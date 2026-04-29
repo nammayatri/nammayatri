@@ -11,7 +11,8 @@ INSERT INTO atlas_registry.subscriber (unique_key_id, subscriber_id, subscriber_
 	('juspay-mobility-bap-1-key', 'localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'http://localhost:8013/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52', 'BAP', 'MOBILITY', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, '2022-04-12 15:15:42.441694+00', '2022-04-12 15:15:42.441694+00'),
 	('juspay-mobility-bpp-1-key1', 'mock-public-transport-bpp', 'http://localhost:8091', 'BPP', 'PUBLIC_TRANSPORT', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, '2022-04-12 15:15:42.441694+00', '2022-04-12 15:15:42.441694+00'),
 	('juspay-mobility-bap-1-key', 'JUSPAY.PUBLIC_TRANSPORT.APP.UAT.1', 'http://localhost:8023/beckn', 'BAP', 'PUBLIC_TRANSPORT', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, '2022-04-12 15:15:42.441694+00', '2022-04-12 15:15:42.441694+00'),
-  ('juspay-mobility-bpp-1-key', 'NAMMA_YATRI', 'http://localhost:8016/beckn/favorit0-0000-0000-0000-00000favorit', 'BPP', 'MOBILITY', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, now(), now());
+  ('juspay-mobility-bpp-1-key', 'NAMMA_YATRI', 'http://localhost:8016/beckn/favorit0-0000-0000-0000-00000favorit', 'BPP', 'MOBILITY', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, now(), now())
+ON CONFLICT (unique_key_id, subscriber_id) DO NOTHING;
   --('juspay-mobility-bpp-1-key', 'NAMMA_YATRI_2', 'http://localhost:8016/beckn/nearest-drivers-testing-organization', 'BPP', 'MOBILITY', ARRAY['Kochi'], NULL, NULL, '1tRC4LHVKWeGikY5C8T1FYI9t3oacpa3IFvj8e7aGws=', NULL, NULL, NULL, now(), now());
 
 -- =============================================================================

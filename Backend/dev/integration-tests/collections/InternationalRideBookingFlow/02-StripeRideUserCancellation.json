@@ -1092,7 +1092,7 @@
 							"    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });"
+							"pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
 						],
 						"type": "text/javascript"
 					}
@@ -1654,7 +1654,7 @@
 							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
 							"pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
 							"pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
-							"pm.test('At least one cancellation invoice exists', function () { pm.expect(d.invoices.length).to.be.greaterThan(0); });"
+							"pm.test('At least one cancellation invoice exists', function () { pm.expect(d.invoices.length).to.be.above(0); });"
 						],
 						"type": "text/javascript"
 					}

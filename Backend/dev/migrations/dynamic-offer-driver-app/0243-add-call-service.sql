@@ -1,1 +1,0 @@
-UPDATE atlas_driver_offer_bpp.exophone SET call_service = 'Knowlarity' where primary_phone = '8035471774';

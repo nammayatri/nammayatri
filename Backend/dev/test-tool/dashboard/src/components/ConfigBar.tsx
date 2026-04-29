@@ -26,21 +26,8 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
   const [variants, setVariants] = useState<VariantInfo[]>([]);
   const [contextLoaded, setContextLoaded] = useState(false);
   const [contextError, setContextError] = useState(false);
-  const [flushState, setFlushState] = useState<'idle' | 'flushing' | 'done' | 'error'>('idle');
-
-  const flushRedis = async () => {
-    if (flushState === 'flushing') return;
-    if (!window.confirm('Flush ALL Redis keys? This cannot be undone.')) return;
-    setFlushState('flushing');
-    try {
-      const res = await fetch(`${PROXY_BASE}/api/redis/flushall`, { method: 'POST' });
-      const data = await res.json();
-      setFlushState(data.result === 'ok' ? 'done' : 'error');
-    } catch {
-      setFlushState('error');
-    }
-    setTimeout(() => setFlushState('idle'), 3000);
-  };
+  // Note: Flush Redis + Sync Data have moved to <TopBarActions /> in the
+  // top bar (next to DB Explorer / Redis Explorer).
 
   const [selectedMerchant, setSelectedMerchant] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
@@ -182,14 +169,6 @@ export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, is
         <div className="config-actions">
           <button className="btn-run" onClick={onRun} disabled={isRunning}>▶ Run</button>
           <button className="btn-stop" onClick={onStop} disabled={!isRunning}>■ Stop</button>
-          <button
-            className={`btn-flush-redis${flushState === 'done' ? ' btn-flush-done' : flushState === 'error' ? ' btn-flush-error' : ''}`}
-            onClick={flushRedis}
-            disabled={flushState === 'flushing'}
-            title="Flush all Redis keys"
-          >
-            {flushState === 'flushing' ? 'Flushing...' : flushState === 'done' ? '✓ Flushed' : flushState === 'error' ? '✗ Error' : '⚡ Flush Redis'}
-          </button>
         </div>
       </div>
 

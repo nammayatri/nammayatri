@@ -116,7 +116,8 @@ in  { esqDBCfg
     , port = +8017
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
-        ? "dev/migrations/rider-dashboard"
+        ? "dev/ddl-migrations/rider-dashboard"
+      , "dev/seed-migrations/rider-dashboard"
       , "dev/migrations-read-only/rider-dashboard"
       ]
     , autoMigrate = True

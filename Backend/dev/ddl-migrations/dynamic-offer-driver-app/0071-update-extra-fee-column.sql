@@ -1,0 +1,5 @@
+
+
+alter table atlas_driver_offer_bpp.search_request_for_driver alter column driver_min_extra_fee set not null;
+
+alter table atlas_driver_offer_bpp.search_request_for_driver alter column driver_max_extra_fee set not null;

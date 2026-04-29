@@ -1,2 +1,0 @@
--- Dont run the below query for master / prod insteadupdate actual data that should be there
-UPDATE atlas_app.ticket_place SET short_desc = 'Nice Place', icon_url = 'http://localhost', map_image_url = 'http://localhost';

@@ -55,7 +55,7 @@ in  { esqDBCfg
     , esqDBReplicaCfg
     , migrationPath =
       [   env:PUBLIC_TRANSPORT_RIDER_PLATFORM_MIGRATION_PATH as Text
-        ? "dev/migrations/public-transport-rider-platform"
+        ? "dev/ddl-migrations/public-transport-rider-platform"
       ]
     , autoMigrate = True
     , hedisCfg = rcfg

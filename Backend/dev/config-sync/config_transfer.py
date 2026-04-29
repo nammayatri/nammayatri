@@ -72,6 +72,11 @@ DEFAULT_CLOUDFRONT_URL = os.getenv(
     "",
 )
 
+# Cap each export-side query (precheck SELECT, COPY, etc.) at 2 minutes so a
+# slow query / flaky link aborts cleanly instead of hanging the whole export.
+# Override with $CONFIG_SYNC_EXPORT_STATEMENT_TIMEOUT_MS (in milliseconds).
+EXPORT_STATEMENT_TIMEOUT_MS = int(os.getenv("CONFIG_SYNC_EXPORT_STATEMENT_TIMEOUT_MS", "120000"))
+
 
 # ── Loaders ──────────────────────────────────────────────────────────────────
 
@@ -129,17 +134,27 @@ def get_db_config(env_config, environment, schema):
     return base
 
 
-def get_connection(db_config):
+def get_connection(db_config, statement_timeout_ms: int | None = None):
+    """Open a psycopg2 connection. If `statement_timeout_ms` is set, the
+    server-side `statement_timeout` GUC is applied to the session immediately
+    so any subsequent SELECT/COPY that runs longer than that aborts cleanly
+    (instead of hanging indefinitely on a flaky network or huge query)."""
     if "_execPod" in db_config:
         raise RuntimeError(
             "Direct psycopg2 connection not available for kubectl-based environments. "
             "Use kubectl_* functions instead."
         )
-    return psycopg2.connect(
+    conn = psycopg2.connect(
         host=db_config["host"], port=db_config.get("port", 5432),
         database=db_config.get("database", "postgres"),
         user=db_config["user"], password=db_config.get("password", ""),
     )
+    if statement_timeout_ms is not None:
+        cur = conn.cursor()
+        cur.execute(f"SET statement_timeout TO {int(statement_timeout_ms)}")
+        cur.close()
+        conn.commit()
+    return conn
 
 
 def is_kubectl_env(db_config):
@@ -162,6 +177,31 @@ def _kubectl_base_cmd(db_config):
         cmd += ["-n", ns]
     cmd += ["exec", pod_cfg["pod"], "--"]
     return cmd
+
+
+def _kubectl_cp_cmd(db_config, src, dst):
+    """Build: kubectl [--context X] [-n NS] cp <src> <dst>.
+    src/dst is either 'pod:path' or 'localpath'."""
+    pod_cfg = db_config["_execPod"]
+    cmd = ["kubectl"]
+    ctx = pod_cfg.get("context", "")
+    if ctx:
+        cmd += ["--context", ctx]
+    ns = pod_cfg.get("namespace", "")
+    if ns:
+        cmd += ["-n", ns]
+    cmd += ["cp", src, dst]
+    return cmd
+
+
+def _kubectl_rm_pod_file(db_config, pod_path):
+    """Best-effort delete of a file inside the pod."""
+    import subprocess
+    cmd = _kubectl_base_cmd(db_config) + ["rm", "-f", pod_path]
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    except Exception:
+        pass
 
 
 def _kubectl_psql_cmd(db_config, sql, flags=None):
@@ -262,27 +302,85 @@ def kubectl_precheck_tables(db_config, schema, tables):
 
 
 def kubectl_export_table(base_dir, env_name, schema, table, meta, db_config, db_schema, columns):
-    """Export table using kubectl exec psql COPY TO STDOUT, streaming CSV to local file.
+    """Export table using kubectl exec psql, persisting CSV to a file inside the pod
+    and then `kubectl cp`-ing it back. Returns (path_or_dir, total_rows).
 
-    Uses \\copy (psql meta-command) which runs client-side inside the pod and
-    streams CSV to stdout. kubectl exec pipes it to local file.
-    Returns (path_or_dir, total_rows).
+    Why not stream to STDOUT?
+      kubectl exec uses SPDY/websocket framing over the apiserver. Under load or
+      timing hiccups, bytes inside an in-flight stream frame can silently disappear
+      — corrupting very long single CSV cells (tens of KB+) without any error.
+      Row count and CSV framing usually survive (commas/quotes are at edges of the
+      bytes), so the local CSV parser happily parses a row whose JSON value has
+      mid-string truncation. See kubernetes/kubernetes#74870 for the upstream issue.
+
+      `kubectl cp` uses tar (with length headers + integrity), so it is robust
+      against this whole class of bug at the cost of one tmp file inside the pod.
     """
-    import subprocess, csv
+    import subprocess, csv, uuid, gzip, time, shutil
 
     d = table_dir_path(base_dir, env_name, schema)
-    csv_tmp = d / f"_{table}.csv"
+    csv_tmp    = d / f"_{table}.csv"
+    csv_gz_tmp = d / f"_{table}.csv.gz"
 
-    # \\copy is a psql meta-command — passed via -c, it streams to STDOUT
-    copy_sql = f'\\copy "{db_schema}"."{table}" TO STDOUT WITH CSV HEADER'
-    cmd = _kubectl_psql_cmd(db_config, copy_sql)
+    pod_cfg  = db_config["_execPod"]
+    pod_name = pod_cfg["pod"]
+    pod_csv  = f"/tmp/cfgsync_{table}_{uuid.uuid4().hex}.csv"
+    pod_gz   = pod_csv + ".gz"
 
-    with open(csv_tmp, "w") as f:
-        proc = subprocess.run(cmd, stdout=f, stderr=subprocess.PIPE, text=True,
-                              timeout=600)
+    # 1) Inside the pod: \copy to a file, then gzip it.
+    #    Streaming \copy over kubectl exec STDOUT can silently drop bytes
+    #    inside very long single CSV cells. Writing to a pod-local file
+    #    avoids that. Gzipping shrinks the payload by ~10x for JSON/text
+    #    columns, which makes the subsequent kubectl cp transfer well
+    #    short of any apiserver keep-alive / max-request thresholds that
+    #    cause `unexpected EOF` mid-tar on long transfers.
+    copy_sql = f"\\copy \"{db_schema}\".\"{table}\" TO '{pod_csv}' WITH CSV HEADER"
+    proc = subprocess.run(_kubectl_psql_cmd(db_config, copy_sql),
+                          capture_output=True, text=True, timeout=1800)
     if proc.returncode != 0:
-        csv_tmp.unlink(missing_ok=True)
-        raise RuntimeError(f"kubectl COPY failed for {db_schema}.{table}: {proc.stderr}")
+        _kubectl_rm_pod_file(db_config, pod_csv)
+        raise RuntimeError(
+            f"kubectl \\copy → pod file failed for {db_schema}.{table}: {proc.stderr.strip()}"
+        )
+
+    gz_proc = subprocess.run(_kubectl_base_cmd(db_config) + ["gzip", "-f", pod_csv],
+                             capture_output=True, text=True, timeout=600)
+    if gz_proc.returncode != 0:
+        # gzip not present? fall back to ungzipped transfer.
+        pod_gz = pod_csv
+
+    # 2) kubectl cp the (gzipped) file out, retrying on EOF/transient errors.
+    last_err = ""
+    csv_gz_tmp.unlink(missing_ok=True)
+    csv_tmp.unlink(missing_ok=True)
+    target = csv_gz_tmp if pod_gz.endswith(".gz") else csv_tmp
+    for attempt in range(1, 4):  # 3 tries
+        cp_proc = subprocess.run(
+            _kubectl_cp_cmd(db_config, f"{pod_name}:{pod_gz}", str(target)),
+            capture_output=True, text=True, timeout=1800,
+        )
+        if cp_proc.returncode == 0 and target.exists() and target.stat().st_size > 0:
+            last_err = ""
+            break
+        last_err = cp_proc.stderr.strip() or "(empty file or unknown error)"
+        target.unlink(missing_ok=True)
+        if attempt < 3:
+            print(f"    [warn] kubectl cp {table} attempt {attempt} failed: {last_err}; retrying", flush=True)
+            time.sleep(2 * attempt)
+    if last_err:
+        _kubectl_rm_pod_file(db_config, pod_gz)
+        raise RuntimeError(
+            f"kubectl cp failed for {db_schema}.{table} after 3 attempts: {last_err}"
+        )
+
+    # 3) Decompress locally if we transferred a gzipped file.
+    if target is csv_gz_tmp:
+        with gzip.open(csv_gz_tmp, "rb") as gzf, open(csv_tmp, "wb") as outf:
+            shutil.copyfileobj(gzf, outf)
+        csv_gz_tmp.unlink(missing_ok=True)
+
+    # 4) Clean up the pod-side temp file (best-effort).
+    _kubectl_rm_pod_file(db_config, pod_gz)
 
     # Parse CSV and write batches — same logic as export_table
     table_d = d / table
@@ -1002,7 +1100,7 @@ def cmd_export(args):
             check_conn = None
             check_cur = None
             try:
-                check_conn = get_connection(source_db)
+                check_conn = get_connection(source_db, statement_timeout_ms=EXPORT_STATEMENT_TIMEOUT_MS)
                 check_cur = check_conn.cursor()
             except Exception as e:
                 print(f"  CONNECTION FAILED: {e}", file=sys.stderr)
@@ -1045,7 +1143,7 @@ def cmd_export(args):
                     TMP_DIR, from_env, schema, tbl, meta, source_db, db_schema, cols
                 )
             else:
-                conn = get_connection(source_db)
+                conn = get_connection(source_db, statement_timeout_ms=EXPORT_STATEMENT_TIMEOUT_MS)
                 try:
                     result_path, total = export_table(
                         TMP_DIR, from_env, schema, tbl, meta, conn, db_schema, cols
@@ -1149,6 +1247,11 @@ def cmd_patch(args):
     if dst_base.exists():
         shutil.rmtree(dst_base)
 
+    # Accumulate per-table failures so the patch phase keeps making progress
+    # on the remaining tables instead of bailing on the first error. Printed
+    # as a grouped summary at the end.
+    failures = []  # list of (schema, table, reason)
+
     for schema in schemas:
         if schema not in config_tables:
             continue
@@ -1169,72 +1272,104 @@ def cmd_patch(args):
                                   if "find" in r])
 
         for table in available:
-            # First pass: check if this table needs patching at all
-            needs_patch = has_global_reps
-            total_rows = 0
-            for meta, batch_rows in iter_table_rows(src_base, "", schema, table):
-                total_rows += len(batch_rows)
+            try:
+                # First pass: check if this table needs patching at all
+                needs_patch = has_global_reps
+                total_rows = 0
+                for meta, batch_rows in iter_table_rows(src_base, "", schema, table):
+                    total_rows += len(batch_rows)
+                    if not needs_patch:
+                        test_data = {"columns": meta.get("columns", []), "rows": batch_rows[:10]}
+                        _, pc = apply_patches_to_table(table, test_data, schema, patch_config)
+                        if pc > 0:
+                            needs_patch = True
+
+                if total_rows == 0:
+                    print(f"    [skip] {table}: 0 rows")
+                    continue
+
                 if not needs_patch:
-                    test_data = {"columns": meta.get("columns", []), "rows": batch_rows[:10]}
-                    _, pc = apply_patches_to_table(table, test_data, schema, patch_config)
-                    if pc > 0:
-                        needs_patch = True
+                    # No patches needed — copy raw export as-is
+                    src_table_dir = src_base / schema / table
+                    src_table_file = src_base / schema / f"{table}.json"
+                    dst_schema_dir = table_dir_path(dst_base, "", schema)
 
-            if total_rows == 0:
-                print(f"    [skip] {table}: 0 rows")
-                continue
+                    if src_table_dir.exists():
+                        shutil.copytree(str(src_table_dir), str(dst_schema_dir / table))
+                    elif src_table_file.exists():
+                        shutil.copy2(str(src_table_file), str(dst_schema_dir / f"{table}.json"))
 
-            if not needs_patch:
-                # No patches needed — copy raw export as-is
-                src_table_dir = src_base / schema / table
-                src_table_file = src_base / schema / f"{table}.json"
-                dst_schema_dir = table_dir_path(dst_base, "", schema)
+                    print(f"    [copy] {table}: {total_rows} rows (no patches)")
+                    continue
 
-                if src_table_dir.exists():
-                    shutil.copytree(str(src_table_dir), str(dst_schema_dir / table))
-                elif src_table_file.exists():
-                    shutil.copy2(str(src_table_file), str(dst_schema_dir / f"{table}.json"))
+                # Needs patching — process batch by batch
+                patch_count = 0
+                batch_idx = 0
 
-                print(f"    [copy] {table}: {total_rows} rows (no patches)")
-                continue
+                for meta, batch_rows in iter_table_rows(src_base, "", schema, table):
+                    batch_data = {"columns": meta.get("columns", []), "rows": batch_rows}
+                    batch_data, pc = apply_patches_to_table(table, batch_data, schema, patch_config)
+                    patch_count += pc
 
-            # Needs patching — process batch by batch
-            patch_count = 0
-            batch_idx = 0
+                    out_meta = {k: v for k, v in meta.items() if k != "rows"}
+                    out_meta["patched"] = True
+                    out_meta["direction"] = direction
 
-            for meta, batch_rows in iter_table_rows(src_base, "", schema, table):
-                batch_data = {"columns": meta.get("columns", []), "rows": batch_rows}
-                batch_data, pc = apply_patches_to_table(table, batch_data, schema, patch_config)
-                patch_count += pc
+                    out_dir = table_dir_path(dst_base, "", schema) / table
+                    out_dir.mkdir(parents=True, exist_ok=True)
+                    (out_dir / f"batch_{batch_idx:04d}.json").write_text(
+                        json.dumps(batch_data["rows"], default=json_serializer))
+                    batch_idx += 1
 
-                out_meta = {k: v for k, v in meta.items() if k != "rows"}
-                out_meta["patched"] = True
-                out_meta["direction"] = direction
-
+                # Write meta
                 out_dir = table_dir_path(dst_base, "", schema) / table
-                out_dir.mkdir(parents=True, exist_ok=True)
-                (out_dir / f"batch_{batch_idx:04d}.json").write_text(
-                    json.dumps(batch_data["rows"], default=json_serializer))
-                batch_idx += 1
+                meta_data = {**out_meta, "total_rows": total_rows, "batched": True}
+                (out_dir / "_meta.json").write_text(json.dumps(meta_data, default=json_serializer, indent=2))
 
-            # Write meta
-            out_dir = table_dir_path(dst_base, "", schema) / table
-            meta_data = {**out_meta, "total_rows": total_rows, "batched": True}
-            (out_dir / "_meta.json").write_text(json.dumps(meta_data, default=json_serializer, indent=2))
+                # If single batch, collapse to single file
+                if batch_idx == 1:
+                    batch_file = out_dir / "batch_0000.json"
+                    rows = json.loads(batch_file.read_text())
+                    shutil.rmtree(out_dir)
+                    single = {**meta_data, "rows": rows}
+                    del single["batched"]
+                    del single["total_rows"]
+                    (table_dir_path(dst_base, "", schema) / f"{table}.json").write_text(
+                        json.dumps(single, default=json_serializer, indent=2))
 
-            # If single batch, collapse to single file
-            if batch_idx == 1:
-                batch_file = out_dir / "batch_0000.json"
-                rows = json.loads(batch_file.read_text())
-                shutil.rmtree(out_dir)
-                single = {**meta_data, "rows": rows}
-                del single["batched"]
-                del single["total_rows"]
-                (table_dir_path(dst_base, "", schema) / f"{table}.json").write_text(
-                    json.dumps(single, default=json_serializer, indent=2))
+                print(f"    [ok] {table}: {total_rows} rows, {patch_count} patches")
+            except Exception as _patch_err:
+                # One bad table shouldn't kill the whole patch phase. Capture
+                # the reason, print a one-line marker, and keep going.
+                reason = f"{type(_patch_err).__name__}: {_patch_err}"
+                # Truncate very long messages to keep the log readable
+                if len(reason) > 240:
+                    reason = reason[:237] + "..."
+                print(f"    [FAIL] {table}: {reason}", flush=True)
+                failures.append((schema, table, reason))
 
-            print(f"    [ok] {table}: {total_rows} rows, {patch_count} patches")
+        print()
 
+    # ── Per-table failure summary ──────────────────────────────────────
+    # Group failures by reason so identical errors across many tables collapse
+    # into one entry. Useful when (e.g.) passetto re-encryption is broken and
+    # 30+ tables fail with the same message.
+    if failures:
+        print(f"\n{'=' * 60}")
+        print(f"PATCH FAILURES — {len(failures)} table(s) across {len({s for s,_,_ in failures})} schema(s)")
+        print(f"{'=' * 60}")
+        from collections import defaultdict
+        by_reason = defaultdict(list)
+        for schema, table, reason in failures:
+            by_reason[reason].append(f"{schema}.{table}")
+        for reason, tables in sorted(by_reason.items(), key=lambda x: -len(x[1])):
+            print(f"\n  Reason: {reason}")
+            print(f"  Affected ({len(tables)}):")
+            # Print up to 20 tables per reason; if more, show count
+            for t in tables[:20]:
+                print(f"    - {t}")
+            if len(tables) > 20:
+                print(f"    … and {len(tables) - 20} more")
         print()
 
     # ── Post-patch audit: scan output for remaining sensitive patterns ──
@@ -1260,6 +1395,9 @@ def cmd_patch(args):
         push_patch_zip_to_s3(dst_base, direction, bucket, prefix)
 
     print(f"Run: python config_transfer.py import --from {from_env} --to {to_env}")
+
+    if failures:
+        sys.exit(1)
 
 
 # ── Post-patch audit ───────────────────────────────────────────────────
@@ -1434,6 +1572,15 @@ def cmd_import(args):
 
     env_config = load_environments()
     config_tables = load_config_tables()
+
+    # ── --only-feature-migrations: skip the data import phase entirely. ──
+    # Used by callers that want to interleave another step (e.g. seeding test
+    # data) between the import and the feature-migration phase. The caller is
+    # expected to run this AFTER a normal `import --skip-feature-migrations`
+    # plus their own seed step.
+    if getattr(args, "only_feature_migrations", False):
+        run_feature_migrations(env_config, to_env, config_tables)
+        return
 
     schemas = args.schemas or list(config_tables.keys())
 
@@ -1690,35 +1837,96 @@ def cmd_import(args):
             conn.rollback()
             print(f"    FAILED at {rel_path}: {e}", file=sys.stderr)
             print(f"    SQL files preserved in {sql_dir}/", file=sys.stderr)
+            # Postgres truncates its LINE/CONTEXT excerpts to ~80 chars. Re-read the failing
+            # line from disk and dump a generous chunk around the offending fragment to stderr
+            # so the operator can see the surrounding bytes without opening the file.
+            try:
+                import re as _re
+                err_text = str(e)
+                m = _re.search(r"LINE\s+(\d+):", err_text)
+                line_no = int(m.group(1)) if m else None
+                full_path = sql_dir / rel_path
+                if line_no and full_path.exists():
+                    target_line = ""
+                    with open(full_path) as _f:
+                        for i, _line in enumerate(_f, 1):
+                            if i == line_no:
+                                target_line = _line
+                                break
+                    fragment_m = _re.search(r"CONTEXT:\s*JSON data[^\n]*?\.\.\.([^\n]{20,200})", err_text)
+                    fragment = fragment_m.group(1).rstrip() if fragment_m else None
+                    print(f"\n    ── failure context: {rel_path}:{line_no} (line length {len(target_line)}) ──", file=sys.stderr)
+                    if fragment and fragment in target_line:
+                        idx   = target_line.find(fragment)
+                        start = max(0, idx - 800)
+                        end   = min(len(target_line), idx + len(fragment) + 800)
+                        print(f"    bytes [{start}:{end}] around offending fragment:\n", file=sys.stderr)
+                        print(target_line[start:end], file=sys.stderr)
+                    else:
+                        print(f"    (could not anchor on JSON fragment) first 1500 chars:\n", file=sys.stderr)
+                        print(target_line[:1500], file=sys.stderr)
+                        print(f"\n    last 1500 chars:\n", file=sys.stderr)
+                        print(target_line[-1500:], file=sys.stderr)
+                    print("    ── end failure context ──\n", file=sys.stderr)
+            except Exception as _dump_err:
+                print(f"    (could not dump failure context: {_dump_err})", file=sys.stderr)
             sys.exit(1)
         finally:
             cursor.close()
             conn.close()
 
     # ── Run feature-migrations (each file may reference multiple schemas) ──
-    if feature_migration_files:
-        # Use the target env's default connection (all schemas accessible on local)
-        first_schema = list(schema_files.keys())[0]
-        fm_db = get_db_config(env_config, to_env, first_schema)
-        fm_conn = get_connection(fm_db)
-        fm_cursor = fm_conn.cursor()
-        try:
-            print(f"\nRunning {len(feature_migration_files)} feature-migration(s)...")
-            for fm_file in feature_migration_files:
-                print(f"  {fm_file.name}...")
-                fm_cursor.execute("BEGIN;")
-                fm_cursor.execute(fm_file.read_text())
-                fm_cursor.execute("COMMIT;")
-            print(f"  Feature-migrations complete.")
-        except Exception as e:
-            fm_conn.rollback()
-            print(f"  FAILED at {fm_file.name}: {e}", file=sys.stderr)
-            sys.exit(1)
-        finally:
-            fm_cursor.close()
-            fm_conn.close()
+    if feature_migration_files and not getattr(args, "skip_feature_migrations", False):
+        _run_feature_migrations_inner(feature_migration_files, env_config, to_env,
+                                       fallback_schema=list(schema_files.keys())[0])
+    elif feature_migration_files:
+        print(f"\nSkipping {len(feature_migration_files)} feature-migration(s) "
+              f"(--skip-feature-migrations). Caller will run them.")
 
     print(f"\nAll done — {total_executed} SQL files executed across {len(schema_files)} schemas.")
+
+
+def _discover_feature_migrations():
+    feature_migrations_dir = SCRIPT_DIR.parent / "feature-migrations"
+    if not feature_migrations_dir.is_dir():
+        return []
+    return sorted(
+        f for f in feature_migrations_dir.iterdir()
+        if f.suffix == ".sql" and not f.name.startswith("_")
+    )
+
+
+def _run_feature_migrations_inner(feature_migration_files, env_config, to_env, fallback_schema):
+    fm_db = get_db_config(env_config, to_env, fallback_schema)
+    fm_conn = get_connection(fm_db)
+    fm_cursor = fm_conn.cursor()
+    try:
+        print(f"\nRunning {len(feature_migration_files)} feature-migration(s)...")
+        for fm_file in feature_migration_files:
+            print(f"  {fm_file.name}...")
+            fm_cursor.execute("BEGIN;")
+            fm_cursor.execute(fm_file.read_text())
+            fm_cursor.execute("COMMIT;")
+        print(f"  Feature-migrations complete.")
+    except Exception as e:
+        fm_conn.rollback()
+        print(f"  FAILED at {fm_file.name}: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        fm_cursor.close()
+        fm_conn.close()
+
+
+def run_feature_migrations(env_config, to_env, config_tables):
+    """Public entry-point for `--only-feature-migrations`. Picks the first
+    config-tables schema as the fallback connection (any schema works on local
+    since the same DB hosts them all)."""
+    feature_migration_files = _discover_feature_migrations()
+    if not feature_migration_files:
+        print("No feature-migration files found.")
+        return
+    fallback_schema = next(iter(config_tables.keys()))
+    _run_feature_migrations_inner(feature_migration_files, env_config, to_env, fallback_schema)
 
 
 def cmd_list(args):
@@ -1854,6 +2062,10 @@ Examples:
                        help="If the patched directory is missing locally, download <from>_to_<to>.zip from the public CloudFront URL and extract it")
     p_imp.add_argument("--fetch-url", default=None,
                        help=f"CloudFront base URL for --fetch (default: $CONFIG_SYNC_CLOUDFRONT_URL = {DEFAULT_CLOUDFRONT_URL!r})")
+    p_imp.add_argument("--skip-feature-migrations", action="store_true",
+                       help="Skip running dev/feature-migrations/*.sql at the end of import (caller will run them separately)")
+    p_imp.add_argument("--only-feature-migrations", action="store_true",
+                       help="Run ONLY dev/feature-migrations/*.sql (skip the prod data import). Use after a separate import + seed step.")
 
     p_list = sub.add_parser("list", help="List config tables")
     p_list.add_argument("--schema", dest="schemas", action="append")

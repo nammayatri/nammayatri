@@ -150,68 +150,6 @@ in
             shutdown.signal = 9;
           };
 
-          # Sync config from master to local DB after infra is ready
-          config-sync = {
-            imports = [ common ];
-            depends_on = {
-              "db-primary".condition = "process_healthy";
-              "redis".condition = "process_healthy";
-              "kafka".condition = "process_healthy";
-              "passetto-service".condition = "process_started";
-              "rider-app-exe".condition = "process_healthy";
-              "dynamic-offer-driver-app-exe".condition = "process_healthy";
-              "mock-registry".condition = "process_healthy";
-              "rider-dashboard-exe".condition = "process_healthy";
-              "provider-dashboard-exe".condition = "process_healthy";
-            };
-            command = pkgs.writeShellApplication {
-              name = "config-sync";
-              runtimeInputs = [
-                (pkgs.python3.withPackages (ps: with ps; [
-                  psycopg2
-                  requests
-                  python-dotenv
-                  rich
-                  websockets
-                ]))
-              ];
-              text = ''
-                set -x
-                export PYTHONUNBUFFERED=1
-                cd dev/config-sync
-                if [ -d "assets/data/prod_international_to_local" ] && [ "$(ls -A assets/data/prod_international_to_local 2>/dev/null)" ]; then
-                  echo "Found prod_international_to_local data, importing from prod_international"
-                  python3 -u config_transfer.py import --from prod_international --to local 2>&1
-                elif [ -d "assets/data/prod_to_local" ] && [ "$(ls -A assets/data/prod_to_local 2>/dev/null)" ]; then
-                  echo "Found prod_to_local data, importing from prod"
-                  python3 -u config_transfer.py import --from prod --to local 2>&1
-                elif [ -d "assets/data/master_to_local" ] && [ "$(ls -A assets/data/master_to_local 2>/dev/null)" ]; then
-                  echo "Using master_to_local data"
-                  python3 -u config_transfer.py import --from master --to local 2>&1
-                fi
-
-                # Restart primary services so they re-read boot-time config from DB.
-                # Kill the actual Haskell binaries; process-compose auto-restarts them.
-                # Match by dist-newstyle path to scope to this project only.
-                echo "Restarting primary services to pick up synced config..."
-                PROJ_DIR="$(cd ../.. && pwd)"
-                for exe in rider-app-exe dynamic-offer-driver-app-exe; do
-                  pid=$(pgrep -f "$PROJ_DIR.*$exe" | head -1 || true)
-                  if [ -n "$pid" ]; then
-                    kill "$pid" 2>/dev/null && echo "Killed $exe (PID $pid) — process-compose will restart"
-                  fi
-                done
-                # mock-registry: find by its listening port (8020) — inherently isolated per instance
-                pid=$(lsof -ti :8020 | head -1 || true)
-                if [ -n "$pid" ]; then
-                  kill "$pid" 2>/dev/null && echo "Killed mock-registry (PID $pid, port 8020) — process-compose will restart"
-                fi
-                sleep 3
-                echo "Primary services restarted."
-              '';
-            };
-          };
-
           # Things to do before local Haskell processes are started
           nammayatri-init = {
             imports = [ common ];
@@ -337,9 +275,24 @@ in
           };
           test-context-api = {
             imports = [ common ];
-            command = "${pkgs.python3.withPackages (ps: [ ps.psycopg2 ])}/bin/python3 dev/test-tool/context-api/server.py --port 7082";
+            # Hosts the config-sync trigger (replaces the old `config-sync` process), so it needs
+            # the same python deps as config_transfer.py: psycopg2, requests, python-dotenv, rich, websockets.
+            command = "${pkgs.python3.withPackages (ps: with ps; [ psycopg2 requests python-dotenv rich websockets ])}/bin/python3 dev/test-tool/context-api/server.py --port 7082";
             namespace = lib.mkForce "test";
-            depends_on."db-primary".condition = "process_healthy";
+            # Start once infra is up. The startup config-sync runs in a background thread,
+            # so we DON'T block on dashboards — if a dashboard is still settling, the API
+            # is still serving and the config-sync will succeed against the DB regardless.
+            # The post-sync restart step targets rider-app-exe / dynamic-offer-driver-app-exe /
+            # mock-registry, which we wait on so those PIDs exist when we try to kill them.
+            depends_on = {
+              "db-primary".condition = "process_healthy";
+              "redis".condition = "process_healthy";
+              "kafka".condition = "process_healthy";
+              "passetto-service".condition = "process_started";
+              "rider-app-exe".condition = "process_healthy";
+              "dynamic-offer-driver-app-exe".condition = "process_healthy";
+              "mock-registry".condition = "process_healthy";
+            };
             availability = {
               restart = "on_failure";
               backoff_seconds = 2;
@@ -512,23 +465,21 @@ in
             initialDatabases = [
               {
                 name = "atlas_dev";
+                # Schema-only initialization. local-testing-data/*.sql is NOT loaded here
+                # because dev/ddl-migrations and feature-migrations need to run on empty tables
+                # (so SET NOT NULL / FK validations pass). After dev/ddl-migrations + feature-migrations
+                # complete, test-context-api applies dev/local-testing-data/*.sql.
                 schemas = [
                   ../../dev/sql-seed/pre-init.sql
                   ../../dev/sql-seed/rider-app-seed.sql
                   ../../dev/sql-seed/public-transport-rider-platform-seed.sql
-                  ../../dev/local-testing-data/public-transport-rider-platform.sql
                   ../../dev/sql-seed/mock-registry-seed.sql
-                  ../../dev/local-testing-data/mock-registry.sql
                   ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
                   ../../dev/sql-seed/rider-dashboard-seed.sql
-                  ../../dev/local-testing-data/rider-dashboard.sql
                   ../../dev/sql-seed/provider-dashboard-seed.sql
-                  ../../dev/local-testing-data/provider-dashboard.sql
                   ../../dev/sql-seed/unified-dashboard-seed.sql
                   ../../dev/sql-seed/safety-dashboard-seed.sql
-                  ../../dev/local-testing-data/safety-dashboard.sql
                   ../../dev/sql-seed/special-zone-seed.sql
-                  ../../dev/local-testing-data/special-zone.sql
                   ../../dev/sql-seed/kaal-chakra-seed.sql
                 ];
               }

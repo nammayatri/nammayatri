@@ -616,7 +616,7 @@
 							"    console.log('Estimate:', d.estimates[0].id, d.estimates[0].vehicleVariant, d.estimates[0].estimatedFare);",
 							"}",
 							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').with.length.above(0); });"
+							"pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
 						],
 						"type": "text/javascript"
 					}

@@ -4,6 +4,7 @@ import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
 import { FinanceViewer } from './components/FinanceViewer';
 import { LogPanel } from './components/LogPanel';
+import { TopBarActions } from './components/TopBarActions';
 import axios from 'axios';
 import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from './services/api';
 import { buildApiCatalog } from './api-catalog';
@@ -975,6 +976,7 @@ function App() {
           <a className="tool-link" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="RedisInsight — standalone + cluster">
             Redis Explorer
           </a>
+          <TopBarActions />
         </div>
         <div className="content-wrapper">
           <div className="content">

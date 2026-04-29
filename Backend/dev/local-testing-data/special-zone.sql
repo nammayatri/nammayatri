@@ -1,31 +1,31 @@
-INSERT INTO atlas_special_zone.special_zone (id, name, category_code, city, state, geom, geo_json, created_at, updated_at)
-	VALUES ('9h8016d0-f9cd-4f9f-886f-bc4cbh6a8641', 'Random triangular shape', 'Airport', 'Bangalore', 'Karnataka' , (ST_SetSRID(ST_GeomFromGeoJSON(
-'{
-  "coordinates": [
-    [
-      [
-        [
-          26.74111671238296,
-          -1.3083724031948663
-        ],
-        [
-          26.75062111299397,
-          -1.6029134155718907
-        ],
-        [
-          27.01991246364392,
-          -1.3432125421878993
-        ],
-        [
-          26.74111671238296,
-          -1.3083724031948663
-        ]
-      ]
-    ]
-  ],
-  "type": "MultiPolygon"
-}'),4326)),
-'ShapeFile (ShapeFileType {_type = "FeatureCollection", features = [LocationFeature {_type = "Feature", properties = SzType {_type = Nothing, area = Nothing, address = Nothing}, geometry = Geometry {_type = MultiPolygon, coordinates = MPolyCoords [[[[26.74111671238296,-1.3083724031948663],[26.75062111299397,-1.6029134155718907],[27.01991246364392,-1.3432125421878993],[26.74111671238296,-1.3083724031948663]]]]}}]})', now(), now());
+-- INSERT INTO atlas_special_zone.special_zone (id, name, category_code, city, state, geom, geo_json, created_at, updated_at)
+-- 	VALUES ('9h8016d0-f9cd-4f9f-886f-bc4cbh6a8641', 'Random triangular shape', 'Airport', 'Bangalore', 'Karnataka' , (ST_SetSRID(ST_GeomFromGeoJSON(
+-- '{
+--   "coordinates": [
+--     [
+--       [
+--         [
+--           26.74111671238296,
+--           -1.3083724031948663
+--         ],
+--         [
+--           26.75062111299397,
+--           -1.6029134155718907
+--         ],
+--         [
+--           27.01991246364392,
+--           -1.3432125421878993
+--         ],
+--         [
+--           26.74111671238296,
+--           -1.3083724031948663
+--         ]
+--       ]
+--     ]
+--   ],
+--   "type": "MultiPolygon"
+-- }'),4326)),
+-- 'ShapeFile (ShapeFileType {_type = "FeatureCollection", features = [LocationFeature {_type = "Feature", properties = SzType {_type = Nothing, area = Nothing, address = Nothing}, geometry = Geometry {_type = MultiPolygon, coordinates = MPolyCoords [[[[26.74111671238296,-1.3083724031948663],[26.75062111299397,-1.6029134155718907],[27.01991246364392,-1.3432125421878993],[26.74111671238296,-1.3083724031948663]]]]}}]})', now(), now());
 
 -- INSERT INTO atlas_bpp_dashboard.merchant (id, short_id, server_name, created_at) VALUES
 --     ('sz2db186-39d3-48a4-ad1f-78a0c3f840fd', 'SPECIAL_ZONE', 'SPECIAL_ZONE', now ());

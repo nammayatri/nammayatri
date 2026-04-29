@@ -134,7 +134,7 @@ in  { esqDBCfg
     , port = +8021
     , migrationPath =
       [   env:UNIFIED_DASHBOARD_MIGRATION_PATH as Text
-        ? "dev/migrations/unified-dashboard"
+        ? "dev/ddl-migrations/unified-dashboard"
       , "dev/migrations-read-only/unified-dashboard"
       ]
     , autoMigrate = True

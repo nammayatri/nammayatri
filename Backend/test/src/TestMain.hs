@@ -78,7 +78,7 @@ main = do
         (T.unpack $ "../dhall-configs/dev/" <> app <> ".dhall")
       Env.setEnv
         (T.unpack $ toEnvVar app <> "_MIGRATION_PATH")
-        (T.unpack $ "../dev/migrations/" <> app)
+        (T.unpack $ "../dev/ddl-migrations/" <> app)
 
     toEnvVar = T.toUpper . T.replace "-" "_"
 

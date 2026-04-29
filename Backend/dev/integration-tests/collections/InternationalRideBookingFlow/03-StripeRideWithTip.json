@@ -990,7 +990,7 @@
 							"    console.log('Estimate:', est.id, est.vehicleServiceTierType, est.estimatedFare);",
 							"}",
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });"
+							"pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
 						],
 						"type": "text/javascript"
 					}

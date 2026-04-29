@@ -1,0 +1,1 @@
+ALTER TABLE atlas_driver_offer_bpp.payment_order add column service_provider text default 'Juspay';

@@ -1,0 +1,39 @@
+CREATE TABLE atlas_driver_offer_bpp.coin_config (
+    id VARCHAR(36) PRIMARY KEY,
+    event_function VARCHAR(255),
+    event_name VARCHAR(255),
+    merchant_id VARCHAR(255) NOT NULL,
+    merchant_opt_city_id VARCHAR(255) NOT NULL,
+    coins INT NOT NULL,
+    expiration_at INT,
+    active BOOLEAN NOT NULL
+);
+
+CREATE TABLE atlas_driver_offer_bpp.coin_history (
+    id VARCHAR (36) PRIMARY KEY,
+    event_function VARCHAR (255) NOT NULL,
+    merchant_id VARCHAR (36) NOT NULL,
+    merchant_opt_city_id VARCHAR (36) NOT NULL,
+    driver_id VARCHAR (36) NOT NULL,
+    coins INT NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    expiration_at timestamp with time zone,
+    status TEXT NOT NULL,
+    coins_used INT NOT NULL
+);
+
+-- ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN distance_to_pickup double precision;
+
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_feature BOOL NOT NULL DEFAULT True;
+
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_expire_time INT NOT NULL DEFAULT 1296000;
+
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN coin_conversion_rate double precision NOT NULL DEFAULT 0.4;
+
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_time_diff INT NOT NULL DEFAULT 120;
+
+-- Alter Table atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_dist_diff INT NOT NULL DEFAULT 50;
+
+ALTER TABLE atlas_driver_offer_bpp.coin_config
+ALTER COLUMN event_function SET NOT NULL,
+ALTER COLUMN event_name SET NOT NULL;

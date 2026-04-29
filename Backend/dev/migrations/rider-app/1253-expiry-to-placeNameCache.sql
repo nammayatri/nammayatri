@@ -1,1 +1,0 @@
-update atlas_app.rider_config set place_name_cache_expiry_days = 90;

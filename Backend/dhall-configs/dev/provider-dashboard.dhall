@@ -128,7 +128,8 @@ in  { esqDBCfg
     , port = +8018
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
-        ? "dev/migrations/provider-dashboard"
+        ? "dev/ddl-migrations/provider-dashboard"
+      , "dev/seed-migrations/provider-dashboard"
       , "dev/migrations-read-only/provider-dashboard"
       ]
     , autoMigrate = True

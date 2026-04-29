@@ -20,7 +20,7 @@ in  { port = +8020
     , autoMigrate = True
     , migrationPath = Some
         (   env:MOCK_REGISTRY_MIGRATION_PATH as Text
-          ? "dev/migrations/mock-registry"
+          ? "dev/ddl-migrations/mock-registry"
         )
     , internalAuthApiKey = sec.internalAuthApiKey
     }

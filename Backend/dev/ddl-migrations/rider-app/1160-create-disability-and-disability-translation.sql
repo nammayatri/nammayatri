@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.disability OWNER TO atlas_app_user;
