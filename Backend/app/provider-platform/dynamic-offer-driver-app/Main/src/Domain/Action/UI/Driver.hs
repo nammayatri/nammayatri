@@ -901,7 +901,10 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   operatorReferral <- case driverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
     Nothing -> pure Nothing
-  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName
+  merchant <-
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchant serviceName
   dues <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName driverId [DDF.RECURRING_INVOICE, DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
@@ -915,9 +918,6 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
   frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return Nothing
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
-  merchant <-
-    CQM.findById merchantId
-      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity driverInfo merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda mbFleetInfo
 
@@ -1149,9 +1149,10 @@ buildDriverEntityRes ::
     EsqDBFlow m r
   ) =>
   (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) ->
+  DM.Merchant ->
   Plan.ServiceNames ->
   m DriverEntityRes
-buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName = do
+buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchant serviceName = do
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   vehicleMB <- QVehicle.findById person.id
   DriverSpecificSubscriptionData {mbDriverPlan = driverPlan, ..} <- getDriverSpecificSubscriptionDataWithSubsConfig (person.id, transporterConfig.merchantId, merchantOpCityId) transporterConfig driverInfo vehicleMB serviceName
@@ -1232,8 +1233,13 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
               _ -> (False, Nothing, Nothing)
           _ -> (False, Nothing, Nothing)
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
-  mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
-  let subsCreditBalance = (.balance) <$> mbRideCreditAccount
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  subsCreditBalance <-
+    if isPrepaidSubscriptionAndWalletEnabled
+      then do
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+        return $ (.balance) <$> mbRideCreditAccount
+      else return Nothing
   return $
     DriverEntityRes
       { id = person.id,
@@ -1472,7 +1478,11 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let driverEntityArg :: (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity)
       driverEntityArg = (updPerson, updatedDriverInfo, driverStats, merchantOpCityId)
-  driverEntity <- buildDriverEntityRes driverEntityArg Plan.YATRI_SUBSCRIPTION
+  let merchantId = person.merchantId
+  org <-
+    CQM.findById merchantId
+      >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  driverEntity <- buildDriverEntityRes driverEntityArg org Plan.YATRI_SUBSCRIPTION
   driverReferralCode <- QDR.findById personId
   allFdas <- QFDA.findAllByDriverIdWithStatus personId
   let activeFda = find (.isActive) allFdas
@@ -1481,10 +1491,6 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   operatorReferral <- case updatedDriverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
     Nothing -> pure Nothing
-  let merchantId = person.merchantId
-  org <-
-    CQM.findById merchantId
-      >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
   makeDriverInformationRes merchantOpCityId driverEntity updatedDriverInfo org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing operatorReferral ((.operatorId) <$> doa) inactiveFda activeFda Nothing
   where
@@ -1611,18 +1617,23 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           if transporterConfig.dynamicReferralCodeEnabled
             then DUR.checkAndUpdateDynamicReferralCode merchantOperatingCity.merchantId merchantOpCityId transporterConfig onRide drc
             else pure drc
-  mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
-  let subsCreditBalance = (.balance) <$> mbRideCreditAccount
-  mbPanCard <- QPanCard.findByDriverId id
-  panDec <- traverse (decrypt . (.panCardNumber)) mbPanCard
-  mbGstin <- QDGExtra.findGSTInByDriverId id
-  mbWalletAccount <- FWallet.getWalletAccountByOwner FAccountTypes.DRIVER id.getId
-  mbDriverBankAccountForRes <- QDBA.findByPrimaryKey id
-  let panAadhaarLinkedFlag' = (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
-  let gstinApplicableFlag' = (== Documents.VALID) . (.verificationStatus) <$> mbGstin
-  let bankAccountNumber' = mbDriverBankAccountForRes <&> (.accountId)
-  let bankIfsc' = mbDriverBankAccountForRes >>= (.ifscCode)
-  let bankVerificationStatus' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+  let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+  (subsCreditBalance, panDec, panAadhaarLinkedFlag', gstinApplicableFlag', mbWalletAccount, bankAccountNumber', bankIfsc', bankVerificationStatus') <-
+    if isPrepaidSubscriptionAndWalletEnabled
+      then do
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+        mbPanCard <- QPanCard.findByDriverId id
+        panDec' <- traverse (decrypt . (.panCardNumber)) mbPanCard
+        mbGstin <- QDGExtra.findGSTInByDriverId id
+        mbWalletAccount' <- FWallet.getWalletAccountByOwner FAccountTypes.DRIVER id.getId
+        mbDriverBankAccountForRes <- QDBA.findByPrimaryKey id
+        let panAadhaarLinkedFlag'' = (== DPanCard.PAN_AADHAAR_LINKED) <$> (mbPanCard >>= (.panAadhaarLinkage))
+        let gstinApplicableFlag'' = (== Documents.VALID) . (.verificationStatus) <$> mbGstin
+        let bankAccountNumber'' = mbDriverBankAccountForRes <&> (.accountId)
+        let bankIfsc'' = mbDriverBankAccountForRes >>= (.ifscCode)
+        let bankVerificationStatus'' = mbDriverBankAccountForRes <&> (\ba -> if ba.detailsSubmitted then "VERIFIED" else "PENDING")
+        return ((.balance) <$> mbRideCreditAccount, panDec', panAadhaarLinkedFlag'', gstinApplicableFlag'', mbWalletAccount', bankAccountNumber'', bankIfsc'', bankVerificationStatus'')
+      else return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
   let driverReferralApplied = isJust driverInfo.referredByDriverId
       fleetReferralApplied = isJust driverInfo.referredByFleetOwnerId
       operatorReferralApplied = isJust driverInfo.referredByOperatorId

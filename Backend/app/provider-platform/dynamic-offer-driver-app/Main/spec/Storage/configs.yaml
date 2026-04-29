@@ -9,7 +9,6 @@ imports:
   ServiceTierType: Domain.Types.Common
   Area: Lib.Types.SpecialLocation
   Common: Domain.Types.Common
-  Common: Kernel.Types.Common
   TimeBound : Kernel.Types.TimeBound
   Currency: Kernel.Utils.Common
   DayOfWeek: Data.Time

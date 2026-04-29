@@ -66,6 +66,15 @@ types:
     - driverId: Text
     - derive: "'HideSecrets"
 
+  QueueDriverDetail:
+    - driverId: Text
+    - lat: Double
+    - lon: Double
+    - queuePosition: Maybe Int
+    - inPickupZone: Bool
+    - acceptedQueueRequest: Bool
+    - committedToPickup: Bool
+
   VehicleQueueStats:
     - vehicleType: Text
     - totalInQueue: Int
@@ -77,6 +86,7 @@ types:
     - demandThreshold: Maybe Int
     - minDriverThreshold: Maybe Int
     - maxDriverThreshold: Maybe Int
+    - drivers: "[QueueDriverDetail]"
 
   SpecialZoneQueueStatsRes:
     - gateId: Text

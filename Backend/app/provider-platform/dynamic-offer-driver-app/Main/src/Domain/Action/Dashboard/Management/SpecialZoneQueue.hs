@@ -88,18 +88,25 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         concatMap Map.keys $
           catMaybes [gate.minDriverThresholds, gate.maxDriverThresholds, gate.demandThresholds]
       vehicleTypes = nub (baseVariants <> configuredVariants)
+  -- Build a map from driverId to DriverLocation for quick lookup
+  let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM vehicleTypes $ \vt -> do
     queueResp <- LTSFlow.getQueueDrivers specialLocationId vt
-    let totalInQueue = queueResp.queueSize
-        queuedDriverIds = map (.driverId) queueResp.drivers
-        -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
-        inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
-        outsidePickupZone = totalInQueue - inPickupZone
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
     mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
     mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
     -- Drivers who accepted the pickup notification and are en-route to the gate
     acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
+    let totalInQueue = queueResp.queueSize
+        queuedDriverIds = map (.driverId) queueResp.drivers
+        -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
+        inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
+        outsidePickupZone = totalInQueue - inPickupZone
+        acceptedDriverIds = map (\r -> r.driverId.getId) acceptedRequests
+        -- Check per-driver notified key to determine committedToPickup
+        notifiedDriverIds = acceptedDriverIds -- drivers who accepted are committed
+        -- Build per-driver details with location from the nearBy data
+        driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) queueResp.drivers
     pure
       SZQT.VehicleQueueStats
         { vehicleType = vt,
@@ -111,7 +118,8 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
           acceptedQueueRequests = length acceptedRequests,
           demandThreshold = DGI.demandThresholdFor gate vt,
           minDriverThreshold = DGI.minDriverThresholdFor gate vt,
-          maxDriverThreshold = DGI.maxDriverThresholdFor gate vt
+          maxDriverThreshold = DGI.maxDriverThresholdFor gate vt,
+          drivers = driverDetails
         }
   let nonEmptyStats = filter (isNonEmpty gate) vehicleStats
       totalDrivers = sum $ map (.totalInQueue) nonEmptyStats
@@ -152,6 +160,21 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         || s.driversCommittedToPickup > 0
         || s.acceptedQueueRequests > 0
         || hasVariantConfig gate s.vehicleType
+    mkDriverDetail driverLocMap pzDriverIds acceptedIds committedIds queueEntry =
+      let did = queueEntry.driverId.getId
+       in case Map.lookup did driverLocMap of
+            Just dl ->
+              Just
+                SZQT.QueueDriverDetail
+                  { driverId = did,
+                    lat = dl.lat,
+                    lon = dl.lon,
+                    queuePosition = Just queueEntry.queuePosition,
+                    inPickupZone = queueEntry.driverId `elem` pzDriverIds,
+                    acceptedQueueRequest = did `elem` acceptedIds,
+                    committedToPickup = did `elem` committedIds
+                  }
+            Nothing -> Nothing
 
 getSpecialZoneQueueDriverQueuePosition :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Text -> Text -> Environment.Flow SZQT.DriverQueuePositionRes)
 getSpecialZoneQueueDriverQueuePosition merchantShortId opCity driverIdText specialLocationId vehicleType = do

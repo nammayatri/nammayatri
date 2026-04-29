@@ -32,6 +32,18 @@ data ManualQueueRemoveReq = ManualQueueRemoveReq {specialLocationId :: Kernel.Pr
 instance Kernel.Types.HideSecrets.HideSecrets ManualQueueRemoveReq where
   hideSecrets = Kernel.Prelude.identity
 
+data QueueDriverDetail = QueueDriverDetail
+  { driverId :: Kernel.Prelude.Text,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
+    queuePosition :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    inPickupZone :: Kernel.Prelude.Bool,
+    acceptedQueueRequest :: Kernel.Prelude.Bool,
+    committedToPickup :: Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SpecialZoneQueueStatsRes = SpecialZoneQueueStatsRes
   { gateId :: Kernel.Prelude.Text,
     gateName :: Kernel.Prelude.Text,
@@ -70,7 +82,8 @@ data VehicleQueueStats = VehicleQueueStats
     acceptedQueueRequests :: Kernel.Prelude.Int,
     demandThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minDriverThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    maxDriverThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    maxDriverThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    drivers :: [QueueDriverDetail]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
