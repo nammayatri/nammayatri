@@ -24,6 +24,7 @@ data SpecialZoneQueueRequest = SpecialZoneQueueRequest
     specialLocationId :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
     status :: Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus,
+    triggerSource :: Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.TriggerSource,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: Kernel.Prelude.Text
@@ -34,6 +35,10 @@ data SpecialZoneQueueRequestResponse = Accept | Reject | Ignored | NoShow | Canc
 
 data SpecialZoneQueueRequestStatus = Active | Accepted | Completed | Expired deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SpecialZoneQueueRequestResponse))
+data TriggerSource = App | Dashboard deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SpecialZoneQueueRequestStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialZoneQueueRequestResponse)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SpecialZoneQueueRequestStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TriggerSource)
