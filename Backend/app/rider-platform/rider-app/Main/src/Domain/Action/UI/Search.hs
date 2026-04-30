@@ -425,7 +425,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
   QPFS.clearCache person.id
-  fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
+  fork "updating search counters" $ unless isDashboardRequest_ $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
   reservePricingTag <-
     if isReservedRideSearch
