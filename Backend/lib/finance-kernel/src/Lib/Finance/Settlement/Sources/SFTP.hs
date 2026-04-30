@@ -23,8 +23,7 @@ import Kernel.External.Settlement.Types (SFTPConfig (..), SettlementParserTypeMa
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
-import Kernel.Utils.Common (generateGUID, getCurrentTime)
-import Kernel.Utils.Common (logInfo)
+import Kernel.Utils.Common (generateGUID, getCurrentTime, logInfo)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Servant.Client (HasRequestId)
 import Lib.Finance.Domain.Types.SettlementFileInfo (SettlementFileInfo (..), SettlementFileStatus (..))
@@ -71,8 +70,10 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbPars
     (row : _) -> do
       logInfo $
         "fetchSettlementFile: PENDING resume fast-path file=" <> row.fileName
-          <> " trackedFileId=" <> Kernel.Types.Id.getId row.id
-          <> " lastProcessedIndex=" <> T.pack (show row.lastProcessedIndex)
+          <> " trackedFileId="
+          <> Kernel.Types.Id.getId row.id
+          <> " lastProcessedIndex="
+          <> T.pack (show row.lastProcessedIndex)
       case guardRemoteName row.fileName of
         Left err -> pure $ Left err
         Right norm ->
@@ -118,7 +119,8 @@ fetchSettlementFile merchantId merchantOperatingCityId paymentGatewayName mbPars
               logInfo $
                 "fetchSettlementFile: fresh-discovery created PENDING row trackedFileId="
                   <> Kernel.Types.Id.getId sfId
-                  <> " fileName=" <> norm
+                  <> " fileName="
+                  <> norm
               downloadAndSlice config mbParserTypeMap norm sfId 0 config.csvChunkRowLimit
 
 downloadAndSlice ::
@@ -157,10 +159,14 @@ downloadAndSlice cfg mbParserTypeMap remoteFile infoId startRow chunkLimit = do
                   }
           logDebug $
             "downloadAndSlice: file=" <> show remoteFile
-              <> " startRow=" <> show startRow
-              <> " chunkLimit=" <> show chunkLimit
-              <> " nData=" <> show nData
-              <> " splitTy=" <> show splitTy
+              <> " startRow="
+              <> show startRow
+              <> " chunkLimit="
+              <> show chunkLimit
+              <> " nData="
+              <> show nData
+              <> " splitTy="
+              <> show splitTy
           pure $ Right (sliced, meta, splitTy)
 
 -- | DFS through the remote SFTP tree, returning the *first* file path that:
@@ -189,9 +195,10 @@ findFirstUnprocessedRemoteFile ::
   m (Either Text (Maybe Text))
 findFirstUnprocessedRemoteFile cfg paymentGatewayName mbParserTypeMap = do
   let initialDir = case cfg.remotePath of
-        Just p | not (T.null p) ->
-          let trimmed = T.dropWhileEnd (== '/') p
-           in if T.null trimmed then "/" else T.unpack trimmed
+        Just p
+          | not (T.null p) ->
+            let trimmed = T.dropWhileEnd (== '/') p
+             in if T.null trimmed then "/" else T.unpack trimmed
         _ -> "."
   logDebug $ "findFirstUnprocessedRemoteFile: initialDir=" <> show initialDir
   eFirst <- runSftpListBatch cfg [initialDir]
@@ -205,7 +212,8 @@ findFirstUnprocessedRemoteFile cfg paymentGatewayName mbParserTypeMap = do
     Right ((rootAbs, rootEntries) : _) -> do
       logDebug $
         "findFirstUnprocessedRemoteFile: rootAbs=" <> show rootAbs
-          <> " rootEntries=" <> show (length rootEntries)
+          <> " rootEntries="
+          <> show (length rootEntries)
       eFound <-
         dfsFindUnprocessed
           cfg
@@ -259,8 +267,10 @@ dfsFindUnprocessed cfg gw mbMap rootAbs currentAbs entries =
             Just r -> do
               logDebug $
                 "dfsFindUnprocessed: tracked, skipping. file=" <> relPath
-                  <> " existingId=" <> Kernel.Types.Id.getId r.id
-                  <> " existingStatus=" <> T.pack (show r.status)
+                  <> " existingId="
+                  <> Kernel.Types.Id.getId r.id
+                  <> " existingStatus="
+                  <> T.pack (show r.status)
               go rest
             Nothing -> do
               logInfo $ "dfsFindUnprocessed: found unprocessed candidate file=" <> relPath
@@ -321,7 +331,8 @@ runSftpListBatch cfg dirs = do
             ++ ["quit"]
   logDebug $
     "runSftpListBatch: dirsCount=" <> show (length dirs)
-      <> " dirs=" <> show dirs
+      <> " dirs="
+      <> show dirs
   eOut <- runSftpBatch cfg script
   case eOut of
     Left err -> do
@@ -331,7 +342,8 @@ runSftpListBatch cfg dirs = do
       let parsed = parseSftpListOutput out
       logDebug $
         "runSftpListBatch: parsedBlocks=" <> show (length parsed)
-          <> " summary=" <> show [(p, length es) | (p, es) <- parsed]
+          <> " summary="
+          <> show [(p, length es) | (p, es) <- parsed]
       pure $ Right parsed
 
 runSftpBatch ::
