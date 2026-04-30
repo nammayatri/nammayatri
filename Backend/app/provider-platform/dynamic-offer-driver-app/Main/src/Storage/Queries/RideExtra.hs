@@ -731,10 +731,11 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
   where
     mkBookingStatusVal ride =
       B.ifThenElse_ (ride.status B.==. B.val_ Ride.COMPLETED) (B.val_ Common.COMPLETED) $
-        B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
-          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
-            B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
-              B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
+        B.ifThenElse_ (ride.status B.==. B.val_ Ride.UPCOMING) (B.val_ Common.UPCOMING) $
+          B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. B.not_ (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING) $
+            B.ifThenElse_ (ride.status B.==. B.val_ Ride.NEW B.&&. (ride.createdAt B.<=. B.val_ (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.UPCOMING_6HRS) $
+              B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
+                B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
 
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
@@ -744,6 +745,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
     mkBookingStatus :: UTCTime -> Ride.Ride -> Common.BookingStatus
     mkBookingStatus now' ride
       | ride.status == Ride.COMPLETED = Common.COMPLETED
+      | ride.status == Ride.UPCOMING = Common.UPCOMING
       | ride.status == Ride.NEW && (ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING
       | ride.status == Ride.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now' = Common.UPCOMING_6HRS
       | ride.status == Ride.INPROGRESS && ride.tripStartTime > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now') = Common.ONGOING
@@ -789,11 +791,11 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
     mkBookingStatusFilter rides = case mbBookingStatus of
       Just bookingStatus -> case bookingStatus of
         Common.COMPLETED -> [ride | ride <- rides, ride.status == Ride.COMPLETED]
-        Common.UPCOMING -> [ride | ride <- rides, ride.status == Ride.NEW && ((ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)]
+        Common.UPCOMING -> [ride | ride <- rides, ride.status == Ride.UPCOMING || (ride.status == Ride.NEW && ((ride.createdAt) > addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))]
         Common.UPCOMING_6HRS -> [ride | ride <- rides, ride.status == Ride.NEW && ride.createdAt <= addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now]
         Common.ONGOING -> [ride | ride <- rides, ride.status == Ride.INPROGRESS && ((ride.tripStartTime) > Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))]
+        Common.ONGOING_6HRS -> [ride | ride <- rides, ride.status == Ride.INPROGRESS && (ride.tripStartTime) <= Just (addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now)]
         Common.CANCELLED -> [ride | ride <- rides, ride.status == Ride.CANCELLED]
-        _ -> rides
       Nothing -> rides
 
 findAllRideItemsV2 ::
