@@ -457,7 +457,9 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         panOfParty = panDecrypted,
         panType = panTypeText,
         tdsRateReason = rateReason,
-        emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig
+        emitLedgerEntries = maybe True (\DTC.InvoiceConfig {emitLedgerEntries = e} -> e) transporterConfig.invoiceConfig,
+        fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
+        issuedToName = Nothing
       }
 
 -- | Pure helper to compute TDS rate reason from PAN card data and LDC status.
@@ -535,7 +537,9 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         panOfParty = panDecrypted,
         panType = panTypeText,
         tdsRateReason = rateReason,
-        emitLedgerEntries = True
+        emitLedgerEntries = True,
+        fromLocationAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city],
+        issuedToName = Nothing
       }
 
 -- Wallet entry delta (for topup/payout)

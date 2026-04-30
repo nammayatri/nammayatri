@@ -114,7 +114,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
             rideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
                   fromMaybe

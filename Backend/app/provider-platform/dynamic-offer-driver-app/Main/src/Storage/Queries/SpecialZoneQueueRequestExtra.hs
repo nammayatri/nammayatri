@@ -32,12 +32,12 @@ findAllByDriverIdsAndStatuses ::
 findAllByDriverIdsAndStatuses driverIds statuses
   | null driverIds || null statuses = pure []
   | otherwise =
-      findAllWithKV
-        [ Se.And
-            [ Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds),
-              Se.Is Beam.status $ Se.In statuses
-            ]
-        ]
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds),
+            Se.Is Beam.status $ Se.In statuses
+          ]
+      ]
 
 -- | Transition a pickup-zone request to Accepted and stamp the arrival deadline.
 -- The arrival deadline lives on its own column (arrivalDeadlineTime) rather than

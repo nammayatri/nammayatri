@@ -73,7 +73,7 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
-import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
@@ -673,7 +673,9 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         panOfParty = Nothing,
         panType = Nothing,
         tdsRateReason = Nothing,
-        emitLedgerEntries = True
+        emitLedgerEntries = True,
+        fromLocationAddress = Nothing,
+        issuedToName = Nothing
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
@@ -697,7 +699,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
     ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
     let cashRechargeInvoiceConfig =
           InvoiceConfig
-            { invoiceType = FinanceInvoice.SubscriptionPurchase,
+            { invoiceType = SubscriptionPurchase,
               issuedToType = "DRIVER",
               issuedToId = driverId.getId,
               issuedToName = Nothing,

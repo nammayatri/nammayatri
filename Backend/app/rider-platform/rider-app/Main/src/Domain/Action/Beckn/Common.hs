@@ -80,6 +80,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as Payout
@@ -519,7 +520,7 @@ rideAssignedReqHandler req = do
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
           estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
           -- Online Ride Assigned branch (inside Just OnlinePaymentParameters case) → isOnline=True.
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing
+          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId merchantOperatingCityId.getId booking.estimatedFare.currency True booking.riderId.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
           mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
           let ledgerInfo =
                 fromMaybe
@@ -563,7 +564,8 @@ rideAssignedReqHandler req = do
                 throwError $ InvalidRequest "Payment non-capturable, booking cancelled"
           pure mbPaymentResp
         Nothing -> do
-          let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing
+          let pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
+              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId booking.estimatedFare.currency False booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
           estimatedBreakups <- traverse (buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) (fromMaybe [] req'.fareBreakups)
           mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups estimatedBreakups bookingDiscountAmount bookingPayoutAmount applicationFeeAmount 0 ledgerCtx
           let ledgerInfo =
@@ -931,7 +933,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         void $
           withTryCatch "applyOfferWithoutPayment:cashRide" $
             DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
-      let cashLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing
+      let riderName = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
+          mbInvCfg = riderConfig.invoiceConfig
+          cashLedgerCtx = (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = riderName, supplierName = mbInvCfg >>= (.supplierName), supplierAddress = mbInvCfg >>= (.supplierAddress), supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)}
       mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 cashLedgerCtx
       let cashLedgerInfo =
             fromMaybe
@@ -967,7 +971,9 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Left err -> logError $ "Cash ride settle failed: " <> show err
     else do
       -- Online Ride End branch → isOnline=True.
-      let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
+      let riderNameOnline = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
+          mbInvCfgOnline = riderConfig.invoiceConfig
+          ledgerCtx = (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = riderNameOnline, supplierName = mbInvCfgOnline >>= (.supplierName), supplierAddress = mbInvCfgOnline >>= (.supplierAddress), supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)}
       mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 ledgerCtx
       let ledgerInfo =
             fromMaybe

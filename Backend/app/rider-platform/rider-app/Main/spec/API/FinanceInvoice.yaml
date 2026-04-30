@@ -1,0 +1,65 @@
+imports:
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  InvoiceStatus: Lib.Finance.Domain.Types.Invoice
+  DateOrTime: Lib.Finance.Invoice.PdfService
+  Value: Data.Aeson
+
+module: FinanceInvoice
+types:
+  FinanceInvoicePdfResp:
+    pdfBase64: Text
+    invoiceNumber: Text
+  FinanceInvoiceListResp:
+    invoices: "[FinanceInvoiceListItem]"
+    totalItems: Int
+  FinanceInvoiceListItem:
+    invoiceId: Text
+    invoiceNumber: Text
+    invoiceType: InvoiceType
+    invoiceDate: UTCTime
+    invoiceStatus: InvoiceStatus
+    counterpartyType: Text
+    counterpartyId: Text
+    taxableValue: Maybe HighPrecMoney
+    gstRate: Maybe Double
+    gstAmount: Maybe HighPrecMoney
+    cgstAmount: Maybe HighPrecMoney
+    sgstAmount: Maybe HighPrecMoney
+    totalInvoiceValue: HighPrecMoney
+    taxableValueOfServiceSupplied: Maybe HighPrecMoney
+    tdsReference: Maybe Text
+    irn: Maybe Text
+    rideId: Maybe Text
+    subscriptionId: Maybe Text
+    supplierName: Maybe Text
+    supplierAddress: Maybe Text
+    supplierGstin: Maybe Text
+    supplierTaxNo: Maybe Text
+    issuedToName: Maybe Text
+    issuedToAddress: Maybe Text
+    issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
+    gstinOfParty: Maybe Text
+    sacCode: Maybe Text
+    paymentMethod: Maybe Text
+    lineItems: Value
+    generatedAt: UTCTime
+    taxRate: Maybe Double
+    issuedToTaxNo: Maybe Text
+    issuedByTaxNo: Maybe Text
+apis:
+  - GET:
+      endpoint: /finance/invoice/pdf
+      query:
+        referenceId: Text
+        invoiceType: InvoiceType
+        from: DateOrTime
+        to: DateOrTime
+        limit: Int
+        offset: Int
+      auth: TokenAuth
+      response:
+        type: FinanceInvoicePdfResp

@@ -20,6 +20,9 @@ imports:
   TimeOfDay: Data.Time
   Day: Data.Time
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
 
 RiderConfig:
   types:
@@ -69,8 +72,12 @@ RiderConfig:
       tracePollingIntervalSeconds: Maybe Seconds
       stateCode: Maybe Text
     RiderInvoiceConfig:
-      derive: "Eq, Read"
+      derive: "Eq"
       ledgerEmitEnabled: Bool
+      logoUrl: Maybe BaseUrl
+      supplierName: Maybe Text
+      supplierAddress: Maybe Text
+      supplierVatNumber: Maybe Text
 
   tableName: rider_config
 

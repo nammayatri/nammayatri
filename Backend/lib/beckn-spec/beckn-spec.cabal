@@ -232,6 +232,7 @@ library
       Domain.Types.FRFSRouteDetails
       Domain.Types.FRFSTicketBookingStatus
       Domain.Types.FRFSTicketStatus
+      Domain.Types.Invoice
       Domain.Types.ParcelType
       Domain.Types.PaymentMode
       Domain.Types.RefereeLink

@@ -938,6 +938,7 @@ chargePaymentIntent merchantId merchantOpCityId paymentMode paymentServiceType p
                 rideId.getId
                 Nothing
                 Nothing
+                Nothing
         result <- RidePaymentFinance.settleRidePaymentLedger ctx entryIds settledReason
         case result of
           Right () -> logInfo $ "Settled " <> show (length entryIds) <> " ledger entries for ride: " <> rideId.getId <> " reason: " <> settledReason

@@ -5,6 +5,7 @@ module Lib.Finance.Storage.Beam.Invoice where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import qualified Domain.Types.Invoice
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -18,7 +19,7 @@ data InvoiceT f = InvoiceT
     dueAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     id :: (B.C f Kernel.Prelude.Text),
     invoiceNumber :: (B.C f Kernel.Prelude.Text),
-    invoiceType :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceType),
+    invoiceType :: (B.C f Domain.Types.Invoice.InvoiceType),
     irn :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     issuedAt :: (B.C f Kernel.Prelude.UTCTime),
     issuedByAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
