@@ -170,7 +170,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       setNodes([]);
       return;
     }
-    fetchCollection(selectedDir, selectedSuite).then(raw => {
+    fetchCollection(selectedDir, selectedSuite).then(async raw => {
       if (!raw) return;
       const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
 
@@ -182,7 +182,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               environment: { ...currentEnv.variables },
               collection: { ...parsed.collectionVars },
             };
-            executePrereqScript(ev.script.exec.join('\n'), stores);
+            await executePrereqScript(ev.script.exec.join('\n'), stores);
             storesRef.current = stores;
           }
         }
@@ -209,14 +209,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       collection: {},
     };
     // Re-run collection prerequest script to regenerate random vars
-    fetchCollection(selectedDir, selectedSuite).then(raw => {
+    fetchCollection(selectedDir, selectedSuite).then(async raw => {
       if (!raw) return;
       const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
       freshStores.collection = { ...parsed.collectionVars };
       if (raw.event) {
         for (const ev of raw.event) {
           if (ev.listen === 'prerequest' && ev.script?.exec) {
-            executePrereqScript(ev.script.exec.join('\n'), freshStores);
+            await executePrereqScript(ev.script.exec.join('\n'), freshStores);
           }
         }
       }
@@ -244,7 +244,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       if (raw.event) {
         for (const ev of raw.event) {
           if (ev.listen === 'prerequest' && ev.script?.exec) {
-            executePrereqScript(ev.script.exec.join('\n'), freshStores);
+            await executePrereqScript(ev.script.exec.join('\n'), freshStores);
           }
         }
       }

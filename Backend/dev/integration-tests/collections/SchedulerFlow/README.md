@@ -108,7 +108,7 @@ Update-only:
 | Variable | Source | Purpose |
 |----------|--------|---------|
 | `baseUrl_app` | Environment | rider-app API (auth, dashboard trigger) |
-| `mock_server_url` | Environment | Mock server for `/mock/sql/select` + `/mock/sql/update` |
+| `mockServerUrl` | Environment | Mock server for `/mock/sql/select` + `/mock/sql/update` |
 | `dashboard_token` | Environment | Internal dashboard auth token |
 | `bap_short_id` | Environment | Merchant short ID for dashboard route |
 | `city` | Environment | City for operating city lookup |

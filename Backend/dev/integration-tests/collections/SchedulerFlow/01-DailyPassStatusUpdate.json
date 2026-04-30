@@ -48,9 +48,9 @@
 					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"target\": \"rider\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\"}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/scheduler/clear",
+					"raw": "{{mockServerUrl}}/mock/scheduler/clear",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -269,9 +269,9 @@
 					"raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_a_order_id}}\", \"{{_pass_a_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/status",
+					"raw": "{{mockServerUrl}}/mock/status",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -389,9 +389,9 @@
 					"raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_b_order_id}}\", \"{{_pass_b_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/status",
+					"raw": "{{mockServerUrl}}/mock/status",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -462,9 +462,9 @@
 					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"purchased_pass\", \"set\": {\"status\": \"PreBooked\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{_pass_b_id}}\", \"op\": \"=\"}]}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/update",
+					"raw": "{{mockServerUrl}}/mock/sql/update",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -503,9 +503,9 @@
 					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"select\": [\"pass_status_update_batch_size\"], \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/select",
+					"raw": "{{mockServerUrl}}/mock/sql/select",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -541,9 +541,9 @@
 					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"pass_status_update_batch_size\": 1}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/update",
+					"raw": "{{mockServerUrl}}/mock/sql/update",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -581,9 +581,9 @@
 					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"delaySeconds\": 5, \"merchantId\": \"{{bap_merchant_id}}\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\", \"jobData\": {\"merchantId\": \"{{bap_merchant_id}}\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\", \"autoSchedule\": true}}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/scheduler/trigger",
+					"raw": "{{mockServerUrl}}/mock/scheduler/trigger",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -594,57 +594,46 @@
 			}
 		},
 		{
-			"name": "Wait for Chain to Drain",
+			"name": "Wait for Pass A to be Expired",
 			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"exec": [
-							"// Poll mock-server for chain drain instead of busy-waiting (which exceeds Postman's 30s script timeout).",
-							"var maxWaitMs = parseInt(pm.environment.get('scheduler_wait_ms')) || 25000;",
-							"var pollInterval = 1000;",
-							"var moc = pm.environment.get('bap_merchant_operating_city_id');",
-							"var mockUrl = pm.environment.get('mock_server_url');",
-							"var startTime = Date.now();",
-							"function poll() {",
-							"  pm.sendRequest({",
-							"    url: mockUrl + '/mock/scheduler/peek',",
-							"    method: 'POST',",
-							"    header: { 'Content-Type': 'application/json' },",
-							"    body: { mode: 'raw', raw: JSON.stringify({ jobType: pm.environment.get('scheduler_job_type'), target: 'rider' }) }",
-							"  }, function (err, res) {",
-							"    var elapsed = Date.now() - startTime;",
-							"    if (err) {",
-							"      console.log('peek error:', err.message || err);",
-							"      if (elapsed < maxWaitMs) setTimeout(poll, pollInterval);",
-							"      return;",
-							"    }",
-							"    var data = (res && res.json && res.json()) || {};",
-							"    var jobs = data.jobs || [];",
-							"    // 'Imminent' = scheduled within next 60s for this moc \u2014 anything later is the tomorrow-01:00 reschedule, not chain.",
-							"    var imminent = jobs.filter(function (j) {",
-							"      return j.merchantOperatingCityId === moc &&",
-							"        (new Date(j.scheduledAt).getTime() - Date.now()) < 60 * 1000;",
-							"    });",
-							"    if (imminent.length === 0) {",
-							"      console.log('Chain drained after', elapsed, 'ms');",
-							"    } else if (elapsed >= maxWaitMs) {",
-							"      console.log('Wait timed out after', elapsed, 'ms;', imminent.length, 'still imminent');",
-							"    } else {",
-							"      setTimeout(poll, pollInterval);",
-							"    }",
-							"  });",
-							"}",
-							"poll();"
-						],
-						"type": "text/javascript"
-					}
-				},
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"pm.test('OK', function () { pm.response.to.have.status(200); });"
+							"// Poll Pass A status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Expired'.",
+							"var MAX_ATTEMPTS = 5;",
+							"var POLL_INTERVAL_MS = 5000;",
+							"var targetId = pm.collectionVariables.get('_pass_a_id');",
+							"var mockUrl = pm.environment.get('mockServerUrl');",
+							"var attempt = 0;",
+							"var lastStatus = null;",
+							"",
+							"function poll() {",
+							"  attempt++;",
+							"  pm.sendRequest({",
+							"    url: mockUrl + '/mock/sql/select',",
+							"    method: 'POST',",
+							"    header: { 'Content-Type': 'application/json' },",
+							"    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+							"  }, function (err, res) {",
+							"    if (err) {",
+							"      console.log('Wait for Pass A to be Expired attempt', attempt, 'error:', err.message || err);",
+							"    } else {",
+							"      var row = ((res.json().rows) || [])[0] || {};",
+							"      lastStatus = row.status;",
+							"      console.log('Wait for Pass A to be Expired attempt', attempt, 'status:', lastStatus);",
+							"    }",
+							"    var done = lastStatus === 'Expired' || attempt >= MAX_ATTEMPTS;",
+							"    if (done) {",
+							"      pm.test('Pass A (ULLA1DAY, expired endDate) is now Expired', function () {",
+							"        pm.expect(lastStatus).to.eql('Expired');",
+							"      });",
+							"    } else {",
+							"      setTimeout(poll, POLL_INTERVAL_MS);",
+							"    }",
+							"  });",
+							"}",
+							"poll();"
 						],
 						"type": "text/javascript"
 					}
@@ -654,9 +643,9 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "{{mock_server_url}}/health",
+					"raw": "{{mockServerUrl}}/health",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"health"
@@ -665,85 +654,61 @@
 			}
 		},
 		{
-			"name": "Verify Pass A is Expired",
+			"name": "Wait for Pass B to be Active",
 			"event": [
 				{
 					"listen": "test",
 					"script": {
 						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Got status', function () { pm.response.to.have.status(200); });",
-							"var row = (d.rows && d.rows[0]) || {};",
-							"console.log('Pass A:', JSON.stringify(row));",
-							"pm.test('Pass A (ULLA1DAY, expired endDate) is now Expired', function () { pm.expect(row.status).to.eql('Expired'); });"
+							"// Poll Pass B status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Active'.",
+							"var MAX_ATTEMPTS = 5;",
+							"var POLL_INTERVAL_MS = 5000;",
+							"var targetId = pm.collectionVariables.get('_pass_b_id');",
+							"var mockUrl = pm.environment.get('mockServerUrl');",
+							"var attempt = 0;",
+							"var lastStatus = null;",
+							"",
+							"function poll() {",
+							"  attempt++;",
+							"  pm.sendRequest({",
+							"    url: mockUrl + '/mock/sql/select',",
+							"    method: 'POST',",
+							"    header: { 'Content-Type': 'application/json' },",
+							"    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+							"  }, function (err, res) {",
+							"    if (err) {",
+							"      console.log('Wait for Pass B to be Active attempt', attempt, 'error:', err.message || err);",
+							"    } else {",
+							"      var row = ((res.json().rows) || [])[0] || {};",
+							"      lastStatus = row.status;",
+							"      console.log('Wait for Pass B to be Active attempt', attempt, 'status:', lastStatus);",
+							"    }",
+							"    var done = lastStatus === 'Active' || attempt >= MAX_ATTEMPTS;",
+							"    if (done) {",
+							"      pm.test('Pass B (GOLD1000, PreBooked->Active) is now Active', function () {",
+							"        pm.expect(lastStatus).to.eql('Active');",
+							"      });",
+							"    } else {",
+							"      setTimeout(poll, POLL_INTERVAL_MS);",
+							"    }",
+							"  });",
+							"}",
+							"poll();"
 						],
 						"type": "text/javascript"
 					}
 				}
 			],
 			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"purchased_pass\", \"select\": [\"id\", \"status\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{_pass_a_id}}\", \"op\": \"=\"}]}"
-				},
+				"method": "GET",
+				"header": [],
 				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/select",
+					"raw": "{{mockServerUrl}}/health",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
-						"mock",
-						"sql",
-						"select"
-					]
-				}
-			}
-		},
-		{
-			"name": "Verify Pass B is Active",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Got status', function () { pm.response.to.have.status(200); });",
-							"var row = (d.rows && d.rows[0]) || {};",
-							"console.log('Pass B:', JSON.stringify(row));",
-							"pm.test('Pass B (GOLD1000, PreBooked->Active) is now Active', function () { pm.expect(row.status).to.eql('Active'); });"
-						],
-						"type": "text/javascript"
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/json"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"purchased_pass\", \"select\": [\"id\", \"status\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{_pass_b_id}}\", \"op\": \"=\"}]}"
-				},
-				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/select",
-					"host": [
-						"{{mock_server_url}}"
-					],
-					"path": [
-						"mock",
-						"sql",
-						"select"
+						"health"
 					]
 				}
 			}
@@ -787,9 +752,9 @@
 					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"target\": \"rider\"}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/scheduler/peek",
+					"raw": "{{mockServerUrl}}/mock/scheduler/peek",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
@@ -844,9 +809,9 @@
 					"raw": "{{_restore_payload}}"
 				},
 				"url": {
-					"raw": "{{mock_server_url}}/mock/sql/update",
+					"raw": "{{mockServerUrl}}/mock/sql/update",
 					"host": [
-						"{{mock_server_url}}"
+						"{{mockServerUrl}}"
 					],
 					"path": [
 						"mock",
