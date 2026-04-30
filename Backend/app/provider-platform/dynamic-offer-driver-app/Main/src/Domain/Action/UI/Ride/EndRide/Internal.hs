@@ -129,7 +129,7 @@ import qualified SharedLogic.FleetVehicleStats as FVS
 import SharedLogic.Reminder.Helper (checkAndCreateRemindersForRidesThreshold)
 import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
-import SharedLogic.TollsDetector
+import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
@@ -164,6 +164,7 @@ import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
+import Toll.SharedLogic.TollsDetector
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -236,7 +237,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
-  clearTollStartGateBatchCache ride.driverId
+  clearTollStartGateBatchCache ride.driverId.getId
   mbRiderDetails <- join <$> QRD.findById `mapM` mbRiderDetailsId
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues

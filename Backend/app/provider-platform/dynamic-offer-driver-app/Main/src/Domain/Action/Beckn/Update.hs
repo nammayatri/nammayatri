@@ -58,8 +58,8 @@ import SharedLogic.FarePolicy
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
-import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -74,6 +74,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as SQSR
+import Toll.SharedLogic.TollsDetector
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notify
@@ -273,7 +274,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) Nothing Nothing (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions
             farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions booking.specialLocationName
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
-            mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
+            mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id.getId (Just person.id.getId) shortestRoute.points
             let isTollAllowed =
                   maybe
                     True
