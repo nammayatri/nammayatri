@@ -84,6 +84,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 isSourceManuallyMoved = Just False,
                 isDestinationManuallyMoved = Just False,
                 isSpecialLocation = Just False, -- Fix it later
+                enforceTollRoute = Nothing,
                 startTime = journeyLegData.fromDepartureTime,
                 isReallocationEnabled = Just True,
                 fareParametersInRateCard = Just True,

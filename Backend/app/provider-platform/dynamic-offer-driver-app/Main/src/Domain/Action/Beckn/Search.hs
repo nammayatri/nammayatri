@@ -95,9 +95,9 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
-import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
+import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
 import qualified Storage.Cac.FarePolicy as QFPolicy
@@ -120,6 +120,7 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
 import qualified Storage.Queries.Vehicle as QVehicle
+import Toll.SharedLogic.TollsDetector
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
@@ -283,7 +284,7 @@ handler ValidatedDSearchReq {..} sReq = do
                   Redis.setExp (multipleRouteKey transactionId) (createMultipleRouteInfo <$> serviceableRoute.multipleRoutes) 3600
               )
         logDebug $ "Route serviceability: " <> show serviceableRoute.multipleRoutes
-        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId Nothing serviceableRoute.routePoints
+        mbTollChargesAndNames <- getTollInfoOnRoute merchantOpCityId.getId Nothing serviceableRoute.routePoints
         return
           ( Just setRouteInfo,
             Just toLocation,

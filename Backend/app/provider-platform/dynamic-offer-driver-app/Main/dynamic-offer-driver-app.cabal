@@ -537,7 +537,6 @@ library
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SyncRide
-      SharedLogic.TollsDetector
       SharedLogic.Type
       SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
@@ -578,6 +577,7 @@ library
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
       Storage.Beam.SystemConfigs
+      Storage.Beam.Toll
       Storage.Beam.Webhook
       Storage.Beam.Yudhishthira
       Storage.Cac.DriverIntelligentPoolConfig
@@ -641,7 +641,6 @@ library
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.SubscriptionConfig
-      Storage.CachedQueries.Toll
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
@@ -1223,7 +1222,6 @@ library
       Domain.Types.SurgePricing
       Domain.Types.TDSDistributionPdfFile
       Domain.Types.TDSDistributionRecord
-      Domain.Types.Toll
       Domain.Types.Translations
       Domain.Types.TransporterConfig
       Domain.Types.TripAlertRequest
@@ -1405,7 +1403,6 @@ library
       Storage.Beam.SurgePricing
       Storage.Beam.TDSDistributionPdfFile
       Storage.Beam.TDSDistributionRecord
-      Storage.Beam.Toll
       Storage.Beam.Translations
       Storage.Beam.TransporterConfig
       Storage.Beam.TripAlertRequest
@@ -1690,7 +1687,6 @@ library
       Storage.Queries.SurgePricing
       Storage.Queries.TDSDistributionPdfFile
       Storage.Queries.TDSDistributionRecord
-      Storage.Queries.Toll
       Storage.Queries.Translations
       Storage.Queries.TransporterConfig
       Storage.Queries.TripAlertRequest

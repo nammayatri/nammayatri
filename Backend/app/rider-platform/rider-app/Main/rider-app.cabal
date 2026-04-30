@@ -539,6 +539,7 @@ library
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
       Storage.Beam.SystemConfigs
+      Storage.Beam.Toll
       Storage.Beam.Yudhishthira
       Storage.CachedQueries.BecknConfig
       Storage.CachedQueries.BlackListOrg

@@ -19,6 +19,8 @@ module Domain.Action.UI.Serviceability
     NearestOperatingAndCurrentCity (..),
     CityState (..),
     getNearestOperatingCityHelper,
+    enforceTollRouteRedisKey,
+    enforceTollRouteRedisTtlSec,
   )
 where
 
@@ -38,6 +40,7 @@ import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant
@@ -70,7 +73,8 @@ data ServiceabilityRes = ServiceabilityRes
     blockRadius :: Maybe Int,
     isMetroServiceable :: Maybe Bool, -- deprecated
     isSubwayServiceable :: Maybe Bool, -- deprecated
-    ptRestrictedHours :: Maybe PTRestrictedHours
+    ptRestrictedHours :: Maybe PTRestrictedHours,
+    enforceTollRoute :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -95,6 +99,10 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
       let city = Just nearestOperatingCity.city
       specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
+      let mbEnforceFlag = filteredSpecialLocationBody >>= (.enforceTollRoute)
+      when isOrigin $ case mbEnforceFlag of
+        Just True -> Redis.setExp (enforceTollRouteRedisKey personId) True enforceTollRouteRedisTtlSec
+        _ -> Redis.del (enforceTollRouteRedisKey personId)
       riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
       now <- getCurrentTime
       let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
@@ -121,6 +129,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             isMetroServiceable = Just (not isOutsideMetroBusinessHours),
             isSubwayServiceable = Just (not isOutsideSubwayBusinessHours),
             ptRestrictedHours = Just ptRestrictedHours,
+            enforceTollRoute = if isOrigin then filteredSpecialLocationBody >>= (.enforceTollRoute) else Nothing,
             ..
           }
     Nothing ->
@@ -134,6 +143,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             isMetroServiceable = Nothing,
             isSubwayServiceable = Nothing,
             ptRestrictedHours = Nothing,
+            enforceTollRoute = Nothing,
             ..
           }
 
@@ -225,3 +235,9 @@ upsertPersonCityInformation personId merchantId shouldUpdatePerson mbCity = when
                 "merchantId:- " <> merchantId.getId <> " ,city:- " <> show city'
             )
       CQP.updateCityInfoById personId city' merchantOperatingCity.id
+
+enforceTollRouteRedisKey :: Id Person.Person -> Text
+enforceTollRouteRedisKey personId = "EnforceTollRoute:Person:" <> personId.getId
+
+enforceTollRouteRedisTtlSec :: Int
+enforceTollRouteRedisTtlSec = 300
