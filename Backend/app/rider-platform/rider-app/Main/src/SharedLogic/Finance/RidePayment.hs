@@ -247,7 +247,9 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,
-      emitLedgerEntries = True
+      emitLedgerEntries = True,
+      fromLocationAddress = Nothing,
+      issuedToName = Nothing
     }
 
 -- ---------------------------------------------------------------------------
@@ -705,8 +707,8 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
     { invoiceType = FInvoice.Ride,
       issuedToType = "RIDER",
       issuedToId = ctx.counterpartyId,
-      issuedToName = Nothing,
-      issuedToAddress = Nothing,
+      issuedToName = ctx.issuedToName,
+      issuedToAddress = ctx.fromLocationAddress,
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
@@ -797,7 +799,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
           issuedToType = "RIDER",
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
-          issuedToAddress = Nothing,
+          issuedToAddress = ctx.fromLocationAddress,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)

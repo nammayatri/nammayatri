@@ -62,6 +62,7 @@ dependencies:
   - mobility-core
   - beckn-spec
   - beckn-services
+  - finance-kernel
   - bytestring
   - record-dot-preprocessor
   - record-hasfield

@@ -227,7 +227,14 @@ data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Gen
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RiderInvoiceConfig = RiderInvoiceConfig {ledgerEmitEnabled :: Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read)
+data RiderInvoiceConfig = RiderInvoiceConfig
+  { ledgerEmitEnabled :: Kernel.Prelude.Bool,
+    logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierVatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

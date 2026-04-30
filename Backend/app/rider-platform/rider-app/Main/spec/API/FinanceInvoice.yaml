@@ -1,0 +1,25 @@
+imports:
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time
+  HighPrecMoney: Kernel.Types.Common
+  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  DateOrTime: Lib.Finance.Invoice.PdfService
+
+module: FinanceInvoice
+types:
+  FinanceInvoicePdfResp:
+    pdfBase64: Text
+    invoiceNumber: Text
+apis:
+  - GET:
+      endpoint: /finance/invoice/pdf
+      query:
+        referenceId: Text
+        invoiceType: InvoiceType
+        from: DateOrTime
+        to: DateOrTime
+        limit: Int
+        offset: Int
+      auth: TokenAuth
+      response:
+        type: FinanceInvoicePdfResp

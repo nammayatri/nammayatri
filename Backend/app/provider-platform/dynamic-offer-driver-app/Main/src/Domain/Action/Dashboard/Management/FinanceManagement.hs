@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
+    getFinanceManagementFinanceInvoicePdf,
   )
 where
 
@@ -15,6 +16,7 @@ import qualified Dashboard.Common
 import Data.List (nub, partition)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
+import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -41,6 +43,7 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
@@ -60,6 +63,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SchedulerJob ()
@@ -72,6 +76,7 @@ import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Encryption (decryptWithDefault)
+import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
 defaultPageLimit :: Int
 defaultPageLimit = 20
@@ -1249,3 +1254,104 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
             openingBalance = openingBalance,
             closingBalance = closingBalance
           }
+
+getFinanceManagementFinanceInvoicePdf ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe DateOrTime ->
+  Maybe API.InvoiceSource ->
+  Maybe FinanceInvoice.InvoiceType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe DateOrTime ->
+  Flow API.FinanceInvoicePdfResp
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceSource mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
+  case mbInvoiceSource of
+    Just API.Rider -> fetchRiderInvoicePdf
+    _ -> fetchDriverInvoicePdf
+  where
+    fetchRiderInvoicePdf = do
+      rideId <- mbReferenceId & fromMaybeM (InvalidRequest "referenceId (driver ride ID) is required for Rider invoice source")
+      ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+      let bppBookingId = ride.bookingId.getId
+      appBackendBapInternal <- asks (.appBackendBapInternal)
+      resp <-
+        CallBAPInternal.getRiderFinanceInvoicePdf
+          appBackendBapInternal.apiKey
+          appBackendBapInternal.url
+          bppBookingId
+          mbFrom
+          mbTo
+          mbInvoiceType
+      pure $
+        API.FinanceInvoicePdfResp
+          { pdfBase64 = resp.pdfBase64,
+            invoiceNumber = resp.invoiceNumber
+          }
+
+    fetchDriverInvoicePdf = do
+      merchant <- SMerchant.findMerchantByShortId merchantShortId
+      merchantOpCity <-
+        CQMOC.findByMerchantIdAndCity merchant.id opCity
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> ", city: " <> show opCity)
+
+      let fromTime = toUTCTimeFrom <$> mbFrom
+          toTime = toUTCTimeTo <$> mbTo
+
+      let mbIssuedToId = case mbInvoiceType of
+            Just FinanceInvoice.Ride -> Nothing
+            _ -> mbReferenceId
+          mbSupplierId = case mbInvoiceType of
+            Just FinanceInvoice.Ride -> mbReferenceId
+            _ -> Nothing
+
+      invoices <-
+        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+          merchantOpCity.id.getId
+          fromTime
+          toTime
+          mbInvoiceType
+          Nothing
+          mbIssuedToId
+          mbSupplierId
+          (mbLimit <|> Just 10)
+          (mbOffset <|> Just 0)
+
+      when (null invoices) $
+        throwError $ InvalidRequest "No invoices found for the given criteria"
+
+      transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+      let locale = countryToLocale merchantOpCity.country
+          tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
+          cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl)}
+
+      pdfDatas <- forM invoices $ \inv -> do
+        let items = parseLineItems inv.lineItems
+        taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
+        let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
+        (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+          Just orderId -> do
+            txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+            let mbTxn = Kernel.Prelude.listToMaybe txns
+            pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+          Nothing -> pure (Nothing, Nothing, Nothing)
+        pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+
+      let lastInv = Kernel.Prelude.last invoices
+          html = case pdfDatas of
+            [single] -> renderInvoiceHtml cfg single
+            batch -> renderBatchInvoiceHtml cfg batch
+
+      pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
+
+      pure $
+        API.FinanceInvoicePdfResp
+          { pdfBase64 = pdfBase64,
+            invoiceNumber = lastInv.invoiceNumber
+          }
+
+    countryToLocale Context.Finland = FI
+    countryToLocale Context.Netherlands = NL
+    countryToLocale _ = EN
+

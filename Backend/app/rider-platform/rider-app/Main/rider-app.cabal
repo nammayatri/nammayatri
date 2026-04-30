@@ -57,6 +57,7 @@ library
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
       API.Internal.EKDLiveCallFeedback
+      API.Internal.FinanceInvoice
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
@@ -219,6 +220,7 @@ library
       Domain.Action.Internal.Auth
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
+      Domain.Action.Internal.FinanceInvoice
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.GetPickupInstructions
@@ -262,6 +264,7 @@ library
       Domain.Action.UI.FavouriteDriver
       Domain.Action.UI.Feedback
       Domain.Action.UI.FeedbackForm
+      Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FollowRide
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
@@ -813,6 +816,7 @@ library
       API.Action.UI.EditLocation
       API.Action.UI.EstimateBP
       API.Action.UI.FavouriteDriver
+      API.Action.UI.FinanceInvoice
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
       API.Action.UI.Insurance
@@ -904,6 +908,7 @@ library
       API.Types.UI.EditLocation
       API.Types.UI.EstimateBP
       API.Types.UI.FavouriteDriver
+      API.Types.UI.FinanceInvoice
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
       API.Types.UI.Insurance

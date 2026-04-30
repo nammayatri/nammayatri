@@ -71,6 +71,10 @@ RiderConfig:
     RiderInvoiceConfig:
       derive: "Eq, Read"
       ledgerEmitEnabled: Bool
+      logoUrl: Maybe Text
+      supplierName: Maybe Text
+      supplierAddress: Maybe Text
+      supplierVatNumber: Maybe Text
 
   tableName: rider_config
 
