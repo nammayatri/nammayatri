@@ -81,6 +81,7 @@ library
       API.Internal.ViolationDetection
       API.Types.UI.TicketKapture
       API.UI
+      API.UI.Aarokya
       API.UI.Call
       API.UI.CallEvent
       API.UI.CancellationReason
@@ -245,6 +246,7 @@ library
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
       Domain.Action.Internal.ViolationDetection
+      Domain.Action.UI.Aarokya
       Domain.Action.UI.Cac
       Domain.Action.UI.Call
       Domain.Action.UI.CallEvent
@@ -862,6 +864,7 @@ library
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
       Tools.Notifications
       Tools.OpenAPIInstances
+      Tools.PartnerSdk
       Tools.Payment
       Tools.PaymentNudge
       Tools.Payout
