@@ -118,10 +118,10 @@ export const TopBarActions: React.FC = () => {
   };
 
   const syncBtnLabel = syncRunning
-    ? '📊 Check Status'
-    : syncStatus === 'done' ? '✓ Synced'
-      : syncStatus === 'error' ? '✗ Error'
-        : '↻ Sync Data';
+    ? 'Check Status'
+    : syncStatus === 'done' ? 'Synced'
+      : syncStatus === 'error' ? 'Error'
+        : 'Sync Data';
 
   const elapsed = statusData?.started_at
     ? Math.floor(((statusData.finished_at ?? Date.now() / 1000) - statusData.started_at))
@@ -135,7 +135,7 @@ export const TopBarActions: React.FC = () => {
         disabled={flushState === 'flushing'}
         title="Flush all Redis keys"
       >
-        {flushState === 'flushing' ? 'Flushing…' : flushState === 'done' ? '✓ Flushed' : flushState === 'error' ? '✗ Error' : '⚡ Flush Redis'}
+        {flushState === 'flushing' ? 'Flushing…' : flushState === 'done' ? 'Flushed' : flushState === 'error' ? 'Error' : 'Flush Redis'}
       </button>
       {syncEnvs.length > 0 && (
         <>

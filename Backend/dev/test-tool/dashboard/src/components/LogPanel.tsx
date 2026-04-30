@@ -45,12 +45,33 @@ function countMatches(text: string, needle?: string): number {
   return count;
 }
 
+function HeaderTable({ headers, highlight }: { headers: Record<string, string>; highlight?: string }) {
+  const keys = Object.keys(headers);
+  if (keys.length === 0) return <div className="log-detail-empty">(none)</div>;
+  return (
+    <table className="log-detail-headers">
+      <tbody>
+        {keys.map((k) => (
+          <tr key={k}>
+            <td className="log-header-key">{highlightInline(k, highlight)}</td>
+            <td className="log-header-val">{highlightInline(headers[k], highlight)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string }) {
   const [expanded, setExpanded] = useState(false);
+  const [showReqHeaders, setShowReqHeaders] = useState(false);
+  const [showRespHeaders, setShowRespHeaders] = useState(false);
+  const [localFilter, setLocalFilter] = useState('');
   const hasDetails = entry.request || entry.response;
 
-  // Auto-expand whenever the active search matches something inside this
-  // entry's request / response / service logs — saves a click.
+  // Per-request filter overrides the global search highlight for body/header rendering.
+  const effective = localFilter || highlight || '';
+
   useEffect(() => {
     if (!highlight) return;
     const q = highlight.toLowerCase();
@@ -58,9 +79,19 @@ function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string
       (entry.request?.url ?? '').toLowerCase().includes(q) ||
       JSON.stringify(entry.request?.body ?? '').toLowerCase().includes(q) ||
       JSON.stringify(entry.response?.body ?? '').toLowerCase().includes(q) ||
+      JSON.stringify(entry.request?.headers ?? '').toLowerCase().includes(q) ||
+      JSON.stringify(entry.response?.headers ?? '').toLowerCase().includes(q) ||
       (entry.serviceLogs && Object.values(entry.serviceLogs).some((l) => l.toLowerCase().includes(q)));
     if (matchesInside) setExpanded(true);
   }, [highlight, entry]);
+
+  const filterBody = (body: any): string => {
+    const s = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
+    if (!effective) return s;
+    const q = effective.toLowerCase();
+    const lines = s.split('\n').filter((l) => l.toLowerCase().includes(q));
+    return lines.length ? lines.join('\n') : s;
+  };
 
   return (
     <div className="log-entry">
@@ -71,13 +102,39 @@ function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string
       </div>
       {expanded && (
         <div className="log-details">
+          {hasDetails && (
+            <div className="log-detail-toolbar" onClick={(e) => e.stopPropagation()}>
+              <input
+                className="log-detail-filter"
+                type="text"
+                placeholder={highlight ? `Filter (override global: "${highlight}")` : 'Filter this request...'}
+                value={localFilter}
+                onChange={(e) => setLocalFilter(e.target.value)}
+              />
+              {localFilter && (
+                <button className="log-detail-filter-clear" onClick={() => setLocalFilter('')} title="Clear filter">{'\u2715'}</button>
+              )}
+            </div>
+          )}
           {entry.request && (
             <div className="log-detail-section">
               <span className="log-detail-label">Request</span>
               <span className="log-detail-method">{entry.request.method}</span>
-              <span className="log-detail-url">{highlightInline(entry.request.url, highlight)}</span>
-              {entry.request.body && (
-                <pre className="log-detail-body">{highlightInline(JSON.stringify(entry.request.body, null, 2), highlight)}</pre>
+              <span className="log-detail-url">{highlightInline(entry.request.url, effective)}</span>
+              {entry.request.headers && Object.keys(entry.request.headers).length > 0 && (
+                <button
+                  className="log-detail-toggle"
+                  onClick={(e) => { e.stopPropagation(); setShowReqHeaders((v) => !v); }}
+                  title="Toggle request headers"
+                >
+                  {showReqHeaders ? '\u25BE' : '\u25B8'} Headers ({Object.keys(entry.request.headers).length})
+                </button>
+              )}
+              {showReqHeaders && entry.request.headers && (
+                <HeaderTable headers={entry.request.headers} highlight={effective} />
+              )}
+              {entry.request.body !== undefined && entry.request.body !== null && entry.request.body !== '' && (
+                <pre className="log-detail-body">{highlightInline(filterBody(entry.request.body), effective)}</pre>
               )}
             </div>
           )}
@@ -87,13 +144,25 @@ function LogEntryRow({ entry, highlight }: { entry: LogEntry; highlight?: string
               <span className={`log-detail-status ${entry.response.status >= 400 ? 'status-error' : 'status-ok'}`}>
                 {entry.response.status}
               </span>
-              {entry.response.body && (
-                <pre className="log-detail-body">{highlightInline(JSON.stringify(entry.response.body, null, 2), highlight)}</pre>
+              {entry.response.headers && Object.keys(entry.response.headers).length > 0 && (
+                <button
+                  className="log-detail-toggle"
+                  onClick={(e) => { e.stopPropagation(); setShowRespHeaders((v) => !v); }}
+                  title="Toggle response headers"
+                >
+                  {showRespHeaders ? '\u25BE' : '\u25B8'} Headers ({Object.keys(entry.response.headers).length})
+                </button>
+              )}
+              {showRespHeaders && entry.response.headers && (
+                <HeaderTable headers={entry.response.headers} highlight={effective} />
+              )}
+              {entry.response.body !== undefined && entry.response.body !== null && entry.response.body !== '' && (
+                <pre className="log-detail-body">{highlightInline(filterBody(entry.response.body), effective)}</pre>
               )}
             </div>
           )}
           {entry.serviceLogs && Object.keys(entry.serviceLogs).length > 0 && (
-            <ServiceLogsSection logs={entry.serviceLogs} globalHighlight={highlight} />
+            <ServiceLogsSection logs={entry.serviceLogs} globalHighlight={effective} />
           )}
         </div>
       )}
@@ -174,6 +243,8 @@ export const LogPanel: React.FC<Props> = ({ logs, onClear }) => {
         e.request?.method?.toLowerCase().includes(q) ||
         JSON.stringify(e.request?.body || '').toLowerCase().includes(q) ||
         JSON.stringify(e.response?.body || '').toLowerCase().includes(q) ||
+        JSON.stringify(e.request?.headers || '').toLowerCase().includes(q) ||
+        JSON.stringify(e.response?.headers || '').toLowerCase().includes(q) ||
         (e.serviceLogs && Object.values(e.serviceLogs).some((l) => l.toLowerCase().includes(q)))
     );
   }, [logs, search]);

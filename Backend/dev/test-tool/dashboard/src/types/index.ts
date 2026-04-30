@@ -58,8 +58,8 @@ export interface LogEntry {
   time: string;
   level: 'info' | 'success' | 'error' | 'warn' | 'req';
   message: string;
-  request?: { method: string; url: string; body?: any };
-  response?: { status: number; body?: any };
+  request?: { method: string; url: string; body?: any; headers?: Record<string, string> };
+  response?: { status: number; body?: any; headers?: Record<string, string> };
   /** Per-service log deltas for this request */
   serviceLogs?: Record<string, string>;
 }

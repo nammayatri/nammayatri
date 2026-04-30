@@ -275,8 +275,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length} assertions]`
         : '';
       onLog(logLevel, `${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms, ${result.status})${assertSummary}`, {
-        request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody },
-        response: { status: result.status, body: result.data },
+        request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
+        response: { status: result.status, body: result.data, headers: result.responseHeaders },
         serviceLogs: result.serviceLogs,
       });
 

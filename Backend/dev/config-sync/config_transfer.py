@@ -666,16 +666,33 @@ def push_patch_zip_to_s3(local_dir: Path, direction: str, bucket: str, prefix: s
         return
 
     key = f"{prefix.rstrip('/')}/{direction}.zip"
+    vpn_hint = (
+        "\n  → The config-sync bucket is behind the corp network. "
+        "Connect to the VPN and try again."
+    )
     with tempfile.TemporaryDirectory() as tmp:
         zip_path = Path(tmp) / f"{direction}.zip"
         file_count = _zip_dir(local_dir, zip_path)
         size_mb = zip_path.stat().st_size / (1024 * 1024)
-        s3_client().put_object(
-            Bucket=bucket,
-            Key=key,
-            Body=zip_path.read_bytes(),
-            ContentType="application/zip",
-        )
+        try:
+            s3_client().put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=zip_path.read_bytes(),
+                ContentType="application/zip",
+            )
+        except Exception as e:
+            # boto3 surfaces ConnectionError / EndpointConnectionError when the
+            # VPN is off; AccessDenied / 403 also typically means VPN/policy.
+            name = type(e).__name__
+            msg = str(e)
+            if any(s in msg for s in ("Could not connect", "EndpointConnection",
+                                      "Name or service not known", "AccessDenied",
+                                      "403", "Forbidden", "timed out")) \
+               or name in ("EndpointConnectionError", "ConnectionError",
+                           "ConnectTimeoutError", "ReadTimeoutError"):
+                sys.exit(f"S3 push to s3://{bucket}/{key} failed: {name}: {msg}{vpn_hint}")
+            raise
     print(f"  [s3] Pushed {file_count} files ({size_mb:.2f} MB zip) to s3://{bucket}/{key}")
 
 
@@ -688,13 +705,21 @@ def fetch_patch_zip_from_cloudfront(direction: str, cloudfront_url: str, dest_di
 
     zip_url = f"{cloudfront_url.rstrip('/')}/{direction}.zip"
     print(f"  [fetch] {zip_url}")
+    vpn_hint = (
+        "\n  → The config-sync bucket is behind the corp network. "
+        "Connect to the VPN and try again."
+    )
     try:
         with urllib.request.urlopen(zip_url, timeout=120) as resp:
             zip_bytes = resp.read()
     except urllib.error.HTTPError as e:
-        sys.exit(f"Zip not found at {zip_url}: HTTP {e.code}")
+        # 403 / 404 typically means the object isn't there OR the VPN is denying.
+        sys.exit(f"Zip not found at {zip_url}: HTTP {e.code}{vpn_hint}")
     except urllib.error.URLError as e:
-        sys.exit(f"Cannot reach {zip_url}: {e.reason}")
+        # DNS / TCP / TLS failures almost always = VPN off.
+        sys.exit(f"Cannot reach {zip_url}: {e.reason}{vpn_hint}")
+    except (TimeoutError, OSError) as e:
+        sys.exit(f"Cannot reach {zip_url}: {e}{vpn_hint}")
 
     size_mb = len(zip_bytes) / (1024 * 1024)
 

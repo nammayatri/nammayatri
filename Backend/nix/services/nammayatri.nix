@@ -38,6 +38,67 @@ in
       inherit (ny) inputs self' inputs';
       cfg = config.services.nammayatri;
 
+      # Metabase plugin JARs — deterministic, store-backed.
+      #
+      # Metabase OSS bundles the Postgres, MySQL, SQLite, and H2 drivers, which is
+      # all atlas_dev needs. Without any extras, this evaluates to an empty
+      # directory and Metabase falls back to its built-ins. To add e.g. Snowflake
+      # later, append an entry below — `nix-prefetch-url <url>` gives the sha256:
+      #
+      #   { name = "snowflake"; version = "1.0.0"; url = "https://github.com/.../snowflake.metabase-driver.jar"; sha256 = "..."; }
+      #
+      # Pinned URLs + hashes mean no first-run downloads and no cache leakage
+      # into the repo (which is what `Backend/plugins/` was before).
+      metabaseDrivers = [
+        # (none — Postgres is built-in)
+      ];
+      metabasePluginsDir = pkgs.linkFarm "metabase-plugins" (map
+        (d: {
+          name = "${d.name}.metabase-driver.jar";
+          path = pkgs.fetchurl { inherit (d) url sha256; };
+        })
+        metabaseDrivers);
+
+      # Metabase declarative config — applied on every startup via MB_CONFIG_FILE_PATH.
+      # Bootstraps the admin user and registers atlas_dev as a Postgres data source so
+      # the UI is usable on first launch without manual setup wizard clicks.
+      # Docs: https://www.metabase.com/docs/latest/configuring-metabase/config-file
+      metabaseConfigFile = pkgs.writeText "metabase-config.yml" ''
+        version: 1
+        config:
+          users:
+            - first_name: Admin
+              last_name: Dev
+              password: metabase123
+              email: admin@nammayatri.local
+          databases:
+            - name: atlas_dev
+              engine: postgres
+              details:
+                host: localhost
+                port: 5434
+                user: atlas_superuser
+                password: ""
+                dbname: atlas_dev
+                ssl: false
+      '';
+
+      # Skip the /setup wizard entirely. config_file (above) creates the admin
+      # user, but doesn't mark the instance "set up", so Metabase still shows
+      # the wizard on a fresh metabase.db. MB_USER_DEFAULTS fills + submits
+      # the setup form programmatically on first launch.
+      # Docs: https://www.metabase.com/docs/latest/configuring-metabase/environment-variables#mb_user_defaults
+      metabaseUserDefaults = builtins.toJSON {
+        token = "ny-local-dev-setup-token";
+        user = {
+          first_name = "Admin";
+          last_name = "Dev";
+          email = "admin@nammayatri.local";
+          password = "metabase123";
+          site_name = "Nammayatri";
+        };
+      };
+
       common = { name, ... }: {
         working_dir = "Backend";
         namespace = "ny";
@@ -47,20 +108,20 @@ in
       # The cabal executables we want to run as part of the nammayatri service
       # group.
       cabalExecutables = [
-        "driver-offer-allocator-exe"
+        "rider-app-exe"
         "dynamic-offer-driver-app-exe"
-        "dynamic-offer-driver-drainer-exe"
+        "rider-dashboard-exe"
+        "provider-dashboard-exe"
         "rider-app-drainer-exe"
+        "dynamic-offer-driver-drainer-exe"
+        "driver-offer-allocator-exe"
         "rider-app-scheduler-exe"
         "image-api-helper-exe"
         "mock-fcm-exe"
         "mock-google-exe"
         "mock-idfy-exe"
         "mock-sms-exe"
-        "provider-dashboard-exe"
         "producer-exe"
-        "rider-app-exe"
-        "rider-dashboard-exe"
         "search-result-aggregator-exe"
         "kafka-consumers-exe"
         "unified-dashboard-exe"
@@ -76,54 +137,55 @@ in
           command = "set -x; pwd; ${ny.config.haskellProjects.default.outputs.apps.${name}.program}";
         };
 
-      # Primary services that must be healthy before other services start
-      primaryExecutables = [
+      # Run every cabal executable strictly sequentially. Each one waits for
+      # the previous entry in `cabalExecutables` so only one process at a
+      # time is in its early-startup window. This avoids the
+      # `stripConcurrentlyForLocal` race in mobility-core where multiple
+      # services concurrently `removePathForcibly` the shared
+      # `/tmp/.../ny-migrations` staging dir and one fails with ENOTEMPTY.
+      #
+      # Chain rules:
+      #   - First exe in the list depends only on init + mock-registry.
+      #   - Every subsequent exe adds `<prev>.<cond>` where:
+      #       * cond = `process_healthy` if `<prev>` has a readiness probe
+      #         (the BAP/BPP servers — rider-app-exe, dynamic-offer-driver-app-exe).
+      #         These have to be fully up before the next service starts so
+      #         downstream services hit a real, working API.
+      #       * cond = `process_started` otherwise (services without probes).
+      #         `process_started` fires post-fork, by which time the previous
+      #         service is already past its migration window.
+      probeBackedExecutables = [
         "rider-app-exe"
         "dynamic-offer-driver-app-exe"
       ];
-
-      secondaryExecutables = builtins.filter
-        (name: !builtins.elem name primaryExecutables)
-        cabalExecutables;
+      prevChainCondition = prev:
+        if builtins.elem prev probeBackedExecutables
+        then "process_healthy"
+        else "process_started";
 
       haskellProcesses.processes =
-        # Primary services: only depend on nammayatri-init
-        lib.listToAttrs
-          (builtins.map
-            (name: {
-              inherit name;
-              value = {
-                imports = [
-                  common
-                  (haskellProcessFor name)
-                ];
-                depends_on = {
-                  "nammayatri-init".condition = "process_completed_successfully";
-                  "mock-registry".condition = "process_healthy";
-                };
-                shutdown.signal = 9;
-              };
-            })
-            primaryExecutables)
-        //
-        # Secondary services: depend on nammayatri-init + primary services healthy
-        lib.listToAttrs (builtins.map
-          (name: {
+        lib.listToAttrs (lib.imap0
+          (idx: name: {
             inherit name;
             value = {
               imports = [
                 common
                 (haskellProcessFor name)
               ];
-              depends_on = {
-                "nammayatri-init".condition = "process_completed_successfully";
-                "rider-app-exe".condition = "process_healthy";
-                "dynamic-offer-driver-app-exe".condition = "process_healthy";
-              };
+              depends_on =
+                {
+                  "nammayatri-init".condition = "process_completed_successfully";
+                  "mock-registry".condition = "process_healthy";
+                } // (
+                  if idx == 0 then { }
+                  else
+                    let prev = builtins.elemAt cabalExecutables (idx - 1); in
+                    { ${prev}.condition = prevChainCondition prev; }
+                );
               shutdown.signal = 9;
             };
           })
-          secondaryExecutables);
+          cabalExecutables);
 
     in
     {
@@ -224,6 +286,7 @@ in
           mock-registry = {
             imports = [ common ];
             command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+            depends_on."nammayatri-init".condition = "process_completed_successfully";
             readiness_probe = {
               http_get = {
                 host = "127.0.0.1";
@@ -233,8 +296,8 @@ in
             };
             availability = {
               restart = "always";
-              backoff_seconds = 2;
-              max_restarts = 5;
+              backoff_seconds = 20;
+              max_restarts = 50;
             };
           };
           location-tracking-service = {
@@ -245,8 +308,8 @@ in
             };
             availability = {
               restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 5;
+              backoff_seconds = 20;
+              max_restarts = 50;
             };
           };
           osrm-server = {
@@ -269,8 +332,8 @@ in
             depends_on."nammayatri-init".condition = "process_completed_successfully";
             availability = {
               restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 3;
+              backoff_seconds = 20;
+              max_restarts = 30;
             };
           };
           test-context-api = {
@@ -297,8 +360,8 @@ in
             };
             availability = {
               restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 3;
+              backoff_seconds = 20;
+              max_restarts = 30;
             };
           };
           test-dashboard = {
@@ -317,23 +380,151 @@ in
             depends_on."rider-app-exe".condition = "process_healthy";
             availability = {
               restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 3;
+              backoff_seconds = 20;
+              max_restarts = 30;
+            };
+          };
+          metabase = {
+            imports = [ common ];
+            command = pkgs.writeShellApplication {
+              name = "metabase";
+              runtimeInputs = [ pkgs.metabase ];
+              text = ''
+                set -x
+                # Working_dir for this service is `Backend/` (set in `common`).
+                # `../data/metabase` resolves to <repo-root>/data/metabase,
+                # the same convention postgres/kafka/passetto use.
+                MB_WORK="$(mkdir -p ../data/metabase && cd ../data/metabase && pwd)"
+                MB_PLUGINS="$MB_WORK/plugins"
+                mkdir -p "$MB_PLUGINS"
+                # Seed the writable plugins dir from our pinned nix-store
+                # linkFarm. Metabase needs MB_PLUGINS_DIR to be writable
+                # because it extracts its built-in drivers there on first
+                # launch; the read-only store path alone won't work.
+                # `cp -fL` deref's the linkFarm symlinks so the JARs land
+                # as real files. With an empty driver list, the loop is
+                # a no-op and only built-in drivers are used.
+                for jar in ${metabasePluginsDir}/*.jar; do
+                  [ -e "$jar" ] || break
+                  cp -fL "$jar" "$MB_PLUGINS/"
+                done
+                export MB_DB_FILE="$MB_WORK/metabase.db"
+                export MB_JETTY_HOST=0.0.0.0
+                export MB_JETTY_PORT=3001
+                export MB_CONFIG_FILE_PATH=${metabaseConfigFile}
+                # Auto-complete the /setup wizard on first launch — see comment
+                # next to `metabaseUserDefaults` in nammayatri.nix.
+                export MB_USER_DEFAULTS=${lib.escapeShellArg metabaseUserDefaults}
+                export MB_PLUGINS_DIR="$MB_PLUGINS"
+                # Pin CWD to the data dir so any stray writes (e.g. the H2
+                # sample DB) stay there, not in the repo's Backend/ dir.
+                cd "$MB_WORK"
+                exec metabase
+              '';
+            };
+            namespace = lib.mkForce "tools";
+            depends_on."db-primary".condition = "process_healthy";
+            readiness_probe = {
+              # Metabase exposes /api/health as soon as the DB is migrated
+              # and Jetty is bound. metabase-setup waits on this.
+              http_get = {
+                host = "127.0.0.1";
+                port = 3001;
+                path = "/api/health";
+              };
+              initial_delay_seconds = 10;
+              period_seconds = 5;
+              failure_threshold = 60;
+              timeout_seconds = 3;
+            };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 50;
+              max_restarts = 30;
             };
           };
 
-          # ── Dev tools: DB explorer + Redis explorer ──
-          pgweb = {
+          metabase-setup = {
             imports = [ common ];
-            command = "${pkgs.pgweb}/bin/pgweb --bind 0.0.0.0 --listen 8432 --host localhost --port 5434 --user atlas_superuser --db atlas_dev --ssl disable --skip-open";
+            command = pkgs.writeShellApplication {
+              name = "metabase-setup";
+              runtimeInputs = [ pkgs.curl pkgs.jq ];
+              text = ''
+                set -uo pipefail
+                MB="http://127.0.0.1:3001"
+                EMAIL="admin@nammayatri.local"
+                PASS="metabase123"
+
+                # 1. Try to log in. Success => setup-token clears automatically.
+                login_body=$(jq -n --arg u "$EMAIL" --arg p "$PASS" \
+                  '{username: $u, password: $p}')
+                login_code=$(curl -sS -o /tmp/mb-login.json -w "%{http_code}" \
+                  -X POST "$MB/api/session" \
+                  -H 'Content-Type: application/json' \
+                  -d "$login_body" || echo 000)
+                if [ "$login_code" = "200" ]; then
+                  echo "metabase: admin login OK — setup token cleared."
+                  exit 0
+                fi
+                echo "metabase: login returned $login_code, falling back to /api/setup"
+
+                # 2. Fall back to /api/setup with the current setup-token.
+                token=$(curl -fsS "$MB/api/session/properties" \
+                  | jq -r '."setup-token" // empty')
+                if [ -z "$token" ]; then
+                  # No token => already set up by something else; don't fail.
+                  echo "metabase: no setup-token — assuming already set up."
+                  exit 0
+                fi
+                payload=$(jq -n --arg token "$token" --arg email "$EMAIL" --arg pass "$PASS" '{
+                  token: $token,
+                  user: {
+                    first_name: "Admin",
+                    last_name: "Dev",
+                    email: $email,
+                    password: $pass,
+                    site_name: "Nammayatri"
+                  },
+                  prefs: {
+                    site_name: "Nammayatri",
+                    site_locale: "en",
+                    allow_tracking: false
+                  },
+                  database: {
+                    engine: "postgres",
+                    name: "atlas_dev",
+                    details: {
+                      host: "localhost",
+                      port: 5434,
+                      user: "atlas_superuser",
+                      password: "",
+                      dbname: "atlas_dev",
+                      ssl: false
+                    }
+                  }
+                }')
+                setup_code=$(curl -sS -o /tmp/mb-setup.json -w "%{http_code}" \
+                  -X POST "$MB/api/setup" \
+                  -H 'Content-Type: application/json' \
+                  -d "$payload" || echo 000)
+                if [ "$setup_code" = "200" ]; then
+                  echo "metabase: setup complete via /api/setup."
+                  exit 0
+                fi
+                echo "metabase: /api/setup returned $setup_code (response: $(cat /tmp/mb-setup.json 2>/dev/null || echo '?'))"
+                # Best-effort: exit 0 so the dev stack stays green even if setup
+                # is in some odd partial state. Worst case: visit /setup once.
+                exit 0
+              '';
+            };
             namespace = lib.mkForce "tools";
-            depends_on."db-primary".condition = "process_healthy";
+            depends_on."metabase".condition = "process_healthy";
             availability = {
-              restart = "on_failure";
-              backoff_seconds = 2;
-              max_restarts = 3;
+              restart = "no";
+              max_restarts = 5;
             };
           };
+
           redis-commander = {
             imports = [ common ];
             command = pkgs.writeShellApplication {
@@ -341,7 +532,9 @@ in
               runtimeInputs = [ pkgs.nodejs ];
               text = ''
                 set -x  # debug output
-                RC_WORK="$HOME/.cache/redis-commander-ny"
+                # Same convention as metabase: persist under <repo-root>/data/
+                # (gitignored) instead of ~/.cache. working_dir is `Backend/`.
+                RC_WORK="$(mkdir -p ../data/redis-commander && cd ../data/redis-commander && pwd)"
                 RC_PKG="$RC_WORK/node_modules/redis-commander"
 
                 # Install only if not already present
@@ -379,8 +572,8 @@ in
             };
             availability = {
               restart = "on_failure";
-              backoff_seconds = 5;
-              max_restarts = 5;
+              backoff_seconds = 50;
+              max_restarts = 50;
             };
           };
 
@@ -392,10 +585,21 @@ in
                 path = "/ui";
               };
             };
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8016;
+                path = "/ui";
+              };
+              initial_delay_seconds = 60;
+              period_seconds = 30;
+              failure_threshold = 5;
+              timeout_seconds = 5;
+            };
             availability = {
               restart = "always";
-              backoff_seconds = 2;
-              max_restarts = 5;
+              backoff_seconds = 20;
+              max_restarts = 50;
             };
           };
 
@@ -407,10 +611,21 @@ in
                 path = "/v2";
               };
             };
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8013;
+                path = "/v2";
+              };
+              initial_delay_seconds = 60;
+              period_seconds = 30;
+              failure_threshold = 5;
+              timeout_seconds = 5;
+            };
             availability = {
               restart = "always";
-              backoff_seconds = 2;
-              max_restarts = 5;
+              backoff_seconds = 20;
+              max_restarts = 50;
             };
           };
 
@@ -429,7 +644,7 @@ in
             availability = {
               restart = "on_failure";
               backoff_seconds = 30;
-              max_restarts = 5;
+              max_restarts = 50;
             };
           };
 
@@ -448,7 +663,7 @@ in
             availability = {
               restart = "on_failure";
               backoff_seconds = 30;
-              max_restarts = 5;
+              max_restarts = 50;
             };
           };
         };

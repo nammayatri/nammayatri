@@ -4,7 +4,29 @@
 _:
 {
   debug = true;
-  perSystem = { config, self', pkgs, lib, ... }: {
+  perSystem = { config, self', pkgs, lib, ... }:
+    let
+      # Shell snippet that SIGKILLs any process holding one of the service ports.
+      # Shared between the standalone `kill-svc-ports` script and the
+      # pre-flight inside `run-mobility-stack-dev`/`run-mobility-stack-nix`.
+      killSvcPortsScript =
+        let ports = import ./services/ports.nix; in
+        lib.concatMapStrings
+          (port: ''
+            set +e
+            pid=$(${pkgs.lsof}/bin/lsof -ti:${builtins.toString port})
+            set -e
+            if [ -n "$pid" ]; then
+              echo "Sending SIGKILL to processes running on ${builtins.toString port}:"
+              echo "$pid"
+              echo "$pid" | ${pkgs.findutils}/bin/xargs kill -9
+            else
+              echo "No processes found on port ${builtins.toString port}"
+            fi
+          '')
+          (lib.attrValues ports);
+    in
+    {
     mission-control.scripts = {
       ghcid = {
         category = "Backend";
@@ -198,6 +220,10 @@ _:
         '';
         exec = ''
           export DEV=1
+          # Free up service ports first so a stale process from a prior run
+          # doesn't hold the port and crash a fresh service start.
+          echo "── Pre-flight: freeing service ports ──"
+          ${killSvcPortsScript}
           # Bump soft stack to the hard max. `nix run` spawns a fresh shell
           # that doesn't inherit the devshell's shellHook, so set it here too.
           # Required by process-compose / some Haskell exes that want >= 60 MB stack.
@@ -215,27 +241,7 @@ _:
         description = ''
           Free up ports by killing all the external-services.
         '';
-        exec =
-          let
-            ports = import ./services/ports.nix;
-          in
-          lib.concatMapStrings
-            (port: ''
-              # Get the process ID using lsof for the specified port
-              set +e
-              pid=$(${pkgs.lsof}/bin/lsof -ti:${builtins.toString port})
-              set -e
-
-              # Check if lsof returned any process ID
-              if [ -n "$pid" ]; then
-                echo "Sending SIGKILL to processes running on ${builtins.toString port}:"
-                echo "$pid"
-                echo "$pid" | ${pkgs.findutils}/bin/xargs kill -9
-              else
-                echo "No processes found on port ${builtins.toString port}"
-              fi
-            '')
-            (lib.attrValues ports);
+        exec = killSvcPortsScript;
       };
 
       backend-new-service = {

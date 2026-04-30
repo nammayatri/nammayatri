@@ -3,6 +3,7 @@ import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
 import { FinanceViewer } from './components/FinanceViewer';
+import { SeedDataPanel } from './components/SeedDataPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import axios from 'axios';
@@ -541,7 +542,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance' | 'seed'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -966,14 +967,17 @@ function App() {
           <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
             Custom Flows
           </button>
+          <button className={`mode-tab ${appMode === 'seed' ? 'active' : ''}`} onClick={() => setAppMode('seed')}>
+            Seed Data
+          </button>
           <button className={`mode-tab ${appMode === 'finance' ? 'active' : ''}`} onClick={() => setAppMode('finance')}>
             Finance Visualization
           </button>
           <span className="mode-tabs-spacer" />
-          <a className="tool-link" href="http://localhost:8432" target="_blank" rel="noopener noreferrer" title="PostgreSQL Web UI — query all databases">
+          <a className="tool-link" href="http://localhost:3001" target="_blank" rel="noopener noreferrer" title="Metabase — BI / DB explorer">
             DB Explorer
           </a>
-          <a className="tool-link" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="RedisInsight — standalone + cluster">
+          <a className="tool-link" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="redis-commander — standalone + cluster">
             Redis Explorer
           </a>
           <TopBarActions />
@@ -984,6 +988,8 @@ function App() {
               <CollectionRunner onLog={log} />
             ) : appMode === 'finance' ? (
               <FinanceViewer />
+            ) : appMode === 'seed' ? (
+              <SeedDataPanel />
             ) : (
             <>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}

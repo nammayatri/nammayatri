@@ -182,6 +182,79 @@
   word-break: break-all;
 }
 
+/* Per-request filter toolbar (inside an expanded log entry) */
+.log-detail-toolbar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #21262d;
+  background: #0a0e13;
+}
+.log-detail-filter {
+  flex: 1;
+  background: #0d1117;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+}
+.log-detail-filter:focus { outline: none; border-color: #58a6ff; }
+.log-detail-filter-clear {
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.log-detail-filter-clear:hover { color: #f85149; border-color: #f85149; }
+
+/* Headers toggle button + table */
+.log-detail-toggle {
+  margin-left: 8px;
+  background: transparent;
+  color: #8b949e;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.log-detail-toggle:hover { color: #58a6ff; border-color: #58a6ff; }
+
+.log-detail-headers {
+  margin: 6px 0 0 0;
+  border-collapse: collapse;
+  background: #0d1117;
+  border-radius: 4px;
+  font-size: 10px;
+  width: 100%;
+  table-layout: fixed;
+}
+.log-detail-headers td {
+  padding: 3px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #161b22;
+  word-break: break-all;
+}
+.log-detail-headers tr:last-child td { border-bottom: none; }
+.log-header-key {
+  color: #8b949e;
+  font-weight: 600;
+  width: 30%;
+  white-space: nowrap;
+}
+.log-header-val { color: #c9d1d9; }
+.log-detail-empty {
+  margin: 6px 0 0 0;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #6e7681;
+  font-style: italic;
+}
+
 /* --- Resize handle --- */
 .log-resize-handle {
   width: 5px;

@@ -1,39 +1,41 @@
 /* Top-bar action controls — sit next to "DB Explorer" / "Redis Explorer" links */
 
+/* Match the neutral look of `.tool-link` (DB Explorer / Redis Explorer) */
 .tb-btn {
-  background: #161b22;
-  color: #c9d1d9;
+  background: transparent;
+  color: #8b949e;
   border: 1px solid #30363d;
-  padding: 5px 12px;
+  padding: 6px 12px;
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 12px;
-  margin-left: 8px;
-  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  font-size: 11px;
+  margin-left: 6px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  align-self: center;
 }
-.tb-btn:hover:not(:disabled) { background: #1f2630; color: #fff; border-color: #58a6ff; }
+.tb-btn:hover:not(:disabled) { color: #58a6ff; border-color: #58a6ff; background: #161b22; }
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.tb-flush { color: #e3b341; border-color: #e3b341; background: #2d1f0e; }
-.tb-flush:hover:not(:disabled) { background: #e3b341; color: #0d1117; border-color: #e3b341; }
-
-.tb-sync { color: #58a6ff; border-color: #58a6ff; background: #0c1a2c; }
-.tb-sync:hover:not(:disabled) { background: #58a6ff; color: #0d1117; border-color: #58a6ff; }
+/* Flush / Sync share the same neutral chrome as DB / Redis Explorer.
+   Status feedback (.tb-ok / .tb-err / .tb-running) still tints them. */
+.tb-flush, .tb-sync { /* inherit base .tb-btn */ }
 
 .tb-ok  { background: #1f3d2e !important; color: #56d364 !important; border-color: #56d364 !important; }
 .tb-err { background: #3d1f1f !important; color: #f85149 !important; border-color: #f85149 !important; }
 
 .tb-select {
-  background: #0d1117;
-  color: #c9d1d9;
+  background: transparent;
+  color: #8b949e;
   border: 1px solid #30363d;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-radius: 4px;
-  font-size: 12px;
-  margin-left: 8px;
+  font-size: 11px;
+  margin-left: 6px;
   cursor: pointer;
+  align-self: center;
 }
+.tb-select:hover:not(:disabled) { color: #58a6ff; border-color: #58a6ff; }
 .tb-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Pulsing border while a sync is in progress */

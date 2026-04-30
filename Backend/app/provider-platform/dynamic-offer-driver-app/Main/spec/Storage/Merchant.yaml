@@ -1606,6 +1606,7 @@ TransporterConfig:
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
+    allowedPaymentInstrumentForPayout: "text[]"
 
   default:
     mediaFileUrlPattern: |-

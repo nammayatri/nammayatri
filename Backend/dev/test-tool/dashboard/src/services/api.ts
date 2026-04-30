@@ -209,6 +209,10 @@ export interface PostmanStepResult extends ApiResult {
   resolvedUrl: string;
   /** Resolved body (with all {{var}} substituted) */
   resolvedBody?: any;
+  /** Resolved request headers (with all {{var}} substituted) */
+  resolvedHeaders?: Record<string, string>;
+  /** Response headers (lower-cased keys, as returned by axios) */
+  responseHeaders?: Record<string, string>;
 }
 
 /**
@@ -249,6 +253,7 @@ export async function callPostmanStep(
   let ok = false;
   let status = 0;
   let data: any = null;
+  let responseHeaders: Record<string, string> = {};
 
   try {
     let resp: AxiosResponse;
@@ -264,10 +269,12 @@ export async function callPostmanStep(
     }
     status = resp.status;
     data = resp.data;
+    responseHeaders = normalizeHeaders(resp.headers);
     ok = status >= 200 && status < 400;
   } catch (err: any) {
     status = err.response?.status ?? 0;
     data = err.response?.data ?? { error: err.message };
+    responseHeaders = normalizeHeaders(err.response?.headers);
   }
 
   const elapsed = Math.round(performance.now() - start);
@@ -292,9 +299,26 @@ export async function callPostmanStep(
     scriptError = result.error;
   }
 
-  // 9. Wait for async service activity (beckn callbacks, allocator, etc.) to flush logs, then stop capture
-  await new Promise(r => setTimeout(r, 1000));
+  // 9. Stop capture. The backend's stop_log_tails does adaptive settle waiting
+  //    (no new lines for `settle_ms`, capped at `max_wait_ms`) — that's where
+  //    the wait for async service activity (beckn callbacks, allocator) lives.
   const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
 
-  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body };
+  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+}
+
+function normalizeHeaders(h: any): Record<string, string> {
+  if (!h) return {};
+  const out: Record<string, string> = {};
+  // Axios v1 returns AxiosHeaders (with forEach). v0 returns a plain object.
+  const visit = (k: string, v: any) => {
+    if (v == null) return;
+    out[String(k).toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v);
+  };
+  if (typeof h.forEach === 'function') {
+    h.forEach((v: any, k: string) => visit(k, v));
+  } else {
+    Object.keys(h).forEach((k) => visit(k, (h as any)[k]));
+  }
+  return out;
 }
