@@ -13,3 +13,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN merchant_id character
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_udyam ADD COLUMN reject_reason text ;

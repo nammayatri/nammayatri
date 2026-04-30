@@ -85,6 +85,8 @@ data Document
 
 data CommonDriverOnboardingDocuments
 
+data DriverUdyam
+
 data TripTransaction
 
 data CoinsConfig

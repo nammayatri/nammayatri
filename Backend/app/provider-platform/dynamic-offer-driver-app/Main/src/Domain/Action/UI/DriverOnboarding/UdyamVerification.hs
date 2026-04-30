@@ -35,7 +35,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.DriverOnboarding (VerificationReqRecord)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -71,16 +71,17 @@ verifyUdyam (personId, merchantOpCityId) req = do
     Just False -> do
       udyamHash <- getDbHash req.uamNumber
       udyamInfoList <- DUQueryExtra.findAllByEncryptedUdyamNumber udyamHash
-      when (length udyamInfoList > 1) $ throwError UdyamAlreadyLinked
-      udyamPersonDetails <- PersonQuery.getDriversByIdIn (map (.driverId) udyamInfoList)
-      let getRoles = map (.role) udyamPersonDetails
-      when (person.role `elem` getRoles) $ throwError UdyamAlreadyLinked
+      let otherDriverIds = filter (/= person.id) (map (.driverId) udyamInfoList)
+      unless (Kernel.Prelude.null otherDriverIds) $ do
+        otherPersonDetails <- PersonQuery.getDriversByIdIn otherDriverIds
+        when (person.role `elem` map (.role) otherPersonDetails) $ throwError UdyamAlreadyLinked
     _ -> pure ()
-  documentVerificationConfig <-
-    CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.UDYAMCertificate Nothing
+  cfg <-
+    CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.UDYAMCertificate Nothing
       >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.UDYAMCertificate))
-        . listToMaybe
-  verifyUdyamFlow person merchantOpCityId documentVerificationConfig req.uamNumber req.imageId1
+  if cfg.doStrictVerifcation
+    then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1
+    else upsertManualUdyamRecord person req.uamNumber
   res <- case person.role of
     Person.DRIVER -> do
       fork "enabling driver if all the mandatory document is verified" $ do
@@ -92,8 +93,8 @@ verifyUdyam (personId, merchantOpCityId) req = do
     _ -> pure False
   pure res
 
-verifyUdyamFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> ODC.DocumentVerificationConfig -> Text -> Id Image.Image -> Flow ()
-verifyUdyamFlow person merchantOpCityId _documentVerificationConfig uamNumber imageId1 = do
+verifyUdyamFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Flow ()
+verifyUdyamFlow person merchantOpCityId uamNumber imageId1 = do
   now <- getCurrentTime
   encryptedUam <- encrypt uamNumber
   let imageExtractionValidation = DIdfy.Skipped
@@ -111,18 +112,20 @@ onVerifyUdyam verificationReq output serviceName = do
     VT.Idfy -> do
       person <- PersonQuery.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
       mDriverUdyam <- DUQuery.findByDriverId person.id
-      let verificationStatus = Documents.VALID
+      now <- getCurrentTime
       case mDriverUdyam of
         Just driverUdyam -> do
           let updated =
                 driverUdyam
-                  { DUdyam.verificationStatus = verificationStatus,
+                  { DUdyam.verificationStatus = Documents.VALID,
                     DUdyam.enterpriseName = output.enterpriseName,
-                    DUdyam.enterpriseType = output.enterpriseType
+                    DUdyam.enterpriseType = output.enterpriseType,
+                    DUdyam.rejectReason = Nothing,
+                    DUdyam.updatedAt = now
                   }
           DUQuery.updateByPrimaryKey updated
         Nothing -> do
-          udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType
+          udyamCardDetails <- buildDriverUdyamCard person verificationReq.documentNumber output.enterpriseName output.enterpriseType Documents.VALID
           DUQuery.create udyamCardDetails
       case person.role of
         role
@@ -132,8 +135,29 @@ onVerifyUdyam verificationReq output serviceName = do
     _ -> throwError $ InternalError ("Unknown Service provider webhook encountered in onVerifyUdyam. Name of provider : " <> show serviceName)
   pure Ack
 
-buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Flow DUdyam.DriverUdyam
-buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType = do
+upsertManualUdyamRecord :: Person.Person -> Text -> Flow ()
+upsertManualUdyamRecord person uamNumber = do
+  encryptedUam <- encrypt uamNumber
+  existing <- DUQuery.findByDriverId person.id
+  now <- getCurrentTime
+  case existing of
+    Just driverUdyam -> do
+      let updated =
+            driverUdyam
+              { DUdyam.udyamNumber = encryptedUam,
+                DUdyam.verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+                DUdyam.rejectReason = Nothing,
+                DUdyam.enterpriseName = Nothing,
+                DUdyam.enterpriseType = Nothing,
+                DUdyam.updatedAt = now
+              }
+      DUQuery.updateByPrimaryKey updated
+    Nothing -> do
+      udyamCardDetails <- buildDriverUdyamCard person encryptedUam Nothing Nothing Documents.MANUAL_VERIFICATION_REQUIRED
+      DUQuery.create udyamCardDetails
+
+buildDriverUdyamCard :: Person.Person -> EncryptedHashedField 'AsEncrypted Text -> Maybe Text -> Maybe Text -> Documents.VerificationStatus -> Flow DUdyam.DriverUdyam
+buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType verificationStatus = do
   now <- getCurrentTime
   uuid <- generateGUID
   return $
@@ -141,12 +165,13 @@ buildDriverUdyamCard person encryptedUdyamNumber enterpriseName enterpriseType =
       { driverId = person.id,
         id = Id uuid :: Id DUdyam.DriverUdyam,
         udyamNumber = encryptedUdyamNumber,
-        verificationStatus = Documents.VALID,
+        verificationStatus = verificationStatus,
         verifiedBy = Nothing,
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         enterpriseName = enterpriseName,
         enterpriseType = enterpriseType,
+        rejectReason = Nothing,
         createdAt = now,
         updatedAt = now
       }
