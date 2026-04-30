@@ -1026,7 +1026,7 @@ getNearby merchantShortId opCity driverId = do
           stalenessMinutes = fromMaybe 15 configs.nearbySearchStalenessMinutes
           geohashPrecision = configs.precisionOfGeohash
       -- Get driver's current location from LTS
-      driverLocs <- LF.driversLocation [cast driverId]
+      driverLocs <- LF.driversLocationByCloudType [cast driverId] driver.cloudType
       driverLatLong <- case driverLocs of
         (loc : _) -> pure $ KEMT.LatLong loc.lat loc.lon
         [] -> throwError $ InvalidRequest "Driver location not found"
