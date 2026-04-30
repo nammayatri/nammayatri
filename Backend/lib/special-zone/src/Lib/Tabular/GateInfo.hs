@@ -61,7 +61,6 @@ mkPersist
       maxRideSkipsBeforeQueueRemoval Int Maybe
       pickupZoneArrivalTimeoutInSec Int Maybe
       pickupRequestResponseTimeoutInSec Int Maybe
-      demandTtlInSec Int Maybe
       Primary id
       deriving Generic
     |]
