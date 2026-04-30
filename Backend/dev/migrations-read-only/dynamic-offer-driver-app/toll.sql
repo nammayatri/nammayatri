@@ -31,3 +31,14 @@ ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN currency TYPE character var
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.toll ADD COLUMN is_two_wheeler_allowed boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN currency TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN merchant_operating_city_id TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.toll ALTER COLUMN merchant_id TYPE text;

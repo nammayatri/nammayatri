@@ -1,38 +1,39 @@
 {-
  Copyright 2022-23, Juspay India Pvt Ltd
- This program is free software: you can Hedistribute it and/or modify it under the terms of the GNU Affero General Public License
+ This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
  as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.TollsDetector where
+module Toll.SharedLogic.TollsDetector where
 
 import Data.List (nubBy)
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
-import Domain.Types.Toll
 import qualified Kernel.Beam.Functions as B
+import qualified Kernel.External.Maps as Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
-import Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
+import Toll.Domain.Types.Toll
+import Toll.Storage.BeamFlow (BeamFlow)
+import Toll.Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
 
-tollStartGateTrackingKey :: Id DP.Driver -> Text
-tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId.getId
+
+tollStartGateTrackingKey :: Text -> Text
+tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId
 
 -- This function is called during endRideTransaction to clear all pending tolls
-clearTollStartGateBatchCache :: (CacheFlow m r) => Id DP.Driver -> m ()
+clearTollStartGateBatchCache :: (CacheFlow m r) => Text -> m ()
 clearTollStartGateBatchCache driverId = do
   Hedis.del $ tollStartGateTrackingKey driverId
 
 -- Removes the matched toll AND all other possibilities with the same entry gate from pending cache
 -- For example, if XL is matched (X entry, L exit), removes XK, XL, XM (all with entry X)
-removeMatchedTollFromCache :: (CacheFlow m r) => Id DP.Driver -> [Toll] -> Toll -> m ()
+removeMatchedTollFromCache :: (CacheFlow m r) => Text -> [Toll] -> Toll -> m ()
 removeMatchedTollFromCache driverId allPendingTolls matchedToll = do
   let remainingPendingTolls = filter (\toll -> toll.tollStartGates /= matchedToll.tollStartGates) allPendingTolls
   if null remainingPendingTolls
@@ -45,7 +46,7 @@ removeMatchedTollFromCache driverId allPendingTolls matchedToll = do
 -- | Now uses toll IDs for exact matching and handles partial toll scenarios (some detected, some not)
 checkAndValidatePendingTolls ::
   (CacheFlow m r) =>
-  Id DP.Driver ->
+  Text ->
   Maybe HighPrecMoney ->
   Maybe [Text] ->
   Maybe [Text] -> -- Estimated toll IDs
@@ -131,7 +132,7 @@ getExitTollAndRemainingRoute (p1 : p2 : ps) tolls = do
     Nothing -> getExitTollAndRemainingRoute (p2 : ps) tolls
 
 -- This function is responsible for checking the toll start and exit segments intersection on the route and appropriately update the state in case exit segment is not found corresponding to the entry segment while On Ride.
-getAggregatedTollChargesAndNamesOnRoute :: (CacheFlow m r) => Maybe (Id DP.Driver) -> RoutePoints -> [Toll] -> (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (HighPrecMoney, [Text], [Text], Bool, Maybe Bool)
+getAggregatedTollChargesAndNamesOnRoute :: (CacheFlow m r) => Maybe Text -> RoutePoints -> [Toll] -> (HighPrecMoney, [Text], [Text], Bool, Maybe Bool) -> m (HighPrecMoney, [Text], [Text], Bool, Maybe Bool)
 getAggregatedTollChargesAndNamesOnRoute _ [] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
 getAggregatedTollChargesAndNamesOnRoute _ [_] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
 getAggregatedTollChargesAndNamesOnRoute _ _ [] tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
@@ -176,7 +177,7 @@ getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (t
   In that case this function maintains the TollCombinationsWithStartGatesInPrevBatch based on driverId to check for it's corresponding exit segment intersection on route coming in later batches.
   Once the exit segment is found, it deletes the TollCombinationsWithStartGatesInPrevBatch & add's the toll and slices the route further to check for anymore tolls if exists till it reaches the end of the route.
 -}
-getTollInfoOnRoute :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> Maybe (Id DP.Driver) -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
+getTollInfoOnRoute :: (BeamFlow m r, EsqDBReplicaFlow m r) => Text -> Maybe Text -> RoutePoints -> m (Maybe (HighPrecMoney, [Text], [Text], Bool, Maybe Bool))
 getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
   tolls <- B.runInReplica $ findAllTollsByMerchantOperatingCity merchantOperatingCityId
   if not $ null tolls
@@ -205,6 +206,33 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
           removeMatchedTollFromCache driverId tollCombinationsWithStartGatesInPrevBatch toll
           getAggregatedTollCharges remainingRoute eligibleTollsThatMaybePresentOnTheRoute (toll.price.amount, [toll.name], [getId toll.id])
         Nothing -> do
-          logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId.getId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
+          logWarning $ "No exit segment of tolls with start segment marked from previous batch found for driverId : " <> driverId <> " TollCombinationsWithStartGatesInPrevBatch : " <> show tollCombinationsWithStartGatesInPrevBatch <> " route : " <> show route
           -- Continue processing current batch for new toll entries even though pending tolls didn't find exits
           getAggregatedTollCharges route eligibleTollsThatMaybePresentOnTheRoute (0, [], [])
+
+-- | Filter Google route alternatives down to those that traverse at least one toll
+--   (start gate intersected AND its corresponding exit gate intersected on the same polyline).
+--   When the filter empties (no alternative uses tolls), the original list is returned with
+--   a warning logged — graceful fallback so an enforce-toll search never fails outright.
+--   Used by both rider-app and BPP search handlers when pickup or drop is in a SpecialLocation
+--   with enforceTollRoute=True.
+filterRoutesPreferringToll ::
+  (BeamFlow m r, EsqDBReplicaFlow m r) =>
+  Text ->
+  [Maps.RouteInfo] ->
+  m [Maps.RouteInfo]
+filterRoutesPreferringToll merchantOpCityId routes = do
+  withTollFlag <- forM routes $ \r -> do
+    mbToll <- getTollInfoOnRoute merchantOpCityId Nothing r.points
+    pure (r, isJust mbToll)
+  let tollUsing = map fst $ filter snd withTollFlag
+  if null tollUsing
+    then do
+      logWarning $
+        "filterRoutesPreferringToll: enforce-toll requested but none of "
+          <> show (length routes)
+          <> " alternatives use tolls in merchantOpCity="
+          <> merchantOpCityId
+          <> "; falling back to full set."
+      pure routes
+    else pure tollUsing

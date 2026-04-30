@@ -40,7 +40,8 @@ data SpecialLocationFull = SpecialLocationFull
     priority :: Int,
     enabled :: Bool,
     isOpenMarketEnabled :: Bool,
-    isQueueEnabled :: Maybe Bool
+    isQueueEnabled :: Maybe Bool,
+    enforceTollRoute :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

@@ -105,6 +105,7 @@ data OneWaySearchReq = OneWaySearchReq
     isSourceManuallyMoved :: Maybe Bool,
     isDestinationManuallyMoved :: Maybe Bool,
     isSpecialLocation :: Maybe Bool,
+    enforceTollRoute :: Maybe Bool,
     startTime :: Maybe UTCTime,
     isReallocationEnabled :: Maybe Bool,
     fareParametersInRateCard :: Maybe Bool,
@@ -227,7 +228,8 @@ data SearchDetails = SearchDetails
     currentLocation :: Maybe LatLong,
     busLocationData :: [RL.BusLocation],
     fromSpecialLocationId :: Maybe Text, -- Fixed route: origin area ID
-    toSpecialLocationId :: Maybe Text -- Fixed route: destination area ID
+    toSpecialLocationId :: Maybe Text, -- Fixed route: destination area ID
+    enforceTollRoute :: Maybe Bool -- echoed from serviceability response; drives toll-aware route filtering
   }
   deriving (Generic, Show)
 
