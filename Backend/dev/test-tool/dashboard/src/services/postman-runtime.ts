@@ -5,6 +5,8 @@
  * Only implements the subset of pm.* API used by our collections.
  */
 
+import axios from 'axios';
+
 export interface PostmanRuntimeResult {
   assertions: Array<{ name: string; passed: boolean; error?: string }>;
   consoleLogs: string[];
@@ -14,6 +16,92 @@ export interface PostmanRuntimeResult {
 export interface VariableStores {
   environment: Record<string, string>;
   collection: Record<string, string>;
+}
+
+// Browser → mock-server / rider / driver direct calls fail CORS — route through the local proxy at :7082.
+const PROXY_BASE = 'http://localhost:7082';
+const SERVICE_URL_REWRITES: Array<[string, string]> = [
+  ['http://localhost:8080', PROXY_BASE + '/proxy/mock-server'],
+  ['http://localhost:8013', PROXY_BASE + '/proxy/rider-raw'],
+  ['http://localhost:8016', PROXY_BASE + '/proxy/driver-raw'],
+  ['http://localhost:8018', PROXY_BASE + '/proxy/provider-dashboard'],
+];
+
+function rewriteUrl(url: string): string {
+  for (const [from, to] of SERVICE_URL_REWRITES) {
+    if (url.startsWith(from)) return to + url.slice(from.length);
+  }
+  return url;
+}
+
+/**
+ * Build async helpers (real setTimeout + sendRequest) plus a drain() that awaits all pending callbacks
+ * (and any further setTimeouts/sendRequests they queue).
+ */
+function makeAsyncHelpers(consoleLogs: string[]) {
+  const pending: Promise<void>[] = [];
+  const logCbError = (where: string, e: any) => {
+    consoleLogs.push(`[${where} cb error] ` + (e && e.message ? e.message : String(e)));
+  };
+
+  const setTimeoutShim = (cb: () => void, ms: number) => {
+    const p = new Promise<void>(resolve => {
+      setTimeout(() => {
+        try { cb(); } catch (e) { logCbError('setTimeout', e); } finally { resolve(); }
+      }, ms);
+    });
+    pending.push(p);
+  };
+
+  const sendRequestShim = (opts: any, cb: (err: any, res: any) => void) => {
+    const isStr = typeof opts === 'string';
+    const url = rewriteUrl(isStr ? opts : opts.url);
+    const method = isStr ? 'GET' : (opts.method || 'GET');
+    const headers: Record<string, string> = {};
+    if (!isStr && opts.header) {
+      if (Array.isArray(opts.header)) {
+        for (const h of opts.header) headers[h.key] = h.value;
+      } else if (typeof opts.header === 'object') {
+        Object.assign(headers, opts.header);
+      }
+    }
+    // Postman-style body: { mode: 'raw', raw: <string|object> } or a plain string/object.
+    // Axios with our identity transformRequest won't stringify objects, so do it here.
+    let body: any = undefined;
+    if (!isStr && opts.body) {
+      const raw = opts.body.mode === 'raw' ? opts.body.raw : opts.body;
+      body = typeof raw === 'string' ? raw : JSON.stringify(raw);
+      if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+    }
+    const p = axios({
+      url, method, headers,
+      data: body,
+      transformRequest: [(d: any) => d],
+      timeout: 30000,
+      validateStatus: () => true,
+    }).then(resp => {
+      const data = resp.data;
+      const res = {
+        json: () => (typeof data === 'string' ? (() => { try { return JSON.parse(data); } catch { return null; } })() : data),
+        text: () => (typeof data === 'string' ? data : JSON.stringify(data)),
+        code: resp.status,
+        status: resp.status,
+      };
+      try { cb(null, res); } catch (e) { logCbError('sendRequest', e); }
+    }).catch(err => {
+      try { cb(err, null); } catch (e) { logCbError('sendRequest', e); }
+    });
+    pending.push(p);
+  };
+
+  const drain = async () => {
+    while (pending.length > 0) {
+      const p = pending.shift()!;
+      try { await p; } catch { /* swallowed at callback edge above */ }
+    }
+  };
+
+  return { setTimeoutShim, sendRequestShim, drain };
 }
 
 /**
@@ -32,20 +120,26 @@ export function resolveVariables(template: string, stores: VariableStores): stri
 
 /**
  * Execute a Postman test script against a response.
+ *
+ * Async to support pm.sendRequest + real setTimeout from inside scripts (e.g. polling loops).
+ * After the synchronous body of the script returns, we drain all pending async callbacks
+ * (setTimeout fires, sendRequest responses) — including any new ones queued from within those callbacks —
+ * so the script effectively runs to completion before this function resolves.
  */
-export function executeTestScript(
+export async function executeTestScript(
   script: string,
   responseData: any,
   responseStatus: number,
   stores: VariableStores
-): PostmanRuntimeResult {
+): Promise<PostmanRuntimeResult> {
   const assertions: PostmanRuntimeResult['assertions'] = [];
   const consoleLogs: string[] = [];
 
-  // Build the pm object
-  const pm = buildPmObject(responseData, responseStatus, stores, assertions);
+  const { setTimeoutShim, sendRequestShim, drain } = makeAsyncHelpers(consoleLogs);
 
-  // Build console capture
+  const pm: any = buildPmObject(responseData, responseStatus, stores, assertions);
+  pm.sendRequest = sendRequestShim;
+
   const consoleObj = {
     log: (...args: any[]) => consoleLogs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     warn: (...args: any[]) => consoleLogs.push('[WARN] ' + args.join(' ')),
@@ -53,8 +147,6 @@ export function executeTestScript(
   };
 
   try {
-    // eslint-disable-next-line no-new-func
-    // Legacy postman.* API (pre-pm era) — used by some older collections
     const postman = {
       setNextRequest: () => {},
       setEnvironmentVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
@@ -63,13 +155,12 @@ export function executeTestScript(
       getGlobalVariable: (key: string) => stores.environment[key] ?? '',
       clearEnvironmentVariable: (key: string) => { delete stores.environment[key]; },
     };
-    // Legacy responseBody / responseCode globals — used by older Postman scripts
     const responseBody = responseData != null ? JSON.stringify(responseData) : '';
     const responseCode = { code: responseStatus };
-    const dummySetTimeout = (cb: () => void) => cb();
     // eslint-disable-next-line no-new-func
     const fn = new Function('pm', 'console', 'setTimeout', 'postman', 'responseBody', 'responseCode', 'JSON', script);
-    fn(pm, consoleObj, dummySetTimeout, postman, responseBody, responseCode, JSON);
+    fn(pm, consoleObj, setTimeoutShim, postman, responseBody, responseCode, JSON);
+    await drain();
   } catch (e: any) {
     return { assertions, consoleLogs, error: e.message };
   }
@@ -79,15 +170,21 @@ export function executeTestScript(
 
 /**
  * Execute a Postman prerequest script (for collection-level variable init).
+ *
+ * Async, like executeTestScript — supports pm.sendRequest + real setTimeout for prereq polling.
  */
-export function executePrereqScript(
+export async function executePrereqScript(
   script: string,
   stores: VariableStores
-): { consoleLogs: string[]; error?: string } {
+): Promise<{ consoleLogs: string[]; error?: string }> {
   const consoleLogs: string[] = [];
   const assertions: PostmanRuntimeResult['assertions'] = [];
 
-  const pm = buildPmObject(null, 0, stores, assertions);
+  const { setTimeoutShim, sendRequestShim, drain } = makeAsyncHelpers(consoleLogs);
+
+  const pm: any = buildPmObject(null, 0, stores, assertions);
+  pm.sendRequest = sendRequestShim;
+
   const consoleObj = {
     log: (...args: any[]) => consoleLogs.push(args.join(' ')),
     warn: (...args: any[]) => consoleLogs.push('[WARN] ' + args.join(' ')),
@@ -97,7 +194,6 @@ export function executePrereqScript(
   try {
     // eslint-disable-next-line no-new-func
     const fn = new Function('pm', 'console', 'setTimeout', 'Math', 'String', 'Date', 'JSON', 'postman', script);
-    const dummySetTimeout = (cb: () => void) => cb();
     const postman = {
       setNextRequest: () => {},
       setEnvironmentVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
@@ -106,7 +202,8 @@ export function executePrereqScript(
       getGlobalVariable: (key: string) => stores.environment[key] ?? '',
       clearEnvironmentVariable: (key: string) => { delete stores.environment[key]; },
     };
-    fn(pm, consoleObj, dummySetTimeout, Math, String, Date, JSON, postman);
+    fn(pm, consoleObj, setTimeoutShim, Math, String, Date, JSON, postman);
+    await drain();
   } catch (e: any) {
     return { consoleLogs, error: e.message };
   }

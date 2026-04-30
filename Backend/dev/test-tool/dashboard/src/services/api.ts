@@ -224,7 +224,7 @@ export async function callPostmanStep(
 ): Promise<PostmanStepResult> {
   // 1. Execute prerequest script (variable init only, delays handled by test script)
   if (step.prereqScript) {
-    executePrereqScript(step.prereqScript, stores);
+    await executePrereqScript(step.prereqScript, stores);
   }
 
   // 2. Start tail -f on all service logs
@@ -285,15 +285,9 @@ export async function callPostmanStep(
   let scriptError: string | undefined;
 
   if (step.testScript) {
-    // Detect busy-wait loop delay in script: while (Date.now() - start < N) {}
-    const busyWaitMatch = step.testScript.match(/Date\.now\(\)\s*-\s*\w+\s*<\s*(\d+)/);
-    if (busyWaitMatch) {
-      // Replace busy-wait with real async delay (don't block browser)
-      const delayMs = parseInt(busyWaitMatch[1], 10);
-      await new Promise(r => setTimeout(r, delayMs));
-    }
-
-    const result = executeTestScript(step.testScript, data, status, stores);
+    // Test script can use pm.sendRequest + real setTimeout from inside (postman-runtime.ts drains all queued
+    // async callbacks before resolving), so polling/sleep-then-check patterns just work — no special-casing here.
+    const result = await executeTestScript(step.testScript, data, status, stores);
     assertions = result.assertions;
     consoleLogs = result.consoleLogs;
     scriptError = result.error;
