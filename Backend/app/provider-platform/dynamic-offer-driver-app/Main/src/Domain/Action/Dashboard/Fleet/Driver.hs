@@ -1501,7 +1501,7 @@ refreshNullDocsVerificationStatuses ::
   [Id DP.Person] ->
   [Id DVRC.VehicleRegistrationCertificate] ->
   Flow ()
-refreshNullDocsVerificationStatuses shouldRefresh  personIds rcIds = do
+refreshNullDocsVerificationStatuses shouldRefresh personIds rcIds = do
   when shouldRefresh $ do
     forM_ (nub personIds) $ \personId ->
       void $

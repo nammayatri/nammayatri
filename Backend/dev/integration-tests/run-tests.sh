@@ -42,6 +42,7 @@ BUS_DIR="$SCRIPT_DIR/collections/BusTicketBookingFlow"
 METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
+LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -438,6 +439,7 @@ run_scheduler() {
     [ "$failed" -eq 0 ]
 }
 
+run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -456,6 +458,7 @@ show_help() {
     echo "  online-offers       Run online ride discount offer suites"
     echo "  offline-offers      Run offline ride cashback offer suites"
     echo "  scheduler           Run scheduler job integration tests"
+    echo "  loyalty             Run loyalty wallet topup/burn suites"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -476,6 +479,9 @@ show_help() {
     echo "  ./run-tests.sh online                             # Online (Stripe) ride suites"
     echo "  ./run-tests.sh online-offers                      # Online discount offer suites"
     echo "  ./run-tests.sh offline-offers                     # Offline cashback offer suites"
+    echo "  ./run-tests.sh loyalty                            # All loyalty wallet suites"
+    echo "  ./run-tests.sh loyalty FRFS_Chennai               # Loyalty suites for Chennai"
+    echo "  ./run-tests.sh loyalty FRFS_Chennai 01-WalletRechargeTopup  # Specific suite"
     echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
     echo "  ./run-tests.sh online BF_Helsinki -vp             # Pretty-print full JSON request/response"
     echo "  ./run-tests.sh online BF_Helsinki -d              # Debug: per-API service logs for all APIs"
@@ -520,6 +526,9 @@ case "${1:-}" in
         ;;
     scheduler)
         run_scheduler "${2:-}" "${3:-}"
+        ;;
+    loyalty|wallet)
+        run_loyalty "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
