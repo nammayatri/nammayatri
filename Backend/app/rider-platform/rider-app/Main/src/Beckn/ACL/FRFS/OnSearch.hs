@@ -358,6 +358,7 @@ castVehicleVariantToServiceTierType = \case
   "THIRD_CLASS" -> Spec.THIRD_CLASS
   "AC_EMU_FIRST_CLASS" -> Spec.AC_EMU_FIRST_CLASS
   "PREMIUM" -> Spec.PREMIUM
+  "SHUTTLE" -> Spec.SHUTTLE
   _ -> Spec.ORDINARY -- Default fallback
 
 buildDiscoveryOnSearchReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Spec.OnSearchReq -> Domain.DiscoveryCounter -> m Domain.DiscoveryOnSearchReq

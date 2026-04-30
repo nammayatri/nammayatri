@@ -1863,7 +1863,7 @@ getBlacklistedFilters ::
   Maybe [Spec.ServiceTierType] ->
   ([Spec.ServiceTierType], [DFRFSQuote.FRFSQuoteType])
 getBlacklistedFilters filterServiceAndJrnyType mbNewServiceTiers =
-  let baseServiceTiers = [Spec.PREMIUM]
+  let baseServiceTiers = [Spec.PREMIUM, Spec.SHUTTLE]
 
       -- flag based blacklist
       flagServiceTiers =
