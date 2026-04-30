@@ -50,6 +50,7 @@ data SpecialLocation = SpecialLocation
     enabled :: Bool,
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
+    enforceTollRoute :: Maybe Bool,
     priority :: Int,
     supportNumber :: Maybe Text,
     createdAt :: UTCTime,

@@ -67,6 +67,7 @@ triggerSubscriptionSearch subscription = do
             isSourceManuallyMoved = Nothing,
             isDestinationManuallyMoved = Nothing,
             isSpecialLocation = Nothing,
+            enforceTollRoute = Nothing,
             startTime = Nothing,
             isReallocationEnabled = Nothing,
             fareParametersInRateCard = Nothing,

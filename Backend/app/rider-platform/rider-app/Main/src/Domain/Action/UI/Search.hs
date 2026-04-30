@@ -75,7 +75,9 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Referral as Referral
 import SharedLogic.Search
 import qualified SharedLogic.Search as SLS
+import qualified Domain.Action.UI.Serviceability as DSrv
 import qualified SharedLogic.Serviceability as Serviceability
+import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
 import qualified Storage.CachedQueries.Merchant as QMerc
@@ -90,6 +92,7 @@ import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import Tools.Event
@@ -185,6 +188,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        enforceTollRoute = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -202,6 +206,7 @@ extractSearchDetails now = \case
         numberOfLuggages = numberOfLuggages,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        enforceTollRoute = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -267,6 +272,7 @@ extractSearchDetails now = \case
         numberOfLuggages = Nothing,
         fromSpecialLocationId = Nothing,
         toSpecialLocationId = Nothing,
+        enforceTollRoute = Nothing,
         ..
       }
   FixedRouteSearch FixedRouteSearchReq {..} ->
@@ -295,7 +301,8 @@ extractSearchDetails now = \case
         currentLocation = Nothing,
         recentLocationId = Nothing,
         fromSpecialLocationId = Just fromSpecialLocationId,
-        toSpecialLocationId = Just toSpecialLocationId
+        toSpecialLocationId = Just toSpecialLocationId,
+        enforceTollRoute = Nothing
       }
 
 {-
@@ -557,11 +564,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       SearchReq ->
       m RouteDetails
     getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide = \case
-      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      OneWaySearch oneWayReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId oneWayReq.sessionToken oneWayReq.isSourceManuallyMoved oneWayReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide oneWayReq.enforceTollRoute
+      AmbulanceSearch ambulanceReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId ambulanceReq.sessionToken ambulanceReq.isSourceManuallyMoved ambulanceReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
+      InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
-      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide Nothing
       PTSearch _ -> do
         return $
           RouteDetails
@@ -598,8 +605,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       Bool ->
       RiderConfig ->
       Maybe Bool ->
+      Maybe Bool ->
       m RouteDetails
-    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide = do
+    processOneWaySearch person merchant merchantOperatingCity searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderConfig isMeterRide mbEnforceTollRoute = do
       autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved isDestinationManuallyMoved now
       destinationLatLong <- case lastMaybe stopsLatLong of
         Just latLong -> return (Just latLong)
@@ -613,7 +621,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
             Just latLong -> return [sourceLatLong, latLong, sourceLatLong]
             Nothing -> throwError (InvalidRequest "Destination is required for Round Trips ")
           else return $ sourceLatLong : stopsLatLong
-      calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now
+      calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute now
 
     processRentalSearch :: SearchRequestFlow m r => DPerson.Person -> RentalSearchReq -> [LatLong] -> Context.City -> m RouteDetails
     processRentalSearch person rentalReq stopsLatLong originCity = do
@@ -764,16 +772,20 @@ calculateDistanceAndRoutes ::
   DPerson.Person ->
   Id SearchRequest.SearchRequest ->
   [LatLong] ->
+  Maybe Bool -> -- mbEnforceTollRoute, echoed from the serviceability response by the UI
   UTCTime ->
   m RouteDetails
-calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs now = do
+calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person searchRequestId latLongs mbEnforceTollRoute now = do
   let request =
         Maps.GetRoutesReq
           { waypoints = NE.fromList latLongs,
             calcPoints = True,
             mode = Just Maps.CAR
           }
-  routeResponse <- Maps.getRoutes (Just riderConfig.isAvoidToll) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
+  mbRedisFlag :: Maybe Bool <- Redis.safeGet (DSrv.enforceTollRouteRedisKey person.id)
+  let mustEnforceToll = fromMaybe False mbEnforceTollRoute || fromMaybe False mbRedisFlag
+      isAvoidTollEffective = if mustEnforceToll then False else riderConfig.isAvoidToll
+  routeResponse <- Maps.getRoutes (Just isAvoidTollEffective) person.id person.merchantId (Just merchantOperatingCity.id) (Just searchRequestId.getId) request
 
   let collectMMIData = fromMaybe False riderConfig.collectMMIRouteData
   when collectMMIData $ do
@@ -807,14 +819,18 @@ calculateDistanceAndRoutes riderConfig merchant merchantOperatingCity person sea
             _ -> logInfo "No NextBillion config"
         _ -> logInfo "NextBillion route not found"
 
+  finalRoutes <-
+    if mustEnforceToll
+      then TollsDetector.filterRoutesPreferringToll merchantOperatingCity.id.getId routeResponse
+      else pure routeResponse
   let distanceWeightage = riderConfig.distanceWeightage
       durationWeightage = 100 - distanceWeightage
-      (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo routeResponse distanceWeightage durationWeightage
-      longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance routeResponse
+      (shortestRouteInfo, shortestRouteIndex) = Search.getEfficientRouteInfo finalRoutes distanceWeightage durationWeightage
+      longestRouteDistance = (.distance) =<< Search.getLongestRouteDistance finalRoutes
       shortestRouteDistance = (.distance) =<< shortestRouteInfo
       shortestRouteDuration = (.duration) =<< shortestRouteInfo
       shortestRouteStaticDuration = (.staticDuration) =<< shortestRouteInfo
-  return $ RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition routeResponse shortestRouteIndex, ..}
+  return $ RouteDetails {multipleRoutes = Just $ Search.updateEfficientRoutePosition finalRoutes shortestRouteIndex, ..}
 
 autoCompleteEvent ::
   SearchRequestFlow m r =>

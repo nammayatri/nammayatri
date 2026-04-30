@@ -391,6 +391,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
             ..
           }
@@ -1577,6 +1578,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now,
                 isQueueEnabled = mbIsQueueEnabled,
+                enforceTollRoute = Nothing,
                 supportNumber = supportNumber
               }
           gateInfo =

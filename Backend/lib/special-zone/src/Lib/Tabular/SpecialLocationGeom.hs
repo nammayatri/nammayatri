@@ -44,6 +44,7 @@ mkPersist
       enabled Bool
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
+      enforceTollRoute Bool Maybe
       supportNumber Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
