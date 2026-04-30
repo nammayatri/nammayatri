@@ -135,6 +135,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
 
     makeOfferReq date paymentMode_ plan driver = do
       now <- getCurrentTime
+      isMember <- SPayment.checkDriverMembership (cast driver.id) transporterConfig.merchantOperatingCityId plan.serviceName Nothing
       let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = plan.maxAmount, currency = transporterConfig.currency, basket = Nothing}
           customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
       return
@@ -148,7 +149,8 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payments.IS_VISIBLE else Nothing,
             staticCustomerId = Nothing,
-            deviceImei = Nothing
+            deviceImei = Nothing,
+            membershipStatus = if isMember then Just (Payment.MembershipStatus True) else Nothing
           }
 
 switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()
