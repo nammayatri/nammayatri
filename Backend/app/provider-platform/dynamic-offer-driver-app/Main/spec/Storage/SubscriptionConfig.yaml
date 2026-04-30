@@ -75,6 +75,7 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Maybe Data.Time.NominalDiffTime
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
     vendorMigrationMappings: "Maybe [VendorMigrationMapping]"
+    enableOffersForMembers: Bool
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -102,6 +103,7 @@ SubscriptionConfig:
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.secondsToNominalDiffTime . Kernel.Prelude.fromMaybe 21600|I
     vendorMigrationMappings: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorMigrationMappings | E
+    enableOffersForMembers: Kernel.Prelude.fromMaybe False|I
   toTType:
     genericJobRescheduleTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     paymentLinkJobTime: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
@@ -123,6 +125,7 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 43200)|I
     manualPaymentLinkRateLimitExpirySeconds: Kernel.Prelude.Just . Kernel.Utils.Common.nominalDiffTimeToSeconds . Kernel.Prelude.fromMaybe (Kernel.Utils.Common.secondsToNominalDiffTime 21600)|I
     vendorMigrationMappings: Kernel.Prelude.toJSON <$> vendorMigrationMappings | E
+    enableOffersForMembers: Kernel.Prelude.Just|I
   beamType:
     genericJobRescheduleTime: Seconds
     paymentLinkJobTime: Seconds
@@ -144,6 +147,7 @@ SubscriptionConfig:
     sendManualPaymentLinkJobMaxDelay: Maybe Seconds
     manualPaymentLinkRateLimitExpirySeconds: Maybe Seconds
     vendorMigrationMappings: Maybe Value
+    enableOffersForMembers: Maybe Bool
   constraints:
     serviceName: PrimaryKey
     merchantOperatingCityId: PrimaryKey
@@ -173,6 +177,7 @@ SubscriptionConfig:
     showManualPlansInUI: "false"
     sendManualPaymentLinkJobMaxDelay: "43200"
     manualPaymentLinkRateLimitExpirySeconds: "21600"
+    enableOffersForMembers: "false"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]

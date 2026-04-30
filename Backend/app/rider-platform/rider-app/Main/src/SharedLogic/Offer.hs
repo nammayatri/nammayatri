@@ -343,7 +343,8 @@ mkOfferListReq person price = do
         numOfRides = 0,
         offerListingMetric = Nothing,
         staticCustomerId = Just staticCustomerId,
-        deviceImei = decryptedImeiNumber
+        deviceImei = decryptedImeiNumber,
+        membershipStatus = Nothing
       }
 
 -------------------------------------------------------------------------------------------------------
@@ -514,7 +515,8 @@ mkOfferListReqWithBasket person totalAmount currency basketItems = do
         numOfRides = 0,
         offerListingMetric = Nothing,
         staticCustomerId = Just staticCustomerId,
-        deviceImei = deviceIdentifier
+        deviceImei = deviceIdentifier,
+        membershipStatus = Nothing
       }
 
 getDeviceIdentifier :: (MonadFlow m, EncFlow m r) => Person.Person -> m (Maybe Text)

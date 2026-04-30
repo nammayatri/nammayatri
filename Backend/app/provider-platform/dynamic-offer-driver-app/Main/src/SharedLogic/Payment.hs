@@ -25,7 +25,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
-import Domain.Types.SubscriptionConfig (VendorMigrationMapping (..))
+import Domain.Types.SubscriptionConfig (SubscriptionConfig, VendorMigrationMapping (..))
 import qualified Domain.Types.VendorFee as VF
 import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
@@ -54,12 +54,29 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Invoice as QIN
+import qualified Domain.Types.StclMembership as StclMembership
+import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as TPayment
 import qualified Tools.SMS as Sms
 import Tools.Whatsapp as Whatsapp
+
+checkDriverMembership ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  DPlan.ServiceNames ->
+  Maybe SubscriptionConfig ->
+  m Bool
+checkDriverMembership driverId merchantOpCityId serviceName mbSubscriptionConfig = do
+  subscriptionConfig <- case mbSubscriptionConfig of
+    Just cfg -> return (Just cfg)
+    Nothing -> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
+  if maybe False (.enableOffersForMembers) subscriptionConfig
+    then not . null <$> QStclMembership.findByDriverIdAndStatus driverId StclMembership.SUBMITTED
+    else return False
 
 applyPseudoClientId :: Maybe Text -> CreateOrderResp -> CreateOrderResp
 applyPseudoClientId pseudoClientId createOrderRes =
@@ -284,6 +301,8 @@ makeOfferListCacheKey includeDriverId req = do
           <> show (utctDay req.registrationDate)
           <> ":Listing-"
           <> maybe "N/A" parseValidityForCaching req.offerListingMetric
+          <> ":MS-"
+          <> maybe "N/A" parseMembershipStatusForCaching req.membershipStatus
     _ ->
       return $
         "OfferList:PId-" <> req.planId <> ":PM-" <> req.paymentMode <> ":n-" <> show req.numOfRides <> ":dt-"
@@ -292,11 +311,14 @@ makeOfferListCacheKey includeDriverId req = do
           <> show (utctDay req.registrationDate)
           <> ":Listing-"
           <> maybe "N/A" parseValidityForCaching req.offerListingMetric
+          <> ":MS-"
+          <> maybe "N/A" parseMembershipStatusForCaching req.membershipStatus
   where
     parseValidityForCaching offerListingMetric' =
       case offerListingMetric' of
         LIST_BASED_ON_DATE listingDates -> show $ UTCTime (utctDay listingDates) (secondsToDiffTime 0)
         _ -> show offerListingMetric'
+    parseMembershipStatusForCaching = show
 
 makeOfferListCacheVersionKey :: Text
 makeOfferListCacheVersionKey = "OfferList:Version"
