@@ -4,6 +4,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -46,6 +47,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
@@ -100,6 +102,27 @@ getLoyaltyInfo customerId merchantId merchantOperatingCityId =
 type FulfillmentStatusHandler m =
   DPayment.PaymentStatusResp ->
   m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+
+fallbackOrderStatusHandler ::
+  (MonadFlow m) =>
+  DPayment.PaymentStatusResp ->
+  m (DPayment.PaymentFulfillmentStatus, Maybe Text, Maybe Text)
+fallbackOrderStatusHandler paymentStatusResp = do
+  status <- DPayment.getTransactionStatus paymentStatusResp
+  let fulfillment = case status of
+        Payment.CHARGED -> DPayment.FulfillmentSucceeded
+        Payment.CANCELLED -> DPayment.FulfillmentFailed
+        Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DPayment.FulfillmentFailed
+        Payment.AUTO_REFUNDED -> DPayment.FulfillmentRefunded
+        Payment.NEW -> DPayment.FulfillmentPending
+        Payment.PENDING_VBV -> DPayment.FulfillmentPending
+        Payment.AUTHORIZING -> DPayment.FulfillmentPending
+        Payment.COD_INITIATED -> DPayment.FulfillmentPending
+        Payment.STARTED -> DPayment.FulfillmentPending
+        Payment.JUSPAY_DECLINED -> DPayment.FulfillmentPending
+        Payment.AUTHORIZATION_FAILED -> DPayment.FulfillmentPending
+        Payment.AUTHENTICATION_FAILED -> DPayment.FulfillmentPending
+  pure (fulfillment, Nothing, Nothing)
 
 orderStatusHandler ::
   ( CacheFlow m r,
@@ -240,6 +263,33 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
   case eitherPaymentFullfillmentStatusWithEntityIdAndTransactionId of
     Right (_, _, domainTransactionId) -> do
       QPaymentOrder.updatePaymentFulfillmentStatus paymentOrder.id finalPaymentStatusResponse.paymentFulfillmentStatus finalPaymentStatusResponse.domainEntityId domainTransactionId
+    _ -> pure ()
+
+  case (finalPaymentStatusResponse, updatedPaymentOrder.merchantOperatingCityId) of
+    (DPayment.PaymentStatus {orderLoyaltyInfo = Just loyalty}, Just commonMerchantOperatingCityId) -> do
+      whenJust paymentOrder.paymentFulfillmentStatus $ \oldPaymentFulfillmentStatus -> do
+        when (finalPaymentStatusResponse.paymentFulfillmentStatus /= Just oldPaymentFulfillmentStatus) $ do
+          let personId = cast @DPayment.Person @Person.Person updatedPaymentOrder.personId
+              merchantId = cast @DPayment.Merchant @Merchant.Merchant updatedPaymentOrder.merchantId
+              merchantOperatingCityId = cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity commonMerchantOperatingCityId
+              fetchFullInfo = getLoyaltyInfo personId.getId merchantId merchantOperatingCityId
+          mbProgramMap <- TPayment.loadLoyaltyProgramMap merchantId merchantOperatingCityId
+          let resolveProgram pid = pure $ (Map.lookup pid) =<< mbProgramMap
+          let domainEntityId = fromMaybe updatedPaymentOrder.id.getId finalPaymentStatusResponse.domainEntityId
+          res <-
+            withTryCatch "processLoyaltyInfoFromOrderStatus" $
+              LoyaltyWalletSvc.processLoyaltyInfoFromOrderStatus
+                personId.getId
+                updatedPaymentOrder
+                domainEntityId
+                loyalty
+                resolveProgram
+                fetchFullInfo
+          case res of
+            Left err -> logError $ "loyalty processing failed for order " <> updatedPaymentOrder.id.getId <> ": " <> show err
+            Right () -> pure ()
+    (DPayment.PaymentStatus {orderLoyaltyInfo = Just _}, Nothing) ->
+      logInfo $ "loyalty processing skipped: order " <> updatedPaymentOrder.id.getId <> " has no merchantOperatingCityId"
     _ -> pure ()
   return finalPaymentStatusResponse
   where

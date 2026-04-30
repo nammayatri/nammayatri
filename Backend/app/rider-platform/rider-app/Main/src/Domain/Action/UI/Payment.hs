@@ -664,7 +664,8 @@ paytmEdcCallbackHandler req = do
                   paymentFulfillmentStatus = paymentOrder.paymentFulfillmentStatus,
                   domainEntityId = paymentOrder.domainEntityId,
                   amount = paymentOrder.amount,
-                  validTill = paymentOrder.validTill
+                  validTill = paymentOrder.validTill,
+                  orderLoyaltyInfo = Nothing
                 }
             fulfillmentHandler = mkFulfillmentHandler paymentServiceType (cast paymentOrder.merchantId) paymentOrder.id
         void $
@@ -704,7 +705,7 @@ mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = c
     paymentFulfillStatus <- BBPS.bbpsOrderStatusHandler merchantId paymentStatusResp
     pure (paymentFulfillStatus, Nothing, Nothing)
   DOrder.RideBooking -> rideBookingOrderStatusHandler orderId merchantId paymentStatusResp
-  _ -> pure (DPayment.FulfillmentPending, Nothing, Nothing)
+  _ -> SPayment.fallbackOrderStatusHandler paymentStatusResp
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
@@ -826,7 +827,7 @@ postWalletRecharge ::
   Flow Payment.CreateOrderResp
 postWalletRecharge (personId, merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound "personId")
-  walletRewardPostingId <- generateGUID
+  paymentOrderId <- generateGUID
   operationId <- generateShortId
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -847,7 +848,7 @@ postWalletRecharge (personId, merchantId) req = do
           req.programId
   let createOrderReq =
         Payment.CreateOrderReq
-          { orderId = walletRewardPostingId,
+          { orderId = paymentOrderId,
             orderShortId = operationId.getShortId,
             amount = fromIntegral req.pointsAmount,
             customerId = person.id.getId,
@@ -875,7 +876,8 @@ postWalletRecharge (personId, merchantId) req = do
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId person.merchantOperatingCityId Nothing DOrder.Wallet
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   mbOrderResp <- DPayment.createOrderService commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId mbPaymentOrderValidTill Nothing DOrder.Wallet isMetroTestTransaction createOrderReq createOrderCall Nothing False Nothing
-  mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  orderResp <- mbOrderResp & fromMaybeM (InternalError "Failed to create payment order")
+  pure orderResp
 
 getWalletBalance ::
   (Id DP.Person, Id DM.Merchant) ->

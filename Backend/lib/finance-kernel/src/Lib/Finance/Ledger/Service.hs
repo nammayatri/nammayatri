@@ -30,6 +30,8 @@ module Lib.Finance.Ledger.Service
     -- * Query by ID/reference
     getEntry,
     getEntriesByReference,
+    getEntriesByReferenceAndToAccount,
+    getEntriesByReferenceAndFromAccount,
     getEntriesByAccount,
     getEntriesBetween,
 
@@ -348,6 +350,26 @@ getEntriesByReference ::
   Text -> -- Reference ID
   m [LedgerEntry]
 getEntriesByReference = QLedger.findByReference
+
+-- | Entries for (refType, refId) where toAccountId matches — i.e. credits
+-- landing in the given account. Use for earn-side lookups.
+getEntriesByReferenceAndToAccount ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- Reference type
+  Text -> -- Reference ID
+  Id Account ->
+  m [LedgerEntry]
+getEntriesByReferenceAndToAccount = QLedger.findByReferenceAndToAccount
+
+-- | Entries for (refType, refId) where fromAccountId matches — i.e. debits
+-- leaving the given account. Use for burn-side lookups.
+getEntriesByReferenceAndFromAccount ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- Reference type
+  Text -> -- Reference ID
+  Id Account ->
+  m [LedgerEntry]
+getEntriesByReferenceAndFromAccount = QLedger.findByReferenceAndFromAccount
 
 -- | Get all entries for an account
 getEntriesByAccount ::
