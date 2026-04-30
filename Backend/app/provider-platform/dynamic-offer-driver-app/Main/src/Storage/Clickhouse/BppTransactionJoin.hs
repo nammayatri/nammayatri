@@ -240,6 +240,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
   where
     mkBookingStatus ride
       | ride.rideStatus == Ride.COMPLETED = Common.COMPLETED
+      | ride.rideStatus == Ride.UPCOMING = Common.UPCOMING
       | ride.rideStatus == Ride.NEW && (ride.rideCreatedAt) > subtract6Hrs = Common.UPCOMING
       | ride.rideStatus == Ride.NEW && ride.rideCreatedAt <= subtract6Hrs = Common.UPCOMING_6HRS
       | ride.rideStatus == Ride.INPROGRESS && ride.rideTripStartTime > Just subtract6Hrs = Common.ONGOING
@@ -249,7 +250,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
     subtract6Hrs = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now
 
     mkBookingStatusCond Common.COMPLETED ride = ride.rideStatus CH.==. Ride.COMPLETED
-    mkBookingStatusCond Common.UPCOMING ride = ride.rideStatus CH.==. Ride.NEW CH.&&. ride.rideCreatedAt CH.>. subtract6Hrs
+    mkBookingStatusCond Common.UPCOMING ride = ride.rideStatus CH.==. Ride.UPCOMING CH.||. (ride.rideStatus CH.==. Ride.NEW CH.&&. ride.rideCreatedAt CH.>. subtract6Hrs)
     mkBookingStatusCond Common.UPCOMING_6HRS ride = ride.rideStatus CH.==. Ride.NEW CH.&&. ride.rideCreatedAt CH.<=. subtract6Hrs
     mkBookingStatusCond Common.ONGOING ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.>. Just subtract6Hrs
     mkBookingStatusCond Common.ONGOING_6HRS ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.<=. Just subtract6Hrs
