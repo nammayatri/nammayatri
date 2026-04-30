@@ -13,27 +13,29 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Storage.CachedQueries.Toll where
+module Toll.Storage.CachedQueries.Toll where
 
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
-import Domain.Types.Toll
 import Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
-import qualified Storage.Queries.Toll as Queries
+import Toll.Domain.Types.Toll
+import Toll.Storage.BeamFlow (BeamFlow)
+import qualified Toll.Storage.Queries.Toll as Queries
 
-findAllTollsByMerchantOperatingCity :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> m [Toll]
+-- | merchantOpCityId is passed as Text so this module is consumable from any app
+--   without importing the per-app MerchantOperatingCity domain type. Uses the shared
+--   @BeamFlow@ constraint which carries the @HasSchemaName TollT@ requirement that
+--   each app satisfies via the orphan instance in @Storage.Beam.Toll@.
+findAllTollsByMerchantOperatingCity :: BeamFlow m r => Text -> m [Toll]
 findAllTollsByMerchantOperatingCity merchantOpCityId =
   (Hedis.safeGet $ makeTollsKeyByMerchantOperatingCityId merchantOpCityId) >>= \case
     Just a -> pure a
     Nothing -> cacheAllTollsByMerchantOperatingCity merchantOpCityId /=<< Queries.findAllTollsByMerchantOperatingCity (Just merchantOpCityId)
 
-cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Id MerchantOperatingCity -> [Toll] -> m ()
+cacheAllTollsByMerchantOperatingCity :: (CacheFlow m r) => Text -> [Toll] -> m ()
 cacheAllTollsByMerchantOperatingCity merchantOpCityId tolls = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Hedis.setExp (makeTollsKeyByMerchantOperatingCityId merchantOpCityId) tolls expTime
 
-makeTollsKeyByMerchantOperatingCityId :: Id MerchantOperatingCity -> Text
-makeTollsKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:Toll:MerchantOpCityId-" <> getId merchantOpCityId
+makeTollsKeyByMerchantOperatingCityId :: Text -> Text
+makeTollsKeyByMerchantOperatingCityId merchantOpCityId = "CachedQueries:Toll:MerchantOpCityId-" <> merchantOpCityId

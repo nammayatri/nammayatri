@@ -259,6 +259,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             createdAt = now,
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
+            enforceTollRoute = Nothing,
             supportNumber = supportNumber
           }
       gateInfo =

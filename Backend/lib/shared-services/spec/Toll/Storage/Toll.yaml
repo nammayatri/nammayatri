@@ -1,11 +1,4 @@
-imports:
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Merchant: Domain.Types.Merchant
-  UTCTime: Kernel.Prelude
-  HighPrecMoney: Kernel.Types.Common
-  Currency: Kernel.Types.Common
-  Price: Kernel.Types.Common
-  LineSegment: Kernel.Utils.ComputeIntersection
+imports: {}
 
 Toll:
   tableName: toll
@@ -18,8 +11,6 @@ Toll:
     isAutoRickshawAllowed : Bool
     isTwoWheelerAllowed : Maybe Bool
     price: Price
-    createdAt : UTCTime
-    updatedAt : UTCTime
 
 
   sqlType:
@@ -50,3 +41,6 @@ Toll:
       kvFunction: findAllWithKV
       where:
         eq: [merchantOperatingCityId]
+
+  defaultQueryTypeConstraint: "(Toll.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
