@@ -136,6 +136,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
                           ""
                           Nothing
                           Nothing
+                          Nothing
                   void $ RidePaymentFinance.markCashbackEntriesAsPaidOut ctx entryIds payoutOrder.amount.amount payoutReq.id.getId
               else when (isPayoutStatusFailed payoutStatus) $
                 -- Webhook reported a terminal failure. Release the PROCESSING

@@ -37,7 +37,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
-import qualified Lib.Finance.Domain.Types.Invoice as Invoice
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -173,7 +173,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
               invoice
                 InvoiceConfig
-                  { invoiceType = Invoice.RideCancellation,
+                  { invoiceType = RideCancellation,
                     issuedToType = "DRIVER",
                     issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                     issuedToName = Nothing,

@@ -292,7 +292,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbTipPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just tipDomainRideId) Nothing DOrder.RideHailing createPaymentIntentServiceReq Nothing
         whenJust mbTipPaymentIntentResp $ \tipPaymentIntentResp -> do
           -- Create separate PENDING tip ledger entry
-          let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
+          let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
           void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
           -- Capture tip — settlement happens automatically inside chargePaymentIntent
           offerStatsInput <- SPayment.buildOfferStatsInput person
@@ -328,7 +328,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         -- ledger core (handled separately via createTipLedger), the
         -- existing core entries won't be disturbed.
         tipRideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
-        let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
+        let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
         mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 tipLedgerCtx
         let tipLedgerInfo =
               fromMaybe
@@ -350,7 +350,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         case mbPaymentIntentResp of
           Nothing -> do
             bookingFareBreakup <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING
-            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing
+            let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
                   fromMaybe
@@ -370,7 +370,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                     mbLedgerInfo
             logDebug $ "makePaymentIntent (tip-applied): breakups=" <> show bookingFareBreakup <> " discount=" <> show rideDiscountAmount <> " payout=" <> show ridePayoutAmount <> " platformFee=" <> show applicationFeeAmount <> " -> ledgerInfo=" <> show ledgerInfo
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
               let discountApplicableFareAmountTaxIncl = case RD.parseProjectFareParamsBreakup $ (\fb -> (fb.description, fb.amount.amount)) <$> bookingFareBreakup of
@@ -379,7 +379,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
               SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
-            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing
+            let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
             -- Capture immediately — old auth was cancelled, new PI needs fresh capture
             when (ride.status == Domain.Types.RideStatus.COMPLETED) $ do
@@ -778,7 +778,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
               driverAccountId
             }
 
-    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing
+    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
         debtLedgerInfo =
           SPayment.mkRidePaymentLedgerInfo
             (duesResp.rideFareDue - duesResp.platformFeeDue)

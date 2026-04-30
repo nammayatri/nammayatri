@@ -39,6 +39,7 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
@@ -84,7 +85,6 @@ import Lib.Finance
     transfer,
   )
 import Lib.Finance.Domain.Types.Account ()
-import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -497,7 +497,7 @@ processWalletTopupWebhook driver order transactionStatus = do
         ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
         let topupInvoiceConfig =
               InvoiceConfig
-                { invoiceType = FinanceInvoice.SubscriptionPurchase,
+                { invoiceType = BecknInvoice.SubscriptionPurchase,
                   issuedToType = "DRIVER",
                   issuedToId = order.personId.getId,
                   issuedToName = Nothing,
