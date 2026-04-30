@@ -1,49 +1,46 @@
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module API.Types.UI.Sos where
+module Safety.API.Types.UI.Sos where
 
 import Data.Aeson
 import Data.OpenApi (ToSchema)
-import qualified Data.Text
-import qualified Domain.Types.Ride
-import qualified Domain.Types.RiderConfig
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
+import qualified Safety.Domain.Types.Common
 import qualified Safety.Domain.Types.Sos
 import Servant
-import Tools.Auth
 
-data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+data CallPoliceAPI = CallPoliceAPI {rideId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ErssStatusUpdateReq = ErssStatusUpdateReq
-  { idSource :: Kernel.Prelude.Maybe Data.Text.Text,
-    idErss :: Data.Text.Text,
-    currentStatus :: Data.Text.Text,
-    statusDesc :: Kernel.Prelude.Maybe Data.Text.Text,
-    comments :: Kernel.Prelude.Maybe Data.Text.Text,
+  { idSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idErss :: Kernel.Prelude.Text,
+    currentStatus :: Kernel.Prelude.Text,
+    statusDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    comments :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastUpdatedTime :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ErssStatusUpdateRes = ErssStatusUpdateRes
-  { resultCode :: Data.Text.Text,
-    resultString :: Kernel.Prelude.Maybe Data.Text.Text,
-    errorMsg :: Kernel.Prelude.Maybe Data.Text.Text,
-    message :: Kernel.Prelude.Maybe Data.Text.Text,
-    payLoad :: Kernel.Prelude.Maybe Data.Text.Text
+  { resultCode :: Kernel.Prelude.Text,
+    resultString :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    errorMsg :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    message :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    payLoad :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MarkAsSafeReq = MarkAsSafeReq
-  { contacts :: Kernel.Prelude.Maybe [Data.Text.Text],
+  { contacts :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isEndLiveTracking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMock :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
@@ -55,7 +52,18 @@ data MockSosReq = MockSosReq {onRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosDetailsRes = SosDetailsRes {externalSOSConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.ExternalSOSConfig, sos :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.Sos}
+data RideDetailsForDriverRes = RideDetailsForDriverRes
+  { driverName :: Kernel.Prelude.Text,
+    trackingUrl :: Kernel.Prelude.Text,
+    tripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    tripStartPos :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
+    vehicleNumber :: Kernel.Prelude.Text,
+    vehicleVariant :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SosDetailsRes = SosDetailsRes {externalSOSConfig :: Kernel.Prelude.Maybe Safety.Domain.Types.Common.ExternalSOSConfig, sos :: Kernel.Prelude.Maybe Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -72,18 +80,18 @@ data SosReq = SosReq
     flow :: Safety.Domain.Types.Sos.SosType,
     isRideEnded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     notifyAllContacts :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
+    rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride),
     sendPNOnPostRideSOS :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     triggerApiList :: Kernel.Prelude.Maybe [TriggerApi]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, kaptureTicketId :: Kernel.Prelude.Maybe Data.Text.Text, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, kaptureTicketId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosTrackingDetailsRes = SosTrackingDetailsRes {mobileNumber :: Data.Text.Text, personName :: Data.Text.Text}
+data SosTrackingDetailsRes = SosTrackingDetailsRes {mobileNumber :: Kernel.Prelude.Text, personName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -91,21 +99,21 @@ data SosTrackingRes = SosTrackingRes {currentLocation :: Kernel.Prelude.Maybe So
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Data.Text.Text, status :: Safety.Domain.Types.Sos.SosStatus}
+data SosUpdateReq = SosUpdateReq {comment :: Kernel.Prelude.Maybe Kernel.Prelude.Text, status :: Safety.Domain.Types.Sos.SosStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StartTrackingReq = StartTrackingReq
-  { contacts :: [Data.Text.Text],
+  { contacts :: [Kernel.Prelude.Text],
     customerLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     durationInMinutes :: Kernel.Prelude.Int,
-    externalReferenceId :: Kernel.Prelude.Maybe Data.Text.Text,
+    externalReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sosId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos, trackingUrl :: Data.Text.Text}
+data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos, trackingUrl :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -119,8 +127,8 @@ data UpdateStateReq = UpdateStateReq {sosState :: Safety.Domain.Types.Sos.SosSta
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateToRideReq = UpdateToRideReq {rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride}
+data UpdateToRideReq = UpdateToRideReq {rideId :: Kernel.Types.Id.Id Safety.Domain.Types.Common.Ride}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''TriggerApi)
+$(mkHttpInstancesForEnum (''TriggerApi))

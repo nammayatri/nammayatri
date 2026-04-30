@@ -103,6 +103,7 @@ library
       API.UI.OrgAdmin
       API.UI.Payment
       API.UI.Performance
+      API.UI.PersonDefaultEmergencyContact
       API.UI.Plan
       API.UI.QueueRank
       API.UI.Rating
@@ -111,6 +112,7 @@ library
       API.UI.RideRoute
       API.UI.RideSummary
       API.UI.Route
+      API.UI.SafetySettings
       API.UI.Sos
       API.UI.Transporter
       API.UI.Whatsapp
@@ -284,7 +286,6 @@ library
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
-      Domain.Action.UI.DriverSafetySettings
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
@@ -948,7 +949,6 @@ library
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfile
       API.Action.UI.DriverProfileQuestions
-      API.Action.UI.DriverSafetySettings
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
@@ -963,13 +963,11 @@ library
       API.Action.UI.Operator
       API.Action.UI.PayoutDriverStatus
       API.Action.UI.Penalty
-      API.Action.UI.PersonDefaultEmergencyContact
       API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
       API.Action.UI.SocialLogin
-      API.Action.UI.Sos
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
       API.Action.UI.SpecialZoneQueue
@@ -1024,7 +1022,6 @@ library
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfile
       API.Types.UI.DriverProfileQuestions
-      API.Types.UI.DriverSafetySettings
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
@@ -1037,13 +1034,11 @@ library
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
       API.Types.UI.Penalty
-      API.Types.UI.PersonDefaultEmergencyContact
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
-      API.Types.UI.Sos
       API.Types.UI.SpecialLocationWarrior
       API.Types.UI.SpecialZoneQueue
       API.Types.UI.StclMembership

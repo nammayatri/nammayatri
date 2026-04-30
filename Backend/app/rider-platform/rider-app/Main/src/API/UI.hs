@@ -49,7 +49,6 @@ import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.SocialLogin as SocialLogin
-import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketKapture as TicketKapture
 import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
@@ -63,6 +62,7 @@ import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
+import qualified API.UI.DefaultEmergencyNumbers as DefaultEmergencyNumbers
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
 import qualified API.UI.Frontend as Frontend
@@ -82,6 +82,7 @@ import qualified API.UI.Registration as Registration
 import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
+import qualified API.UI.SafetySettings as SafetySettings
 import qualified API.UI.SavedReqLocation as SavedReqLocation
 import qualified API.UI.Search as Search
 import qualified API.UI.Select as Select
@@ -99,6 +100,8 @@ type API =
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
+           :<|> SafetySettings.API
+           :<|> DefaultEmergencyNumbers.API
            :<|> RidePayment.API
            :<|> Payment.API
            :<|> Payment.S2SAPI
@@ -137,7 +140,6 @@ type API =
            :<|> Invoice.API
            :<|> PriceBreakup.API
            :<|> FollowRide.API
-           :<|> SosApi.API
            :<|> FRFSTicketService.API
            :<|> Cac.API
            :<|> CustomerReferral.API
@@ -176,6 +178,8 @@ handler =
   healthCheck
     :<|> Registration.handler
     :<|> Profile.handler
+    :<|> SafetySettings.handler
+    :<|> DefaultEmergencyNumbers.handler
     :<|> RidePayment.handler
     :<|> Payment.handler
     :<|> Payment.handlerS2S
@@ -214,7 +218,6 @@ handler =
     :<|> Invoice.handler
     :<|> PriceBreakup.handler
     :<|> FollowRide.handler
-    :<|> SosApi.handler
     :<|> FRFSTicketService.handler
     :<|> Cac.handler
     :<|> CustomerReferral.handler

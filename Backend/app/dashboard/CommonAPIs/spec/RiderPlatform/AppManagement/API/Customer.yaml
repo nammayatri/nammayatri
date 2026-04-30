@@ -1,14 +1,14 @@
 imports:
   Customer: Dashboard.Common
-  SosReq: API.Types.UI.Sos
-  SosRes: API.Types.UI.Sos
+  SosReq: Safety.API.Types.UI.Sos
+  SosRes: Safety.API.Types.UI.Sos
   Person: Domain.Types.Person
   DeletedPersonReq: API.Types.UI.DeletedPerson
   APISuccess: Kernel.Types.APISuccess
   SavedReqLocationAPIEntity: Domain.Types.SavedReqLocation
 
 importPackageOverrides:
-  API.Types.UI.Sos: "rider-app"
+  Safety.API.Types.UI.Sos: "shared-services"
   Domain.Types.Person: "rider-app"
   API.Types.UI.DeletedPerson: "rider-app"
   Domain.Types.SavedReqLocation: "rider-app"

@@ -4,7 +4,6 @@
 module API.Types.Dashboard.AppManagement.Endpoints.Customer where
 
 import qualified "this" API.Types.UI.DeletedPerson
-import qualified "this" API.Types.UI.Sos
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified "this" Domain.Types.Person
@@ -15,6 +14,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified "shared-services" Safety.API.Types.UI.Sos
 import Servant
 import Servant.Client
 
@@ -45,10 +45,10 @@ data SavedReqLocationsListRes = SavedReqLocationsListRes {list :: [Domain.Types.
 type API = ("customer" :> (PostCustomerSosCreate :<|> PostCustomerDeletedPerson :<|> GetCustomerSavedLocations :<|> PostCustomerSavedLocations :<|> DeleteCustomerSavedLocations))
 
 type PostCustomerSosCreate =
-  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "sos" :> "create" :> ReqBody '[JSON] API.Types.UI.Sos.SosReq
+  ( Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> "sos" :> "create" :> ReqBody '[JSON] Safety.API.Types.UI.Sos.SosReq
       :> Post
            '[JSON]
-           API.Types.UI.Sos.SosRes
+           Safety.API.Types.UI.Sos.SosRes
   )
 
 type PostCustomerDeletedPerson =
@@ -76,7 +76,7 @@ type DeleteCustomerSavedLocations =
   )
 
 data CustomerAPIs = CustomerAPIs
-  { postCustomerSosCreate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.Sos.SosReq -> EulerHS.Types.EulerClient API.Types.UI.Sos.SosRes,
+  { postCustomerSosCreate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Safety.API.Types.UI.Sos.SosReq -> EulerHS.Types.EulerClient Safety.API.Types.UI.Sos.SosRes,
     postCustomerDeletedPerson :: Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.UI.DeletedPerson.DeletedPersonReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getCustomerSavedLocations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient SavedReqLocationsListRes,
     postCustomerSavedLocations :: Kernel.Types.Id.Id Domain.Types.Person.Person -> CreateSavedReqLocationReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

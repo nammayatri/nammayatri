@@ -11,37 +11,35 @@ module API.UI.Sos
   )
 where
 
-import qualified API.Action.UI.Sos as GeneratedSos
-import qualified Domain.Action.UI.Sos as DSos
-import qualified Domain.Types.Merchant as Merchant
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as Person
+import Domain.Action.UI.Sos ()
+-- HasSosHandle + BuildSosCtx instances
 import Environment
 import EulerHS.Prelude
-import Kernel.ServantMultipart
-import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Safety.Domain.Types.Sos as Sos
+import qualified Safety.API.UI.Sos as SosRoutes
+import qualified Safety.Domain.Action.UI.Sos as SharedSos
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type UploadAPI =
-  TokenAuth
-    :> "sos"
-    :> Capture "sosId" (Id Sos.Sos)
-    :> "upload"
-    :> MultipartForm Tmp DSos.SOSVideoUploadReq
-    :> Post '[JSON] DSos.AddSosVideoRes
-
-type API = GeneratedSos.API :<|> UploadAPI
+type API = SosRoutes.SosAPI TokenAuth
 
 handler :: Environment.FlowServer API
-handler = GeneratedSos.handler :<|> uploadMediaHandler
-
-uploadMediaHandler ::
-  (Id Person.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
-  Id Sos.Sos ->
-  DSos.SOSVideoUploadReq ->
-  Environment.FlowHandler DSos.AddSosVideoRes
-uploadMediaHandler (personId, _, _) sosId = withFlowHandlerAPI . DSos.uploadMedia sosId personId
+handler =
+  (\auth rideId -> withFlowHandlerAPI $ SharedSos.sosGetDetails auth rideId)
+    :<|> (\a b c d -> withFlowHandlerAPI $ SharedSos.sosIvrOutcome a b c d)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCreate auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosStatus auth sosId req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosMarkRideAsSafe auth sosId req)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCreateMockSos auth req)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosCallPolice auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateLocation auth sosId req)
+    :<|> (\sosId -> withFlowHandlerAPI $ SharedSos.sosTracking sosId)
+    :<|> (\auth req -> withFlowHandlerAPI $ SharedSos.sosStartTracking auth req)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateState auth sosId req)
+    :<|> (\auth sosId -> withFlowHandlerAPI $ SharedSos.sosTrackingDetails auth sosId)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUpdateToRide auth sosId req)
+    :<|> (\auth status -> withFlowHandlerAPI $ SharedSos.sosGetDetailsByPerson auth status)
+    :<|> (\req -> withFlowHandlerAPI $ SharedSos.sosErssStatusUpdate req)
+    :<|> (\rideShortId -> withFlowHandlerAPI $ SharedSos.sosRideDetails rideShortId)
+    :<|> (\auth sosId req -> withFlowHandlerAPI $ SharedSos.sosUploadMedia auth sosId req)

@@ -2,8 +2,9 @@ module Domain.Action.UI.FollowRide where
 
 import API.Types.UI.FollowRide
 import qualified Domain.Action.UI.Booking as DAB
-import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
-import Domain.Action.UI.Profile as DAP
+import Domain.Action.UI.Profile ()
+-- HasEmergencyContactHandle instance
+
 import Domain.Types.Booking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as Person
@@ -18,6 +19,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Safety.Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SLPEN
@@ -65,15 +67,15 @@ postShareRide :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> ShareRideRe
 postShareRide (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  emergencyContacts <- DAP.getDefaultEmergencyNumbers (personId, merchantId)
+  emergencyContacts <- EmergencyLib.getEmergencyContacts (personId, merchantId)
   mapM_
     ( \emergencyContact ->
         when (emergencyContact.mobileNumber `elem` req.emergencyContactNumbers) $ do
           case emergencyContact.contactPersonId of
             Nothing -> pure ()
             Just id -> do
-              emergencyContactEntity <- QPerson.findById id >>= fromMaybeM (PersonDoesNotExist id.getId)
-              updateFollowDetails emergencyContactEntity emergencyContact
+              emergencyContactEntity <- QPerson.findById (cast id) >>= fromMaybeM (PersonDoesNotExist id.getId)
+              updateFollowDetails personId emergencyContactEntity
               dbHash <- getDbHash emergencyContact.mobileNumber
               QPDEN.updateShareRide dbHash (cast personId) True
               SLPEN.sendNotificationToEmergencyContact personId emergencyContactEntity (body person) title Notification.SHARE_RIDE Nothing Nothing
@@ -84,8 +86,8 @@ postShareRide (mbPersonId, merchantId) req = do
     title = "Ride Share"
     body person = SLP.getName person <> " has invited you to follow their ride!\nFollow along to ensure their safety."
 
-updateFollowDetails :: Person.Person -> DPDEN.PersonDefaultEmergencyNumberAPIEntity -> Flow ()
-updateFollowDetails contactPersonEntity DPDEN.PersonDefaultEmergencyNumberAPIEntity {..} = do
+updateFollowDetails :: Id Person.Person -> Person.Person -> Flow ()
+updateFollowDetails personId contactPersonEntity = do
   void $ CQFollowRide.updateFollowRideList contactPersonEntity.id personId True
   QPerson.updateFollowsRide True contactPersonEntity.id
 

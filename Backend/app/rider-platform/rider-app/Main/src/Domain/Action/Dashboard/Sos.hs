@@ -3,7 +3,6 @@
 module Domain.Action.Dashboard.Sos where
 
 import qualified API.Types.RiderPlatform.Management.Sos
-import qualified API.Types.UI.Sos as UISos
 import qualified Dashboard.Common
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
@@ -11,12 +10,12 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import qualified Domain.Action.UI.Profile as DP
+import Domain.Action.UI.Profile ()
+-- HasEmergencyContactHandle instance
+
 import qualified Domain.Action.UI.Sos as Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
@@ -25,7 +24,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SOS as PoliceSOS
-import qualified Kernel.External.SOS.ERSS.Auth as ERSSAuth
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
 import qualified Kernel.Storage.Hedis as Redis
@@ -34,21 +32,20 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified Safety.API.Types.UI.Sos as UISos
+import qualified Safety.Domain.Action.UI.PersonDefaultEmergencyNumber as EmergencyLib
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyDCommon
 import qualified Safety.Domain.Types.Sos as SafetyDSos
+import qualified Safety.Storage.CachedQueries.Sos as SafetyCQSos
 import qualified Safety.Storage.Queries.Sos as SafetyQSos
 import Servant hiding (throwError)
-import Servant.Client (showBaseUrl)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
-import qualified SharedLogic.External.LocationTrackingService.Types as LTSTypes
 import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Getter (getConfig)
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -59,7 +56,7 @@ getSosTracking _merchantShortId _opCity sosId = do
   sosTrackingRateLimitOptions <- asks (.sosTrackingRateLimitOptions)
   checkSlidingWindowLimitWithOptions (sosDashboardHitsCountKey sosId) sosTrackingRateLimitOptions
   let sosId' = Kernel.Types.Id.cast @Dashboard.Common.Sos @SafetyDSos.Sos sosId
-  res <- Sos.getSosTracking sosId'
+  res <- SafetySos.sosTracking sosId'
   pure $ convertToApiRes res
 
 getSosDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> Environment.Flow API.Types.RiderPlatform.Management.Sos.SosDetailsMaybeRes)
@@ -171,64 +168,44 @@ callExternalSOS sosId mbComments = do
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
   riderConfig <- getConfig (RiderDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
-  case riderConfig.externalSOSConfig of
+  case Sos.toSafetyExternalSOSConfig <$> riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do
-      when (sosConfig.triggerSource /= DRC.DASHBOARD) $
+      when (sosConfig.triggerSource /= SafetyDCommon.DASHBOARD) $
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
-      let sosServiceType = flowToSOSService sosConfig.flow
-      merchantSvcCfg <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
+      let sosServiceType = SafetyDCommon.flowToSOSService sosConfig.flow
+      specificConfig <-
+        Sos.getSosSpecificConfig merchantId merchantOpCityId sosServiceType
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
-      case merchantSvcCfg.serviceConfig of
-        DMSC.SOSServiceConfig specificConfig -> do
-          mbRide <- maybe (pure Nothing) (\rid -> QRide.findById (Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride rid)) sos.rideId
-          let rideIdForLoc = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId
-          customerLocation <- getCustomerLocation rideIdForLoc mbRide
-          emergencyContacts <- DP.getDefaultEmergencyNumbers (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
-          merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-          externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity riderConfig mbComments (Just sos.id)
-          initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
-          unless initialRes.success $
-            throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
-          whenJust initialRes.trackingId $ \trackingId -> do
-            SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
-            Redis.del (Sos.mkExternalSOSTraceKey sosId)
-            -- Register ERSS config with LTS for location trace forwarding
-            case specificConfig of
-              SOSInterface.ERSSConfig erssCfg -> do
-                mbMobile <- Sos.getPersonMobileNo (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId)
-                whenJust mbMobile $ \mobileNo -> do
-                  erssToken <- ERSSAuth.getERSSToken erssCfg
-                  selfBaseUrl <- asks (.selfBaseUrl)
-                  locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
-                  let nyReauthUrl = T.pack (showBaseUrl selfBaseUrl) <> "/internal/sos/erss-reauth"
-                      tokenExpiresAt = round (utcTimeToPOSIXSeconds erssToken.accessExpiresAt) :: Int
-                  let erssReq =
-                        LTSTypes.SosErssConfigReq
-                          { externalReferenceId = trackingId,
-                            baseUrl = T.pack (showBaseUrl erssCfg.baseUrl),
-                            accessToken = erssToken.accessToken,
-                            tokenExpiresAt = tokenExpiresAt,
-                            nyReauthUrl = nyReauthUrl,
-                            nyApiKey = locationTrackingServiceKey,
-                            merchantOperatingCityId = merchantOpCityId.getId,
-                            pollingIntervalSecs = maybe 60 (.getSeconds) (riderConfig.externalSOSConfig >>= (.tracePollingIntervalSeconds)),
-                            timeDiffSecs = riderConfig.timeDiffFromUtc.getSeconds,
-                            expiresAt = Nothing,
-                            provider =
-                              LTSTypes.SosTraceProvider
-                                { providerKind = LTSTypes.ERSS,
-                                  authId = erssCfg.authId,
-                                  authCode = erssCfg.authCode,
-                                  mobileNo = mobileNo,
-                                  traceUrlSuffix = "/public/api/sos/trace"
-                                }
-                          }
-                  fork "ltsSosEntityUpsert" $
-                    LTS.entityUpsertForSos sosId.getId (sos.personId.getId) merchantId.getId (Just erssReq)
-              _ -> pure ()
-        _ -> throwError $ InternalError "Invalid SOS Service Config for provider"
+      mbRide <- maybe (pure Nothing) (\rid -> QRide.findById (Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride rid)) sos.rideId
+      let rideIdForLoc = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId
+      customerLocation <- getCustomerLocation rideIdForLoc mbRide
+      emergencyContacts <- EmergencyLib.getEmergencyContacts (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId, merchantId)
+      merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+      personData <- Sos.riderGetPersonData sos.personId
+      externalSOSDetails <- Sos.buildExternalSOSDetails (mkSosReq sos customerLocation) person personData sosConfig specificConfig mbRide emergencyContacts.defaultEmergencyNumbers merchantOpCity mbComments (Just sos.id)
+      initialRes <- PoliceSOS.sendInitialSOS specificConfig externalSOSDetails
+      unless initialRes.success $
+        throwError $ InternalError (fromMaybe "External SOS call failed" initialRes.errorMessage)
+      whenJust initialRes.trackingId $ \trackingId -> do
+        SafetyQSos.updateExternalReferenceId (Just trackingId) sosId
+        Redis.del (SafetyCQSos.mkExternalSOSTraceKey sosId)
+        -- Register ERSS config with LTS for location trace forwarding
+        case specificConfig of
+          SOSInterface.ERSSConfig erssCfg -> do
+            mbMobile <- Sos.getPersonMobileNo (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId)
+            whenJust mbMobile $ \mobileNo -> do
+              erssReq <-
+                Sos.buildSosErssConfigReq
+                  trackingId
+                  erssCfg
+                  merchantOpCityId
+                  (riderConfig.externalSOSConfig >>= (.tracePollingIntervalSeconds))
+                  riderConfig.timeDiffFromUtc
+                  mobileNo
+              fork "ltsSosEntityUpsert" $
+                LTS.entityUpsertForSos sosId.getId (sos.personId.getId) merchantId.getId (Just erssReq)
+          _ -> pure ()
   where
     getCustomerLocation :: Maybe (Kernel.Types.Id.Id DRide.Ride) -> Maybe DRide.Ride -> Environment.Flow (Maybe LatLong)
     getCustomerLocation rideId mbRide = do
@@ -253,18 +230,13 @@ callExternalSOS sosId mbComments = do
     mkSosReq sos customerLoc =
       UISos.SosReq
         { flow = sos.flow,
-          rideId = Kernel.Types.Id.cast @SafetyDCommon.Ride @DRide.Ride <$> sos.rideId,
+          rideId = sos.rideId,
           isRideEnded = Nothing,
           sendPNOnPostRideSOS = Nothing,
           notifyAllContacts = Nothing,
           customerLocation = customerLoc,
           triggerApiList = Nothing
         }
-
-flowToSOSService :: DRC.ExternalSOSFlow -> SOS.SOSService
-flowToSOSService DRC.ERSS = SOS.ERSS
-flowToSOSService DRC.GJ112 = SOS.GJ112
-flowToSOSService DRC.Trinity = SOS.Trinity
 
 postSosCallExternalSOS :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Sos -> API.Types.RiderPlatform.Management.Sos.CallExternalSOSReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postSosCallExternalSOS _merchantShortId _opCity sosId req = do
@@ -282,8 +254,8 @@ postSosErssStatusUpdate _merchantShortId _opCity req = do
       >>= fromMaybeM (InvalidRequest $ "No SOS found for signal ID: " <> req.idErss)
 
   let newStatus = req.currentStatus
-      newEntry = Sos.ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
-      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [Sos.ExternalStatusEntry]
+      newEntry = SafetySos.ExternalStatusEntry {status = newStatus, idErss = req.idErss, lastUpdatedTime = req.lastUpdatedTime}
+      existingHistory = maybe [] (\h -> fromMaybe [] (A.decode (LBS.fromStrict $ TE.encodeUtf8 h))) sosDetails.externalStatusHistory :: [SafetySos.ExternalStatusEntry]
       updatedHistory = existingHistory <> [newEntry]
       updatedHistoryJson = Just $ TE.decodeUtf8 $ LBS.toStrict $ A.encode updatedHistory
 
