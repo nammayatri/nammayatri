@@ -27,6 +27,7 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverGstin as DGST
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPanCard as DPC
 import Domain.Types.DriverSSN
 import Domain.Types.FarePolicy
@@ -1570,6 +1571,11 @@ getInfoBankAccount (mbPersonId, merchantId, merchantOpCityId) requestId _driverI
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   bankAccountVerificationResponse <-
     BankAccountVerification.getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId
+  when (bankAccountVerificationResponse.accountExists) $
+    case (bankAccountVerificationResponse.bankAccountNumber, bankAccountVerificationResponse.ifscCode) of
+      (Just accNo, Just ifsc) ->
+        QDI.updatePayoutVpaAndStatus (Just (accNo <> "@" <> ifsc <> ".ifsc.npci")) (Just DI.MANUALLY_ADDED) personId
+      _ -> pure ()
   return bankAccountVerificationResponse
 
 postDriverDeleteBankAccount ::
