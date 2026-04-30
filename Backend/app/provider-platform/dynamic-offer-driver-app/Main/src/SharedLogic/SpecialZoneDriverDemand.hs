@@ -238,7 +238,7 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
         logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
       when isQueueEnabled $
         forM_ variants $ \variant -> do
-          let demandTtl = fromMaybe 300 gate.demandTtlInSec
+          let demandTtl = 86400 -- 1 day
           incrementGateSearchDemand pickupZoneGateId variant demandTtl
           checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
 
