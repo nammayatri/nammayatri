@@ -35,9 +35,11 @@ import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
+import qualified Lib.Payment.Storage.Queries.PayoutRequest as QPR
 import Lib.Scheduler
 import SharedLogic.Allocator
 import SharedLogic.Ride (getRcIdForRide)
+import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -141,8 +143,14 @@ executeSpecialZonePayout payoutRequest = do
   payoutServiceName <- TP.decidePayoutService (DEMSC.RidePayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
   let payoutCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
   mbPayoutOrder <- PayoutRequest.executePayoutRequest payoutRequest payoutCall
-  whenJust mbPayoutOrder $ \payoutOrder ->
-    logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
+  case mbPayoutOrder of
+    Just payoutOrder ->
+      logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
+    Nothing -> do
+      mbUpdatedPayoutReq <- QPR.findById payoutRequest.id
+      whenJust mbUpdatedPayoutReq $ \updatedPayoutReq ->
+        when (updatedPayoutReq.status `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
+          SharedRide.safeRevertVehicleBalanceForPayout updatedPayoutReq
   pure Complete
 
 -- ---------------------------------------------------------------------------

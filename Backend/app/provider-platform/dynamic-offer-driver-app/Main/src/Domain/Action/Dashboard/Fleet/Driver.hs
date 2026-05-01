@@ -866,7 +866,9 @@ postDriverAddRidePayoutAccountNumber merchantShortId opCity req = do
             merchantId = Just merchant.id,
             merchantOperatingCityId = Just merchantOpCity.id,
             createdAt = now,
-            updatedAt = now
+            updatedAt = now,
+            vehicleBalance = req.vehicleBalance <|> (mbAlreadyExists >>= (.vehicleBalance)),
+            vehicleBalanceAdjustmentPercentage = req.vehicleBalanceAdjustmentPercentage <|> (mbAlreadyExists >>= (.vehicleBalanceAdjustmentPercentage))
           }
   case mbAlreadyExists of
     Just _ -> QDRPB.updateByPrimaryKey driverRidePayoutBankAccount
