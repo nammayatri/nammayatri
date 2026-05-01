@@ -60,6 +60,7 @@ DriverPoolConfig:
     distanceUnit: DistanceUnit
     dynamicBatchSize: Vector Int
     selfRequestIfRiderIsDriver: Bool
+    enablePriorityTagSplit: Maybe Bool
 
   beamFields:
     dynamicBatchSize:

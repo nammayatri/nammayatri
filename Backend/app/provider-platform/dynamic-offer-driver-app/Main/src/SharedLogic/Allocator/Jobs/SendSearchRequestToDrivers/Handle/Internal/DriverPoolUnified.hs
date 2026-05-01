@@ -6,6 +6,7 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.List as DL
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import Data.Maybe (listToMaybe)
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
@@ -26,6 +27,7 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Lib.Yudhishthira.Types as LYT
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -311,27 +313,56 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
 
         mkDriverPoolBatch mOCityId onlyNewDrivers transporterConfig batchSize' isOnRidePool = withTimeAPI "driverPooling" "makeTaggedDriverPool" $ SDP.makeTaggedDriverPool mOCityId transporterConfig.timeDiffFromUtc searchReq onlyNewDrivers batchSize' isOnRidePool searchReq.customerNammaTags searchReq.poolingLogicVersion batchNum driverPoolCfg searchTry.id
 
-        addDistanceSplitConfigBasedDelaysForDriversWithinBatch filledPoolBatch =
-          fst $
-            foldl'
-              ( \(finalBatch, restBatch) splitConfig -> do
-                  let (splitToAddDelay, newRestBatch) = splitAt splitConfig.batchSplitSize restBatch
-                      splitWithDelay = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = splitConfig.batchSplitDelay}) splitToAddDelay
-                  (finalBatch <> splitWithDelay, newRestBatch)
-              )
-              ([], filledPoolBatch)
-              driverPoolCfg.distanceBasedBatchSplit
+        addDistanceSplitConfigBasedDelaysForDriversWithinBatch =
+          addDelaysWithPrioritySplit driverPoolCfg.distanceBasedBatchSplit
 
-        addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch filledPoolBatch =
-          fst $
-            foldl'
-              ( \(finalBatch, restBatch) splitConfig -> do
-                  let (splitToAddDelay, newRestBatch) = splitAt splitConfig.batchSplitSize restBatch
-                      splitWithDelay = map (\driverWithDistance -> driverWithDistance {keepHiddenForSeconds = splitConfig.batchSplitDelay}) splitToAddDelay
-                  (finalBatch <> splitWithDelay, newRestBatch)
-              )
-              ([], filledPoolBatch)
-              driverPoolCfg.onRideBatchSplitConfig
+        addDistanceSplitConfigBasedDelaysForOnRideDriversWithinBatch =
+          addDelaysWithPrioritySplit driverPoolCfg.onRideBatchSplitConfig
+
+        addDelaysWithPrioritySplit ::
+          ( HasField "batchSplitSize" split Int,
+            HasField "batchSplitDelay" split Seconds
+          ) =>
+          [split] ->
+          [DriverPoolWithActualDistResult] ->
+          [DriverPoolWithActualDistResult]
+        addDelaysWithPrioritySplit splits pool =
+          if not enablePriorityTagSplit' || null priorityTagNames || null priorityDrivers
+            then applyDelays splits pool
+            else firstSplitWithDelay <> restWithDelay
+          where
+            enablePriorityTagSplit' = fromMaybe False driverPoolCfg.enablePriorityTagSplit
+            priorityTagNames = extractPriorityDriverTags searchReq.searchTags
+            (priorityDrivers, nonPriorityDrivers) = DL.partition (hasAnyPriorityTag priorityTagNames) pool
+            mbFirstSplit = listToMaybe splits
+            firstSplitDelay = maybe (Seconds 0) (.batchSplitDelay) mbFirstSplit
+            firstSplitSize = maybe 0 (.batchSplitSize) mbFirstSplit
+            backfillCount = max 0 (firstSplitSize - length priorityDrivers)
+            restSplits = drop 1 splits
+            firstSplitWithDelay = map (\d -> d {keepHiddenForSeconds = firstSplitDelay}) priorityDrivers
+            lastIdx = length restSplits - 1
+            restWithDelay =
+              fst $
+                foldl'
+                  ( \(finalBatch, (restBatch, idx)) splitConfig ->
+                      let extraSize = if idx == lastIdx then backfillCount else 0
+                          (splitToAddDelay, newRestBatch) = splitAt (splitConfig.batchSplitSize + extraSize) restBatch
+                          splitWithDelay = map (\d -> d {keepHiddenForSeconds = splitConfig.batchSplitDelay}) splitToAddDelay
+                       in (finalBatch <> splitWithDelay, (newRestBatch, idx + 1))
+                  )
+                  ([], (nonPriorityDrivers, 0 :: Int))
+                  restSplits
+
+            applyDelays splits' pool' =
+              fst $
+                foldl'
+                  ( \(finalBatch, restBatch) splitConfig ->
+                      let (splitToAddDelay, newRestBatch) = splitAt splitConfig.batchSplitSize restBatch
+                          splitWithDelay = map (\d -> d {keepHiddenForSeconds = splitConfig.batchSplitDelay}) splitToAddDelay
+                       in (finalBatch <> splitWithDelay, newRestBatch)
+                  )
+                  ([], pool')
+                  splits'
 
         calcDriverCurrentlyOnRidePool poolType radiusStep transporterConfig _batchNum allDriverPoolResults = do
           let merchantId = searchReq.providerId
@@ -547,3 +578,18 @@ insertInObject obj tags =
   case obj of
     Object keymap -> Object $ DL.foldl' (\acc key -> AKM.insert ((AK.fromString . show) key) (toJSON True) acc) keymap tags
     _ -> Object $ DL.foldl' (\acc key -> AKM.insert ((AK.fromString . show) key) (toJSON True) acc) AKM.empty tags
+
+hasAnyPriorityTag :: [Text] -> DriverPoolWithActualDistResult -> Bool
+hasAnyPriorityTag tagNames dp = case dp.driverPoolResult.driverTags of
+  Object keymap -> any (\name -> AKM.member (AK.fromText name) keymap) tagNames
+  _ -> False
+
+priorityDriverTagPrefix :: Text
+priorityDriverTagPrefix = "priorityDriverTag#"
+
+extractPriorityDriverTags :: Maybe [LYT.TagNameValue] -> [Text]
+extractPriorityDriverTags = maybe [] (mapMaybe extractTag)
+  where
+    extractTag (LYT.TagNameValue raw) = case T.stripPrefix priorityDriverTagPrefix raw of
+      Just name | not (T.null name) -> Just name
+      _ -> Nothing
