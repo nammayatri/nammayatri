@@ -1517,6 +1517,8 @@ types:
     - ifscCode: Maybe Text
     - bankName: Maybe Text
     - vehicleRegistrationNumber: Text
+    - vehicleBalance: Maybe HighPrecMoney
+    - vehicleBalanceAdjustmentPercentage: Maybe Centesimal
     - derive: "'HideSecrets"
   EstimatedRouteDetails:
     - polyline: Maybe Text

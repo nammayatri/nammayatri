@@ -10,6 +10,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
@@ -19,6 +20,8 @@ data DriverRidePayoutBankAccountE e = DriverRidePayoutBankAccount
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     id :: Kernel.Types.Id.Id Domain.Types.DriverRidePayoutBankAccount.DriverRidePayoutBankAccount,
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
+    vehicleBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    vehicleBalanceAdjustmentPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
@@ -26,9 +29,9 @@ data DriverRidePayoutBankAccountE e = DriverRidePayoutBankAccount
   }
   deriving (Generic)
 
-type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsEncrypted)
+type DriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsEncrypted
 
-type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE ('AsUnencrypted)
+type DecryptedDriverRidePayoutBankAccount = DriverRidePayoutBankAccountE 'AsUnencrypted
 
 instance EncryptedItem DriverRidePayoutBankAccount where
   type Unencrypted DriverRidePayoutBankAccount = (DecryptedDriverRidePayoutBankAccount, HashSalt)
@@ -42,6 +45,8 @@ instance EncryptedItem DriverRidePayoutBankAccount where
           driverId = driverId entity,
           id = id entity,
           rcId = rcId entity,
+          vehicleBalance = vehicleBalance entity,
+          vehicleBalanceAdjustmentPercentage = vehicleBalanceAdjustmentPercentage entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           createdAt = createdAt entity,
@@ -57,6 +62,8 @@ instance EncryptedItem DriverRidePayoutBankAccount where
             driverId = driverId entity,
             id = id entity,
             rcId = rcId entity,
+            vehicleBalance = vehicleBalance entity,
+            vehicleBalanceAdjustmentPercentage = vehicleBalanceAdjustmentPercentage entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             createdAt = createdAt entity,

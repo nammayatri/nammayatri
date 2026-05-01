@@ -67,7 +67,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculatorV2 as FCV2
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.IffcoTokioInsurance as IffcoInsurance
-import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutVpaForRide, isKaaliPeeliBooking)
+import SharedLogic.Ride (calculateEstimatedEndTimeRange, getPayoutDetailsForRide, isKaaliPeeliBooking)
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Domain.Types.VehicleVariant as Veh
@@ -253,7 +253,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                       (roundToIntegral (getHighPrecMoney payoutAmountBase) :: Integer)
               payoutRequestId <- Id <$> generateGUID
               let scheduledTime = addUTCTime (secondsToNominalDiffTime buffer) now
-              payoutVpa <- getPayoutVpaForRide ride.id
+              (payoutVpa, netPayoutAmount, mbAdjustVehicleBalance) <- getPayoutDetailsForRide ride.id payoutAmount
               let payoutStatus =
                     if ( paymentInstrument `elem` (fromMaybe [] transporterConfig.allowedPaymentInstrumentForPayout)
                            && isJust payoutVpa
@@ -270,7 +270,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         entityId = ride.id.getId,
                         entityRefId = Just booking.id.getId,
                         beneficiaryId = driverId.getId,
-                        amount = Just payoutAmount,
+                        amount = Just netPayoutAmount,
                         status = payoutStatus,
                         retryCount = Nothing,
                         failureReason = Nothing,
@@ -291,7 +291,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
                         updatedAt = now,
                         merchantId = booking.providerId.getId,
                         merchantOperatingCityId = ride.merchantOperatingCityId.getId,
-                        payoutFee = Nothing,
+                        payoutFee = mbAdjustVehicleBalance,
                         coverageFrom = Nothing,
                         coverageTo = Nothing,
                         payoutType = Nothing

@@ -12,3 +12,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD COLUMN me
 ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD COLUMN vehicle_balance_adjustment_percentage numeric(10,2) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_ride_payout_bank_account ADD COLUMN vehicle_balance numeric(30,2) ;
