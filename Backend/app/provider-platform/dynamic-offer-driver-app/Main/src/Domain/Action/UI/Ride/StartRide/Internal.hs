@@ -47,7 +47,8 @@ startRideTransaction ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "minDistanceBetweenTwoPoints" r Int,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id SP.Person ->
   SRide.Ride ->

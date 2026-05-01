@@ -6,6 +6,7 @@ module SharedLogic.DriverPool.DriverPoolData
   )
 where
 
+import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
@@ -82,24 +83,29 @@ data DriverPoolData = DriverPoolData
 driverPoolDataKey :: Id Driver -> Text
 driverPoolDataKey driverId = "driver-pool-data:" <> driverId.getId
 
--- TODO: When LTS Redis is deployed separately, add withLTSRedis swap here
--- For now, using the same Redis instance. The ltsRedisCfg in Environment.hs
--- points to the same Redis in dev, and can be configured to LTS Redis in prod.
-
 -- | Batch-fetch pool data for multiple drivers from Redis.
 getDriverPoolDataBatch ::
-  (Redis.HedisFlow m r, MonadFlow m) =>
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+  ) =>
   [Id Driver] ->
   m [DriverPoolData]
 getDriverPoolDataBatch driverIds = do
-  results <- mapM (\did -> Redis.safeGet (driverPoolDataKey did)) driverIds
-  pure $ catMaybes results
+  let keys = map driverPoolDataKey driverIds
+  primaryResults <- Redis.withLTSRedis $ Redis.mGetStandalone keys
+  secondaryResults <- Redis.withSecondaryLTSRedis $ Redis.mGetStandalone keys
+  pure $ nubBy (\a b -> a.driverId == b.driverId) (primaryResults <> secondaryResults)
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
 -- via syncDriverPoolDataToLTS. No need to expire and rebuild frequently.
 setDriverPoolData ::
-  (Redis.HedisFlow m r, MonadFlow m) =>
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   DriverPoolData ->
   m ()
 setDriverPoolData dpd = do
-  Redis.setExp (driverPoolDataKey dpd.driverId) dpd (2592000 * 12) -- 1 year
+  Redis.withLTSRedis $ Redis.setExp (driverPoolDataKey dpd.driverId) dpd (2592000 * 12) -- 1 year

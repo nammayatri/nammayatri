@@ -85,7 +85,7 @@ import qualified Tools.Notifications as Notify
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
-type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r)
+type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
 getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
@@ -486,7 +486,7 @@ sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompl
     replaceCoinsValue = T.replace "{#pointsValue#}" (T.pack $ show coinsValue)
 sendCoinsNotificationV3 _merchantOpCityId _driverId _coinsValue _eventFunction = pure ()
 
-sendCoinsNotificationV2 :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
 sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language
@@ -505,7 +505,7 @@ sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUpl
     replaceAmountValue amount' = T.replace "{#amountValue#}" (T.pack $ show amount')
 sendCoinsNotificationV2 _merchantOpCityId _driverId _amount _coinsValue _eventFunction = pure ()
 
-sendCoinsNotification :: EventFlow m r => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotification :: (EventFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
 sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
   B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
     let language = fromMaybe L.ENGLISH driver.language

@@ -56,6 +56,9 @@ getNextDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r
   ) =>
@@ -102,6 +105,9 @@ prepareDriverPoolBatch ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r
   ) =>
@@ -477,7 +483,9 @@ assignDriverGoHomeTags ::
     CacheFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   [DriverPoolWithActualDistResult] ->
   DSR.SearchRequest ->

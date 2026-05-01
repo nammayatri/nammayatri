@@ -6,6 +6,7 @@ import qualified Domain.Action.UI.CallFeedbackFCM as CallFeedbackFCM
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -32,7 +33,9 @@ prodLoopStatus ::
     CoreMetrics m,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasRequestId r
+    HasRequestId r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   ProdLoopStatusReq ->
   m APISuccess

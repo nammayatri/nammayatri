@@ -25,6 +25,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
+import qualified Domain.Types.StclMembership as StclMembership
 import Domain.Types.SubscriptionConfig (SubscriptionConfig, VendorMigrationMapping (..))
 import qualified Domain.Types.VendorFee as VF
 import qualified EulerHS.Language as L
@@ -54,9 +55,8 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.Invoice as QIN
-import qualified Domain.Types.StclMembership as StclMembership
-import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Error
 import Tools.Metrics
 import qualified Tools.Payment as TPayment

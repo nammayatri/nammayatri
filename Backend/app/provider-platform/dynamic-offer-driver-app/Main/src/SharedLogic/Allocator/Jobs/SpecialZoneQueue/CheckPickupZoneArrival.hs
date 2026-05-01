@@ -35,7 +35,9 @@ checkPickupZoneArrival ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'CheckPickupZoneArrival ->
   m ExecutionResult
@@ -61,7 +63,9 @@ runArrivalCheckForRequest ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DSZQR.SpecialZoneQueueRequest ->
   Id DP.Person ->

@@ -202,6 +202,7 @@ data AppEnv = AppEnv
     cutOffHedisCluster :: Bool,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
+    secondaryLTSHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -333,6 +334,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let modifierFunc = ("dynamic-offer-driver-app:" <>)
   hedisEnv <- connectHedis hedisCfg modifierFunc -- will be depreciated once data is migrated to cluster
   ltsHedisEnv <- connectHedis ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
+  let secondaryLTSHedisEnv = Nothing
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg modifierFunc
   hedisClusterEnv <-
     if cutOffHedisCluster

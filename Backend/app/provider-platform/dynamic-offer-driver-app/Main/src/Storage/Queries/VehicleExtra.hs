@@ -15,6 +15,7 @@ import qualified Domain.Types.VehicleVariant as Variant
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
@@ -24,7 +25,7 @@ import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import Storage.Queries.OrphanInstances.Vehicle ()
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Vehicle -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => (Vehicle -> m ())
 create vehicle = do
   createWithKV vehicle
   whenJust vehicle.category $ \category -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category) vehicle.driverId
@@ -39,11 +40,11 @@ create vehicle = do
         LTSSync.vehicleRating = LTSSync.Set vehicle.vehicleRating
       }
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Vehicle] -> m ())
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => ([Vehicle] -> m ())
 createMany = traverse_ create
 
 -- Extra code goes here --
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Vehicle -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
   if isJust res
@@ -78,7 +79,7 @@ upsert a@Vehicle {..} = do
       }
 
 updateVehicleVariant ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   (VehicleVariant -> Maybe VehicleCategory -> Id Person -> m ())
 updateVehicleVariant variant category driverId = do
   _now <- getCurrentTime
@@ -88,7 +89,7 @@ updateVehicleVariant variant category driverId = do
     LTSSync.emptyUpdate {LTSSync.variant = LTSSync.Set variant}
 
 updateVariantAndServiceTiers ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   (VehicleVariant -> [ServiceTierType] -> Maybe VehicleCategory -> Id Person -> m ())
 updateVariantAndServiceTiers variant selectedServiceTiers category driverId = do
   _now <- getCurrentTime
@@ -149,14 +150,14 @@ findAllByDriverIds driverIds =
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [ServiceTierType] -> Id Person -> m ()
+updateSelectedServiceTiers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => [ServiceTierType] -> Id Person -> m ()
 updateSelectedServiceTiers tiers driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamV.selectedServiceTiers tiers, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.selectedServiceTiers = LTSSync.Set tiers}
 
-updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Days.Day -> Id Person -> m ()
+updateManufacturing :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe Days.Day -> Id Person -> m ()
 updateManufacturing mYManufacturing driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set BeamV.mYManufacturing mYManufacturing, Se.Set BeamV.updatedAt _now] [Se.Is BeamV.driverId $ Se.Eq (getId driverId)]
@@ -179,7 +180,7 @@ updateMerchantIdAndCityIdByDriverId driverId merchantId mbMerchantOperatingCityI
 
 -- | Update vehicle row by registration number only (works even when RC is unassigned to a driver).
 updateVehicleFromRcEdit ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Text ->
   Text ->
   Maybe Text ->
@@ -210,7 +211,7 @@ updateVehicleFromRcEdit oldRegistrationNo newRegistrationNo mbMake mbModel mbCol
 
 -- | When the driver's vehicle row still matches the old RC registration number, sync fields from optional dashboard edits.
 updateFleetVehicleFromDashboardRcEdit ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Id Person ->
   Text ->
   Text ->
