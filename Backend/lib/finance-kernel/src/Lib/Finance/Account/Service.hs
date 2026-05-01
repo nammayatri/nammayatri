@@ -22,6 +22,7 @@ module Lib.Finance.Account.Service
 where
 
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
@@ -65,22 +66,25 @@ getAccount ::
 getAccount = QAccount.findById
 
 -- | Get or create account (idempotent operation)
--- Returns existing account if found, creates new one if not
+-- Returns existing account if found, creates new one if not.
+-- Uses a Redis lock to prevent duplicate account creation under concurrent requests.
 getOrCreateAccount ::
   (BeamFlow.BeamFlow m r) =>
   AccountInput ->
   m (Either FinanceError Account)
 getOrCreateAccount input = do
-  mbExisting <-
-    QAccount.findByCounterpartyAndType
-      input.counterpartyType
-      input.counterpartyId
-      input.accountType
-      input.currency
+  let lockKey = "finance:getOrCreateAccount:" <> show input.counterpartyType <> ":" <> fromMaybe "" input.counterpartyId <> ":" <> show input.accountType <> ":" <> show input.currency
+  Redis.withWaitAndLockRedis lockKey 10 200 $ do
+    mbExisting <-
+      QAccount.findByCounterpartyAndType
+        input.counterpartyType
+        input.counterpartyId
+        input.accountType
+        input.currency
 
-  case mbExisting of
-    Just existing -> pure $ Right existing
-    Nothing -> createAccount input
+    case mbExisting of
+      Just existing -> pure $ Right existing
+      Nothing -> createAccount input
 
 -- | Get current balance for an account
 getBalance ::

@@ -3015,6 +3015,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantId = Just merchantId,
             priority = 0,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
             ..
           }
@@ -3076,7 +3077,6 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
-            demandTtlInSec = mbGate >>= (.demandTtlInSec),
             ..
           }
 

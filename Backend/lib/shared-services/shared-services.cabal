@@ -105,6 +105,9 @@ library
       Safety.Storage.Queries.PersonDefaultEmergencyNumberExtra
       Safety.Storage.Queries.SafetySettingsExtra
       Safety.Tools.Error
+      Toll.SharedLogic.TollsDetector
+      Toll.Storage.BeamFlow
+      Toll.Storage.CachedQueries.Toll
       UrlShortner.Common
       UrlShortner.Types
       API.Types.ProviderPlatform.IssueManagement
@@ -126,6 +129,9 @@ library
       Safety.Storage.Queries.PersonDefaultEmergencyNumber
       Safety.Storage.Queries.SafetySettings
       Safety.Storage.Queries.Sos
+      Toll.Domain.Types.Toll
+      Toll.Storage.Beam.Toll
+      Toll.Storage.Queries.Toll
   other-modules:
       Tools.Beam.UtilsTH
   hs-source-dirs:

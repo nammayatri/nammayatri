@@ -100,8 +100,8 @@ import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
-import qualified SharedLogic.TollsDetector as TollsDetector
 import qualified SharedLogic.Type as SLT
+import Storage.Beam.Toll ()
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
@@ -118,6 +118,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.StopInformation as QSI
+import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Maps as TM
@@ -474,7 +475,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                 -- Check for pending tolls (entry detected but exit not found) and validate against estimate using IDs
                 mbValidatedPendingToll <-
                   TollsDetector.checkAndValidatePendingTolls
-                    updRide.driverId
+                    updRide.driverId.getId
                     updRide.estimatedTollCharges
                     updRide.estimatedTollNames
                     updRide.estimatedTollIds

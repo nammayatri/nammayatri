@@ -20,6 +20,7 @@ data DriverUdyamE e = DriverUdyam
     enterpriseType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.DriverUdyam.DriverUdyam,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     udyamNumber :: Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text,
     verificationStatus :: Kernel.Types.Documents.VerificationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy,
@@ -29,9 +30,9 @@ data DriverUdyamE e = DriverUdyam
   }
   deriving (Generic)
 
-type DriverUdyam = DriverUdyamE ('AsEncrypted)
+type DriverUdyam = DriverUdyamE 'AsEncrypted
 
-type DecryptedDriverUdyam = DriverUdyamE ('AsUnencrypted)
+type DecryptedDriverUdyam = DriverUdyamE 'AsUnencrypted
 
 instance EncryptedItem DriverUdyam where
   type Unencrypted DriverUdyam = (DecryptedDriverUdyam, HashSalt)
@@ -44,6 +45,7 @@ instance EncryptedItem DriverUdyam where
           enterpriseType = enterpriseType entity,
           id = id entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
+          rejectReason = rejectReason entity,
           udyamNumber = udyamNumber_,
           verificationStatus = verificationStatus entity,
           verifiedBy = verifiedBy entity,
@@ -60,6 +62,7 @@ instance EncryptedItem DriverUdyam where
             enterpriseType = enterpriseType entity,
             id = id entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
+            rejectReason = rejectReason entity,
             udyamNumber = udyamNumber_,
             verificationStatus = verificationStatus entity,
             verifiedBy = verifiedBy entity,

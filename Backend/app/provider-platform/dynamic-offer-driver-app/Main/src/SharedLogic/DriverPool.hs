@@ -104,7 +104,6 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Beckn.Common as DST
-import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
@@ -120,6 +119,7 @@ import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
 import Utils.Common.Cac.KeyNameConstants
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 
 mkTotalQuotesKey :: Text -> Text
 mkTotalQuotesKey driverId = "driver-offer:DriverPool:Total-quotes:DriverId-" <> driverId

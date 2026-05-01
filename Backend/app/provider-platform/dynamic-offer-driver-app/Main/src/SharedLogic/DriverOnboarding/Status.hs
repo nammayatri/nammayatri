@@ -1230,8 +1230,10 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
       status <- getInspectionHubStatusForResponseStatus DOHR.DRIVER_ONBOARDING_INSPECTION (Just driverId) Nothing
       return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.UDYAMCertificate -> do
-      mbUdyamCertificate <- QUDYAM.findByDriverId driverId
-      return (mapStatus <$> (mbUdyamCertificate <&> (.verificationStatus)), Nothing, Nothing, Nothing, mbS3Path, mbImageId)
+      mbUdyam <- QUDYAM.findByDriverId driverId
+      return (mapStatus . (.verificationStatus) <$> mbUdyam, mbUdyam >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId)
+    DVC.TANCertificate -> commonDocStatus DVC.TANCertificate
+    DVC.LDCCertificate -> commonDocStatus DVC.LDCCertificate
     DVC.BusinessLicense -> commonDocStatus DVC.BusinessLicense
     DVC.TaxiTransportLicense -> commonDocStatus DVC.TaxiTransportLicense
     DVC.BusinessRegistrationExtract -> do
@@ -1464,6 +1466,8 @@ getInProgressDriverDocuments driverId entityImagesInfo docType possibleVehicleCa
     DDVC.BusinessRegistrationExtract -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.BusinessRegistrationExtract onlyImageLookup filteredDocVerificationConfigs
     DDVC.TAXDetails -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TAXDetails onlyImageLookup filteredDocVerificationConfigs
     DDVC.FinnishIDResidencePermit -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.FinnishIDResidencePermit onlyImageLookup filteredDocVerificationConfigs
+    DDVC.TANCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.TANCertificate onlyImageLookup filteredDocVerificationConfigs
+    DDVC.LDCCertificate -> checkIfImageUploadedOrInvalidated entityImagesInfo DDVC.LDCCertificate onlyImageLookup filteredDocVerificationConfigs
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId)
 

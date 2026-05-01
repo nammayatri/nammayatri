@@ -157,6 +157,7 @@ transformToSearchReq req subscriptionId =
             sessionToken = details.sessionToken,
             recentLocationId = details.recentLocationId,
             isSpecialLocation = Nothing,
+            enforceTollRoute = Nothing,
             placeNameSource = Nothing,
             isReserveRide = Just True,
             subscriptionId = Just subscriptionId,

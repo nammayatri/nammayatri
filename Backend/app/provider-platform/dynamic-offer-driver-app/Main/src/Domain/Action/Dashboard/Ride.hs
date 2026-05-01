@@ -628,6 +628,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         rideBookingTime = booking.createdAt,
         estimatedDriverArrivalTime = (\quote -> realToFrac quote.durationToPickup `addUTCTime` ride.createdAt) <$> mQuote,
         actualDriverArrivalTime = ride.driverArrivalTime,
+        fleetOwnerId = fmap getId ride.fleetOwnerId,
         rideStartTime = ride.tripStartTime,
         rideEndTime = ride.tripEndTime,
         rideDistanceEstimated = booking.estimatedDistance,

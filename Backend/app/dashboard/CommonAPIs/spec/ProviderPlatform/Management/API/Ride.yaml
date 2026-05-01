@@ -304,6 +304,7 @@ types:
     - driverId: Id Driver
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - fleetOwnerId: Maybe Text
     - vehicleNo: Text
     - driverStartLocation: Maybe LatLong
     - driverCurrentLocation: Maybe LatLong

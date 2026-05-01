@@ -18,6 +18,7 @@ import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified SharedLogic.Offer as SOffer
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
 
@@ -44,6 +45,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     tripCategory :: Maybe DTC.TripCategory,
+    customerOffers :: Maybe SOffer.CumulativeOfferResp,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
     validTill :: UTCTime,
@@ -73,6 +75,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
           discountWithCurrency = mkPriceAPIEntity <$> discount,
           vehicleVariant = vehicleServiceTierType,
+          customerOffers = Nothing,
           quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
           vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
           ..

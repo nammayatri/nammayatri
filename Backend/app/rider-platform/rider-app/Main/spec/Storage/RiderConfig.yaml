@@ -196,6 +196,7 @@ RiderConfig:
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
     enableMultiModalForAllUsers: Maybe Bool
+    passStatusUpdateBatchSize: Maybe Int
     nyRegularSubscriptionBatchSize: Maybe Int
     nyRegularExecutionTimeOffsetMinutes: Maybe Int
     nyRegularMinGapSeconds: Seconds

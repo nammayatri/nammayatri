@@ -359,6 +359,7 @@ types:
     - name: Maybe Text
     - mobileCountryCode: Maybe Text
     - mobileNumber: Maybe Text
+    - fleetName: Maybe Text
   OnboardingAs:
     enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:
