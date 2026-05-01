@@ -236,6 +236,32 @@ _:
         '';
       };
 
+      run-mobility-full-stack-dev = {
+        category = "Backend";
+        description = ''
+          Run the nammayatri backend components via "cabal run" plus the
+          control-center frontend (cloned from
+          https://github.com/nammayatri/control-center) running "npm run dev"
+          with VITE_BAP_URL=http://localhost:8017 and VITE_BPP_URL=http://localhost:8018.
+        '';
+        exec = ''
+          export DEV=1
+          # Free up service ports first so a stale process from a prior run
+          # doesn't hold the port and crash a fresh service start.
+          echo "── Pre-flight: freeing service ports ──"
+          ${killSvcPortsScript}
+          # Bump soft stack to the hard max. `nix run` spawns a fresh shell
+          # that doesn't inherit the devshell's shellHook, so set it here too.
+          # Required by process-compose / some Haskell exes that want >= 60 MB stack.
+          _hard=$(ulimit -Hs 2>/dev/null || true)
+          if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+            ulimit -s "$_hard" 2>/dev/null || true
+          fi
+          # -S NAME forces stable sort by process name (no re-ordering on status change)
+          nix run .#run-mobility-full-stack-dev -- -S NAME "$@"
+        '';
+      };
+
       kill-svc-ports = {
         category = "Backend";
         description = ''
