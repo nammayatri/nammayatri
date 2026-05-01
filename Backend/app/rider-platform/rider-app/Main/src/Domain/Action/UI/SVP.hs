@@ -377,15 +377,17 @@ handleExit mobileNum mId stationCode exitTime = do
     walletResp <-
       TWallet.walletPosting person.merchantId person.merchantOperatingCityId
         WalletPostingReq
-          { customerId   = getId person.id,
-            postingType  = REDEEM,
-            operationId  = getId journey.id,   -- unique per journey
+          { customerId = getId person.id,
+            postingType = REDEEM,
+            operationId = getId journey.id, -- unique per journey
             pointsAmount = farePaisa
           }
     unless walletResp.success $
-      throwError $ InternalError $
-        "[SVP] Wallet deduction failed for rider " <> getId person.id
-          <> ": " <> walletResp.message
+      throwError $
+        InternalError $
+          "[SVP] Wallet deduction failed for rider " <> getId person.id
+            <> ": "
+            <> walletResp.message
 
   -- Mark journey EXITED and expire tktSlNo so next QR issues a fresh serial
   QSvpJourney.updateStatusAndExitDetailsById
@@ -400,7 +402,11 @@ handleExit mobileNum mId stationCode exitTime = do
 
   logInfo $
     "[SVP:Exit] DONE rider=" <> getId person.id
-      <> " " <> entryStation <> "→" <> stationCode
-      <> " fare=₹" <> show fareAmount
+      <> " "
+      <> entryStation
+      <> "→"
+      <> stationCode
+      <> " fare=₹"
+      <> show fareAmount
 
   pure API.GateCallbackResp {allowed = True, reason = Nothing}

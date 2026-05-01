@@ -18,6 +18,7 @@ import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
@@ -169,6 +170,13 @@ getServiceNameConfigJSON = \case
     Tokenize.TtenTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Tten, toJSON cfg)
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
+    Payout.StripeConfig cfg -> do
+      let service = Domain.PayoutService $
+            case cfg.serviceMode of
+              Just Stripe.Live -> Payout.Stripe
+              Just Stripe.Test -> Payout.StripeTest
+              Nothing -> Payout.Stripe
+      (service, toJSON cfg)
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)

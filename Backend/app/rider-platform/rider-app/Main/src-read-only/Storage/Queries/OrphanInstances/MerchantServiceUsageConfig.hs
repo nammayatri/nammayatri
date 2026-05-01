@@ -10,6 +10,7 @@ import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Payment.Types
+import qualified Kernel.External.Payout.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Kernel.Types.Error
@@ -29,6 +30,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             createEphemeralKeys = createEphemeralKeys,
             createPaymentCustomer = createPaymentCustomer,
             createPaymentIntent = createPaymentIntent,
+            createPayoutOrder = fromMaybe Kernel.External.Payout.Types.Juspay createPayoutOrder,
             createRefunds = fromMaybe Kernel.External.Payment.Types.Stripe createRefunds,
             createSetupIntent = createSetupIntent,
             createdAt = createdAt,
@@ -56,6 +58,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             notifyPerson = notifyPerson,
+            payoutOrderStatus = fromMaybe Kernel.External.Payout.Types.Juspay payoutOrderStatus,
             smsProvidersPriorityList = smsProvidersPriorityList,
             snapToRoad = snapToRoad,
             updateAmountInPaymentIntent = updateAmountInPaymentIntent,
@@ -75,6 +78,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.createEphemeralKeys = createEphemeralKeys,
         Beam.createPaymentCustomer = createPaymentCustomer,
         Beam.createPaymentIntent = createPaymentIntent,
+        Beam.createPayoutOrder = Kernel.Prelude.Just createPayoutOrder,
         Beam.createRefunds = Kernel.Prelude.Just createRefunds,
         Beam.createSetupIntent = createSetupIntent,
         Beam.createdAt = createdAt,
@@ -102,6 +106,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.notifyPerson = notifyPerson,
+        Beam.payoutOrderStatus = Kernel.Prelude.Just payoutOrderStatus,
         Beam.smsProvidersPriorityList = smsProvidersPriorityList,
         Beam.snapToRoad = snapToRoad,
         Beam.updateAmountInPaymentIntent = updateAmountInPaymentIntent,

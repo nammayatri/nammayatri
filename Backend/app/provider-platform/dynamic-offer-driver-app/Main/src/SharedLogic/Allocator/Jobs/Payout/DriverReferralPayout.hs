@@ -25,7 +25,7 @@ import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Types as PT
+import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -193,8 +193,12 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
       uid <- generateGUID
       person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       merchantOperatingCity <- CQMOC.findById (cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      case payoutVpa of
-        Just vpa -> do
+      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion person.merchantOperatingCityId person.id
+      let payoutVpaValid = case payoutServiceFlow of
+            IPayout.JuspayFlow -> isJust payoutVpa
+            IPayout.StripeFlow -> True
+      if payoutVpaValid
+        then do
           dailyStat <- QDailyStats.findByPrimaryKey id >>= fromMaybeM (InternalError "DailyStats Not Found")
           if dailyStat.payoutStatus /= statusForRetry
             then pure ()
@@ -209,16 +213,15 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
               if directBase <= payoutConfig.thresholdPayoutAmountPerPerson
                 then do
                   logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
-                  let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
-                  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-                  let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+                  let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType False
+                      createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                   mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
                   errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
                 else do
                   Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey driverId.getId) 3 3 $ do
                     QDailyStats.updatePayoutStatusById DS.ManualReview id
               pure ()
-        Nothing -> pure ()
+        else pure ()
     Nothing -> pure ()
 
 errorCatchAndHandle ::
@@ -284,8 +287,13 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
   for_ pendingRefundFees $ \driverFee -> do
     let driverId = driverFee.driverId
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    when (driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded && isJust driverInfo.payoutVpa) $ do
-      whenJust driverInfo.payoutVpa $ \vpa -> do
+    when (isNothing driverInfo.payoutRegAmountRefunded) $ do
+      person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion person.merchantOperatingCityId person.id
+      let payoutVpaValid = case payoutServiceFlow of
+            IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
+            IPayout.StripeFlow -> True
+      when payoutVpaValid $ do
         fork ("processing registration refund for DriverId: " <> driverId.getId) $ do
           let refundLockKey = "PayoutRegRefund:DriverId-" <> driverId.getId
           gotLock <- Redis.tryLockRedis refundLockKey 300
@@ -294,7 +302,6 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
             let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
             let mbPayoutConfig = find (\pc -> pc.vehicleCategory == vehicleCategory) payoutConfigList
             whenJust mbPayoutConfig $ \payoutConfig -> do
-              person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
               merchantOperatingCity <- CQMOC.findById (cast driverFee.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound driverFee.merchantOperatingCityId.getId)
               uid <- generateGUID
               now <- getCurrentTime
@@ -306,10 +313,9 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                 QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
                 -- Attempt payout; rollback on failure
                 phoneNo <- mapM decrypt person.mobileNumber
-                payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-                let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid registrationAmount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
+                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType False
                     entityName = DLP.DRIVER_DAILY_STATS
-                    createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+                    createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
                 result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
                 case result of

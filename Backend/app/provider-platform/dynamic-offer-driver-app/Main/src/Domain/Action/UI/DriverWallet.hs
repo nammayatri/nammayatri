@@ -26,7 +26,6 @@ module Domain.Action.UI.DriverWallet
     loadPayoutContext,
     counterpartyFromRole,
     computePayoutFee,
-    resolvePayoutVpa,
     initiateWalletPayout,
     makePayoutEntryIdsKey,
     mkDriverWalletFinanceCtx,
@@ -49,7 +48,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.Payout.Types as TPayout
+import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -84,7 +83,6 @@ import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
@@ -401,8 +399,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
       Just accountId -> getPayoutEligibilityData accountId cutoff now
     let payoutableBalance = walletBalance - nonRedeemable
     ensureMinimumPayoutAmount ctx payoutableBalance
-    vpa <- resolvePayoutVpa ctx
-    initiateWalletPayout ctx vpa payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds)
+    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds)
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.
@@ -426,21 +423,19 @@ initiateWalletPayout ::
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   PayoutContext ->
-  Text -> -- VPA
   HighPrecMoney -> -- payoutable balance
   PR.PayoutType -> -- INSTANT or SCHEDULED
   Maybe UTCTime -> -- coverageFrom
   Maybe UTCTime -> -- coverageTo
   [Text] -> -- redeemable entry IDs for settlement
   m ()
-initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds = do
+initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
-  subscriptionConfig <-
-    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName ctx.person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION
-      >>= fromMaybeM (NoSubscriptionConfigForService ctx.person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION")
-  payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
-
+  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id
+  vpa <- case payoutServiceFlow of
+    IPayout.JuspayFlow -> Just <$> resolvePayoutVpa ctx
+    IPayout.StripeFlow -> pure Nothing
   let fee = computePayoutFee ctx.transporterConfig.driverWalletConfig.payoutFee payoutableBalance
       netAmount = SPayment.roundToTwoDecimalPlaces (payoutableBalance - fee)
       submission =
@@ -450,6 +445,7 @@ initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageT
             entityId = ctx.driverId.getId,
             entityRefId = Nothing,
             amount = netAmount,
+            currency = ctx.transporterConfig.currency,
             payoutFee = if fee > 0 then Just fee else Nothing,
             merchantId = ctx.merchantId.getId,
             merchantOpCityId = ctx.mocId.getId,
@@ -464,9 +460,10 @@ initiateWalletPayout ctx vpa payoutableBalance payoutType coverageFrom coverageT
             payoutType = Just payoutType,
             coverageFrom = coverageFrom,
             coverageTo = coverageTo,
-            ledgerEntryIds = [] -- driver side keeps Redis stash flow unchanged
+            ledgerEntryIds = [], -- driver side keeps Redis stash flow unchanged
+            payoutServiceFlow
           }
-      payoutCall = Payout.createPayoutOrder ctx.person.merchantId ctx.person.merchantOperatingCityId payoutServiceName (Just ctx.person.id.getId)
+      payoutCall = Payout.createPayoutOrder payoutServiceName ctx.person.merchantOperatingCityId ctx.person.id mbPersonBankAccount
 
   when (netAmount > 0.0) $ do
     result <- PayoutRequest.submitPayoutRequest submission payoutCall

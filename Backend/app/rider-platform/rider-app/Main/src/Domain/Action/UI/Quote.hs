@@ -41,8 +41,8 @@ import qualified Domain.Action.UI.MerchantPaymentMethod as DMPM
 import qualified Domain.SharedLogic.RideDiscount as RD
 import Domain.Types.Booking
 import Domain.Types.Booking as DBooking
-import Domain.Types.BppDetails (BppDetails)
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import Domain.Types.BppDetails (BppDetails)
 import Domain.Types.CancellationReason
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ

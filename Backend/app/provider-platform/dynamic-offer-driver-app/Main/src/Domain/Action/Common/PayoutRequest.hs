@@ -6,8 +6,8 @@ where
 
 import qualified Domain.Action.UI.Ride.EndRide as RideEnd
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
+import qualified Domain.Types.Person as DP
 import qualified Kernel.External.Payout.Interface.Types as IPayout
-import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
@@ -15,7 +15,8 @@ import Kernel.Types.Id (Id (..), cast)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import Lib.LocationUpdates (LocationUpdateFlow)
-import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DCommon
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Payment.Payout.Order as PayoutOrder
 import qualified Lib.Payment.Payout.Request as PayoutRequest
@@ -39,7 +40,7 @@ refreshPayoutRequestStatus ::
   m DPR.PayoutRequest
 refreshPayoutRequestStatus payoutRequest = do
   case payoutRequest.entityName of
-    Just DPayment.SPECIAL_ZONE_PAYOUT -> refreshSpecialZone payoutRequest
+    Just DCommon.SPECIAL_ZONE_PAYOUT -> refreshSpecialZone payoutRequest
     _ -> pure payoutRequest
   where
     refreshSpecialZone ::
@@ -54,14 +55,16 @@ refreshPayoutRequestStatus payoutRequest = do
       DPR.PayoutRequest ->
       m DPR.PayoutRequest
     refreshSpecialZone pr = do
-      mbPayoutOrder <- PayoutOrder.findLatestPayoutOrderByEntityId DPayment.SPECIAL_ZONE_PAYOUT pr.id.getId
+      mbPayoutOrder <- PayoutOrder.findLatestPayoutOrderByEntityId DCommon.SPECIAL_ZONE_PAYOUT pr.id.getId
       case mbPayoutOrder of
         Nothing -> pure pr
         Just payoutOrder -> do
-          let merchantId = Id pr.merchantId
+          let clientSdkVersion = Nothing
               opCityId = Id pr.merchantOperatingCityId
-              createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
-              createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId opCityId (DEMSC.RidePayoutService TPayout.Juspay) (Just pr.beneficiaryId)
+          (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.RidePayoutService clientSdkVersion opCityId (Id @DP.Person pr.beneficiaryId)
+          let merchantId = Id pr.merchantId
+              createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrder.orderId, mbExpand = Nothing}
+              createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName opCityId (Id @DP.Person pr.beneficiaryId) mbPersonBankAccount
               shouldUpdate current new = current /= new && current `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]
               onUpdate newStatus rawStatus = do
                 let statusMsg = "Order Status Updated: " <> show rawStatus

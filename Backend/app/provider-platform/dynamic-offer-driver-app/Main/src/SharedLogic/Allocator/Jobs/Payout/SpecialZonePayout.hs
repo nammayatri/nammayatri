@@ -21,7 +21,7 @@ import qualified Domain.Types.ScheduledPayout as DSP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types (LatLong (..))
-import qualified Kernel.External.Payout.Types as PT
+import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -138,9 +138,10 @@ executeSpecialZonePayout payoutRequest = do
       shandle <- RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just ride.id)
       void $ RideEnd.driverEndRide shandle ride.id driverReq
 
-  payoutServiceName <- TP.decidePayoutService (DEMSC.RidePayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-  let payoutCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
-  mbPayoutOrder <- PayoutRequest.executePayoutRequest payoutRequest payoutCall
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion merchantOpCityId person.id
+  let payoutCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
+  mbPayoutOrder <- PayoutRequest.executePayoutRequest merchantOperatingCity.currency payoutServiceFlow payoutRequest payoutCall
   whenJust mbPayoutOrder $ \payoutOrder ->
     logInfo $ "Special Zone Payout request submitted for id: " <> show payoutRequest.id <> " | orderId: " <> payoutOrder.id.getId
   pure Complete
@@ -268,19 +269,22 @@ executeOldSpecialZonePayout scheduledPayout = do
             accountNumber <- decrypt `mapM` rcAccount.bankAccountNumber
             ifscCode <- decrypt `mapM` rcAccount.bankIfscCode
             pure $ (\a i -> a <> "@" <> i <> ".ifsc.npci") <$> accountNumber <*> ifscCode
-
-  case mbVpa of
+  case merchantOpCityId of
     Nothing -> do
-      logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId
-      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "No payout bank account for this ride") scheduledPayout
+      logWarning $ "No merchant operating city for payout: " <> show scheduledPayout.id
+      QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
       pure Complete
-    Just vpa -> do
-      case merchantOpCityId of
-        Nothing -> do
-          logWarning $ "No merchant operating city for payout: " <> show scheduledPayout.id
-          QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "Missing merchant operating city") scheduledPayout
+    Just opCityId -> do
+      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.RidePayoutService person.clientSdkVersion opCityId person.id
+      let payoutVpaValid = case payoutServiceFlow of
+            IPayout.JuspayFlow -> isJust mbVpa
+            IPayout.StripeFlow -> True
+      if not payoutVpaValid
+        then do
+          logWarning $ "No payout bank account for ride: " <> scheduledPayout.rideId
+          QSPE.updateStatusWithHistoryById DSP.AUTO_PAY_FAILED (Just "No payout bank account for this ride") scheduledPayout
           pure Complete
-        Just opCityId -> do
+        else do
           let amount = fromMaybe 0 scheduledPayout.amount
           if amount <= 0
             then do
@@ -292,7 +296,7 @@ executeOldSpecialZonePayout scheduledPayout = do
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
               let entityName = DLP.SPECIAL_ZONE_PAYOUT
-                  createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) vpa "FULFILL_ONLY" False
+                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" False
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id
@@ -300,8 +304,7 @@ executeOldSpecialZonePayout scheduledPayout = do
                   pure Complete
                 Just mId -> do
                   logInfo $ "Calling payout service for driver: " <> driverId.getId <> " | amount: " <> show amount <> " | orderId: " <> uid
-                  payoutServiceName <- TP.decidePayoutService (DEMSC.RidePayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-                  let createPayoutOrderCall = TP.createPayoutOrder mId opCityId payoutServiceName (Just person.id.getId)
+                  let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
 
                   result <- try $ Payout.createPayoutService (cast mId) (Just $ cast opCityId) (cast driverId) (Just [scheduledPayout.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
 
