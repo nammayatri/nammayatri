@@ -41,6 +41,13 @@ apis:
       response:
         type: GenerateQrResp
 
+  # Public key endpoint — used by gate scanner to verify QR signatures
+  - GET:
+      endpoint: /svp/publicKey
+      auth: NoAuth
+      response:
+        type: Text
+
   # AFC gate callback — called by CMRL AFC on QR scan
   - POST:
       endpoint: /svp/gate

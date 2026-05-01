@@ -1,5 +1,7 @@
 module Tools.LoyaltyWallet
   ( loyaltyInfo,
+    svpWalletPosting,
+    svpWalletBalance,
   )
 where
 
@@ -18,6 +20,7 @@ import Kernel.Utils.Common
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
+-- | Fetch loyalty/wallet info — same source the consumer app wallet screen uses.
 loyaltyInfo ::
   ( EncFlow m r,
     CoreMetrics m,
@@ -52,3 +55,52 @@ loyaltyInfo customerId merchantId merchantOperatingCityId = do
           Wallet.loyaltyInfo loyaltyCfg req
         _ -> throwError $ InternalError "Unsupported payment config for loyalty info"
     _ -> throwError $ InternalError "Unknown Service Config"
+
+-- | Deduct fare from the MultiModal wallet (same wallet the consumer app displays).
+svpWalletPosting ::
+  ( EncFlow m r,
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  WalletTypes.WalletPostingReq ->
+  m WalletTypes.WalletPostingResp
+svpWalletPosting merchantId merchantOperatingCityId req =
+  runWithMultiModalConfig Wallet.walletPosting merchantId merchantOperatingCityId req
+
+-- | Read live balance from the MultiModal wallet (same wallet the consumer app displays).
+svpWalletBalance ::
+  ( EncFlow m r,
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  WalletTypes.WalletBalanceReq ->
+  m WalletTypes.WalletBalanceResp
+svpWalletBalance merchantId merchantOperatingCityId req =
+  runWithMultiModalConfig Wallet.walletBalance merchantId merchantOperatingCityId req
+
+-- | Run any wallet operation using the MultiModalPaymentService config.
+runWithMultiModalConfig ::
+  ( EncFlow m r,
+    CoreMetrics m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  (Payment.PaymentServiceConfig -> req -> m resp) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  req ->
+  m resp
+runWithMultiModalConfig func merchantId merchantOperatingCityId req = do
+  let serviceName = DMSC.MultiModalPaymentService Payment.Juspay
+  merchantServiceConfig <-
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName})
+      >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "MultiModalPayment" (show Payment.Juspay))
+  case merchantServiceConfig.serviceConfig of
+    DMSC.MultiModalPaymentServiceConfig paymentCfg -> func paymentCfg req
+    _ -> throwError $ InternalError "Unknown Service Config for SVP wallet"
