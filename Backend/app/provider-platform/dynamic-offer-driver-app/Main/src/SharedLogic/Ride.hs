@@ -20,6 +20,7 @@ import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as SReqD
 import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
+import qualified Domain.Types.DriverRidePayoutBankAccount as DDPBA
 import Domain.Types.EmptyDynamicParam
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
@@ -57,6 +58,7 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
@@ -240,23 +242,115 @@ getRcIdForRide rideId = do
         Just t -> pure (Just t)
         Nothing -> fmap (fmap (.id.getId)) (QVRC.findLastVehicleRCWrapper rideDetails.vehicleNumber)
 
--- | Get payout VPA for a ride using rcId -> driver_ride_payout_bank_account.
-getPayoutVpaForRide ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
+-- | Get payout details for a ride using rcId -> driver_ride_payout_bank_account.
+getPayoutDetailsForRide ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
   Id DRide.Ride ->
-  m (Maybe Text)
-getPayoutVpaForRide rideId = do
+  HighPrecMoney ->
+  m (Maybe Text, HighPrecMoney, Maybe HighPrecMoney)
+getPayoutDetailsForRide rideId payoutAmount = do
   mbRcIdText <- getRcIdForRide rideId
   case mbRcIdText of
-    Nothing -> pure Nothing
+    Nothing -> pure (Nothing, payoutAmount, Nothing)
     Just rcIdText -> do
-      mbBankAccount <- QDRPB.findByRcId (Id rcIdText :: Id DVRC.VehicleRegistrationCertificate)
+      Redis.withLockRedisAndReturnValue (mkVehicleBalanceLockKey rcIdText) 10 $ do
+        mbBankAccount <- QDRPB.findByRcId (Id rcIdText :: Id DVRC.VehicleRegistrationCertificate)
+        case mbBankAccount of
+          Nothing -> pure (Nothing, payoutAmount, Nothing)
+          Just rcAccount -> do
+            accountNumber <- decrypt `mapM` rcAccount.bankAccountNumber
+            ifscCode <- decrypt `mapM` rcAccount.bankIfscCode
+            let vpa = (\a i -> a <> "@" <> i <> ".ifsc.npci") <$> accountNumber <*> ifscCode
+                (netPayoutAmount, payoutFee) = calculateNetPayoutAndFee rcAccount.vehicleBalance rcAccount.vehicleBalanceAdjustmentPercentage
+
+            whenJust payoutFee $ \fee -> do
+              let currentBalance = fromMaybe 0 rcAccount.vehicleBalance
+                  newBalance = currentBalance + fee
+              -- We are updating the vehicle balance here before the payout is successfully credited.
+              -- While this might seem premature, we must do it now because if a subsequent ride for
+              -- the same vehicle happens before the current payout completes, `calculateNetPayoutAndFee`
+              -- would use the old, outdated vehicle balance, which is incorrect.
+              -- If a payout request for a special zone is cancelled or fails later, we will check if
+              -- a `payoutFee` was present and revert the vehicle balance accordingly so it can be handled
+              -- cleanly in the next ride.
+              QDRPB.updateByPrimaryKey (rcAccount {DDPBA.vehicleBalance = Just newBalance})
+
+            pure (vpa, netPayoutAmount, payoutFee)
+  where
+    calculateNetPayoutAndFee :: Maybe HighPrecMoney -> Maybe Centesimal -> (HighPrecMoney, Maybe HighPrecMoney)
+    calculateNetPayoutAndFee mbVehicleBalance mbVehicleBalanceAdjustmentPercentage =
+      case (mbVehicleBalance, mbVehicleBalanceAdjustmentPercentage) of
+        (Just vb, Just pct)
+          | toRational pct < 0 || toRational pct > 100 ->
+              (payoutAmount, Nothing)
+          | getHighPrecMoney vb < 0 ->
+            let avbBase = getHighPrecMoney payoutAmount * toRational pct / 100
+                avb = toHighPrecMoney (roundToIntegral avbBase :: Integer)
+             in if getHighPrecMoney avb > 0
+                  then
+                    if getHighPrecMoney (avb + vb) >= 0
+                      then ((payoutAmount + vb), Just (abs vb)) -- since vb is negative, adding it will reduce the payout amount (PA - AVB) + (AVB + VB)
+                      else (payoutAmount - avb, Just avb)
+                  else (payoutAmount, Nothing)
+        _ -> (payoutAmount, Nothing)
+
+mkRevertVehicleBalanceRedisKey :: Id DPR.PayoutRequest -> Text
+mkRevertVehicleBalanceRedisKey payoutRequestId = "revertVehicleBalance:" <> payoutRequestId.getId
+
+mkVehicleBalanceLockKey :: Text -> Text
+mkVehicleBalanceLockKey rcIdText = "lock:vehicleBalance:" <> rcIdText
+
+safeRevertVehicleBalanceForPayout ::
+  ( EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r ) =>
+  DPR.PayoutRequest -> m ()
+safeRevertVehicleBalanceForPayout pr = do
+  whenJust pr.payoutFee $ \fee -> do
+    mbRcIdText <- getRcIdForRide (Id pr.entityId)
+    whenJust mbRcIdText $ \rcIdText -> do
+      Redis.withLockRedis (mkVehicleBalanceLockKey rcIdText) 10 $ do
+        let redisKey = mkRevertVehicleBalanceRedisKey pr.id
+        alreadyReverted <- Redis.get redisKey -- Added this because webhook might call this revert function more then once times
+        case (alreadyReverted :: Maybe Bool) of
+          Just True -> pure ()
+          _ -> do
+            Redis.setExp redisKey True (60 * 60 * 24 * 30)
+            revertVehicleBalanceForRc rcIdText fee
+  where
+    revertVehicleBalanceForRc :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> HighPrecMoney -> m ()
+    revertVehicleBalanceForRc rcIdText fee = do
+      mbBankAccount <- QDRPB.findByRcId (Id rcIdText)
       case mbBankAccount of
-        Nothing -> pure Nothing
+        Nothing -> pure ()
         Just rcAccount -> do
-          accountNumber <- decrypt `mapM` rcAccount.bankAccountNumber
-          ifscCode <- decrypt `mapM` rcAccount.bankIfscCode
-          pure $ (\a i -> a <> "@" <> i <> ".ifsc.npci") <$> accountNumber <*> ifscCode
+          let currentBalance = fromMaybe 0 rcAccount.vehicleBalance
+              newBalance = currentBalance - fee
+          QDRPB.updateByPrimaryKey (rcAccount {DDPBA.vehicleBalance = Just newBalance})
+
+safeApplyVehicleBalanceForPayout ::
+  ( EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r ) =>
+  DPR.PayoutRequest -> m ()
+safeApplyVehicleBalanceForPayout pr = do
+  whenJust pr.payoutFee $ \fee -> do
+    mbRcIdText <- getRcIdForRide (Id pr.entityId)
+    whenJust mbRcIdText $ \rcIdText -> do
+      Redis.withLockRedis (mkVehicleBalanceLockKey rcIdText) 10 $ do
+        let redisKey = mkRevertVehicleBalanceRedisKey pr.id
+        wasReverted <- Redis.get redisKey
+        case (wasReverted :: Maybe Bool) of
+          Just True -> do
+            applyVehicleBalanceForRc rcIdText fee
+            Redis.del redisKey
+          _ -> pure ()
+  where
+    applyVehicleBalanceForRc :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) => Text -> HighPrecMoney -> m ()
+    applyVehicleBalanceForRc rcIdText fee = do
+      mbBankAccount <- QDRPB.findByRcId (Id rcIdText)
+      case mbBankAccount of
+        Nothing -> pure ()
+        Just rcAccount -> do
+          let currentBalance = fromMaybe 0 rcAccount.vehicleBalance
+              newBalance = currentBalance + fee
+          QDRPB.updateByPrimaryKey (rcAccount {DDPBA.vehicleBalance = Just newBalance})
 
 buildRideDetails ::
   DBooking.Booking ->
