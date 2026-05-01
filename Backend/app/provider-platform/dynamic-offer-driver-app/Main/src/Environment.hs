@@ -337,8 +337,8 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   ltsHedisEnv <- connectHedis ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
   secondaryLTSHedisEnv <- case secondaryLTSRedisCfg of
     Nothing -> pure Nothing
-    Just cfg ->
-      try (connectHedis cfg ("dynamic-offer-driver-app-lts:" <>)) >>= \case
+    Just cfg' ->
+      try (connectHedis cfg' ("dynamic-offer-driver-app-lts:" <>)) >>= \case
         Left (e :: SomeException) -> do
           putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
           pure Nothing

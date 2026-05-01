@@ -91,6 +91,7 @@ data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
+    ltsRedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -132,6 +133,7 @@ data AppEnv = AppEnv
     dumpEvery :: Seconds,
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
+    ltsHedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -200,6 +202,7 @@ buildAppEnv AppCfg {..} consumerType = do
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
+  ltsHedisEnv <- connectHedis ltsRedisCfg id
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -237,4 +240,5 @@ releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
+  disconnectHedis ltsHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
