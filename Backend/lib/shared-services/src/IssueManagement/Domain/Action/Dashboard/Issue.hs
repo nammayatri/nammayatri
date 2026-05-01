@@ -6,7 +6,9 @@ import qualified AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
+import Data.Either (partitionEithers)
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T hiding (count, map)
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -1641,6 +1643,196 @@ reorderMessages merchantShortId city req issueHandle identifier = do
     )
     req.messageOrder
   pure Success
+
+copyIssueCategory ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.CopyIssueCategoryReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.CopyIssueCategoryRes
+copyIssueCategory merchantShortId city req issueHandle identifier = do
+  _ <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  sourceCategory <- QIC.findById req.sourceCategoryId >>= fromMaybeM (IssueCategoryDoesNotExist req.sourceCategoryId.getId)
+  targetMoc <-
+    issueHandle.findMOCityByMerchantShortIdAndCity req.targetMerchantShortId req.targetCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> req.targetMerchantShortId.getShortId <> "-city-" <> show req.targetCity)
+  existingCategories <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage targetMoc.id ENGLISH identifier
+  let conflict = find (\(cat, _) -> cat.category == sourceCategory.category && cat.categoryType == sourceCategory.categoryType) existingCategories
+  when (isJust conflict) $
+    throwError $ InvalidRequest $ "Category '" <> sourceCategory.category <> "' already exists in target city"
+  let maxPriority = foldl' (\acc (cat, _) -> max acc cat.priority) 0 existingCategories
+  let nextPriority = maxPriority + 1
+  topLevelMessages <- QIM.findAllByCategoryId req.sourceCategoryId
+  allOptions <- QIO.findAllByCategoryId req.sourceCategoryId
+  childMessages <-
+    if null allOptions
+      then pure []
+      else QIM.findAllByOptionIds (map (.id) allOptions)
+  now <- getCurrentTime
+  newCategoryId <- generateGUID
+  let allMessages = topLevelMessages ++ childMessages
+  newMsgIdPairs <- mapM (\msg -> (msg.id.getId,) . getId <$> generateGUID) allMessages
+  newOptIdPairs <- mapM (\opt -> (opt.id.getId,) . getId <$> generateGUID) allOptions
+  let msgIdMap = Map.fromList newMsgIdPairs
+      optIdMap = Map.fromList newOptIdPairs
+  QIC.create $
+    DIC.IssueCategory
+      { id = newCategoryId,
+        merchantId = targetMoc.merchantId,
+        merchantOperatingCityId = targetMoc.id,
+        priority = nextPriority,
+        createdAt = now,
+        updatedAt = now,
+        category = sourceCategory.category,
+        logoUrl = sourceCategory.logoUrl,
+        isActive = sourceCategory.isActive,
+        categoryType = sourceCategory.categoryType,
+        isRideRequired = sourceCategory.isRideRequired,
+        isTicketRequired = sourceCategory.isTicketRequired,
+        maxAllowedRideAge = sourceCategory.maxAllowedRideAge,
+        allowedRideStatuses = sourceCategory.allowedRideStatuses,
+        label = sourceCategory.label,
+        igmCategory = sourceCategory.igmCategory,
+        enableKapture = Nothing,
+        showInDefault = Nothing
+      }
+  mapM_ (cloneTopLevelMessage newCategoryId targetMoc msgIdMap now) topLevelMessages
+  mapM_ (cloneOption newCategoryId targetMoc msgIdMap optIdMap now) allOptions
+  mapM_ (cloneChildMessage targetMoc msgIdMap optIdMap now) childMessages
+  CQIC.clearAllIssueCategoryByMerchantOpCityIdAndLanguageCache targetMoc.id identifier
+  pure $
+    Common.CopyIssueCategoryRes
+      { categoryId = newCategoryId,
+        messageIds = Id . snd <$> newMsgIdPairs,
+        optionIds = Id . snd <$> newOptIdPairs
+      }
+  where
+    cloneTopLevelMessage catId moc msgIdMap now msg = do
+      let newId = Id $ fromMaybe msg.id.getId $ Map.lookup msg.id.getId msgIdMap
+      QIM.create $
+        DIM.IssueMessage
+          { id = newId,
+            categoryId = Just catId,
+            optionId = Nothing,
+            merchantId = moc.merchantId,
+            merchantOperatingCityId = moc.id,
+            createdAt = now,
+            updatedAt = now,
+            message = msg.message,
+            messageTitle = msg.messageTitle,
+            messageAction = msg.messageAction,
+            label = msg.label,
+            priority = msg.priority,
+            messageType = msg.messageType,
+            isActive = msg.isActive,
+            mediaFiles = msg.mediaFiles,
+            referenceCategoryId = msg.referenceCategoryId,
+            referenceOptionId = msg.referenceOptionId
+          }
+    cloneOption catId moc msgIdMap optIdMap now opt = do
+      let newId = Id $ fromMaybe opt.id.getId $ Map.lookup opt.id.getId optIdMap
+      let newMsgId = opt.issueMessageId >>= \mid -> Map.lookup mid msgIdMap
+      QIO.create $
+        DIO.IssueOption
+          { id = newId,
+            issueCategoryId = Just catId,
+            issueMessageId = newMsgId,
+            merchantId = moc.merchantId,
+            merchantOperatingCityId = moc.id,
+            createdAt = now,
+            updatedAt = now,
+            option = opt.option,
+            label = opt.label,
+            priority = opt.priority,
+            isActive = opt.isActive,
+            restrictedVariants = opt.restrictedVariants,
+            restrictedRideStatuses = opt.restrictedRideStatuses,
+            showOnlyWhenUserBlocked = opt.showOnlyWhenUserBlocked,
+            igmSubCategory = opt.igmSubCategory,
+            mandatoryUploads = opt.mandatoryUploads
+          }
+    cloneChildMessage moc msgIdMap optIdMap now msg = do
+      let newId = Id $ fromMaybe msg.id.getId $ Map.lookup msg.id.getId msgIdMap
+      let newOptId = msg.optionId >>= \(Id oid) -> Id <$> Map.lookup oid optIdMap
+      QIM.create $
+        DIM.IssueMessage
+          { id = newId,
+            categoryId = Nothing,
+            optionId = newOptId,
+            merchantId = moc.merchantId,
+            merchantOperatingCityId = moc.id,
+            createdAt = now,
+            updatedAt = now,
+            message = msg.message,
+            messageTitle = msg.messageTitle,
+            messageAction = msg.messageAction,
+            label = msg.label,
+            priority = msg.priority,
+            messageType = msg.messageType,
+            isActive = msg.isActive,
+            mediaFiles = msg.mediaFiles,
+            referenceCategoryId = msg.referenceCategoryId,
+            referenceOptionId = msg.referenceOptionId
+          }
+
+-----------------------------------------------------------
+-- Copy All Default Categories API -------------------------
+
+copyAllDefaultIssueCategories ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.CopyAllDefaultIssueCategoryRes
+copyAllDefaultIssueCategories merchantShortId city issueHandle identifier = do
+  _ <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  defaultMoc <-
+    issueHandle.findMOCityByMerchantShortIdAndCity (ShortId "NAMMA_YATRI") (Context.City "Bangalore")
+      >>= fromMaybeM (MerchantOperatingCityNotFound "Default Bangalore MOC not found")
+  defaultCategories <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage defaultMoc.id ENGLISH identifier
+  let toCopy = filter (\(cat, _) -> cat.showInDefault == Just True) defaultCategories
+  results <-
+    mapM
+      ( \(cat, _) -> do
+          result <-
+            withTryCatch "copyAllDefaultIssueCategories" $
+              copyIssueCategory
+                merchantShortId
+                city
+                Common.CopyIssueCategoryReq
+                  { sourceCategoryId = cat.id,
+                    targetMerchantShortId = merchantShortId,
+                    targetCity = city
+                  }
+                issueHandle
+                identifier
+          case result of
+            Left err -> do
+              let reason = show err
+              logWarning $ "Skipping category '" <> cat.category <> "': " <> reason
+              pure $
+                Left
+                  Common.FailedCategoryCopy
+                    { categoryId = cat.id,
+                      categoryName = cat.category,
+                      reason = reason
+                    }
+            Right res -> pure $ Right res
+      )
+      toCopy
+  let (failures, successes) = partitionEithers results
+  pure $
+    Common.CopyAllDefaultIssueCategoryRes
+      { succeeded = successes,
+        failed = failures
+      }
 
 -----------------------------------------------------------
 -- Helper Functions ----------------------------------------
