@@ -7,6 +7,7 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Trip (isInterCityTrip, isRentalTrip)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -22,7 +23,9 @@ triggerIffcoTokioInsuranceForOnRideDrivers ::
     CacheFlow m r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
-    Log m
+    Log m,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'IffcoTokioInsurance ->
   m ExecutionResult
@@ -57,7 +60,9 @@ processDriverInsurance ::
     MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Log m
+    Log m,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DI.DriverInformation ->
   m ()

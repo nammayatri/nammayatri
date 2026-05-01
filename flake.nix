@@ -12,6 +12,13 @@
     nixpkgs.follows = "common/nixpkgs";
     haskell-flake.follows = "common/haskell-flake";
 
+    # Recent nixpkgs used only for tooling that needs a modern Node (>= 20.19)
+    # — currently the control-center frontend run by the
+    # run-mobility-full-stack-dev process-compose stack. The pinned
+    # `common/nixpkgs` ships nodejs 18 / 20.8 which Vite rejects with
+    # "TypeError: crypto.hash is not a function".
+    nixpkgs-unstable.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
     # Backend inputs
     shared-kernel = {
       url = "github:nammayatri/shared-kernel";

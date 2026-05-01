@@ -16,6 +16,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Logging (withDynamicLogLevel)
 import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Id
@@ -42,7 +43,7 @@ type ChakraJobs m r =
   )
 
 mkKaalChakraHandle ::
-  ChakraJobs m r =>
+  (ChakraJobs m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   Event.Handle m Actions.Action
@@ -59,7 +60,10 @@ mkKaalChakraHandle merchantId merchantOperatingCityId =
     }
 
 createFetchUserDataJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.Chakra ->
@@ -79,7 +83,10 @@ createFetchUserDataJob merchantId merchantOperatingCityId chakra jobData schedul
     updJobData = jobData{startTime = Just scheduledTime}
 
 createUpdateUserTagDataJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Maybe (Id DM.Merchant) ->
   Maybe (Id DMOC.MerchantOperatingCity) ->
   LYT.Chakra ->
@@ -103,7 +110,10 @@ createUpdateUserTagDataJob merchantId merchantOperatingCityId chakra jobData sch
       LYT.Quarterly -> QuarterlyUpdateTag
 
 runDailyJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'Daily ->
   m ExecutionResult
 runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -112,7 +122,10 @@ runDailyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag 
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'Weekly ->
   m ExecutionResult
 runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -121,7 +134,10 @@ runWeeklyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'Quarterly ->
   m ExecutionResult
 runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -130,7 +146,10 @@ runQuarterlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLog
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'Monthly ->
   m ExecutionResult
 runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -139,7 +158,10 @@ runMonthlyJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTa
     Event.runKaalChakraAndRescheduleJob kaalChakraHandle LYT.Monthly jobInfo.jobData
 
 runDailyUpdateTagJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'DailyUpdateTag ->
   m ExecutionResult
 runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -148,7 +170,10 @@ runDailyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = wi
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Daily jobInfo.jobData
 
 runWeeklyUpdateTagJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'WeeklyUpdateTag ->
   m ExecutionResult
 runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -157,7 +182,10 @@ runWeeklyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = w
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Weekly jobInfo.jobData
 
 runQuarterlyUpdateTagJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'QuarterlyUpdateTag ->
   m ExecutionResult
 runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $
@@ -166,7 +194,10 @@ runQuarterlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} 
     Event.runKaalChakraUpdateTagsJob kaalChakraHandle LYT.Quarterly jobInfo.jobData
 
 runMonthlyUpdateTagJob ::
-  ChakraJobs m r =>
+  ( ChakraJobs m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Job 'MonthlyUpdateTag ->
   m ExecutionResult
 runMonthlyUpdateTagJob Job {id, jobInfo, merchantId, merchantOperatingCityId} = withLogTag ("JobId-" <> id.getId) $

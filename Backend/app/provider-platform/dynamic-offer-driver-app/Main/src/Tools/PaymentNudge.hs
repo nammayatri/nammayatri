@@ -36,6 +36,7 @@ import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as Payments
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -81,7 +82,9 @@ sendSwitchPlanNudge ::
     EncFlow m r,
     CacheFlow m r,
     MonadFlow m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   TC.TransporterConfig ->
   DI.DriverInformation ->
@@ -153,7 +156,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             membershipStatus = if isMember then Just (Payment.MembershipStatus True) else Nothing
           }
 
-switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()
+switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()
 switchPlanNudge driver numOfRides saveUpto planId = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId switchPlanBudgeKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
   whenJust mOverlay $ \overlay -> do
@@ -166,7 +169,7 @@ switchPlanNudge driver numOfRides saveUpto planId = do
     sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay'
 
 notifyPaymentFailure ::
-  (CacheFlow m r, EsqDBFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Id DP.Person ->
   PaymentMode ->
   Maybe Text ->
@@ -185,14 +188,14 @@ notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
     let overlay' = overlay {DOverlay.description = description, DOverlay.okButtonText = okButtonText}
     sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay'
 
-notifyMandatePaused :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+notifyMandatePaused :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> m ()
 notifyMandatePaused driver = do
   let pnKey = mandatePausedKey
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing
   whenJust mOverlay $ \overlay -> do
     sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay
 
-notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+notifyMandateCancelled :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> m ()
 notifyMandateCancelled driver = do
   let pnKey = mandateCancelledKey
   driverInfo <- QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
@@ -202,7 +205,7 @@ notifyMandateCancelled driver = do
       whenJust mOverlay $ \overlay -> do
         sendOverlay driver.merchantOperatingCityId driver $ mkOverlayReq overlay
 
-notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r) => DP.Person -> m ()
+notifyPlanActivatedForDay :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> m ()
 notifyPlanActivatedForDay driver = do
   let pnKey = planActivatedKey
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId pnKey (fromMaybe ENGLISH driver.language) Nothing Nothing Nothing

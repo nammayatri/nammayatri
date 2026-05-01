@@ -1095,6 +1095,7 @@ DriverUdyam :
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     verificationStatus: VerificationStatus
+    rejectReason: Maybe Text
   excludedFields: [merchantOperatingCityId]
   constraints:
     id: PrimaryKey
@@ -1111,6 +1112,10 @@ DriverUdyam :
       kvFunction: updateWithKV
       params: [verificationStatus, updatedAt]
       where: driverId
+    updateVerificationStatusAndRejectReason:
+      kvFunction: updateWithKV
+      params: [verificationStatus, rejectReason, updatedAt]
+      where: id
 
 DriverRidePayoutBankAccount:
   tableName: driver_ride_payout_bank_account

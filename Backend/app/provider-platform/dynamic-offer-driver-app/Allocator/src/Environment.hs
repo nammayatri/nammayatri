@@ -81,6 +81,7 @@ data HandlerEnv = HandlerEnv
     encTools :: EncTools,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
+    secondaryLTSHedisEnv :: Maybe HedisEnv,
     kafkaProducerTools :: KafkaProducerTools,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -159,6 +160,14 @@ buildHandlerEnv HandlerCfg {..} = do
   passettoContext <- uncurry mkDefPassettoContext encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg identity
+  secondaryLTSHedisEnv <- case appCfg.secondaryLTSRedisCfg of
+    Nothing -> pure Nothing
+    Just cfg ->
+      Kernel.Prelude.try (connectHedis cfg ("dynamic-offer-driver-app-lts:" <>)) >>= \case
+        Left (e :: SomeException) -> do
+          putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ show e
+          pure Nothing
+        Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis appCfg.hedisNonCriticalCfg ("doa:n_c:" <>)
   serviceClickhouseEnv <- createConn driverClickhouseCfg
   let internalEndPointHashMap = HMS.fromList $ MS.toList internalEndPointMap
@@ -200,6 +209,7 @@ releaseHandlerEnv HandlerEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
+  maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
   disconnectHedis hedisClusterEnv
   maybe (pure ()) disconnectHedis secondaryHedisClusterEnv
 

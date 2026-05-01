@@ -1,0 +1,825 @@
+{
+	"info": {
+		"name": "Daily Pass Status Update",
+		"description": "Tests DailyPassStatusUpdate scheduler job: purchase passes via API, mock payment, override status, trigger scheduler, verify transitions (Active->Expired, PreBooked->Active).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_rider_number')) {",
+					"    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    pm.collectionVariables.set('_test_rider_number', rNum);",
+					"    console.log('Test rider:', rNum);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Cleanup Scheduler State",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Cleanup OK', function () { pm.response.to.have.status(200); });",
+							"var r = pm.response.json();",
+							"console.log('Removed', r.removedJobs, 'jobs and', r.removedLocks, 'locks');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"target\": \"rider\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\"}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/clear",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"scheduler",
+						"clear"
+					]
+				}
+			}
+		},
+		{
+			"name": "Rider Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('rider_authId', d.authId);",
+							"pm.test('Auth OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
+			}
+		},
+		{
+			"name": "Rider OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('rider_token', d.token);",
+							"pm.environment.set('rider_person_id', d.person.id);",
+							"console.log('Rider ID:', d.person.id);",
+							"pm.test('Verify OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-scheduler-rider\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth",
+						"{{rider_authId}}",
+						"verify"
+					]
+				}
+			}
+		},
+		{
+			"name": "Get Available Passes",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Got passes', function () { pm.response.to.have.status(200); });",
+							"var ullaPassId = null, goldPassId = null;",
+							"d.forEach(function(cat) { (cat.passes || []).forEach(function(p) {",
+							"    if (p.code === 'ULLA1DAY') ullaPassId = p.id;",
+							"    if (p.code === 'GOLD1000') goldPassId = p.id;",
+							"}); });",
+							"pm.collectionVariables.set('_ulla_pass_id', ullaPassId);",
+							"pm.collectionVariables.set('_gold_pass_id', goldPassId);",
+							"console.log('ULLA1DAY:', ullaPassId, 'GOLD1000:', goldPassId);",
+							"pm.test('Found both passes', function () { pm.expect(ullaPassId).to.not.be.null; pm.expect(goldPassId).to.not.be.null; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/availablePasses",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"multimodal",
+						"pass",
+						"availablePasses"
+					]
+				}
+			}
+		},
+		{
+			"name": "Select Pass A (ULLA1DAY, yesterday)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];",
+							"pm.collectionVariables.set('_yesterday', yesterday);",
+							"console.log('Yesterday:', yesterday);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Select OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.collectionVariables.set('_pass_a_id', d.purchasedPassId);",
+							"if (d.paymentOrder) { pm.collectionVariables.set('_pass_a_order_id', d.paymentOrder.id); pm.collectionVariables.set('_pass_a_order_short_id', d.paymentOrder.order_id || ''); }",
+							"console.log('Pass A:', d.purchasedPassId, 'order:', d.paymentOrder ? d.paymentOrder.id : 'none');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"startDate\": \"{{_yesterday}}\", \"imeiNumber\": \"test-imei-001\", \"profilePicture\": \"data:image/png;base64,test\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/v2/{{_ulla_pass_id}}/select",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"multimodal",
+						"pass",
+						"v2",
+						"{{_ulla_pass_id}}",
+						"select"
+					]
+				}
+			}
+		},
+		{
+			"name": "Mock Juspay CHARGED (Pass A)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Mock OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_a_order_id}}\", \"{{_pass_a_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"status"
+					]
+				}
+			}
+		},
+		{
+			"name": "Check Pass A Payment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Payment OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Pass A payment:', pm.response.json().status);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/{{_pass_a_order_id}}/status",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"payment",
+						"{{_pass_a_order_id}}",
+						"status"
+					]
+				}
+			}
+		},
+		{
+			"name": "Select Pass B (GOLD1000, yesterday)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Select OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.collectionVariables.set('_pass_b_id', d.purchasedPassId);",
+							"if (d.paymentOrder) { pm.collectionVariables.set('_pass_b_order_id', d.paymentOrder.id); pm.collectionVariables.set('_pass_b_order_short_id', d.paymentOrder.order_id || ''); }",
+							"console.log('Pass B:', d.purchasedPassId, 'order:', d.paymentOrder ? d.paymentOrder.id : 'none');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"startDate\": \"{{_yesterday}}\", \"imeiNumber\": \"test-imei-002\", \"profilePicture\": \"data:image/png;base64,test\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/v2/{{_gold_pass_id}}/select",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"multimodal",
+						"pass",
+						"v2",
+						"{{_gold_pass_id}}",
+						"select"
+					]
+				}
+			}
+		},
+		{
+			"name": "Mock Juspay CHARGED (Pass B)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Mock OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_b_order_id}}\", \"{{_pass_b_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"status"
+					]
+				}
+			}
+		},
+		{
+			"name": "Check Pass B Payment",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Payment OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Pass B payment:', pm.response.json().status);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/{{_pass_b_order_id}}/status",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"payment",
+						"{{_pass_b_order_id}}",
+						"status"
+					]
+				}
+			}
+		},
+		{
+			"name": "Override Pass B to PreBooked",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Override OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Pass B overridden:', pm.response.json());"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"purchased_pass\", \"set\": {\"status\": \"PreBooked\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{_pass_b_id}}\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"update"
+					]
+				}
+			}
+		},
+		{
+			"name": "Snapshot Pass BatchSize",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Got config row', function () { pm.response.to.have.status(200); });",
+							"var row = (pm.response.json().rows || [])[0] || {};",
+							"pm.collectionVariables.set('_prev_batch_size', row.pass_status_update_batch_size === null || row.pass_status_update_batch_size === undefined ? '' : String(row.pass_status_update_batch_size));",
+							"console.log('Previous pass_status_update_batch_size:', pm.collectionVariables.get('_prev_batch_size'));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"select\": [\"pass_status_update_batch_size\"], \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/select",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"select"
+					]
+				}
+			}
+		},
+		{
+			"name": "Force BatchSize=1 for Chain Test",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Override OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"pass_status_update_batch_size\": 1}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"update"
+					]
+				}
+			}
+		},
+		{
+			"name": "Trigger DailyPassStatusUpdate Chain",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Trigger OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"console.log('Initial job scheduled:', d.jobId, 'shard:', d.shardId, 'key:', d.zsetKey);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"delaySeconds\": 5, \"merchantId\": \"{{bap_merchant_id}}\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\", \"jobData\": {\"merchantId\": \"{{bap_merchant_id}}\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\", \"autoSchedule\": true}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/trigger",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"scheduler",
+						"trigger"
+					]
+				}
+			}
+		},
+		{
+			"name": "Wait for Pass A to be Expired",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Poll Pass A status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Expired'.",
+							"var MAX_ATTEMPTS = 5;",
+							"var POLL_INTERVAL_MS = 5000;",
+							"var targetId = pm.collectionVariables.get('_pass_a_id');",
+							"var mockUrl = pm.environment.get('mockServerUrl');",
+							"var attempt = 0;",
+							"var lastStatus = null;",
+							"",
+							"function poll() {",
+							"  attempt++;",
+							"  pm.sendRequest({",
+							"    url: mockUrl + '/mock/sql/select',",
+							"    method: 'POST',",
+							"    header: { 'Content-Type': 'application/json' },",
+							"    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+							"  }, function (err, res) {",
+							"    if (err) {",
+							"      console.log('Wait for Pass A to be Expired attempt', attempt, 'error:', err.message || err);",
+							"    } else {",
+							"      var row = ((res.json().rows) || [])[0] || {};",
+							"      lastStatus = row.status;",
+							"      console.log('Wait for Pass A to be Expired attempt', attempt, 'status:', lastStatus);",
+							"    }",
+							"    var done = lastStatus === 'Expired' || attempt >= MAX_ATTEMPTS;",
+							"    if (done) {",
+							"      pm.test('Pass A (ULLA1DAY, expired endDate) is now Expired', function () {",
+							"        pm.expect(lastStatus).to.eql('Expired');",
+							"      });",
+							"    } else {",
+							"      setTimeout(poll, POLL_INTERVAL_MS);",
+							"    }",
+							"  });",
+							"}",
+							"poll();"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mockServerUrl}}/health",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			}
+		},
+		{
+			"name": "Wait for Pass B to be Active",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Poll Pass B status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Active'.",
+							"var MAX_ATTEMPTS = 5;",
+							"var POLL_INTERVAL_MS = 5000;",
+							"var targetId = pm.collectionVariables.get('_pass_b_id');",
+							"var mockUrl = pm.environment.get('mockServerUrl');",
+							"var attempt = 0;",
+							"var lastStatus = null;",
+							"",
+							"function poll() {",
+							"  attempt++;",
+							"  pm.sendRequest({",
+							"    url: mockUrl + '/mock/sql/select',",
+							"    method: 'POST',",
+							"    header: { 'Content-Type': 'application/json' },",
+							"    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+							"  }, function (err, res) {",
+							"    if (err) {",
+							"      console.log('Wait for Pass B to be Active attempt', attempt, 'error:', err.message || err);",
+							"    } else {",
+							"      var row = ((res.json().rows) || [])[0] || {};",
+							"      lastStatus = row.status;",
+							"      console.log('Wait for Pass B to be Active attempt', attempt, 'status:', lastStatus);",
+							"    }",
+							"    var done = lastStatus === 'Active' || attempt >= MAX_ATTEMPTS;",
+							"    if (done) {",
+							"      pm.test('Pass B (GOLD1000, PreBooked->Active) is now Active', function () {",
+							"        pm.expect(lastStatus).to.eql('Active');",
+							"      });",
+							"    } else {",
+							"      setTimeout(poll, POLL_INTERVAL_MS);",
+							"    }",
+							"  });",
+							"}",
+							"poll();"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mockServerUrl}}/health",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"health"
+					]
+				}
+			}
+		},
+		{
+			"name": "Verify Chain Scheduled Tomorrow 01:00",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Peek OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var mocId = pm.environment.get('bap_merchant_operating_city_id');",
+							"var pending = (d.jobs || []).filter(function (j) { return j.merchantOperatingCityId === mocId; });",
+							"console.log('Pending DailyPassStatusUpdate jobs for moc:', pending.length);",
+							"pending.forEach(function (j) { console.log(' - scheduledAt=', j.scheduledAt, 'jobData=', JSON.stringify(j.jobData)); });",
+							"pm.test('Exactly one DailyPassStatusUpdate pending for this moc', function () { pm.expect(pending.length).to.eql(1); });",
+							"var job = pending[0] || {};",
+							"var scoreMs = job.scoreMs || 0;",
+							"var hoursFromNow = (scoreMs - Date.now()) / 3600000;",
+							"console.log('Next run in', hoursFromNow.toFixed(2), 'hours');",
+							"pm.test('Next run is in the future (chain terminated via scheduleTomorrow)', function () { pm.expect(hoursFromNow).to.be.above(0); });",
+							"pm.test('Next run <= 25h from now (tomorrow 01:00 local, not a mis-enqueued delay=0)', function () { pm.expect(hoursFromNow).to.be.below(25); });",
+							"pm.test('Rescheduled job has autoSchedule=true', function () { pm.expect(job.jobData && job.jobData.autoSchedule).to.eql(true); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{scheduler_job_type}}\", \"target\": \"rider\"}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/peek",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"scheduler",
+						"peek"
+					]
+				}
+			}
+		},
+		{
+			"name": "Restore BatchSize",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var prev = pm.collectionVariables.get('_prev_batch_size');",
+							"var setVal = (prev === '' || prev === undefined || prev === null) ? 'null' : String(parseInt(prev, 10));",
+							"var mocId = pm.environment.get('bap_merchant_operating_city_id');",
+							"var payload = {",
+							"  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
+							"  set: { pass_status_update_batch_size: setVal === 'null' ? null : parseInt(setVal, 10) },",
+							"  touch_updated_at: true,",
+							"  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+							"};",
+							"pm.collectionVariables.set('_restore_payload', JSON.stringify(payload));",
+							"console.log('Restoring batch size to:', setVal);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Restore OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{{_restore_payload}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": [
+						"{{mockServerUrl}}"
+					],
+					"path": [
+						"mock",
+						"sql",
+						"update"
+					]
+				}
+			}
+		}
+	]
+}

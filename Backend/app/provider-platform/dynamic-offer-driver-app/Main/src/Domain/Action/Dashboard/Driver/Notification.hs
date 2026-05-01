@@ -37,6 +37,7 @@ import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -83,7 +84,8 @@ triggerDummyRideRequest ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->

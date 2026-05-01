@@ -52,7 +52,7 @@ import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
-import qualified SharedLogic.TollsDetector as TollsDetector
+import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.Booking as QBooking
@@ -61,6 +61,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.Vehicle as QVeh
+import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.Error
 import qualified Tools.Maps as TMaps
 import Tools.Metrics.ARDUBPPMetrics.Types
@@ -76,7 +77,7 @@ type LocationUpdateFlow m r c =
     HasLongDurationRetryCfg r c,
     ClickhouseFlow m r,
     EncFlow m r,
-    HedisFlow m r,
+    HasField "ltsHedisEnv" r HedisEnv,
     MonadMask m,
     HasBPPMetrics m r,
     HasPrettyLogger m r,
@@ -246,7 +247,7 @@ updateTollRouteDeviation _ _ Nothing _ = do
   return (False, False)
 updateTollRouteDeviation merchantOpCityId driverId (Just ride) batchWaypoints = do
   let driverDeviatedToTollRoute = fromMaybe False ride.driverDeviatedToTollRoute
-  isTollPresentOnCurrentRoute <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId (Just driverId) batchWaypoints
+  isTollPresentOnCurrentRoute <- isJust <$> TollsDetector.getTollInfoOnRoute merchantOpCityId.getId (Just driverId.getId) batchWaypoints
   when (isTollPresentOnCurrentRoute && not driverDeviatedToTollRoute) $ do
     QRide.updateDriverDeviatedToTollRoute ride.id isTollPresentOnCurrentRoute
   return (driverDeviatedToTollRoute, isTollPresentOnCurrentRoute)
@@ -267,7 +268,7 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
         Just route -> do
           let distance = RI.distance $ RI.routeInfo route
               routePoints = RI.points $ RI.routeInfo route
-          tollChargesInfo <- join <$> mapM (TollsDetector.getTollInfoOnRoute merchantOperatingCityId Nothing) routePoints
+          tollChargesInfo <- join <$> mapM (TollsDetector.getTollInfoOnRoute merchantOperatingCityId.getId Nothing) routePoints
           return $ (fromMaybe estimatedDistance distance, tollChargesInfo <|> estimatedTollInfo)
         Nothing -> do
           logInfo $ "UndeviatedRoute not found for ride" <> show rideId
@@ -301,7 +302,7 @@ buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBat
           (tollRouteDeviation, isTollPresentOnCurrentRoute) <- updateTollRouteDeviation merchantOpCityId driverId ride batchWaypoints
           return (routeDeviation, tollRouteDeviation, isTollPresentOnCurrentRoute)
       )
-      (TollsDetector.getTollInfoOnRoute merchantOpCityId)
+      (\mbDriverId -> TollsDetector.getTollInfoOnRoute merchantOpCityId.getId (fmap getId mbDriverId))
       ( \driverId estimatedDistance estimatedTollInfo -> do
           ride <- QRide.getActiveByDriverId driverId
           getTravelledDistanceAndTollInfo merchantOpCityId ride estimatedDistance estimatedTollInfo

@@ -20,6 +20,7 @@ where
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -34,7 +35,9 @@ sendFeedbackPN ::
     CacheFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int, "kafkaProducerTools" ::: KafkaProducerTools]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int, "kafkaProducerTools" ::: KafkaProducerTools],
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   Job 'SendFeedbackPN ->
   m ExecutionResult

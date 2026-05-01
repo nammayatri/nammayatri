@@ -104,7 +104,9 @@ sendSearchRequestToDrivers ::
     JobCreator r m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Bool ->
   [SDP.TripQuoteDetail] ->

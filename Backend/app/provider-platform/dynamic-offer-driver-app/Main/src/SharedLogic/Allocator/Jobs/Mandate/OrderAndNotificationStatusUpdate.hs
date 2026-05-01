@@ -41,7 +41,8 @@ notificationAndOrderStatusUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult

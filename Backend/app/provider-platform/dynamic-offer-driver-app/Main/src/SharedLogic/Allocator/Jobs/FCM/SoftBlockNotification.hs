@@ -20,6 +20,7 @@ where
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -34,7 +35,9 @@ softBlockNotifyDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   Job 'SoftBlockNotifyDriver ->
   m ExecutionResult

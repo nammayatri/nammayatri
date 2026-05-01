@@ -306,6 +306,7 @@ cancelSearch ::
     EsqDBFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     Esq.EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->

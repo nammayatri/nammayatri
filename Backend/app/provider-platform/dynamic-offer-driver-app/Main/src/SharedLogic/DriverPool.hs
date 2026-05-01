@@ -104,7 +104,6 @@ import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Beckn.Common as DST
-import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIP
 import Storage.Cac.DriverPoolConfig as Reexport
@@ -120,6 +119,7 @@ import Tools.Maps as Maps
 import qualified Tools.Maps as TMaps
 import Tools.Metrics
 import Utils.Common.Cac.KeyNameConstants
+import qualified SharedLogic.DriverPool.DriverPoolDataBuilder as DPDBuilder
 
 mkTotalQuotesKey :: Text -> Text
 mkTotalQuotesKey driverId = "driver-offer:DriverPool:Total-quotes:DriverId-" <> driverId
@@ -540,7 +540,9 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     LT.HasLocationService m r,
     CoreMetrics m,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -729,7 +731,10 @@ calculateDriverPool ::
     HasCoordinates a,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
   ) =>
   CalculateDriverPoolReq a ->
   m ([DriverPoolResult], [DriverPoolResult], [QP.NearestDriversResult]) -- (offRide, onRide, rawApproxPool)
@@ -827,7 +832,10 @@ calculateDriverPoolWithActualDist ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->

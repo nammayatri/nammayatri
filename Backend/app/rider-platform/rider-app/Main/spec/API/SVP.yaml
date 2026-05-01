@@ -1,0 +1,51 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  Merchant: Domain.Types.Merchant
+  SvpJourneyStatus: Domain.Types.SvpJourney
+
+module: SVP
+
+types:
+
+  GenerateQrResp:
+    qrData: Text
+    tktSlNo: Text
+    validTill: UTCTime
+    journeyStatus: Maybe SvpJourneyStatus
+
+  ScanType:
+    enum: "ENTRY,EXIT"
+    derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  GateCallbackReq:
+    mobileNumber: Text
+    merchantId: Id Merchant
+    stationCode: Text
+    timestamp: UTCTime
+    scanType: ScanType
+
+  GateCallbackResp:
+    allowed: Bool
+    reason: Maybe Text
+
+apis:
+
+  # Generate (or refresh) SVP QR for the authenticated rider
+  - GET:
+      endpoint: /svp/qr
+      auth: TokenAuth
+      query:
+        lat: Double
+        lon: Double
+      response:
+        type: GenerateQrResp
+
+  # AFC gate callback — called by CMRL AFC on QR scan
+  - POST:
+      endpoint: /svp/gate
+      auth: NoAuth
+      request:
+        type: GateCallbackReq
+      response:
+        type: GateCallbackResp

@@ -32,6 +32,7 @@ import Kernel.Prelude hiding (handle)
 import Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -95,7 +96,9 @@ sendSearchRequestToDrivers ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -211,7 +214,9 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
   ) =>
   DriverPoolConfig ->
   SearchTry ->

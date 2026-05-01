@@ -22,6 +22,7 @@ import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Kernel.Beam.Functions as BF
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Scheduler
@@ -37,7 +38,9 @@ unblockDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   Job 'UnblockDriver ->
   m ExecutionResult
@@ -57,7 +60,9 @@ unblockSoftBlockedDriver ::
   ( TranslateFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   Job 'UnblockSoftBlockedDriver ->
   m ExecutionResult

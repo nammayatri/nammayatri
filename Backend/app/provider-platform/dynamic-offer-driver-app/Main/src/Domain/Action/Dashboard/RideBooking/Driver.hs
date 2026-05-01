@@ -496,13 +496,15 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
     Nothing -> pure Nothing
     Just fda -> do
       fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
-      Just <$> buildDriverAssociationInfoFromPerson fleetOwner
+      fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
+      let fleetName = fleetOwnerInfo >>= (.fleetName)
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetName
   operatorInfo <-
     B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
       Nothing -> pure Nothing
       Just doa -> do
         op <- B.runInReplica $ QPerson.findById (Id doa.operatorId) >>= fromMaybeM (PersonDoesNotExist doa.operatorId)
-        Just <$> buildDriverAssociationInfoFromPerson op
+        Just <$> buildDriverAssociationInfoFromPerson op Nothing
   mbBankAccount <- QDBA.findByPrimaryKey person.id
   mbGstin <- QDGExtra.findGSTInByDriverId person.id
   mbWalletAccount <- FWallet.getWalletAccountByOwner DRIVER person.id.getId
@@ -589,15 +591,16 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         fleetOwnerId = fleetOwnerId'
       }
   where
-    buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> m Common.DriverAssociationInfo
-    buildDriverAssociationInfoFromPerson p = do
+    buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> Maybe Text -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson p mbFleetName = do
       mob <- traverse decrypt p.mobileNumber
       pure
         Common.DriverAssociationInfo
           { personId = cast @DP.Person @Dashboard.Common.Person p.id,
             name = Just $ p.firstName <> maybe "" (" " <>) p.lastName,
             mobileCountryCode = p.mobileCountryCode,
-            mobileNumber = mob
+            mobileNumber = mob,
+            fleetName = mbFleetName
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
