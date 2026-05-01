@@ -87,6 +87,8 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CH.ClickhouseFlow m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
@@ -286,6 +288,8 @@ cancelOrReallocate ::
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisFlow m r,
     EventStreamFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,

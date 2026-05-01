@@ -423,7 +423,9 @@ initiateWalletPayout ::
     EsqDBFlow m r,
     BeamFlow m r,
     ServiceFlow m r,
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
+    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   PayoutContext ->
   Text -> -- VPA

@@ -145,7 +145,9 @@ disableDriverForMandatoryReminder ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DTC.TransporterConfig ->
   Id DP.Person ->
@@ -175,6 +177,7 @@ processReminder ::
     CacheFlow m r,
     EsqDBFlow m r,
     Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     SchedulerFlow r,
@@ -219,6 +222,7 @@ processReminderByType ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
@@ -324,6 +328,7 @@ processInspectionReminder ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
@@ -386,7 +391,8 @@ processDocumentExpiryReminder ::
     ServiceFlow m r,
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -573,7 +579,9 @@ sendDriverNotifications ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
-    ServiceFlow m r
+    ServiceFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -660,7 +668,9 @@ sendDocumentExpiryNotification ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
-    ServiceFlow m r
+    ServiceFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -689,7 +699,9 @@ sendVehicleDocumentExpiryNotification ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
-    ServiceFlow m r
+    ServiceFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DR.Reminder ->
   DP.Person ->
@@ -728,7 +740,9 @@ sendInspectionOrTrainingNotification ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig, "maxNotificationShards" ::: Int],
-    ServiceFlow m r
+    ServiceFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DR.Reminder ->
   DP.Person ->

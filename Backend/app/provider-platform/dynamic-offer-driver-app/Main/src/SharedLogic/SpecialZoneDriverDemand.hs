@@ -220,7 +220,8 @@ runDemandCheckForVariants ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -257,7 +258,8 @@ checkAndNotifyDriverDemand ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -330,7 +332,8 @@ forceNotifyDriverDemand ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -366,6 +369,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
 -- Common notification logic: create SpecialZoneQueueRequest entries and send FCM + GRPC
 notifyDrivers ::
   ( Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     MonadFlow m,
     ServiceFlow m r,
     CacheFlow m r,

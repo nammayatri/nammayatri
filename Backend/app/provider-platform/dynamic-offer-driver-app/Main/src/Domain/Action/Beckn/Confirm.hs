@@ -264,7 +264,8 @@ validateRequest ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Subscriber.Subscriber ->
   Id DM.Merchant ->

@@ -150,6 +150,8 @@ cancelRideImpl ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     ClickhouseFlow m r
   ) =>
   Id DRide.Ride ->
@@ -255,7 +257,8 @@ cancelRideTransaction ::
     Esq.EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    EncFlow m r
+    EncFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   SRB.Booking ->
   DRide.Ride ->

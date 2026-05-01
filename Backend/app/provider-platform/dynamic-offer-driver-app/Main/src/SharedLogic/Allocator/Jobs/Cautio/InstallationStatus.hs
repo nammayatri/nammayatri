@@ -4,6 +4,7 @@ import qualified Data.Map as M
 import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Plan as Plan
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -30,7 +31,9 @@ installationStatus ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'CheckDashCamInstallationStatus ->
   m ExecutionResult

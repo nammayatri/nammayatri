@@ -33,6 +33,7 @@ import qualified Kernel.External.Verification.Interface.Types as VerificationInt
 import qualified Kernel.External.Verification.Types as VT
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -60,7 +61,8 @@ retryDocumentVerificationJob ::
     SchedulerFlow r,
     ServiceFlow m r,
     HasField "blackListedJobs" r [Text],
-    HasSchemaName SchedulerJobT
+    HasSchemaName SchedulerJobT,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -82,7 +84,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
         Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing verificationReq.vehicleCategory (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})

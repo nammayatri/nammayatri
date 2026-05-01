@@ -123,7 +123,8 @@ initiateDriverSearchBatch ::
     HasShortDurationRetryCfg r c,
     HasField "blackListedJobs" r [Text],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DriverSearchBatchInput m ->
   m DST.SearchTry

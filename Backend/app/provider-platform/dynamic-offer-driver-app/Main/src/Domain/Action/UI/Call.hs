@@ -73,6 +73,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Beckn.Ack
@@ -484,7 +485,8 @@ type CallBAPConstraints m r c =
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     EsqDBReplicaFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv,
-    EventStreamFlow m r
+    EventStreamFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   )
 
 getCallTwillioAccessToken ::

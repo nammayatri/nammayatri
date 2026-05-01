@@ -5,6 +5,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id as Id
 import Kernel.Utils.Common
@@ -18,7 +19,7 @@ import Storage.Queries.OrphanInstances.DriverGoHomeRequest ()
 -- | Wrapper for src-read-only finishWithStatus with LTS sync.
 -- Takes driverId as extra parameter so we can sync to the driver's LTS key.
 finishWithStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   DDGR.DriverGoHomeRequestStatus ->
   Maybe Bool ->
   Id DDGR.DriverGoHomeRequest ->

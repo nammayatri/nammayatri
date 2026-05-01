@@ -958,7 +958,8 @@ postPaymentVerifyVpa (mbPersonId, _merchantId) vpa = do
   when (isNothing person.payoutVpa) $ do
     triggerPendingCashRideCashbackPayoutJob person{payoutVpa = Just vpa}
   pure Success
-        -- else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
+
+-- else throwError $ InvalidRequest $ "VPA Verification Failed with status: " <> response.status
 
 getPaymentVpaFromNumber ::
   ( ( Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

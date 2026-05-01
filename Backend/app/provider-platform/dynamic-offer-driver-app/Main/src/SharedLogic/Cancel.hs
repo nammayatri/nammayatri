@@ -102,6 +102,8 @@ reAllocateBookingIfPossible ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe HedisEnv),
     ClickhouseFlow m r
   ) =>
   Bool ->

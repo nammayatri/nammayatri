@@ -41,6 +41,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Sms.Config (SmsConfig)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -727,7 +728,9 @@ processFleetCommunicationDeliveryPayload ::
     CoreMetrics m,
     HasField "requestId" r (Maybe Text),
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()
@@ -749,7 +752,9 @@ dispatchFromPayload ::
     CoreMetrics m,
     HasField "requestId" r (Maybe Text),
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()

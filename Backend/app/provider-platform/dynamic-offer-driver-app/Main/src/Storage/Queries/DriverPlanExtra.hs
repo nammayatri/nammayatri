@@ -12,6 +12,7 @@ import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleCategory as VC
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -212,7 +213,7 @@ updateWaiveOffPercantageAndType waiveOffEntity = do
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
+updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
 updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV

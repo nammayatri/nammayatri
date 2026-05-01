@@ -432,6 +432,7 @@ in  { esqDBCfg
     , hedisClusterCfg = rccfg
     , hedisSecondaryClusterCfg = rccfgSecondary
     , ltsRedisCfg = rcfg
+    , secondaryLTSRedisCfg = Some rcfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False

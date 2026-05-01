@@ -37,6 +37,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -75,7 +76,9 @@ bulkUpdateByDriverId ::
     EsqDBFlow m r,
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -148,7 +151,9 @@ bulkUpdateByDriverIdV2 ::
     EsqDBFlow m r,
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
