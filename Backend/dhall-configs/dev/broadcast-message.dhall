@@ -76,6 +76,7 @@ let cacConfig =
       }
 
 in  { hedisCfg
+    , ltsRedisCfg = hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
