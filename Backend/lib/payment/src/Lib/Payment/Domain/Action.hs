@@ -29,11 +29,15 @@ module Lib.Payment.Domain.Action
     updateForCXCancelPaymentIntentService,
     chargePaymentIntentService,
     createPayoutService,
+    PayoutStatusServiceReq (..),
+    mkPayoutOrderStatusReq,
+    CreatePayoutServiceReq (..),
+    mkCreatePayoutOrderReq,
     payoutStatusService,
     payoutStatusUpdates,
     cancelPaymentIntentService,
     verifyVPAService,
-    mkCreatePayoutOrderReq,
+    mkCreatePayoutServiceReq,
     buildPaymentOrder,
     upsertRefundStatus,
     buildOrderOffer,
@@ -2293,6 +2297,23 @@ txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
 
 -- payout APIs ---
 
+data CreatePayoutServiceReq = CreatePayoutServiceReq
+  { orderId :: Text,
+    amount :: HighPrecMoney,
+    currency :: Currency,
+    customerPhone :: Text,
+    customerEmail :: Text,
+    customerId :: Text,
+    orderType :: Text,
+    remark :: Text,
+    customerName :: Text,
+    customerVpa :: Maybe Text,
+    isDynamicWebhookRequired :: Bool
+  }
+
+mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
+mkCreatePayoutOrderReq mRoutingId mConnectedAccountId CreatePayoutServiceReq {..} = PT.CreatePayoutOrderReq {mExternalAccountId = Nothing, ..}
+
 createPayoutService ::
   ( EncFlow m r,
     BeamFlow m r
@@ -2303,36 +2324,37 @@ createPayoutService ::
   Maybe [Text] ->
   Maybe EntityName ->
   Text ->
-  PT.CreatePayoutOrderReq ->
-  (PT.CreatePayoutOrderReq -> m PT.CreatePayoutOrderResp) ->
+  CreatePayoutServiceReq ->
+  (CreatePayoutServiceReq -> m PT.CreatePayoutOrderResp) ->
   Maybe PGFeeConfig -> -- fee config from JuspayConfig (if configured)
   m (Maybe PT.CreatePayoutOrderResp, Maybe Payment.PayoutOrder)
-createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutOrderReq createPayoutOrderCall mbPGFeeConfig = do
-  mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
+createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntityName city createPayoutServiceReq createPayoutOrderCall mbPGFeeConfig = do
+  mbExistingPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
   case mbExistingPayoutOrder of
     Nothing -> do
-      payoutOrder <- buildInitialPayoutOrder createPayoutOrderReq
+      payoutOrder <- buildInitialPayoutOrder createPayoutServiceReq
       QPayoutOrder.create payoutOrder
-      createPayoutOrderResp <- createPayoutOrderCall createPayoutOrderReq -- api call
+      createPayoutOrderResp <- createPayoutOrderCall createPayoutServiceReq -- api call
       -- Record PG fee ledger entries if configured
       mbFeeResult <- case mbPGFeeConfig of
         Just feeConfig -> do
           let merchantOpCityId = maybe merchantId.getId getId mbMerchantOpCityId
-          result <- recordPGFeeLedgerEntries PGPayout feeConfig merchantId.getId merchantOpCityId createPayoutOrderReq.orderId
+          result <- recordPGFeeLedgerEntries PGPayout feeConfig merchantId.getId merchantOpCityId createPayoutServiceReq.orderId
           case result of
             Right feeResult -> pure $ Just feeResult
             Left _err -> pure Nothing
         Nothing -> pure Nothing
       let txn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< ((.transactions) =<< listToMaybe =<< createPayoutOrderResp.fulfillments)
       QPayoutOrder.updatePostCreateFieldsSafely
-        createPayoutOrderReq.orderId
+        createPayoutServiceReq.orderId
         createPayoutOrderResp.status
         ((.responseCode) =<< txn)
         ((.responseMessage) =<< txn)
         ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< createPayoutOrderResp.fulfillments)
         ((.pgBaseFee) <$> mbFeeResult)
         ((.pgGst) <$> mbFeeResult)
-      latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutOrderReq.orderId
+        createPayoutOrderResp.idAssignedByServiceProvider
+      latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
       return (Just createPayoutOrderResp, latestPayoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
   where
@@ -2352,6 +2374,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             mobileNo = mobileNo,
             city = city,
             amount = mkPrice Nothing req.amount,
+            idAssignedByServiceProvider = Nothing,
             entityIds = mbEntityIds,
             entityName = mbEntityName,
             status = Payout.INITIATED,
@@ -2359,7 +2382,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             responseCode = Nothing,
             retriedOrderId = Nothing,
             accountDetailsType = Nothing, --- for now only one fullfillment supported
-            vpa = Just req.customerVpa,
+            vpa = req.customerVpa,
             customerEmail = customerEmail,
             lastStatusCheckedAt = Nothing,
             pgBaseFee = Nothing,
@@ -2369,20 +2392,27 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
           }
 
+data PayoutStatusServiceReq = PayoutStatusServiceReq
+  { orderId :: Text,
+    mbExpand :: Maybe PT.Expand
+  }
+
+mkPayoutOrderStatusReq :: Maybe Text -> Maybe Text -> Maybe Text -> PayoutStatusServiceReq -> PT.PayoutOrderStatusReq
+mkPayoutOrderStatusReq idAssignedByServiceProvider mRoutingId mConnectedAccountId PayoutStatusServiceReq {..} = PT.PayoutOrderStatusReq {..}
+
 payoutStatusService ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r
   ) =>
   Id Merchant ->
   Id Person ->
-  PT.PayoutOrderStatusReq ->
-  (PT.PayoutOrderStatusReq -> m PT.PayoutOrderStatusResp) ->
+  PayoutStatusServiceReq ->
+  (Maybe Text -> PayoutStatusServiceReq -> m PT.PayoutOrderStatusResp) ->
   m PayoutPaymentStatus
-payoutStatusService _merchantId _personId createPayoutOrderStatusReq createPayoutOrderStatusCall = do
-  _ <- QPayoutOrder.findByOrderId createPayoutOrderStatusReq.orderId >>= fromMaybeM (PayoutOrderNotFound (createPayoutOrderStatusReq.orderId)) -- validation
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = createPayoutOrderStatusReq.orderId, mbExpand = createPayoutOrderStatusReq.mbExpand}
-  statusResp <- createPayoutOrderStatusCall payoutOrderStatusReq -- api call
-  payoutStatusUpdates statusResp.status createPayoutOrderStatusReq.orderId (Just statusResp)
+payoutStatusService _merchantId _personId payoutStatusServiceReq createPayoutOrderStatusCall = do
+  payoutOrder <- QPayoutOrder.findByOrderId payoutStatusServiceReq.orderId >>= fromMaybeM (PayoutOrderNotFound (payoutStatusServiceReq.orderId)) -- validation
+  statusResp <- createPayoutOrderStatusCall payoutOrder.idAssignedByServiceProvider payoutStatusServiceReq -- api call
+  payoutStatusUpdates statusResp.status payoutStatusServiceReq.orderId (Just statusResp)
   pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
 
 payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
@@ -2427,9 +2457,22 @@ payoutStatusUpdates status_ orderId statusResp = do
         Nothing -> pure ()
     Nothing -> pure ()
 
-mkCreatePayoutOrderReq :: Text -> HighPrecMoney -> Maybe Text -> Maybe Text -> Text -> Text -> Maybe Text -> Text -> Text -> Bool -> PT.CreatePayoutOrderReq
-mkCreatePayoutOrderReq orderId amount mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired =
-  PT.CreatePayoutOrderReq
+-- TODO extra check (isJust customerVpa) for Juspay service
+mkCreatePayoutServiceReq ::
+  Text ->
+  HighPrecMoney ->
+  Currency ->
+  Maybe Text ->
+  Maybe Text ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Text ->
+  Bool ->
+  CreatePayoutServiceReq
+mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired =
+  CreatePayoutServiceReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,

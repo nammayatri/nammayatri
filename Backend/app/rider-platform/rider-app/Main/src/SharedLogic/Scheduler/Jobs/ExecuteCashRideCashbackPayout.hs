@@ -1,15 +1,14 @@
 module SharedLogic.Scheduler.Jobs.ExecuteCashRideCashbackPayout where
 
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.PayoutConfig (PayoutConfig)
 import Domain.Types.Person (Person)
 import Domain.Types.VehicleCategory as DV
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
@@ -118,9 +117,8 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
       >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
   phoneNo <- mapM decrypt person.mobileNumber
   emailId <- mapM decrypt person.email
-  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
   let originalEntryIds = map (.id) cashbackEntries
-      payoutCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+      payoutCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
       submission =
         PayoutRequest.PayoutSubmission
           { beneficiaryId = person.id.getId,
@@ -128,11 +126,12 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             entityId = person.id.getId,
             entityRefId = Nothing,
             amount = totalAmount,
+            currency = payoutConfig.currency,
             payoutFee = Nothing,
             merchantId = person.merchantId.getId,
             merchantOpCityId = person.merchantOperatingCityId.getId,
             city = show merchantOperatingCity.city,
-            vpa = payoutVpa,
+            vpa = Just payoutVpa,
             customerName = person.firstName,
             customerPhone = phoneNo,
             customerEmail = emailId,
@@ -142,7 +141,8 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             payoutType = Just DPR.INSTANT,
             coverageFrom = Nothing,
             coverageTo = Nothing,
-            ledgerEntryIds = map (.getId) originalEntryIds
+            ledgerEntryIds = map (.getId) originalEntryIds,
+            payoutServiceFlow = Payout.JuspayFlow -- StripeFlow not supported currently in rider-app
           }
   -- DB-level reservation: flip entries UNSETTLED → PROCESSING BEFORE
   -- submitting so a parallel job (or a delayed webhook) can't re-pick
@@ -161,7 +161,8 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
       -- back to UNSETTLED via releaseCashbackEntriesReservation).
       RidePaymentFinance.reserveCashbackEntriesForPayout originalEntryIds (Just pr.id.getId)
       logInfo $
-        "Cashback payout initiated person=" <> person.id.getId
+        "Cashback payout initiated person="
+          <> person.id.getId
           <> " payoutRequestId="
           <> pr.id.getId
           <> " entries="

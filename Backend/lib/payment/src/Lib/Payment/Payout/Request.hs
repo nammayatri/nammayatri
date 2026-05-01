@@ -27,10 +27,11 @@ import Control.Applicative ((<|>))
 import Data.Time.Clock (addUTCTime)
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface.Types as IPayout
+import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
+import Kernel.Utils.Common (Currency, HighPrecMoney, MonadFlow, fromMaybeM, generateGUID, getCurrentTime, logDebug, logError, logInfo, throwError)
 import qualified Lib.Finance.Domain.Types.StateTransition as ST
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -49,11 +50,13 @@ data PayoutSubmission = PayoutSubmission
     entityId :: Text,
     entityRefId :: Maybe Text,
     amount :: HighPrecMoney,
+    currency :: Currency,
+    payoutServiceFlow :: Payout.PayoutServiceFlow,
     payoutFee :: Maybe HighPrecMoney,
     merchantId :: Text,
     merchantOpCityId :: Text,
     city :: Text,
-    vpa :: Text,
+    vpa :: Maybe Text,
     customerName :: Maybe Text,
     customerPhone :: Maybe Text,
     customerEmail :: Maybe Text,
@@ -201,7 +204,7 @@ submitPayoutRequest ::
     FinanceBeamFlow.BeamFlow m r
   ) =>
   PayoutSubmission ->
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) ->
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   m PayoutResult
 submitPayoutRequest submission payoutCall = do
   -- 1. Build and persist PayoutRequest (INITIATED)
@@ -211,7 +214,7 @@ submitPayoutRequest submission payoutCall = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  mbPayoutOrder <- executePayoutRequestInternal payoutRequest payoutCall
+  mbPayoutOrder <- executePayoutRequestInternal submission.currency submission.payoutServiceFlow payoutRequest payoutCall
   case mbPayoutOrder of
     Just po -> pure $ PayoutInitiated payoutRequest po
     Nothing -> pure $ PayoutFailed payoutRequest "Payout service call failed"
@@ -226,8 +229,10 @@ executePayoutRequest ::
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r
   ) =>
+  Currency ->
+  Payout.PayoutServiceFlow ->
   PayoutRequest ->
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) ->
+  (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
 executePayoutRequest = executePayoutRequestInternal
 
@@ -241,17 +246,19 @@ executePayoutRequestInternal ::
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r
   ) =>
+  Currency ->
+  Payout.PayoutServiceFlow ->
   PayoutRequest ->
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) ->
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequestInternal payoutRequest payoutCall = do
+executePayoutRequestInternal currency payoutServiceFlow payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
       pure Nothing
     else do
       orderId <- generateGUID
-      createPayoutOrderReq <- buildCreatePayoutOrderReq orderId payoutRequest
+      createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow
       let merchantId = Id payoutRequest.merchantId
           mbMocId = Just $ Id payoutRequest.merchantOperatingCityId
           personId = Id payoutRequest.beneficiaryId
@@ -274,13 +281,16 @@ executePayoutRequestInternal payoutRequest payoutCall = do
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.
-buildCreatePayoutOrderReq :: (MonadFlow m) => Text -> PayoutRequest -> m IPayout.CreatePayoutOrderReq
-buildCreatePayoutOrderReq orderId pr = do
-  vpa <- fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
+buildCreatePayoutOrderReq :: (MonadFlow m) => Text -> Currency -> PayoutRequest -> Payout.PayoutServiceFlow -> m DPayment.CreatePayoutServiceReq
+buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow = do
+  vpa <- case payoutServiceFlow of
+    Payout.JuspayFlow -> Just <$> fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
+    Payout.StripeFlow -> pure $ pr.customerVpa
   pure $
-    DPayment.mkCreatePayoutOrderReq
+    DPayment.mkCreatePayoutServiceReq
       orderId
       (fromMaybe 0 pr.amount)
+      currency
       pr.customerPhone
       pr.customerEmail
       pr.beneficiaryId
@@ -315,7 +325,7 @@ buildPayoutRequest submission = do
         cashMarkedAt = Nothing,
         expectedCreditTime = Nothing,
         scheduledAt = submission.scheduledAt,
-        customerVpa = Just submission.vpa,
+        customerVpa = submission.vpa,
         customerPhone = submission.customerPhone,
         customerEmail = submission.customerEmail,
         customerName = submission.customerName,

@@ -14,6 +14,22 @@ import qualified Kernel.Types.Common
 import Servant
 import Tools.Auth
 
+data CreatePayoutOrderReq = CreatePayoutOrderReq
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    currency :: Kernel.Types.Common.Currency,
+    customerEmail :: Data.Text.Text,
+    customerId :: Data.Text.Text,
+    customerName :: Data.Text.Text,
+    customerPhone :: Data.Text.Text,
+    customerVpa :: Kernel.Prelude.Maybe Data.Text.Text,
+    isDynamicWebhookRequired :: Kernel.Prelude.Bool,
+    orderId :: Data.Text.Text,
+    orderType :: Data.Text.Text,
+    remark :: Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DailyEarning = DailyEarning
   { activatedItems :: Kernel.Prelude.Int,
     earningDate :: Data.Time.Calendar.Day,

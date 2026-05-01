@@ -290,16 +290,16 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
 
     callPayoutService driverId payoutConfig payoutOrderId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      paymentServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId paymentServiceName (Just $ getId driverId)
+      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion driver.merchantOperatingCityId driverId
+      let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName driver.merchantOperatingCityId driverId mbPersonBankAccount
       void $ DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
     callPayoutServiceForCoinsRedemption driverId payoutConfig payoutOrderId merchantOperatingCityId merchantId = do
       driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-      paymentServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus driver.merchantId driver.merchantOperatingCityId paymentServiceName (Just $ getId driverId)
+      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion driver.merchantOperatingCityId driverId
+      let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName driver.merchantOperatingCityId driverId mbPersonBankAccount
       payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
       case payoutStatusResp.status of
         Payout.FULFILLMENTS_FAILURE ->
@@ -310,11 +310,11 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
       let dPayoutStatus = castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
       driver <- B.runInReplica $ QP.findById (cast dailyStats.driverId) >>= fromMaybeM (PersonDoesNotExist $ getId dailyStats.driverId)
-      paymentServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
       Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
         when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dStatsId
-      let createPayoutOrderStatusReq = IPayout.PayoutOrderStatusReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
-          createPayoutOrderStatusCall = Payout.payoutOrderStatus merchantId merchantOperatingCityId paymentServiceName (Just $ getId dailyStats.driverId)
+      (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getPayoutStatusServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion merchantOperatingCityId dailyStats.driverId
+      let createPayoutOrderStatusReq = DPayment.PayoutStatusServiceReq {orderId = payoutOrderId, mbExpand = payoutConfig.expand}
+          createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName merchantOperatingCityId dailyStats.driverId mbPersonBankAccount
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
 castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
@@ -388,17 +388,20 @@ processPreviousPayoutAmount personId mbVpa merchOpCity = do
       person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let statsIds = map (.id) dailyStats
           pendingAmount = sum (map (.referralEarnings) dailyStats) + sum (map (.d2dReferralEarnings) dailyStats)
-      case (mbVpa, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
-        (Just vpa, True) -> do
+      (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow Payout.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion merchOpCity person.id
+      let payoutVpaValid = case payoutServiceFlow of
+            TPayout.JuspayFlow -> isJust mbVpa
+            TPayout.StripeFlow -> True
+      case (payoutVpaValid, pendingAmount <= payoutConfig.thresholdPayoutAmountPerPerson) of
+        (True, True) -> do
           uid <- generateGUID
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey personId.getId) 3 3 $ do
             mapM_ (QDailyStats.updatePayoutStatusById DS.Processing) statsIds
             mapM_ (QDailyStats.updatePayoutOrderId (Just uid)) statsIds
           phoneNo <- mapM decrypt person.mobileNumber
-          let createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
-          payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+          let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid pendingAmount transporterConfig.currency phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) mbVpa payoutConfig.orderType False
           let entityName = DPayment.BACKLOG
-              createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity payoutServiceName (Just person.id.getId)
+              createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchOpCity person.id mbPersonBankAccount
           merchantOperatingCity <- CQMOC.findById (cast merchOpCity) >>= fromMaybeM (MerchantOperatingCityNotFound merchOpCity.getId)
           logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show pendingAmount <> " | orderId: " <> show uid
           void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
