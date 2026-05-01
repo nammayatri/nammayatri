@@ -52,6 +52,7 @@ cacheMerchantServiceConfig placeBasedServiceConfig = do
 makePlaceIdAndServiceKey :: Id TicketPlace -> ServiceName -> Text
 makePlaceIdAndServiceKey id serviceName = "CachedQueries:PlaceBasedServiceConfig:PlaceId-" <> id.getId <> ":ServiceName-" <> show serviceName
 
+-- FIXME why StripeTest wasn't used?
 getServiceNameFromPlaceBasedConfigs :: PlaceBasedServiceConfig -> ServiceName
 getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   MapsServiceConfig mapsCfg -> case mapsCfg of
@@ -127,6 +128,7 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
   PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+    Payout.StripeConfig _ -> PayoutService Payout.Stripe -- FIXME do we need StripeTest?
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit

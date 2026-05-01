@@ -92,3 +92,9 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_refunds text 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_instruction_route text  default 'OSRM';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN payout_order_status text  default 'Juspay';
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_payout_order text  default 'Juspay';

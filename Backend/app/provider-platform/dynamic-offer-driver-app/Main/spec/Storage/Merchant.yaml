@@ -21,6 +21,7 @@ imports:
   CallService: Kernel.External.Call
   MapsService: Kernel.External.Maps.Types
   PaymentService: Kernel.External.Payment.Types
+  PayoutService: Kernel.External.Payout.Types
   NotificationService: Kernel.External.Notification.Types
   SmsService: Kernel.External.SMS.Types
   IssueTicketService: Kernel.External.Ticket.Types
@@ -608,6 +609,8 @@ MerchantServiceUsageConfig:
     createBankAccount: PaymentService
     retryBankAccountLink: PaymentService
     getBankAccount: PaymentService
+    createPayoutOrder: PayoutService
+    payoutOrderStatus: PayoutService
     backgroundVerification: BackgroundVerificationService
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
@@ -615,14 +618,20 @@ MerchantServiceUsageConfig:
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
     categoryBasedVerificationPriorityList: Maybe Value
+    createPayoutOrder: Maybe PayoutService
+    payoutOrderStatus: Maybe PayoutService
 
   fromTType:
     llmChatCompletion: Kernel.Prelude.fromMaybe ChatCompletion.Types.AzureOpenAI|I
     categoryBasedVerificationPriorityList: Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList|E
+    createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
+    payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
 
   toTType:
     llmChatCompletion: Kernel.Prelude.Just|I
     categoryBasedVerificationPriorityList: Data.Aeson.toJSON <$> categoryBasedVerificationPriorityList|E
+    createPayoutOrder: Kernel.Prelude.Just|I
+    payoutOrderStatus: Kernel.Prelude.Just|I
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -685,6 +694,8 @@ MerchantServiceUsageConfig:
     createBankAccount: "'Stripe'"
     retryBankAccountLink: "'Stripe'"
     getBankAccount: "'Stripe'"
+    createPayoutOrder: "'Juspay'" # TODO migration for Stripe service
+    payoutOrderStatus: "'Juspay'" # TODO migration for Stripe service
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
     getDistancesForScheduledRides: "'OSRM'"

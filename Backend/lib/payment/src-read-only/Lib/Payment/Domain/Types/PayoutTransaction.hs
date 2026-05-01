@@ -8,6 +8,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PayoutOrder
+import qualified Tools.Beam.UtilsTH
 
 data PayoutTransaction = PayoutTransaction
   { amount :: Kernel.Types.Common.Price,

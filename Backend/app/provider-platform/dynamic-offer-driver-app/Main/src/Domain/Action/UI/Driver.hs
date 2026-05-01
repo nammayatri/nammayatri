@@ -201,8 +201,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Payout.Interface as Juspay
-import qualified Kernel.External.Payout.Types as TPayout
+import qualified Kernel.External.Payout.Interface as IPayout
 import qualified Kernel.External.Verification.Interface.InternalScripts as IF
 import Kernel.Prelude (NominalDiffTime, handle, intToNominalDiffTime, roundToIntegral)
 import Kernel.Serviceability (rideServiceable)
@@ -3352,8 +3351,13 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
     ------------ todo :-  put check for access post rbac implemtation --------------
     let mbVpa = refundByPayoutReq.payerVpa <|> driverInfo.payoutVpa <|> (mDriverPlan >>= (.payerVpa))
-    unless (isJust mbVpa) $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
-    whenJust mbVpa $ \vpa -> do
+    person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption serviceName) DEMSC.PayoutService person.clientSdkVersion opCityId person.id
+    let payoutVpaValid = case payoutServiceFlow of
+          IPayout.JuspayFlow -> isJust mbVpa
+          IPayout.StripeFlow -> True
+    unless payoutVpaValid $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
+    when payoutVpaValid $ do
       pendingDriverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING]
       unless (null pendingDriverFees) $ throwError (InternalError "some driver fee currently in auto pay execution")
       driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [driverFeeType] [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH]
@@ -3363,19 +3367,15 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           refundAmount = totalSecurityDeposit - dueDriverFeesAmount - refundAmountDeduction
       when (refundAmount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       let driverFeeSorted = sortOn (.platformFee.fee) driverFees
-      subscriptionConfig <- do
-        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
-          >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
       uid <- generateGUID
       now <- getCurrentTime
       let ((driverFeeToPayout, driverFeeToSettle), _) = driverFeeWithRefundData driverFeeSorted refundAmount uid now
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       phoneNo <- mapM decrypt person.mobileNumber
-      payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
-      let createPayoutOrderReq = mkPayoutReq driverFeeToPayout person vpa uid phoneNo
-          entityName = DPayment.DRIVER_FEE
-          createPayoutOrderCall = Payout.createPayoutOrder person.merchantId opCityId payoutServiceName (Just person.id.getId)
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
+      let payoutCurrency = maybe merchantOperatingCity.currency (.currency) (listToMaybe driverFeeToPayout)
+          createPayoutOrderReq = mkPayoutReq driverFeeToPayout person mbVpa uid phoneNo payoutCurrency
+          entityName = DPayment.DRIVER_FEE
+          createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
       when (createPayoutOrderReq.amount < 0.0) $ throwError (InternalError "refund amount is less than 0")
       (_, mbPayoutOrder) <- do
@@ -3426,10 +3426,11 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         )
         (([], []), refundAmount)
         driverFeeSorted
-    mkPayoutReq driverFeeToPayout person vpa uid phoneNo =
-      Juspay.CreatePayoutOrderReq
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency = do
+      DPayment.CreatePayoutServiceReq
         { orderId = uid,
           amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout,
+          currency,
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
           customerId = personId.getId,

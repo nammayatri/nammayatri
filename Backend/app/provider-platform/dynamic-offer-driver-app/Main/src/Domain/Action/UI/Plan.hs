@@ -329,7 +329,6 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
         then return (Just order.id, Just CLEAR_DUE)
         else return (Nothing, Nothing)
 
-
 class Subscription a where
   getSubcriptionStatusWithPlan ::
     ( BeamFlow m r,

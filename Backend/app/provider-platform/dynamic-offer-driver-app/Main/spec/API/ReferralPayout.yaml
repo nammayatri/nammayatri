@@ -4,6 +4,7 @@ imports:
   Person: Domain.Types.Person
   Text: Data.Text
   Money: Kernel.Types.Common
+  Currency: Kernel.Types.Common
   PayoutStatus: Domain.Types.DailyStats
   ClearDuesRes: Domain.Action.UI.Driver
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
@@ -40,6 +41,19 @@ types:
     referrals: Int
     status: PayoutStatus
     payoutOrderId: Maybe Text
+
+  CreatePayoutOrderReq:
+    orderId: Text
+    amount: HighPrecMoney
+    currency: Currency
+    customerPhone: Text
+    customerEmail: Text
+    customerId: Text
+    orderType: Text
+    remark: Text
+    customerName: Text
+    customerVpa: Maybe Text
+    isDynamicWebhookRequired: Bool
 
 
 apis:
@@ -81,7 +95,7 @@ apis:
       endpoint: /payout/createOrder
       auth: TokenAuth PROVIDER_TYPE
       request:
-        type: Kernel.External.Payout.Interface.Types.CreatePayoutOrderReq
+        type: CreatePayoutOrderReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
 

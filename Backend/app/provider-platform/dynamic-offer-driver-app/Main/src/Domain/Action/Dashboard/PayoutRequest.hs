@@ -20,7 +20,7 @@ import qualified Environment
 import EulerHS.Prelude hiding (id, readMaybe, sum)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
-import qualified Kernel.External.Payout.Types as PT
+import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import qualified Kernel.Types.Beckn.Context
@@ -92,8 +92,16 @@ refundRegistrationAmount merchantShortId opCity req = do
   driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
+  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+
+  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService driver.clientSdkVersion merchantOpCity.id driverId
+
   -- Eligibility check: VPA must be captured via webhook, refund not already done
-  unless (driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isNothing driverInfo.payoutRegAmountRefunded && isJust driverInfo.payoutVpa) $
+  let payoutVpaValid = case payoutServiceFlow of
+        IPayout.JuspayFlow -> driverInfo.payoutVpaStatus == Just DI.VIA_WEBHOOK && isJust driverInfo.payoutVpa
+        IPayout.StripeFlow -> True
+  unless (payoutVpaValid && isNothing driverInfo.payoutRegAmountRefunded) $
     throwError $ InvalidRequest $ "Driver not eligible for refund | driver id: " <> show driverId
 
   -- Get the registration PaymentOrder ID
@@ -102,16 +110,13 @@ refundRegistrationAmount merchantShortId opCity req = do
     Nothing -> throwError $ InvalidRequest $ "No registration order found for driver: " <> show driverId
 
   -- Get payout call
-  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   let vehicleCategory = DV.AUTO_CATEGORY
   payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
-  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) driver.clientSdkVersion driver.merchantOperatingCityId
-  let createPayoutOrderCall = TP.createPayoutOrder merchant.id merchantOpCity.id payoutServiceName (Just driverId.getId)
+  let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCity.id driverId mbPersonBankAccount
 
   -- Delegate to lib — it looks up PaymentOrder for amount + VPA, checks idempotency
   logDebug $ "Refunding registration for driverId: " <> driverId.getId <> " | orderId: " <> registrationOrderId.getId
-  mbResult <- Registration.refundRegistrationAmount registrationOrderId createPayoutOrderCall payoutConfig.remark payoutConfig.orderType (show merchantOpCity.city)
+  mbResult <- Registration.refundRegistrationAmount registrationOrderId createPayoutOrderCall payoutConfig.remark payoutConfig.orderType (show merchantOpCity.city) payoutServiceFlow
 
   case mbResult of
     Just _ -> do
