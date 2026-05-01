@@ -20,6 +20,7 @@ module Domain.Types.Booking.API where
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Aeson (eitherDecode, encode)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types
@@ -89,6 +90,7 @@ data BookingAPIEntity = BookingAPIEntity
     agencyName :: Text,
     agencyNumber :: Maybe Text,
     riderMobileNumber :: Maybe Text,
+    riderName :: Maybe Text,
     estimatedFare :: Money,
     isBookingUpdated :: Bool,
     discount :: Maybe Money,
@@ -300,6 +302,9 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
   rides <- mapM (buildRideAPIEntity (requesterId, booking, isOnlinePayment)) allRides
   person <- QP.findById requesterId >>= fromMaybeM (PersonNotFound requesterId.getId)
   riderMobile <- mapM decrypt person.mobileNumber
+  let riderName =
+        let names = catMaybes [person.firstName, person.middleName, person.lastName]
+         in if null names then Nothing else Just $ T.intercalate " " names
   let providerNum = fromMaybe "+91" bppDetails.supportNumber
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.transactionId)
   return $
@@ -309,6 +314,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         agencyName = bppDetails.name,
         agencyNumber = Just providerNum,
         riderMobileNumber = riderMobile,
+        riderName = riderName,
         estimatedFare = booking.estimatedFare.amountInt,
         discount = booking.discount <&> (.amountInt),
         estimatedTotalFare = booking.estimatedTotalFare.amountInt,

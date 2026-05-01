@@ -22,6 +22,7 @@ import qualified Lib.Payment.Payout.Request as PayoutRequest
 import qualified Lib.Payment.Payout.Status as PayoutStatus
 import qualified Lib.Payment.Storage.Beam.BeamFlow as PaymentBeamFlow
 import qualified SharedLogic.Allocator.Jobs.Payout.SpecialZonePayout as SpecialZonePayout
+import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import qualified Tools.Payout as Payout
@@ -66,6 +67,8 @@ refreshPayoutRequestStatus payoutRequest = do
               onUpdate newStatus rawStatus = do
                 let statusMsg = "Order Status Updated: " <> show rawStatus
                 PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) pr
+                when (newStatus `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
+                  SharedRide.safeRevertVehicleBalanceForPayout pr
           newStatus <-
             PayoutStatus.refreshPayoutStatus
               (cast merchantId)
@@ -94,6 +97,7 @@ executeSpecialZonePayoutRequest ::
   DPR.PayoutRequest ->
   m ()
 executeSpecialZonePayoutRequest payoutRequest = do
+  SharedRide.safeApplyVehicleBalanceForPayout payoutRequest
   _ <- SpecialZonePayout.executeSpecialZonePayout payoutRequest
   pure ()
 
