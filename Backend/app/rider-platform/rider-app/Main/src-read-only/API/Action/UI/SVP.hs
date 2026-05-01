@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.SVP
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Domain.Action.UI.SVP
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -24,26 +25,36 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "svp" :> "qr" :> QueryParam "lat" Kernel.Prelude.Double :> QueryParam "lon" Kernel.Prelude.Double
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.SVP.GenerateQrResp
       :<|> "svp"
+      :> "publicKey"
+      :> Get '[JSON] Data.Text.Text
+      :<|> "svp"
       :> "gate"
-      :> ReqBody ('[JSON]) API.Types.UI.SVP.GateCallbackReq
-      :> Post ('[JSON]) API.Types.UI.SVP.GateCallbackResp
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.SVP.GateCallbackReq
+      :> Post
+           '[JSON]
+           API.Types.UI.SVP.GateCallbackResp
   )
 
 handler :: Environment.FlowServer API
-handler = getSvpQr :<|> postSvpGate
+handler = getSvpQr :<|> getSvpPublicKey :<|> postSvpGate
 
 getSvpQr ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.SVP.GenerateQrResp
   )
 getSvpQr a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.getSvpQr (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getSvpPublicKey :: Environment.FlowHandler Data.Text.Text
+getSvpPublicKey = withFlowHandlerAPI $ Domain.Action.UI.SVP.getSvpPublicKey
 
 postSvpGate :: (API.Types.UI.SVP.GateCallbackReq -> Environment.FlowHandler API.Types.UI.SVP.GateCallbackResp)
 postSvpGate a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.postSvpGate a1
