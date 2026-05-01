@@ -34,6 +34,7 @@ updateByPrimaryKey IssueMessage {..} =
       Set BeamIM.label label,
       Set BeamIM.isActive isActive,
       Set BeamIM.mediaFiles (getId <$> mediaFiles),
+      Set BeamIM.messageType messageType,
       Set BeamIM.createdAt createdAt,
       Set BeamIM.updatedAt updatedAt
     ]
@@ -90,6 +91,14 @@ translationClause iMessages language =
           ]
       ]
   ]
+
+findAllByCategoryId :: BeamFlow m r => Id DIC.IssueCategory -> m [IssueMessage]
+findAllByCategoryId (Id issueCategoryId) =
+  findAllIssueMessageWithSeCondition [Is BeamIM.categoryId $ Eq $ Just issueCategoryId] (Asc BeamIM.priority) Nothing Nothing
+
+findAllByOptionIds :: BeamFlow m r => [Id DIO.IssueOption] -> m [IssueMessage]
+findAllByOptionIds optionIds =
+  findAllIssueMessageWithSeCondition [Is BeamIM.optionId $ In (Just . getId <$> optionIds)] (Asc BeamIM.priority) Nothing Nothing
 
 findAllWithMinPriority :: BeamFlow m r => Int -> m [IssueMessage]
 findAllWithMinPriority priority =

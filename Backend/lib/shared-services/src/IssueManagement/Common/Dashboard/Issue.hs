@@ -22,6 +22,7 @@ import IssueManagement.Domain.Types.Issue.IssueReport
 import IssueManagement.Domain.Types.MediaFile (MediaFile)
 import Kernel.External.Types (Language)
 import Kernel.Prelude
+import Kernel.Types.Beckn.Context as Context
 import Kernel.ServantMultipart
 import Kernel.Types.CacheFlow as Reexport
 import Kernel.Types.Common
@@ -667,6 +668,40 @@ newtype ReorderIssueMessageReq = ReorderIssueMessageReq
 
 instance HideSecrets ReorderIssueMessageReq where
   hideSecrets = identity
+
+data CopyIssueCategoryReq = CopyIssueCategoryReq
+  { sourceCategoryId :: Id IssueCategory,
+    targetMerchantShortId :: ShortId Merchant,
+    targetCity :: Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CopyIssueCategoryReq where
+  hideSecrets = identity
+
+data CopyIssueCategoryRes = CopyIssueCategoryRes
+  { categoryId :: Id IssueCategory,
+    messageIds :: [Id IssueMessage],
+    optionIds :: [Id IssueOption]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CopyAllDefaultIssueCategoryRes = CopyAllDefaultIssueCategoryRes
+  { succeeded :: [CopyIssueCategoryRes],
+    failed :: [FailedCategoryCopy]
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FailedCategoryCopy = FailedCategoryCopy
+  { categoryId :: Id IssueCategory,
+    categoryName :: Text,
+    reason :: Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 ---------------------------------------------------------
 -- Live chat (dashboard side) ---------------------------
