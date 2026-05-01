@@ -22,7 +22,7 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN pulled_
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_request_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN ride_duration integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_completed_rides integer ;
-ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_distance integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_distance double precision ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_rating_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_rating_score integer ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN total_request_count integer ;

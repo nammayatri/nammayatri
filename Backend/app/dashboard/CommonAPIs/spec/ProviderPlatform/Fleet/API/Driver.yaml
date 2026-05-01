@@ -598,6 +598,7 @@ apis:
         - to: Day
         - fleetOwnerId: Text
         - search: Text
+        - driverNumber: Text
         - limit: Int
         - offset: Int
         - sortDesc: Bool
@@ -616,6 +617,7 @@ apis:
               - to: Day
               - fleetOwnerId: Text
               - search: Text
+              - driverNumber: Text
               - limit: Int
               - offset: Int
               - sortDesc: Bool
@@ -1394,15 +1396,15 @@ apis:
         type: FleetVehicleStatsRes
       helperApi:
         - GET:
-            endpoint: /{fleetOwnerId}/fleet/vehicle/list/stats
+            endpoint: /{requestorId}/fleet/vehicle/list/stats
             auth: ApiAuthV2
             params:
-              fleetOwnerId: Text
+              requestorId: Text
             mandatoryQuery:
               - from: Day
               - to: Day
             query:
-              - requestorId: Text
+              - fleetOwnerId: Text
               - vehicleNo: Text
               - limit: Int
               - offset: Int
