@@ -36,7 +36,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Hedis.Queries as Redis
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -129,7 +129,8 @@ handler ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   Id DM.Merchant ->
   InitReq ->

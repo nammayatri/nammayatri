@@ -26,13 +26,20 @@ import qualified Storage.Queries.Vehicle as QV
 -- This handles cold start: first call after deploy fetches from DB and caches.
 -- Subsequent calls hit Redis directly.
 getOrBuildDriverPoolDataBatch ::
-  (BeamFlow m r, Redis.HedisFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  ( BeamFlow m r,
+    Redis.HedisFlow m r,
+    MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+  ) =>
   [Id Driver] ->
   m [DriverPoolData]
 getOrBuildDriverPoolDataBatch driverIds = do
-  -- Batch fetch from LTS Redis, tracking which are missing
-  redisResults <- mapM (\did -> (did,) <$> Redis.safeGet (driverPoolDataKey did)) driverIds
-  let (found, missing) = foldr partitionResult ([], []) redisResults
+  found <- getDriverPoolDataBatch driverIds
+  let foundIds = map (.driverId) found
+      missing = filter (`notElem` foundIds) driverIds
   if null missing
     then pure found
     else do
@@ -41,10 +48,6 @@ getOrBuildDriverPoolDataBatch driverIds = do
       builtFromDB <- buildDriverPoolDataFromDB missing
       mapM_ setDriverPoolData builtFromDB
       pure $ found <> builtFromDB
-  where
-    partitionResult :: (Id Driver, Maybe DriverPoolData) -> ([DriverPoolData], [Id Driver]) -> ([DriverPoolData], [Id Driver])
-    partitionResult (_, Just dpd) (founds, missings) = (dpd : founds, missings)
-    partitionResult (did, Nothing) (founds, missings) = (founds, did : missings)
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
 -- Fetches from: driver_information, vehicle, person, driver_bank_account,

@@ -19,6 +19,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -123,7 +124,7 @@ updateEnabledVerifiedState (Id driverId) isEnabled isVerified = do
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
 updateActivityWithDriverFlowStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   (Bool -> Maybe Common.DriverMode -> Maybe DFS.DriverFlowStatus -> Maybe Bool -> Maybe UTCTime -> Id Person.Driver -> m ())
 updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted lastOfflineTime driverId = do
   now <- getCurrentTime
@@ -143,7 +144,7 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
         LTSSync.mode = LTSSync.Set mode
       }
 
-updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
+updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
 updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime dashboardUserName merchantId reasonCode merchantOperatingCityId blockedBy isBlocked mbActive mbMode blockReasonFlag = do
   now <- getCurrentTime
   driverInfo <- findById driverId
@@ -195,7 +196,7 @@ updateDynamicBlockedStateWithActivity driverId blockedReason blockedExpiryTime d
         LTSSync.mode = LTSSync.Set $ mbMode <|> modeState
       }
 
-updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
+updateBlockedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Bool -> Maybe Text -> Id Merchant -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> m ()
 updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOperatingCityId blockedBy = do
   now <- getCurrentTime
   driverInfo <- findById driverId
@@ -239,7 +240,7 @@ updateBlockedState driverId isBlocked blockStateModifier merchantId merchantOper
 findByDriverIdActiveRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findByDriverIdActiveRide (Id driverId) = findOneWithKV [Se.And [Se.Is BeamDI.driverId $ Se.Eq driverId, Se.Is BeamDI.onRide $ Se.Eq True]]
 
-updateNotOnRideMultiple :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person.Driver] -> m ()
+updateNotOnRideMultiple :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => [Id Person.Driver] -> m ()
 updateNotOnRideMultiple driverIds = do
   now <- getCurrentTime
   updateWithKV
@@ -341,7 +342,7 @@ updatPayerVpa payerVpa (Id driverId) = do
     )
     [Se.Is BeamDI.driverId (Se.Eq driverId)]
 
-updateHasAdvancedRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasAdvancedRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Bool -> m ()
 updateHasAdvancedRide (Id driverId) isOnAdvancedRide = do
   now <- getCurrentTime
   updateOneWithKV
@@ -362,7 +363,7 @@ updatePayoutVpaAndStatusByDriverIds payoutVpa payoutVpaStatus driverIds = do
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
 
-updateTripCategoryAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Common.TripCategory -> Maybe Maps.LatLong -> m ()
+updateTripCategoryAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Maybe Common.TripCategory -> Maybe Maps.LatLong -> m ()
 updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLocation = do
   now <- getCurrentTime
   updateOneWithKV
@@ -376,7 +377,7 @@ updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLoca
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.onRideTripCategory = LTSSync.Set (show <$> tripCategory)}
 
-updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
+updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
 updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
   now <- getCurrentTime
   updateOneWithKV
@@ -390,7 +391,7 @@ updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
 
-updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Bool -> m ()
 updateHasRideStarted driverId hasRideStarted = do
   now <- getCurrentTime
   updateOneWithKV
@@ -410,7 +411,7 @@ updateIsBlockedForReferralPayout driverIds isBlocked = do
     ]
     [Se.Is BeamDI.driverId (Se.In (getId <$> driverIds))]
 
-updateForwardBatchingEnabledOrIsInteroperable :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Maybe Bool -> Maybe Bool -> m ()
+updateForwardBatchingEnabledOrIsInteroperable :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person.Driver -> Maybe Bool -> Maybe Bool -> m ()
 updateForwardBatchingEnabledOrIsInteroperable driverId isAdvancedBookingEnabled isInteroperable = do
   if isNothing isAdvancedBookingEnabled && isNothing isInteroperable
     then pure ()
@@ -595,7 +596,7 @@ findOnRideDriversWithRideStartedByMerchantOpCityIds merchantOpCityIds limitVal o
 
 -- Wrappers for src-read-only functions with LTS sync
 
-updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Id Person.Person -> m ()
 updateOnRide onRide driverId = do
   now <- getCurrentTime
   LTSSync.runPoolFieldUpdate (cast driverId) $
@@ -604,7 +605,7 @@ updateOnRide onRide driverId = do
       (LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide})
 
 updateOnRideAndLatestScheduledBookingAndPickup ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Bool ->
   Maybe UTCTime ->
   Maybe Maps.LatLong ->
@@ -630,7 +631,7 @@ updateOnRideAndLatestScheduledBookingAndPickup onRide latestScheduledBooking lat
 -- Class 1 wrappers for src-read-only functions with LTS sync
 
 updateDriverInformation ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Bool ->
   Bool ->
   Bool ->
@@ -692,14 +693,14 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
         LTSSync.maxPickupRadius = LTSSync.Set maxPickupRadius
       }
 
-updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateSubscription :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Id Person.Person -> m ()
 updateSubscription subscribed driverId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDI.subscribed subscribed, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.subscribed = LTSSync.Set subscribed}
 
-updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
+updateSoftBlock :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe [DVST.ServiceTierType] -> Maybe UTCTime -> Maybe Text -> Id Person.Person -> m ()
 updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -712,7 +713,7 @@ updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.softBlockStiers = LTSSync.Set softBlockStiers}
 
-updateSpecialLocWarriorInfo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Maybe (Id SL.SpecialLocation) -> [Id SL.SpecialLocation] -> Maybe UTCTime -> Id Person.Person -> m ()
+updateSpecialLocWarriorInfo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Maybe (Id SL.SpecialLocation) -> [Id SL.SpecialLocation] -> Maybe UTCTime -> Id Person.Person -> m ()
 updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId preferredSecondarySpecialLocIds specialLocWarriorEnabledAt driverId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -726,14 +727,14 @@ updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId pre
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.isSpecialLocWarrior = LTSSync.Set isSpecialLocWarrior}
 
-updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe UTCTime -> Id Person.Person -> m ()
+updateTollRouteBlockedTill :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe UTCTime -> Id Person.Person -> m ()
 updateTollRouteBlockedTill tollRouteBlockedTill driverId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDI.tollRouteBlockedTill tollRouteBlockedTill, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.tollRouteBlockedTill = LTSSync.Set tollRouteBlockedTill}
 
-removeAcUsageRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Double -> DriverInfo.AirConditionedRestrictionType -> Int -> Id Person.Person -> m ()
+removeAcUsageRestriction :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe Double -> DriverInfo.AirConditionedRestrictionType -> Int -> Id Person.Person -> m ()
 removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionLiftCount driverId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -749,7 +750,7 @@ removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionL
         LTSSync.acRestrictionLiftCount = LTSSync.Set acRestrictionLiftCount
       }
 
-updateAcUsageRestrictionAndScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverInfo.AirConditionedRestrictionType -> Maybe Double -> Id Person.Person -> m ()
+updateAcUsageRestrictionAndScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DriverInfo.AirConditionedRestrictionType -> Maybe Double -> Id Person.Person -> m ()
 updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driverId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -761,7 +762,7 @@ updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driver
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType)}
 
-updateRentalInterCityAndIntraCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Bool -> Bool -> Id Person.Person -> m ()
+updateRentalInterCityAndIntraCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Bool -> Bool -> Id Person.Person -> m ()
 updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity canSwitchToIntraCity driverId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -778,7 +779,7 @@ updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity c
         LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity
       }
 
-updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Id Person.Person -> m ()
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDI.forwardBatchingEnabled (Just forwardBatchingEnabled), Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]

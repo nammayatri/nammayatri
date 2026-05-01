@@ -29,6 +29,7 @@ import qualified Domain.Types.Person as SP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Notification.FCM.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as QM
@@ -64,7 +65,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =

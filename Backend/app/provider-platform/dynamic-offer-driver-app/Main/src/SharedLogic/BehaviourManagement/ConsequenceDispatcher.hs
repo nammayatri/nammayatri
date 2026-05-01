@@ -65,6 +65,7 @@ handleConsequences ::
     EsqDBFlow m r,
     CacheFlow m r,
     Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
@@ -93,7 +94,8 @@ dispatchConsequence ::
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -201,7 +203,9 @@ parseBlockReasonFlag = \case
 sendOverlayByKey ::
   ( MonadFlow m,
     EsqDBFlow m r,
-    CacheFlow m r
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   DispatchContext ->
   Id DP.Person ->

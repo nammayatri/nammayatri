@@ -113,6 +113,8 @@ cancelRideHandle ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
     CH.ClickhouseFlow m r
   ) =>
   ServiceHandle m
@@ -189,7 +191,9 @@ cancelRideImpl ::
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   ServiceHandle m ->
   RequestorId ->

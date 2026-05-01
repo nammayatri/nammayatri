@@ -19,6 +19,7 @@ import qualified Kernel.External.Insurance.Interface as Insurance
 import qualified Kernel.External.Insurance.Interface.Types as InsuranceTypes
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude ()
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.Client.Core ()
@@ -43,7 +44,9 @@ triggerIffcoTokioInsurance ::
     CacheFlow m r,
     MonadTime m,
     Log m,
-    MonadReader r m
+    MonadReader r m,
+    Hedis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv
   ) =>
   Id DP.Person ->
   Id DM.Merchant ->

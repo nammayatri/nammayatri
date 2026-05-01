@@ -149,7 +149,11 @@ emptyUpdate =
 -- keep their existing values. If the key doesn't exist yet, skip — the full
 -- key is built lazily by getOrBuildDriverPoolDataBatch on first pool query.
 syncDriverPoolDataToLTS ::
-  (MonadFlow m, Log m, Redis.HedisFlow m r) =>
+  ( MonadFlow m,
+    Log m,
+    Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
   Id Driver ->
   DriverPoolDataUpdate ->
   m ()
@@ -243,7 +247,7 @@ mkPoolFieldUpdate = PoolFieldUpdate
 
 -- | Execute a pool field update: runs the DB write, then syncs to LTS.
 runPoolFieldUpdate ::
-  (MonadFlow m, Log m, Redis.HedisFlow m r) =>
+  (MonadFlow m, Log m, Redis.HedisFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
   Id Driver ->
   PoolFieldUpdate m ->
   m ()
