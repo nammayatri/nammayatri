@@ -22,6 +22,7 @@ where
 import API.Types.ProviderPlatform.Management.Endpoints.Driver as Reexport
 import Dashboard.Common as Reexport hiding (Role (..))
 import Dashboard.Common.Driver as Reexport hiding (Role (..))
+import qualified Data.Text as T
 import Kernel.Prelude
 import Kernel.Types.Predicate
 import qualified Kernel.Utils.Predicates as P
@@ -41,8 +42,12 @@ validateUpdateDriverNameReq :: Validate UpdateDriverNameReq
 validateUpdateDriverNameReq UpdateDriverNameReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.name,
-      validateField "middleName" middleName $ InMaybe (MaxLength 50 `And` P.name),
-      validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name)
+      whenJust middleName $ \mn ->
+        unless (T.null mn) $
+          validateField "middleName" mn $ MaxLength 50 `And` P.name,
+      whenJust lastName $ \ln ->
+        unless (T.null ln) $
+          validateField "lastName" ln $ MaxLength 50 `And` P.name
     ]
 
 instance HideSecrets ClearDriverFeeReq where
