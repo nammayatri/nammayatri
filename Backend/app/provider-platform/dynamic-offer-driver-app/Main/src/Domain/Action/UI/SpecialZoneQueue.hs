@@ -142,6 +142,8 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
         QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
         fork "specialZoneSupplyIncrementOnAccept" $
           SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
+        fork "specialZoneRecordAcceptTime" $
+          SpecialZoneDriverDemand.recordDriverPickupZoneAccept request.specialLocationId personId
         createJobIn @_ @'CheckPickupZoneArrival
           (Just request.merchantId)
           (Just request.merchantOperatingCityId)

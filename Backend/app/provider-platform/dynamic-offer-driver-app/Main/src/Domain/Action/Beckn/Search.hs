@@ -78,6 +78,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.Queries.GateInfo as QGI
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -95,6 +96,8 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.SpecialZoneDriverDemand as SZDD
+import SharedLogic.TollsDetector
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.Toll ()
@@ -353,12 +356,17 @@ handler ValidatedDSearchReq {..} sReq = do
   fork "Updating Demand Hotspots on search" $ do
     DemandHotspots.updateDemandHotspotsOnSearch searchReq.id merchantOpCityId transporterConfig sReq.pickupLocation
 
-  (driverPool, selectedFarePolicies) <-
+  (driverPool, selectedFarePolicies') <-
     if transporterConfig.considerDriversForSearch
       then do
         (pool, policies) <- selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig possibleTripOption.isScheduled allFarePoliciesProduct.area farePolicies now isValueAddNP searchReq sReq.paymentMode
         pure (nonEmpty pool, policies)
       else return (Nothing, farePolicies)
+  -- Special-zone airport pickup: for HATCHBACK and PREMIUM_SEDAN only, drop the
+  -- variant when no spare supply exists over current demand at the pickup gate
+  -- (i.e. max(0, supply - demand) == 0). Other variants pass through unchanged.
+  -- No-op when the search has no pickup gate.
+  selectedFarePolicies <- filterSupplyConstrainedVariants mbPickupGateId selectedFarePolicies'
   -- This is to filter the fare policies based on the driverId, if passed during search
   -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
@@ -546,6 +554,48 @@ addNearestDriverInfo merchantOpCityId (Just driverPool) estdOrQuotes configInExp
               locationId = NE.head dp & (.driverId) & (.getId)
               nearestDriverInfo = NearestDriverInfo {..}
           return (input, vehicleServiceTierItem, Just nearestDriverInfo, vehicleServiceTierItem.vehicleIconUrl)
+
+-- | For special-zone airport pickups on the static-offer Quote flow only,
+--   drop fare policies for variants the gate has explicitly opted into the
+--   supply-vs-demand filter (via 'GateInfo.enableQuoteSupplyFilter' +
+--   'quoteSupplyFilterVariants') when @max(0, supply - demand) == 0@ at that
+--   gate — i.e. no spare supply beyond current demand.
+--
+--   Estimate-based (dynamic-offer) policies pass through unchanged regardless
+--   of variant. No-op when:
+--     * the search has no pickup gate ('Nothing'),
+--     * the gate row cannot be found,
+--     * 'enableQuoteSupplyFilter' is 'Nothing' / 'Just False', or
+--     * 'quoteSupplyFilterVariants' is 'Nothing' / empty.
+filterSupplyConstrainedVariants :: Maybe Text -> [DFP.FullFarePolicy] -> Flow [DFP.FullFarePolicy]
+filterSupplyConstrainedVariants Nothing fps = pure fps
+filterSupplyConstrainedVariants (Just gateId) fps = do
+  mbGate <- Esq.runInReplica $ QGI.findById (Id gateId)
+  case mbGate of
+    Nothing -> pure fps
+    Just gate
+      | not (fromMaybe False gate.enableQuoteSupplyFilter) -> pure fps
+      | otherwise -> do
+          let gatedVariants = fromMaybe [] gate.quoteSupplyFilterVariants
+          if null gatedVariants
+            then pure fps
+            else do
+              let isQuoteFlow fp = case tripCategoryToPricingPolicy fp.tripCategory of
+                    QuoteBased _ -> True
+                    EstimateBased _ -> False
+                  isGated fp = isQuoteFlow fp && (T.pack (show fp.vehicleServiceTier) `elem` gatedVariants)
+              filterM
+                ( \fp ->
+                    if not (isGated fp)
+                      then pure True
+                      else do
+                        let variantTxt = T.pack (show fp.vehicleServiceTier)
+                        supply <- SZDD.getSupply gateId variantTxt
+                        demand <- SZDD.getDemand gateId variantTxt
+                        let spare = max 0 (supply - demand)
+                        pure (spare > 0)
+                )
+                fps
 
 selectDriversAndMatchFarePolicies :: DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Meters -> DLoc.Location -> DTMT.TransporterConfig -> Bool -> SL.Area -> [DFP.FullFarePolicy] -> UTCTime -> Bool -> DSR.SearchRequest -> Maybe DMPM.PaymentMode -> Flow ([DriverPoolResult], [DFP.FullFarePolicy])
 selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocation transporterConfig isScheduled area farePolicies now isValueAddNP sreq paymentMode = do

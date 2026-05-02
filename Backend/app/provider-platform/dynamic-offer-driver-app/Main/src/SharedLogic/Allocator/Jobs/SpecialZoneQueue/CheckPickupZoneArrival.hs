@@ -1,9 +1,11 @@
 module SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
   ( checkPickupZoneArrival,
     runArrivalCheckForRequest,
+    sweepStaleAcceptedRequestsForGate,
   )
 where
 
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -124,3 +126,56 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                             requestType = "PICKUP_ZONE_NO_SHOW"
                           }
                   Notify.notifyPickupNoShow merchantOpCityId driverId entityData
+
+-- | Lazy-expire any Accepted pickup-zone requests at this gate (for the given
+--   variants) whose arrival deadline has passed. Forks 'runArrivalCheckForRequest'
+--   per stale request — same code path the scheduled job uses, with the same
+--   per-request lock for idempotency. Safe to call from the customer-facing
+--   demand-check path: forks make it non-blocking, the lock prevents races
+--   with the scheduled job.
+--
+--   Per-gate cooldown of 'sweepCooldownSec' seconds via SETNX so back-to-back
+--   customer searches at the same gate don't repeat the (cheap but non-trivial)
+--   DB scan. The cooldown key naturally expires; no explicit teardown.
+--
+--   Lookback matches the dashboard stats endpoint (2h) so the cheap KV/DB
+--   query stays bounded.
+sweepStaleAcceptedRequestsForGate ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    MonadFlow m,
+    MonadMask m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  Text -> -- gateId
+  [Text] -> -- vehicleVariants to sweep
+  m ()
+sweepStaleAcceptedRequestsForGate gateId variants = do
+  let cooldownKey = "SpecialZoneSweep:Gate:" <> gateId <> ":Cooldown"
+  shouldRun <- Redis.withCrossAppRedis $ Redis.setNxExpire cooldownKey sweepCooldownSec ("1" :: Text)
+  when shouldRun $ do
+    now <- getCurrentTime
+    let cutoff = addUTCTime (negate (60 * 60)) now
+    forM_ variants $ \variant -> do
+      reqs <- QSZQR.findAllByGateIdStatusAndVehicleType cutoff gateId DSZQR.Accepted variant
+      forM_ reqs $ \req -> case req.arrivalDeadlineTime of
+        Just deadline
+          | deadline < now ->
+            fork ("specialZoneArrivalCheckLazy-" <> req.id.getId) $
+              runArrivalCheckForRequest
+                req.id
+                req.driverId
+                req.gateId
+                req.specialLocationId
+                req.vehicleType
+                req.merchantId
+                req.merchantOperatingCityId
+        _ -> pure ()
+  where
+    sweepCooldownSec :: Int
+    sweepCooldownSec = 60
