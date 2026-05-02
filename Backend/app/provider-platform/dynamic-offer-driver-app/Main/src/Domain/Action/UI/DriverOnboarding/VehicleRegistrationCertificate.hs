@@ -609,9 +609,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules lang
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-      isExcludedVehicleCategoryFromVerification = maybe False (`elem` (map show $ fromMaybe [] transporterConfig.vehicleCategoryExcludedFromVerification)) rcVerificationResponse.vehicleCategory
-      vehicleCategory' = if isExcludedVehicleCategoryFromVerification then mapTextToVehicle rcVerificationResponse.vehicleCategory else mbVehicleCategory
-      rcInput = createRCInput vehicleCategory' mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
+      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       expiryFailures = getExpiryFailures transporterConfig rcInput now
       allFailures = failures <> expiryFailures
   mVehicleRC <- do
@@ -813,21 +811,6 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                     VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
         Nothing -> pure ()
-
-    mapTextToVehicle :: Maybe Text -> Maybe DVC.VehicleCategory
-    mapTextToVehicle = \case
-      Just "AUTO_RICKSHAW" -> Just DVC.AUTO_CATEGORY
-      Just "AUTO_PLUS" -> Just DVC.AUTO_CATEGORY
-      Just "CAB" -> Just DVC.CAR
-      Just "TWO_WHEELER" -> Just DVC.MOTORCYCLE
-      Just "MOTORCYCLE" -> Just DVC.MOTORCYCLE
-      Just "AMBULANCE" -> Just DVC.AMBULANCE
-      Just "TRUCK" -> Just DVC.TRUCK
-      Just "AUTO_LITE" -> Just DVC.AUTO_CATEGORY
-      Just "PINK_AUTO" -> Just DVC.AUTO_CATEGORY
-      Just "BUS" -> Just DVC.BUS
-      Just "TOTO" -> Just DVC.TOTO
-      _ -> Nothing
 
 validateRCResponse :: forall r m. (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => RCValidationReq -> RCValidationRules -> Language -> m [Text]
 validateRCResponse rc rule language = do
