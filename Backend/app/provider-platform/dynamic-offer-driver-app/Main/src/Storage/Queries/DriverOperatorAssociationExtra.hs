@@ -136,6 +136,14 @@ findByDriverId driverId isActive = do
       (Just 1)
       Nothing
 
+findAllByDriverIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id DP.Person] ->
+  m [DriverOperatorAssociation]
+findAllByDriverIds driverIds = do
+  now <- getCurrentTime
+  findAllWithKV [Se.And [Se.Is BeamDOA.driverId $ Se.In (getId <$> driverIds), Se.Is BeamDOA.isActive $ Se.Eq True, Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)]]
+
 findAllByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id DP.Person ->
