@@ -183,6 +183,8 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
         SpecialZoneDriverDemand.resetQueueSkipCount request.specialLocationId personId
         fork "specialZoneSupplyIncrementOnAccept" $
           SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
+        fork "specialZoneRecordAcceptTime" $
+          SpecialZoneDriverDemand.recordDriverPickupZoneAccept request.specialLocationId personId
         createJobIn @_ @'CheckPickupZoneArrival
           (Just request.merchantId)
           (Just request.merchantOperatingCityId)

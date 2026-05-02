@@ -39,6 +39,10 @@ module SharedLogic.SpecialZoneDriverDemand
     clearAirportPerKmFareCacheForPolicy,
     getAirportPerKmFare,
     getCalloutVariantsForTier,
+    mkDriverPickupZoneAcceptKey,
+    recordDriverPickupZoneAccept,
+    getDemand,
+    getSupply,
   )
 where
 
@@ -53,6 +57,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as DFP
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -60,6 +65,8 @@ import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Maps.Types (LatLong (..))
+import Environment (AppEnv (..))
+import GHC.Records.Extra ()
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -68,6 +75,7 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
+import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
@@ -315,7 +323,17 @@ mkGateDriverNotifiedKey shards gateId driverId =
 mkQueueSkipCountKey :: Text -> Text -> Text
 mkQueueSkipCountKey specialLocationId driverId = "DriverDemand:QueueSkip:" <> specialLocationId <> ":" <> driverId
 
+-- | Key recording the server-time at which a driver accepted a pickup-zone
+--   request at this special location. Written to cross-app Redis so LTS can
+--   read it; 1-hour TTL guards against orphaned keys if the explicit clear
+--   path is ever missed.
+mkDriverPickupZoneAcceptKey :: Text -> Text -> Text
+mkDriverPickupZoneAcceptKey specialLocationId driverId = "DriverPickupZoneAccept:" <> specialLocationId <> ":" <> driverId
+
 -- Redis operations
+
+windowLimit :: SWC.SlidingWindowOptions
+windowLimit = SWC.SlidingWindowOptions 60 Minutes
 
 incrementGateSearchDemand ::
   ( Redis.HedisFlow m r,
@@ -327,6 +345,7 @@ incrementGateSearchDemand ::
   m ()
 incrementGateSearchDemand gateId variant ttlInSec = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
+  SWC.incrementWindowCount key windowLimit
   void $ Redis.incr key
   Redis.expire key ttlInSec
 
@@ -340,6 +359,7 @@ decrementGateSearchDemand ::
   m ()
 decrementGateSearchDemand gateId variant = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
+  SWC.decrementWindowCount key windowLimit
   newVal <- Redis.decr key
   when (newVal < 0) $ void $ Redis.set key (0 :: Int)
 
@@ -416,6 +436,36 @@ runSupplyDecrementForRequest requestId gateId variant = do
   let idempotencyKey = "DriverSupply:Decremented:" <> requestId
   wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ decrementGateSearchSupply gateId variant
+
+-- | Local swap to the LTS Hedis env. Mirrors @withCrossAppRedisNew@ in
+--   rider-app's @Storage.CachedQueries.Merchant.MultiModalBus@. Any 'Redis.*'
+--   call inside the action runs against @ltsHedisEnv@, not the default app
+--   Redis. Used so LTS can read the keys we write here.
+withLtsRedis ::
+  ( Redis.HedisFlow m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
+  m a ->
+  m a
+withLtsRedis = local (\env -> env {hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv})
+
+-- | Stamp the server-time at which a driver accepted a pickup-zone request,
+--   written to LTS Redis under
+--   @DriverPickupZoneAccept:{specialLocationId}:{driverId}@ with a 1-hour TTL.
+--   Value is the current 'UTCTime' rendered with 'show', which round-trips
+--   through 'read' / 'parseTimeM' on the LTS side.
+recordDriverPickupZoneAccept ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ) =>
+  Text -> -- specialLocationId
+  Id DP.Person -> -- driverId
+  m ()
+recordDriverPickupZoneAccept specialLocationId driverId = do
+  now <- getCurrentTime
+  let key = mkDriverPickupZoneAcceptKey specialLocationId driverId.getId
+  withLtsRedis $ Redis.setExp key (show now :: Text) 3600
 
 incrementQueueSkipCount ::
   ( Redis.HedisFlow m r,
@@ -552,6 +602,63 @@ getCalloutVariantsForTier merchantOpCityId mbSlId mbServiceTier variantFallback 
         else pure calloutVars
     Nothing -> pure $ maybeToList (readMaybe (T.unpack variantFallback))
 
+mkGateSearchDemandMultiplierKey :: Text -> Text -> Text
+mkGateSearchDemandMultiplierKey gateId variant = "DriverDemandMultiplier:Gate:" <> gateId <> ":" <> variant
+
+multiplier :: Floating a => a -> a -> a -> a
+multiplier k demandNow demandPast =
+  let d = log (demandNow / safePast)
+   in max 0.7 (min 1.5 (1 + k * tanh d)) -- bounded to 0.7 - 1.5 range, with a smooth transition based on the ratio of current to past demand
+  where
+    safePast = max demandPast 1e-6
+
+getDemandMultiplier ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m Double
+getDemandMultiplier gateId variant = Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ do
+  let key = mkGateSearchDemandKey gateId variant
+  currentDemand <- SWC.getCurrentWindowValues key windowLimit
+  demand15MinutesBack <- SWC.getCurrentWindowValuesUptoLast 15 key windowLimit
+  multiplier 0.05 currentDemand demand15MinutesBack
+
+-- | Effective demand at a gate/variant: raw counter from the cross-app Redis,
+--   scaled by 'getDemandMultiplier' (a 0.7-1.5 smoothing based on current vs.
+--   15-minutes-prior window). Missing counter → 0. The 'Double' product is
+--   rounded to 'Int' since callers use it for integer thresholding.
+getDemand ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m Int
+getDemand gateId variant = do
+  mbDemandCount <- Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
+  let demandCount = fromMaybe 0 mbDemandCount
+  demandMultiplier <- getDemandMultiplier gateId variant
+  logError $ "getDemand for gateId=" <> gateId <> " variant=" <> variant -- temp log for debugging and verifying logic
+    <> " rawDemand=" <> show demandCount
+    <> " multiplier=" <> show demandMultiplier
+  pure $ round (fromIntegral demandCount * demandMultiplier)
+
+-- | Drivers who accepted a pickup-zone request at this gate/variant and are
+-- | Drivers committed to a pickup at this gate/variant. Single Redis read of the
+--   supply counter maintained by the Accept handler (++) and the
+--   confirm/start-ride / cancel / no-show paths (--).
+getSupply ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text -> -- gateId
+  Text -> -- vehicleVariant
+  m Int
+getSupply gateId variant =
+  fromMaybe 0 <$> (Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis (Redis.get @Int (mkGateSearchSupplyKey gateId variant)))
+
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
 --   Compares per-variant demand against the gate's demand threshold; when it's hit and
 --   committed supply (tracked via Redis) is below 'min', notifies top LTS-queue drivers
@@ -580,59 +687,41 @@ checkAndNotifyDriverDemand ::
 checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTier mbTriggerSource = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
-  mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
-  let demandCount = fromMaybe 0 mbDemandCount
-      demandThresholdVal = fromMaybe 2 (DGI.demandThresholdFor gate variant)
-  logDebug $
-    "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
-      <> " demand="
-      <> show demandCount
-      <> " demandThreshold="
-      <> show demandThresholdVal
-  if demandCount < demandThresholdVal
-    then logDebug $ "Demand below threshold, skipping notification gateId=" <> gateId <> " variant=" <> variant
-    else do
-      let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
-          maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
-      mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
-      let supplyCount = fromMaybe 0 mbSupplyCount
-      logDebug $
-        "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
-          <> " supply="
-          <> show supplyCount
-          <> " minThreshold="
-          <> show minThreshold
-          <> " maxThreshold="
-          <> show maxThreshold
-      if supplyCount >= minThreshold
-        then logDebug $ "Supply already at/above minThreshold, skipping gateId=" <> gateId <> " variant=" <> variant
-        else do
-          let needed = max 0 (maxThreshold - supplyCount)
-          when (needed > 0) $ do
-            let cooldown = fromMaybe 900 gate.notificationCooldownInSec
-            calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier variant
-            logDebug $ "checkAndNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for variant=" <> variant
-            allSortedDrivers <- fmap concat $
-              forM calloutVariants $ \cv -> do
-                queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
-                pure $ sortOn (.queuePosition) queueResp.drivers
-            let queueDriverIds = nub $ map (.driverId) allSortedDrivers
-            logInfo $
-              "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
-                <> " needed="
-                <> show needed
-                <> " queueSize="
-                <> show (length queueDriverIds)
-                <> " cooldown="
-                <> show cooldown
-            eligibleNearGate <- filterInBatches 50 needed variant gateId gate.enableQueueFilter merchantId gate queueDriverIds
-            logInfo $
-              "Eligible drivers after batched filter gateId=" <> gateId <> " variant=" <> variant
-                <> " eligibleNearGate="
-                <> show (length eligibleNearGate)
-                <> " toNotify="
-                <> show (min needed (length eligibleNearGate))
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing (take needed eligibleNearGate)
+  demand <- getDemand gateId variant
+  supplyCount <- getSupply gateId variant
+  let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
+      maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
+      needed = min demand maxThreshold - supplyCount + minThreshold
+  logError $ "getDemand for gateId=" <> gateId <> " variant=" <> variant -- temp log for debugging and verifying logic
+    <> " demand=" <> show demand
+    <> " supply=" <> show supplyCount
+    <> " minThreshold=" <> show minThreshold
+    <> " maxThreshold=" <> show maxThreshold
+  when (needed > 0) $ do
+    let cooldown = fromMaybe 900 gate.notificationCooldownInSec
+    calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier variant
+    logDebug $ "checkAndNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for variant=" <> variant
+    allSortedDrivers <- fmap concat $
+      forM calloutVariants $ \cv -> do
+        queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
+        pure $ sortOn (.queuePosition) queueResp.drivers
+    let queueDriverIds = nub $ map (.driverId) allSortedDrivers
+    logInfo $
+      "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
+        <> " needed="
+        <> show needed
+        <> " queueSize="
+        <> show (length queueDriverIds)
+        <> " cooldown="
+        <> show cooldown
+    eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
+    logInfo $
+      "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
+        <> " eligible="
+        <> show (length eligible)
+        <> " toNotify="
+        <> show (min needed (length eligible))
+    void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource (take needed eligible)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -1171,17 +1260,26 @@ driverLocationStalenessThresholdSecondsDefault :: Seconds
 driverLocationStalenessThresholdSecondsDefault = Seconds 120
 
 -- | Booking is progressing (Confirm or StartRide fired) for a driver: decrement demand
---   for the booking's gate/variant and, if the driver had an Accepted pickup-zone request,
---   mark it Completed and decrement supply. A driver has at most one Accepted request at
---   a time. Idempotent:
+--   for the booking's gate/variant and, if the driver had an Accepted pickup-zone request:
+--     - mark it Completed
+--     - decrement supply
+--     - evict the driver from the LTS special-location queue (LTS doesn't auto-evict
+--       on ride start — drainer only blocks re-entry via 'is_on_ride'; existing queue
+--       members stay until manual remove / hysteresis).
+--   A driver has at most one Accepted request at a time. Idempotent:
 --     - demand: bookingId-keyed SETNX (runDemandDecrementForBooking)
 --     - supply: requestId-keyed SETNX + DB status transition Accepted → Completed
+--     - LTS eviction: manualQueueRemove is a no-op on a driver already absent
 --   Safe to call from both Confirm and StartRide: first fire wins, second is a no-op.
 completePickupZoneRequestsForDriver ::
-  ( MonadFlow m,
+  ( CoreMetrics m,
+    MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
   ) =>
   Id DP.Person ->
   Text -> -- bookingId (for demand-decrement idempotency)
@@ -1198,7 +1296,8 @@ completePickupZoneRequestsForDriver driverId bookingId mbPickupGateId variant = 
   forM_ mbReq $ \req -> do
     QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Completed req.id
     runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
-    logInfo $ "Completed pickup zone request " <> req.id.getId <> " for driver " <> driverId.getId
+    void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType req.merchantId driverId
+    logInfo $ "Completed pickup zone request " <> req.id.getId <> " for driver " <> driverId.getId <> " and removed from LTS queue at " <> req.specialLocationId
 
 -- | Driver cancelled the ride that was to fulfill the pickup-zone commitment. Supply
 --   retracts — demand is untouched (customer still wants a ride). A driver has at most

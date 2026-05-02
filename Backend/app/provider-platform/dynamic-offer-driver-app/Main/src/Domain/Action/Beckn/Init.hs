@@ -50,6 +50,7 @@ import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
+import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
@@ -183,7 +184,8 @@ handler merchantId req validatedReq = do
         <> show serviceTier
         <> " searchRequestId="
         <> searchRequest.id.getId
-    fork "specialZoneDriverDemandPipeline" $
+    fork "specialZoneDriverDemandPipeline" $ do
+      ArrivalCheck.sweepStaleAcceptedRequestsForGate pickupZoneGateId [show vehicleVariant]
       SpecialZoneDriverDemand.runDemandCheckForVariants
         searchRequest.merchantOperatingCityId
         merchantId

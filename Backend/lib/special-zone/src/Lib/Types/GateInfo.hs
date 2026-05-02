@@ -45,7 +45,9 @@ data GateInfoFull = GateInfoFull
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
     pickupRequestResponseTimeoutInSec :: Maybe Int,
     notificationActiveTillInSec :: Maybe Int,
-    enableQueueFilter :: Maybe (Map.Map Text Bool)
+    enableQueueFilter :: Maybe (Map.Map Text Bool),
+    enableQuoteSupplyFilter :: Maybe Bool,
+    quoteSupplyFilterVariants :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -82,8 +84,8 @@ data GateInfo = GateInfo
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
     pickupRequestResponseTimeoutInSec :: Maybe Int,
-    notificationActiveTillInSec :: Maybe Int,
-    enableQueueFilter :: Maybe (Map.Map Text Bool)
+    enableQuoteSupplyFilter :: Maybe Bool,
+    quoteSupplyFilterVariants :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 

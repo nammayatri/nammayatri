@@ -461,6 +461,8 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            enableQuoteSupplyFilter = mbGate >>= (.enableQuoteSupplyFilter),
+            quoteSupplyFilterVariants = mbGate >>= (.quoteSupplyFilterVariants),
             ..
           }
 
@@ -1676,7 +1678,9 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
                 pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
                 notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
-                enableQueueFilter = parseBoolMap row.enableQueueFilter
+                enableQueueFilter = parseBoolMap row.enableQueueFilter,
+                enableQuoteSupplyFilter = readMaybeCSVField idx (fromMaybe "" row.gateInfoEnableQuoteSupplyFilter) "Gate Info (enable_quote_supply_filter)",
+                quoteSupplyFilterVariants = readMaybeCSVField idx (fromMaybe "" row.gateInfoQuoteSupplyFilterVariants) "Gate Info (quote_supply_filter_variants)"
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
