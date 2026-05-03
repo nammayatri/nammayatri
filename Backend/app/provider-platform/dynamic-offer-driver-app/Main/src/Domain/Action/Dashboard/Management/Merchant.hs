@@ -22,6 +22,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantServiceConfigVerificationUpdate,
     postMerchantConfigFarePolicyUpsert,
     getMerchantConfigFarePolicyExport,
+    getMerchantConfigFarePolicyDetails,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
     postMerchantConfigSpecialLocationUpsert,
@@ -1894,6 +1895,73 @@ ambulanceSlabsCreateLockKey :: Text -> Text
 ambulanceSlabsCreateLockKey cityId = "Driver:FarePolicy:AmbulanceSlabs:CreateLock:" <> cityId
 
 -- | Export all enabled fare policies for a merchant operating city as CSV
+getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> Context.City -> Id Common.FarePolicy -> Flow Common.FarePolicyDetailsResp
+getMerchantConfigFarePolicyDetails _ _ reqFarePolicyId = do
+  let farePolicyId = cast reqFarePolicyId
+  farePolicy <- CQFP.findById Nothing farePolicyId >>= fromMaybeM (InvalidRequest "Fare Policy with given id not found")
+  let curr = farePolicy.currency
+  let (farePolicyType, mbBaseFare, mbBaseDistance, mbDeadKmFare, mbWaitingChargeInfo, mbNightShiftCharge) = case farePolicy.farePolicyDetails of
+        FarePolicy.ProgressiveDetails d ->
+          ( "Progressive" :: Text,
+            Just d.baseFare,
+            Just d.baseDistance,
+            Just d.deadKmFare,
+            toApiWaitingChargeInfo curr <$> d.waitingChargeInfo,
+            toApiNightShiftCharge curr <$> d.nightShiftCharge
+          )
+        FarePolicy.SlabsDetails _ -> ("Slabs", Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.RentalDetails _ -> ("Rental", Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.InterCityDetails _ -> ("InterCity", Nothing, Nothing, Nothing, Nothing, Nothing)
+        FarePolicy.AmbulanceDetails _ -> ("Ambulance", Nothing, Nothing, Nothing, Nothing, Nothing)
+  pure
+    Common.FarePolicyDetailsResp
+      { id = cast farePolicy.id,
+        serviceCharge = farePolicy.serviceCharge,
+        perMinuteRideExtraTimeCharge = farePolicy.perMinuteRideExtraTimeCharge,
+        tollCharges = farePolicy.tollCharges,
+        petCharges = farePolicy.petCharges,
+        driverAllowance = farePolicy.driverAllowance,
+        airportConvenienceFee = farePolicy.airportConvenienceFee,
+        priorityCharges = farePolicy.priorityCharges,
+        businessDiscountPercentage = farePolicy.businessDiscountPercentage,
+        personalDiscountPercentage = farePolicy.personalDiscountPercentage,
+        pickupBufferInSecsForNightShiftCal = farePolicy.pickupBufferInSecsForNightShiftCal,
+        nightShiftBounds = farePolicy.nightShiftBounds,
+        allowedTripDistanceBounds = toApiAllowedTripDistanceBounds <$> farePolicy.allowedTripDistanceBounds,
+        congestionChargeMultiplier = toApiCongestionChargeMultiplier <$> farePolicy.congestionChargeMultiplier,
+        description = farePolicy.description,
+        farePolicyType,
+        baseFare = mbBaseFare,
+        baseDistance = mbBaseDistance,
+        deadKmFare = mbDeadKmFare,
+        waitingChargeInfo = mbWaitingChargeInfo,
+        nightShiftCharge = mbNightShiftCharge
+      }
+  where
+    toApiCongestionChargeMultiplier = \case
+      FarePolicy.BaseFareAndExtraDistanceFare v -> Common.BaseFareAndExtraDistanceFare v
+      FarePolicy.ExtraDistanceFare v -> Common.ExtraDistanceFare v
+    toApiAllowedTripDistanceBounds bounds =
+      Common.AllowedTripDistanceBoundsAPIEntity
+        { maxAllowedTripDistance = bounds.maxAllowedTripDistance,
+          minAllowedTripDistance = bounds.minAllowedTripDistance,
+          maxAllowedTripDistanceWithUnit = Nothing,
+          minAllowedTripDistanceWithUnit = Nothing
+        }
+    toApiWaitingChargeInfo curr wci =
+      Common.WaitingChargeInfoAPIEntity
+        { freeWaitingTime = wci.freeWaitingTime,
+          waitingCharge = toApiWaitingCharge curr wci.waitingCharge
+        }
+    -- Surface domain WaitingCharge via the *WithCurrency variants so HighPrecMoney isn't truncated to Money.
+    toApiWaitingCharge curr = \case
+      FarePolicy.PerMinuteWaitingCharge v -> Common.PerMinuteWaitingChargeWithCurrency (PriceAPIEntity {amount = v, currency = curr})
+      FarePolicy.ConstantWaitingCharge v -> Common.ConstantWaitingChargeWithCurrency (PriceAPIEntity {amount = v, currency = curr})
+    -- ConstantNightShiftCharge in domain is HighPrecMoney; use the *WithCurrency API variant to preserve precision.
+    toApiNightShiftCharge curr = \case
+      FarePolicy.ProgressiveNightShiftCharge v -> Common.ProgressiveNightShiftCharge v
+      FarePolicy.ConstantNightShiftCharge v -> Common.ConstantNightShiftChargeWithCurrency (PriceAPIEntity {amount = v, currency = curr})
+
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
