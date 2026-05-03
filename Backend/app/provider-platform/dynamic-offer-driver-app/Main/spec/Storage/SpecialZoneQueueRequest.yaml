@@ -11,6 +11,8 @@ SpecialZoneQueueRequest:
       enum: "Active, Accepted, Completed, Expired"
     SpecialZoneQueueRequestResponse:
       enum: "Accept, Reject, Ignored, NoShow, Cancelled"
+    TriggerSource:
+      enum: "App, Dashboard"
 
   fields:
     id: Id SpecialZoneQueueRequest
@@ -26,6 +28,7 @@ SpecialZoneQueueRequest:
     gateName: Text
     specialLocationName: Text
     vehicleType: Text
+    triggerSource: "Maybe TriggerSource"
     createdAt: UTCTime
     updatedAt: UTCTime
 

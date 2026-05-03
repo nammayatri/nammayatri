@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findActiveByDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus -> m ([Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest]))
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus -> m [Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest])
 findActiveByDriverId driverId status = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.Eq status]]
 
 updateResponse ::
@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
       Se.Set Beam.specialLocationId specialLocationId,
       Se.Set Beam.specialLocationName specialLocationName,
       Se.Set Beam.status status,
+      Se.Set Beam.triggerSource triggerSource,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType

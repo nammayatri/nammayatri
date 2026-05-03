@@ -240,7 +240,8 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
         forM_ variants $ \variant -> do
           let demandTtl = 86400 -- 1 day
           incrementGateSearchDemand pickupZoneGateId variant demandTtl
-          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant
+          -- Customer/app path (called from Beckn Init); audit field on the queue request row.
+          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just DSZQR.App)
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
 --   Compares per-variant demand against the gate's demand threshold; when it's hit and
@@ -262,8 +263,9 @@ checkAndNotifyDriverDemand ::
   Id DM.Merchant ->
   DGI.GateInfo ->
   Text -> -- vehicleVariant (service tier)
+  Maybe DSZQR.TriggerSource -> -- trigger source threaded through to notifyDrivers
   m ()
-checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
+checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSource = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
@@ -314,7 +316,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant = do
                 <> show (length eligible)
                 <> " toNotify="
                 <> show (min needed (length eligible))
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown (take needed eligible)
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource (take needed eligible)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -342,9 +344,11 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
       priorityDriverIds = fromMaybe [] mbPriorityDriverIds
+      -- Dashboard is the only caller of this force path; stamp every row it produces.
+      triggerSource = Just DSZQR.Dashboard
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
   eligiblePriority <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId priorityDriverIds
-  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown eligiblePriority
+  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource eligiblePriority
   let remaining = max 0 (needed - priorityCount)
   -- Fill remaining from LTS queue
   queueCount <-
@@ -355,7 +359,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
             -- Exclude priority drivers already processed
             queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
         eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
-        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown (take remaining eligible)
+        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource (take remaining eligible)
       else pure 0
   pure (priorityCount + queueCount)
 
@@ -375,9 +379,10 @@ notifyDrivers ::
   Text -> -- specialLocationId
   Text -> -- vehicleType
   Int -> -- cooldown in seconds
+  Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown driverIds = do
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown mbTriggerSource driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -416,6 +421,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       specialLocationName = specialLocationName,
                       vehicleType = driverVehicleType,
                       arrivalDeadlineTime = Nothing,
+                      triggerSource = mbTriggerSource,
                       createdAt = now,
                       updatedAt = now
                     }

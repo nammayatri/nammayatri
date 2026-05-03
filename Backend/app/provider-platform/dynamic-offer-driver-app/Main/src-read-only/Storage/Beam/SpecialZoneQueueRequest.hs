@@ -12,21 +12,22 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SpecialZoneQueueRequestT f = SpecialZoneQueueRequestT
-  { arrivalDeadlineTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    driverId :: (B.C f Kernel.Prelude.Text),
-    gateId :: (B.C f Kernel.Prelude.Text),
-    gateName :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    response :: (B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestResponse)),
-    specialLocationId :: (B.C f Kernel.Prelude.Text),
-    specialLocationName :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    validTill :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleType :: (B.C f Kernel.Prelude.Text)
+  { arrivalDeadlineTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    driverId :: B.C f Kernel.Prelude.Text,
+    gateId :: B.C f Kernel.Prelude.Text,
+    gateName :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestResponse),
+    specialLocationId :: B.C f Kernel.Prelude.Text,
+    specialLocationName :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus,
+    triggerSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.TriggerSource),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validTill :: B.C f Kernel.Prelude.UTCTime,
+    vehicleType :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
 
@@ -36,6 +37,6 @@ instance B.Table SpecialZoneQueueRequestT where
 
 type SpecialZoneQueueRequest = SpecialZoneQueueRequestT Identity
 
-$(enableKVPG (''SpecialZoneQueueRequestT) [('id)] [[('driverId)]])
+$(enableKVPG ''SpecialZoneQueueRequestT ['id] [['driverId]])
 
-$(mkTableInstances (''SpecialZoneQueueRequestT) "special_zone_queue_request")
+$(mkTableInstances ''SpecialZoneQueueRequestT "special_zone_queue_request")
