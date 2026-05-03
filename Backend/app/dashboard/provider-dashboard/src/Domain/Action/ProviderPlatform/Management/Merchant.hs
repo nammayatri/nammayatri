@@ -36,6 +36,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigFarePolicyUpdate,
     postMerchantConfigFarePolicyUpsert,
     getMerchantConfigFarePolicyExport,
+    getMerchantConfigFarePolicyDetails,
     postMerchantConfigOperatingCityCreate,
     postMerchantSchedulerTrigger,
     postMerchantUpdateOnboardingVehicleVariantMapping,
@@ -509,6 +510,11 @@ getMerchantConfigFarePolicyExport :: (Kernel.Types.Id.ShortId Domain.Types.Merch
 getMerchantConfigFarePolicyExport merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyExport)
+
+getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Dashboard.Common.FarePolicy -> Flow Common.FarePolicyDetailsResp
+getMerchantConfigFarePolicyDetails merchantShortId opCity apiTokenInfo farePolicyId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyDetails) farePolicyId
 
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier merchantShortId opCity apiTokenInfo serviceTierType = do
