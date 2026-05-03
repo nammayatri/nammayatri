@@ -74,7 +74,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Kernel.Types.Id.Id specialLocationId)
   let specialLocationName = maybe "" (.locationName) mbSpecialLocation
   -- Get all drivers near gate once, filter to those inside pickup zone
-  driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchant.id Nothing Nothing
+  driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2500 merchant.id Nothing Nothing
   driversInPickupZone <- filterM (isInsideGateGeometry gate.id) driversNearGate
   let pickupZoneDriverIds = map (.driverId) driversInPickupZone
   -- Compute the queue-request lookback cutoff once, reused across all variants.
