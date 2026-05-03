@@ -345,6 +345,13 @@ apis:
       auth: ApiAuthV2
       response:
         type: Text
+  - GET: # FarePolicyDetailsAPI
+      endpoint: /config/farePolicy/{farePolicyId}/details
+      auth: ApiAuthV2
+      params:
+        farePolicyId: Id FarePolicy
+      response:
+        type: FarePolicyDetailsResp
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
@@ -946,6 +953,28 @@ types:
     - businessDiscountPercentage: Maybe Double
     - personalDiscountPercentage: Maybe Double
     - derive: "'HideSecrets"
+  FarePolicyDetailsResp:
+    - id: Id FarePolicy
+    - serviceCharge: Maybe HighPrecMoney
+    - perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
+    - tollCharges: Maybe HighPrecMoney
+    - petCharges: Maybe HighPrecMoney
+    - driverAllowance: Maybe HighPrecMoney
+    - airportConvenienceFee: Maybe HighPrecMoney
+    - priorityCharges: Maybe HighPrecMoney
+    - businessDiscountPercentage: Maybe Double
+    - personalDiscountPercentage: Maybe Double
+    - pickupBufferInSecsForNightShiftCal: Maybe Seconds
+    - nightShiftBounds: Maybe NightShiftBounds
+    - allowedTripDistanceBounds: Maybe AllowedTripDistanceBoundsAPIEntity
+    - congestionChargeMultiplier: Maybe CongestionChargeMultiplierAPIEntity
+    - description: Maybe Text
+    - farePolicyType: Text
+    - baseFare: Maybe HighPrecMoney
+    - baseDistance: Maybe Meters
+    - deadKmFare: Maybe HighPrecMoney
+    - waitingChargeInfo: Maybe WaitingChargeInfoAPIEntity
+    - nightShiftCharge: Maybe NightShiftChargeAPIEntity
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes
     - waitingCharge: WaitingChargeAPIEntity
