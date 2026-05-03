@@ -61,6 +61,8 @@ mkPersist
       maxRideSkipsBeforeQueueRemoval Int Maybe
       pickupZoneArrivalTimeoutInSec Int Maybe
       pickupRequestResponseTimeoutInSec Int Maybe
+      enableQuoteSupplyFilter Bool Maybe
+      quoteSupplyFilterVariantsJson Text Maybe
       Primary id
       deriving Generic
     |]
@@ -82,6 +84,7 @@ instance FromTType GateInfoT Domain.GateInfo where
           minDriverThresholds = decodeThresholdMap minDriverThresholdsJson,
           maxDriverThresholds = decodeThresholdMap maxDriverThresholdsJson,
           demandThresholds = decodeThresholdMap demandThresholdsJson,
+          quoteSupplyFilterVariants = decodeTextList quoteSupplyFilterVariantsJson,
           ..
         }
 
@@ -94,3 +97,14 @@ decodeThresholdMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
 -- | Encode a per-variant threshold map back to JSON text for storage.
 encodeThresholdMap :: Maybe (Map.Map Text Int) -> Maybe Text
 encodeThresholdMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
+
+-- | Decode a JSON text column into a list of vehicle-variant strings.
+--   Returns Nothing on missing/invalid JSON. Used for the supply-filter
+--   variant whitelist.
+decodeTextList :: Maybe Text -> Maybe [Text]
+decodeTextList Nothing = Nothing
+decodeTextList (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
+
+-- | Encode a list of vehicle-variant strings back to JSON text for storage.
+encodeTextList :: Maybe [Text] -> Maybe Text
+encodeTextList = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)

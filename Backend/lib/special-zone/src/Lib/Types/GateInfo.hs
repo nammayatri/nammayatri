@@ -43,7 +43,15 @@ data GateInfoFull = GateInfoFull
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
-    pickupRequestResponseTimeoutInSec :: Maybe Int
+    pickupRequestResponseTimeoutInSec :: Maybe Int,
+    -- | When True, on_search drops Quote-based fare policies for variants in
+    --   'quoteSupplyFilterVariants' whose @max(0, supply - demand) == 0@. Off by
+    --   default. See 'filterSupplyConstrainedVariants' in the BPP search flow.
+    enableQuoteSupplyFilter :: Maybe Bool,
+    -- | Vehicle service tiers (as text — e.g. \"HATCHBACK\", \"PREMIUM_SEDAN\")
+    --   eligible for the supply-vs-demand quote filter. Only consulted when
+    --   'enableQuoteSupplyFilter' is True. 'Nothing'/empty → filter never fires.
+    quoteSupplyFilterVariants :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -79,7 +87,11 @@ data GateInfo = GateInfo
     notificationCooldownInSec :: Maybe Int,
     maxRideSkipsBeforeQueueRemoval :: Maybe Int,
     pickupZoneArrivalTimeoutInSec :: Maybe Int,
-    pickupRequestResponseTimeoutInSec :: Maybe Int
+    pickupRequestResponseTimeoutInSec :: Maybe Int,
+    -- | See 'GateInfoFull.enableQuoteSupplyFilter'.
+    enableQuoteSupplyFilter :: Maybe Bool,
+    -- | See 'GateInfoFull.quoteSupplyFilterVariants'.
+    quoteSupplyFilterVariants :: Maybe [Text]
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
