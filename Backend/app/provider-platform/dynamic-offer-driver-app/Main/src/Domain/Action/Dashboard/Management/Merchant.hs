@@ -3092,7 +3092,6 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
-            demandTtlInSec = mbGate >>= (.demandTtlInSec),
             ..
           }
 
