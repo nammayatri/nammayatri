@@ -27,6 +27,7 @@ module SharedLogic.SpecialZoneDriverDemand
     runSupplyDecrementForRequest,
     incrementQueueSkipCount,
     resetQueueSkipCount,
+    incrementSkipAndCheckThreshold,
     checkAndNotifyDriverDemand,
     runDemandCheckForVariants,
     forceNotifyDriverDemand,
@@ -202,6 +203,33 @@ resetQueueSkipCount specialLocationId driverId = Redis.withCrossAppRedis $ do
   let key = mkQueueSkipCountKey specialLocationId driverId.getId
   void $ Redis.del key
 
+-- | Record a true queue skip for a driver: bump the per-(specialLocation, driver)
+--   skip counter and, if the gate's removal threshold is reached, kick the driver
+--   out of the LTS queue and clear the counter. Threshold = Nothing means "track
+--   the count but never auto-remove" (still useful — the driver UI surfaces the
+--   running count via the GET endpoint). Caller owns the threshold lookup so we
+--   don't refetch the gate per call.
+incrementSkipAndCheckThreshold ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r
+  ) =>
+  Text -> -- specialLocationId
+  Text -> -- vehicleType
+  Id DM.Merchant ->
+  Id DP.Person ->
+  Maybe Int -> -- threshold; Nothing = no auto-removal
+  m ()
+incrementSkipAndCheckThreshold specialLocationId vehicleType merchantId driverId mbThreshold = do
+  newCount <- incrementQueueSkipCount specialLocationId driverId 86400
+  whenJust mbThreshold $ \threshold ->
+    when (newCount >= threshold) $ do
+      void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
+      resetQueueSkipCount specialLocationId driverId
+      logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " skips at " <> specialLocationId
+
 -- Demand check and notification
 
 -- | Self-contained pickup-zone demand pipeline meant to be called inside a
@@ -312,7 +340,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSou
                 <> show (length queueDriverIds)
                 <> " cooldown="
                 <> show cooldown
-            eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
+            eligible <- filterEligibleDrivers gateId queueDriverIds
             logInfo $
               "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
                 <> " eligible="
@@ -351,7 +379,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- Dashboard is the only caller of this force path; stamp every row it produces.
       triggerSource = Just DSZQR.Dashboard
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
-  eligiblePriority <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId priorityDriverIds
+  eligiblePriority <- filterEligibleDrivers gateId priorityDriverIds
   priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource eligiblePriority
   let remaining = max 0 (needed - priorityCount)
   -- Fill remaining from LTS queue
@@ -362,7 +390,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
         let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
             -- Exclude priority drivers already processed
             queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
-        eligible <- filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId queueDriverIds
+        eligible <- filterEligibleDrivers gateId queueDriverIds
         notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource (take remaining eligible)
       else pure 0
   pure (priorityCount + queueCount)
@@ -452,26 +480,23 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
     (0 :: Int)
     driverIds
 
--- Filter eligible drivers: not recently notified + increment skip count + remove if threshold exceeded
+-- Filter eligible drivers: not in cooldown, not already committed to a pickup-zone
+-- request, and not currently on a ride. Skip-count accounting now lives at the
+-- true skip paths (Reject in postSpecialZoneQueueRequestRespond, Ignored expiry
+-- in collectValidActive, search-flow timeout in handleQueueSkipIfApplicable) so
+-- merely being considered here no longer penalises a driver who may not even be
+-- notified after `take needed`.
 filterEligibleDrivers ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r,
-    HasLocationService m r,
-    HasShortDurationRetryCfg r c,
-    HasRequestId r
+    Esq.EsqDBReplicaFlow m r
   ) =>
-  DGI.GateInfo ->
-  Text -> -- specialLocationId
-  Text -> -- vehicleType
-  Id DM.Merchant ->
   Text -> -- gateId
   [Id DP.Person] ->
   m [Id DP.Person]
-filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId driverIds = do
-  let maxSkips = gate.maxRideSkipsBeforeQueueRemoval
+filterEligibleDrivers gateId driverIds =
   foldM
     ( \acc driverId -> do
         recentlyNotified <- not <$> notRecentlyNotified gateId driverId
@@ -485,26 +510,11 @@ filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId drive
             if hasAccepted
               then pure acc
               else do
-                -- Increment skip count for every request we're about to send
-                shouldInclude <- case maxSkips of
-                  Nothing -> pure True
-                  Just threshold -> do
-                    newCount <- incrementQueueSkipCount specialLocationId driverId 86400
-                    if newCount >= threshold
-                      then do
-                        void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
-                        resetQueueSkipCount specialLocationId driverId
-                        logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " requests at gate " <> gateId
-                        pure False
-                      else pure True
-                shouldIncludePkka <-
-                  if shouldInclude
-                    then do
-                      driverInfo <- QDI.findById driverId
-                      let hasPkka = maybe False (.onRide) driverInfo
-                      pure $ not hasPkka
-                    else pure False
-                pure $ if shouldIncludePkka then acc ++ [driverId] else acc
+                driverInfo <- QDI.findById driverId
+                let hasPkka = maybe False (.onRide) driverInfo
+                if hasPkka
+                  then pure acc
+                  else pure (acc ++ [driverId])
     )
     []
     driverIds

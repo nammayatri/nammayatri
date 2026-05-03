@@ -98,8 +98,18 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
             -- Re-read to ensure the respond handler hasn't already processed this
             mbLatest <- QSZQR.findByPrimaryKey req.id
             whenJust mbLatest $ \latest ->
-              when (latest.status == Domain.Types.SpecialZoneQueueRequest.Active) $
+              when (latest.status == Domain.Types.SpecialZoneQueueRequest.Active) $ do
                 QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Ignored) Domain.Types.SpecialZoneQueueRequest.Expired req.id
+                -- Driver let the request expire without responding — count this
+                -- as a true queue skip and remove them from the LTS queue if
+                -- they've hit the gate's skip threshold.
+                mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
+                SpecialZoneDriverDemand.incrementSkipAndCheckThreshold
+                  req.specialLocationId
+                  req.vehicleType
+                  req.merchantId
+                  req.driverId
+                  (mbGate >>= (.maxRideSkipsBeforeQueueRemoval))
           collectValidActive now rest
         else do
           rest' <- collectValidActive now rest
@@ -134,12 +144,16 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
     unless (request.status == Domain.Types.SpecialZoneQueueRequest.Active) $ throwError (InvalidRequest "Request is no longer active")
     now <- getCurrentTime
     when (request.validTill < now) $ throwError (InvalidRequest "Request has expired")
+    -- Fetched once and reused so both Accept (arrival timeout) and Reject
+    -- (skip threshold) branches read the same gate snapshot.
+    mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
     case req.response of
       Domain.Types.SpecialZoneQueueRequest.Accept -> do
-        mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
         let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
             arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
         QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
+        -- Driver engaged with the queue; clear any accumulated skip count.
+        SpecialZoneDriverDemand.resetQueueSkipCount request.specialLocationId personId
         fork "specialZoneSupplyIncrementOnAccept" $
           SpecialZoneDriverDemand.runSupplyIncrementForRequest requestId.getId request.gateId request.vehicleType
         createJobIn @_ @'CheckPickupZoneArrival
@@ -155,7 +169,21 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
               merchantId = request.merchantId,
               merchantOperatingCityId = request.merchantOperatingCityId
             }
+      Domain.Types.SpecialZoneQueueRequest.Reject -> do
+        QSZQR.updateResponse (Just req.response) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+        -- Driver explicitly rejected — count as a true queue skip and remove
+        -- from queue if they've hit the gate's skip threshold. Forked so the
+        -- LTS removal doesn't block the respond endpoint.
+        fork "specialZoneSkipCountOnReject" $
+          SpecialZoneDriverDemand.incrementSkipAndCheckThreshold
+            request.specialLocationId
+            request.vehicleType
+            request.merchantId
+            personId
+            (mbGate >>= (.maxRideSkipsBeforeQueueRemoval))
       _ ->
+        -- Defensive: Cancelled / Ignored / NoShow are set by the system, not
+        -- this endpoint. Preserve old behavior of just stamping the response.
         QSZQR.updateResponse (Just req.response) Domain.Types.SpecialZoneQueueRequest.Expired requestId
   pure Kernel.Types.APISuccess.Success
 
