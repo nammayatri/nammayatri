@@ -51,6 +51,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfo as DGI
+import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -492,7 +493,14 @@ filterEligibleDrivers gate specialLocationId vehicleType merchantId gateId drive
                         logInfo $ "Driver " <> driverId.getId <> " removed from queue after " <> show newCount <> " requests at gate " <> gateId
                         pure False
                       else pure True
-                pure $ if shouldInclude then acc ++ [driverId] else acc
+                shouldIncludePkka <-
+                  if shouldInclude
+                    then do
+                      driverInfo <- QDI.findById driverId
+                      let hasPkka = maybe False (.onRide) driverInfo
+                      pure $ not hasPkka
+                    else pure False
+                pure $ if shouldIncludePkka then acc ++ [driverId] else acc
     )
     []
     driverIds
