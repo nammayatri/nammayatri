@@ -76,7 +76,7 @@ createInvoice input entryIds = do
   invoiceId <- generateGUID
   let dbFallback = fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now
       purposeAbbr = invoiceTypeToPurpose input.invoiceType
-  invoiceNum <- generateInvoiceNumber input.merchantShortId purposeAbbr typePayment now dbFallback
+  invoiceNum <- generateInvoiceNumber purposeAbbr now dbFallback
 
   -- Calculate totals from line items
   -- subtotal: excludes external charges (toll, parking) and tax line items
