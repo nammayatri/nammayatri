@@ -3,12 +3,15 @@ imports:
   UTCTime: Data.Time
   APISuccess: Kernel.Types.APISuccess
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+  EntryStatus: Lib.Finance.Domain.Types.LedgerEntry
   Location: Domain.Types.Location
   HighPrecMoney: Kernel.Types.Common
   Ride: Domain.Types.Ride
   PlanSubscribeRes: Domain.Action.UI.Plan
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
   EntityName: Lib.Payment.Domain.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  WalletTransactionStatus: Domain.Types.WalletTransaction
 
 module: DriverWallet
 
@@ -48,6 +51,20 @@ types:
   WalletBalanceResponse:
     currentBalance: HighPrecMoney
 
+  PaymentOrderInfo:
+    id: Id PaymentOrder
+    walletStatus: WalletTransactionStatus
+  WalletTransactionHistoryItem:
+    itemReference: Text
+    itemName: Text
+    itemValue: HighPrecMoney
+    isCredit: Bool
+    status: EntryStatus
+    paymentOrder: Maybe PaymentOrderInfo
+    date: UTCTime
+  WalletTransactionHistoryResponse:
+    items: "[WalletTransactionHistoryItem]"
+
 apis:
   - GET:
       endpoint: /wallet/balance
@@ -85,3 +102,13 @@ apis:
         - offset: Int
       response:
         type: PayoutHistoryResponse
+  - GET:
+      endpoint: /wallet/transactionHistory
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: WalletTransactionHistoryResponse

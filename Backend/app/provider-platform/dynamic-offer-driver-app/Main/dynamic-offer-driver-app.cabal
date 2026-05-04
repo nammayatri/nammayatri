@@ -386,6 +386,7 @@ library
       Domain.Types.Extra.Notification
       Domain.Types.Extra.Plan
       Domain.Types.Extra.TransporterConfig
+      Domain.Types.Extra.WalletTransaction
       Domain.Types.FareParameters
       Domain.Types.FarePolicy
       Domain.Types.FarePolicy.Common
@@ -846,6 +847,7 @@ library
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.VendorFeeExtra
       Storage.Queries.VolunteerExtra
+      Storage.Queries.WalletTransactionExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -1245,6 +1247,7 @@ library
       Domain.Types.VendorFee
       Domain.Types.VendorSplitDetails
       Domain.Types.Volunteer
+      Domain.Types.WalletTransaction
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarCard
       Storage.Beam.AadhaarOtpReq
@@ -1426,6 +1429,7 @@ library
       Storage.Beam.VendorFee
       Storage.Beam.VendorSplitDetails
       Storage.Beam.Volunteer
+      Storage.Beam.WalletTransaction
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
       Storage.CachedQueries.FeedbackForm
@@ -1649,6 +1653,7 @@ library
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.VendorFee
       Storage.Queries.OrphanInstances.Volunteer
+      Storage.Queries.OrphanInstances.WalletTransaction
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
@@ -1710,6 +1715,7 @@ library
       Storage.Queries.VendorFee
       Storage.Queries.VendorSplitDetails
       Storage.Queries.Volunteer
+      Storage.Queries.WalletTransaction
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_dynamic_offer_driver_app

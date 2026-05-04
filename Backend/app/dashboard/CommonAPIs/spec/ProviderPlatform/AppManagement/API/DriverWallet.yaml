@@ -1,6 +1,8 @@
 imports:
   Driver: Domain.Types.Person
+  WalletBalanceResponse: API.Types.UI.DriverWallet
   WalletSummaryResponse: API.Types.UI.DriverWallet
+  WalletTransactionHistoryResponse: API.Types.UI.DriverWallet
   TopUpRequest: API.Types.UI.DriverWallet
   PayoutHistoryResponse: API.Types.UI.DriverWallet
   PlanSubscribeRes: Domain.Action.UI.Plan
@@ -72,6 +74,18 @@ apis:
         - offset: Int
       response:
         type: PayoutHistoryResponse
+  - GET:
+      endpoint: /wallet/{driverId}/transactionHistory
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+      response:
+        type: WalletTransactionHistoryResponse
 
 types:
   AirportCashRechargeRequest:

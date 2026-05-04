@@ -17,6 +17,7 @@
 module Domain.Action.UI.DriverWallet
   ( getWalletBalance,
     getWalletTransactions,
+    getWalletTransactionHistory,
     postWalletPayout,
     postWalletTopup,
     recordAirportCashRecharge,
@@ -45,6 +46,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Domain.Types.WalletTransaction as DWT
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -74,6 +76,7 @@ import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
 import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
@@ -88,6 +91,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.WalletTransaction as QWalletTransaction
 import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
@@ -247,6 +251,60 @@ referenceTypeToItemName ref
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
   | ref == walletReferenceVATAbsorbedOnDiscount = "VAT Absorbed on Discount"
   | otherwise = ref
+
+--------------------------------------------------------------------------------
+-- getWalletTransactionHistory (paginated per-row ledger entries)
+--------------------------------------------------------------------------------
+
+getWalletTransactionHistory ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Environment.Flow DriverWallet.WalletTransactionHistoryResponse
+  )
+getWalletTransactionHistory (mbPersonId, _merchantId, _mocId) mbFromDate mbToDate mbLimit mbOffset = do
+  validateInput
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let counterParty = counterpartyFromRole person.role
+  mbWalletAcc <- getWalletAccountByOwner counterParty driverId.getId
+  case mbWalletAcc of
+    Nothing -> pure DriverWallet.WalletTransactionHistoryResponse {items = []}
+    Just walletAcc -> do
+      entries <- QLedgerEntry.findByAccountsWithOptions [walletAcc.id] [] mbFromDate mbToDate mbLimit mbOffset
+      let topupOrderIds = [Id e.referenceId | e <- entries, e.referenceType == walletReferenceTopup]
+      walletTxns <- QWalletTransaction.findAllByPaymentOrderIds topupOrderIds
+      let walletStatusByOrderId = Map.fromList [(wt.paymentOrderId.getId, wt.status) | wt <- walletTxns]
+      let mkItem e =
+            let isTopup = e.referenceType == walletReferenceTopup
+                paymentOrder =
+                  if isTopup
+                    then
+                      Just
+                        DriverWallet.PaymentOrderInfo
+                          { id = Id e.referenceId,
+                            walletStatus = fromMaybe DWT.SUCCESS (Map.lookup e.referenceId walletStatusByOrderId)
+                          }
+                    else Nothing
+             in DriverWallet.WalletTransactionHistoryItem
+                  { itemReference = e.referenceType,
+                    itemName = referenceTypeToItemName e.referenceType,
+                    itemValue = e.amount,
+                    isCredit = e.toAccountId == walletAcc.id,
+                    status = e.status,
+                    paymentOrder = paymentOrder,
+                    date = e.timestamp
+                  }
+      pure DriverWallet.WalletTransactionHistoryResponse {items = map mkItem entries}
+  where
+    validateInput =
+      unless ((isJust mbFromDate && isJust mbToDate) || (isJust mbLimit && isJust mbOffset)) $
+        throwError $ InvalidRequest "Either fromDate+toDate or limit+offset must be provided"
 
 --------------------------------------------------------------------------------
 -- getWalletPayoutHistory
@@ -504,15 +562,47 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
         driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbP
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
-          (createOrderResp, orderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount
+          mbExisting <- QWalletTransaction.findByDriverIdAndStatus driverId DWT.INITIATED
+          let mbReuseOrderId = case mbExisting of
+                Just e | e.amount == r.amount -> Just e.paymentOrderId
+                _ -> Nothing
+          (createOrderResp, returnedOrderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount mbReuseOrderId
+          handleWalletTransaction driverId mId mocId0 r.amount mbExisting returnedOrderId
           pure $
             PlanSubscribeRes
-              { orderId = orderId,
+              { orderId = returnedOrderId,
                 orderResp = createOrderResp
               }
         >>= \case
           Right res -> pure res
           Left _ -> throwError WalletTopupLockFailed
+
+    handleWalletTransaction driverId mId mocId0 amount mbExisting returnedOrderId =
+      case mbExisting of
+        Just existing
+          | existing.paymentOrderId == returnedOrderId ->
+            pure ()
+        Just existing -> do
+          QWalletTransaction.updateStatus DWT.EXPIRED existing.paymentOrderId
+          insertWalletTransaction driverId mId mocId0 returnedOrderId amount
+        Nothing ->
+          insertWalletTransaction driverId mId mocId0 returnedOrderId amount
+
+    insertWalletTransaction driverId mId mocId0 paymentOrderId amount = do
+      walletTxnId <- generateGUID
+      now <- getCurrentTime
+      QWalletTransaction.create $
+        DWT.WalletTransaction
+          { id = Id walletTxnId,
+            driverId = driverId,
+            paymentOrderId = paymentOrderId,
+            amount = amount,
+            status = DWT.INITIATED,
+            merchantId = Just mId,
+            merchantOperatingCityId = Just mocId0,
+            createdAt = now,
+            updatedAt = now
+          }
 
     makeWalletTopupLockKey :: Text -> Text
     makeWalletTopupLockKey dId = "wallet-topup-lock:" <> dId
