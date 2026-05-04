@@ -541,8 +541,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     CoreMetrics m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->

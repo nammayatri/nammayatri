@@ -33,7 +33,7 @@ import Storage.Queries.OrphanInstances.Person ()
 -- Extra code goes here --
 
 createFleetDriverAssociationIfNotExists ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id Person ->
   Maybe (Id Person) ->
@@ -358,7 +358,7 @@ findActiveDriverByFleetOwnerId fleetOwnerId = do
       (Just 1)
       Nothing
 
-endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Text -> Id Person -> m ()
+endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
   now <- getCurrentTime
   updateWithKV
@@ -616,7 +616,7 @@ rejectFleetDriverAssociation driverId fleetOwnerId responseReason = do
     [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId.getId]]
 
 revokeFleetDriverAssociation ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id Person ->
   Id Person ->
   m ()

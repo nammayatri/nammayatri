@@ -92,6 +92,7 @@ data AppCfg = AppCfg
     esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     ltsRedisCfg :: HedisCfg,
+    secondaryLTSRedisCfg :: Maybe HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisSecondaryClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -134,6 +135,7 @@ data AppEnv = AppEnv
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
+    secondaryLTSHedisEnv :: Maybe HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
@@ -203,6 +205,15 @@ buildAppEnv AppCfg {..} consumerType = do
   version <- lookupDeploymentVersion
   hedisEnv <- connectHedis hedisCfg id
   ltsHedisEnv <- connectHedis ltsRedisCfg id
+  secondaryLTSHedisEnv <-
+    case secondaryLTSRedisCfg of
+      Nothing -> pure Nothing
+      Just cfg' ->
+        Kernel.try (connectHedis cfg' id) >>= \case
+          Left (e :: SomeException) -> do
+            putStrLn $ "ERROR: Failed to connect to secondary LTS hedis: " ++ Kernel.Prelude.show e
+            pure Nothing
+          Right env -> pure (Just env)
   hedisNonCriticalEnv <- connectHedis hedisNonCriticalCfg id
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
@@ -241,4 +252,5 @@ releaseAppEnv AppEnv {..} = do
   releaseLoggerEnv loggerEnv
   disconnectHedis hedisEnv
   disconnectHedis ltsHedisEnv
+  Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryLTSHedisEnv
   Kernel.Prelude.maybe (pure ()) disconnectHedis secondaryHedisClusterEnv

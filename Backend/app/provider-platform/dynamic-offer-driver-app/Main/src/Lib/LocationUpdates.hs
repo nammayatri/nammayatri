@@ -77,7 +77,7 @@ type LocationUpdateFlow m r c =
     HasLongDurationRetryCfg r c,
     ClickhouseFlow m r,
     EncFlow m r,
-    HasField "ltsHedisEnv" r HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     MonadMask m,
     HasBPPMetrics m r,
     HasPrettyLogger m r,
