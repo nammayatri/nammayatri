@@ -25,7 +25,10 @@ import qualified Tools.Payment as TPayment
 data PersonStripeInfo = PersonStripeInfo
   { personDob :: Maybe UTCTime,
     address :: Maybe Payment.Address,
-    idNumber :: Maybe (EncryptedHashed Text)
+    idNumber :: Maybe (EncryptedHashed Text),
+    companyName :: Maybe Text,
+    companyTaxId :: Maybe (EncryptedHashed Text),
+    companyStructure :: Maybe Payment.CompanyStructure
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
@@ -90,6 +93,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       personStripeInfo <- h.fetchPersonStripeInfo
       personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       idNumber <- forM personStripeInfo.idNumber decrypt
+      companyTaxId <- forM personStripeInfo.companyTaxId decrypt
       ssnLast4 <-
         if merchantOpCity.country == Context.USA
           then do
@@ -98,8 +102,27 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             return $ Just $ T.takeEnd 4 ssnNumber
           else return Nothing
 
+      let isCompany = isJust companyTaxId
+          mobileE164 = mobileCountryCode <> mobileNumber
+      mbCompanyDetails <- case (companyTaxId, personStripeInfo.companyName) of
+        (Just taxId, Just companyName) ->
+          pure $
+            Just
+              Payment.CompanyConnectDetails
+                { name = companyName,
+                  taxId = taxId,
+                  structure = personStripeInfo.companyStructure,
+                  address = personStripeInfo.address,
+                  phone = Just mobileE164,
+                  directorsProvided = Just True,
+                  ownersProvided = Just True,
+                  executivesProvided = Just True
+                }
+        (Nothing, _) -> pure Nothing
+        (Just _, Nothing) ->
+          throwError $ InvalidRequest "Company name (fleetName) is required when companyTaxId is set"
       let createAccountReq =
-            Payment.IndividualConnectAccountReq
+            Payment.ConnectAccountReq
               { country = merchantOpCity.country,
                 email = person.email,
                 dateOfBirth = DT.utctDay personDob,
@@ -108,9 +131,11 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 address = personStripeInfo.address,
                 ssnLast4 = ssnLast4,
                 idNumber,
-                mobileNumber = mobileCountryCode <> mobileNumber
+                mobileNumber = mobileE164,
+                businessType = Just $ if isCompany then Payment.Company else Payment.Individual,
+                companyDetails = mbCompanyDetails
               }
-      resp <- TPayment.createIndividualConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
+      resp <- TPayment.createConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
       accountUrl <- Kernel.Prelude.parseBaseUrl resp.accountUrl
       let driverBankAccount =
             DDBA.DriverBankAccount
@@ -159,7 +184,12 @@ getPersonRegisterBankAccountStatus person = do
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = driverBankAccount.chargesEnabled,
             detailsSubmitted = driverBankAccount.detailsSubmitted,
-            paymentMode
+            paymentMode,
+            currentlyDue = Nothing,
+            pastDue = Nothing,
+            requirementErrors = Nothing,
+            disabledReason = Nothing,
+            currentDeadline = Nothing
           }
     else do
       resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
@@ -168,5 +198,10 @@ getPersonRegisterBankAccountStatus person = do
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,
             detailsSubmitted = resp.detailsSubmitted,
-            paymentMode
+            paymentMode,
+            currentlyDue = resp.currentlyDue,
+            pastDue = resp.pastDue,
+            requirementErrors = resp.requirementErrors,
+            disabledReason = resp.disabledReason,
+            currentDeadline = resp.currentDeadline
           }

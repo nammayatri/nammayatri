@@ -2240,9 +2240,12 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
   whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+    reqCompanyTaxId <- forM req.companyTaxId encrypt
     let updFleetOwnerInfo =
           fleetOwnerInfo
             { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+              DFOI.companyTaxId = reqCompanyTaxId <|> fleetOwnerInfo.companyTaxId,
+              DFOI.companyStructure = req.companyStructure <|> fleetOwnerInfo.companyStructure,
               DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
               DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
@@ -4266,6 +4269,8 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         || isJust req.fleetDob
         || isJust req.stripeAddress
         || isJust req.stripeIdNumber
+        || isJust req.companyTaxId
+        || isJust req.companyStructure
         || isJust req.fleetName
         || isJust req.fleetType
     )
@@ -4280,11 +4285,14 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         DP.FLEET_OWNER -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
           reqStripeIdNumber <- forM req.stripeIdNumber encrypt
+          reqCompanyTaxId <- forM req.companyTaxId encrypt
           let updFleetOwnerInfo =
                 fleetOwnerInfo
                   { DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
                     DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
                     DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
+                    DFOI.companyTaxId = reqCompanyTaxId <|> fleetOwnerInfo.companyTaxId,
+                    DFOI.companyStructure = req.companyStructure <|> fleetOwnerInfo.companyStructure,
                     DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
                     DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
                   }

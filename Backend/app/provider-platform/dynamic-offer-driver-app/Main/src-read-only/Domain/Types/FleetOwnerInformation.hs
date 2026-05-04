@@ -28,6 +28,8 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     businessLicenseImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     businessLicenseNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     businessLicenseNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    companyStructure :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.CompanyStructure,
+    companyTaxId :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     enabled :: Kernel.Prelude.Bool,
@@ -77,6 +79,7 @@ instance EncryptedItem FleetOwnerInformation where
   encryptItem (entity, salt) = do
     aadhaarNumber_ <- encryptItem $ (,salt) <$> aadhaarNumber entity
     businessLicenseNumber_ <- encryptItem $ (,salt) <$> businessLicenseNumber entity
+    companyTaxId_ <- encryptItem $ (,salt) <$> companyTaxId entity
     gstNumber_ <- encryptItem $ (,salt) <$> gstNumber entity
     panNumber_ <- encryptItem $ (,salt) <$> panNumber entity
     stripeIdNumber_ <- encryptItem $ (,salt) <$> stripeIdNumber entity
@@ -92,6 +95,8 @@ instance EncryptedItem FleetOwnerInformation where
           businessLicenseImageId = businessLicenseImageId entity,
           businessLicenseNumber = businessLicenseNumber_,
           businessLicenseNumberDec = businessLicenseNumberDec entity,
+          companyStructure = companyStructure entity,
+          companyTaxId = companyTaxId_,
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           docsVerificationStatus = docsVerificationStatus entity,
           enabled = enabled entity,
@@ -133,6 +138,7 @@ instance EncryptedItem FleetOwnerInformation where
   decryptItem entity = do
     aadhaarNumber_ <- fmap fst <$> decryptItem (aadhaarNumber entity)
     businessLicenseNumber_ <- fmap fst <$> decryptItem (businessLicenseNumber entity)
+    companyTaxId_ <- fmap fst <$> decryptItem (companyTaxId entity)
     gstNumber_ <- fmap fst <$> decryptItem (gstNumber entity)
     panNumber_ <- fmap fst <$> decryptItem (panNumber entity)
     stripeIdNumber_ <- fmap fst <$> decryptItem (stripeIdNumber entity)
@@ -148,6 +154,8 @@ instance EncryptedItem FleetOwnerInformation where
             businessLicenseImageId = businessLicenseImageId entity,
             businessLicenseNumber = businessLicenseNumber_,
             businessLicenseNumberDec = businessLicenseNumberDec entity,
+            companyStructure = companyStructure entity,
+            companyTaxId = companyTaxId_,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             docsVerificationStatus = docsVerificationStatus entity,
             enabled = enabled entity,

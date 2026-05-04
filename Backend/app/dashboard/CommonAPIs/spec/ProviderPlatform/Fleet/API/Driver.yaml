@@ -23,6 +23,7 @@ imports:
   GetRoutesResp: Kernel.External.Maps
   StripeAddress: Dashboard.Common.Driver
   FleetType: API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+  CompanyStructure: Kernel.External.Payment.Stripe.Types
   TripCategory: Dashboard.Common
   ServiceTierType: Dashboard.Common
   CancellationReasonCode: Dashboard.Common.Booking
@@ -1548,6 +1549,8 @@ types:
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
     - stripeIdNumber: Maybe Text
+    - companyTaxId: Maybe Text
+    - companyStructure: Maybe CompanyStructure
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
     - derive: "'HideSecrets"
@@ -2010,6 +2013,8 @@ types:
     - fleetDob: Maybe UTCTime
     - stripeAddress: Maybe StripeAddress
     - stripeIdNumber: Maybe Text
+    - companyTaxId: Maybe Text
+    - companyStructure: Maybe CompanyStructure
     - fleetName: Maybe Text
     - fleetType: Maybe FleetType
     - derive: "'HideSecrets"

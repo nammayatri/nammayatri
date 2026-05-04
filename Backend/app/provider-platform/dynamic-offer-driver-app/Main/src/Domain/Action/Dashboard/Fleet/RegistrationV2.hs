@@ -350,6 +350,8 @@ createFleetOwnerInfo personId merchantId enabled mbMerchantOperatingCityId mbTds
             panNumberDec = Nothing,
             tdsRate = mbTdsRate,
             stripeIdNumber = Nothing,
+            companyTaxId = Nothing,
+            companyStructure = Nothing,
             autoPayStatus = Nothing,
             blockReasonFlag = Nothing,
             dailyCancellationRateBlockingCooldown = Nothing,
@@ -503,7 +505,10 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
           SPBA.PersonStripeInfo
             { personDob = fleetOwnerInfo.fleetDob,
               address = Just stripeAddress,
-              idNumber = fleetOwnerInfo.stripeIdNumber
+              idNumber = fleetOwnerInfo.stripeIdNumber,
+              companyName = fleetOwnerInfo.fleetName,
+              companyTaxId = fleetOwnerInfo.companyTaxId,
+              companyStructure = fleetOwnerInfo.companyStructure
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
