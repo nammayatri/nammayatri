@@ -5,6 +5,7 @@ import { CollectionRunner } from './components/CollectionRunner';
 import { FinanceViewer } from './components/FinanceViewer';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
+import { DialogHost } from './components/Dialogs';
 import axios from 'axios';
 import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from './services/api';
 import { buildApiCatalog } from './api-catalog';
@@ -958,8 +959,13 @@ function App() {
 
   return (
     <div className="app">
+      <DialogHost />
       <div className="main">
         <div className="mode-tabs">
+          <span className="app-brand" title="Full Stack Dev Box">
+            <img className="app-brand-logo" src="/logo.svg" alt="" />
+            <span className="app-brand-name">Full Stack Dev Box</span>
+          </span>
           <button className={`mode-tab ${appMode === 'collections' ? 'active' : ''}`} onClick={() => setAppMode('collections')}>
             Collections (Integration Tests)
           </button>
@@ -970,12 +976,6 @@ function App() {
             Finance Visualization
           </button>
           <span className="mode-tabs-spacer" />
-          <a className="tool-link" href="http://localhost:3001" target="_blank" rel="noopener noreferrer" title="Metabase — BI / DB explorer">
-            DB Explorer
-          </a>
-          <a className="tool-link" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="redis-commander — standalone + cluster">
-            Redis Explorer
-          </a>
           <TopBarActions />
         </div>
         <div className="content-wrapper">

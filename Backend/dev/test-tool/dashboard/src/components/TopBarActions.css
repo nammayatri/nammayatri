@@ -1,4 +1,60 @@
-/* Top-bar action controls — sit next to "DB Explorer" / "Redis Explorer" links */
+/* Top-bar action controls.
+   Visual hierarchy: three labelled groups separated by faint dividers.
+     1. Systems              — DB Explorer, Redis Explorer, Flush Redis
+     2. Data Pipeline        — Sync Data
+     3. Client Applications  — Control Center, Customer App, Driver App
+   Each launcher button surfaces its current state inline (variant, elapsed
+   seconds, ready/error). Selectors live inside the modals — keeps the bar
+   compact even with several knobs per launcher. */
+
+.tb-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tb-group-label {
+  color: #6e7681;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 6px;
+  user-select: none;
+}
+.tb-divider {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: #30363d;
+  margin: 0 8px;
+  align-self: center;
+}
+.tb-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 24px;
+  font-size: 11px;
+  color: #8b949e;
+  background: #0d1117;
+  border-radius: 999px;
+  border: 1px solid #30363d;
+  margin-right: 4px;
+}
+.tb-status-chip-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #6e7681;
+}
+.tb-status-chip.is-running .tb-status-chip-dot { background: #58a6ff; animation: tb-blink 1.4s ease-in-out infinite; }
+.tb-status-chip.is-ready   .tb-status-chip-dot { background: #56d364; }
+.tb-status-chip.is-error   .tb-status-chip-dot { background: #f85149; }
+@keyframes tb-blink {
+  0%, 100% { opacity: 0.4; }
+  50%      { opacity: 1; }
+}
+
+
 
 /* Match the neutral look of `.tool-link` (DB Explorer / Redis Explorer) */
 .tb-btn {
@@ -13,7 +69,11 @@
   margin-left: 6px;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
   align-self: center;
+  /* Anchor tags inherit the default underline; suppress it so DB
+     Explorer / Redis Explorer match the look of the <button> peers. */
+  text-decoration: none;
 }
+.tb-btn:hover { text-decoration: none; }
 .tb-btn:hover:not(:disabled) { color: #58a6ff; border-color: #58a6ff; background: #161b22; }
 .tb-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -125,3 +185,323 @@
   display: flex; align-items: center; justify-content: space-between;
 }
 .tb-modal-meta { color: #8b949e; font-size: 11px; }
+
+/* Log-source tab strip inside a launcher modal */
+.tb-modal-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 18px;
+  background: #0d1117;
+  border-bottom: 1px solid #30363d;
+}
+.tb-modal-tab {
+  background: transparent;
+  color: #8b949e;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tb-modal-tab:hover { color: #c9d1d9; }
+.tb-modal-tab.active {
+  color: #58a6ff;
+  border-bottom-color: #58a6ff;
+}
+.tb-modal-tab-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 999px;
+  background: #161b22;
+  color: #8b949e;
+  border: 1px solid #30363d;
+}
+.tb-modal-tab.active .tb-modal-tab-count {
+  background: #0c1a2c;
+  color: #58a6ff;
+  border-color: #58a6ff;
+}
+
+/* Config section at the top of a launcher modal (above the log) */
+.tb-modal-form {
+  padding: 14px 18px;
+  border-bottom: 1px solid #30363d;
+  background: #0d1117;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px 16px;
+  align-items: end;
+}
+.tb-modal-form-field {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tb-modal-form-field label {
+  color: #8b949e;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tb-modal-form-field select {
+  background: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.tb-modal-form-field select:hover:not(:disabled) {
+  color: #58a6ff; border-color: #58a6ff;
+}
+.tb-modal-form-field select:disabled { opacity: 0.55; cursor: not-allowed; }
+.tb-modal-form-actions {
+  display: flex; align-items: end; gap: 8px;
+  /* Sit in the same grid row as the selectors. Bottom-aligned so the
+     button baseline matches the dropdowns. Right-aligned within the
+     cell so Start lands at the far right of the modal. */
+  align-self: end;
+  justify-self: end;
+}
+.tb-modal-form-actions .tb-btn {
+  margin-left: 0;
+  padding: 8px 16px;
+}
+.tb-modal-form-primary {
+  background: #1f6feb !important;
+  color: #fff !important;
+  border-color: #1f6feb !important;
+}
+.tb-modal-form-primary:hover:not(:disabled) {
+  background: #388bfd !important;
+  border-color: #388bfd !important;
+}
+.tb-modal-form-primary:disabled {
+  background: #1f3d2e !important;
+  color: #56d364 !important;
+  border-color: #1f3d2e !important;
+}
+
+/* ── Loader spinner ────────────────────────────────────────────────
+   Used by Start / Clear-cache / similar fire-once actions to bridge
+   the dead window between click and the next status poll. */
+.tb-spinner {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  vertical-align: -2px;
+  animation: tb-spin 0.7s linear infinite;
+}
+@keyframes tb-spin {
+  to { transform: rotate(360deg); }
+}
+/* When a button is in "busy" state, dim it slightly even when not
+   :disabled — so a quick double-click feels like the button registered
+   the first press. */
+.tb-btn.tb-busy {
+  opacity: 0.85;
+}
+
+/* ── Floating top-right widget ─────────────────────────────────────
+   The top bar used to crowd in three groups of buttons inline next to
+   the mode tabs ("Collections" / "Finance Visualization"). At narrow
+   widths it wrapped or pushed the tabs offscreen. The widget below
+   collapses every action behind a single Tools button on the top-right
+   corner, with a status dot that lights up when something is running /
+   ready / errored. */
+/* Inline anchor — sits in the flex flow of the top bar (after the
+   mode-tabs-spacer, so it lands at the far right), and the dropdown
+   panel positions absolutely relative to it. No fixed positioning;
+   the toggle scrolls/relayouts with the rest of the bar. */
+.tb-floating {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  font-family: inherit;
+}
+.tb-floating-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.tb-floating-toggle:hover { color: #58a6ff; border-color: #58a6ff; background: #1c2230; }
+.tb-floating-toggle.is-open {
+  color: #58a6ff;
+  border-color: #58a6ff;
+  background: #0c1a2c;
+}
+.tb-floating-toggle-icon { font-size: 14px; line-height: 1; }
+.tb-floating-toggle-label { line-height: 1; }
+.tb-floating-toggle-caret { font-size: 10px; opacity: 0.7; line-height: 1; }
+.tb-floating-toggle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6e7681;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.tb-floating-toggle-dot.is-running {
+  background: #58a6ff;
+  animation: tb-blink 1.4s ease-in-out infinite;
+}
+.tb-floating-toggle-dot.is-ready { background: #56d364; }
+.tb-floating-toggle-dot.is-error { background: #f85149; }
+/* While running, give the toggle pill a subtle pulsing border so the
+   user notices it even with the panel closed. */
+.tb-floating-toggle.is-running:not(.is-open) {
+  animation: tb-pulse 1.6s ease-in-out infinite;
+}
+.tb-floating-toggle.is-error:not(.is-open) {
+  border-color: #f85149;
+}
+.tb-floating-toggle.is-ready:not(.is-open) {
+  border-color: #56d364;
+}
+
+.tb-floating-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 200;       /* sit above the content below the top bar */
+  min-width: 320px;
+  max-width: 420px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+  animation: tb-floating-pop 0.12s ease-out;
+}
+@keyframes tb-floating-pop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.tb-floating-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  background: #0a0d12;
+}
+.tb-floating-section-label {
+  color: #6e7681;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Two-column grid so every button has the same width regardless of
+   label length. Status chips inside Customer/Driver/Control Center
+   buttons are absorbed by the cell — buttons truncate cleanly with
+   ellipsis when needed. Buttons that should span both columns can
+   set `grid-column: 1 / -1` (currently none do). */
+.tb-floating-section-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  align-items: stretch;
+}
+.tb-floating-section-row > .tb-btn,
+.tb-floating-section-row > .tb-select,
+.tb-floating-section-row > a.tb-btn {
+  margin-left: 0;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;       /* let the cell shrink so ellipsis triggers */
+}
+/* The status chip inside a launcher button (e.g. "error", "ready",
+   "12s") gets pushed to the right edge of its row. NativeAppLauncher
+   sets an inline `margin-left: 6` on the chip — override with
+   !important so the chip aligns flush-right inside the grid cell. */
+.tb-floating-section-row > .tb-btn .tb-status-chip {
+  margin-left: auto !important;
+}
+
+/* ── RefPicker (combobox for branch / commit selection) ──────────── */
+/* Mirrors the structure of .tb-modal-form-field (label + control)
+   so it stacks the same height as the Platform / Brand dropdowns
+   beside it. The "current ref" chip lives in the label row, NOT
+   below the input, so it never adds extra vertical space. */
+.tb-refpicker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tb-refpicker-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #8b949e;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.tb-refpicker-current {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #58a6ff;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10px;
+  background: #0c1a2c;
+  border: 1px solid #1f3d2e;
+  border-radius: 999px;
+  padding: 0 6px;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.tb-refpicker-current.is-error {
+  color: #f85149;
+  border-color: #f85149;
+  background: #3d1f1f;
+}
+.tb-refpicker-input {
+  background: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+.tb-refpicker-input:focus {
+  outline: none;
+  border-color: #58a6ff;
+}
+

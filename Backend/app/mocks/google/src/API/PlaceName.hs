@@ -26,6 +26,7 @@ import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.PlaceName as Data
 import Tools.Error
+import qualified Tools.PlaceCache as PlaceCache
 
 handler ::
   Maybe Text ->
@@ -34,7 +35,29 @@ handler ::
   Maybe Text ->
   Maybe Language ->
   FlowHandler GoogleMaps.GetPlaceNameResp
-handler _sessionToken key mbLatLng _placeId _language = withFlowHandlerAPI' $ do
+handler _sessionToken key mbLatLng mbPlaceId _language = withFlowHandlerAPI' $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
-  latLng <- mbLatLng & fromMaybeM (NotImplemented "getPlaceName is not implemented: latlng: Nothing")
-  pure $ Data.mkMockPlaceNameResp latLng
+  -- Resolve in priority order:
+  --   1. ?place_id=<id> looked up in the in-mem cache populated by the
+  --      autocomplete handler. Falls back to decoding lat/lng embedded
+  --      in the placeId string itself (mock:<lat>:<lon>) so the
+  --      "user picks a suggestion" flow stays consistent across
+  --      mock-google restarts.
+  --   2. ?latlng=<lat>,<lon> — explicit coordinate.
+  --   3. neither: 501 like the legacy mock.
+  resolved <- case mbPlaceId of
+    Just pid -> do
+      mbCached <- liftIO $ PlaceCache.lookupPlace pid
+      case mbCached of
+        Just (la, lo) -> pure $ Maps.LatLong {lat = la, lon = lo}
+        Nothing ->
+          mbLatLng
+            & fromMaybeM
+              ( NotImplemented $
+                  "getPlaceName is not implemented: unknown placeId " <> pid
+              )
+    Nothing ->
+      mbLatLng
+        & fromMaybeM
+          (NotImplemented "getPlaceName is not implemented: latlng + place_id both Nothing")
+  pure $ Data.mkMockPlaceNameResp resolved

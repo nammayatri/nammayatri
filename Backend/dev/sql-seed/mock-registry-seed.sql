@@ -35,7 +35,7 @@ valid_from timestamp with time zone,
 valid_until timestamp with time zone,
 created timestamp with time zone DEFAULT now() NOT NULL,
 updated timestamp with time zone DEFAULT now() NOT NULL
-,CONSTRAINT  subscriber_pkey PRIMARY KEY (unique_key_id, subscriber_id)
+-- No PK — master data has duplicates on (unique_key_id, subscriber_id)
 );
 ALTER TABLE atlas_registry.subscriber OWNER TO atlas_registry_user;
 

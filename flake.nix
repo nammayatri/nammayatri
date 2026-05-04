@@ -49,6 +49,8 @@
 
     location-tracking-service.url = "github:nammayatri/location-tracking-service";
 
+    notification-service.url = "github:nammayatri/notification-service";
+
     # https://github.com/nammayatri/passetto/pull/8
     passetto = {
       url = "github:nammayatri/passetto/use-crypton";

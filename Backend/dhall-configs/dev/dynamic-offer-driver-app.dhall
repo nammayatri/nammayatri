@@ -437,7 +437,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
-    , port = +8016
+    , port = +8116
     , metricsPort = +9997
     , hostName = "localhost"
     , nwAddress = "http://localhost:8016/beckn"

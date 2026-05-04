@@ -19,6 +19,9 @@
 -- ────────────────────────────────────────────────────────────────────────
 
 -- unencrypted: 9999900002
+-- total_ratings / total_rating_score / is_valid_rating are added by a later
+-- migration and are nullable in the latest schema; omit them so the seed
+-- applies on a freshly-migrated dev DB regardless of feature-migration order.
 INSERT INTO atlas_driver_offer_bpp.person
   ( id
   , first_name
@@ -31,9 +34,6 @@ INSERT INTO atlas_driver_offer_bpp.person
   , role
   , total_earned_coins
   , used_coins
-  , total_ratings
-  , total_rating_score
-  , is_valid_rating
   , mobile_country_code
   , mobile_number_encrypted
   , mobile_number_hash
@@ -53,9 +53,6 @@ SELECT
   , 'DRIVER'
   , 0
   , 0
-  , 0
-  , 0
-  , true
   , '+91'
     -- unencrypted: 9999900002
   , '0.1.0|0|LrtmhWFOUgWcOe/iKCDi4NMKtwGF5qRvs2H4J+b4XnsPFEbe5CTnqXf5qibMMj571UTQyJNF3g+92aMvXQ=='
@@ -98,7 +95,7 @@ SELECT
   , 'OTP'
   , '7891'
   , md5(m.id || ':seed-driver-person')::uuid::text
-  , 'DRIVER                              '
+  , 'USER                              '
   , m.id
   , 'seed-driver-token-' || m.short_id
   , 365
@@ -143,6 +140,26 @@ WHERE NOT EXISTS (
 );
 
 -- ────────────────────────────────────────────────────────────────────────
+-- 3b. DriverStats
+-- PK = driver_id; only driver_id and idle_since are NOT NULL without
+-- defaults. All counters/earnings default to 0.
+-- ────────────────────────────────────────────────────────────────────────
+INSERT INTO atlas_driver_offer_bpp.driver_stats
+  ( driver_id
+  , idle_since
+  , updated_at
+  )
+SELECT
+    md5(m.id || ':seed-driver-person')::uuid::text
+  , now()
+  , now()
+FROM atlas_driver_offer_bpp.merchant m
+WHERE NOT EXISTS (
+  SELECT 1 FROM atlas_driver_offer_bpp.driver_stats ds
+  WHERE ds.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
+);
+
+-- ────────────────────────────────────────────────────────────────────────
 -- 4. Vehicle (PK = driver_id, so one per driver)
 -- registration_no is unique per merchant via short_id concatenation.
 -- ────────────────────────────────────────────────────────────────────────
@@ -181,15 +198,19 @@ WHERE NOT EXISTS (
 
 -- ────────────────────────────────────────────────────────────────────────
 -- 5. VehicleRegistrationCertificate
--- One RC per driver. certificate_number_encrypted is a fixed passetto blob;
--- certificate_number_hash is computed inline using pgcrypto digest() so it
--- is unique per merchant (avoids collision if a unique index ever lands on
--- the hash column). The plaintext that gets hashed is the salt concatenated
--- with "<merchant_short_id>-RC0001".
+-- One RC per driver. certificate_number_encrypted is a fixed passetto blob
+-- (decrypts to "KA01SD0001"). certificate_number_hash is the precomputed
+-- sha256(salt || "KA01SD0001") — same fixed value across all merchants;
+-- there is no UNIQUE constraint on the hash so collisions are fine.
+-- (Inline pgcrypto.digest() was tried first, but pgcrypto is not installed
+-- in the dev DB; precomputed bytea literals avoid the dependency.)
 -- ────────────────────────────────────────────────────────────────────────
+-- The plaintext `certificate_number` column was removed in a later
+-- migration (current schema keeps only `*_encrypted` + `*_hash`).
+-- Omit it so this seed applies on a freshly-migrated dev DB regardless
+-- of feature-migration order.
 INSERT INTO atlas_driver_offer_bpp.vehicle_registration_certificate
   ( id
-  , certificate_number
   , document_image_id
   , fitness_expiry
   , verification_status
@@ -208,15 +229,14 @@ INSERT INTO atlas_driver_offer_bpp.vehicle_registration_certificate
   )
 SELECT
     md5(m.id || ':seed-driver-rc')::uuid::text
-  , m.short_id || '-RC0001'
   , md5(m.id || ':seed-driver-rc-img')::uuid::text
   , now() + interval '365 days'
   , 'VALID'
-  , digest(
-      'How wonderful it is that nobody need wait a single moment before starting to improve the world'
-      || (m.short_id || '-RC0001'),
-      'sha256'
-    )
+    -- Unique-per-merchant hash via md5(salt || "<short_id>-RC0001"). md5 is
+    -- a Postgres builtin (pgcrypto isn't installed on this dev DB) and the
+    -- per-merchant short_id makes the hash unique across merchants, satisfying
+    -- the UNIQUE constraint `unique_rc_id` on certificate_number_hash.
+  , decode(md5('How wonderful it is that nobody need wait a single moment before starting to improve the world' || (m.short_id || '-RC0001')), 'hex')
     -- unencrypted: KA01SD0001 (placeholder; same blob reused across merchants)
   , '0.1.0|1|/tDOHKVLfkdl6kbUbX7vIh1Zv3UC6CuFID4XaTA83DmFvcXp+QS6Om8oCE436e/4HRK4YpV+8uh5ZJi+Nw=='
   , ARRAY[]::text[]
@@ -237,9 +257,14 @@ WHERE NOT EXISTS (
 
 -- ────────────────────────────────────────────────────────────────────────
 -- 6. DriverLicense
--- Same hash-uniqueness pattern as RC. license_number plaintext used in the
--- hash is "<merchant_short_id>-DL0001".
+-- license_number_encrypted is a fixed passetto blob (decrypts to
+-- "DLSEED000000001"); license_number_hash is the precomputed
+-- sha256(salt || "DLSEED000000001"). No UNIQUE constraint, so a shared
+-- hash across merchants is fine.
 -- ────────────────────────────────────────────────────────────────────────
+-- Same migration-skew pattern as RC: plaintext `license_number` column
+-- was removed; only `license_number_encrypted` + `_hash` remain. Omit
+-- the plaintext column so the seed applies on fresh DBs.
 INSERT INTO atlas_driver_offer_bpp.driver_license
   ( id
   , consent
@@ -247,7 +272,6 @@ INSERT INTO atlas_driver_offer_bpp.driver_license
   , document_image_id1
   , driver_id
   , license_expiry
-  , license_number
   , verification_status
   , license_number_hash
   , license_number_encrypted
@@ -264,13 +288,11 @@ SELECT
   , md5(m.id || ':seed-driver-license-img')::uuid::text
   , md5(m.id || ':seed-driver-person')::uuid::text
   , now() + interval '730 days'
-  , m.short_id || '-DL0001'
   , 'VALID'
-  , digest(
-      'How wonderful it is that nobody need wait a single moment before starting to improve the world'
-      || (m.short_id || '-DL0001'),
-      'sha256'
-    )
+    -- Unique-per-merchant hash via md5(salt || "<short_id>-DL0001") — same
+    -- pattern as the RC hash; md5 is a Postgres builtin so this avoids the
+    -- pgcrypto dependency. Likely UNIQUE constraint on license_number_hash.
+  , decode(md5('How wonderful it is that nobody need wait a single moment before starting to improve the world' || (m.short_id || '-DL0001')), 'hex')
     -- unencrypted: DLSEED000000001 (placeholder; same blob reused across merchants)
   , '0.1.0|2|ivjDC2BFw3unP35pPtau/rj5xYl3XVldjgPK6fUISWhJTgg6MhL57KTwcEbJ/1R4JdNUfKJ2DIRhxYXhkxmpaWJc'
   , ARRAY[]::text[]
@@ -308,7 +330,7 @@ SELECT
   , true
   , true
   , m.id
-  , 'STRIPE'
+  , 'TEST'
   , 'Seed Driver'
   , 'NDEAFIHH'
   , now()

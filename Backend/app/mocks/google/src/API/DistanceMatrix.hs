@@ -25,6 +25,7 @@ import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.DistanceMatrix as Data
 import Tools.Error
+import qualified Tools.OSRM as OSRM
 
 handler ::
   [GoogleMaps.Place] ->
@@ -45,7 +46,75 @@ handler origins destinations key mode _ = withFlowHandlerAPI' $ do
 
   if allEqual $ origins <> destinations
     then pure $ mkDefaultMatrix origins destinations
-    else buildMatrix origins destinations
+    else do
+      -- Try OSRM table first — works for arbitrary lat/lng pairs, not
+      -- just the curated set in MockData.DistanceMatrix. Fall back to
+      -- the curated lookup table when OSRM is unreachable or any
+      -- origin/destination is an Address (no coordinates).
+      mbOsrm <- liftIO $ tryOsrmMatrix origins destinations
+      case mbOsrm of
+        Just resp -> pure resp
+        Nothing -> buildMatrix origins destinations
+  where
+    tryOsrmMatrix origs dests = do
+      let mbCoords = traverse placeCoords (origs <> dests)
+      case mbCoords of
+        Nothing -> pure Nothing
+        Just coords -> do
+          mbTable <- OSRM.getTable coords
+          case mbTable of
+            Nothing -> pure Nothing
+            Just t ->
+              pure $ Just $ buildOsrmResp origs dests t
+
+    placeCoords :: GoogleMaps.Place -> Maybe (Double, Double)
+    placeCoords (GoogleMaps.Location loc) = Just (loc.lat, loc.lng)
+    placeCoords (GoogleMaps.Address _) = Nothing
+
+    -- OSRM table rows are origin-rows × destination-cols when we feed
+    -- it `origins ++ destinations`. The first |origins| rows are
+    -- origins; we slice columns |origins|..|origins|+|destinations|-1
+    -- to read the origin→destination distance/duration.
+    buildOsrmResp origs dests t =
+      let oN = length origs
+          dN = length dests
+          slice xs = take dN (drop oN xs)
+          rows =
+            zipWith
+              ( \distRow durRow ->
+                  GoogleMaps.DistanceMatrixRow
+                    { GoogleMaps.elements =
+                        zipWith mkOsrmElement (slice distRow) (slice durRow)
+                    }
+              )
+              (take oN t.distancesMatrix)
+              (take oN t.durationsMatrix)
+          -- Address strings: cheap stringification — the rider-app
+          -- uses the structured distance/duration, not the address text.
+          addr (GoogleMaps.Location l) =
+            show l.lat <> "," <> show l.lng
+          addr (GoogleMaps.Address a) = a
+       in GoogleMaps.DistanceMatrixResp
+            { destination_addresses = map addr dests,
+              origin_addresses = map addr origs,
+              rows,
+              status = "OK"
+            }
+
+    mkOsrmElement mbDist mbDur =
+      case (mbDist, mbDur) of
+        (Just d, Just du) ->
+          GoogleMaps.DistanceMatrixElement
+            { distance = Just (GoogleMaps.TextValue {text = show (round d :: Int) <> " m", value = round d}),
+              duration = Just (GoogleMaps.TextValue {text = show (round du `div` 60 :: Int) <> " min", value = round du}),
+              status = "OK"
+            }
+        _ ->
+          GoogleMaps.DistanceMatrixElement
+            { distance = Nothing,
+              duration = Nothing,
+              status = "ZERO_RESULTS"
+            }
 
 allEqual :: [GoogleMaps.Place] -> Bool
 allEqual [] = True

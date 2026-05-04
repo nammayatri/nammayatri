@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.Directions as Data
 import Tools.Error
+import qualified Tools.OSRM as OSRM
 
 handler ::
   GoogleMaps.Place ->
@@ -44,7 +45,12 @@ handler origin destination key _alternatives mode waypoints avoid = withFlowHand
     throwError $ NotImplemented $ "directions API is not implemented: avoid: " <> show avoid
   case (origin, destination) of
     (GoogleMaps.Location origin', GoogleMaps.Location destination') -> do
-      pure $ Data.mkDirectionsResp origin' destination'
+      -- Try OSRM first for real road distance/duration/polyline.
+      -- Fall back to the straight-line mock when osrm-routed is down.
+      mbOsrm <- liftIO $ OSRM.getRoute (origin'.lat, origin'.lng) (destination'.lat, destination'.lng)
+      pure $ case mbOsrm of
+        Just r -> Data.mkDirectionsRespOsrm origin' destination' r
+        Nothing -> Data.mkDirectionsResp origin' destination'
     _ -> throwError $ NotImplemented "Both origin and destination should contain coordinates"
   where
     isEmptyWaypoint Nothing = True

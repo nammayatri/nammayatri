@@ -19,6 +19,7 @@ module API
 where
 
 import qualified API.AdvancedDirections as AdvancedDirections
+import qualified API.Autocomplete as Autocomplete
 import qualified API.Directions as Directions
 import qualified API.DistanceMatrix as DistanceMatrix
 import qualified API.PlaceName as PlaceName
@@ -34,6 +35,7 @@ type API =
     :<|> Maps.DistanceMatrixAPI
     :<|> Maps.DirectionsAPI
     :<|> Maps.AdvancedDirectionsAPI
+    :<|> Maps.AutoCompleteV2API
     :<|> Maps.PlaceNameAPI
     :<|> Roads.SnapToRoadAPI
 
@@ -43,5 +45,6 @@ handler =
     :<|> DistanceMatrix.handler
     :<|> Directions.handler
     :<|> AdvancedDirections.handler
+    :<|> Autocomplete.handler
     :<|> PlaceName.handler
     :<|> SnapToRoad.handler

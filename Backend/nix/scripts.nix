@@ -207,6 +207,7 @@ _:
           _hard=$(ulimit -Hs 2>/dev/null || true)
           if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
             ulimit -s "$_hard" 2>/dev/null || true
+            ulimit -n "$_hard" 2>/dev/null || true
           fi
           # -S NAME forces stable sort by process name (no re-ordering on status change)
           nix run .#run-mobility-stack-nix -- -S NAME "$@"
@@ -230,35 +231,10 @@ _:
           _hard=$(ulimit -Hs 2>/dev/null || true)
           if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
             ulimit -s "$_hard" 2>/dev/null || true
+            ulimit -n "$_hard" 2>/dev/null || true
           fi
           # -S NAME forces stable sort by process name (no re-ordering on status change)
           nix run .#run-mobility-stack-dev -- -S NAME "$@"
-        '';
-      };
-
-      run-mobility-full-stack-dev = {
-        category = "Backend";
-        description = ''
-          Run the nammayatri backend components via "cabal run" plus the
-          control-center frontend (cloned from
-          https://github.com/nammayatri/control-center) running "npm run dev"
-          with VITE_BAP_URL=http://localhost:8017 and VITE_BPP_URL=http://localhost:8018.
-        '';
-        exec = ''
-          export DEV=1
-          # Free up service ports first so a stale process from a prior run
-          # doesn't hold the port and crash a fresh service start.
-          echo "── Pre-flight: freeing service ports ──"
-          ${killSvcPortsScript}
-          # Bump soft stack to the hard max. `nix run` spawns a fresh shell
-          # that doesn't inherit the devshell's shellHook, so set it here too.
-          # Required by process-compose / some Haskell exes that want >= 60 MB stack.
-          _hard=$(ulimit -Hs 2>/dev/null || true)
-          if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
-            ulimit -s "$_hard" 2>/dev/null || true
-          fi
-          # -S NAME forces stable sort by process name (no re-ordering on status change)
-          nix run .#run-mobility-full-stack-dev -- -S NAME "$@"
         '';
       };
 
@@ -268,6 +244,67 @@ _:
           Free up ports by killing all the external-services.
         '';
         exec = killSvcPortsScript;
+      };
+
+      clear-data = {
+        category = "Backend";
+        description = ''
+          Wipe runtime state under <repo-root>/data/ (postgres, kafka,
+          zookeeper, metabase, redis-commander, etc.) but PRESERVE
+          ny-react-native/ and control-center/ — those are expensive to
+          re-clone + re-install. Asks for confirmation before deleting.
+          Stop services first with ", kill-svc-ports" if they are still
+          running.
+        '';
+        exec = ''
+          set -euo pipefail
+          DATA_DIR="''${FLAKE_ROOT}/data"
+          if [ ! -d "$DATA_DIR" ]; then
+            echo "No $DATA_DIR — nothing to clear."
+            exit 0
+          fi
+
+          KEEP_RE='^(ny-react-native|control-center)$'
+          to_delete=()
+          while IFS= read -r entry; do
+            name=$(basename "$entry")
+            if echo "$name" | ${pkgs.gnugrep}/bin/grep -qE "$KEEP_RE"; then
+              continue
+            fi
+            to_delete+=("$entry")
+          done < <(${pkgs.findutils}/bin/find "$DATA_DIR" -mindepth 1 -maxdepth 1)
+
+          if [ ''${#to_delete[@]} -eq 0 ]; then
+            echo "Nothing to clear under $DATA_DIR (only ny-react-native / control-center present)."
+            exit 0
+          fi
+
+          echo "── Will delete the following under $DATA_DIR ──"
+          for p in "''${to_delete[@]}"; do
+            size=$(${pkgs.coreutils}/bin/du -sh "$p" 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1 || echo "?")
+            echo "  $size  $p"
+          done
+          echo "── Will KEEP ──"
+          for k in ny-react-native control-center; do
+            if [ -d "$DATA_DIR/$k" ]; then
+              size=$(${pkgs.coreutils}/bin/du -sh "$DATA_DIR/$k" 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1 || echo "?")
+              echo "  $size  $DATA_DIR/$k"
+            fi
+          done
+          echo ""
+          printf "Proceed with deletion? [y/N] "
+          read -r ans
+          case "$ans" in
+            y|Y|yes|YES) ;;
+            *) echo "Aborted."; exit 0 ;;
+          esac
+
+          for p in "''${to_delete[@]}"; do
+            echo "rm -rf $p"
+            rm -rf -- "$p"
+          done
+          echo "Done."
+        '';
       };
 
       backend-new-service = {
@@ -341,7 +378,8 @@ _:
             ];
             servicePorts = [
               8013 # rider-app
-              8016 # driver-app
+              8016 # driver-proxy (external driver-app port)
+              8116 # driver-app (internal, behind driver-proxy)
               8015 # beckn-gateway
               8018 # provider-dashboard
               8019 # mock-google

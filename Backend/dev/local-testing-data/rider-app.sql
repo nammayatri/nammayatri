@@ -86,7 +86,7 @@ SELECT
   , 'OTP'
   , '7891'
   , md5(m.id || ':seed-rider-person')::uuid::text
-  , 'CUSTOMER'
+  , 'USER'
   , m.id
   , 'seed-rider-token-' || m.short_id
   , 365

@@ -1,7 +1,8 @@
 {
-  "name": "dashboard",
+  "name": "full-stack-dev-box",
   "version": "0.1.0",
   "private": true,
+  "description": "Full Stack Dev Box — local nammayatri stack control center",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",

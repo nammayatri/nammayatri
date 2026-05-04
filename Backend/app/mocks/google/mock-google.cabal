@@ -28,6 +28,7 @@ library
   exposed-modules:
       API
       API.AdvancedDirections
+      API.Autocomplete
       API.Directions
       API.DistanceMatrix
       API.PlaceName
@@ -46,6 +47,8 @@ library
       Tools.Client
       Tools.Error
       Tools.Metrics
+      Tools.OSRM
+      Tools.PlaceCache
   other-modules:
       Paths_mock_google
   hs-source-dirs:

@@ -45,13 +45,21 @@
 
   # Application services
   rider-app = 8013;
+  # External port (driver-proxy listens here and forwards to 8116, except
+  # /ui/driver/location which goes to location-tracking-service on 8081).
   dynamic-offer-driver-app = 8016;
+  # Internal port the driver-app actually binds to.
+  dynamic-offer-driver-app-internal = 8116;
   rider-dashboard = 8017;
   provider-dashboard = 8018;
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
   location-tracking-service = 8081;
   image-api-helper = 8099;
+
+  # Notification service
+  notification-service-grpc = 50051;
+  notification-service-http = 9091;
 
   # Application metrics
   rider-app-metrics = 9999;

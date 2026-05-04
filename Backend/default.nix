@@ -269,6 +269,7 @@
           _ny_hard_stack=$(ulimit -Hs 2>/dev/null)
           if [ -n "$_ny_hard_stack" ] && [ "$_ny_hard_stack" != "unlimited" ]; then
             ulimit -s "$_ny_hard_stack" 2>/dev/null || true
+            ulimit -n "$_ny_hard_stack" 2>/dev/null || true
           fi
           unset _ny_hard_stack
         '';

@@ -24,6 +24,7 @@ import Kernel.Utils.Common
 import qualified MockData.Common as Data
 import qualified MockData.Directions as Data
 import Tools.Error
+import qualified Tools.OSRM as OSRM
 
 handler ::
   Text ->
@@ -34,4 +35,14 @@ handler key _fieldMask req = withFlowHandlerAPI' $ do
   unless (key == Data.mockKey) $ throwError AccessDenied
   let origin = req.origin.location.latLng
       destination = req.destination.location.latLng
-  pure $ Data.mkAdvancedDirectionsResp origin destination
+  -- Try OSRM first for realistic distance/duration/polyline. Falls back
+  -- to the straight-line mock when osrm-routed is unreachable or the
+  -- response can't be parsed — keeps the mock self-sufficient.
+  osrmResult <-
+    liftIO $
+      OSRM.getRoute
+        (origin.latitude, origin.longitude)
+        (destination.latitude, destination.longitude)
+  pure $ case osrmResult of
+    Just r -> Data.mkAdvancedDirectionsRespOsrm origin destination r
+    Nothing -> Data.mkAdvancedDirectionsResp origin destination

@@ -25,6 +25,32 @@ body {
   background: #0d1117;
   border-bottom: 1px solid #30363d;
   padding: 0 16px;
+  align-items: center;
+}
+/* Brand block (logo + product name) sits at the leftmost position of
+   mode-tabs, before the first tab. The 12px right margin and 1px right
+   border separate it visually from the tab strip without competing for
+   attention with the active-tab underline. */
+.app-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 0;
+  margin-right: 8px;
+  border-right: 1px solid #30363d;
+  user-select: none;
+}
+.app-brand-logo {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+.app-brand-name {
+  color: #c9d1d9;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 .mode-tab {
   padding: 8px 16px;

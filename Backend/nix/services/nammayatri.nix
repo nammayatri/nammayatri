@@ -247,18 +247,49 @@ in
             };
           };
 
-          # Periodic log cleaner: truncates .log files exceeding 1GB
+          # Periodic log cleaner: truncates .log files exceeding 100MB
           # Covers process-compose logs (./*.log) and dhall/app logs (/tmp/*.log)
           log-cleaner = {
             imports = [ common ];
             command = pkgs.writeShellApplication {
               name = "log-cleaner";
-              runtimeInputs = with pkgs; [ coreutils findutils ];
+              runtimeInputs = with pkgs; [ coreutils findutils procps ];
               text = ''
+                # Stale-instance reaper. Each previous `run-mobility-stack-dev`
+                # leaves its log-cleaner alive across stack restarts (the
+                # outgoing process-compose doesn't always reap children, and
+                # the loop below has no signal handler that exits cleanly).
+                # Result: after a few launches you accumulate 3–5 stale
+                # cleaners running OLD nix-store versions of this script
+                # (different size thresholds, different sleep cadences) — we
+                # observed +1G/sleep 300 ghosts still active after the source
+                # had moved to +100M/sleep 5. They all race on truncate, but
+                # the older +1G ones win the "what's oversized" check and
+                # producer logs balloon to 1.5GB+ before any truncation.
+                #
+                # Match by argv[0] = "<store-path>/bin/log-cleaner" — that
+                # token is unique to this script and present in every prior
+                # nix build, regardless of the threshold/sleep values inside.
+                # Exclude our own pid so we don't kill ourselves.
+                self_pid=$$
+                stale=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
+                if [ -n "$stale" ]; then
+                  echo "log-cleaner: reaping stale instances: $stale"
+                  # shellcheck disable=SC2086
+                  kill -TERM $stale 2>/dev/null || true
+                  sleep 1
+                  # Anything still alive after SIGTERM gets SIGKILL — old
+                  # cleaners ignore SIGTERM if they're mid-`find` syscall.
+                  still=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
+                  if [ -n "$still" ]; then
+                    # shellcheck disable=SC2086
+                    kill -KILL $still 2>/dev/null || true
+                  fi
+                fi
                 while true; do
-                  find . -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
-                  find /tmp -maxdepth 1 -name '*.log' -size +1G -exec truncate -s 0 {} \;
-                  sleep 300
+                  find .. -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
+                  find /private/tmp -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
+                  sleep 1
                 done
               '';
             };
@@ -294,6 +325,21 @@ in
                 path = "/";
               };
             };
+            # Mirrors readiness_probe → if /:8020 stays unhealthy past the
+            # failure_threshold window, process-compose kills the proc and
+            # availability.restart brings it back. (Readiness alone never
+            # triggers a restart in process-compose.)
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8020;
+                path = "/";
+              };
+              initial_delay_seconds = 30;
+              period_seconds = 10;
+              failure_threshold = 6;
+              timeout_seconds = 5;
+            };
             availability = {
               restart = "always";
               backoff_seconds = 20;
@@ -306,6 +352,15 @@ in
             environment = {
               DEV = "true";
             };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 20;
+              max_restarts = 50;
+            };
+          };
+          notification-service = {
+            imports = [ common ];
+            command = ny.inputs.notification-service.packages.${pkgs.system}.default;
             availability = {
               restart = "on_failure";
               backoff_seconds = 20;
@@ -437,8 +492,23 @@ in
               failure_threshold = 60;
               timeout_seconds = 3;
             };
+            # Mirror readiness with a slower-cadence liveness so persistent
+            # failure of /api/health → kill+restart. Metabase first-boot
+            # migration can take ~30s; give it a 60s grace period before
+            # liveness starts checking.
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 3001;
+                path = "/api/health";
+              };
+              initial_delay_seconds = 60;
+              period_seconds = 15;
+              failure_threshold = 4;
+              timeout_seconds = 5;
+            };
             availability = {
-              restart = "on_failure";
+              restart = "always";
               backoff_seconds = 50;
               max_restarts = 30;
             };
@@ -578,22 +648,27 @@ in
           };
 
           dynamic-offer-driver-app-exe = {
+            # Probes hit 8116 (the actual app port) so process_healthy
+            # reflects the app itself, not the driver-proxy on 8016.
             readiness_probe = {
               http_get = {
                 host = "127.0.0.1";
-                port = 8016;
+                port = 8116;
                 path = "/ui";
               };
             };
+            # Tightened: ~60s of consecutive failures past initial_delay → kill
+            # + restart (was ~210s). Haskell + migrations get a 90s startup
+            # window before liveness starts checking.
             liveness_probe = {
               http_get = {
                 host = "127.0.0.1";
-                port = 8016;
+                port = 8116;
                 path = "/ui";
               };
-              initial_delay_seconds = 60;
-              period_seconds = 30;
-              failure_threshold = 5;
+              initial_delay_seconds = 90;
+              period_seconds = 10;
+              failure_threshold = 6;
               timeout_seconds = 5;
             };
             availability = {
@@ -601,6 +676,86 @@ in
               backoff_seconds = 20;
               max_restarts = 50;
             };
+            # Driver-proxy must own port 8016 before the app starts so any
+            # consumer dialing localhost:8016 sees a working endpoint by the
+            # time dynamic-offer-driver-app-exe is healthy. Merges with the
+            # depends_on chain set by haskellProcesses (nammayatri-init,
+            # mock-registry, and the previous cabalExecutable in the chain).
+            depends_on."driver-proxy".condition = "process_healthy";
+          };
+
+          # Reverse proxy fronting the driver-app on its public port.
+          # Caddyfile is inlined here (no separate file) — routing is:
+          #   localhost:8016/ui/driver/location* -> localhost:8081 (LTS)
+          #   localhost:8016/<anything else>     -> localhost:8116 (driver-app)
+          #   localhost:8016/__driver_proxy_health -> 200 inline (probe)
+          # Starts BEFORE dynamic-offer-driver-app-exe so the public port is
+          # always reachable by the time the app is healthy.
+          driver-proxy = {
+            imports = [ common ];
+            command =
+              let
+                caddyfile = pkgs.writeText "driver-proxy.Caddyfile" ''
+                  {
+                  	auto_https off
+                  	admin off
+                  }
+
+                  http://:8016 {
+                  	# Port-only site address (no host), so this block matches
+                  	# any Host header — 127.0.0.1:8016, localhost:8016, the
+                  	# simulator's host alias, etc. With `http://127.0.0.1:8016`
+                  	# Caddy would only match Host=127.0.0.1:8016 and fall through
+                  	# to its default empty 200 response for Host=localhost
+                  	# requests (which is what the app sends).
+                  	bind 127.0.0.1 ::1
+
+                  	handle /__driver_proxy_health {
+                  		respond "ok" 200
+                  	}
+
+                  	handle /ui/driver/location* {
+                  		reverse_proxy 127.0.0.1:8081
+                  	}
+
+                  	handle {
+                  		reverse_proxy 127.0.0.1:8116
+                  	}
+
+                  	log {
+                  		output stderr
+                  		format console
+                  	}
+                  }
+                '';
+              in
+              pkgs.writeShellApplication {
+                name = "driver-proxy";
+                runtimeInputs = [ pkgs.caddy ];
+                text = ''
+                  exec caddy run --config ${caddyfile} --adapter caddyfile
+                '';
+              };
+            depends_on = {
+              "nammayatri-init".condition = "process_completed_successfully";
+            };
+            readiness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8016;
+                path = "/__driver_proxy_health";
+              };
+              initial_delay_seconds = 1;
+              period_seconds = 2;
+              failure_threshold = 5;
+              timeout_seconds = 2;
+            };
+            availability = {
+              restart = "always";
+              backoff_seconds = 5;
+              max_restarts = 50;
+            };
+            shutdown.signal = 9;
           };
 
           rider-app-exe = {
@@ -611,15 +766,16 @@ in
                 path = "/v2";
               };
             };
+            # Same tightened liveness as dynamic-offer-driver-app-exe.
             liveness_probe = {
               http_get = {
                 host = "127.0.0.1";
                 port = 8013;
                 path = "/v2";
               };
-              initial_delay_seconds = 60;
-              period_seconds = 30;
-              failure_threshold = 5;
+              initial_delay_seconds = 90;
+              period_seconds = 10;
+              failure_threshold = 6;
               timeout_seconds = 5;
             };
             availability = {
@@ -641,9 +797,22 @@ in
               failure_threshold = 30;
               timeout_seconds = 3;
             };
+            # Mirrors readiness so persistent failure → restart. Dashboards
+            # boot fast, so a short window is fine.
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8017;
+                path = "/";
+              };
+              initial_delay_seconds = 30;
+              period_seconds = 10;
+              failure_threshold = 6;
+              timeout_seconds = 5;
+            };
             availability = {
-              restart = "on_failure";
-              backoff_seconds = 30;
+              restart = "always";
+              backoff_seconds = 20;
               max_restarts = 50;
             };
           };
@@ -660,9 +829,20 @@ in
               failure_threshold = 30;
               timeout_seconds = 3;
             };
+            liveness_probe = {
+              http_get = {
+                host = "127.0.0.1";
+                port = 8018;
+                path = "/";
+              };
+              initial_delay_seconds = 30;
+              period_seconds = 10;
+              failure_threshold = 6;
+              timeout_seconds = 5;
+            };
             availability = {
-              restart = "on_failure";
-              backoff_seconds = 30;
+              restart = "always";
+              backoff_seconds = 20;
               max_restarts = 50;
             };
           };
