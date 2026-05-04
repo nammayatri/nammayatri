@@ -491,6 +491,7 @@ library
       SharedLogic.External.LocationTrackingService.API.ManualQueueAdd
       SharedLogic.External.LocationTrackingService.API.ManualQueueRemove
       SharedLogic.External.LocationTrackingService.API.NearBy
+      SharedLogic.External.LocationTrackingService.API.QueueHistory
       SharedLogic.External.LocationTrackingService.API.RideDetails
       SharedLogic.External.LocationTrackingService.API.StartRide
       SharedLogic.External.LocationTrackingService.Flow

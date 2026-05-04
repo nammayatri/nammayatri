@@ -12,35 +12,25 @@
   General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module SharedLogic.External.LocationTrackingService.API.ManualQueueRemove where
+module SharedLogic.External.LocationTrackingService.API.QueueHistory where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified EulerHS.Types as ET
-import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Servant
+import SharedLogic.External.LocationTrackingService.Types
 
-data ManualQueueRemoveRequest = ManualQueueRemoveRequest
-  { reason :: Maybe Text
-  }
-  deriving (Generic, ToJSON, FromJSON, Show)
-
-type ManualQueueRemoveAPI =
+type QueueHistoryAPI =
   "internal"
-    :> "special-locations"
-    :> Capture "specialLocationId" Text
-    :> "queue"
-    :> Capture "vehicleType" Text
     :> "drivers"
     :> Capture "merchantId" (Id DM.Merchant)
     :> Capture "driverId" (Id DP.Person)
-    :> ReqBody '[JSON] ManualQueueRemoveRequest
-    :> Delete '[JSON] APISuccess
+    :> "queue-history"
+    :> Get '[JSON] DriverQueueHistoryResp
 
-manualQueueRemoveAPI :: Proxy ManualQueueRemoveAPI
-manualQueueRemoveAPI = Proxy
+queueHistoryAPI :: Proxy QueueHistoryAPI
+queueHistoryAPI = Proxy
 
-manualQueueRemove :: Text -> Text -> Id DM.Merchant -> Id DP.Person -> ManualQueueRemoveRequest -> ET.EulerClient APISuccess
-manualQueueRemove = ET.client manualQueueRemoveAPI
+queueHistory :: Id DM.Merchant -> Id DP.Person -> ET.EulerClient DriverQueueHistoryResp
+queueHistory = ET.client queueHistoryAPI

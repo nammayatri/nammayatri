@@ -104,7 +104,18 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                   QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Expired requestId
                 else do
                   logWarning $ "Driver " <> driverId.getId <> " no-show at gate " <> gateId <> ", removing from queue"
-                  void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId
+                  logError $
+                    "[CheckPickupZoneArrival] manualQueueRemove triggered: driverId=" <> driverId.getId
+                      <> ", specialLocationId="
+                      <> specialLocationId
+                      <> ", gateId="
+                      <> gateId
+                      <> ", vehicleType="
+                      <> vehicleType
+                      <> ", requestId="
+                      <> requestId.getId
+                      <> ", reason=no-show at pickup zone after accepting request"
+                  void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "no_show_at_pickup")
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
                   let entityData =
