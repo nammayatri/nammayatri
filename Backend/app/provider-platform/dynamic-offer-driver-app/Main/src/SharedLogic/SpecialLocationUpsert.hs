@@ -24,11 +24,14 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
 import Control.Applicative
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import qualified Data.List as DL
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Environment
@@ -84,7 +87,12 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationCooldownInSec :: Maybe Text,
     gateInfoMaxRideSkipsBeforeQueueRemoval :: Maybe Text,
     gateInfoPickupZoneArrivalTimeoutInSec :: Maybe Text,
-    gateInfoPickupRequestResponseTimeoutInSec :: Maybe Text
+    gateInfoPickupRequestResponseTimeoutInSec :: Maybe Text,
+    gateInfoMaxDriverThreshold :: Maybe Text,
+    gateInfoMinDriverThresholdsJson :: Maybe Text,
+    gateInfoMaxDriverThresholdsJson :: Maybe Text,
+    gateInfoDemandThresholdsJson :: Maybe Text,
+    gateInfoId :: Maybe Text
   }
   deriving (Show)
 
@@ -121,6 +129,11 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
       <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
       <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+      <*> optional (r .: "gate_info_max_driver_threshold")
+      <*> optional (r .: "gate_info_min_driver_thresholds")
+      <*> optional (r .: "gate_info_max_driver_thresholds")
+      <*> optional (r .: "gate_info_demand_thresholds")
+      <*> optional (r .: "gate_info_id")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -145,6 +158,11 @@ cleanCSVField idx fieldValue fieldName =
 
 cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
 cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
+
+parseJsonMap :: Maybe Text -> Maybe (Map.Map Text Int)
+parseJsonMap mbT = do
+  t <- mbT >>= cleanField
+  Aeson.decodeStrict (TE.encodeUtf8 t)
 
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
@@ -222,7 +240,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
-  gateInfoId <- generateGUID
+  gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
   gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
   gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
   gateInfoLon :: Double <- readCSVField idx row.gateInfoLon "Gate Info (longitude)"
@@ -280,11 +298,11 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             gateTags = gateInfoGateTags,
             walkDescription = gateInfoWalkDescription,
             entryFeeAmount = gateInfoEntryFeeAmount,
-            minDriverThresholds = Nothing,
-            maxDriverThresholds = Nothing,
-            demandThresholds = Nothing,
+            minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
+            maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
+            demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
             defaultMinDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMinDriverThreshold) "Gate Info (min_driver_threshold)",
-            defaultMaxDriverThreshold = Nothing,
+            defaultMaxDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxDriverThreshold) "Gate Info (max_driver_threshold)",
             defaultDemandThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoDemandThreshold) "Gate Info (demand_threshold)",
             notificationCooldownInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationCooldownInSec) "Gate Info (notification_cooldown_in_sec)",
             maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
@@ -348,33 +366,69 @@ processSpecialLocationAndGatesGroup _ _ [] = throwError $ InvalidRequest "Empty 
 processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGates@(x : _) = do
   void $ runValidationOnSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGates
   let (_city, locationName, (specialLocation, _), _, _, mbSpecialLocationIdFromCsv) = x
-  -- CSV specialLocationId takes precedence over parameter
-  specialLocationId <-
+  mbExisting <-
     case mbSpecialLocationIdFromCsv of
-      Just splId -> return $ Id splId -- Use the specialLocationId from CSV or parameter if provided
+      Just splId -> QSL.findById (Id splId)
       Nothing ->
         QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
           |<|>| QSL.findByLocationName locationName
-            >>= \case
-              Just spl -> do
-                void $
-                  runTransaction $ do
-                    QSL.deleteById spl.id
-                    QGI.deleteAll spl.id
-                return $ spl.id
-              Nothing -> generateGUID
-  -- When specialLocationId is provided from CSV or parameter, still check and delete existing
-  when (isJust mbSpecialLocationIdFromCsv) $ do
-    QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId
-      |<|>| QSL.findByLocationName locationName
-        >>= \case
-          Just spl -> do
-            void $
-              runTransaction $ do
-                QSL.deleteById spl.id
-                QGI.deleteAll spl.id
-          Nothing -> return ()
-  void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
+  existingGatesByName <- case mbExisting of
+    Just spl -> do
+      gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson spl.id
+      return $ Map.fromList [(g.name, g) | g <- gates]
+    Nothing -> return Map.empty
+  -- Fetch any existing gates by gate ids supplied via CSV (works across SLs).
+  existingGatesById <-
+    fmap (Map.fromList . catMaybes) $
+      forM specialLocationAndGates $ \(_, _, (_, gi), _, _, _) -> do
+        mbGate <- QGI.findById gi.id
+        pure $ (gi.id,) <$> mbGate
+  whenJust mbExisting $ \spl ->
+    void $
+      runTransaction $ do
+        QSL.deleteById spl.id
+        QGI.deleteAll spl.id
+  specialLocationId <-
+    case mbSpecialLocationIdFromCsv of
+      Just splId -> return $ Id splId
+      Nothing -> maybe generateGUID (return . (.id)) mbExisting
+  let mergedSL = mergeSpecialLocationWithExisting specialLocation mbExisting
+  void $ runTransaction $ QSLG.create $ mergedSL {DSL.id = specialLocationId}
   mapM_
-    (\(_, _, (_, gateInfo), _, _, _) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
+    ( \(_, _, (_, gateInfo), _, _, _) -> do
+        let mbExistingGate =
+              Map.lookup gateInfo.id existingGatesById
+                <|> Map.lookup gateInfo.name existingGatesByName
+            merged = mergeGateInfoWithExisting gateInfo mbExistingGate
+        runTransaction $ QGIG.create $ merged {DGI.specialLocationId = specialLocationId}
+    )
     specialLocationAndGates
+
+---------------------------------------------------------------------
+-- Merge helpers — preserve existing DB values when CSV value is Nothing
+-- for fields parsed via `optional` in the FromNamedRecord instance.
+---------------------------------------------------------------------
+mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
+mergeSpecialLocationWithExisting new Nothing = new
+mergeSpecialLocationWithExisting new (Just old) =
+  new
+    { DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+      DSL.supportNumber = new.supportNumber <|> old.supportNumber
+    }
+
+mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
+mergeGateInfoWithExisting new Nothing = new
+mergeGateInfoWithExisting new (Just old) =
+  new
+    { DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+      DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
+      DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
+      DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
+      DGI.defaultMinDriverThreshold = new.defaultMinDriverThreshold <|> old.defaultMinDriverThreshold,
+      DGI.defaultMaxDriverThreshold = new.defaultMaxDriverThreshold <|> old.defaultMaxDriverThreshold,
+      DGI.defaultDemandThreshold = new.defaultDemandThreshold <|> old.defaultDemandThreshold,
+      DGI.notificationCooldownInSec = new.notificationCooldownInSec <|> old.notificationCooldownInSec,
+      DGI.maxRideSkipsBeforeQueueRemoval = new.maxRideSkipsBeforeQueueRemoval <|> old.maxRideSkipsBeforeQueueRemoval,
+      DGI.pickupZoneArrivalTimeoutInSec = new.pickupZoneArrivalTimeoutInSec <|> old.pickupZoneArrivalTimeoutInSec,
+      DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec
+    }
