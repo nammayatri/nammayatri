@@ -51,7 +51,9 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Csv
 import qualified Data.List as DL
 import Data.List.Extra (notNull)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Vector as V
 import qualified Domain.Types
@@ -1426,6 +1428,11 @@ cleanCSVField idx fieldValue fieldName =
 cleanMaybeCSVField :: Int -> Text -> Text -> Maybe Text
 cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
+parseJsonMap :: Maybe Text -> Maybe (Map.Map Text Int)
+parseJsonMap mbT = do
+  t <- mbT >>= cleanField
+  JSON.decodeStrict (TE.encodeUtf8 t)
+
 parseGateTags :: Text -> Maybe [Text]
 parseGateTags fieldValue =
   case cleanField fieldValue of
@@ -1459,7 +1466,19 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
-    supportNumber :: Maybe Text
+    supportNumber :: Maybe Text,
+    gateInfoEntryFeeAmount :: Maybe Text,
+    gateInfoMinDriverThreshold :: Maybe Text,
+    gateInfoDemandThreshold :: Maybe Text,
+    gateInfoNotificationCooldownInSec :: Maybe Text,
+    gateInfoMaxRideSkipsBeforeQueueRemoval :: Maybe Text,
+    gateInfoPickupZoneArrivalTimeoutInSec :: Maybe Text,
+    gateInfoPickupRequestResponseTimeoutInSec :: Maybe Text,
+    gateInfoMaxDriverThreshold :: Maybe Text,
+    gateInfoMinDriverThresholdsJson :: Maybe Text,
+    gateInfoMaxDriverThresholdsJson :: Maybe Text,
+    gateInfoDemandThresholdsJson :: Maybe Text,
+    gateInfoId :: Maybe Text
   }
   deriving (Show)
 
@@ -1489,6 +1508,18 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
       <*> optional (r .: "support_number")
+      <*> optional (r .: "gate_info_entry_fee_amount")
+      <*> optional (r .: "gate_info_min_driver_threshold")
+      <*> optional (r .: "gate_info_demand_threshold")
+      <*> optional (r .: "gate_info_notification_cooldown_in_sec")
+      <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
+      <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
+      <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+      <*> optional (r .: "gate_info_max_driver_threshold")
+      <*> optional (r .: "gate_info_min_driver_thresholds")
+      <*> optional (r .: "gate_info_max_driver_thresholds")
+      <*> optional (r .: "gate_info_demand_thresholds")
+      <*> optional (r .: "gate_info_id")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1541,7 +1572,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
-      gateInfoId <- generateGUID
+      gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
       gateInfoLon :: Double <- readCSVField idx row.gateInfoLon "Gate Info (longitude)"
@@ -1597,17 +1628,17 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 updatedAt = now,
                 gateTags = gateInfoGateTags,
                 walkDescription = gateInfoWalkDescription,
-                entryFeeAmount = Nothing,
-                minDriverThresholds = Nothing,
-                maxDriverThresholds = Nothing,
-                demandThresholds = Nothing,
-                defaultMinDriverThreshold = Nothing,
-                defaultMaxDriverThreshold = Nothing,
-                defaultDemandThreshold = Nothing,
-                notificationCooldownInSec = Nothing,
-                maxRideSkipsBeforeQueueRemoval = Nothing,
-                pickupZoneArrivalTimeoutInSec = Nothing,
-                pickupRequestResponseTimeoutInSec = Nothing
+                entryFeeAmount = row.gateInfoEntryFeeAmount >>= \v -> readMaybeCSVField idx v "Gate Info (entry_fee_amount)",
+                minDriverThresholds = parseJsonMap row.gateInfoMinDriverThresholdsJson,
+                maxDriverThresholds = parseJsonMap row.gateInfoMaxDriverThresholdsJson,
+                demandThresholds = parseJsonMap row.gateInfoDemandThresholdsJson,
+                defaultMinDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMinDriverThreshold) "Gate Info (min_driver_threshold)",
+                defaultMaxDriverThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxDriverThreshold) "Gate Info (max_driver_threshold)",
+                defaultDemandThreshold = readMaybeCSVField idx (fromMaybe "" row.gateInfoDemandThreshold) "Gate Info (demand_threshold)",
+                notificationCooldownInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationCooldownInSec) "Gate Info (notification_cooldown_in_sec)",
+                maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
+                pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
+                pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)"
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
@@ -1631,7 +1662,20 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     processSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates@(x : _) = do
       void $ runValidationOnSpecialLocationAndGatesGroup merchantOpCity specialLocationAndGates
       let (_city, locationName, (specialLocation, _), mbSpecialLocationIdFromCsv) = x
-      mbExisting <- QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId |<|>| QSL.findByLocationName locationName
+      mbExisting <-
+        case mbSpecialLocationIdFromCsv of
+          Just splId -> QSL.findById (Id splId)
+          Nothing -> QSL.findByLocationNameAndCity locationName merchantOpCity.id.getId |<|>| QSL.findByLocationName locationName
+      existingGatesByName <- case mbExisting of
+        Just spl -> do
+          gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson spl.id
+          return $ Map.fromList [(g.name, g) | g <- gates]
+        Nothing -> return Map.empty
+      existingGatesById <-
+        fmap (Map.fromList . catMaybes) $
+          forM specialLocationAndGates $ \(_, _, (_, gi), _) -> do
+            mbGate <- QGI.findById gi.id
+            pure $ (gi.id,) <$> mbGate
       whenJust mbExisting $ \spl -> do
         void $
           runTransaction $ do
@@ -1640,10 +1684,42 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       specialLocationId <- case mbSpecialLocationIdFromCsv of
         Just splIdFromCsv -> return $ Id splIdFromCsv
         Nothing -> maybe generateGUID (return . (.id)) mbExisting
-      void $ runTransaction $ QSLG.create $ specialLocation {DSL.id = specialLocationId}
+      let mergedSL = mergeSpecialLocationWithExisting specialLocation mbExisting
+      void $ runTransaction $ QSLG.create $ mergedSL {DSL.id = specialLocationId}
       mapM_
-        (\(_, _, (_, gateInfo), _) -> runTransaction $ QGIG.create $ (gateInfo :: DGI.GateInfo) {DGI.specialLocationId = specialLocationId})
+        ( \(_, _, (_, gateInfo), _) -> do
+            let mbExistingGate =
+                  Map.lookup gateInfo.id existingGatesById
+                    <|> Map.lookup gateInfo.name existingGatesByName
+                merged = mergeGateInfoWithExisting gateInfo mbExistingGate
+            runTransaction $ QGIG.create $ (merged :: DGI.GateInfo) {DGI.specialLocationId = specialLocationId}
+        )
         specialLocationAndGates
+
+    mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
+    mergeSpecialLocationWithExisting new Nothing = new
+    mergeSpecialLocationWithExisting new (Just old) =
+      new
+        { DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+          DSL.supportNumber = new.supportNumber <|> old.supportNumber
+        }
+
+    mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
+    mergeGateInfoWithExisting new Nothing = new
+    mergeGateInfoWithExisting new (Just old) =
+      new
+        { DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+          DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
+          DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
+          DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
+          DGI.defaultMinDriverThreshold = new.defaultMinDriverThreshold <|> old.defaultMinDriverThreshold,
+          DGI.defaultMaxDriverThreshold = new.defaultMaxDriverThreshold <|> old.defaultMaxDriverThreshold,
+          DGI.defaultDemandThreshold = new.defaultDemandThreshold <|> old.defaultDemandThreshold,
+          DGI.notificationCooldownInSec = new.notificationCooldownInSec <|> old.notificationCooldownInSec,
+          DGI.maxRideSkipsBeforeQueueRemoval = new.maxRideSkipsBeforeQueueRemoval <|> old.maxRideSkipsBeforeQueueRemoval,
+          DGI.pickupZoneArrivalTimeoutInSec = new.pickupZoneArrivalTimeoutInSec <|> old.pickupZoneArrivalTimeoutInSec,
+          DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec
+        }
 
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [Common.SpecialLocationWithPlatform]
 getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbSpecialLocationType mbSpecialLocationTypes = do
