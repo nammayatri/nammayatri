@@ -562,6 +562,13 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         cancelledCount = (.cancelledCount) <$> cancellationData,
         cancellationRate = (.cancellationRate) <$> cancellationData,
         windowSize = (.windowSize) <$> cancellationData,
+        lifetimeRidesCancelled = driverStats.ridesCancelled,
+        lifetimeRidesAssigned = driverStats.totalRidesAssigned,
+        lifetimeCancellationRate = do
+          cancelled <- driverStats.ridesCancelled
+          assigned <- driverStats.totalRidesAssigned
+          guard (assigned > 0)
+          pure (div (cancelled * 100) assigned),
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = fmap Yudhishthira.removeTagExpiry <$> person.driverTag,
         driverTagObject = fmap Yudhishthira.convertToTagObject <$> person.driverTag,
