@@ -709,6 +709,9 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
             <> personId.getId
             <> " hasAadhaarRow="
             <> show (isJust mbAadhaarCard)
+      case req.nameOnCard of
+        Just name_ -> void $ PersonQuery.updateName name_ person.id
+        Nothing -> pure ()
       whenJust mbAadhaarNumber $ \aadhaarNumber -> do
         let panAadhaarLinkReq = VI.VerifyPanAadhaarLinkAsyncReq {panNumber, aadhaarNumber, driverId = person.id.getId}
         logInfo $
@@ -980,6 +983,9 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
       logInfo $
         "PanAadhaarLink postDriverRegisterAadhaarCard: skipped (allowPanAadhaarLinkage=false) driverId="
           <> personId.getId
+    case req.nameOnCard of
+      Just name_ -> void $ PersonQuery.updateName name_ person.id
+      Nothing -> pure ()
     when allowPanAadhaarLink $ do
       mdriverPanCard <- QDPC.findByDriverId personId
       when (isNothing mdriverPanCard) $
