@@ -1,0 +1,110 @@
+imports:
+  Person: Domain.Types.Person
+  Depot: Domain.Types.Depot
+
+module: DepotManager
+apiPrefix: depotManager
+
+apis:
+  - POST:
+      endpoint: /upsertOne
+      name: PostDepotManagerUpsertOne
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetail
+      response:
+        type: UpsertDepotManagerResp
+
+  - POST:
+      endpoint: /upsertMany
+      name: PostDepotManagerUpsertMany
+      auth: ApiAuthV2
+      request:
+        type: DepotManagerDetails
+      response:
+        type: UpsertDepotManagerResp
+
+  - GET:
+      endpoint: /list
+      name: GetDepotManagerList
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: DepotManagerListResp
+
+  - POST:
+      endpoint: /delete
+      name: DeleteDepotManager
+      auth: ApiAuthV2
+      request:
+        type: DeleteDepotManagerReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /findByMobileNumber
+      name: GetDepotManagerByMobileNumber
+      auth: ApiAuthV2
+      query:
+        - mobileNumber: Text
+        - countryCode: Text
+      response:
+        type: DepotManagerInfo
+
+  - GET:
+      endpoint: /findByDepotCode
+      name: GetDepotManagerByDepotCode
+      auth: ApiAuthV2
+      query:
+        - depotCode: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: DepotManagerListResp
+
+  - GET:
+      endpoint: /findByPersonId
+      name: GetDepotManagerByPersonId
+      auth: ApiAuthV2
+      query:
+        - personId: Id Person
+      response:
+        type: DepotManagerInfo
+
+types:
+  DepotManagerDetail:
+    countryCode: Text
+    mobileNumber: Text
+    depotCode: Text
+    isAdmin: Maybe Bool
+    derive: "'HideSecrets"
+
+  DepotManagerDetails:
+    items: "[DepotManagerDetail]"
+    derive: "'HideSecrets"
+
+  UpsertDepotManagerResp:
+    success: Text
+    succeededCount: Int
+    failedCount: Int
+    succeededPhoneNumbers: "[Text]"
+    failedPhoneNumbers: "[Text]"
+
+  DepotManagerListResp:
+    items: "[DepotManagerInfo]"
+
+  DepotManagerInfo:
+    depotCode: Text
+    personId: Id Person
+    countryCode: Text
+    isAdmin: Bool
+    enabled: Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  DeleteDepotManagerReq:
+    personId: Id Person
+    depotCode: Text
+    derive: "'HideSecrets"
