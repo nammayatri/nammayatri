@@ -252,7 +252,7 @@ decrementOperatorStatusKeyForFleetOwner = updateAtomicallyOperatorStatusKeyForFl
 
 -- | Common function to update both the fleet/operator status key and the driver activity in the DB
 updateDriverModeAndFlowStatus ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, Redis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   DTC.TransporterConfig ->
   Bool ->

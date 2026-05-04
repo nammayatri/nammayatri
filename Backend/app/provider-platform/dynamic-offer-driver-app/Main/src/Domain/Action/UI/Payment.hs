@@ -184,9 +184,8 @@ getStatus ::
     CacheFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
-    Redis.HedisFlow m r,
     JobCreatorEnv r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -294,8 +293,7 @@ getStatusV2 ::
     CacheFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
@@ -477,7 +475,7 @@ processWalletTopupWebhook ::
     CacheFlow m r,
     EsqDBFlow m r,
     MonadFlow m,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DP.Person ->
   DOrder.PaymentOrder ->
@@ -519,7 +517,7 @@ processPayment ::
     EsqDBFlow m r,
     EncFlow m r,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
@@ -554,7 +552,7 @@ processNonClearedDriverFees ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -574,7 +572,7 @@ processSubscriptionPurchasePayment ::
     EncFlow m r,
     Redis.HedisFlow m r,
     JobCreatorEnv r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
@@ -697,7 +695,7 @@ updatePrepaidBalanceAndExpiry ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -770,8 +768,7 @@ updatePaymentStatus ::
     BeamFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
@@ -802,7 +799,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
               dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst
         )
 
-notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> Id DOrder.PaymentOrder -> m ()
+notifyPaymentSuccessIfNotNotified :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => DP.Person -> Id DOrder.PaymentOrder -> m ()
 notifyPaymentSuccessIfNotNotified driver orderId = do
   let key = "driver-offer:SuccessNotif-" <> orderId.getId
   sendNotificationIfNotSent key 86400 $ do
@@ -812,7 +809,7 @@ shouldSendSuccessNotification :: Payment.MandateStatus -> Bool
 shouldSendSuccessNotification mandateStatus = mandateStatus `notElem` [Payment.REVOKED, Payment.FAILURE, Payment.EXPIRED, Payment.PAUSED]
 
 notifyAndUpdateInvoiceStatusIfPaymentFailed ::
-  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id DP.Person ->
   Id DOrder.PaymentOrder ->
   Payment.TransactionStatus ->
@@ -945,7 +942,7 @@ processMandate ::
     EsqDBFlow m r,
     EventStreamFlow m r,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,

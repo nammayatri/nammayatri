@@ -43,12 +43,11 @@ startRideTransaction ::
     EsqDBFlow m r,
     EventStreamFlow m r,
     LT.HasLocationService m r,
-    Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "minDistanceBetweenTwoPoints" r Int,
     HasShortDurationRetryCfg r c,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id SP.Person ->
   SRide.Ride ->

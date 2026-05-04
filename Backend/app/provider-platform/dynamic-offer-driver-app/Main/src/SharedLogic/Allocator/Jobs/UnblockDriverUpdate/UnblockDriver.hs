@@ -39,8 +39,7 @@ unblockDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   Job 'UnblockDriver ->
   m ExecutionResult
@@ -61,8 +60,7 @@ unblockSoftBlockedDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   Job 'UnblockSoftBlockedDriver ->
   m ExecutionResult

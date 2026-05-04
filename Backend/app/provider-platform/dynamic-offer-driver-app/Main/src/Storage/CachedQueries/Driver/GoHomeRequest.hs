@@ -31,7 +31,7 @@ import Utils.Common.Cac.KeyNameConstants
 makeGoHomeReqKey :: Id DP.Driver -> Text
 makeGoHomeReqKey = pack . ("CachedQueries:GoHomeRequest-driverId:" <>) . show
 
-getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
+getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
 getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
   ghCfg <- maybe (CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))) return goHomeCfg
   let initCnt = ghCfg.startCnt
@@ -53,7 +53,7 @@ getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
         withCrossAppRedis $ Hedis.setExp ghkey (templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime) expTime
         return $ templateGoHomeData Nothing initCnt Nothing Nothing False Nothing currTime
 
-checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> Int -> m CachedGoHomeRequest
+checkInvalidReqData :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => CachedGoHomeRequest -> UTCTime -> Text -> Id DP.Driver -> Id DMOC.MerchantOperatingCity -> GoHomeConfig -> Int -> m CachedGoHomeRequest
 checkInvalidReqData ghrData currTime ghkey driverId merchantOpCityId goHomeCfg expTime = do
   let initCnt = goHomeCfg.startCnt
   if ghrData.goHomeReferenceTime > currTime
@@ -117,7 +117,7 @@ activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLoc g
             ..
           }
 
-deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
+deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
 deactivateDriverGoHomeRequest merchantOpCityId driverId stat ghInfo mbReachedHome = do
   currTime <- getLocalCurrentTime =<< ((SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
@@ -133,7 +133,7 @@ resetDriverGoHomeRequest merchantOpCityId driverId goHomeConfig ghInfo = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status ghInfo.cnt (Just $ addUTCTime (fromIntegral goHomeConfig.activeTime) currTime) ghInfo.driverGoHomeRequestId False (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
-increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> m ()
+increaseDriverGoHomeRequestCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> m ()
 increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
   currTime <- getLocalCurrentTime =<< ((SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   let ghKey = makeGoHomeReqKey driverId
@@ -141,7 +141,7 @@ increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
   ghInfo <- getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
   withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData ghInfo.status (ghInfo.cnt + 1) ghInfo.validTill ghInfo.driverGoHomeRequestId ghInfo.isOnRide (Just ghInfo.goHomeReferenceTime) currTime) expTime
 
-setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
+setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
 setDriverGoHomeIsOnRideStatus driverId merchantOpCityId status = do
   ghCfg <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   if ghCfg.enableGoHome

@@ -24,8 +24,7 @@ triggerIffcoTokioInsuranceForOnRideDrivers ::
     SchedulerFlow r,
     HasField "blackListedJobs" r [Text],
     Log m,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Job 'IffcoTokioInsurance ->
   m ExecutionResult
@@ -62,7 +61,7 @@ processDriverInsurance ::
     CacheFlow m r,
     Log m,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DI.DriverInformation ->
   m ()
