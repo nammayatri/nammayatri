@@ -5,6 +5,7 @@ module API.Client.RiderPlatform.AppManagement where
 
 import qualified "rider-app" API.Dashboard
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Customer
+import qualified "rider-app" API.Types.Dashboard.AppManagement.DepotManager
 import qualified "rider-app" API.Types.Dashboard.AppManagement.EDCMachine
 import qualified "rider-app" API.Types.Dashboard.AppManagement.EventManagement
 import qualified "rider-app" API.Types.Dashboard.AppManagement.FRFSTicketService
@@ -28,6 +29,7 @@ import qualified "lib-dashboard" Tools.Client
 
 data AppManagementAPIs = AppManagementAPIs
   { customerDSL :: API.Types.Dashboard.AppManagement.Customer.CustomerAPIs,
+    depotManagerDSL :: API.Types.Dashboard.AppManagement.DepotManager.DepotManagerAPIs,
     eDCMachineDSL :: API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineAPIs,
     eventManagementDSL :: API.Types.Dashboard.AppManagement.EventManagement.EventManagementAPIs,
     fRFSTicketServiceDSL :: API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceAPIs,
@@ -46,6 +48,7 @@ data AppManagementAPIs = AppManagementAPIs
 mkAppManagementAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> AppManagementAPIs)
 mkAppManagementAPIs merchantId city token = do
   let customerDSL = API.Types.Dashboard.AppManagement.Customer.mkCustomerAPIs customerClientDSL
+  let depotManagerDSL = API.Types.Dashboard.AppManagement.DepotManager.mkDepotManagerAPIs depotManagerClientDSL
   let eDCMachineDSL = API.Types.Dashboard.AppManagement.EDCMachine.mkEDCMachineAPIs eDCMachineClientDSL
   let eventManagementDSL = API.Types.Dashboard.AppManagement.EventManagement.mkEventManagementAPIs eventManagementClientDSL
   let fRFSTicketServiceDSL = API.Types.Dashboard.AppManagement.FRFSTicketService.mkFRFSTicketServiceAPIs fRFSTicketServiceClientDSL
@@ -61,7 +64,7 @@ mkAppManagementAPIs merchantId city token = do
   let vehicleSeatLayoutMappingDSL = API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.mkVehicleSeatLayoutMappingAPIs vehicleSeatLayoutMappingClientDSL
   (AppManagementAPIs {..})
   where
-    customerClientDSL :<|> eDCMachineClientDSL :<|> eventManagementClientDSL :<|> fRFSTicketServiceClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> passOrganizationClientDSL :<|> passettoClientDSL :<|> paymentClientDSL :<|> stopRouteDetailsClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL :<|> vehicleSeatLayoutMappingClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    customerClientDSL :<|> depotManagerClientDSL :<|> eDCMachineClientDSL :<|> eventManagementClientDSL :<|> fRFSTicketServiceClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> passOrganizationClientDSL :<|> passettoClientDSL :<|> paymentClientDSL :<|> stopRouteDetailsClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL :<|> vehicleSeatLayoutMappingClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.

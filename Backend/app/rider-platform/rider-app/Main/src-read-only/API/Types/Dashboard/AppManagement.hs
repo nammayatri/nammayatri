@@ -4,6 +4,7 @@
 module API.Types.Dashboard.AppManagement where
 
 import qualified API.Types.Dashboard.AppManagement.Customer
+import qualified API.Types.Dashboard.AppManagement.DepotManager
 import qualified API.Types.Dashboard.AppManagement.EDCMachine
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.FRFSTicketService
@@ -26,6 +27,7 @@ import qualified Text.Show
 
 data AppManagementUserActionType
   = CUSTOMER API.Types.Dashboard.AppManagement.Customer.CustomerUserActionType
+  | DEPOT_MANAGER API.Types.Dashboard.AppManagement.DepotManager.DepotManagerUserActionType
   | EDC_MACHINE API.Types.Dashboard.AppManagement.EDCMachine.EDCMachineUserActionType
   | EVENT_MANAGEMENT API.Types.Dashboard.AppManagement.EventManagement.EventManagementUserActionType
   | FRFS_TICKET_SERVICE API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceUserActionType
@@ -45,6 +47,7 @@ data AppManagementUserActionType
 instance Text.Show.Show AppManagementUserActionType where
   show = \case
     CUSTOMER e -> "CUSTOMER/" <> show e
+    DEPOT_MANAGER e -> "DEPOT_MANAGER/" <> show e
     EDC_MACHINE e -> "EDC_MACHINE/" <> show e
     EVENT_MANAGEMENT e -> "EVENT_MANAGEMENT/" <> show e
     FRFS_TICKET_SERVICE e -> "FRFS_TICKET_SERVICE/" <> show e
@@ -65,11 +68,20 @@ instance Text.Read.Read AppManagementUserActionType where
       (d' > app_prec)
       ( \r ->
           [(CUSTOMER v1, r2) | r1 <- stripPrefix "CUSTOMER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( DEPOT_MANAGER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DEPOT_MANAGER/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( EDC_MACHINE v1,
                    r2
                  )
                  | r1 <- stripPrefix "EDC_MACHINE/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( EVENT_MANAGEMENT v1,
                    r2
