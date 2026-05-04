@@ -401,7 +401,9 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   (mbDepotCode, mbIsDepotAdmin) <-
     if req.isOperatorReq == Just True
       then do
-        mbDepotManager <- QDepotManager.findByPersonId person.id
+        -- A person can manage multiple depots; pick the highest-privileged row
+        -- (admin first, then latest updatedAt) so the login response is stable.
+        mbDepotManager <- QDepotManager.findBestForOperatorByPersonId person.id
         return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
       else return (Nothing, Nothing)
 
@@ -718,7 +720,9 @@ passwordBasedAuth req = do
   (mbDepotCode, mbIsDepotAdmin) <-
     if req.isOperatorReq == Just True
       then do
-        mbDepotManager <- QDepotManager.findByPersonId person.id
+        -- A person can manage multiple depots; pick the highest-privileged row
+        -- (admin first, then latest updatedAt) so the login response is stable.
+        mbDepotManager <- QDepotManager.findBestForOperatorByPersonId person.id
         return (mbDepotManager <&> (.depotCode), mbDepotManager <&> (.isAdmin))
       else return (Nothing, Nothing)
   let scfg =

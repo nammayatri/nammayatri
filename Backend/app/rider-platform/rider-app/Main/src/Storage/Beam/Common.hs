@@ -18,6 +18,7 @@ import qualified Database.Beam as B
 import Kernel.Prelude (Generic)
 import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
+import Storage.Beam.DepotManager (DepotManagerT, depotManagerTable)
 import Storage.Beam.Exophone
 import Storage.Beam.Geometry as BeamG
 import Storage.Beam.Geometry.GeometryGeom as BeamGeomG
@@ -36,7 +37,8 @@ atlasDB =
         ride = rideTable,
         person = personTable,
         bookingCancellationReason = bookingCancellationReasonTable,
-        rating = ratingTable
+        rating = ratingTable,
+        depotManager = depotManagerTable
       }
 
 data AtlasDB f = AtlasDB
@@ -47,6 +49,7 @@ data AtlasDB f = AtlasDB
     ride :: f (B.TableEntity RideT),
     person :: f (B.TableEntity PersonT),
     bookingCancellationReason :: f (B.TableEntity BookingCancellationReasonT),
-    rating :: f (B.TableEntity RatingT)
+    rating :: f (B.TableEntity RatingT),
+    depotManager :: f (B.TableEntity DepotManagerT)
   }
   deriving (Generic, B.Database be)
