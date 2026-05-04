@@ -30,13 +30,20 @@ DepotManager:
     merchantOperatingCityId: Id MerchantOperatingCity
 
   constraints:
-    personId: PrimaryKey
     depotCode: PrimaryKey
+    personId: PrimaryKey
 
   queries:
     findByPersonId:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: personId
     findByDepotCode:
-      kvFunction: findOneWithKV
+      kvFunction: findOneWithDb
       where: depotCode
+    findByPersonIdAndDepotCode:
+      kvFunction: findOneWithDb
+      where:
+        and: [personId, depotCode]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
