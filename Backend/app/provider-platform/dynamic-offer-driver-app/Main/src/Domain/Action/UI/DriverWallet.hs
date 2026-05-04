@@ -424,8 +424,7 @@ initiateWalletPayout ::
     BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   PayoutContext ->
   Text -> -- VPA

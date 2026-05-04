@@ -19,7 +19,7 @@ import Storage.Queries.OrphanInstances.DriverGoHomeRequest ()
 -- | Wrapper for src-read-only finishWithStatus with LTS sync.
 -- Takes driverId as extra parameter so we can sync to the driver's LTS key.
 finishWithStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   DDGR.DriverGoHomeRequestStatus ->
   Maybe Bool ->
   Id DDGR.DriverGoHomeRequest ->

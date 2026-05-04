@@ -26,14 +26,13 @@ installationStatus ::
     EncFlow m r,
     MonadFlow m,
     HasShortDurationRetryCfg r c,
+    Redis.HedisLTSFlowEnv r,
     HasField "maxShards" r Int,
     HasField "schedulerSetName" r Text,
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasKafkaProducer r,
-    HasField "blackListedJobs" r [Text],
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "blackListedJobs" r [Text]
   ) =>
   Job 'CheckDashCamInstallationStatus ->
   m ExecutionResult
