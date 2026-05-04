@@ -184,6 +184,9 @@ updateFleetOwnerInfo fleetOwnerInfo = do
   updateOneWithKV
     [ Se.Set Beam.stripeIdNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.stripeIdNumber),
       Se.Set Beam.stripeIdNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.stripeIdNumber),
+      Se.Set Beam.companyTaxIdEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted fleetOwnerInfo.companyTaxId),
+      Se.Set Beam.companyTaxIdHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash fleetOwnerInfo.companyTaxId),
+      Se.Set Beam.companyStructure fleetOwnerInfo.companyStructure,
       Se.Set Beam.stripeAddress (fmap toJSON fleetOwnerInfo.stripeAddress),
       Se.Set Beam.fleetDob fleetOwnerInfo.fleetDob,
       Se.Set Beam.fleetName fleetOwnerInfo.fleetName,

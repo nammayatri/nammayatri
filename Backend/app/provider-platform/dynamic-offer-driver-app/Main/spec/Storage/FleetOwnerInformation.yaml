@@ -6,6 +6,7 @@ imports:
   DbHash: Kernel.External.Encryption
   Value: Data.Aeson
   Address: Kernel.External.Payment.Stripe.Types
+  CompanyStructure: Kernel.External.Payment.Stripe.Types
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   BlockReasonFlag: Tools.Error
   DocsVerificationStatus: Domain.Types.DocsVerificationStatus
@@ -36,6 +37,8 @@ FleetOwnerInformation:
     businessLicenseNumberDec: Maybe Text # for backward compatibilty
     businessLicenseImageId : Maybe Text
     stripeIdNumber: Maybe (EncryptedHashedField e Text) # required for Stripe connected account, can have different format depending on country
+    companyTaxId: Maybe (EncryptedHashedField e Text) # company tax id (e.g. Y-tunnus for Finland Oy); set when business_type=Company on Stripe Connect
+    companyStructure: Maybe CompanyStructure # legal structure (sole_proprietorship, private_corporation, etc.); paired with companyTaxId for Company business_type
     referredByOperatorId: Maybe Text
     registeredAt: Maybe UTCTime
     ticketPlaceId: Maybe Text
@@ -100,6 +103,9 @@ FleetOwnerInformation:
     stripeIdNumber:
       stripeIdNumberEncrypted: Maybe Text
       stripeIdNumberHash: Maybe DbHash
+    companyTaxId:
+      companyTaxIdEncrypted: Maybe Text
+      companyTaxIdHash: Maybe DbHash
 
   fromTType:
     gstNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem gstNumberEncrypted gstNumberHash|E
@@ -107,6 +113,7 @@ FleetOwnerInformation:
     aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
     businessLicenseNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem businessLicenseNumberEncrypted businessLicenseNumberHash|E
     stripeIdNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem stripeIdNumberEncrypted stripeIdNumberHash|E
+    companyTaxId: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem companyTaxIdEncrypted companyTaxIdHash|E
     isEligibleForSubscription: fromMaybe True isEligibleForSubscription | E
     stripeAddress: stripeAddress >>= Kernel.Utils.JSON.valueToMaybe|E
 
@@ -125,6 +132,8 @@ FleetOwnerInformation:
       businessLicenseNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
       stripeIdNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
       stripeIdNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+      companyTaxIdEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+      companyTaxIdHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
       isEligibleForSubscription: Just isEligibleForSubscription | E
       stripeAddress: Kernel.Prelude.fmap toJSON
 
@@ -181,6 +190,8 @@ FleetOwnerInformation:
     aadhaarNumberHash: bytea
     businessLicenseNumberEncrypted: character varying (255)
     businessLicenseNumberHash: bytea
+    companyTaxIdEncrypted: character varying (255)
+    companyTaxIdHash: bytea
     stripeAddress: json
     fleetName: character varying (255)
 
