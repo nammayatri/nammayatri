@@ -335,7 +335,7 @@ incrementGateSearchDemand ::
   Text -> -- vehicleVariant
   Int -> -- TTL in seconds
   m ()
-incrementGateSearchDemand gateId variant ttlInSec = Redis.withCrossAppRedis $ do
+incrementGateSearchDemand gateId variant ttlInSec = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
   void $ Redis.incr key
   Redis.expire key ttlInSec
@@ -348,7 +348,7 @@ decrementGateSearchDemand ::
   Text -> -- gateId
   Text -> -- vehicleVariant
   m ()
-decrementGateSearchDemand gateId variant = Redis.withCrossAppRedis $ do
+decrementGateSearchDemand gateId variant = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchDemandKey gateId variant
   newVal <- Redis.decr key
   when (newVal < 0) $ void $ Redis.set key (0 :: Int)
@@ -379,7 +379,7 @@ incrementGateSearchSupply ::
   Text -> -- gateId
   Text -> -- vehicleVariant
   m ()
-incrementGateSearchSupply gateId variant = Redis.withCrossAppRedis $ do
+incrementGateSearchSupply gateId variant = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchSupplyKey gateId variant
   void $ Redis.incr key
   Redis.expire key 86400
@@ -392,7 +392,7 @@ decrementGateSearchSupply ::
   Text -> -- gateId
   Text -> -- vehicleVariant
   m ()
-decrementGateSearchSupply gateId variant = Redis.withCrossAppRedis $ do
+decrementGateSearchSupply gateId variant = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkGateSearchSupplyKey gateId variant
   newVal <- Redis.decr key
   when (newVal < 0) $ void $ Redis.set key (0 :: Int)
@@ -424,7 +424,7 @@ runSupplyDecrementForRequest ::
   m ()
 runSupplyDecrementForRequest requestId gateId variant = do
   let idempotencyKey = "DriverSupply:Decremented:" <> requestId
-  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ decrementGateSearchSupply gateId variant
 
 incrementQueueSkipCount ::
@@ -435,7 +435,7 @@ incrementQueueSkipCount ::
   Id DP.Person ->
   Int ->
   m Int
-incrementQueueSkipCount specialLocationId driverId ttlInSec = Redis.withCrossAppRedis $ do
+incrementQueueSkipCount specialLocationId driverId ttlInSec = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkQueueSkipCountKey specialLocationId driverId.getId
   newCount <- Redis.incr key
   when (newCount == 1) $ Redis.expire key ttlInSec
@@ -448,7 +448,7 @@ resetQueueSkipCount ::
   Text ->
   Id DP.Person ->
   m ()
-resetQueueSkipCount specialLocationId driverId = Redis.withCrossAppRedis $ do
+resetQueueSkipCount specialLocationId driverId = Redis.runInMasterCloudRedisCellWithCrossAppRedis $ do
   let key = mkQueueSkipCountKey specialLocationId driverId.getId
   void $ Redis.del key
 
@@ -563,7 +563,7 @@ checkAndNotifyDriverDemand ::
 checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSource = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
-  mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
+  mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
   let demandCount = fromMaybe 0 mbDemandCount
       demandThresholdVal = fromMaybe 2 (DGI.demandThresholdFor gate variant)
   logDebug $
@@ -577,7 +577,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSou
     else do
       let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
           maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
-      mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
+      mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchSupplyKey gateId variant)
       let supplyCount = fromMaybe 0 mbSupplyCount
       logDebug $
         "checkAndNotifyDriverDemand gateId=" <> gateId <> " variant=" <> variant
@@ -1097,7 +1097,7 @@ handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId search
   -- Idempotency: each searchTry should only increment skip count once, even if
   -- both the allocator timeout and driver reject paths fire.
   let idempotencyKey = "QueueSkip:Done:" <> searchTryId
-  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ do
     mbGateInfo <- Esq.runInReplica $ QGI.findById (Id gateId)
     case mbGateInfo >>= (.maxRideSkipsBeforeQueueRemoval) of
