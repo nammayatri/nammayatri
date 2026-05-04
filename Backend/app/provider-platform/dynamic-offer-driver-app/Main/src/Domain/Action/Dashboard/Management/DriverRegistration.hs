@@ -1864,7 +1864,17 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
         Just personId -> do
           result <- withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
             fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
-          pure $ fromRight False result
+          case result of
+            Right isEnabled -> pure isEnabled
+            Left _ -> do
+              person <- QDriver.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+              if DCommon.checkFleetOwnerRole person.role
+                then do
+                  fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
+                  pure fleetOwnerInfo.enabled
+                else do
+                  driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+                  pure driverInfo.enabled
         Nothing -> pure False
       refreshVehicleDocsStatus mbRcId =
         whenJust mbRcId $ \rcId ->
