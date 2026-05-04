@@ -98,6 +98,7 @@ library
     , containers
     , esqueleto
     , euler-hs
+    , http-client
     , mobility-core
     , passetto-client
     , persistent
@@ -167,6 +168,7 @@ executable mock-google-exe
     , containers
     , esqueleto
     , euler-hs
+    , http-client
     , mobility-core
     , mock-google
     , passetto-client

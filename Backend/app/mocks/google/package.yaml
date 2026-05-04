@@ -79,6 +79,7 @@ dependencies:
   - passetto-client
   - containers
   - unordered-containers
+  - http-client
 
 ghc-options:
   - -Wall
