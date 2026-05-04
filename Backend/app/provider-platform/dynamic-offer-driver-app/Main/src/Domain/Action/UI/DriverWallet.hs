@@ -343,7 +343,7 @@ ensurePayoutsEnabled :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutCon
 ensurePayoutsEnabled ctx = do
   merchant <- CQM.findById ctx.merchantId >>= fromMaybeM (MerchantNotFound ctx.merchantId.getId)
   let isPrepaidAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  unless (isPrepaidAndWalletEnabled && ctx.transporterConfig.driverWalletConfig.enableWalletPayout) $
+  unless (isPrepaidAndWalletEnabled && ctx.transporterConfig.driverWalletConfig.enableWalletPayout) $ -- TODO :: This also can be (||), but not changing it for now.
     throwError $ InvalidRequest "Payouts are disabled"
 
 -- | Check that the driver hasn't exceeded the maximum daily payout count.
