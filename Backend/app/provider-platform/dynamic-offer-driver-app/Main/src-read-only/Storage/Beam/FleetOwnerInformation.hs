@@ -10,7 +10,6 @@ import qualified Domain.Types.DocsVerificationStatus
 import qualified Domain.Types.FleetOwnerInformation
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
-import qualified Kernel.External.Payment.Stripe.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -30,9 +29,6 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     businessLicenseNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     businessLicenseNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     businessLicenseNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    companyStructure :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.CompanyStructure),
-    companyTaxIdEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    companyTaxIdHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),
     enabled :: B.C f Kernel.Prelude.Bool,

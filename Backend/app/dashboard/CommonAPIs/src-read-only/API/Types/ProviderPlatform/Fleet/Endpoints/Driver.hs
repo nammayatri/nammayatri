@@ -24,7 +24,6 @@ import qualified EulerHS.Types
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.FCM.Types
-import qualified Kernel.External.Payment.Stripe.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
@@ -1171,8 +1170,6 @@ data UpdateDriverReq = UpdateDriverReq
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    companyTaxId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    companyStructure :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.CompanyStructure,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
   }
@@ -1191,8 +1188,6 @@ data UpdateFleetOwnerInfoReq = UpdateFleetOwnerInfoReq
     fleetDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stripeAddress :: Kernel.Prelude.Maybe Dashboard.Common.Driver.StripeAddress,
     stripeIdNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    companyTaxId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    companyStructure :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.CompanyStructure,
     fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2.FleetType
   }

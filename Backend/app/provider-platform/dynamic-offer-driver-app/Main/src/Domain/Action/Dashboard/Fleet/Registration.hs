@@ -217,8 +217,6 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             aadhaarNumber = Nothing,
             aadhaarNumberDec = Nothing,
             stripeIdNumber = Nothing,
-            companyTaxId = Nothing,
-            companyStructure = Nothing,
             stripeAddress = Nothing,
             fleetDob = Nothing,
             gstNumber = mbGstNumberEnc,

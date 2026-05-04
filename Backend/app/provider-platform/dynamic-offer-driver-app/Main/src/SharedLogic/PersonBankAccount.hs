@@ -5,6 +5,7 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import qualified Domain.Types.DriverBankAccount as DDBA
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person
 import Environment
@@ -27,8 +28,8 @@ data PersonStripeInfo = PersonStripeInfo
     address :: Maybe Payment.Address,
     idNumber :: Maybe (EncryptedHashed Text),
     companyName :: Maybe Text,
-    companyTaxId :: Maybe (EncryptedHashed Text),
-    companyStructure :: Maybe Payment.CompanyStructure
+    fleetType :: Maybe DFOI.FleetType,
+    vatNumber :: Maybe Text
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
@@ -93,7 +94,6 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       personStripeInfo <- h.fetchPersonStripeInfo
       personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       idNumber <- forM personStripeInfo.idNumber decrypt
-      companyTaxId <- forM personStripeInfo.companyTaxId decrypt
       ssnLast4 <-
         if merchantOpCity.country == Context.USA
           then do
@@ -102,25 +102,21 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             return $ Just $ T.takeEnd 4 ssnNumber
           else return Nothing
 
-      let isCompany = isJust companyTaxId
+      let businessType = maybe Payment.Individual castBusinessType personStripeInfo.fleetType
           mobileE164 = mobileCountryCode <> mobileNumber
-      mbCompanyDetails <- case (companyTaxId, personStripeInfo.companyName) of
-        (Just taxId, Just companyName) ->
-          pure $
-            Just
-              Payment.CompanyConnectDetails
-                { name = companyName,
-                  taxId = taxId,
-                  structure = personStripeInfo.companyStructure,
-                  address = personStripeInfo.address,
-                  phone = Just mobileE164,
-                  directorsProvided = Just True,
-                  ownersProvided = Just True,
-                  executivesProvided = Just True
-                }
-        (Nothing, _) -> pure Nothing
-        (Just _, Nothing) ->
-          throwError $ InvalidRequest "Company name (fleetName) is required when companyTaxId is set"
+      mbCompanyDetails <- case businessType of
+        Payment.Company -> case personStripeInfo.companyName of
+          Just companyName ->
+            pure $
+              Just
+                Payment.CompanyConnectDetails
+                  { name = companyName,
+                    taxId = personStripeInfo.vatNumber,
+                    address = personStripeInfo.address
+                  }
+          Nothing ->
+            throwError $ InvalidRequest "Company name (fleetName) is required for BUSINESS_FLEET"
+        _ -> pure Nothing
       let createAccountReq =
             Payment.ConnectAccountReq
               { country = merchantOpCity.country,
@@ -132,7 +128,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 ssnLast4 = ssnLast4,
                 idNumber,
                 mobileNumber = mobileE164,
-                businessType = Just $ if isCompany then Payment.Company else Payment.Individual,
+                businessType = Just businessType,
                 companyDetails = mbCompanyDetails
               }
       resp <- TPayment.createConnectAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) createAccountReq
@@ -163,6 +159,12 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             paymentMode
           }
 
+castBusinessType :: DFOI.FleetType -> Payment.BusinessType
+castBusinessType = \case
+  DFOI.NORMAL_FLEET -> Payment.Individual
+  DFOI.RENTAL_FLEET -> Payment.Individual
+  DFOI.BUSINESS_FLEET -> Payment.Company
+
 validatePaymentMode :: Maybe DMPM.PaymentMode -> Maybe DDBA.DriverBankAccount -> Environment.Flow DMPM.PaymentMode
 validatePaymentMode mbPaymentMode mbDriverBankAccount = do
   let paymentMode = fromMaybe DMPM.LIVE mbPaymentMode
@@ -185,11 +187,8 @@ getPersonRegisterBankAccountStatus person = do
           { chargesEnabled = driverBankAccount.chargesEnabled,
             detailsSubmitted = driverBankAccount.detailsSubmitted,
             paymentMode,
-            currentlyDue = Nothing,
-            pastDue = Nothing,
-            requirementErrors = Nothing,
-            disabledReason = Nothing,
-            currentDeadline = Nothing
+            requirements = Nothing,
+            futureRequirements = Nothing
           }
     else do
       resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
@@ -199,9 +198,6 @@ getPersonRegisterBankAccountStatus person = do
           { chargesEnabled = resp.chargesEnabled,
             detailsSubmitted = resp.detailsSubmitted,
             paymentMode,
-            currentlyDue = resp.currentlyDue,
-            pastDue = resp.pastDue,
-            requirementErrors = resp.requirementErrors,
-            disabledReason = resp.disabledReason,
-            currentDeadline = resp.currentDeadline
+            requirements = resp.requirements,
+            futureRequirements = resp.futureRequirements
           }

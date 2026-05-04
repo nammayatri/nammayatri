@@ -1110,8 +1110,8 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) paymentMode = do
               address = Nothing, -- will add later
               idNumber = Nothing, -- will add later
               companyName = Nothing,
-              companyTaxId = Nothing,
-              companyStructure = Nothing
+              fleetType = Nothing,
+              vatNumber = Nothing
             }
   let driverRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   SPBA.getPersonRegisterBankAccountLink driverRegisterBankAccountLinkHandle paymentMode person
