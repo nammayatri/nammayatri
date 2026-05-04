@@ -158,7 +158,7 @@ syncDriverPoolDataToLTS ::
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
-  mbExisting <- Redis.safeGet (DPD.driverPoolDataKey driverId)
+  mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
   whenJust mbExisting $ \existing -> do
     let merged = applyUpdate update existing
     DPD.setDriverPoolData merged
