@@ -53,6 +53,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
+import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import TransactionLogs.Types
 import qualified UrlShortner.Common as UrlShortner
@@ -127,6 +128,7 @@ onConfirm ::
 onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
   whenJust specialZoneOtp $ \otp -> do
     void $ QRB.updateOtpCodeBookingId booking.id otp
+    fork "notify otp ride confirmed" $ Notify.notifyOtpRideConfirmed booking otp
     when (booking.isDashboardRequest == Just True) $
       fork "sending Booking confirmed dasboard sms" $ do
         let merchantOperatingCityId = booking.merchantOperatingCityId

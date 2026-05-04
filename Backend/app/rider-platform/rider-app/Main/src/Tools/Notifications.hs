@@ -395,6 +395,94 @@ notifyOnRideAssigned booking ride = do
           _ -> Nothing
       )
 
+
+-- OTP_RIDE_CONFIRMED notification --
+-- INSERT INTO atlas_app.merchant_push_notification (
+--     fcm_notification_type, key, merchant_id, merchant_operating_city_id, title, body, language, created_at, updated_at
+-- )
+-- SELECT
+--     'DRIVER_ASSIGNMENT',
+--     'OTP_RIDE_CONFIRMED',
+--     moc.merchant_id,
+--     moc.id,
+--     'Your ride is confirmed!',
+--     'Head to the pickup zone and board any cab. Use OTP {#otp#} to start your ride.',
+--     'ENGLISH',a
+--     CURRENT_TIMESTAMP,
+--     CURRENT_TIMESTAMP
+-- FROM
+--     atlas_app.merchant_operating_city moc
+-- ON CONFLICT DO NOTHING;
+
+notifyOtpRideConfirmed ::
+  ServiceFlow m r =>
+  SRB.Booking ->
+  Text ->
+  m ()
+notifyOtpRideConfirmed booking otp = do
+  let personId = booking.riderId
+      mbToLocation = case booking.bookingDetails of
+        SRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+        SRB.OneWayDetails details -> Just details.toLocation
+        SRB.DriverOfferDetails details -> Just details.toLocation
+        SRB.InterCityDetails details -> Just details.toLocation
+        SRB.AmbulanceDetails details -> Just details.toLocation
+        SRB.DeliveryDetails details -> Just details.toLocation
+        SRB.RentalDetails _ -> Nothing
+        _ -> Nothing
+      mbDestination = do
+        loc <- mbToLocation
+        let addr = loc.address
+        addr.building <|> addr.title <|> addr.area <|> addr.street <|> addr.city
+  person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let entity = Notification.Entity Notification.Product personId.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "OTP_RIDE_CONFIRMED" identity)
+    ()
+    entity
+    booking.tripCategory
+    [("otp", otp)]
+    (Just booking.configInExperimentVersions)
+    ( case person.liveActivityToken of
+        Just _liveActivityToken ->
+          Just $
+            FCMType.LiveActivityReq
+              { liveActivityToken = _liveActivityToken,
+                liveActivityReqType = "update",
+                liveActivityNotificationType = "DRIVER_ASSIGNMENT",
+                liveActivityContentState =
+                  FCMType.LiveActivityContentState
+                    { activityStatus = "NEW",
+                      driverInfo =
+                        Just $
+                          FCMType.DriverInfo
+                            { rideOtp = Just otp,
+                              driverName = Nothing,
+                              distanceLeft = Nothing,
+                              totalDistance = Nothing,
+                              driverNumber = Nothing,
+                              driverProfile = Nothing
+                            },
+                      bookingInfo =
+                        Just $
+                          FCMType.BookingInfo
+                            { vehicleColor = Nothing,
+                              vehicleName = Nothing,
+                              vehicleNumber = Nothing,
+                              vehicleVariant = Just (show booking.vehicleServiceTierType),
+                              source = Nothing,
+                              destination = mbDestination,
+                              estimatedFare = Nothing
+                            },
+                      timerDuration = Nothing,
+                      customMessage = Nothing
+                    },
+                liveActivityApnsPriority = "10"
+              }
+        _ -> Nothing
+    )
+
 notifyOnScheduledRideAccepted ::
   ServiceFlow m r =>
   SRB.Booking ->
