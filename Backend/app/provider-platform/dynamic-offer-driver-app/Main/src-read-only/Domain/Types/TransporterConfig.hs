@@ -116,6 +116,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     distanceWeightage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    dontAutoEnableDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dpBlackListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     dpGeoHashPercision :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dpWhiteListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],

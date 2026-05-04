@@ -1163,6 +1163,7 @@ TransporterConfig:
     requiresOnboardingInspection: Maybe Bool
     requiresDriverOnboardingInspection: Maybe Bool
     separateDriverVehicleEnablement: Maybe Bool
+    dontAutoEnableDriver: Maybe Bool
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool

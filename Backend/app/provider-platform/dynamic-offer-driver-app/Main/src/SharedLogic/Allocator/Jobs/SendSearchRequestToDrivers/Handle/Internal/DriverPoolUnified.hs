@@ -6,8 +6,8 @@ import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.List as DL
 import qualified Data.Map as Map
-import qualified Data.Text as T
 import Data.Maybe (listToMaybe)
+import qualified Data.Text as T
 import Domain.Types.Common
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverPoolConfig
@@ -27,13 +27,13 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Lib.Yudhishthira.Types as LYT
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Lib.Queries.GateInfo
+import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool as SDP
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
