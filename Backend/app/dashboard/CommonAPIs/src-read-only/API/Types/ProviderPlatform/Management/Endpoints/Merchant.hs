@@ -295,7 +295,8 @@ data DriverPoolConfigCreateReq = DriverPoolConfigCreateReq
     driverToDestinationDistanceThresholdWithUnit :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     driverToDestinationDuration :: Kernel.Types.Common.Seconds,
     enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int
+    dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int,
+    enablePriorityTagSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -376,7 +377,8 @@ data DriverPoolConfigListItem = DriverPoolConfigListItem
     batchSizeOnRideWithStraightLineDistance :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enableUnifiedPooling :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dynamicBatchSize :: Data.Vector.Vector Kernel.Prelude.Int,
-    selfRequestIfRiderIsDriver :: Kernel.Prelude.Bool
+    selfRequestIfRiderIsDriver :: Kernel.Prelude.Bool,
+    enablePriorityTagSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

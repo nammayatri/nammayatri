@@ -770,6 +770,7 @@ types:
     - derive: "'HideSecrets"
     - enableUnifiedPooling: Maybe Bool
     - dynamicBatchSize: Vector Int
+    - enablePriorityTagSplit: Maybe Bool
   OnRideRadiusConfig:
     - onRideRadius: Meters
     - onRideRadiusWithUnit: Maybe Distance
@@ -823,6 +824,7 @@ types:
     - enableUnifiedPooling: Maybe Bool
     - dynamicBatchSize: Vector Int
     - selfRequestIfRiderIsDriver: Bool
+    - enablePriorityTagSplit: Maybe Bool
   DriverIntelligentPoolConfigRes:
     - availabilityTimeWeightage: Int
     - availabilityTimeWindowOption: SlidingWindowOptions

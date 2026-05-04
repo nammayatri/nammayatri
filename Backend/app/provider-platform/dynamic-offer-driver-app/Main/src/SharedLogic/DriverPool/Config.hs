@@ -145,7 +145,8 @@ instance Default DriverPoolConfig where
         useOneToOneOsrmMapping = Nothing,
         vehicleVariant = Nothing,
         dynamicBatchSize = V.singleton 1,
-        selfRequestIfRiderIsDriver = False
+        selfRequestIfRiderIsDriver = False,
+        enablePriorityTagSplit = Nothing
       }
 
 getDriverPoolConfigFromDB ::
