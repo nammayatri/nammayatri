@@ -15,7 +15,7 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Payment.Stripe.Types
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -59,13 +59,10 @@ data BankAccountLinkResp = BankAccountLinkResp
 
 data BankAccountResp = BankAccountResp
   { chargesEnabled :: Kernel.Prelude.Bool,
-    currentDeadline :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    currentlyDue :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     detailsSubmitted :: Kernel.Prelude.Bool,
-    disabledReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    pastDue :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
-    requirementErrors :: Kernel.Prelude.Maybe [Kernel.External.Payment.Stripe.Types.RequirementError]
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
