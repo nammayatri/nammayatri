@@ -1494,6 +1494,24 @@ castCommonToDocsVerificationStatus = \case
   Common.ADMIN_APPROVED -> DDVS.ADMIN_APPROVED
   Common.ADMIN_REJECTED -> DDVS.ADMIN_REJECTED
 
+refreshNullDocsVerificationStatuses ::
+  Bool ->
+  [Id DP.Person] ->
+  [Id DVRC.VehicleRegistrationCertificate] ->
+  Flow ()
+refreshNullDocsVerificationStatuses shouldRefresh  personIds rcIds = do
+  when shouldRefresh $ do
+    forM_ (nub personIds) $ \personId ->
+      void $
+        withTryCatch
+          ("refreshNullDocsVerificationStatuses:person:" <> personId.getId)
+          (SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId))
+    forM_ (nub rcIds) $ \rcId ->
+      void $
+        withTryCatch
+          ("refreshNullDocsVerificationStatuses:rc:" <> rcId.getId)
+          (SStatus.processStatusEvent Nothing Nothing (SStatus.VehicleDocChangedEvent rcId))
+
 buildFleetOwnerNameMap :: Map.Map Text (Text, Maybe Text) -> [Text] -> Flow (Map.Map Text (Text, Maybe Text))
 buildFleetOwnerNameMap currentMap ownerIds = do
   let missingOwnerIds = filter (`Map.notMember` currentMap) ownerIds
@@ -1526,8 +1544,25 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   when (hasFleetMemberHierarchy == Just False && not (null fleetOwnerIds)) $ mapM_ (FleetAccess.checkRequestorAccessToFleet False mbRequestorId . (.fleetOwnerId)) fleetOwnersInfo
   when (fromMaybe False merchant.fleetOwnerEnabledCheck && not (null fleetOwnerIds)) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerNameMapFromRequest = Map.fromList $ map (\info -> (info.fleetOwnerId, (info.fleetOwnerName, info.fleetName))) fleetOwnersInfo
-  listOfAllDrivers <- getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id merchantOpCity.id mbDriverId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved mbDriverDocsVerificationStatus
-  filteredDrivers <- filterDriversByServiceTier mbServiceTier listOfAllDrivers
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  let shouldRefreshNullDocStatus = transporterConfig.enableManualDocumentStatusCheck == Just True
+  let fetchDrivers = getListOfDriversMultiFleet mbCountryCode mbDriverPhNo fleetOwnerIds merchant.id merchantOpCity.id mbDriverId mbIsActive mbLimit mbOffset mbMode mbName mbSearchString mbHasRequestReason mbEnabled mbFrom mbTo mbApproved mbDriverDocsVerificationStatus
+  listOfAllDrivers <- fetchDrivers
+  listOfAllDriversFinal <-
+    if shouldRefreshNullDocStatus
+      then do
+        let (_, personList0, driverInfoList0) = listOfAllDrivers
+            personIdsWithNullDocsStatus =
+              map fst $
+                filter (isNothing . (.docsVerificationStatus) . snd) $
+                  zip (map (.id) personList0) driverInfoList0
+        when (not $ null personIdsWithNullDocsStatus) $ do
+          refreshNullDocsVerificationStatuses shouldRefreshNullDocStatus personIdsWithNullDocsStatus []
+        if null personIdsWithNullDocsStatus
+          then pure listOfAllDrivers
+          else fetchDrivers
+      else pure listOfAllDrivers
+  filteredDrivers <- filterDriversByServiceTier mbServiceTier listOfAllDriversFinal
   let (filteredFdaList, _, _) = filteredDrivers
       fleetOwnerIdsFromResponse = nub $ map (.fleetOwnerId) filteredFdaList
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
@@ -1714,10 +1749,23 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   when (fromMaybe False merchant.fleetOwnerEnabledCheck && not (null fleetOwnerIds)) $ mapM_ (\info -> DCommon.checkFleetOwnerVerification info.fleetOwnerId merchant.fleetOwnerEnabledCheck) fleetOwnersInfo
   let fleetOwnerNameMapFromRequest = Map.fromList $ map (\info -> (info.fleetOwnerId, (info.fleetOwnerName, info.fleetName))) fleetOwnersInfo
-  listOfAllVehicle <- getListOfVehiclesMultiFleet mbVehicleNumber fleetOwnerIds mbLimit mbOffset mbStatus merchant.id merchantOpCity.id mbSearchString mbStatusAwareVehicleNo mbApproved mbFrom mbTo mbVehicleDocsVerificationStatus
-  let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicle
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  let shouldRefreshNullDocStatus = transporterConfig.enableManualDocumentStatusCheck == Just True
+  let fetchVehicles = getListOfVehiclesMultiFleet mbVehicleNumber fleetOwnerIds mbLimit mbOffset mbStatus merchant.id merchantOpCity.id mbSearchString mbStatusAwareVehicleNo mbApproved mbFrom mbTo mbVehicleDocsVerificationStatus
+  listOfAllVehicle <- fetchVehicles
+  listOfAllVehicleFinal <-
+    if shouldRefreshNullDocStatus
+      then do
+        let rcIdsWithNullDocsStatus = map (.id) $ filter (isNothing . (.docsVerificationStatus)) listOfAllVehicle
+        when (not $ null rcIdsWithNullDocsStatus) $ do
+          refreshNullDocsVerificationStatuses shouldRefreshNullDocStatus [] rcIdsWithNullDocsStatus
+        if null rcIdsWithNullDocsStatus
+          then pure listOfAllVehicle
+          else fetchVehicles
+      else pure listOfAllVehicle
+  let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicleFinal
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
-  let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap) in Just (vrc, fleetOwnerId, fleetOwnerName, fleetName)) listOfAllVehicle
+  let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap) in Just (vrc, fleetOwnerId, fleetOwnerName, fleetName)) listOfAllVehicleFinal
   listItems <- createFleetVehicleAssociationListItem listOfAllVehicleWithFleetInfo
   let summary = Common.Summary {totalCount = 10000, count = length listItems}
   pure $
@@ -3515,8 +3563,21 @@ getDriverFleetOwnerList merchantShortId opCity mbBlocked mbDocsVerificationStatu
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let mbFleetType = DRegV2.castFleetType <$> mbFleetTypeReg
       mbFleetDocsVerificationStatus = castCommonToDocsVerificationStatus <$> mbDocsVerificationStatus
-  uiItems <- FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate
-  pure $ map fleetOwnerListItemToCommon uiItems
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  let shouldRefreshNullDocStatus = transporterConfig.enableManualDocumentStatusCheck == Just True
+  let fetchFleetOwners = FleetOwnerList.getFleetOwnerList (Nothing, merchant.id, merchantOpCity.id) mbBlocked mbFleetDocsVerificationStatus mbFleetType mbFromDate mbLimit mbSearchString mbOffset mbOnlyEnabled mbToDate
+  fleetOwnerListItems <- fetchFleetOwners
+  fleetOwnerListItemsFinal <-
+    if shouldRefreshNullDocStatus
+      then do
+        let personIdsWithNullDocsStatus = map (.fleetOwnerId) $ filter (isNothing . (.docsVerificationStatus)) fleetOwnerListItems
+        when (not $ null personIdsWithNullDocsStatus) $ do
+          refreshNullDocsVerificationStatuses shouldRefreshNullDocStatus personIdsWithNullDocsStatus []
+        if null personIdsWithNullDocsStatus
+          then pure fleetOwnerListItems
+          else fetchFleetOwners
+      else pure fleetOwnerListItems
+  pure $ map fleetOwnerListItemToCommon fleetOwnerListItemsFinal
   where
     fleetOwnerListItemToCommon :: FleetOwnerListAPI.FleetOwnerListItem -> Common.FleetOwnerListItem
     fleetOwnerListItemToCommon FleetOwnerListAPI.FleetOwnerListItem {..} =
