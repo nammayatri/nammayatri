@@ -330,6 +330,9 @@ types:
     - cancelledCount : Maybe Int
     - cancellationRate : Maybe Int
     - windowSize : Maybe Int
+    - lifetimeCancellationRate : Maybe Int
+    - lifetimeRidesCancelled : Maybe Int
+    - lifetimeRidesAssigned : Maybe Int
     - blockedDueToRiderComplains: Bool
     - blockStateModifier: Maybe Text
     - driverTag: Maybe [TagNameValue]
