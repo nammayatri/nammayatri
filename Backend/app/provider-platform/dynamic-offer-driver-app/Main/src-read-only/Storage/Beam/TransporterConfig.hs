@@ -110,6 +110,7 @@ data TransporterConfigT f = TransporterConfigT
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     distanceWeightage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dlNumberVerification :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    dontAutoEnableDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     dpBlackListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     dpGeoHashPercision :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dpWhiteListedGeohash :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
