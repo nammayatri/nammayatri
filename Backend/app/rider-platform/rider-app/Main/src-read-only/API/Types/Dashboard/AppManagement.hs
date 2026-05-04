@@ -4,6 +4,7 @@
 module API.Types.Dashboard.AppManagement where
 
 import qualified API.Types.Dashboard.AppManagement.Customer
+import qualified API.Types.Dashboard.AppManagement.DepotManager
 import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.FRFSTicketService
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
@@ -22,6 +23,7 @@ import qualified Text.Show
 
 data AppManagementUserActionType
   = CUSTOMER API.Types.Dashboard.AppManagement.Customer.CustomerUserActionType
+  | DEPOT_MANAGER API.Types.Dashboard.AppManagement.DepotManager.DepotManagerUserActionType
   | EVENT_MANAGEMENT API.Types.Dashboard.AppManagement.EventManagement.EventManagementUserActionType
   | FRFS_TICKET_SERVICE API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
@@ -37,6 +39,7 @@ data AppManagementUserActionType
 instance Text.Show.Show AppManagementUserActionType where
   show = \case
     CUSTOMER e -> "CUSTOMER/" <> show e
+    DEPOT_MANAGER e -> "DEPOT_MANAGER/" <> show e
     EVENT_MANAGEMENT e -> "EVENT_MANAGEMENT/" <> show e
     FRFS_TICKET_SERVICE e -> "FRFS_TICKET_SERVICE/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
@@ -53,11 +56,20 @@ instance Text.Read.Read AppManagementUserActionType where
       (d' > app_prec)
       ( \r ->
           [(CUSTOMER v1, r2) | r1 <- stripPrefix "CUSTOMER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( DEPOT_MANAGER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DEPOT_MANAGER/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( EVENT_MANAGEMENT v1,
                    r2
                  )
                  | r1 <- stripPrefix "EVENT_MANAGEMENT/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( FRFS_TICKET_SERVICE v1,
                    r2
@@ -136,4 +148,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])
