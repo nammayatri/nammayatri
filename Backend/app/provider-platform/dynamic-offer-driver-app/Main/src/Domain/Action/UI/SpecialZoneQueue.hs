@@ -79,7 +79,7 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
     [] -> pure Nothing
   (skipCount, maxSkips) <- case mbSpecialLoc of
     Just specialLoc -> do
-      mbSkipCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey specialLoc.id.getId personId.getId)
+      mbSkipCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkQueueSkipCountKey specialLoc.id.getId personId.getId)
       let mbMaxSkips = Kernel.Prelude.listToMaybe specialLoc.gatesInfo >>= (.maxRideSkipsBeforeQueueRemoval)
       pure (fromMaybe 0 mbSkipCount, mbMaxSkips)
     Nothing -> pure (0, Nothing)
