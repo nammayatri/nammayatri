@@ -254,7 +254,7 @@ type EndRideFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     JobCreator r m,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   )
 
 driverEndRide ::
@@ -326,7 +326,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
     mkLockKey = "EndTransaction:RID:-" <> rideId.getId
 
 endRideHandler ::
-  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r) =>
+  (EndRideFlow m r, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, ClickhouseFlow m r, Redis.HedisLTSFlowEnv r) =>
   ServiceHandle m ->
   Id DRide.Ride ->
   EndRideReq ->
@@ -928,7 +928,7 @@ getDistanceDiff booking distance = do
   pure $ metersToHighPrecMeters rideDistanceDifference
 
 calculateFinalValuesForCorrectDistanceCalculations ::
-  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
+  (MonadFlow m, MonadThrow m, Log m, MonadTime m, MonadGuid m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => ServiceHandle m -> SRB.Booking -> DRide.Ride -> Maybe HighPrecMeters -> Bool -> DTConf.TransporterConfig -> LatLong -> m (Meters, HighPrecMoney, Maybe FareParameters)
 calculateFinalValuesForCorrectDistanceCalculations handle booking ride mbMaxDistance pickupDropOutsideOfThreshold thresholdConfig tripEndPoint = do
   distanceDiff <- getDistanceDiff booking (highPrecMetersToMeters ride.traveledDistance)
   let estimatedDistance = fromMaybe 0 booking.estimatedDistance -- TODO: Fix with rentals

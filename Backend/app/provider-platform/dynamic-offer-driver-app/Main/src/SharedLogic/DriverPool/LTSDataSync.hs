@@ -146,22 +146,34 @@ emptyUpdate =
 
 -- | Synchronously update driver pool data in Redis/LTS.
 -- MERGE semantics: only fields marked 'Set' are written; 'Unchanged' fields
--- keep their existing values. If the key doesn't exist yet, skip — the full
--- key is built lazily by getOrBuildDriverPoolDataBatch on first pool query.
+-- keep their existing values. If the key doesn't exist yet, a zeroed-out
+-- DriverPoolData (defaultDriverPoolData) is used as the base and the update
+-- is applied on top of it, creating the entry fresh.
 syncDriverPoolDataToLTS ::
   ( MonadFlow m,
     Log m,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Driver ->
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
-  mbExisting <- Redis.safeGet (DPD.driverPoolDataKey driverId)
-  whenJust mbExisting $ \existing -> do
-    let merged = applyUpdate update existing
-    DPD.setDriverPoolData merged
+  mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+  case mbExisting of
+    Just existing -> do
+      let merged = applyUpdate update existing
+      DPD.setDriverPoolData merged
+    Nothing -> do
+      mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+      case mbExisting' of
+        Just existing' -> do
+          let merged = applyUpdate update existing'
+          DPD.setDriverPoolData merged
+          Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
+        Nothing -> do
+          let merged = applyUpdate update (DPD.defaultDriverPoolData driverId)
+          DPD.setDriverPoolData merged
 
 -- | Apply a partial update to an existing DriverPoolData record.
 -- Only fields marked 'Set' are overwritten; 'Unchanged' fields keep current values.
@@ -247,7 +259,7 @@ mkPoolFieldUpdate = PoolFieldUpdate
 
 -- | Execute a pool field update: runs the DB write, then syncs to LTS.
 runPoolFieldUpdate ::
-  (MonadFlow m, Log m, Redis.HedisFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, Log m, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)) =>
   Id Driver ->
   PoolFieldUpdate m ->
   m ()

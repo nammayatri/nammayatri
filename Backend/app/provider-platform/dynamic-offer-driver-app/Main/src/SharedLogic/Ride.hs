@@ -476,7 +476,7 @@ editDestinationUpdatedLocGeohashKey driverId = "Driver:EditDes:GeoHash:DId-" <> 
 offerQuoteLockKeyWithCoolDown :: Id Person -> Text
 offerQuoteLockKeyWithCoolDown driverId = "Driver:OffQuote:CD:DId-" <> driverId.getId
 
-updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person -> Maybe DRide.Ride -> m ()
+updateOnRideStatusWithAdvancedRideCheck :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Maybe DRide.Ride -> m ()
 updateOnRideStatusWithAdvancedRideCheck personId mbRide = do
   lockAcquired <- case mbRide of
     Just ride -> Redis.tryLockRedis (lockRide (ride.id.getId)) 10

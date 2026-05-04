@@ -164,7 +164,7 @@ getCancellationRateOfDaysStandalone driverId period windowSize = do
 -- Uses Redis to track last update time to ensure it runs only once per day per driver
 -- Takes pre-calculated cancellation rates to avoid redundant calculations
 updateDriverCancellationPercentageTagsDaily ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   CancellationPercentageTags ->
@@ -203,7 +203,7 @@ updateDriverCancellationPercentageTagsDaily mocId driverId cancellationRates = d
       logDebug $ "Updated cancellation percentage tags for driver " <> driverId.getId
 
 nudgeOrBlockDriver ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r) =>
   TransporterConfig ->
   DP.Person ->
   DI.DriverInformation ->

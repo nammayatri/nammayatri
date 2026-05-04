@@ -130,7 +130,7 @@ handler ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
   InitReq ->

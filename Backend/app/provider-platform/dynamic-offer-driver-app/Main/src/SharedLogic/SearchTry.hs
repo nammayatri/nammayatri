@@ -124,7 +124,7 @@ initiateDriverSearchBatch ::
     HasField "blackListedJobs" r [Text],
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DriverSearchBatchInput m ->
   m DST.SearchTry

@@ -17,6 +17,7 @@ import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as HedisFlow
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -40,16 +41,16 @@ acUsageRestrictionLiftedKey = "AC_USAGE_RESTRICTION_LIFTED"
 acUsageWarningKey :: Text
 acUsageWarningKey = "AC_USAGE_WARNING"
 
-sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisFlow m r, HasField "ltsHedisEnv" r HedisFlow.HedisEnv) => DP.Person -> m ()
+sendACUsageRestrictionLiftedOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
 sendACUsageRestrictionLiftedOverlay = sendACOverlay acUsageRestrictionLiftedKey
 
-sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisFlow m r, HasField "ltsHedisEnv" r HedisFlow.HedisEnv) => DP.Person -> m ()
+sendACUsageRestrictionOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
 sendACUsageRestrictionOverlay = sendACOverlay acUsageRestrictionKey
 
-sendACUsageWarningOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisFlow m r, HasField "ltsHedisEnv" r HedisFlow.HedisEnv) => DP.Person -> m ()
+sendACUsageWarningOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> m ()
 sendACUsageWarningOverlay = sendACOverlay acUsageWarningKey
 
-sendACOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisFlow m r, HasField "ltsHedisEnv" r HedisFlow.HedisEnv) => Text -> DP.Person -> m ()
+sendACOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => Text -> DP.Person -> m ()
 sendACOverlay overlayKey person = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory person.merchantOperatingCityId overlayKey (fromMaybe ENGLISH person.language) Nothing Nothing Nothing
   whenJust mOverlay $ \overlay -> do
@@ -64,8 +65,7 @@ sendOverlayToDriver ::
     Esq.Transactionable m,
     EncFlow m r,
     HasShortDurationRetryCfg r c,
-    HedisFlow.HedisFlow m r,
-    HasField "ltsHedisEnv" r HedisFlow.HedisEnv
+    HedisFlow.HedisLTSFlowEnv r
   ) =>
   Job 'SAllocator.SendOverlay ->
   m ExecutionResult
@@ -150,7 +150,7 @@ sendOverlayToDriver (Job {id, jobInfo}) = withLogTag ("JobId-" <> id.getId) do
 getRescheduledTime :: (MonadTime m) => TransporterConfig -> m UTCTime
 getRescheduledTime tc = addUTCTime tc.mandateNotificationRescheduleInterval <$> getCurrentTime
 
-sendOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisFlow m r, HasField "ltsHedisEnv" r HedisFlow.HedisEnv) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> Maybe DVC.VehicleCategory -> m ()
+sendOverlay :: (CacheFlow m r, EsqDBFlow m r, HedisFlow.HedisLTSFlowEnv r) => DP.Person -> Text -> Maybe Text -> HighPrecMoney -> Maybe DVC.VehicleCategory -> m ()
 sendOverlay driver overlayKey udf1 amount mbVehicle = do
   mOverlay <- CMP.findByMerchantOpCityIdPNKeyLangaugeUdfVehicleCategory driver.merchantOperatingCityId overlayKey (fromMaybe ENGLISH driver.language) udf1 mbVehicle Nothing
   whenJust mOverlay $ \overlay -> do
