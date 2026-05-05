@@ -36,3 +36,16 @@ ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN reconciliation_status text
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_timestamp timestamp with time zone ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_status text ;
 ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN settlement_id text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_ledger_entry ADD COLUMN concerned_individual_id text ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_concerned_individual_id ON atlas_app.finance_ledger_entry USING btree (concerned_individual_id);
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_from_account_id ON atlas_app.finance_ledger_entry USING btree (from_account_id);
+CREATE INDEX CONCURRENTLY finance_ledger_entry_idx_to_account_id ON atlas_app.finance_ledger_entry USING btree (to_account_id);

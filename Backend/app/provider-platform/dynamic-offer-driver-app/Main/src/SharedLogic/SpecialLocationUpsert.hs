@@ -411,16 +411,14 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
 mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
 mergeSpecialLocationWithExisting new Nothing = new
 mergeSpecialLocationWithExisting new (Just old) =
-  new
-    { DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
       DSL.supportNumber = new.supportNumber <|> old.supportNumber
-    }
+     }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
 mergeGateInfoWithExisting new Nothing = new
 mergeGateInfoWithExisting new (Just old) =
-  new
-    { DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+  new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
       DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
       DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
       DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
@@ -431,4 +429,4 @@ mergeGateInfoWithExisting new (Just old) =
       DGI.maxRideSkipsBeforeQueueRemoval = new.maxRideSkipsBeforeQueueRemoval <|> old.maxRideSkipsBeforeQueueRemoval,
       DGI.pickupZoneArrivalTimeoutInSec = new.pickupZoneArrivalTimeoutInSec <|> old.pickupZoneArrivalTimeoutInSec,
       DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec
-    }
+     }

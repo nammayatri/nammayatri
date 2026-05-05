@@ -22,6 +22,7 @@ import Lib.Finance.Domain.Types.LedgerEntry (EntryStatus, EntryType, SettlementS
 data LedgerEntryInput = LedgerEntryInput
   { fromAccountId :: Id Account,
     toAccountId :: Id Account,
+    concernedIndividualId :: Maybe Text,
     amount :: HighPrecMoney,
     currency :: Currency,
     entryType :: EntryType,

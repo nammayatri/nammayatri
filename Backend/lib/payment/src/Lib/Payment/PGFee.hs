@@ -76,6 +76,7 @@ recordPGFeeLedgerEntries feeType config merchantId merchantOpCityId referenceId 
             isOnline = True,
             counterpartyType = Account.SELLER,
             counterpartyId = merchantId,
+            concernedIndividualId = Nothing,
             referenceId = referenceId,
             merchantName = Nothing,
             merchantShortId = Nothing,
