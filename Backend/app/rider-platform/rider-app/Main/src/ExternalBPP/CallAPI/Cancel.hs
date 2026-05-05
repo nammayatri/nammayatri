@@ -76,6 +76,11 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
       return Nothing
+    -- OSRTC supports per-seat partial cancellation that does not fit the all-or-nothing
+    -- unified contract. Riders/dashboard must use /frfs/osrtc/{bookingId}/cancelTicket;
+    -- reaching this dispatcher with an OSRTC booking would silently mark the booking
+    -- cancelled internally without notifying OSRTC.
+    OSRTC _ -> throwError $ InvalidRequest "OSRTC bookings must be cancelled via /frfs/osrtc/{bookingId}/cancelTicket"
     _ -> do
       onCancelReq <- Flow.cancel merchant merchantOperatingCity integratedBPPConfig bapConfig cancellationType booking
       mbSideEffectData <- OnCancelCore.onCancelCore merchant booking onCancelReq

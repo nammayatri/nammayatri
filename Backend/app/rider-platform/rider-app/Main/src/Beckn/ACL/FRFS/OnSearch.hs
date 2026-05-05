@@ -182,6 +182,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         routeStations,
         stations,
         fareDetails = Nothing,
+        osrtcTripDetail = Nothing,
         categories = categories,
         _type = quoteType
       }

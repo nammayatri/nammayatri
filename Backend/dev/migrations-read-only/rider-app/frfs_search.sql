@@ -145,3 +145,63 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_date timestamp with time zone ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

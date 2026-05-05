@@ -13,6 +13,7 @@ imports:
   CMRLV2Config: Domain.Types.Extra.IntegratedBPPConfig
   ONDCBecknConfig: Domain.Types.Extra.IntegratedBPPConfig
   CRISConfig: Domain.Types.Extra.IntegratedBPPConfig
+  OSRTCConfig: Domain.Types.Extra.IntegratedBPPConfig
 
 BecknConfig:
   tableName: beckn_config
@@ -120,7 +121,7 @@ IntegratedBPPConfig:
       enum: "MULTIMODAL, PARTNERORG, APPLICATION"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
-      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig"
+      enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, CMRLV2 CMRLV2Config, ONDC ONDCBecknConfig, CRIS CRISConfig, OSRTC OSRTCConfig"
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
 
   domainInstance:

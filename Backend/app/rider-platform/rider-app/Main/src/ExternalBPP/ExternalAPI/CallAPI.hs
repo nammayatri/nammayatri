@@ -46,6 +46,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
+import Kernel.Storage.Hedis ()
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -65,6 +66,7 @@ getProviderName integrationBPPConfig =
     (_, DIRECT _) -> "Direct Multimodal Services"
     (_, ONDC _) -> "ONDC Services"
     (_, CRIS _) -> "CRIS Subway"
+    (_, OSRTC _) -> "Odisha State Road Transport Corporation"
 
 data BasicRouteDetail = BasicRouteDetail
   { routeCode :: Text,
@@ -148,6 +150,8 @@ getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRou
       SubwayFareDetail {viaPoints, changeOver, rawChangeOver, getAllFares} <- subwayFareDetail & fromMaybeM (InternalError "SubwayFareDetail not found")
       fares <- callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares
       return fares
+    OSRTC _ ->
+      throwError $ InternalError "OSRTC fares are computed via OSRTC TicketFareCalculation API; getFares should not be called for OSRTC. The search path in Flow.Common.osrtcSearchTrips bypasses this code; reaching it indicates a caller bug."
   where
     callCRISAPI config' changeOver rawChangeOver viaPoints startStopCode endStopCode getAllFares = do
       routeFareReq <- getRouteFareRequest startStopCode endStopCode changeOver rawChangeOver viaPoints riderId (config'.useRouteFareV4 /= Just True)
@@ -216,6 +220,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
       EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking quoteCategories
       CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking quoteCategories
+      OSRTC _ -> throwError $ InternalError "OSRTC uses InsertTicketBooking/UpdateTicketBookingResponse flow instead of createOrder"
       _ -> throwError $ InternalError "Unimplemented!"
   Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   return resp
@@ -228,6 +233,7 @@ getBppOrderId integratedBPPConfig booking = do
     EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
     DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
     CRIS _ -> Just <$> CRISBookJourney.getBppOrderId booking
+    OSRTC _ -> return Nothing
     _ -> return Nothing
 
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
@@ -238,6 +244,7 @@ getTicketStatus integrationBPPConfig booking = do
     EBIX config' -> EBIXStatus.getTicketStatus config' booking
     DIRECT config' -> DIRECTStatus.getTicketStatus config' booking
     CRIS _config' -> return []
+    OSRTC _ -> return []
     _ -> throwError $ InternalError "Unimplemented!"
 
 verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Text -> m TicketPayload

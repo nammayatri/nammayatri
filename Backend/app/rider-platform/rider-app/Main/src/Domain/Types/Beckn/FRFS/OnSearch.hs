@@ -1,6 +1,7 @@
 module Domain.Types.Beckn.FRFS.OnSearch where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified Data.Aeson as A
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSQuoteCategoryType
 import qualified Domain.Types.FRFSSearch as Search
@@ -61,6 +62,7 @@ data DQuote = DQuote
     stations :: [DStation],
     categories :: [DCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
+    osrtcTripDetail :: Maybe A.Value,
     _type :: Quote.FRFSQuoteType
   }
   deriving (Show)

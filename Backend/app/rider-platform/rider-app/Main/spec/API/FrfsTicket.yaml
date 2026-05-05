@@ -1,6 +1,7 @@
 imports:
   Text: Data.Text
   Maybe: Data.Maybe
+  Value: Data.Aeson
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
@@ -56,6 +57,7 @@ types:
     recentLocationId: Maybe (Id RecentLocation)
     busLocationData: Maybe [BusLocation]
     vehicleNumber: Maybe Text
+    journeyDate: Maybe UTCTime
 
   FRFSSearchAPIRes:
     searchId: Id FRFSSearch
@@ -76,6 +78,7 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     categories: [CategoryInfoResponse]
     observingFailures: Maybe Bool
+    osrtcTripDetail: "Maybe Value"
 
     derive: "Show"
 
@@ -371,6 +374,77 @@ types:
     current: Maybe OperatorTripInfo
     upcoming: "[OperatorTripInfo]"
     derive: "Show"
+
+  OSRTCSeatAvailabilityReq:
+    serviceTripDepartureId: Int
+    fromStationId: Int
+    toStationId: Int
+
+  OSRTCSeatAvailabilityRes:
+    totalCount: Int
+    availableCount: Int
+    unavailableCount: Int
+    singleAvailableSeats: Int
+    serviceTripDepartureId: Int
+    seats: Value
+
+  OSRTCSelectedSeat:
+    srNo: Int
+    selectedSeatCode: Text
+    selectedSeatNo: Text
+    seatTypeId: Int
+    ticketCategoryId: Int
+
+  OSRTCPerSeatPassenger:
+    srNo: Int
+    selectedSeatCode: Text
+    selectedSeatNo: Text
+    seatTypeId: Int
+    berthTypeId: Int
+    ticketCategoryId: Int
+    passengerName: Text
+    age: Int
+    gender: Int
+    mobileNo: Text
+
+  OSRTCFareCalculationReq:
+    serviceTripDepartureId: Int
+    fromStationId: Int
+    toStationId: Int
+    passengerName: Text
+    email: Text
+    mobileNo: Text
+    seats: "[OSRTCSelectedSeat]"
+    perSeatPassengers: "[OSRTCPerSeatPassenger]"
+
+  OSRTCFareCalculationRes:
+    totalFinalAmount: HighPrecMoney
+    totalBaseFare: HighPrecMoney
+    totalDiscount: HighPrecMoney
+    fareBreakdown: Value
+
+  OSRTCRefundPreviewReq:
+    seatCodes: Text
+
+  OSRTCRefundPreviewRes:
+    refundAmount: HighPrecMoney
+
+  OSRTCCancelTicketReq:
+    seatCodes: Text
+    refundRemarks: Text
+
+  OSRTCCancelTicketRes:
+    pnrNo: Text
+    refundAmount: HighPrecMoney
+    seatCodes: Text
+
+  OSRTCTrackingRes:
+    tracking: Value
+
+  OSRTCStationRes:
+    intStationId: Int
+    stationCode: Text
+    stationName: Text
 
 apis:
   # Get FRFS Config
@@ -676,3 +750,63 @@ apis:
         type: FleetOperatorCurrentOperationReq
       response:
         type: FleetOperatorCurrentOperationResp
+
+  # OSRTC-specific endpoints
+  - POST:
+      endpoint: /frfs/osrtc/{searchId}/seatAvailability
+      params:
+        searchId: Id FRFSSearch
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityReq
+      response:
+        type: API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityRes
+
+  - POST:
+      endpoint: /frfs/osrtc/{searchId}/fareCalculation
+      params:
+        searchId: Id FRFSSearch
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.OSRTCFareCalculationReq
+      response:
+        type: API.Types.UI.FRFSTicketService.OSRTCFareCalculationRes
+
+  - POST:
+      endpoint: /frfs/osrtc/{bookingId}/refundAmount
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.OSRTCRefundPreviewReq
+      response:
+        type: API.Types.UI.FRFSTicketService.OSRTCRefundPreviewRes
+
+  - POST:
+      endpoint: /frfs/osrtc/{bookingId}/cancelTicket
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      request:
+        type: API.Types.UI.FRFSTicketService.OSRTCCancelTicketReq
+      response:
+        type: API.Types.UI.FRFSTicketService.OSRTCCancelTicketRes
+
+  - GET:
+      endpoint: /frfs/osrtc/{bookingId}/tracking
+      params:
+        bookingId: Id FRFSTicketBooking
+      auth: TokenAuth
+      response:
+        type: API.Types.UI.FRFSTicketService.OSRTCTrackingRes
+
+  - GET:
+      endpoint: /frfs/osrtc/stations
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+        city: City
+      query:
+        platformType: PlatformType
+      response:
+        type: "[API.Types.UI.FRFSTicketService.OSRTCStationRes]"

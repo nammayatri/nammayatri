@@ -866,6 +866,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
             if fromMaybe False config.singleTicketForMultiplePassengers
               then tickets
               else maybe [] (\ticket -> [ticket]) $ listToMaybe tickets
+          DIBC.OSRTC _ -> tickets -- one QR per confirmed booking; return all tickets
           _ -> tickets
   let ticketsCreatedAt = ticketsData <&> (.createdAt)
   let qrDataList = ticketsData <&> (.qrData)

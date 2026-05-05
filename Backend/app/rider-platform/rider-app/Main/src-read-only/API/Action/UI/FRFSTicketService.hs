@@ -426,10 +426,88 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> Capture
+           "searchId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
+      :> "seatAvailability"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> Capture
+           "searchId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch)
+      :> "fareCalculation"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCFareCalculationReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCFareCalculationRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "refundAmount"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCRefundPreviewReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCRefundPreviewRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "cancelTicket"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCCancelTicketReq
+      :> Post
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCCancelTicketRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> Capture
+           "bookingId"
+           (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking)
+      :> "tracking"
+      :> Get
+           '[JSON]
+           API.Types.UI.FRFSTicketService.OSRTCTrackingRes
+      :<|> TokenAuth
+      :> "frfs"
+      :> "osrtc"
+      :> "stations"
+      :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
+      :> MandatoryQueryParam
+           "city"
+           Kernel.Types.Beckn.Context.City
+      :> MandatoryQueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> Get
+           '[JSON]
+           [API.Types.UI.FRFSTicketService.OSRTCStationRes]
   )
 
 handler :: Environment.FlowServer API
-handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation
+handler = getFrfsConfig :<|> getFrfsAutocomplete :<|> getFrfsRoutes :<|> getFrfsStations :<|> postFrfsStationsPossibleStops :<|> getFrfsRoute :<|> postFrfsSearch :<|> postFrfsDiscoverySearch :<|> getFrfsSearchQuote :<|> postFrfsQuoteConfirm :<|> postFrfsQuoteV2Confirm :<|> postFrfsQuotePaymentRetry :<|> getFrfsBookingStatus :<|> getFrfsBookingList :<|> postFrfsBookingCanCancel :<|> getFrfsBookingCanCancelStatus :<|> postFrfsBookingCancel :<|> getFrfsBookingCancelStatus :<|> postFrfsTicketVerify :<|> postFrfsBookingFeedback :<|> getFrfsTripRouteSeats :<|> getFrfsRouteSeatLayout :<|> postFrfsRouteServiceability :<|> getFrfsActiveRoutes :<|> getFrfsTripRouteManifest :<|> postFrfsFleetOperatorTripAction :<|> postFrfsFleetOperatorCurrentOperation :<|> postFrfsOsrtcSeatAvailability :<|> postFrfsOsrtcFareCalculation :<|> postFrfsOsrtcRefundAmount :<|> postFrfsOsrtcCancelTicket :<|> getFrfsOsrtcTracking :<|> getFrfsOsrtcStations
 
 getFrfsConfig ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -717,3 +795,63 @@ postFrfsFleetOperatorCurrentOperation ::
     Environment.FlowHandler API.Types.UI.FRFSTicketService.FleetOperatorCurrentOperationResp
   )
 postFrfsFleetOperatorCurrentOperation a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsFleetOperatorCurrentOperation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postFrfsOsrtcSeatAvailability ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch ->
+    API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.OSRTCSeatAvailabilityRes
+  )
+postFrfsOsrtcSeatAvailability a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsOsrtcSeatAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postFrfsOsrtcFareCalculation ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch ->
+    API.Types.UI.FRFSTicketService.OSRTCFareCalculationReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.OSRTCFareCalculationRes
+  )
+postFrfsOsrtcFareCalculation a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsOsrtcFareCalculation (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postFrfsOsrtcRefundAmount ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    API.Types.UI.FRFSTicketService.OSRTCRefundPreviewReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.OSRTCRefundPreviewRes
+  )
+postFrfsOsrtcRefundAmount a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsOsrtcRefundAmount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+postFrfsOsrtcCancelTicket ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    API.Types.UI.FRFSTicketService.OSRTCCancelTicketReq ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.OSRTCCancelTicketRes
+  )
+postFrfsOsrtcCancelTicket a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.postFrfsOsrtcCancelTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+
+getFrfsOsrtcTracking ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking ->
+    Environment.FlowHandler API.Types.UI.FRFSTicketService.OSRTCTrackingRes
+  )
+getFrfsOsrtcTracking a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsOsrtcTracking (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+getFrfsOsrtcStations ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
+    Kernel.Types.Beckn.Context.City ->
+    BecknV2.FRFS.Enums.VehicleCategory ->
+    Environment.FlowHandler [API.Types.UI.FRFSTicketService.OSRTCStationRes]
+  )
+getFrfsOsrtcStations a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.FRFSTicketService.getFrfsOsrtcStations (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

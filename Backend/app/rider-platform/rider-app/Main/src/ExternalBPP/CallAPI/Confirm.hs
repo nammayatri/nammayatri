@@ -19,6 +19,8 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as LibPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
@@ -60,6 +62,9 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
   Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
+    -- OSRTC requires a payment context (PaymentOrder + PaymentStatusResp) that the unified
+    -- confirm flow does not carry. Callers must dispatch on providerConfig and use confirmOSRTC.
+    OSRTC _ -> throwError $ InternalError "OSRTC bookings must be confirmed via confirmOSRTC; caller failed to dispatch on providerConfig"
     ONDC _ -> do
       fork "FRFS ONDC Confirm Req" $ do
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
@@ -128,5 +133,90 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       DOrder ->
       m ()
     processOnConfirm onConfirmReq = do
+      (merchant', booking'', quoteCategories') <- DACFOC.validateRequest onConfirmReq
+      DACFOC.onConfirm merchant' booking'' quoteCategories' onConfirmReq
+
+-- | OSRTC confirm — separate from the unified `confirm` because OSRTC's UpdateTicketBookingResponse
+-- requires the Juspay PaymentOrder + PaymentStatusResp produced earlier in the booking flow.
+-- Threading those through the unified contract pollutes every other provider's signature, so
+-- callers in FRFSStatus dispatch on providerConfig and use this function for OSRTC bookings.
+confirmOSRTC ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    EncFlow m r,
+    SchedulerFlow r,
+    EsqDBReplicaFlow m r,
+    HasLongDurationRetryCfg r c,
+    HasShortDurationRetryCfg r c,
+    CallFRFSBPP.BecknAPICallFlow m r,
+    Metrics.HasBAPMetrics m r,
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+    HasField "isMetroTestTransaction" r Bool,
+    HasField "blackListedJobs" r [Text],
+    HasField "cloudType" r (Maybe CloudType)
+  ) =>
+  Merchant ->
+  MerchantOperatingCity ->
+  BecknConfig ->
+  DBooking.FRFSTicketBooking ->
+  (DPaymentOrder.PaymentOrder, Maybe LibPayment.PaymentStatusResp) ->
+  m (Either Text ())
+confirmOSRTC merchant merchantOperatingCity bapConfig booking osrtcPaymentContext = do
+  Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  case integratedBPPConfig.providerConfig of
+    OSRTC _ -> do
+      let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
+      mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
+      let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
+      result <- withTryCatch "callExternalBPP:confirmOSRTCFlow" $ do
+        onConfirmReq <- Flow.confirmOSRTC merchant merchantOperatingCity integratedBPPConfig bapConfig booking osrtcPaymentContext
+        processOnConfirmOSRTC onConfirmReq
+      case result of
+        Left err -> do
+          CB.recordFailure ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.checkAndDisableIfNeeded ptMode CB.BookingAPI merchantOperatingCity.id cbConfig
+          let errorMessage = someExceptionToErrorMessage err
+          logError $ "OSRTC External Confirm failed with error: " <> errorMessage
+          return $ Left errorMessage
+        Right _ -> do
+          when circuitOpen $ CB.reEnableCircuit ptMode CB.BookingAPI merchantOperatingCity.id
+          CB.recordSuccess ptMode CB.BookingAPI merchantOperatingCity.id
+          return $ Right ()
+    _ -> throwError $ InternalError "confirmOSRTC called with non-OSRTC providerConfig"
+  where
+    someExceptionToErrorMessage exc
+      | Just (CRISError err) <- fromException exc = err
+      | Just (HTTPException err) <- fromException exc = show err
+      | Just (BaseException err) <- fromException exc = fromMaybe (show err) $ toMessage err
+      | otherwise = show exc
+
+    processOnConfirmOSRTC ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        MonadFlow m,
+        EncFlow m r,
+        SchedulerFlow r,
+        EsqDBReplicaFlow m r,
+        HasLongDurationRetryCfg r c,
+        HasShortDurationRetryCfg r c,
+        CallFRFSBPP.BecknAPICallFlow m r,
+        Metrics.HasBAPMetrics m r,
+        HasField "ltsHedisEnv" r Redis.HedisEnv,
+        HasFlowEnv m r '["smsCfg" ::: SmsConfig],
+        HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+        HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
+        HasField "isMetroTestTransaction" r Bool,
+        HasField "blackListedJobs" r [Text],
+        HasField "cloudType" r (Maybe CloudType)
+      ) =>
+      DOrder ->
+      m ()
+    processOnConfirmOSRTC onConfirmReq = do
       (merchant', booking'', quoteCategories') <- DACFOC.validateRequest onConfirmReq
       DACFOC.onConfirm merchant' booking'' quoteCategories' onConfirmReq

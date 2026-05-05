@@ -267,7 +267,7 @@ upsertRouteStopFare quotes integratedBPPConfig merchantId merchantOperatingCityI
                   ( \routeStation -> do
                       let mbStartStopCode = find (\station -> station.stationType == Station.START) routeStation.routeStations <&> (.stationCode)
                           mbEndStopCode = find (\station -> station.stationType == Station.END) routeStation.routeStations <&> (.stationCode)
-                      case ((,) <$> mbStartStopCode <*> mbEndStopCode) of
+                      case (,) <$> mbStartStopCode <*> mbEndStopCode of
                         Just (startStopCode, endStopCode) -> Just (routeStation.routeCode, startStopCode, endStopCode)
                         Nothing -> Nothing
                   )
@@ -398,6 +398,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
             Quote.vehicleNumber = search.vehicleNumber,
             bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
             oldCacheDump = Nothing,
+            osrtcTripDetail = osrtcTripDetail,
             ..
           }
 
@@ -528,7 +529,8 @@ updateQuotes ((quotesFromCache, quotesFromCacheCategories), (quotesFromOnSearch,
       Quote.toStationAddress = quotesFromOnSearch.toStationAddress,
       Quote.toStationName = quotesFromOnSearch.toStationName,
       Quote.toStationPoint = quotesFromOnSearch.toStationPoint,
-      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber
+      Quote.vehicleNumber = quotesFromOnSearch.vehicleNumber,
+      Quote.osrtcTripDetail = quotesFromOnSearch.osrtcTripDetail
     }
   where
     toJsonText :: FRFSCachedQuote -> Text

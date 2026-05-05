@@ -23,6 +23,8 @@ import uuid
 from datetime import datetime, timezone
 from status_store import deep_merge
 
+_amounts = {}  # order_id/short_id → amount from createOrder; echoed back on order-status so backends that verify charged amount (e.g. OSRTC UpdateTicketBookingResponse) see what they sent.
+
 
 def handle(handler, path, body):
     """Route Juspay requests."""
@@ -60,11 +62,22 @@ def handle(handler, path, body):
 
     # ── Create order / session: POST ──
     if handler.command == "POST" and ("order" in path_lower or "session" in path_lower):
-        from status_store import set_status
         oid = order_id_from_body or f"mock-order-{uuid.uuid4().hex[:8]}"
         short_id = order_short_id_from_body or f"mock-short-{uuid.uuid4().hex[:6]}"
-        ids = list({oid, short_id})
-        set_status("juspay", ids, "NEW")
+        amount = None
+        if body:
+            try:
+                req = json.loads(body) if isinstance(body, (str, bytes)) else body
+                if isinstance(req, dict):
+                    amount = req.get("amount") or req.get("Amount")
+                    if amount is not None:
+                        amount = float(amount)
+            except (json.JSONDecodeError, ValueError, TypeError):
+                pass
+        for k in {oid, short_id}:
+            if k:
+                _amounts[k] = amount  # remember per-order amount so subsequent status checks can echo it back
+        # Don't seed status="NEW" at create time: an explicit entry shadows future extract-based /mock/status rules in _get_override. _order_data defaults to NEW when no override exists.
         return _create_order(handler, oid, short_id)
 
     # ── Payout / fulfillment ──
@@ -224,7 +237,7 @@ def _order_data(handler, order_id):
         "status_id": status_id_map.get(status, 10),
         "status": status,
         "event_name": event_map.get(status),
-        "amount": 0.0,
+        "amount": _amounts.get(order_id) or 0.0,
         "currency": "INR",
         "date_created": now,
         "payment_method_type": None,
