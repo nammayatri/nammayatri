@@ -67,3 +67,9 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_en
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN nominee_aadhar_hash;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_encrypted;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_hash;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN address_proof_type text ;
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN address_proof_image_id text ;
