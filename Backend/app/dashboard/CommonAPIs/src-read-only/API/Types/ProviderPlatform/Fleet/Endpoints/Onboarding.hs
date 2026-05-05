@@ -71,6 +71,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isMandatoryForEnabling :: Kernel.Prelude.Bool,
     isReminderSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
+    supportedFileExtensions :: Kernel.Prelude.Maybe [SupportedFileExtension],
     title :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
@@ -134,6 +135,14 @@ data StatusRes = StatusRes
     vehicleRegistrationCertificateDetails :: Kernel.Prelude.Maybe [API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.RCDetails]
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SupportedFileExtension
+  = JPG
+  | JPEG
+  | PNG
+  | PDF
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehicleDocumentItem = VehicleDocumentItem
