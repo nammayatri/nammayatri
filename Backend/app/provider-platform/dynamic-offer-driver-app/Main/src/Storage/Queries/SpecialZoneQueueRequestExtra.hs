@@ -24,6 +24,21 @@ findActiveByStasusListAndDriverId ::
 findActiveByStasusListAndDriverId driverId statusList =
   findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.status $ Se.In statusList]]
 
+findAllByDriverIdsAndStatuses ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Kernel.Types.Id.Id Domain.Types.Person.Person] ->
+  [Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestStatus] ->
+  m [Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest]
+findAllByDriverIdsAndStatuses driverIds statuses
+  | null driverIds || null statuses = pure []
+  | otherwise =
+      findAllWithKV
+        [ Se.And
+            [ Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds),
+              Se.Is Beam.status $ Se.In statuses
+            ]
+        ]
+
 -- | Transition a pickup-zone request to Accepted and stamp the arrival deadline.
 -- The arrival deadline lives on its own column (arrivalDeadlineTime) rather than
 -- repurposing validTill — that way validTill keeps its original "Active window
