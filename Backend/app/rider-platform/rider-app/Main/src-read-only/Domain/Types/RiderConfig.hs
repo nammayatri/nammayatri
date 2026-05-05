@@ -134,6 +134,7 @@ data RiderConfig = RiderConfig
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passStatusUpdateBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

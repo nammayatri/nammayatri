@@ -4,6 +4,9 @@
 
 module Storage.Queries.PurchasedPass (module Storage.Queries.PurchasedPass, module ReExport) where
 
+import qualified Data.Time.Calendar
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.PurchasedPass
 import Kernel.Beam.Functions
@@ -22,6 +25,26 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPass.PurchasedPass] -> m ())
 createMany = traverse_ create
+
+findAllByEndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Time.Calendar.Day -> m [Domain.Types.PurchasedPass.PurchasedPass])
+findAllByEndDate endDate = do findAllWithKV [Se.Is Beam.endDate $ Se.Eq endDate]
+
+findAllByEndDateMerchantOperatingCityIdAndMerchantId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.PurchasedPass.PurchasedPass])
+findAllByEndDateMerchantOperatingCityIdAndMerchantId endDate merchantOperatingCityId merchantId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.endDate $ Se.Eq endDate,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)
+        ]
+    ]
+
+findAllByPersonIdsAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m [Domain.Types.PurchasedPass.PurchasedPass])
+findAllByPersonIdsAndStatus personId status = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.In (Kernel.Types.Id.getId <$> personId), Se.Is Beam.status $ Se.Eq status]]
 
 findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
 findByPassNumber passNumber = do findOneWithKV [Se.Is Beam.passNumber $ Se.Eq passNumber]

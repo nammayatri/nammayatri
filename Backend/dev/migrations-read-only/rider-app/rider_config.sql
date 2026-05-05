@@ -656,3 +656,6 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_config json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN pass_status_update_batch_size integer ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_days integer ;
