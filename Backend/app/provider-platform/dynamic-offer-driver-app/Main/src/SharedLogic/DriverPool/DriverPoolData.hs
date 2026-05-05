@@ -3,6 +3,7 @@ module SharedLogic.DriverPool.DriverPoolData
     getDriverPoolDataBatch,
     setDriverPoolData,
     driverPoolDataKey,
+    defaultDriverPoolData,
   )
 where
 
@@ -10,9 +11,9 @@ import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
-import Domain.Types.Person (Driver, Gender)
+import Domain.Types.Person (Driver, Gender (..))
 import Domain.Types.ServiceTierType (ServiceTierType)
-import Domain.Types.VehicleVariant (VehicleVariant)
+import Domain.Types.VehicleVariant (VehicleVariant (..))
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
@@ -97,6 +98,61 @@ getDriverPoolDataBatch driverIds = do
   primaryResults <- Redis.withLTSRedis $ Redis.mGetStandalone keys
   secondaryResults <- Redis.withSecondaryLTSRedis $ Redis.mGetStandalone keys
   pure $ nubBy (\a b -> a.driverId == b.driverId) (primaryResults <> secondaryResults)
+
+-- | Zeroed-out DriverPoolData used as the base when no LTS entry exists yet.
+-- Required non-Maybe fields use the most conservative defaults.
+-- 'applyUpdate' overwrites whichever fields the caller has marked 'Set'.
+defaultDriverPoolData :: Id Driver -> DriverPoolData
+defaultDriverPoolData dId =
+  DriverPoolData
+    { driverId = dId,
+      active = False,
+      mode = Nothing,
+      onRide = False,
+      onRideTripCategory = Nothing,
+      hasAdvanceBooking = Nothing,
+      latestScheduledBooking = Nothing,
+      latestScheduledPickup = Nothing,
+      deviceToken = Nothing,
+      goHomeStatus = Nothing,
+      totalRides = 0,
+      variant = AUTO_RICKSHAW,
+      selectedServiceTiers = [],
+      blocked = False,
+      subscribed = False,
+      canSwitchToRental = False,
+      canSwitchToInterCity = False,
+      canSwitchToIntraCity = False,
+      forwardBatchingEnabled = False,
+      isSpecialLocWarrior = False,
+      tollRouteBlockedTill = Nothing,
+      softBlockStiers = Nothing,
+      acUsageRestrictionType = Nothing,
+      acRestrictionLiftCount = 0,
+      tripDistanceMinThreshold = Nothing,
+      tripDistanceMaxThreshold = Nothing,
+      maxPickupRadius = Nothing,
+      isPetModeEnabled = False,
+      chargesEnabled = False,
+      language = Nothing,
+      gender = UNKNOWN,
+      driverTag = Nothing,
+      clientDevice = Nothing,
+      clientSdkVersion = Nothing,
+      clientBundleVersion = Nothing,
+      clientConfigVersion = Nothing,
+      vehicleTags = Nothing,
+      mYManufacturing = Nothing,
+      safetyPlusEnabled = False,
+      fleetOwnerId = Nothing,
+      driverTripEndLocation = Nothing,
+      hasRideStarted = Nothing,
+      airConditionScore = Nothing,
+      airConditioned = Nothing,
+      luggageCapacity = Nothing,
+      vehicleRating = Nothing,
+      registrationNo = ""
+    }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
 -- via syncDriverPoolDataToLTS. No need to expire and rebuild frequently.

@@ -45,8 +45,7 @@ triggerIffcoTokioInsurance ::
     MonadTime m,
     Log m,
     MonadReader r m,
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   Id DP.Person ->
   Id DM.Merchant ->

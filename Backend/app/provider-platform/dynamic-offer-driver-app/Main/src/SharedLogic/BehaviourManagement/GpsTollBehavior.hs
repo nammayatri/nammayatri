@@ -169,7 +169,7 @@ blockDriverForTollRoutes ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DP.Person ->
   Int -> -- Block duration in hours

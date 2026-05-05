@@ -651,8 +651,7 @@ findUpcomingTrips ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    Hedis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
@@ -896,8 +895,7 @@ buildMultimodalRouteDetails ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
+    Hedis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c

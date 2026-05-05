@@ -1834,7 +1834,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         <&> (.enableDashboardSms)
 
-    sendDocumentRejectionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], HasField "ltsHedisEnv" r Redis.HedisEnv) => Id DMOC.MerchantOperatingCity -> Text -> Text -> DP.Person -> m ()
+    sendDocumentRejectionNotification :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, ServiceFlow m r, HasFlowEnv m r '["smsCfg" ::: SmsConfig], Redis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Text -> Text -> DP.Person -> m ()
     sendDocumentRejectionNotification merchantOpCityId docType reason driver = do
       let language = fromMaybe Lang.ENGLISH driver.language
       translatedDocType <- translateDocumentType language docType

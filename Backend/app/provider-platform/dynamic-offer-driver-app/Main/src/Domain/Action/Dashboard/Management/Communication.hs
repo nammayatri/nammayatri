@@ -730,7 +730,7 @@ processFleetCommunicationDeliveryPayload ::
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasKafkaProducer r,
     Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()
@@ -753,8 +753,7 @@ dispatchFromPayload ::
     HasField "requestId" r (Maybe Text),
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasKafkaProducer r,
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   CommunicationDeliveryDispatchPayload ->
   m ()

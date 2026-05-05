@@ -146,22 +146,36 @@ emptyUpdate =
 
 -- | Synchronously update driver pool data in Redis/LTS.
 -- MERGE semantics: only fields marked 'Set' are written; 'Unchanged' fields
--- keep their existing values. If the key doesn't exist yet, skip — the full
--- key is built lazily by getOrBuildDriverPoolDataBatch on first pool query.
+-- keep their existing values.
+-- If no LTS entry exists yet, the update is skipped — cold-start initialisation
+-- is the responsibility of getOrBuildDriverPoolDataBatch (called at pool-query
+-- time), which builds the full entry from DB and populates LTS. Any field
+-- changes that arrive before the first pool query will be captured by that
+-- rebuild, so no data is permanently lost.
 syncDriverPoolDataToLTS ::
   ( MonadFlow m,
+    CacheFlow m r,
     Log m,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Driver ->
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
   mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
-  whenJust mbExisting $ \existing -> do
-    let merged = applyUpdate update existing
-    DPD.setDriverPoolData merged
+  case mbExisting of
+    Just existing -> do
+      let merged = applyUpdate update existing
+      DPD.setDriverPoolData merged
+    Nothing -> do
+      mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+      case mbExisting' of
+        Just existing' -> do
+          let merged = applyUpdate update existing'
+          DPD.setDriverPoolData merged
+          Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
+        Nothing ->
+          logError $ "syncDriverPoolDataToLTS: no LTS entry for driver " <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
 
 -- | Apply a partial update to an existing DriverPoolData record.
 -- Only fields marked 'Set' are overwritten; 'Unchanged' fields keep current values.
@@ -247,7 +261,7 @@ mkPoolFieldUpdate = PoolFieldUpdate
 
 -- | Execute a pool field update: runs the DB write, then syncs to LTS.
 runPoolFieldUpdate ::
-  (MonadFlow m, Log m, Redis.HedisFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, Log m, HasField "ltsHedisEnv" r Redis.HedisEnv, HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv), CacheFlow m r) =>
   Id Driver ->
   PoolFieldUpdate m ->
   m ()

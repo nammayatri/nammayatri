@@ -36,8 +36,7 @@ softBlockNotifyDriver ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   Job 'SoftBlockNotifyDriver ->
   m ExecutionResult

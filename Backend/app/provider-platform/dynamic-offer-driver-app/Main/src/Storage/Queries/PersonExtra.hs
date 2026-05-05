@@ -420,7 +420,7 @@ updatePersonName (Id personId) mbFirstName mbLastName = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person -> Person -> m ()
+updatePersonRec :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> Person -> m ()
 updatePersonRec (Id personId) person = do
   now <- getCurrentTime
   updateOneWithKV
@@ -463,7 +463,7 @@ updatePersonRec (Id personId) person = do
       }
 
 updatePersonVersionsAndMerchantOperatingCity ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Person ->
   Maybe Version ->
   Maybe Version ->
@@ -621,7 +621,7 @@ updateFleetOwnerDetails (Id personId) req = do
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
-clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Id Person -> m ()
+clearDeviceTokenByPersonId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person -> m ()
 clearDeviceTokenByPersonId personId = do
   now <- getCurrentTime
   updateOneWithKV
@@ -707,14 +707,14 @@ findByMobileNumberAndMerchantWithCountryCode mobileCountryCode mobileNumberHash 
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe FCM.FCMRecipientToken -> Id Person -> m ()
+updateDeviceToken :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe FCM.FCMRecipientToken -> Id Person -> m ()
 updateDeviceToken token personId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamP.deviceToken token, Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.deviceToken = LTSSync.Set token}
 
-updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
+updateDriverTag :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe [LYT.TagNameValueExpiry] -> Id Person -> m ()
 updateDriverTag driverTag personId = do
   now <- getCurrentTime
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]

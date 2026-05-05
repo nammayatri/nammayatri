@@ -505,7 +505,7 @@ runDemandCheckForVariants ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -533,8 +533,7 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
 --   committed supply (tracked via Redis) is below 'min', notifies top LTS-queue drivers
 --   up to 'max - supply'.
 checkAndNotifyDriverDemand ::
-  ( Redis.HedisFlow m r,
-    MonadFlow m,
+  ( MonadFlow m,
     ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -544,7 +543,7 @@ checkAndNotifyDriverDemand ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -611,8 +610,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSou
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
 forceNotifyDriverDemand ::
-  ( Redis.HedisFlow m r,
-    MonadFlow m,
+  ( MonadFlow m,
     ServiceFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
@@ -622,7 +620,7 @@ forceNotifyDriverDemand ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -660,11 +658,10 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
 
 -- Common notification logic: create SpecialZoneQueueRequest entries and send FCM + GRPC
 notifyDrivers ::
-  ( Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    MonadFlow m,
+  ( MonadFlow m,
     ServiceFlow m r,
     CacheFlow m r,
+    Redis.HedisLTSFlowEnv r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,

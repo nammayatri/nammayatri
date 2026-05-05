@@ -486,7 +486,7 @@ type CallBAPConstraints m r c =
     EsqDBReplicaFlow m r,
     HasField "esqDBReplicaEnv" r EsqDBEnv,
     EventStreamFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   )
 
 getCallTwillioAccessToken ::
