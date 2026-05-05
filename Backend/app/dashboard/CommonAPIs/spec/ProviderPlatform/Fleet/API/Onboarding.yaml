@@ -143,6 +143,9 @@ types:
     documentCategory: Maybe DocumentCategory
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
+    supportedFileExtensions: "Maybe [SupportedFileExtension]"
+  SupportedFileExtension:
+    enum: "JPG,JPEG,PNG,PDF,WEBP"
   DocumentCategory:
     enum: "Driver,Vehicle,Permission,Training"
   DocumentFlowGrouping:

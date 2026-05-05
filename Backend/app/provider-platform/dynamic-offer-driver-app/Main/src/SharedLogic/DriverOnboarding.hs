@@ -691,7 +691,8 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         isReminderSupported = Nothing,
-        isApprovalSupported = Nothing,
+        isApprovalSupported = isApprovalSupported,
+        supportedFileExtensions = fmap (map castSupportedFileExtension) supportedFileExtensions,
         ..
       }
 
@@ -727,6 +728,14 @@ castDocumentCategory = \case
   Domain.Types.DocumentVerificationConfig.Vehicle -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Vehicle
   Domain.Types.DocumentVerificationConfig.Permission -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Permission
   Domain.Types.DocumentVerificationConfig.Training -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.Training
+
+castSupportedFileExtension :: Domain.Types.DocumentVerificationConfig.SupportedFileExtension -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.SupportedFileExtension
+castSupportedFileExtension = \case
+  Domain.Types.DocumentVerificationConfig.JPG -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.JPG
+  Domain.Types.DocumentVerificationConfig.JPEG -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.JPEG
+  Domain.Types.DocumentVerificationConfig.PNG -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.PNG
+  Domain.Types.DocumentVerificationConfig.PDF -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.PDF
+  Domain.Types.DocumentVerificationConfig.WEBP -> API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding.WEBP
 
 castDocumentType :: Domain.Types.DocumentVerificationConfig.DocumentType -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType
 castDocumentType = \case

@@ -54,6 +54,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.DocumentFileValidation as DocFileValidation
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
@@ -214,6 +215,12 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
               allImages
         )
         $ throwError $ DocumentAlreadyValidated (show imageType)
+
+      case person.role of
+        Person.FLEET_OWNER -> do
+          fleetDocConfig <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+          void $ DocFileValidation.validateFileExtension (fleetDocConfig >>= (.supportedFileExtensions)) fileExtension
+        _ -> pure ()
 
       imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
       fork "S3 Put Image" do

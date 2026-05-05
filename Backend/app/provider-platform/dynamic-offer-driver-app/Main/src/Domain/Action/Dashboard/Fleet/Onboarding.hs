@@ -98,7 +98,8 @@ castDocumentVerificationConfigAPIEntity Onboarding.DocumentVerificationConfigAPI
       documentFields = fmap (map SDO.castDocumentFieldInfo) documentFields,
       documentFlowGrouping = SDO.castDocumentFlowGrouping documentFlowGrouping,
       isReminderSupported = isReminderSupported,
-      isApprovalSupported = isApprovalSupported
+      isApprovalSupported = isApprovalSupported,
+      supportedFileExtensions = Nothing
     }
 
 getOnboardingGetReferralDetails ::
