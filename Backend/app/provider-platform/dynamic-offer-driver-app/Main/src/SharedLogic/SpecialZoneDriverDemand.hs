@@ -43,6 +43,7 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import Data.List (partition, sortOn)
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
@@ -313,8 +314,13 @@ mkGateSearchDemandKey gateId variant = "DriverDemand:Gate:" <> gateId <> ":" <> 
 mkGateSearchSupplyKey :: Text -> Text -> Text
 mkGateSearchSupplyKey gateId variant = "DriverSupply:Gate:" <> gateId <> ":" <> variant
 
-mkGateDriverNotifiedKey :: Text -> Text -> Text
-mkGateDriverNotifiedKey gateId driverId = "DriverDemand:Notified:" <> gateId <> ":" <> driverId
+-- | Cooldown key. Embeds 'Redis.shardHashTag' so a batch of writes for many
+--   drivers groups into a small number of cluster slots, letting
+--   'Redis.bulkShardedRedisBatch' pipeline efficiently. Shard count is sourced
+--   from 'gateNotifiedKeyShards' in AppEnv.
+mkGateDriverNotifiedKey :: Int -> Text -> Text -> Text
+mkGateDriverNotifiedKey shards gateId driverId =
+  "DriverDemand:Notified:" <> gateId <> ":" <> driverId <> ":" <> Redis.shardHashTag shards driverId
 
 mkQueueSkipCountKey :: Text -> Text -> Text
 mkQueueSkipCountKey specialLocationId driverId = "DriverDemand:QueueSkip:" <> specialLocationId <> ":" <> driverId
@@ -505,7 +511,8 @@ runDemandCheckForVariants ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -544,7 +551,8 @@ checkAndNotifyDriverDemand ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -622,7 +630,8 @@ forceNotifyDriverDemand ::
     HasShortDurationRetryCfg r c,
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -668,7 +677,8 @@ notifyDrivers ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     BeamFlow m r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -695,58 +705,78 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
   mbPerKmFare <- getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId vehicleType
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
   let demandCount = fromMaybe 0 mbDemandCount
-  foldM
-    ( \count driverId -> do
-        activeRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
-        acceptedRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Accepted
-        let hasActiveRequest = any (\r -> r.validTill > now) activeRequests || not (null acceptedRequests)
-        if hasActiveRequest
-          then pure count
-          else do
-            reqId <- generateGUID
-            let request =
-                  DSZQR.SpecialZoneQueueRequest
-                    { id = reqId,
-                      driverId = driverId,
-                      gateId = gateId,
-                      specialLocationId = specialLocationId,
-                      merchantId = merchantId,
-                      merchantOperatingCityId = merchantOpCityId,
-                      status = DSZQR.Active,
-                      response = Nothing,
-                      validTill = validTill,
-                      gateName = gate.name,
-                      specialLocationName = specialLocationName,
-                      vehicleType = vehicleType,
-                      arrivalDeadlineTime = Nothing,
-                      triggerSource = mbTriggerSource,
-                      createdAt = now,
-                      updatedAt = now
-                    }
-            QSZQR.create request
-            let entityData =
-                  Notify.PickupZoneRequestEntityData
-                    { requestId = reqId.getId,
-                      gateName = gate.name,
-                      gateAddress = gate.address,
-                      specialLocationName = specialLocationName,
-                      specialLocationId = specialLocationId,
-                      gateId = gateId,
-                      vehicleType = vehicleType,
-                      validTill = validTill,
-                      requestType = "PICKUP_ZONE_REQUEST",
-                      perKmFare = mbPerKmFare,
-                      isDemandHigh = isDemandHigh,
-                      demandCount = demandCount
-                    }
-            Notify.notifyPickupZoneRequest merchantOpCityId driverId entityData
-            Redis.withCrossAppRedis $
-              Redis.setExp (mkGateDriverNotifiedKey gateId driverId.getId) ("1" :: Text) cooldown
-            logInfo $ "Notified driver " <> driverId.getId <> " to move to pickup zone at gate " <> gate.name
-            pure (count + 1)
-    )
-    (0 :: Int)
-    driverIds
+  -- Callers funnel through 'filterEligibleDrivers' which has already done the
+  -- bulk cooldown / Accepted / Active-pending / on-ride filtering. We trust
+  -- the input here and just build + create + notify; cooldown semantics cover
+  -- the small race window of two near-concurrent calls.
+  -- Build every row upfront so we can do a single bulk insert and then fan the
+  -- per-driver notify + cooldown work out in parallel via fork. Previous loop
+  -- did 1 INSERT + 1 FCM + 1 GRPC + 1 Redis SET per driver in series.
+  toNotify <- forM driverIds $ \driverId -> do
+    reqId <- generateGUID
+    let request =
+          DSZQR.SpecialZoneQueueRequest
+            { id = reqId,
+              driverId = driverId,
+              gateId = gateId,
+              specialLocationId = specialLocationId,
+              merchantId = merchantId,
+              merchantOperatingCityId = merchantOpCityId,
+              status = DSZQR.Active,
+              response = Nothing,
+              validTill = validTill,
+              gateName = gate.name,
+              specialLocationName = specialLocationName,
+              vehicleType = vehicleType,
+              arrivalDeadlineTime = Nothing,
+              triggerSource = mbTriggerSource,
+              createdAt = now,
+              updatedAt = now
+            }
+    pure (driverId, reqId, request)
+  QSZQR.createMany (map (\(_, _, r) -> r) toNotify)
+  -- Cooldown markers must land before this function returns: 'forceNotifyDriverDemand'
+  -- can call notifyDrivers twice back-to-back, and the second call's eligibility
+  -- filter relies on these keys to avoid double-notifying. 'bulkShardedRedisBatch'
+  -- groups items by cluster slot (the '{shard-N}' tag baked into
+  -- 'mkGateDriverNotifiedKey' funnels keys with the same hash bucket onto one
+  -- slot) and forks per shard, bounded by 'clusterMGetForkLimit'. Each shard's
+  -- action then issues 'setExpMany' which packages every key in the bucket into
+  -- a single atomic Lua-script EVAL — one TCP round-trip per shard.
+  shards <- asks (.gateNotifiedKeyShards)
+  let cooldownKey driverId = mkGateDriverNotifiedKey shards gateId driverId.getId
+  void $
+    Redis.bulkShardedRedisBatch
+      (\(driverId, _, _) -> cooldownKey driverId)
+      ( \items -> do
+          Redis.setExpMany
+            cooldown
+            [(cooldownKey driverId, "1" :: Text) | (driverId, _, _) <- items]
+          pure (() <$ items)
+      )
+      toNotify
+  -- FCM + GRPC are external network calls and dominate the per-driver cost; fan
+  -- them out in parallel so total wallclock is the slowest call, not the sum.
+  forM_ toNotify $ \(driverId, reqId, _) -> do
+    let entityData =
+          Notify.PickupZoneRequestEntityData
+            { requestId = reqId.getId,
+              gateName = gate.name,
+              gateAddress = gate.address,
+              specialLocationName = specialLocationName,
+              specialLocationId = specialLocationId,
+              gateId = gateId,
+              vehicleType = vehicleType,
+              validTill = validTill,
+              requestType = "PICKUP_ZONE_REQUEST",
+              perKmFare = mbPerKmFare,
+              isDemandHigh = isDemandHigh,
+              demandCount = demandCount
+            }
+    fork ("notifyPickupZone-" <> reqId.getId) $ do
+      Notify.notifyPickupZoneRequest merchantOpCityId driverId entityData
+      logInfo $ "Notified driver " <> driverId.getId <> " to move to pickup zone at gate " <> gate.name
+  pure (length toNotify)
 
 -- Filter eligible drivers: not in cooldown, not already committed to a pickup-zone
 -- request, and not currently on a ride. Skip-count accounting now lives at the
@@ -754,49 +784,70 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
 -- in collectValidActive, search-flow timeout in handleQueueSkipIfApplicable) so
 -- merely being considered here no longer penalises a driver who may not even be
 -- notified after `take needed`.
+--
+-- Bulk shape: replaces 3N per-driver round-trips with three bulk fetches —
+-- cooldown markers via shard-aware MGET, Active-or-Accepted requests via
+-- 'findAllByDriverIdsAndStatuses', and driver-information via
+-- 'findAllByDriverIds'. Final filter is in-memory and preserves input order.
+--
+-- Why both Active and Accepted in one query:
+--   * Accepted = driver already committed; re-notifying does nothing useful
+--     and just spams them.
+--   * Active with validTill > now = a pending un-responded notification is
+--     out there; sending another would be noise (cooldown also covers most
+--     of this, but the Active check tightens the race window between two
+--     near-concurrent notify calls).
+-- 'notifyDrivers' trusts this filter and skips its own busy-check.
 filterEligibleDrivers ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
     CacheFlow m r,
     EsqDBFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Forkable m,
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Text -> -- gateId
   [Id DP.Person] ->
   m [Id DP.Person]
-filterEligibleDrivers gateId driverIds =
-  foldM
-    ( \acc driverId -> do
-        recentlyNotified <- not <$> notRecentlyNotified gateId driverId
-        if recentlyNotified
-          then pure acc
-          else do
-            -- Skip drivers who already committed to a pickup-zone request; re-notifying
-            -- them wouldn't change supply and would just spam the driver. At most one
-            -- Accepted request per driver by business rule.
-            hasAccepted <- not . null <$> QSZQR.findActiveByDriverId driverId DSZQR.Accepted
-            if hasAccepted
-              then pure acc
-              else do
-                driverInfo <- QDI.findById driverId
-                let hasPkka = maybe False (.onRide) driverInfo
-                if hasPkka
-                  then pure acc
-                  else pure (acc ++ [driverId])
-    )
-    []
-    driverIds
-
-notRecentlyNotified ::
-  ( Redis.HedisFlow m r,
-    MonadFlow m
-  ) =>
-  Text ->
-  Id DP.Person ->
-  m Bool
-notRecentlyNotified gId driverId = do
-  mbVal <- Redis.withCrossAppRedis $ Redis.get @Text (mkGateDriverNotifiedKey gId driverId.getId)
-  pure $ isNothing mbVal
+filterEligibleDrivers _ [] = pure []
+filterEligibleDrivers gateId driverIds = do
+  shards <- asks (.gateNotifiedKeyShards)
+  now <- getCurrentTime
+  let cooldownKeyFor d = mkGateDriverNotifiedKey shards gateId d.getId
+      cooldownKeys = map cooldownKeyFor driverIds
+  -- One pipelined MGET per cluster shard, shards in parallel. The '{shard-N}'
+  -- hash tag in 'mkGateDriverNotifiedKey' funnels keys onto a bounded number
+  -- of slots so each shard's batch is meaningful.
+  -- Note: NOT inside 'withCrossAppRedis'. This key is private to the special-
+  -- zone-notify flow, so it should carry the app's standard key prefix. The
+  -- write side (notifyDrivers' 'bulkShardedRedisBatch' + 'setExpMany') is also
+  -- un-wrapped, so reader and writer apply the same 'keyModifier' and the
+  -- bytes match — wrapping only one side would silently break "find my SET".
+  cooldownHits <- Redis.mGetClusterWithKeys @Text cooldownKeys
+  let inCooldownKeys = Set.fromList (map fst cooldownHits)
+  -- Bulk DB: drivers with an Accepted (committed) or pending Active request.
+  busyRows <- QSZQR.findAllByDriverIdsAndStatuses driverIds [DSZQR.Active, DSZQR.Accepted]
+  let busyDrivers =
+        Set.fromList $
+          mapMaybe
+            ( \r ->
+                if r.status == DSZQR.Accepted || r.validTill > now
+                  then Just r.driverId
+                  else Nothing
+            )
+            busyRows
+  -- Bulk DB: drivers currently on a ride.
+  driverInfos <- QDI.findAllByDriverIds (map (.getId) driverIds)
+  let onRideDrivers = Set.fromList [info.driverId | info <- driverInfos, info.onRide]
+  pure $
+    filter
+      ( \d ->
+          not (Set.member (cooldownKeyFor d) inCooldownKeys)
+            && not (Set.member d busyDrivers)
+            && not (Set.member d onRideDrivers)
+      )
+      driverIds
 
 -- | Cached snapshot of a queueable gate used for the proximity check. Carries the
 --   parsed pickup-zone polygon(s) so the in-memory filter can do point-in-polygon

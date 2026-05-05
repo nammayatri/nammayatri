@@ -496,6 +496,7 @@ in  { esqDBCfg
     , osrmMatchThreshold = +1500
     , maxShards = +5
     , maxNotificationShards = +128
+    , gateNotifiedKeyShards = +16
     , enableRedisLatencyLogging = False
     , enablePrometheusMetricLogging = True
     , enableAPILatencyLogging = True
