@@ -129,7 +129,8 @@ handler ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    HasField "gateNotifiedKeyShards" r Int
   ) =>
   Id DM.Merchant ->
   InitReq ->
