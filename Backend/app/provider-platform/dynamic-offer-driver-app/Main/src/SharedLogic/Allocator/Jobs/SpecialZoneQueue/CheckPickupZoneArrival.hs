@@ -122,6 +122,10 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                   void $ LTSFlow.manualQueueRemove specialLocationId vehicleType merchantId driverId (Just "no_show_at_pickup")
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
+                  nowTs <- getCurrentTime
+                  let nsNotificationDuration =  fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+                      nsNotificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
+                      nsNotificationValidTill = addUTCTime (fromIntegral nsNotificationActiveTillInSec) nowTs
                   let entityData =
                         Notify.PickupZoneRequestEntityData
                           { requestId = requestId.getId,
@@ -132,6 +136,8 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                             gateId = gateId,
                             vehicleType = vehicleType,
                             validTill = request.validTill,
+                            notificationDuration = nsNotificationDuration,
+                            notificationValidTill = nsNotificationValidTill,
                             requestType = "PICKUP_ZONE_NO_SHOW",
                             perKmFare = Nothing,
                             isDemandHigh = False,
