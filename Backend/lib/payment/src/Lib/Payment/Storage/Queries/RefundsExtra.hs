@@ -12,6 +12,14 @@ import qualified Sequelize as Se
 
 -- Extra code goes here --
 
+findAllByOrderIds ::
+  BeamFlow m r =>
+  [ShortId DPaymentOrder.PaymentOrder] ->
+  m [DRefunds.Refunds]
+findAllByOrderIds shortIds = findAllWithKV [Se.Is BeamR.orderId $ Se.In ids | not (null ids)]
+  where
+    ids = map getShortId shortIds
+
 findLatestByOrderId ::
   BeamFlow m r =>
   ShortId DPaymentOrder.PaymentOrder ->
