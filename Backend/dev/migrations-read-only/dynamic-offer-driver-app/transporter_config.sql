@@ -896,3 +896,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dont_auto_enable_driver boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_membership_id_in_profile boolean ;
