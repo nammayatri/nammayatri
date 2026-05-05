@@ -111,7 +111,9 @@ deductAirportEntryFeeAtEndRide ride booking = do
               panOfParty = Nothing,
               panType = Nothing,
               tdsRateReason = Nothing,
-              emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig
+              emitLedgerEntries = maybe True (.emitLedgerEntries) transporterConfig.invoiceConfig,
+              fromLocationAddress = Nothing,
+              issuedToName = Nothing
             }
     result <-
       runFinance ctx $

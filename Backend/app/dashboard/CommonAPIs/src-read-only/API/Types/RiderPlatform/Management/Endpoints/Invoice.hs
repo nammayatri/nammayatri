@@ -3,7 +3,6 @@
 
 module API.Types.RiderPlatform.Management.Endpoints.Invoice where
 
-import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Data.Text
@@ -12,10 +11,16 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
+import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Invoice.PdfService
 import Servant
 import Servant.Client
 
 data FareBreakup = FareBreakup {price :: Data.Text.Text, title :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceInvoicePdfResp = FinanceInvoicePdfResp {invoiceNumber :: Data.Text.Text, pdfBase64 :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -36,7 +41,25 @@ data InvoiceRes = InvoiceRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("invoice" :> GetInvoiceInvoice)
+type API = ("invoice" :> (GetInvoiceFinanceInvoicePdf :<|> GetInvoiceInvoice))
+
+type GetInvoiceFinanceInvoicePdf =
+  ( "finance" :> "invoice" :> "pdf" :> QueryParam "from" Lib.Finance.Invoice.PdfService.DateOrTime
+      :> QueryParam
+           "invoiceType"
+           Lib.Finance.Domain.Types.Invoice.InvoiceType
+      :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "referenceId"
+           Data.Text.Text
+      :> QueryParam
+           "to"
+           Lib.Finance.Invoice.PdfService.DateOrTime
+      :> Get
+           '[JSON]
+           FinanceInvoicePdfResp
+  )
 
 type GetInvoiceInvoice =
   ( "invoice" :> MandatoryQueryParam "from" Kernel.Prelude.UTCTime :> MandatoryQueryParam "phoneNumber" Data.Text.Text
@@ -46,23 +69,20 @@ type GetInvoiceInvoice =
       :> Get '[JSON] [InvoiceRes]
   )
 
-newtype InvoiceAPIs = InvoiceAPIs {getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]}
+data InvoiceAPIs = InvoiceAPIs
+  { getInvoiceFinanceInvoicePdf :: Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime -> Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Invoice.InvoiceType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Text.Text -> Kernel.Prelude.Maybe Lib.Finance.Invoice.PdfService.DateOrTime -> EulerHS.Types.EulerClient FinanceInvoicePdfResp,
+    getInvoiceInvoice :: Kernel.Prelude.UTCTime -> Data.Text.Text -> Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient [InvoiceRes]
+  }
 
 mkInvoiceAPIs :: (Client EulerHS.Types.EulerClient API -> InvoiceAPIs)
 mkInvoiceAPIs invoiceClient = (InvoiceAPIs {..})
   where
-    getInvoiceInvoice = invoiceClient
+    getInvoiceFinanceInvoicePdf :<|> getInvoiceInvoice = invoiceClient
 
 data InvoiceUserActionType
-  = GET_INVOICE_INVOICE
+  = GET_INVOICE_FINANCE_INVOICE_PDF
+  | GET_INVOICE_INVOICE
   deriving stock (Show, Read, Generic, Eq, Ord)
-  deriving anyclass (ToSchema)
-
-instance ToJSON InvoiceUserActionType where
-  toJSON GET_INVOICE_INVOICE = Data.Aeson.String "GET_INVOICE_INVOICE"
-
-instance FromJSON InvoiceUserActionType where
-  parseJSON (Data.Aeson.String "GET_INVOICE_INVOICE") = pure GET_INVOICE_INVOICE
-  parseJSON _ = fail "GET_INVOICE_INVOICE expected"
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 $(Data.Singletons.TH.genSingletons [''InvoiceUserActionType])

@@ -428,7 +428,7 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data InvoiceConfig = InvoiceConfig {driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool, emitLedgerEntries :: Kernel.Prelude.Bool}
+data InvoiceConfig = InvoiceConfig {driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool, emitLedgerEntries :: Kernel.Prelude.Bool, logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}

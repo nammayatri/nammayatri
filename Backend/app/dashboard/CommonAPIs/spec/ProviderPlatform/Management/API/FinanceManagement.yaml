@@ -12,6 +12,7 @@ imports:
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Lib.Finance.Domain.Types.Invoice
   ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
+  DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
 
 module: FinanceManagement
@@ -36,6 +37,21 @@ apis:
       response:
         type: SubscriptionPurchaseListRes
 
+
+  # ----- Invoice PDF -----
+  - GET: # InvoiceDownloadPdfAPI
+      endpoint: /finance/invoice/pdf
+      query:
+        referenceId: Text
+        invoiceType: InvoiceType
+        from: DateOrTime
+        to: DateOrTime
+        limit: Int
+        offset: Int
+        invoiceSource: InvoiceSource
+      auth: ApiAuthV2
+      response:
+        type: FinanceInvoicePdfResp
 
   # ----- Invoice -----
   - GET: # InvoiceListAPI
@@ -155,7 +171,7 @@ types:
 
   TransactionTypeFilter:
     - enum: "Order, Refund, Chargeback"
-    - derive: "ToParamSchema,HttpInstance"
+    - derive: "HttpInstance"
 
   # ----- Subscription Purchase -----
   SubscriptionPurchaseListRes:
@@ -226,6 +242,16 @@ types:
     - payoutStatus: Maybe Text
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
+
+  # ----- Invoice Source -----
+  InvoiceSource:
+    - enum: "Driver, Rider"
+    - derive: "HttpInstance"
+
+  # ----- Invoice PDF -----
+  FinanceInvoicePdfResp:
+    - pdfBase64: Text
+    - invoiceNumber: Text
 
   # ----- Invoice -----
   InvoiceListRes:

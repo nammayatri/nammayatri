@@ -50,3 +50,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
 data FinanceInvoiceListRes = FinanceInvoiceListRes {invoices :: [FinanceInvoiceItem], totalItems :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceInvoicePdfResp = FinanceInvoicePdfResp {invoiceNumber :: Kernel.Prelude.Text, pdfBase64 :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

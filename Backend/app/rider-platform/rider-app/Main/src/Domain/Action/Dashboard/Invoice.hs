@@ -1,6 +1,11 @@
-module Domain.Action.Dashboard.Invoice where
+module Domain.Action.Dashboard.Invoice
+  ( getInvoiceInvoice,
+    getInvoiceFinanceInvoicePdf,
+  )
+where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Invoice as Common
+import qualified Data.Time as DT
 import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
@@ -10,13 +15,92 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Finance.Domain.Types.Invoice (InvoiceType)
+import Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
 import qualified Storage.Clickhouse.Location as CHL
 import qualified Storage.Clickhouse.Ride as CHR
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
+
+getInvoiceFinanceInvoicePdf ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe DateOrTime ->
+  Maybe InvoiceType ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe DateOrTime ->
+  Flow Common.FinanceInvoicePdfResp
+getInvoiceFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> ", city: " <> show opCity)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
+
+  let fromTime = toUTCTimeFrom <$> mbFrom
+      toTime = toUTCTimeTo <$> mbTo
+
+  invoices <-
+    QInvoiceExtra.findByMerchantOpCityIdAndDateRange
+      merchantOpCity.id.getId
+      fromTime
+      toTime
+      mbInvoiceType
+      Nothing
+      mbReferenceId
+      Nothing
+      (mbLimit <|> Just 10)
+      (mbOffset <|> Just 0)
+
+  when (Kernel.Prelude.null invoices) $
+    throwError $ InvalidRequest "No invoices found for the given criteria"
+
+  let locale = countryToLocale merchantOpCity.country
+      tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
+      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl)}
+
+  pdfDatas <- forM invoices $ \inv -> do
+    let items = parseLineItems inv.lineItems
+    taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
+    let mbTaxTxn = listToMaybe taxTxns
+    (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      Just orderId -> do
+        txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+        let mbTxn = listToMaybe txns
+        pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+      Nothing -> pure (Nothing, Nothing, Nothing)
+    pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+
+  let lastInv = last invoices
+      html = case pdfDatas of
+        [single] -> renderInvoiceHtml cfg single
+        batch -> renderBatchInvoiceHtml cfg batch
+
+  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
+
+  pure $
+    Common.FinanceInvoicePdfResp
+      { pdfBase64 = pdfBase64,
+        invoiceNumber = lastInv.invoiceNumber
+      }
+  where
+    countryToLocale Context.Finland = FI
+    countryToLocale Context.Netherlands = NL
+    countryToLocale _ = EN
+
 
 getInvoiceInvoice :: ShortId DM.Merchant -> Context.City -> UTCTime -> Text -> UTCTime -> Flow [Common.InvoiceRes]
 getInvoiceInvoice merchantShortId _ from phoneNumber to = do

@@ -118,7 +118,9 @@ data FinanceCtx = FinanceCtx
     panOfParty :: Maybe Text,
     panType :: Maybe Text,
     tdsRateReason :: Maybe TdsRateReason,
-    emitLedgerEntries :: Bool
+    emitLedgerEntries :: Bool,
+    fromLocationAddress :: Maybe Text,
+    issuedToName :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
