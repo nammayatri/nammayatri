@@ -21,6 +21,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     doStrictVerifcation :: Kernel.Prelude.Bool,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    isApprovalSupported :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDefaultEnabledOnManualVerification :: Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
@@ -31,6 +32,7 @@ data FleetOwnerDocumentVerificationConfig = FleetOwnerDocumentVerificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     order :: Kernel.Prelude.Int,
     role :: Domain.Types.Person.Role,
+    supportedFileExtensions :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.SupportedFileExtension],
     title :: Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

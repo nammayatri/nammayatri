@@ -1734,8 +1734,9 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         Just driver -> do
           let docType = show image.imageType
               reason = imageRejectReq.reason
-          void $ withTryCatch "ImageDocuments:sendRejectionNotification" $
-            sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
+          void $
+            withTryCatch "ImageDocuments:sendRejectionNotification" $
+              sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
@@ -1748,15 +1749,17 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             let merchantOpCityId = document.merchantOperatingCityId
                 docType = show document.documentType
                 reason = commonRejectReq.reason
-            void $ withTryCatch "CommonDocumentReject:sendRejectionNotification" $
-              sendDocumentRejectionNotification merchantOpCityId docType reason driver
+            void $
+              withTryCatch "CommonDocumentReject:sendRejectionNotification" $
+                sendDocumentRejectionNotification merchantOpCityId docType reason driver
     Common.UDYAMReject udyamRejectReq -> do
       let udyamId = Id udyamRejectReq.udyamId.getId :: Id DUdyam.DriverUdyam
       driverUdyam <- QUdyam.findById udyamId >>= fromMaybeM (DocumentNotFound udyamId.getId)
       driver <- QDriver.findById driverUdyam.driverId >>= fromMaybeM (PersonNotFound driverUdyam.driverId.getId)
       let notifyOpCityId = fromMaybe merchantOperatingCityId driverUdyam.merchantOperatingCityId
-      void $ withTryCatch "CommonDocumentReject:sendRejectionNotification" $
-        sendDocumentRejectionNotification notifyOpCityId (show DVC.UDYAMCertificate) udyamRejectReq.reason driver
+      void $
+        withTryCatch "CommonDocumentReject:sendRejectionNotification" $
+          sendDocumentRejectionNotification notifyOpCityId (show DVC.UDYAMCertificate) udyamRejectReq.reason driver
       rejectAndUpdateUdyamDocument udyamRejectReq merchantOperatingCityId
   where
     notificationType = FCM.DOCUMENT_INVALID
@@ -1862,8 +1865,9 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let updateAndFetchEnabled mbPersonId = case mbPersonId of
         Just personId -> do
-          result <- withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
-            fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
+          result <-
+            withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
+              fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
           case result of
             Right isEnabled -> pure isEnabled
             Left _ -> do

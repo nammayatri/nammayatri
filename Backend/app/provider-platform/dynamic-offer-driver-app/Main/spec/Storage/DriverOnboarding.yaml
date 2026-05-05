@@ -14,6 +14,7 @@ imports:
   encode: Data.Aeson
   decode: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
+  SupportedFileExtension: Domain.Types.DocumentVerificationConfig
   DocStatusMap: Domain.Types.DocStatus
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
@@ -573,6 +574,8 @@ DocumentVerificationConfig:
       enum: "FLEET,INDIVIDUAL,FLEET_AND_INDIVIDUAL"
     FieldType:
       enum: "FieldText,FieldInt,FieldDouble"
+    SupportedFileExtension:
+      enum: "JPG,JPEG,PNG,PDF,WEBP"
     FieldInfo:
       name: Text
       _type: FieldType
@@ -1191,6 +1194,8 @@ FleetOwnerDocumentVerificationConfig:
     order: Int
     role: Role
     documentCategory: Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory
+    supportedFileExtensions: "Maybe [SupportedFileExtension]"
+    isApprovalSupported: Maybe Bool
   default:
     order: "0"
     role: "'FLEET_OWNER'"
@@ -1200,6 +1205,7 @@ FleetOwnerDocumentVerificationConfig:
     role: PrimaryKey
   sqlType:
     dependencyDocumentType: text[]
+    supportedFileExtensions: text[]
   queries:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithOptionsKV

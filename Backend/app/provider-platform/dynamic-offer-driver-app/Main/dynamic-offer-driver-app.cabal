@@ -483,6 +483,7 @@ library
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Digilocker
+      SharedLogic.DriverOnboarding.DocumentFileValidation
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
