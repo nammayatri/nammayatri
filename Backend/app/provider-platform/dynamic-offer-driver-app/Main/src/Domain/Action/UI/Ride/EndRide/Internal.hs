@@ -356,7 +356,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     _ -> pure ()
 
   -- 2. Wallet Flow
-  when (isPrepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
+  when (isPrepaidSubscriptionAndWalletEnabled || thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)

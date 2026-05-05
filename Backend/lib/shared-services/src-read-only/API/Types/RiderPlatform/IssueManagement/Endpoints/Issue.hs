@@ -25,7 +25,7 @@ import qualified Kernel.Types.Id
 import Servant hiding (Summary)
 import Servant.Client
 
-type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
+type API = ("issueV2" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdateHelper :<|> PostIssueCommentHelper :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueKaptureCreate :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueChatMessageHelper :<|> GetIssueChatMessages :<|> PostIssueChatRead))
 
 type GetIssueCategoryList = ("category" :> Get '[JSON] IssueManagement.Common.Dashboard.Issue.IssueCategoryListRes)
 
@@ -265,6 +265,15 @@ type PostIssueOptionReorder = ("option" :> "reorder" :> ReqBody '[JSON] IssueMan
 
 type PostIssueMessageReorder = ("message" :> "reorder" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostIssueCategoryCopy =
+  ( "category" :> "copy" :> ReqBody '[JSON] IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq
+      :> Post
+           '[JSON]
+           IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes
+  )
+
+type PostIssueCategoryDefaultCopy = ("category" :> "copyAllDefault" :> Post '[JSON] IssueManagement.Common.Dashboard.Issue.CopyAllDefaultIssueCategoryRes)
+
 type PostIssueChatMessage =
   ( Capture "issueId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) :> "chat" :> "message"
       :> ReqBody
@@ -333,6 +342,8 @@ data IssueAPIs = IssueAPIs
     postIssueCategoryReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueOptionReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueMessageReorder :: IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postIssueCategoryCopy :: IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes,
+    postIssueCategoryDefaultCopy :: EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CopyAllDefaultIssueCategoryRes,
     postIssueChatMessage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageByUserReq -> EulerHS.Types.EulerClient IssueManagement.Common.UI.Issue.ChatMessageItem,
     getIssueChatMessages :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient [IssueManagement.Common.UI.Issue.ChatMessageItem],
     postIssueChatRead :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.MarkChatReadByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
@@ -341,7 +352,7 @@ data IssueAPIs = IssueAPIs
 mkIssueAPIs :: (Client EulerHS.Types.EulerClient API -> IssueAPIs)
 mkIssueAPIs issueClient = (IssueAPIs {..})
   where
-    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueKaptureCreate :<|> getIssueCategoryDetail :<|> getIssueOptionDetail :<|> getIssueMessageDetail :<|> getIssueMessageList :<|> getIssueOptionList :<|> deleteIssueCategory :<|> deleteIssueOption :<|> deleteIssueMessage :<|> getIssueCategoryFlowPreview :<|> getIssueTranslations :<|> postIssueBulkUpsertTranslations :<|> getIssueConfig :<|> postIssueConfigUpdate :<|> postIssueCategoryReorder :<|> postIssueOptionReorder :<|> postIssueMessageReorder :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
+    getIssueCategoryList :<|> getIssueList :<|> getIssueInfo :<|> getIssueInfoV2 :<|> putIssueUpdate :<|> postIssueComment :<|> getIssueMedia :<|> postIssueTicketStatusCallBack :<|> postIssueCategoryCreate :<|> postIssueCategoryUpdate :<|> postIssueOptionCreate :<|> postIssueOptionUpdate :<|> postIssueMessageUpsert :<|> postIssueKaptureCreate :<|> getIssueCategoryDetail :<|> getIssueOptionDetail :<|> getIssueMessageDetail :<|> getIssueMessageList :<|> getIssueOptionList :<|> deleteIssueCategory :<|> deleteIssueOption :<|> deleteIssueMessage :<|> getIssueCategoryFlowPreview :<|> getIssueTranslations :<|> postIssueBulkUpsertTranslations :<|> getIssueConfig :<|> postIssueConfigUpdate :<|> postIssueCategoryReorder :<|> postIssueOptionReorder :<|> postIssueMessageReorder :<|> postIssueCategoryCopy :<|> postIssueCategoryDefaultCopy :<|> postIssueChatMessage :<|> getIssueChatMessages :<|> postIssueChatRead = issueClient
 
 data IssueUserActionType
   = GET_ISSUE_CATEGORY_LIST
@@ -374,6 +385,8 @@ data IssueUserActionType
   | POST_ISSUE_CATEGORY_REORDER
   | POST_ISSUE_OPTION_REORDER
   | POST_ISSUE_MESSAGE_REORDER
+  | POST_ISSUE_CATEGORY_COPY
+  | POST_ISSUE_CATEGORY_DEFAULT_COPY
   | POST_ISSUE_CHAT_MESSAGE
   | GET_ISSUE_CHAT_MESSAGES
   | POST_ISSUE_CHAT_READ

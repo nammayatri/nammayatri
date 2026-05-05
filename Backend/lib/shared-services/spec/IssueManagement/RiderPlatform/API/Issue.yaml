@@ -60,6 +60,10 @@ imports:
   ReorderIssueOptionReq: IssueManagement.Common.Dashboard.Issue
   ReorderIssueMessageReq: IssueManagement.Common.Dashboard.Issue
   DetailedTranslationRes: IssueManagement.Common.Dashboard.Issue
+  CopyIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
+  CopyIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  CopyAllDefaultIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  FailedCategoryCopy: IssueManagement.Common.Dashboard.Issue
   # Live chat types
   SendChatMessageReq: IssueManagement.Common.Dashboard.Issue
   SendChatMessageByUserReq: IssueManagement.Common.Dashboard.Issue
@@ -405,6 +409,22 @@ apis:
         type: ReorderIssueMessageReq
       response:
         type: APISuccess
+
+  - POST: # CopyIssueCategoryAPI
+      endpoint: /category/copy
+      name: PostIssueCategoryCopy
+      auth: ApiAuthV2
+      request:
+        type: CopyIssueCategoryReq
+      response:
+        type: CopyIssueCategoryRes
+
+  - POST: # CopyAllDefaultIssueCategoryAPI
+      endpoint: /category/copyAllDefault
+      name: PostIssueCategoryDefaultCopy
+      auth: ApiAuthV2
+      response:
+        type: CopyAllDefaultIssueCategoryRes
 
   # Live chat endpoints
   - POST:  # PostIssueChatMessageAPI

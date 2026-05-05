@@ -709,8 +709,10 @@ postDriverFleetScheduledBookingCancel merchantShortId opCity apiTokenInfo req = 
 postDriverAddRidePayoutAccountNumber :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.AddRidePayoutAccountNumberReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverAddRidePayoutAccountNumber merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  T.withTransactionStoring transaction $ do Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverAddRidePayoutAccountNumber) req
+  let isUserAdmin = DP.isAdmin apiTokenInfo.person
+  let secureReq = if isUserAdmin then req else req {Common.vehicleBalance = Nothing, Common.vehicleBalanceAdjustmentPercentage = Nothing}
+  transaction <- buildTransaction apiTokenInfo Nothing (Just secureReq)
+  T.withTransactionStoring transaction $ do Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverAddRidePayoutAccountNumber) secureReq
 
 postDriverFleetScheduledBookingReassign :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.ReassignScheduledBookingReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverFleetScheduledBookingReassign merchantShortId opCity apiTokenInfo req = do

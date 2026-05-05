@@ -148,7 +148,7 @@ processWalletPayouts config jobData = do
       merchantOpCityId = jobData.merchantOperatingCityId
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout
+  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout -- TODO :: This also can be (||), but not changing it for now.
   if not walletEnabled
     then do
       logInfo "Wallet payouts disabled at transporter level"

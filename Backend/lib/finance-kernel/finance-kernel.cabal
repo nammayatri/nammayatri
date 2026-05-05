@@ -40,7 +40,11 @@ library
       Lib.Finance.Invoice.Service
       Lib.Finance.Ledger.Interface
       Lib.Finance.Ledger.Service
+      Lib.Finance.Settlement.Fetch
       Lib.Finance.Settlement.Ingestion
+      Lib.Finance.Settlement.ParserTypeMap
+      Lib.Finance.Settlement.Sources.Email
+      Lib.Finance.Settlement.Sources.SFTP
       Lib.Finance.Settlement.Transformer
       Lib.Finance.StateMachine.Interface
       Lib.Finance.StateMachine.Service
@@ -67,6 +71,7 @@ library
       Lib.Finance.Domain.Types.PgPayoutSettlementReport
       Lib.Finance.Domain.Types.ReconciliationEntry
       Lib.Finance.Domain.Types.ReconciliationSummary
+      Lib.Finance.Domain.Types.SettlementFileInfo
       Lib.Finance.Domain.Types.StateTransition
       Lib.Finance.Storage.Beam.Account
       Lib.Finance.Storage.Beam.AuditEntry
@@ -81,6 +86,7 @@ library
       Lib.Finance.Storage.Beam.PgPayoutSettlementReport
       Lib.Finance.Storage.Beam.ReconciliationEntry
       Lib.Finance.Storage.Beam.ReconciliationSummary
+      Lib.Finance.Storage.Beam.SettlementFileInfo
       Lib.Finance.Storage.Beam.StateTransition
       Lib.Finance.Storage.Queries.Account
       Lib.Finance.Storage.Queries.AuditEntry
@@ -97,6 +103,7 @@ library
       Lib.Finance.Storage.Queries.PgPayoutSettlementReport
       Lib.Finance.Storage.Queries.ReconciliationEntry
       Lib.Finance.Storage.Queries.ReconciliationSummary
+      Lib.Finance.Storage.Queries.SettlementFileInfo
       Lib.Finance.Storage.Queries.StateTransition
   other-modules:
       Paths_finance_kernel
@@ -144,21 +151,28 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , base64-bytestring
     , beam-core
     , beam-mysql
     , beam-postgres
     , bytestring
     , containers
+    , directory
+    , euler-hs
     , exceptions
+    , filepath
     , mobility-core
     , mtl
     , postgresql-simple
+    , process
     , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , text
     , time
+    , unix
     , unordered-containers
+    , zip-archive
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

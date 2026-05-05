@@ -3690,7 +3690,8 @@
         "osrm-pbf-finland": "osrm-pbf-finland",
         "passetto": "passetto",
         "services-flake": "services-flake_3",
-        "shared-kernel": "shared-kernel"
+        "shared-kernel": "shared-kernel",
+        "zip-archive-hs": "zip-archive-hs"
       }
     },
     "rust-flake": {
@@ -3952,11 +3953,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1777617640,
-        "narHash": "sha256-SwL3idur5ntpAMT9Tk8mPRuXoEHin4siu394g+AD5HE=",
+        "lastModified": 1777901834,
+        "narHash": "sha256-kHppRFmD0eL4ICuHs2Xho08zcdx5x/lIyBc8tyDLhEg=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "6525394f5972922f023dd51b8be125ccbc4992c3",
+        "rev": "96d748fba9524356146adf02d0bccb63e5942a7e",
         "type": "github"
       },
       "original": {
@@ -4346,6 +4347,23 @@
       "original": {
         "owner": "winterland1989",
         "repo": "word24",
+        "type": "github"
+      }
+    },
+    "zip-archive-hs": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1712678524,
+        "narHash": "sha256-JcKyhl4dvECsSU1KPwPKChP+edKcJN8/nRBBehmvDR8=",
+        "owner": "jgm",
+        "repo": "zip-archive",
+        "rev": "d5d07a4d2e5d4bfaf7dc2f944cccffb5dbb2c790",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jgm",
+        "ref": "0.4.3.2",
+        "repo": "zip-archive",
         "type": "github"
       }
     }

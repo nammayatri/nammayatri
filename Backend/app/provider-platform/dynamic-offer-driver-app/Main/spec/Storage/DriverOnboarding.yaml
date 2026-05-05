@@ -26,6 +26,8 @@ imports:
   MediaFileDocumentType: Domain.Types.Common
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   MediaFile: IssueManagement.Domain.Types.MediaFile
+  HighPrecMoney: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -1125,6 +1127,8 @@ DriverRidePayoutBankAccount:
     bankIfscCode: Maybe (EncryptedHashedField e Text)
     driverId: Id Person
     rcId: Id VehicleRegistrationCertificate
+    vehicleBalance: Maybe HighPrecMoney
+    vehicleBalanceAdjustmentPercentage: Maybe Centesimal
 
   constraints:
     id: PrimaryKey
@@ -1154,6 +1158,8 @@ DriverRidePayoutBankAccount:
     bankAccountNumberHash: bytea
     bankIfscCodeEncrypted: character varying(255)
     bankIfscCodeHash: bytea
+    vehicleBalance: numeric(30,2)
+    vehicleBalanceAdjustmentPercentage: numeric(10,2)
 
   queries:
     findByRcId:
