@@ -1430,6 +1430,16 @@ apis:
             response:
               type: OnboardedDriversAndUnlinkedVehiclesRes
 
+  - GET: # GetDriverFleetDriverStatusSummaryAPI
+      endpoint: /fleet/{entityOperationType}/statusSummary
+      auth: ApiAuthV2
+      params:
+        entityOperationType: EntityOperationType
+      query:
+        - fleetOwnerId: Text
+      response:
+        type: StatusSummaryResponse
+
   - GET: # ListScheduledBookingsForFleetOwnerAPI
       endpoint: /fleet/scheduledBooking/list
       auth: ApiAuthV2
@@ -2345,6 +2355,14 @@ types:
     - area: Maybe Text
     - instructions: Maybe Text
     - extras: Maybe Text
+  StatusSummaryResponse:
+    - total: Int
+    - approved: Int
+    - pending: Int
+    - rejected: Int
+  EntityOperationType:
+    enum: "DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS"
+    derive: "HttpInstance"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

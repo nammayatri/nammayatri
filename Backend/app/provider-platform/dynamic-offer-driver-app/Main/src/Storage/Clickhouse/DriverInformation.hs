@@ -1,5 +1,7 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 module Storage.Clickhouse.DriverInformation where
 
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
@@ -7,9 +9,12 @@ import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
 import Kernel.Types.Id
 
+instance CH.ClickhouseValue DDVS.DocsVerificationStatus
+
 data DriverInformationT f = DriverInformationT
   { driverId :: C f (Id DP.Person),
     driverFlowStatus :: C f (Maybe DDF.DriverFlowStatus),
+    docsVerificationStatus :: C f (Maybe DDVS.DocsVerificationStatus),
     enabled :: C f Bool,
     enabledAt :: C f (Maybe UTCTime)
   }
@@ -22,6 +27,7 @@ driverInformationTTable =
   DriverInformationT
     { driverId = "driver_id",
       driverFlowStatus = "driver_flow_status",
+      docsVerificationStatus = "docs_verification_status",
       enabled = "enabled",
       enabledAt = "enabled_at"
     }
@@ -88,3 +94,19 @@ countEnabledByDriverIds driverIds =
               (\info -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True)
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
       pure $ fromMaybe 0 (listToMaybe res)
+
+getStatusCountsByDriverIds ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  m [(Maybe DDVS.DocsVerificationStatus, Int)]
+getStatusCountsByDriverIds driverIds =
+  CH.findAll $
+    CH.select_
+      ( \info -> do
+          let status = info.docsVerificationStatus
+          let countDrivers = CH.count_ info.driverId
+          CH.groupBy status $ \s -> (s, countDrivers)
+      )
+      $ CH.filter_
+        (\info -> info.driverId `CH.in_` driverIds)
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)

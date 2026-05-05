@@ -82,6 +82,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetScheduledBookingReassign,
     postDriverAddRidePayoutAccountNumber,
     postDriverFleetVehicleEdit,
+    getDriverFleetStatusSummary,
   )
 where
 
@@ -736,3 +737,9 @@ postDriverFleetVehicleEdit merchantShortId opCity apiTokenInfo fleetOwnerId driv
   T.withTransactionStoring transaction $ do
     (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo fleetOwnerId
     Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetVehicleEdit) requestorId mbFleetOwnerId' driverId vehicleNo rcId req
+
+getDriverFleetStatusSummary :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.EntityOperationType -> Maybe (Kernel.Prelude.Text) -> Environment.Flow Common.StatusSummaryResponse)
+getDriverFleetStatusSummary merchantShortId opCity apiTokenInfo entityOperationType mbFleetOwnerId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatusSummary) entityOperationType (Just fleetOwnerId')

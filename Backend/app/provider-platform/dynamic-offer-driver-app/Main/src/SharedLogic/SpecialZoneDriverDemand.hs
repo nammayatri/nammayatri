@@ -638,7 +638,7 @@ pointInRing (LatLong y x) ring =
       | y1 == y2 = inside -- horizontal edge: ignore (avoids div-by-zero)
       | ((y1 > y) /= (y2 > y))
           && (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1) =
-          not inside
+        not inside
       | otherwise = inside
 
 -- | Inside the polygon (outer ring AND not in any hole).
@@ -682,9 +682,9 @@ minDistanceToPolygonEdges p rings =
 isPointInOrNearGate :: LatLong -> Double -> CachedGateForProximity -> Bool
 isPointInOrNearGate p radius gate
   | null gate.polygons =
-      realToFrac (distanceBetweenInMeters p gate.centerPoint) < radius
+    realToFrac (distanceBetweenInMeters p gate.centerPoint) < radius
   | otherwise =
-      any (\poly -> pointInPolygon p poly || minDistanceToPolygonEdges p poly < radius) gate.polygons
+    any (\poly -> pointInPolygon p poly || minDistanceToPolygonEdges p poly < radius) gate.polygons
 
 -- | Exclude drivers physically committed to a *different* queueable gate at the
 --   same special location: their location is inside that gate's pickup polygon
