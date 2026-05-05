@@ -35,6 +35,7 @@ module SharedLogic.SpecialZoneDriverDemand
     completePickupZoneRequestsForDriver,
     cancelPickupZoneRequestsForDriver,
     filterByGateProximity,
+    clearAirportPerKmFareCacheForPolicy,
   )
 where
 
@@ -42,11 +43,15 @@ import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import Data.List (partition, sortOn)
 import qualified Data.Map as Map
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
+import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
@@ -58,15 +63,21 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
+import qualified SharedLogic.FareCalculator as SFC
+import qualified SharedLogic.FareProduct as SharedFareProduct
+import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Queries.DriverInformationExtra as QDI
+import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
-import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Tools.Notifications as Notify
 
 -- | Drivers within this many meters of a *different* queueable gate at the same
@@ -74,6 +85,222 @@ import qualified Tools.Notifications as Notify
 --   driver standing at T1 should not get a T2 pickup request).
 gateProximityExclusionMeters :: Double
 gateProximityExclusionMeters = 150.0
+
+-- | Representative airport-ride distance used to derive a single per-km figure
+--   from a fare policy. The fare per km isn't constant — base fare amortises over
+--   distance, and per-km section rates can change across distance bands — so we
+--   evaluate the full fare pipeline at this distance and divide.
+--   15 km = typical airport-to-city run.
+representativeAirportRideDistanceMeters :: Int
+representativeAirportRideDistanceMeters = 15000
+
+-- | Representative ride duration paired with the distance above. Used by per-min
+--   congestion charge and ride-extra-time-fare computations inside the fare
+--   calculator. 30 min ~ 30 km/h average ~ 15 km.
+representativeAirportRideDurationSec :: Int
+representativeAirportRideDurationSec = 30 * 60
+
+airportPerKmFareCacheTtlSec :: Int
+airportPerKmFareCacheTtlSec = 86400 -- 1 day
+
+-- | Cached per-km fare result key. Scoped per (specialLocation, variant) — the
+--   pair that uniquely identifies which fare policy we'll resolve to.
+mkAirportPerKmFareCacheKey :: Id SL.SpecialLocation -> Text -> Text
+mkAirportPerKmFareCacheKey slId variantText =
+  "AirportPerKmFare:" <> slId.getId <> ":" <> variantText
+
+-- | Per-km fare a driver can expect for a typical airport ride from this gate
+--   with their vehicle variant. Result is cached in Redis for one day, keyed
+--   by (specialLocation, variant). Invalidated by
+--   'clearAirportPerKmFareCacheForPolicy' when the dashboard fare-policy
+--   update handler runs.
+--
+--   Mirrors the same `FC.calculateFareParameters` / `fareSum` shape that
+--   `Beckn.Search.buildQuote` uses for real quotes — threading `pickupGateId`
+--   so the V2 calculator's `applyAirportEntryFee` step folds the gate entry
+--   fee into `parkingCharge`. We then subtract the flat reimbursements
+--   (toll + gate parking, including their VAT slots) and divide by the
+--   representative distance.
+--
+--   Trip-category resolution: the notify path doesn't have a search context,
+--   so we fetch every fare product configured for the special location and
+--   pick the one that matches the driver's variant, preferring (in order) the
+--   OneWay subtypes most likely to be served from a queueable airport gate —
+--   StaticOffer, DynamicOffer, then RideOtp. We never hard-code a category
+--   that may not be set up for that special location.
+--
+--   Returns Nothing for: unknown variant, no matching fare product configured,
+--   or missing fare policy.
+getAirportPerKmFare ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    MonadFlow m
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Id SL.SpecialLocation ->
+  LatLong -> -- gate's pickup point — used by getAllFareProducts to resolve the special location
+  Text -> -- pickupGateId of the gate we're notifying for
+  Text -> -- driver's vehicle service-tier as Text
+  m (Maybe HighPrecMoney)
+getAirportPerKmFare merchantId merchantOpCityId specialLocationId gateLatLong pickupGateId variantText = do
+  let cacheKey = mkAirportPerKmFareCacheKey specialLocationId variantText
+  mbCached <- Redis.withCrossAppRedis $ Redis.safeGet @(Maybe HighPrecMoney) cacheKey
+  case mbCached of
+    Just cached -> pure cached
+    Nothing -> do
+      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId variantText
+      Redis.withCrossAppRedis $ Redis.setExp cacheKey mbFare airportPerKmFareCacheTtlSec
+      pure mbFare
+
+-- | Drop per-(specialLocation, variant) per-km-fare cache entries derived from
+--   the given fare policy. Used by the dashboard
+--   `postMerchantConfigFarePolicyUpdate` handler after the policy row is
+--   updated, so the next pickup-zone notification recomputes against the new
+--   policy.
+--
+--   Implementation: read every FareProduct that references this farePolicyId,
+--   filter to Pickup-area products (the only kind 'getAirportPerKmFare' caches
+--   under), and delete the corresponding `(specialLocationId, variant)` keys.
+clearAirportPerKmFareCacheForPolicy ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id DFP.FarePolicy ->
+  m ()
+clearAirportPerKmFareCacheForPolicy fpId = do
+  fareProducts <- QFareProduct.findAllFareProductByFarePolicyId fpId
+  let cacheKeys =
+        [ mkAirportPerKmFareCacheKey slId (T.pack (show fp.vehicleServiceTier))
+          | fp <- fareProducts,
+            SL.Pickup slId <- [fp.area]
+        ]
+  Redis.withCrossAppRedis $ forM_ cacheKeys Redis.del
+
+-- | Heavy lift behind 'getAirportPerKmFare'. Resolves the matching FareProduct
+--   via the same `SharedLogic.FareProduct.getAllFareProducts` path that
+--   `Beckn.Search` uses, iterating over the OneWay subtypes most likely to be
+--   served from a queueable airport gate (StaticOffer, DynamicOffer, RideOtp)
+--   and stopping at the first one that has a fare product for this variant.
+computeAirportPerKmFare ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    MonadFlow m
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  LatLong ->
+  Text ->
+  Text ->
+  m (Maybe HighPrecMoney)
+computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId variantText =
+  case readMaybe (T.unpack variantText) :: Maybe DVST.ServiceTierType of
+    Nothing -> pure Nothing
+    Just serviceTier -> do
+      let searchSources = SharedFareProduct.getSearchSources False
+          preferenceOrder =
+            [ DTC.OneWay DTC.OneWayOnDemandStaticOffer,
+              DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
+              DTC.OneWay DTC.OneWayRideOtp
+            ]
+          tryCategory tripCategory = do
+            res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
+            pure $ find (\fp -> fp.vehicleServiceTier == serviceTier) res.fareProducts
+      mbFareProduct <- firstJustM tryCategory preferenceOrder
+      case mbFareProduct of
+        Nothing -> pure Nothing
+        Just fp -> do
+          mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+          case mbFarePolicy of
+            Nothing -> pure Nothing
+            Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
+  where
+    firstJustM _ [] = pure Nothing
+    firstJustM f (x : xs) = do
+      r <- f x
+      maybe (firstJustM f xs) (pure . Just) r
+    -- Use the static congestion multiplier already on the fare policy; we don't
+    -- have a search context here to call the dynamic-pricing service.
+    staticCongestionDetails =
+      DFP.CongestionChargeDetails
+        { dpVersion = Just "Static",
+          mbSupplyDemandRatioToLoc = Nothing,
+          mbSupplyDemandRatioFromLoc = Nothing,
+          congestionChargePerMin = Nothing,
+          smartTipSuggestion = Nothing,
+          smartTipReason = Nothing,
+          mbActualQARFromLocGeohash = Nothing,
+          mbActualQARCity = Nothing
+        }
+    computePerKmFromPolicy fp farePolicy = do
+      let fullFarePolicy =
+            DFP.farePolicyToFullFarePolicy
+              merchantId
+              fp.vehicleServiceTier
+              fp.tripCategory
+              Nothing -- cancellationFarePolicy: not relevant for per-km
+              staticCongestionDetails
+              Nothing -- no congestionChargeData
+              farePolicy
+              fp.disableRecompute
+          representativeMeters = Meters representativeAirportRideDistanceMeters
+          representativeDuration = Seconds representativeAirportRideDurationSec
+      currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+      distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
+      mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+      now <- getCurrentTime
+      fareParams <-
+        SFC.calculateFareParameters
+          SFC.CalculateFareParametersParams
+            { farePolicy = fullFarePolicy,
+              actualDistance = Just representativeMeters,
+              rideTime = now,
+              returnTime = Nothing,
+              roundTrip = False,
+              waitingTime = Nothing,
+              stopWaitingTimes = [],
+              actualRideDuration = Nothing,
+              vehicleAge = Nothing,
+              driverSelectedFare = Nothing,
+              customerExtraFee = Nothing,
+              petCharges = Nothing,
+              nightShiftCharge = Nothing,
+              estimatedCongestionCharge = Nothing,
+              customerCancellationDues = Nothing,
+              nightShiftOverlapChecking = False,
+              estimatedDistance = Just representativeMeters,
+              estimatedRideDuration = Just representativeDuration,
+              timeDiffFromUtc = Nothing,
+              tollCharges = Nothing,
+              currency,
+              noOfStops = 0,
+              shouldApplyBusinessDiscount = False,
+              shouldApplyPersonalDiscount = True,
+              distanceUnit,
+              merchantOperatingCityId = Just merchantOpCityId,
+              mbAdditonalChargeCategories = Nothing,
+              numberOfLuggages = Nothing,
+              govtChargesRate = mbTransporterConfig <&> (.taxConfig.rideGst),
+              pickupGateId = Just pickupGateId
+            }
+      let estimatedFare = SFC.fareSum fareParams (Just [])
+          -- Tolls and gate parking (which now includes airport entry fee added by
+          -- applyAirportEntryFee in the V2 path) are flat per-trip reimbursements,
+          -- not earnings per km.
+          excludedFlat =
+            fromMaybe 0 fareParams.tollCharges
+              + fromMaybe 0 fareParams.tollFareTax
+              + fromMaybe 0 fareParams.parkingCharge
+              + fromMaybe 0 fareParams.parkingChargeTax
+          variableFare = estimatedFare - excludedFlat
+          distanceKm :: HighPrecMoney
+          distanceKm = HighPrecMoney (toRational representativeAirportRideDistanceMeters / 1000)
+      pure $ if distanceKm > 0 then variableFare / distanceKm else 0
 
 -- Redis keys
 
@@ -273,6 +500,7 @@ runDemandCheckForVariants ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
@@ -311,6 +539,7 @@ checkAndNotifyDriverDemand ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
@@ -377,7 +606,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSou
                 <> show (length eligibleNearGate)
                 <> " toNotify="
                 <> show (min needed (length eligibleNearGate))
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource (take needed eligibleNearGate)
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource Nothing (take needed eligibleNearGate)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -388,6 +617,7 @@ forceNotifyDriverDemand ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
@@ -400,8 +630,9 @@ forceNotifyDriverDemand ::
   Text -> -- vehicleType
   Int -> -- number of drivers to notify
   Maybe [Id DP.Person] -> -- optional priority driver IDs to notify first
+  Maybe Bool -> -- isDemandHigh flag (dashboard-supplied, surfaced to driver app)
   m Int -- returns count of drivers actually notified
-forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds = do
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh = do
   let specialLocationId = gate.specialLocationId.getId
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
@@ -411,7 +642,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
   eligiblePriority <- filterEligibleDrivers gateId priorityDriverIds
   eligiblePriorityNearGate <- filterByGateProximity gate eligiblePriority
-  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource eligiblePriorityNearGate
+  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
   let remaining = max 0 (needed - priorityCount)
   -- Fill remaining from LTS queue
   queueCount <-
@@ -423,7 +654,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
             queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
         eligible <- filterEligibleDrivers gateId queueDriverIds
         eligibleNearGate <- filterByGateProximity gate eligible
-        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource (take remaining eligibleNearGate)
+        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
       else pure 0
   pure (priorityCount + queueCount)
 
@@ -436,6 +667,7 @@ notifyDrivers ::
     CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    BeamFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int]
   ) =>
   Id DMOC.MerchantOperatingCity ->
@@ -445,9 +677,10 @@ notifyDrivers ::
   Text -> -- vehicleType
   Int -> -- cooldown in seconds
   Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
+  Maybe Bool -> -- isDemandHigh override (Nothing => default True)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown mbTriggerSource driverIds = do
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown mbTriggerSource mbIsDemandHigh driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -458,9 +691,10 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
   now <- getCurrentTime
   let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
-  -- Bulk fetch vehicle variants for all drivers
-  vehicles <- QVehicle.findAllByDriverIds driverIds
-  let vehicleVariantMap = Map.fromList $ map (\v -> (v.driverId, show v.variant)) vehicles
+      isDemandHigh = fromMaybe True mbIsDemandHigh
+  mbPerKmFare <- getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId vehicleType
+  mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
+  let demandCount = fromMaybe 0 mbDemandCount
   foldM
     ( \count driverId -> do
         activeRequests <- QSZQR.findActiveByDriverId driverId DSZQR.Active
@@ -470,7 +704,6 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
           then pure count
           else do
             reqId <- generateGUID
-            let driverVehicleType = fromMaybe vehicleType (Map.lookup driverId vehicleVariantMap)
             let request =
                   DSZQR.SpecialZoneQueueRequest
                     { id = reqId,
@@ -484,7 +717,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       validTill = validTill,
                       gateName = gate.name,
                       specialLocationName = specialLocationName,
-                      vehicleType = driverVehicleType,
+                      vehicleType = vehicleType,
                       arrivalDeadlineTime = Nothing,
                       triggerSource = mbTriggerSource,
                       createdAt = now,
@@ -499,9 +732,12 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       specialLocationName = specialLocationName,
                       specialLocationId = specialLocationId,
                       gateId = gateId,
-                      vehicleType = driverVehicleType,
+                      vehicleType = vehicleType,
                       validTill = validTill,
-                      requestType = "PICKUP_ZONE_REQUEST"
+                      requestType = "PICKUP_ZONE_REQUEST",
+                      perKmFare = mbPerKmFare,
+                      isDemandHigh = isDemandHigh,
+                      demandCount = demandCount
                     }
             Notify.notifyPickupZoneRequest merchantOpCityId driverId entityData
             Redis.withCrossAppRedis $
@@ -638,7 +874,7 @@ pointInRing (LatLong y x) ring =
       | y1 == y2 = inside -- horizontal edge: ignore (avoids div-by-zero)
       | ((y1 > y) /= (y2 > y))
           && (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1) =
-          not inside
+        not inside
       | otherwise = inside
 
 -- | Inside the polygon (outer ring AND not in any hole).
@@ -682,9 +918,9 @@ minDistanceToPolygonEdges p rings =
 isPointInOrNearGate :: LatLong -> Double -> CachedGateForProximity -> Bool
 isPointInOrNearGate p radius gate
   | null gate.polygons =
-      realToFrac (distanceBetweenInMeters p gate.centerPoint) < radius
+    realToFrac (distanceBetweenInMeters p gate.centerPoint) < radius
   | otherwise =
-      any (\poly -> pointInPolygon p poly || minDistanceToPolygonEdges p poly < radius) gate.polygons
+    any (\poly -> pointInPolygon p poly || minDistanceToPolygonEdges p poly < radius) gate.polygons
 
 -- | Exclude drivers physically committed to a *different* queueable gate at the
 --   same special location: their location is inside that gate's pickup polygon
