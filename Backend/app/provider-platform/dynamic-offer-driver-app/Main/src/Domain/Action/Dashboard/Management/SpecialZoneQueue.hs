@@ -110,8 +110,8 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   vehicleStats <- forM vehicleTypes $ \vt -> do
     queueResp <- LTSFlow.getQueueDrivers specialLocationId vt
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
-    mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
-    mbSupplyCount <- Redis.withCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
+    mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
+    mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
     -- Drivers who accepted the pickup notification and are en-route to the gate
     acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
     let totalInQueue = queueResp.queueSize
