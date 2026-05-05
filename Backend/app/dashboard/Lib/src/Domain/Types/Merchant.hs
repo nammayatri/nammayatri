@@ -44,7 +44,8 @@ data MerchantE e = Merchant
     hasFleetMemberHierarchy :: Maybe Bool,
     isStrongNameCheckRequired :: Maybe Bool,
     singleActiveSessionOnly :: Maybe Bool,
-    trackLoginLogoutForRoles :: [DRole.DashboardAccessType]
+    trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
+    twoFactorMandatoryForRoles :: [DRole.DashboardAccessType]
   }
   deriving (Generic)
 
