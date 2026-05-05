@@ -61,6 +61,8 @@ updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
       Se.Set Beam.accountNumberHash ((.hash) accountNumber),
       Se.Set Beam.addressCity addressCity,
       Se.Set Beam.addressPostalCode addressPostalCode,
+      Se.Set Beam.addressProofImageId addressProofImageId,
+      Se.Set Beam.addressProofType addressProofType,
       Se.Set Beam.addressState addressState,
       Se.Set Beam.addressStreetAddress1 addressStreetAddress1,
       Se.Set Beam.addressStreetAddress2 addressStreetAddress2,
