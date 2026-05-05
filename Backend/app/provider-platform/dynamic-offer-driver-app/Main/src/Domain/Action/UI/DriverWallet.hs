@@ -73,6 +73,7 @@ import Lib.Finance
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
+import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -86,6 +87,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
@@ -135,7 +137,12 @@ getWalletTransactions ::
 getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  let counterparty = counterpartyFromRole person.role
+  mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
+  let mbAssocFleetOwnerId = (.fleetOwnerId) <$> mbActiveFleetAssoc
+  let (counterparty, ownerId, mbConcernedIndividualId) =
+        case mbAssocFleetOwnerId of
+          Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, Just driverId.getId)
+          Nothing -> (counterpartyFromRole person.role, driverId.getId, Nothing)
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
   now <- getCurrentTime
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
@@ -143,13 +150,13 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
       toDate = fromMaybe now mbToDate
       cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-  (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty driverId.getId
+  (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
   case (mbWalletAcc, mbControlAcc) of
     (Nothing, Nothing) -> pure emptyWalletSummary
     _ -> do
-      currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty driverId.getId
+      currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
-      (additions, deductions, nonRedeemableBalance) <- classifyEntries accountIds fromDate toDate cutoff
+      (additions, deductions, nonRedeemableBalance) <- classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff
       let redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
       pure $
         DriverWallet.WalletSummaryResponse
@@ -179,16 +186,21 @@ emptyWalletSummary =
 classifyEntries ::
   (BeamFlow m r) =>
   [Id Account] ->
+  Maybe Text ->
   UTCTime ->
   UTCTime ->
   UTCTime -> -- payout cutoff time
   m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
-classifyEntries accountIds fromDate toDate cutoff = do
+classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff = do
   -- Use walletCreditRefs (single source of truth) + debit-only refs for full picture
   let allRefs = walletCreditRefs ++ [walletReferencePayout]
       accountIdSet = accountIds
   entriesPerAccount <- forM accountIds $ \accountId ->
-    findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
+    case mbConcernedIndividualId of
+      Just concernedIndividualId ->
+        LedgerService.findByAccountWithFiltersAndConcernedIndividual accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs) (Just concernedIndividualId)
+      Nothing ->
+        findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
   let entries = concat entriesPerAccount
       (addEntries, dedEntries) = partition (\e -> e.toAccountId `elem` accountIdSet) entries
 
@@ -343,7 +355,7 @@ ensurePayoutsEnabled :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutCon
 ensurePayoutsEnabled ctx = do
   merchant <- CQM.findById ctx.merchantId >>= fromMaybeM (MerchantNotFound ctx.merchantId.getId)
   let isPrepaidAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  unless (isPrepaidAndWalletEnabled && ctx.transporterConfig.driverWalletConfig.enableWalletPayout) $
+  unless (isPrepaidAndWalletEnabled && ctx.transporterConfig.driverWalletConfig.enableWalletPayout) $ -- TODO :: This also can be (||), but not changing it for now.
     throwError $ InvalidRequest "Payouts are disabled"
 
 -- | Check that the driver hasn't exceeded the maximum daily payout count.
@@ -558,6 +570,7 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         isOnline = True,
         counterpartyType = FAccount.DRIVER,
         counterpartyId = driverId.getId,
+        concernedIndividualId = Just driverId.getId,
         referenceId = referenceId,
         merchantName = mName,
         merchantShortId = mShortId,

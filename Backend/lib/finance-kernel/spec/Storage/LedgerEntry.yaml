@@ -30,6 +30,7 @@ LedgerEntry:
     timestamp: UTCTime
     fromAccountId: Id Account
     toAccountId: Id Account
+    concernedIndividualId: Maybe Text
     amount: HighPrecMoney
     currency: Currency
     entryType: EntryType
@@ -56,6 +57,7 @@ LedgerEntry:
     id: PrimaryKey
     fromAccountId: SecondaryKey
     toAccountId: SecondaryKey
+    concernedIndividualId: "!SecondaryKey"
     referenceId: "!SecondaryKey"
     ownerId: "!SecondaryKey"
     settlementId: "!SecondaryKey"
@@ -105,6 +107,12 @@ LedgerEntry:
       kvFunction: updateWithKV
       params: [settlementStatus, settlementId, settlementTimestamp]
       where: id
+
+  extraIndexes:
+    - columns: [concernedIndividualId]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

@@ -118,6 +118,7 @@ apis:
         - offset: Int
         - driverId: Text
         - fleetOperatorId: Text
+        - concernedIndividualId: Text
         - from: UTCTime
         - to: UTCTime
         - sourceType: Text

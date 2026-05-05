@@ -83,6 +83,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.amount amount,
+      Se.Set Beam.concernedIndividualId concernedIndividualId,
       Se.Set Beam.currency currency,
       Se.Set Beam.entryType entryType,
       Se.Set Beam.fromAccountId (Kernel.Types.Id.getId fromAccountId),
@@ -115,6 +116,7 @@ instance FromTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.Ledger
       Just
         Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry
           { amount = amount,
+            concernedIndividualId = concernedIndividualId,
             createdAt = createdAt,
             currency = currency,
             entryType = entryType,
@@ -146,6 +148,7 @@ instance ToTType' Beam.LedgerEntry Lib.Finance.Domain.Types.LedgerEntry.LedgerEn
   toTType' (Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry {..}) = do
     Beam.LedgerEntryT
       { Beam.amount = amount,
+        Beam.concernedIndividualId = concernedIndividualId,
         Beam.createdAt = createdAt,
         Beam.currency = currency,
         Beam.entryType = entryType,

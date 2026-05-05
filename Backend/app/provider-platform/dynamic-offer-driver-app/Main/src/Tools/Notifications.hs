@@ -1739,7 +1739,10 @@ data PickupZoneRequestEntityData = PickupZoneRequestEntityData
     gateId :: Text,
     vehicleType :: Text,
     validTill :: UTCTime,
-    requestType :: Text
+    requestType :: Text,
+    perKmFare :: Maybe HighPrecMoney,
+    isDemandHigh :: Bool,
+    demandCount :: Int
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 

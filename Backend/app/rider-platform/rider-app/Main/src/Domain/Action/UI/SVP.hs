@@ -2,6 +2,7 @@ module Domain.Action.UI.SVP
   ( getSvpQr,
     getSvpPublicKey,
     postSvpGate,
+    postSvpSignQR,
   )
 where
 
@@ -28,7 +29,6 @@ import qualified Domain.Types.SvpJourney as DSvp
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Types (ServiceFlow)
-import Kernel.External.Wallet.Interface.Types (WalletPostingReq (..), WalletPostingType (REDEEM))
 import qualified Kernel.External.Wallet.Interface.Types as Wallet
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -36,8 +36,6 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
-import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Numeric (showHex)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.Person as QPersonBase
@@ -225,28 +223,15 @@ getSvpQr (Just riderId, merchantId) mbLat mbLon = do
   person <- QPersonBase.findById riderId >>= fromMaybeM (PersonNotFound (getId riderId))
   decMobile <- mapM decrypt person.mobileNumber
   let mobile = encodeMobile (fromMaybe "0000000000" decMobile)
-  -- Fetch LIVE balance from Juspay so QR reflects real wallet balance
-  mbPersonWallet <- QPersonWallet.findByPersonId (getId riderId)
-  balancePaisa <- case mbPersonWallet of
-    Nothing -> pure (0 :: Int)
-    Just pw -> do
-      let balanceReq = Wallet.WalletBalanceReq {customerId = pw.personId, requireHistory = Just False}
-      walletResp <- LoyaltyWallet.svpWalletBalance merchantId person.merchantOperatingCityId balanceReq
-      now <- getCurrentTime
-      if walletResp.success
-        then do
-          QPersonWallet.updateByPrimaryKey
-            pw
-              { DPersonWallet.usableCashAmount = walletResp.walletData.usableCashAmount,
-                DPersonWallet.cashAmount = walletResp.walletData.cashAmount,
-                DPersonWallet.pointsAmount = walletResp.walletData.pointsAmount,
-                DPersonWallet.cashFromPointsRedemption = walletResp.walletData.cashFromPointsRedemption,
-                DPersonWallet.usablePointsAmount = walletResp.walletData.usablePointsAmount,
-                DPersonWallet.expiredBalance = walletResp.walletData.expiredBalance,
-                DPersonWallet.updatedAt = now
-              }
-          pure (floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int)
-        else pure (floor (getHighPrecMoney pw.usableCashAmount * 100) :: Int)
+  -- Fetch live balance from Juspay wallet API
+  balancePaisa <- do
+    let balanceReq = Wallet.WalletBalanceReq {customerId = getId riderId, requireHistory = Just False}
+    walletResp <- LoyaltyWallet.svpWalletBalance merchantId person.merchantOperatingCityId balanceReq
+    if walletResp.success
+      then pure (floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int)
+      else do
+        logWarning $ "[SVP:QR] walletBalance failed for rider=" <> getId riderId <> " — balance=0"
+        pure (0 :: Int)
   let txnRef = T.take 22 $ T.filter (/= '-') (getId riderId)
       bookingLat = encodeCoord mbLat
       bookingLon = encodeCoord mbLon
@@ -306,41 +291,24 @@ handleEntry ::
   m API.GateCallbackResp
 handleEntry mobileNum mId stationCode entryTime = do
   person <- findRiderByMobile mobileNum mId
-  -- Fetch LIVE balance from Juspay — same source as consumer app wallet display
-  mbPersonWallet <- QPersonWallet.findByPersonId (getId person.id)
-  balance <- case mbPersonWallet of
-    Nothing -> do
-      logWarning $ "[SVP:Entry] No person_wallet row for rider=" <> getId person.id <> " — balance=0"
-      pure (0 :: Int)
-    Just pw -> do
-      let balanceReq = Wallet.WalletBalanceReq {customerId = pw.personId, requireHistory = Just False}
-      walletResp <- LoyaltyWallet.svpWalletBalance person.merchantId person.merchantOperatingCityId balanceReq
-      now <- getCurrentTime
-      if walletResp.success
-        then do
-          -- Sync fresh balance back into person_wallet
-          QPersonWallet.updateByPrimaryKey
-            pw
-              { DPersonWallet.usableCashAmount = walletResp.walletData.usableCashAmount,
-                DPersonWallet.cashAmount = walletResp.walletData.cashAmount,
-                DPersonWallet.pointsAmount = walletResp.walletData.pointsAmount,
-                DPersonWallet.cashFromPointsRedemption = walletResp.walletData.cashFromPointsRedemption,
-                DPersonWallet.usablePointsAmount = walletResp.walletData.usablePointsAmount,
-                DPersonWallet.expiredBalance = walletResp.walletData.expiredBalance,
-                DPersonWallet.updatedAt = now
-              }
-          let livePaisa = floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int
-          logInfo $ "[SVP:Entry] Live wallet balance for rider=" <> getId person.id <> " ₹" <> show (livePaisa `div` 100)
-          pure livePaisa
-        else do
-          -- Fall back to cached value if live call fails
-          logWarning $ "[SVP:Entry] walletBalance call failed for rider=" <> getId person.id <> " — using cached ₹" <> show (floor (getHighPrecMoney pw.usableCashAmount) :: Int)
-          pure (floor (getHighPrecMoney pw.usableCashAmount * 100) :: Int)
+  -- Fetch live balance from Juspay wallet API
+  balance <- do
+    let balanceReq = Wallet.WalletBalanceReq {customerId = getId person.id, requireHistory = Just False}
+    walletResp <- LoyaltyWallet.svpWalletBalance person.merchantId person.merchantOperatingCityId balanceReq
+    if walletResp.success
+      then do
+        let livePaisa = floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int
+        logInfo $ "[SVP:Entry] Balance for rider=" <> getId person.id <> " ₹" <> show (livePaisa `div` 100)
+        pure livePaisa
+      else do
+        logWarning $ "[SVP:Entry] walletBalance failed for rider=" <> getId person.id <> " — balance=0"
+        pure (0 :: Int)
   if balance < svpMinFarePaisa
     then
       pure
         API.GateCallbackResp
           { allowed = False,
+            fareCharged = Nothing,
             reason =
               Just $
                 "Insufficient balance. Minimum ₹"
@@ -357,6 +325,7 @@ handleEntry mobileNum mId stationCode entryTime = do
           pure
             API.GateCallbackResp
               { allowed = False,
+                fareCharged = Nothing,
                 reason =
                   Just $
                     "Already inside the metro at station "
@@ -391,7 +360,7 @@ handleEntry mobileNum mId stationCode entryTime = do
               <> stationCode
               <> " balance=₹"
               <> show (balance `div` 100)
-          pure API.GateCallbackResp {allowed = True, reason = Nothing}
+          pure API.GateCallbackResp {allowed = True, fareCharged = Nothing, reason = Nothing}
 
 handleExit ::
   ( CacheFlow m r,
@@ -437,30 +406,9 @@ handleExit mobileNum mId stationCode exitTime = do
 
   logInfo $
     "[SVP:Exit] rider=" <> getId person.id
-      <> " entry="
-      <> entryStation
-      <> " exit="
-      <> stationCode
-      <> " fare=₹"
-      <> show fareAmount
-
-  -- Deduct fare from wallet; gate stays closed if deduction fails
-  when (fareAmount > HighPrecMoney 0) $ do
-    let farePaisa = round (getHighPrecMoney fareAmount * 100) :: Int
-    walletResp <-
-      LoyaltyWallet.svpWalletPosting person.merchantId person.merchantOperatingCityId
-        WalletPostingReq
-          { customerId = getId person.id,
-            postingType = REDEEM,
-            operationId = getId journey.id, -- unique per journey
-            pointsAmount = farePaisa
-          }
-    unless walletResp.success $
-      throwError $
-        InternalError $
-          "[SVP] Wallet deduction failed for rider " <> getId person.id
-            <> ": "
-            <> walletResp.message
+      <> " entry=" <> entryStation
+      <> " exit=" <> stationCode
+      <> " fare=₹" <> show fareAmount
 
   -- Mark journey EXITED and expire tktSlNo so next QR issues a fresh serial
   QSvpJourney.updateStatusAndExitDetailsById
@@ -473,13 +421,18 @@ handleExit mobileNum mId stationCode exitTime = do
 
   Hedis.del (tktSlNoRedisKey person.id)
 
-  logInfo $
-    "[SVP:Exit] DONE rider=" <> getId person.id
-      <> " "
-      <> entryStation
-      <> "→"
-      <> stationCode
-      <> " fare=₹"
-      <> show fareAmount
+  logInfo $ "[SVP:Exit] DONE rider=" <> getId person.id <> " " <> entryStation <> "→" <> stationCode
 
-  pure API.GateCallbackResp {allowed = True, reason = Nothing}
+  pure API.GateCallbackResp
+    { allowed = True,
+      reason = Nothing,
+      fareCharged = Just (fromRational (getHighPrecMoney fareAmount))
+    }
+
+postSvpSignQR ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  API.SignQRReq ->
+  m API.SignQRResp
+postSvpSignQR API.SignQRReq {plaintext} = do
+  sig <- signPlaintext plaintext
+  pure API.SignQRResp {signature = sig}

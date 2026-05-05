@@ -86,9 +86,9 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SOSService SOS.ERSS -> Domain.SOSServiceConfig . SOSInterface.ERSSConfig <$> valueToMaybe configJSON
     Domain.SOSService SOS.GJ112 -> Domain.SOSServiceConfig . SOSInterface.GJ112Config <$> valueToMaybe configJSON
     Domain.SOSService SOS.Trinity -> Domain.SOSServiceConfig . SOSInterface.TrinityConfig <$> valueToMaybe configJSON
-    Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> valueToMaybe configJSON
-    Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> valueToMaybe configJSON
-    Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> valueToMaybe configJSON
+    Domain.SettlementService svc -> case valueToMaybe @Settlement.SettlementServiceConfig configJSON of
+      Just cfg | cfg.settlementService == svc -> Just $ Domain.SettlementServiceConfig cfg
+      _ -> Nothing
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -171,10 +171,7 @@ getServiceNameConfigJson = \case
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)
     SOSInterface.TrinityConfig cfg -> (Domain.SOSService SOS.Trinity, toJSON cfg)
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
-    Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
-    Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)
+  Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case

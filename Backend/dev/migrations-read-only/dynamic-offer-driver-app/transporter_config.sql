@@ -891,3 +891,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN invoice_config 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_manual_document_status_check boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dont_auto_enable_driver boolean ;

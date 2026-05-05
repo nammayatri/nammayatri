@@ -45,12 +45,21 @@ apis:
       response:
         type: DriverQueuePositionRes
 
+  - GET:
+      endpoint: /driverQueueHistory
+      auth: ApiAuthV2
+      mandatoryQuery:
+        driverId: Text
+      response:
+        type: DriverQueueHistoryRes
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
     - vehicleType: Text
     - driversToNotify: Int
     - forceNotifyDriverIds: Maybe [Text]
+    - isDemandHigh: Maybe Bool
     - derive: "'HideSecrets"
 
   ManualQueueAddReq:
@@ -104,3 +113,18 @@ types:
   DriverQueuePositionRes:
     - queuePosition: Maybe Int
     - queueSize: Int
+
+  QueueTrackingState:
+    - specialLocationId: Text
+    - vehicleType: Text
+    - consecutiveExitPings: Int
+    - lastRecordedRank: Int
+
+  QueueHistoryEvent:
+    - timestamp: Double
+    - value: Text
+
+  DriverQueueHistoryRes:
+    - trackingState: Maybe QueueTrackingState
+    - currentRank: Maybe Int
+    - events: "[QueueHistoryEvent]"

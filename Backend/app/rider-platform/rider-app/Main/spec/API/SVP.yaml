@@ -28,6 +28,13 @@ types:
   GateCallbackResp:
     allowed: Bool
     reason: Maybe Text
+    fareCharged: Maybe Double
+
+  SignQRReq:
+    plaintext: Text
+
+  SignQRResp:
+    signature: Text
 
 apis:
 
@@ -56,3 +63,12 @@ apis:
         type: GateCallbackReq
       response:
         type: GateCallbackResp
+
+  # Sign plaintext with the server RSA key — used by gate scanner test app
+  - POST:
+      endpoint: /svp/signQR
+      auth: NoAuth
+      request:
+        type: SignQRReq
+      response:
+        type: SignQRResp

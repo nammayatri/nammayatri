@@ -35,12 +35,12 @@ import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import qualified Kernel.Storage.Hedis as Redis
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant

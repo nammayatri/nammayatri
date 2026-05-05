@@ -222,7 +222,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               when (bookingCReason.source == SBCR.ByDriver) $ do
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
-                DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
+                DCP.accumulateCancellationPenalty (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) booking ride rideTags transporterConfig driver
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
@@ -306,7 +306,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                 }
         QCDD.create cancellationDuesDetails
       -- Customer cancellation ledger entries (wallet path)
-      when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $ do
+      when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && fee.amount > 0) $ do
         merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
         let rideGst = transporterConfig.taxConfig.rideGst
             gstPct = fromMaybe 0 rideGst.cgstPercentage + fromMaybe 0 rideGst.sgstPercentage + fromMaybe 0 rideGst.igstPercentage

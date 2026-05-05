@@ -22,6 +22,11 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Id
 import Servant
 
+data ManualQueueRemoveRequest = ManualQueueRemoveRequest
+  { reason :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
 type ManualQueueRemoveAPI =
   "internal"
     :> "special-locations"
@@ -31,10 +36,11 @@ type ManualQueueRemoveAPI =
     :> "drivers"
     :> Capture "merchantId" (Id DM.Merchant)
     :> Capture "driverId" (Id DP.Person)
+    :> ReqBody '[JSON] ManualQueueRemoveRequest
     :> Delete '[JSON] APISuccess
 
 manualQueueRemoveAPI :: Proxy ManualQueueRemoveAPI
 manualQueueRemoveAPI = Proxy
 
-manualQueueRemove :: Text -> Text -> Id DM.Merchant -> Id DP.Person -> ET.EulerClient APISuccess
+manualQueueRemove :: Text -> Text -> Id DM.Merchant -> Id DP.Person -> ManualQueueRemoveRequest -> ET.EulerClient APISuccess
 manualQueueRemove = ET.client manualQueueRemoveAPI

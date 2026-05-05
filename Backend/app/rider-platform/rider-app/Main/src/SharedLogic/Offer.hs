@@ -84,7 +84,9 @@ data OffersFraudChecksReq = OffersFraudChecksReq
     isMultipleOrNoDeviceIdExist :: Maybe Bool,
     isDriverNumberSameAsCustomer :: Bool,
     personOfferStats :: [DOfferStats.OfferStats],
-    personStats :: Maybe DPS.PersonStats
+    personStats :: Maybe DPS.PersonStats,
+    hasTakenValidRide :: Bool,
+    totalRidesCount :: Maybe Int
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON)
@@ -403,7 +405,7 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           mbBookingData = mkBookingData <$> mbBooking
           mbSearchReqData = mkSearchRequestData <$> mbSearchReq
       forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
         pure (productId, filteredOffers)
     else do
       let totalAmount = sum $ map ((.amount) . snd) products
@@ -417,17 +419,17 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
           mbBookingData = mkBookingData <$> mbBooking
           mbSearchReqData = mkSearchRequestData <$> mbSearchReq
       forM offersByProduct $ \(productId, offersForProduct) -> do
-        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats
+        filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
         pure (productId, filteredOffers)
 
-applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> m Payment.OfferListResp
-applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats = do
+applyOffersFraudChecks :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) => Id DMOC.MerchantOperatingCity -> Payment.OfferListResp -> Maybe DRide.Ride -> Maybe DRB.Booking -> Maybe SSR.SearchRequest -> Maybe Y.RideData -> Maybe Y.BookingData -> Maybe Y.SearchRequestData -> Maybe Bool -> Bool -> [DOfferStats.OfferStats] -> Maybe DPS.PersonStats -> Bool -> Maybe Int -> m Payment.OfferListResp
+applyOffersFraudChecks merchantOperatingCityId offerListResp mbRideEntity mbBookingEntity mbSearchReqEntity mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount = do
   now <- getCurrentTime
   (logics, _) <- TDL.getAppDynamicLogic (cast merchantOperatingCityId) LYT.OFFERS_FRAUD_CHECKS now Nothing Nothing
   if null logics
     then pure offerListResp
     else do
-      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats)
+      result <- LYTUtils.runLogics logics (OffersFraudChecksReq offerListResp mbRide mbBooking mbSearchReq isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats hasTakenValidRide totalRidesCount)
       case A.fromJSON result.result :: A.Result OffersFraudChecksResp of
         A.Success logicResult -> do
           let mbFailureReason = (T.strip <$> logicResult.failureReason) >>= (\reason -> if T.null reason then Nothing else Just reason)

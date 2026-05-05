@@ -3,6 +3,7 @@ imports:
   City: Kernel.Types.Beckn.Context
   BaseUrl: Kernel.Prelude
   PaymentMode: Domain.Types.PaymentMode
+  RequirementsInfo: Kernel.External.Payment.Interface.Types
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -151,6 +152,8 @@ types:
     - chargesEnabled: Bool
     - detailsSubmitted: Bool
     - paymentMode: PaymentMode
+    - requirements: Maybe RequirementsInfo
+    - futureRequirements: Maybe RequirementsInfo
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -63,6 +63,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban

@@ -10,6 +10,7 @@ import qualified Data.Singletons.TH
 import qualified Domain.Types.PaymentMode
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -29,7 +30,13 @@ data FleetBankAccountLinkResp = FleetBankAccountLinkResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetBankAccountResp = FleetBankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, paymentMode :: Domain.Types.PaymentMode.PaymentMode}
+data FleetBankAccountResp = FleetBankAccountResp
+  { chargesEnabled :: Kernel.Prelude.Bool,
+    detailsSubmitted :: Kernel.Prelude.Bool,
+    paymentMode :: Domain.Types.PaymentMode.PaymentMode,
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

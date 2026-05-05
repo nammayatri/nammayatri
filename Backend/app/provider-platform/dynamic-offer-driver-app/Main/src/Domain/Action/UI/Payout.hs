@@ -62,6 +62,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.Finance.Wallet
 import SharedLogic.Merchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.Ride as SharedRide
 import Storage.Beam.Finance ()
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -134,6 +135,8 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                   when (payoutRequest.status /= newStatus && payoutRequest.status `notElem` [DPR.CREDITED, DPR.CASH_PAID, DPR.CASH_PENDING]) do
                     let statusMsg = "Bank Webhook: " <> show payoutStatus
                     PayoutRequest.updateStatusWithHistoryById newStatus (Just statusMsg) payoutRequest
+                    when (newStatus `elem` [DPR.CANCELLED, DPR.AUTO_PAY_FAILED, DPR.FAILED]) $ do
+                      SharedRide.safeRevertVehicleBalanceForPayout payoutRequest
                     when (newStatus `elem` [DPR.CREDITED, DPR.CASH_PAID]) $ do
                       let redisKey = mkSpecialZonePayoutSmsKey payoutRequest.id newStatus
                       alreadySent <- Redis.get redisKey

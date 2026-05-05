@@ -51,7 +51,9 @@ data AddRidePayoutAccountNumberReq = AddRidePayoutAccountNumberReq
     accountNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ifscCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    vehicleRegistrationNumber :: Kernel.Prelude.Text
+    vehicleRegistrationNumber :: Kernel.Prelude.Text,
+    vehicleBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    vehicleBalanceAdjustmentPercentage :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

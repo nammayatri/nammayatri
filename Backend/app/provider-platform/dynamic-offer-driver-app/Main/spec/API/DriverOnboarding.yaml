@@ -33,6 +33,7 @@ imports:
   VerifyAsyncResp : Kernel.External.Verification.Interface.Types
   HighPrecMoney: Kernel.Types.Common
   VerificationService: Kernel.External.Verification.Types
+  RequirementsInfo: Kernel.External.Payment.Interface.Types
 
 module: DriverOnboardingV2
 types:
@@ -154,6 +155,8 @@ types:
     chargesEnabled: Bool
     detailsSubmitted: Bool
     paymentMode: PaymentMode
+    requirements: Maybe RequirementsInfo
+    futureRequirements: Maybe RequirementsInfo
   HVSdkCallLogReq:
     txnId: Text
     hvFlowId: Maybe Text

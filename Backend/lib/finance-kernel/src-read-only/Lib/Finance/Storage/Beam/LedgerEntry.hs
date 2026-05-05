@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data LedgerEntryT f = LedgerEntryT
   { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
+    concernedIndividualId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     currency :: (B.C f Kernel.Types.Common.Currency),
     entryType :: (B.C f Lib.Finance.Domain.Types.LedgerEntry.EntryType),
@@ -48,6 +49,6 @@ instance B.Table LedgerEntryT where
 
 type LedgerEntry = LedgerEntryT Identity
 
-$(enableKVPG (''LedgerEntryT) [('id)] [[('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
+$(enableKVPG (''LedgerEntryT) [('id)] [[('concernedIndividualId)], [('fromAccountId)], [('referenceId)], [('settlementId)], [('toAccountId)]])
 
 $(mkTableInstancesGenericSchema (''LedgerEntryT) "finance_ledger_entry")
