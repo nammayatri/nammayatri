@@ -58,12 +58,14 @@ module Tools.Payment
     createPayment,
     refundPayment,
     getRefundStatus,
+    loadLoyaltyProgramMap,
   )
 where
 
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.List (groupBy, sortBy, sortOn)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
@@ -110,6 +112,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Payment.Domain.Types.PaymentOrder
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
@@ -838,3 +841,24 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       RideHailing -> DMSC.PaymentService Payment.Juspay
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
+
+loadLoyaltyProgramMap ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe (Map.Map Text FAccount.CounterpartyType))
+loadLoyaltyProgramMap merchantId merchantOperatingCityId = do
+  mbCfg <-
+    getOneConfig
+      ( MerchantServiceConfigDimensions
+          { merchantOperatingCityId = merchantOperatingCityId.getId,
+            merchantId = merchantId.getId,
+            serviceName = Just (DMSC.JuspayWalletService Payment.Juspay)
+          }
+      )
+  pure $ case mbCfg of
+    Just cfg -> case cfg.serviceConfig of
+      DMSC.JuspayWalletServiceConfig (Payment.JuspayConfig jcfg) ->
+        Map.mapMaybe (readMaybe . T.unpack) <$> jcfg.loyaltyProgramMap
+      _ -> Nothing
+    Nothing -> Nothing

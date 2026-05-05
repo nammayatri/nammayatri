@@ -1,0 +1,159 @@
+imports:
+  UTCTime: Kernel.Prelude
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Types.Common
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  Account: Lib.Finance.Domain.Types.Account
+  CounterpartyType: Lib.Finance.Domain.Types.Account
+  WalletPaymentKind: Lib.Payment.Domain.Types.WalletPayments
+
+# One wallet per (person, program). `programType` is the finance-kernel
+# CounterpartyType used on the linked finance_account row. The Juspay
+# `programId` is resolved to a `programType` via LoyaltyProgramConfig.
+#
+# `availableBalance` mirrors the finance-kernel ledger balance (convenience),
+# while `currentAvailablePoints` is the authoritative value snapped from
+# Juspay's loyaltyInfo on every post-CHARGED reconciliation.
+Wallet:
+  tableName: wallet
+
+  fields:
+    id: Id Wallet
+    personId: Text
+    programType: CounterpartyType
+    programId: Text
+    accountId: Id Account
+    currency: Currency
+    availableBalance: HighPrecMoney
+    currentAvailablePoints: HighPrecMoney
+    lifetimeEarned: HighPrecMoney
+    lifetimeBurned: HighPrecMoney
+    topupEarned: HighPrecMoney
+    cashbackEarned: HighPrecMoney
+    merchantId: Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    personId: "!SecondaryKey"
+    accountId: "!SecondaryKey"
+
+  queries:
+    findByPersonAndProgram:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, programType]
+    updateAggregatesOnEarn:
+      kvFunction: updateWithKV
+      params: [availableBalance, lifetimeEarned, topupEarned, cashbackEarned]
+      where: id
+    updateAggregatesOnBurn:
+      kvFunction: updateWithKV
+      params: [availableBalance, lifetimeBurned]
+      where: id
+    syncFromLoyaltyInfo:
+      kvFunction: updateWithKV
+      params: [currentAvailablePoints, availableBalance, lifetimeEarned, lifetimeBurned, topupEarned, cashbackEarned]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+# One row per order. Captures only order-level metadata + status of the
+# loyalty side-effects of that order. Per-program / per-kind / per-campaign
+# breakdown lives in WalletHistory rows linked by walletPaymentsId.
+#
+# Status lifecycle:
+# NEW -> PENDING -> CHARGED (terminal) | FAILED (terminal) | REVERSED
+WalletPayments:
+  tableName: wallet_payments
+
+  types:
+    WalletPaymentKind:
+      enum: "TOPUP, CASHBACK, BURN"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+    WalletPaymentStatus:
+      enum: "NEW, PENDING, CHARGED, FAILED, REVERSED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id WalletPayments
+    personId: Text
+    orderId: Id PaymentOrder
+    currency: Currency
+    status: WalletPaymentStatus
+    totalEarned: HighPrecMoney
+    totalBurned: HighPrecMoney
+    domainEntityId: Maybe Text
+    merchantId: Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    orderId: "!SecondaryKey"
+
+  queries:
+    findByOrderId:
+      kvFunction: findOneWithKV
+      where: orderId
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Lib.Payment.Domain.Types.WalletPayments.WalletPaymentKind>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Lib.Payment.Domain.Types.WalletPayments.WalletPaymentStatus>
+
+# Per-(program, kind, campaign) breakdown of the loyalty side-effects of one
+# order. Each row corresponds to one ledger entry — referenceId on the
+# ledger entry is walletHistory.id. Burns get one row per program with
+# kind = BURN and campaignId = Nothing.
+WalletHistory:
+  tableName: wallet_history
+
+  fields:
+    id: Id WalletHistory
+    walletPaymentsId: Id WalletPayments
+    walletId: Id Wallet
+    programType: CounterpartyType
+    kind: WalletPaymentKind
+    campaignId: Maybe Text
+    points: HighPrecMoney
+    reversedPoints: Maybe HighPrecMoney
+    benefitValue: Maybe HighPrecMoney
+    domainEntityId: Text
+    merchantId: Text
+    merchantOperatingCityId: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    walletPaymentsId: "!SecondaryKey"
+    walletId: "!SecondaryKey"
+
+  queries:
+    findByWalletPaymentsAndProgramAndKindAndCampaign:
+      kvFunction: findOneWithKV
+      where:
+        and: [walletPaymentsId, programType, kind, campaignId]
+    updatePointsAndBenefit:
+      kvFunction: updateWithKV
+      params: [points, reversedPoints, benefitValue]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+# NOTE: Juspay programId -> internal CounterpartyType resolution lives on
+# JuspayCfg.loyaltyProgramMap (shared-kernel) — stored inline on the
+# MerchantServiceConfig row for ServiceName = JuspayWalletService Juspay.
+# No separate table.

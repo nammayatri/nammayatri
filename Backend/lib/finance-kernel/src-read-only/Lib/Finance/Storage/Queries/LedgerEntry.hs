@@ -32,6 +32,30 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByReference :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByReference referenceType referenceId = do findAllWithKV [Se.And [Se.Is Beam.referenceType $ Se.Eq referenceType, Se.Is Beam.referenceId $ Se.Eq referenceId]]
 
+findByReferenceAndFromAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByReferenceAndFromAccount referenceType referenceId fromAccountId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.referenceId $ Se.Eq referenceId,
+          Se.Is Beam.fromAccountId $ Se.Eq (Kernel.Types.Id.getId fromAccountId)
+        ]
+    ]
+
+findByReferenceAndToAccount ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
+findByReferenceAndToAccount referenceType referenceId toAccountId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.referenceType $ Se.Eq referenceType,
+          Se.Is Beam.referenceId $ Se.Eq referenceId,
+          Se.Is Beam.toAccountId $ Se.Eq (Kernel.Types.Id.getId toAccountId)
+        ]
+    ]
+
 findByStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.LedgerEntry.EntryStatus -> m ([Lib.Finance.Domain.Types.LedgerEntry.LedgerEntry]))
 findByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 

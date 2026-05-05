@@ -40,6 +40,7 @@ data CounterpartyType
   | PG_PAYMENT_JUSPAY
   | PG_PAYOUT_JUSPAY
   | RIDER
+  | LOYALTY_WALLET
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountStatus))

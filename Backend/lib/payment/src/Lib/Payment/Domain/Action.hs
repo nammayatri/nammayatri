@@ -89,10 +89,9 @@ import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
-import Kernel.External.Wallet as Wallet
+import Kernel.External.Wallet as Wallet hiding (loyaltyInfo)
 -- import qualified Tools.Wallet as TWallet
 
-import qualified Kernel.External.Wallet.Interface as WalletInterface
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto as Esq hiding (Value, isNothing)
 import qualified Kernel.Storage.Hedis as Redis
@@ -112,7 +111,6 @@ import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import qualified Lib.Payment.Domain.Types.PersonDailyOfferStats as DPersonDailyOfferStats
-import qualified Lib.Payment.Domain.Types.PersonWallet as DPersonWallet
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
 import qualified Lib.Payment.Domain.Types.WalletRewardPosting as DWalletRewardPosting
 import Lib.Payment.PGFee (PGFeeConfig (..), PGFeeType (..), recordPGFeeLedgerEntries)
@@ -128,8 +126,6 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderS
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
 import qualified Lib.Payment.Storage.Queries.PersonDailyOfferStats as QPersonDailyOfferStats
-import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
-import qualified Lib.Payment.Storage.Queries.WalletRewardPosting as QWalletRewardPosting
 import qualified Lib.Yudhishthira.Tools.Utils as LYUtils
 
 data PaymentStatusResp
@@ -155,7 +151,8 @@ data PaymentStatusResp
         paymentFulfillmentStatus :: Maybe PaymentFulfillmentStatus,
         domainEntityId :: Maybe Text,
         amount :: HighPrecMoney,
-        validTill :: Maybe UTCTime
+        validTill :: Maybe UTCTime,
+        orderLoyaltyInfo :: Maybe Payment.LoyaltyInfo
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -745,7 +742,6 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
   logInfo $ "CreateOrderService: "
   let updatedOrderShortId = updateShortId (Just paymentServiceType) isTestTransaction createOrderRequest.orderShortId
       createOrderReq = (createOrderRequest :: Payment.CreateOrderReq) {Payment.orderShortId = updatedOrderShortId}
-  when (paymentServiceType == DOrder.Wallet) $ do handleWalletOrder createOrderReq
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
@@ -779,48 +775,6 @@ createOrderService merchantId mbMerchantOpCityId personId mbPaymentOrderValidity
       now <- getCurrentTime
       let buffer = secondsToNominalDiffTime 150 -- 2.5 mins of buffer
       return (order.status `notElem` [Payment.CHARGED, Payment.AUTO_REFUNDED] && expiry < addUTCTime buffer now)
-
-    handleWalletOrder createOrderReq = do
-      now <- getCurrentTime
-      mbPersonWallet <- QPersonWallet.findByPersonId personId.getId
-      personWallet <-
-        case mbPersonWallet of
-          Just personWallet -> do
-            pure personWallet
-          Nothing -> do
-            personWalletId <- generateGUID
-            let personWallet =
-                  DPersonWallet.PersonWallet
-                    { id = personWalletId,
-                      cashAmount = HighPrecMoney {getHighPrecMoney = 0},
-                      cashFromPointsRedemption = HighPrecMoney {getHighPrecMoney = 0},
-                      expiredBalance = HighPrecMoney {getHighPrecMoney = 0},
-                      personId = personId.getId,
-                      pointsAmount = createOrderReq.amount,
-                      updatedAt = now,
-                      usableCashAmount = HighPrecMoney {getHighPrecMoney = 0},
-                      usablePointsAmount = HighPrecMoney {getHighPrecMoney = 0},
-                      merchantId = merchantId.getId,
-                      merchantOperatingCityId = mbMerchantOpCityId <&> (.getId),
-                      createdAt = now
-                    }
-            QPersonWallet.create personWallet
-            return personWallet
-      let walletRewardPosting =
-            DWalletRewardPosting.WalletRewardPosting
-              { id = Id createOrderReq.orderId,
-                shortId = ShortId createOrderReq.orderShortId,
-                walletId = personWallet.id,
-                pointsAmount = createOrderReq.amount,
-                cashAmount = HighPrecMoney {getHighPrecMoney = 0},
-                postingType = WalletInterface.GRANT,
-                status = DWalletRewardPosting.NEW,
-                createdAt = now,
-                updatedAt = now,
-                merchantId = merchantId.getId,
-                merchantOperatingCityId = mbMerchantOpCityId <&> (.getId)
-              }
-      QWalletRewardPosting.create walletRewardPosting
 
 buildSDKPayload :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayload)
 buildSDKPayload req order = do
@@ -1543,9 +1497,6 @@ orderStatusService ::
 orderStatusService merchantOpCityId personId orderId orderStatusCall = do
   -- order <- runInReplica $ QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
   order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
-  when (order.paymentServiceType == Just DOrder.Wallet) $ do
-    handleWalletOrderStatus order
-
   unless (personId == order.personId) $ throwError NotAnExecutor
   let orderStatusReq =
         Payment.OrderStatusReq
@@ -1664,28 +1615,10 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
             validTill = order.validTill,
             paymentFulfillmentStatus = order.paymentFulfillmentStatus,
             domainEntityId = order.domainEntityId, -- To be filled by Domain
+            orderLoyaltyInfo = loyaltyInfo,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
-  where
-    handleWalletOrderStatus paymentOrder = do
-      personWallet <- QPersonWallet.findByPersonId personId.getId >>= fromMaybeM (InternalError $ "Person wallet not found for personId: " <> show personId.getId)
-      mbWalletRewardPosting <- QWalletRewardPosting.findByWalletIdAndStatus personWallet.id DWalletRewardPosting.NEW
-      case mbWalletRewardPosting of
-        Just walletRewardPosting -> do
-          case paymentOrder.status of
-            Payment.CHARGED -> do
-              QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.SUCCESS}
-            Payment.AUTHENTICATION_FAILED -> markFailed
-            Payment.AUTHORIZATION_FAILED -> markFailed
-            Payment.JUSPAY_DECLINED -> markFailed
-            Payment.CLIENT_AUTH_TOKEN_EXPIRED -> markFailed
-            Payment.AUTO_REFUNDED -> markFailed
-            _ -> pure ()
-          where
-            markFailed = QWalletRewardPosting.updateByPrimaryKey walletRewardPosting {DWalletRewardPosting.status = DWalletRewardPosting.FAILED}
-        Nothing -> do
-          logError $ "Wallet reward posting with status NEW not found for walletId: " <> show personWallet.id.getId
 
 data OrderTxn = OrderTxn
   { transactionUUID :: Maybe Text,

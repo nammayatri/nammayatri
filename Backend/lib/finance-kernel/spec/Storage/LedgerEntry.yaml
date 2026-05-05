@@ -72,6 +72,16 @@ LedgerEntry:
       where:
         and: [referenceType, referenceId]
 
+    findByReferenceAndToAccount:
+      kvFunction: findAllWithKV
+      where:
+        and: [referenceType, referenceId, toAccountId]
+
+    findByReferenceAndFromAccount:
+      kvFunction: findAllWithKV
+      where:
+        and: [referenceType, referenceId, fromAccountId]
+
     findByFromAccount:
       kvFunction: findAllWithKV
       where: fromAccountId
