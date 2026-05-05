@@ -51,7 +51,6 @@ import SharedLogic.SearchTry
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
-import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
@@ -279,13 +278,6 @@ validateRequest subscriber transporterId req now = do
   unless (transporterId' == transporterId) $ throwError AccessDenied
   let bapMerchantId = booking.bapId
   unless (subscriber.subscriber_id == bapMerchantId) $ throwError AccessDenied
-  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  let isAllowedForNonValueAddNP = case booking.tripCategory of
-        OneWay OneWayOnDemandDynamicOffer -> True
-        CrossCity OneWayOnDemandDynamicOffer _ -> True
-        _ -> False
-  when (not isValueAddNP && not isAllowedForNonValueAddNP) $
-    throwError (InvalidRequest $ "Unserviceable trip category:-" <> show booking.tripCategory)
   case booking.tripCategory of
     OneWay OneWayOnDemandDynamicOffer -> getDriverQuoteDetails booking transporter
     OneWay OneWayRideOtp -> getRideOtpQuoteDetails booking transporter

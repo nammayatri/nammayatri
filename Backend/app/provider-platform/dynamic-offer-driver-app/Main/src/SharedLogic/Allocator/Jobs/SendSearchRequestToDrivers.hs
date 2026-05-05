@@ -44,6 +44,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle (Handle (..)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal as I
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Booking as SBooking
+import qualified SharedLogic.CallBAP as CallBAP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
@@ -251,5 +252,10 @@ sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput go
               Nothing -> True,
           cancelBookingIfApplies = do
             whenJust mbBooking $ \booking -> do
-              SBooking.cancelBooking booking Nothing driverSearchBatchInput.merchant
+              SBooking.cancelBooking booking Nothing driverSearchBatchInput.merchant,
+          sendOnSelectErrorToBAP = do
+            result <- try $ CallBAP.sendOnSelectErrorToBAP driverSearchBatchInput.merchant driverSearchBatchInput.searchReq searchTry
+            case result of
+              Right () -> pure ()
+              Left (e :: SomeException) -> logError $ "on_select(error) dispatch failed: " <> show e
         }

@@ -468,6 +468,7 @@ in  { esqDBCfg
     , encTools
     , authTokenCacheExpiry = +600
     , disableSignatureAuth = False
+    , becknResponseWrapped = False
     , httpClientOptions = common.httpClientOptions
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
