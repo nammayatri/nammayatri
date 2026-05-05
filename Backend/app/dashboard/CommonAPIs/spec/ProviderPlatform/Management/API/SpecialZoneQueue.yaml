@@ -59,6 +59,7 @@ types:
     - vehicleType: Text
     - driversToNotify: Int
     - forceNotifyDriverIds: Maybe [Text]
+    - isDemandHigh: Maybe Bool
     - derive: "'HideSecrets"
 
   ManualQueueAddReq:

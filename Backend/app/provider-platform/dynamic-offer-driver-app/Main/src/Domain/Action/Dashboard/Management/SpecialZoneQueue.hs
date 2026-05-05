@@ -42,7 +42,7 @@ postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   gate <- Esq.runInReplica (QGI.findById (Kernel.Types.Id.Id req.gateId)) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
   let mbPriorityIds = fmap (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
-  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds
+  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds req.isDemandHigh
   logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId
   pure Kernel.Types.APISuccess.Success
 
