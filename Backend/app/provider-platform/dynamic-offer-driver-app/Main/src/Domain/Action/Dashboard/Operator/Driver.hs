@@ -163,21 +163,21 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
               ONBOARDING_INSPECTION ->
                 void $
                   withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
+                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig True
               REGULAR_INSPECTION ->
                 void $
                   withTryCatch "incrementRejectedVehicleRequestsDaily" $
-                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig False
+                    FleetOpStats.incrementRejectedVehicleRequestsDaily req.operatorId analyticsDriverId transporterConfig True
               DRIVER_ONBOARDING_INSPECTION -> do
                 personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
                 void $
                   withTryCatch "incrementRejectedDriverRequestsDaily" $
-                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig True
               DRIVER_REGULAR_INSPECTION -> do
                 personId <- opHubReq.driverId & fromMaybeM (InvalidRequest "driverId is required for driver inspection")
                 void $
                   withTryCatch "incrementRejectedDriverRequestsDaily" $
-                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig False
+                    FleetOpStats.incrementRejectedDriverRequestsDaily req.operatorId personId.getId transporterConfig True
 
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED) $ do
           case opHubReq.requestType of
@@ -216,7 +216,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedVehicleRequests" $
-              FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig False
+              FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig True
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
@@ -239,7 +239,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedDriverRequestsDaily" $
-              FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig False
+              FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig True
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
