@@ -31,6 +31,8 @@ StclMembership:
     addressCity: Text
     addressState: Text
     addressPostalCode: Text
+    addressProofType: Maybe Text
+    addressProofImageId: Maybe Text
     bankName: Text
     bankBranch: Text
     accountNumber: EncryptedHashedField e Text

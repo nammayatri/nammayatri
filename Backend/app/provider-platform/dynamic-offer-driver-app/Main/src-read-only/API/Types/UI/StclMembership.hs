@@ -42,6 +42,8 @@ data FuelType
 data MembershipApplicationReq = MembershipApplicationReq
   { aadharNumber :: Kernel.Prelude.Text,
     address :: Address,
+    addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     amount :: Kernel.Types.Common.Money,
     bankDetails :: BankDetails,
     dateOfBirth :: Data.Time.Day,
@@ -68,6 +70,8 @@ data MembershipApplicationResp = MembershipApplicationResp {applicationId :: Ker
 
 data MembershipDetailsResp = MembershipDetailsResp
   { address :: Address,
+    addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     applicationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     applicationId :: Kernel.Prelude.Text,
     bankDetails :: BankDetails,
@@ -95,6 +99,19 @@ data MembershipDetailsResp = MembershipDetailsResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NomineeInfo = NomineeInfo {nomineeAadhar :: Kernel.Prelude.Maybe Kernel.Prelude.Text, nomineeName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateBankDetails = UpdateBankDetails {accountNumber :: Kernel.Prelude.Text, branch :: Kernel.Prelude.Text, confirmAccountNumber :: Kernel.Prelude.Text, ifscCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpdateMembershipApplicationReq = UpdateMembershipApplicationReq
+  { address :: Kernel.Prelude.Maybe Address,
+    bankDetails :: Kernel.Prelude.Maybe UpdateBankDetails,
+    nomineeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleType :: Kernel.Prelude.Maybe VehicleType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
