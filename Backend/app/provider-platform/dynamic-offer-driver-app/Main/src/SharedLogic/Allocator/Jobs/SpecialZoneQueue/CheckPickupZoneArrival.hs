@@ -132,6 +132,9 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                             gateId = gateId,
                             vehicleType = vehicleType,
                             validTill = request.validTill,
-                            requestType = "PICKUP_ZONE_NO_SHOW"
+                            requestType = "PICKUP_ZONE_NO_SHOW",
+                            perKmFare = Nothing,
+                            isDemandHigh = False,
+                            demandCount = 0
                           }
                   Notify.notifyPickupNoShow merchantOpCityId driverId entityData
