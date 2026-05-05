@@ -393,6 +393,7 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             priority = 0,
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
+            isInternal = maybe False (.isInternal) mbExistingSpLoc,
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
             supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
             ..
@@ -1478,7 +1479,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMinDriverThresholdsJson :: Maybe Text,
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
-    gateInfoId :: Maybe Text
+    gateInfoId :: Maybe Text,
+    isInternal :: Maybe Text
   }
   deriving (Show)
 
@@ -1520,6 +1522,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_max_driver_thresholds")
       <*> optional (r .: "gate_info_demand_thresholds")
       <*> optional (r .: "gate_info_id")
+      <*> optional (r .: "is_internal")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1570,6 +1573,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+          mbIsInternal :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isInternal) "Is Internal"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -1608,6 +1612,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 createdAt = now,
                 updatedAt = now,
                 isQueueEnabled = mbIsQueueEnabled,
+                isInternal = fromMaybe False mbIsInternal,
                 enforceTollRoute = Nothing,
                 supportNumber = supportNumber
               }

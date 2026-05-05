@@ -92,7 +92,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMinDriverThresholdsJson :: Maybe Text,
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
-    gateInfoId :: Maybe Text
+    gateInfoId :: Maybe Text,
+    isInternal :: Maybe Text
   }
   deriving (Show)
 
@@ -134,6 +135,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_max_driver_thresholds")
       <*> optional (r .: "gate_info_demand_thresholds")
       <*> optional (r .: "gate_info_id")
+      <*> optional (r .: "is_internal")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -237,6 +239,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   enabled :: Bool <- readCSVField idx row.enabled "Enabled"
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
+      mbIsInternal :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isInternal) "Is Internal"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
@@ -277,6 +280,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             createdAt = now,
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
+            isInternal = fromMaybe False mbIsInternal,
             enforceTollRoute = Nothing,
             supportNumber = supportNumber
           }

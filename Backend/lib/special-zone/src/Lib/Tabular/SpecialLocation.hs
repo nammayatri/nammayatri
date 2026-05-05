@@ -43,6 +43,7 @@ mkPersist
       enabled Bool
       isOpenMarketEnabled Bool Maybe
       isQueueEnabled Bool Maybe
+      isInternal Bool Maybe
       enforceTollRoute Bool Maybe
       supportNumber Text Maybe
       createdAt UTCTime
@@ -68,5 +69,6 @@ instance FromTType SpecialLocationT Domain.SpecialLocation where
           merchantId = Id <$> merchantId,
           merchantOperatingCityId = Id <$> merchantOperatingCityId,
           isOpenMarketEnabled = fromMaybe True isOpenMarketEnabled,
+          isInternal = fromMaybe False isInternal,
           ..
         }

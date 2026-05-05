@@ -42,6 +42,7 @@ data SpecialLocationFull = SpecialLocationFull
     enabled :: Bool,
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
+    isInternal :: Bool,
     enforceTollRoute :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
@@ -77,12 +78,18 @@ findByLocationName locationName =
       specialLocation ^. SpecialLocationLocationName ==. val locationName
     return specialLocation
 
+-- | Predicate used by every app-facing query so internal/dashboard-only
+-- locations never reach customer or driver app code paths.
+notInternalLoc :: SqlExpr (Value (Maybe Bool)) -> SqlExpr (Value Bool)
+notInternalLoc col = isNothing col ||. col ==. just (val False)
+
 findByIdWithGeom :: Transactionable m => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
 findByIdWithGeom specialLocationId =
   Esq.findOne $ do
     specialLocation <- from $ table @SpecialLocationT
     where_ $
       specialLocation ^. SpecialLocationEnabled ==. val True
+        &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
         &&. specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
     return (specialLocation, F.mbGetGeomGeoJSON)
 
@@ -149,6 +156,7 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
       specialLocation <- from $ table @SpecialLocationT
       where_ $
         specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
           &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
                   ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
               )
@@ -218,6 +226,7 @@ findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
     specialLocation <- from $ table @SpecialLocationT
     where_ $
       specialLocation ^. SpecialLocationEnabled ==. val True
+        &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
         &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
                 ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
                 &&. specialLocation ^. SpecialLocationCategory ==. val category
@@ -230,7 +239,10 @@ findSpecialLocationByLatLongFull point = do
   mbRes <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      where_ $
+        specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
+          &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   mapM makeFullSpecialLocation (listToMaybe mbRes)
@@ -240,7 +252,10 @@ findSpecialLocationByLatLongNearby point radius = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
+      where_ $
+        specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
+          &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
@@ -257,7 +272,10 @@ findSpecialLocationByLatLong' point = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      where_ $
+        specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
+          &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return specialLocation
   return $ listToMaybe specialLocations
@@ -267,7 +285,10 @@ findSpecialLocationByLatLong point = do
   specialLocations <-
     Esq.findAll $ do
       specialLocation <- from $ table @SpecialLocationT
-      where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
+      where_ $
+        specialLocation ^. SpecialLocationEnabled ==. val True
+          &&. notInternalLoc (specialLocation ^. SpecialLocationIsInternal)
+          &&. containsPoint (point.lon, point.lat)
       orderBy [asc (specialLocation ^. SpecialLocationPriority)]
       return (specialLocation, F.getGeomGeoJSON)
   return $ listToMaybe specialLocations
