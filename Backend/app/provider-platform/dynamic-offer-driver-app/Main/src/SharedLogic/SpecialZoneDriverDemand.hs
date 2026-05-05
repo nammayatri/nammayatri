@@ -691,6 +691,9 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
   now <- getCurrentTime
   let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
+      notificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+      notificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
+      notificationValidTill = addUTCTime (fromIntegral notificationActiveTillInSec) now
       isDemandHigh = fromMaybe True mbIsDemandHigh
   mbPerKmFare <- getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId vehicleType
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
@@ -734,6 +737,8 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
                       gateId = gateId,
                       vehicleType = vehicleType,
                       validTill = validTill,
+                      notificationDuration = notificationDuration,
+                      notificationValidTill = notificationValidTill,
                       requestType = "PICKUP_ZONE_REQUEST",
                       perKmFare = mbPerKmFare,
                       isDemandHigh = isDemandHigh,
