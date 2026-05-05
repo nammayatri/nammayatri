@@ -48,6 +48,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
+import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -58,7 +59,6 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
@@ -282,7 +282,7 @@ getPayoutDetailsForRide rideId payoutAmount = do
       case (mbVehicleBalance, mbVehicleBalanceAdjustmentPercentage) of
         (Just vb, Just pct)
           | toRational pct < 0 || toRational pct > 100 ->
-              (payoutAmount, Nothing)
+            (payoutAmount, Nothing)
           | getHighPrecMoney vb < 0 ->
             let avbBase = getHighPrecMoney payoutAmount * toRational pct / 100
                 avb = toHighPrecMoney (roundToIntegral avbBase :: Integer)
@@ -301,8 +301,9 @@ mkVehicleBalanceLockKey :: Text -> Text
 mkVehicleBalanceLockKey rcIdText = "lock:vehicleBalance:" <> rcIdText
 
 safeRevertVehicleBalanceForPayout ::
-  ( EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r ) =>
-  DPR.PayoutRequest -> m ()
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
+  DPR.PayoutRequest ->
+  m ()
 safeRevertVehicleBalanceForPayout pr = do
   whenJust pr.payoutFee $ \fee -> do
     mbRcIdText <- getRcIdForRide (Id pr.entityId)
@@ -327,8 +328,9 @@ safeRevertVehicleBalanceForPayout pr = do
           QDRPB.updateByPrimaryKey (rcAccount {DDPBA.vehicleBalance = Just newBalance})
 
 safeApplyVehicleBalanceForPayout ::
-  ( EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r ) =>
-  DPR.PayoutRequest -> m ()
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r, Redis.HedisFlow m r) =>
+  DPR.PayoutRequest ->
+  m ()
 safeApplyVehicleBalanceForPayout pr = do
   whenJust pr.payoutFee $ \fee -> do
     mbRcIdText <- getRcIdForRide (Id pr.entityId)

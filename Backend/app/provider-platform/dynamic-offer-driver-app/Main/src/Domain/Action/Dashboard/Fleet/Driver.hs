@@ -82,6 +82,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetScheduledBookingReassign,
     postDriverFleetDashboardAnalyticsCache,
     postDriverAddRidePayoutAccountNumber,
+    getDriverFleetStatusSummary,
   )
 where
 
@@ -207,13 +208,16 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
+import qualified Storage.Clickhouse.DriverInformation as CHDriverInfo
 import qualified Storage.Clickhouse.DriverOperatorAssociation as CDOA
 import qualified Storage.Clickhouse.FleetDriverAssociation as CFDA
 import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
+import qualified Storage.Clickhouse.FleetOwnerInformation as CHFOI
 import qualified Storage.Clickhouse.FleetRcDailyStats as CFRDSExtra
 import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
+import qualified Storage.Clickhouse.VehicleRegistrationCertificate as CHVRC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.Booking as QRB
@@ -1977,7 +1981,8 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
         let statsList = map (buildEarningsResponse transporterConfig) earningsStats
         forM statsList $ \(driverId, statRes) -> do
           let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
-          pure $ Common.EarningsList $ statRes {Common.driverName = driverName}
+          let statRes' = statRes {Common.driverName = driverName} :: Common.FleetDriverEarningsStatsRes
+          pure $ Common.EarningsList statRes'
       Common.METRICS_LIST -> do
         metricsStats <-
           if useDBForAnalytics
@@ -1987,7 +1992,8 @@ getDriverFleetDriverListStats merchantShortId opCity requestorId mbFrom mbTo mbF
         let statsList = map (buildMetricsResponse transporterConfig fromDay toDay) metricsStats
         forM statsList $ \(driverId, statRes) -> do
           let driverName = fromMaybe "Unknown" $ Map.lookup driverId nameMap
-          pure $ Common.MetricsList $ statRes {Common.driverName = driverName}
+          let statRes' = statRes {Common.driverName = driverName} :: Common.FleetDriverMetricsStatsRes
+          pure $ Common.MetricsList statRes'
 
   let count = length driverStats
       summary = Common.Summary {totalCount = length filteredDriverIds, count}
@@ -4706,3 +4712,49 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
   void $ UIDriver.acceptScheduledBookingWithPreFetched merchant transporterConfig newBooking newDriver clientId (Just newBooking)
 
   pure Success
+
+mkStatusSummaryResponse :: [(Maybe DDVS.DocsVerificationStatus, Int)] -> Common.StatusSummaryResponse
+mkStatusSummaryResponse statusCounts =
+  let findCount s = fromMaybe 0 $ Kernel.Prelude.lookup (Just s) statusCounts
+      approvedCount = findCount DDVS.ADMIN_APPROVED
+      pendingCount = findCount DDVS.ADMIN_PENDING
+      rejectedCount = findCount DDVS.ADMIN_REJECTED
+      totalCount = approvedCount + pendingCount + rejectedCount
+   in Common.StatusSummaryResponse
+        { total = totalCount,
+          approved = approvedCount,
+          pending = pendingCount,
+          rejected = rejectedCount
+        }
+
+getDriverFleetStatusSummary ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.EntityOperationType ->
+  Maybe Text ->
+  Flow Common.StatusSummaryResponse
+getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  mbRequestor <- case mbRequestorId of
+    Just requestorId -> B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+    Nothing -> pure Nothing
+  case entityOperationType of
+    Common.DRIVER_STATUS -> do
+      driverIds <- case mbRequestor of
+        Just person | person.role == DP.FLEET_OWNER ->
+          fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
+        _ -> do
+          fleetOwnerIds <- map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
+          CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds
+      statusCounts <- CHDriverInfo.getStatusCountsByDriverIds driverIds
+      pure $ mkStatusSummaryResponse statusCounts
+    Common.VEHICLE_STATUS -> do
+      fleetOwnerIds <- case mbRequestor of
+        Just person | person.role == DP.FLEET_OWNER -> pure [person.id.getId]
+        _ -> map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
+      statusCounts <- CHVRC.getStatusCountsByFleetOwnerIds fleetOwnerIds
+      pure $ mkStatusSummaryResponse statusCounts
+    Common.FLEET_OWNER_STATUS -> do
+      statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
+      pure $ mkStatusSummaryResponse statusCounts

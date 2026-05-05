@@ -426,6 +426,13 @@ data EditVehicleReq = EditVehicleReq
 instance Kernel.Types.HideSecrets.HideSecrets EditVehicleReq where
   hideSecrets = Kernel.Prelude.identity
 
+data EntityOperationType
+  = DRIVER_STATUS
+  | VEHICLE_STATUS
+  | FLEET_OWNER_STATUS
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
 data EstimateRouteReq = EstimateRouteReq {start :: Kernel.External.Maps.Types.LatLong, end :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1042,6 +1049,10 @@ data SortOn
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
+data StatusSummaryResponse = StatusSummaryResponse {total :: Kernel.Prelude.Int, approved :: Kernel.Prelude.Int, pending :: Kernel.Prelude.Int, rejected :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data StopInfo = StopInfo {code :: Kernel.Prelude.Text, name :: Kernel.Prelude.Text, point :: Kernel.External.Maps.Types.LatLong}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1261,7 +1272,7 @@ data VerifyFleetJoiningOtpReq = VerifyFleetJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyFleetJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverFleetAccessList :<|> GetDriverFleetOwnerList :<|> PostDriverFleetAccessSelect :<|> PostDriverFleetV2AccessSelect :<|> PostDriverFleetV2AccessMultiOwnerIdSelect :<|> PostDriverFleetAddVehiclesHelper :<|> PostDriverAddRidePayoutAccountNumber :<|> PostDriverFleetAddVehicleHelper :<|> GetDriverFleetGetDriverRequests :<|> PostDriverFleetDriverRequestRespondHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicle :<|> GetDriverFleetGetAllDriver :<|> GetDriverFleetGetAllBadge :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetBookingsHelper :<|> GetDriverFleetAssignmentsHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetDriverListStatsHelper :<|> GetDriverFleetDriverAssociation :<|> GetDriverFleetVehicleAssociation :<|> PostDriverFleetVehicleEditHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfoHelper :<|> GetDriverFleetOwnerInfo :<|> GetDriverFleetOperatorInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> GetDriverFleetRoutesHelper :<|> GetDriverFleetPossibleRoutesHelper :<|> PostDriverFleetTripPlannerHelper :<|> GetDriverFleetTripTransactions :<|> PostDriverFleetAddDriversHelper :<|> PostDriverFleetAddDriverBusRouteMappingHelper :<|> PostDriverFleetLinkRCWithDriverHelper :<|> PostDriverDashboardFleetWmbTripEndHelper :<|> GetDriverDashboardFleetTripWaypointsHelper :<|> GetDriverFleetWmbRouteDetailsHelper :<|> PostDriverFleetGetNearbyDriversHelper :<|> PostDriverDashboardFleetTrackDriverHelper :<|> GetDriverDashboardInternalHelperGetFleetOwnerId :<|> GetDriverDashboardInternalHelperGetFleetOwnerIds :<|> GetDriverFleetStatusHelper :<|> PostDriverFleetLocationListHelper :<|> PostDriverFleetGetDriverDetailsHelper :<|> PostDriverFleetGetNearbyDriversV2Helper :<|> GetDriverFleetDashboardAnalyticsAllTimeHelper :<|> GetDriverFleetDashboardAnalyticsHelper :<|> PostDriverFleetDashboardAnalyticsCache :<|> PostDriverDashboardFleetEstimateRouteHelper :<|> PostDriverFleetApproveDriverHelper :<|> PostDriverFleetDriverUpdateHelper :<|> GetDriverFleetDriverDetailsHelper :<|> PostDriverFleetTripTransactionsV2 :<|> GetDriverFleetVehicleListStatsHelper :<|> GetDriverFleetDriverOnboardedDriversAndUnlinkedVehiclesHelper :<|> GetDriverFleetScheduledBookingListHelper :<|> PostDriverFleetScheduledBookingAssignHelper :<|> PostDriverFleetScheduledBookingCancelHelper :<|> PostDriverFleetScheduledBookingReassignHelper))
+type API = ("driver" :> (GetDriverFleetAccessList :<|> GetDriverFleetOwnerList :<|> PostDriverFleetAccessSelect :<|> PostDriverFleetV2AccessSelect :<|> PostDriverFleetV2AccessMultiOwnerIdSelect :<|> PostDriverFleetAddVehiclesHelper :<|> PostDriverAddRidePayoutAccountNumber :<|> PostDriverFleetAddVehicleHelper :<|> GetDriverFleetGetDriverRequests :<|> PostDriverFleetDriverRequestRespondHelper :<|> PostDriverFleetAddRCWithoutDriverHelper :<|> GetDriverFleetGetAllVehicle :<|> GetDriverFleetGetAllDriver :<|> GetDriverFleetGetAllBadge :<|> PostDriverFleetUnlinkHelper :<|> PostDriverFleetRemoveVehicleHelper :<|> PostDriverFleetRemoveDriverHelper :<|> GetDriverFleetTotalEarningHelper :<|> GetDriverFleetVehicleEarningHelper :<|> GetDriverFleetDriverEarningHelper :<|> GetDriverFleetBookingsHelper :<|> GetDriverFleetAssignmentsHelper :<|> GetDriverFleetGetFleetDriverVehicleAssociationHelper :<|> GetDriverFleetDriverListStatsHelper :<|> GetDriverFleetDriverAssociation :<|> GetDriverFleetVehicleAssociation :<|> PostDriverFleetVehicleEditHelper :<|> PostDriverFleetVehicleDriverRCstatusHelper :<|> PostDriverUpdateFleetOwnerInfoHelper :<|> GetDriverFleetOwnerInfo :<|> GetDriverFleetOperatorInfo :<|> PostDriverFleetDriverSendJoiningOtpHelper :<|> PostDriverFleetDriverVerifyJoiningOtpHelper :<|> GetDriverFleetRoutesHelper :<|> GetDriverFleetPossibleRoutesHelper :<|> PostDriverFleetTripPlannerHelper :<|> GetDriverFleetTripTransactions :<|> PostDriverFleetAddDriversHelper :<|> PostDriverFleetAddDriverBusRouteMappingHelper :<|> PostDriverFleetLinkRCWithDriverHelper :<|> PostDriverDashboardFleetWmbTripEndHelper :<|> GetDriverDashboardFleetTripWaypointsHelper :<|> GetDriverFleetWmbRouteDetailsHelper :<|> PostDriverFleetGetNearbyDriversHelper :<|> PostDriverDashboardFleetTrackDriverHelper :<|> GetDriverDashboardInternalHelperGetFleetOwnerId :<|> GetDriverDashboardInternalHelperGetFleetOwnerIds :<|> GetDriverFleetStatusHelper :<|> PostDriverFleetLocationListHelper :<|> PostDriverFleetGetDriverDetailsHelper :<|> PostDriverFleetGetNearbyDriversV2Helper :<|> GetDriverFleetDashboardAnalyticsAllTimeHelper :<|> GetDriverFleetDashboardAnalyticsHelper :<|> PostDriverFleetDashboardAnalyticsCache :<|> PostDriverDashboardFleetEstimateRouteHelper :<|> PostDriverFleetApproveDriverHelper :<|> PostDriverFleetDriverUpdateHelper :<|> GetDriverFleetDriverDetailsHelper :<|> PostDriverFleetTripTransactionsV2 :<|> GetDriverFleetVehicleListStatsHelper :<|> GetDriverFleetDriverOnboardedDriversAndUnlinkedVehiclesHelper :<|> GetDriverFleetStatusSummary :<|> GetDriverFleetScheduledBookingListHelper :<|> PostDriverFleetScheduledBookingAssignHelper :<|> PostDriverFleetScheduledBookingCancelHelper :<|> PostDriverFleetScheduledBookingReassignHelper))
 
 type GetDriverFleetAccessList = ("fleet" :> "access" :> "list" :> QueryParam "fleetMemberId" Kernel.Prelude.Text :> Get '[JSON] FleetOwnerListRes)
 
@@ -2488,6 +2499,13 @@ type GetDriverFleetDriverOnboardedDriversAndUnlinkedVehiclesHelper =
            OnboardedDriversAndUnlinkedVehiclesRes
   )
 
+type GetDriverFleetStatusSummary =
+  ( "fleet" :> Capture "entityOperationType" EntityOperationType :> "statusSummary" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           StatusSummaryResponse
+  )
+
 type GetDriverFleetScheduledBookingList =
   ( "fleet" :> "scheduledBooking" :> "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
       :> QueryParam
@@ -2617,6 +2635,7 @@ data DriverAPIs = DriverAPIs
     postDriverFleetTripTransactionsV2 :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe TripStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient TripTransactionRespT,
     getDriverFleetVehicleListStats :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Data.Time.Day -> Data.Time.Day -> EulerHS.Types.EulerClient FleetVehicleStatsRes,
     getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient OnboardedDriversAndUnlinkedVehiclesRes,
+    getDriverFleetStatusSummary :: EntityOperationType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient StatusSummaryResponse,
     getDriverFleetScheduledBookingList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Data.Time.Day -> Kernel.Prelude.Maybe Dashboard.Common.TripCategory -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient FleetScheduledBookingListRes,
     postDriverFleetScheduledBookingAssign :: Kernel.Prelude.Text -> AssignScheduledBookingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverFleetScheduledBookingCancel :: Kernel.Prelude.Text -> CancelScheduledBookingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -2626,7 +2645,7 @@ data DriverAPIs = DriverAPIs
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverFleetAccessList :<|> getDriverFleetOwnerList :<|> postDriverFleetAccessSelect :<|> postDriverFleetV2AccessSelect :<|> postDriverFleetV2AccessMultiOwnerIdSelect :<|> postDriverFleetAddVehicles :<|> postDriverAddRidePayoutAccountNumber :<|> postDriverFleetAddVehicle :<|> getDriverFleetGetDriverRequests :<|> postDriverFleetRespondDriverRequest :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> getDriverFleetGetAllBadge :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetBookings :<|> getDriverFleetAssignments :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverListStats :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleEdit :<|> postDriverFleetVehicleDriverRcStatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> getDriverFleetOperatorInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> getDriverFleetRoutes :<|> getDriverFleetPossibleRoutes :<|> postDriverFleetTripPlanner :<|> getDriverFleetTripTransactions :<|> postDriverFleetAddDrivers :<|> postDriverFleetAddDriverBusRouteMapping :<|> postDriverFleetLinkRCWithDriver :<|> postDriverDashboardFleetWmbTripEnd :<|> getDriverDashboardFleetTripWaypoints :<|> getDriverFleetWmbRouteDetails :<|> postDriverFleetGetNearbyDrivers :<|> postDriverDashboardFleetTrackDriver :<|> getDriverDashboardInternalHelperGetFleetOwnerId :<|> getDriverDashboardInternalHelperGetFleetOwnerIds :<|> getDriverFleetStatus :<|> postDriverFleetLocationList :<|> postDriverFleetGetDriverDetails :<|> postDriverFleetGetNearbyDriversV2 :<|> getDriverFleetDashboardAnalyticsAllTime :<|> getDriverFleetDashboardAnalytics :<|> postDriverFleetDashboardAnalyticsCache :<|> postDriverDashboardFleetEstimateRoute :<|> postDriverFleetApproveDriver :<|> postDriverFleetDriverUpdate :<|> getDriverFleetDriverDetails :<|> postDriverFleetTripTransactionsV2 :<|> getDriverFleetVehicleListStats :<|> getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :<|> getDriverFleetScheduledBookingList :<|> postDriverFleetScheduledBookingAssign :<|> postDriverFleetScheduledBookingCancel :<|> postDriverFleetScheduledBookingReassign = driverClient
+    getDriverFleetAccessList :<|> getDriverFleetOwnerList :<|> postDriverFleetAccessSelect :<|> postDriverFleetV2AccessSelect :<|> postDriverFleetV2AccessMultiOwnerIdSelect :<|> postDriverFleetAddVehicles :<|> postDriverAddRidePayoutAccountNumber :<|> postDriverFleetAddVehicle :<|> getDriverFleetGetDriverRequests :<|> postDriverFleetRespondDriverRequest :<|> postDriverFleetAddRCWithoutDriver :<|> getDriverFleetGetAllVehicle :<|> getDriverFleetGetAllDriver :<|> getDriverFleetGetAllBadge :<|> postDriverFleetUnlink :<|> postDriverFleetRemoveVehicle :<|> postDriverFleetRemoveDriver :<|> getDriverFleetTotalEarning :<|> getDriverFleetVehicleEarning :<|> getDriverFleetDriverEarning :<|> getDriverFleetBookings :<|> getDriverFleetAssignments :<|> getDriverFleetDriverVehicleAssociation :<|> getDriverFleetDriverListStats :<|> getDriverFleetDriverAssociation :<|> getDriverFleetVehicleAssociation :<|> postDriverFleetVehicleEdit :<|> postDriverFleetVehicleDriverRcStatus :<|> postDriverUpdateFleetOwnerInfo :<|> getDriverFleetOwnerInfo :<|> getDriverFleetOperatorInfo :<|> postDriverFleetSendJoiningOtp :<|> postDriverFleetVerifyJoiningOtp :<|> getDriverFleetRoutes :<|> getDriverFleetPossibleRoutes :<|> postDriverFleetTripPlanner :<|> getDriverFleetTripTransactions :<|> postDriverFleetAddDrivers :<|> postDriverFleetAddDriverBusRouteMapping :<|> postDriverFleetLinkRCWithDriver :<|> postDriverDashboardFleetWmbTripEnd :<|> getDriverDashboardFleetTripWaypoints :<|> getDriverFleetWmbRouteDetails :<|> postDriverFleetGetNearbyDrivers :<|> postDriverDashboardFleetTrackDriver :<|> getDriverDashboardInternalHelperGetFleetOwnerId :<|> getDriverDashboardInternalHelperGetFleetOwnerIds :<|> getDriverFleetStatus :<|> postDriverFleetLocationList :<|> postDriverFleetGetDriverDetails :<|> postDriverFleetGetNearbyDriversV2 :<|> getDriverFleetDashboardAnalyticsAllTime :<|> getDriverFleetDashboardAnalytics :<|> postDriverFleetDashboardAnalyticsCache :<|> postDriverDashboardFleetEstimateRoute :<|> postDriverFleetApproveDriver :<|> postDriverFleetDriverUpdate :<|> getDriverFleetDriverDetails :<|> postDriverFleetTripTransactionsV2 :<|> getDriverFleetVehicleListStats :<|> getDriverFleetDriverOnboardedDriversAndUnlinkedVehicles :<|> getDriverFleetStatusSummary :<|> getDriverFleetScheduledBookingList :<|> postDriverFleetScheduledBookingAssign :<|> postDriverFleetScheduledBookingCancel :<|> postDriverFleetScheduledBookingReassign = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_FLEET_ACCESS_LIST
@@ -2690,6 +2709,7 @@ data DriverUserActionType
   | POST_DRIVER_FLEET_TRIP_TRANSACTIONS_V2
   | GET_DRIVER_FLEET_VEHICLE_LIST_STATS
   | GET_DRIVER_FLEET_DRIVER_ONBOARDED_DRIVERS_AND_UNLINKED_VEHICLES
+  | GET_DRIVER_FLEET_STATUS_SUMMARY
   | GET_DRIVER_FLEET_SCHEDULED_BOOKING_LIST
   | POST_DRIVER_FLEET_SCHEDULED_BOOKING_ASSIGN
   | POST_DRIVER_FLEET_SCHEDULED_BOOKING_CANCEL
@@ -2702,6 +2722,8 @@ $(mkHttpInstancesForEnum ''AddressDocumentType)
 $(mkHttpInstancesForEnum ''DocsVerificationStatus)
 
 $(mkHttpInstancesForEnum ''DriverMode)
+
+$(mkHttpInstancesForEnum ''EntityOperationType)
 
 $(mkHttpInstancesForEnum ''FleetAnalyticsResponseType)
 

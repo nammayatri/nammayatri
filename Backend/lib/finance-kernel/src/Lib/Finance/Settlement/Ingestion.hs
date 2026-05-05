@@ -98,7 +98,8 @@ finalizeSftpFileCursor ::
 finalizeSftpFileCursor mbMeta parseHadNoReports = do
   logInfo $
     "finalizeSftpFileCursor: mbMeta=" <> show mbMeta
-      <> " parseHadNoReports=" <> show parseHadNoReports
+      <> " parseHadNoReports="
+      <> show parseHadNoReports
   maybe (logInfo "finalizeSftpFileCursor: mbMeta=Nothing → no-op") finalize mbMeta
   where
     finalize meta@SftpFetchMeta {..}
@@ -106,18 +107,25 @@ finalizeSftpFileCursor mbMeta parseHadNoReports = do
         let newIndex = firstDataRowIndex + dataRowsDelivered - 1
         logInfo $
           "finalizeSftpFileCursor: branch=updateProgress(PENDING)"
-            <> " trackedFileId=" <> show trackedFileId
-            <> " firstDataRowIndex=" <> show firstDataRowIndex
-            <> " dataRowsDelivered=" <> show dataRowsDelivered
-            <> " newLastProcessedIndex=" <> show newIndex
+            <> " trackedFileId="
+            <> show trackedFileId
+            <> " firstDataRowIndex="
+            <> show firstDataRowIndex
+            <> " dataRowsDelivered="
+            <> show dataRowsDelivered
+            <> " newLastProcessedIndex="
+            <> show newIndex
         QSFI.updateProgress PENDING newIndex trackedFileId
         logInfo $ "finalizeSftpFileCursor: updateProgress done meta=" <> show meta
       | otherwise = do
         logInfo $
           "finalizeSftpFileCursor: branch=updateStatus(COMPLETED)"
-            <> " trackedFileId=" <> show trackedFileId
-            <> " parseHadNoReports=" <> show parseHadNoReports
-            <> " dataRowsDelivered=" <> show dataRowsDelivered
+            <> " trackedFileId="
+            <> show trackedFileId
+            <> " parseHadNoReports="
+            <> show parseHadNoReports
+            <> " dataRowsDelivered="
+            <> show dataRowsDelivered
         QSFI.updateStatus COMPLETED trackedFileId
         logInfo $ "finalizeSftpFileCursor: updateStatus done meta=" <> show meta -- here we need to fix even if the parser breaks it marks it as completed
 
