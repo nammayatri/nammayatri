@@ -1251,6 +1251,7 @@ TransporterConfig:
     allowGstReupload: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
+    sendMembershipIdInProfile: Maybe Bool
 
   beamType:
     currency: Maybe Currency
