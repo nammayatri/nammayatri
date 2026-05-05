@@ -38,10 +38,18 @@ type API =
       :> Post
            '[JSON]
            API.Types.UI.SVP.GateCallbackResp
+      :<|> "svp"
+      :> "signQR"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.SVP.SignQRReq
+      :> Post
+           '[JSON]
+           API.Types.UI.SVP.SignQRResp
   )
 
 handler :: Environment.FlowServer API
-handler = getSvpQr :<|> getSvpPublicKey :<|> postSvpGate
+handler = getSvpQr :<|> getSvpPublicKey :<|> postSvpGate :<|> postSvpSignQR
 
 getSvpQr ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -58,3 +66,6 @@ getSvpPublicKey = withFlowHandlerAPI $ Domain.Action.UI.SVP.getSvpPublicKey
 
 postSvpGate :: (API.Types.UI.SVP.GateCallbackReq -> Environment.FlowHandler API.Types.UI.SVP.GateCallbackResp)
 postSvpGate a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.postSvpGate a1
+
+postSvpSignQR :: (API.Types.UI.SVP.SignQRReq -> Environment.FlowHandler API.Types.UI.SVP.SignQRResp)
+postSvpSignQR a1 = withFlowHandlerAPI $ Domain.Action.UI.SVP.postSvpSignQR a1
