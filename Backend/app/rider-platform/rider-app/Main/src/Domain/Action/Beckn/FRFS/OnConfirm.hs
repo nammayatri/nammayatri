@@ -199,6 +199,14 @@ onConfirm merchant booking' quoteCategories dOrder = do
       SeatBooking.confirmBooking tripId holdId
       SeatBooking.releaseAbandonedHolds tripId booking.id.getId holdId
   void $ QTicket.createMany tickets
+  -- Increment metric only after tickets are successfully persisted
+  fork "incrementTicketConfirmedCounter" $
+    forM_ tickets $ \_ -> do
+      Metrics.incrementTicketConfirmedCounter
+        merchant.shortId.getShortId
+        booking.merchantOperatingCityId.getId
+        (show booking.vehicleType)
+        (show booking.serviceTierType)
   mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
   -- Update journey expiry time based on maximum ticket validity using the created tickets
   whenJust mbJourneyId $ \journeyId -> do
