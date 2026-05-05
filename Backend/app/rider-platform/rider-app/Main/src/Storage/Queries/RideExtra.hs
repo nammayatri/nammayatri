@@ -607,9 +607,9 @@ updateDriverArrivalStatus newStatus (Id rideId) = do
   where
     possiblePredecessors =
       case newStatus of
-        Just DRIVER_ON_THE_WAY -> Just [Nothing]
-        Just DRIVER_REACHING -> Just [Nothing, Just DRIVER_ON_THE_WAY]
-        Just DRIVER_REACHED -> Just [Nothing, Just DRIVER_ON_THE_WAY, Just DRIVER_REACHING]
+        Just DRIVER_ON_THE_WAY -> Nothing
+        Just DRIVER_REACHING -> Just [Just DRIVER_ON_THE_WAY]
+        Just DRIVER_REACHED -> Just [Just DRIVER_ON_THE_WAY, Just DRIVER_REACHING]
         Nothing -> Nothing
 
 findCompletedRideByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
