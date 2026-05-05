@@ -1128,25 +1128,27 @@ getFinanceManagementFinanceWalletLedger ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
   Flow API.WalletLedgerRes
-getFinanceManagementFinanceWalletLedger merchantShortId opCity mbLimit mbOffset mbDriverId mbFleetOperatorId mbFrom mbTo mbSourceType =
-  getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbSourceType mbTo
+getFinanceManagementFinanceWalletLedger merchantShortId opCity mbLimit mbOffset mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbTo mbSourceType =
+  getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo
 
 getFinanceManagementFinanceWalletLedgerImpl ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   Maybe UTCTime ->
   Flow API.WalletLedgerRes
-getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbFrom mbLimit mbOffset mbSourceType mbTo = do
+getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mbFleetOperatorId mbConcernedIndividualId mbFrom mbLimit mbOffset mbSourceType mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1154,11 +1156,26 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  -- Resolve counterparty type and owner ID from driverId or fleetOperatorId
-  let mbOwnerInfo = case (mbDriverId, mbFleetOperatorId) of
-        (Just driverId, _) -> Just (DRIVER, driverId)
-        (_, Just fleetOwnerId) -> Just (FLEET_OWNER, fleetOwnerId)
-        _ -> Nothing
+  -- Resolve owner and optional concernedIndividualId filter (driver within a fleet).
+  -- Backward compatibility: when driverId is present and concernedIndividualId is absent,
+  -- keep DRIVER context even if fleetOperatorId is also passed.
+  let (mbOwnerInfo, mbConcernedIndividualIdFilter) = case (mbDriverId, mbFleetOperatorId, mbConcernedIndividualId) of
+        (Just driverId, _, Nothing) -> (Just (DRIVER, driverId), Nothing)
+        (Nothing, Just fleetOwnerId, Just cid) -> (Just (FLEET_OWNER, fleetOwnerId), Just cid)
+        (Just driverId, Just fleetOwnerId, Just cid)
+          | driverId == cid -> (Just (FLEET_OWNER, fleetOwnerId), Just cid)
+          | otherwise -> (Nothing, Nothing)
+        (Nothing, Just fleetOwnerId, Nothing) -> (Just (FLEET_OWNER, fleetOwnerId), Nothing)
+        (Just driverId, Nothing, Just _) -> (Just (DRIVER, driverId), Nothing)
+        _ -> (Nothing, Nothing)
+
+  when
+    ( isJust mbDriverId
+        && isJust mbFleetOperatorId
+        && isJust mbConcernedIndividualId
+        && mbDriverId /= mbConcernedIndividualId
+    )
+    $ throwError $ InvalidRequest "driverId and concernedIndividualId must be same when used with fleetOperatorId"
 
   case mbOwnerInfo of
     Nothing ->
@@ -1196,7 +1213,7 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
 
           -- Query ledger entries with filters
           let mbReferenceTypes = (\st -> [st]) <$> mbSourceType
-          filteredEntries <- LedgerService.findByAccountWithFilters account.id mbFrom mbTo Nothing Nothing Nothing mbReferenceTypes
+          filteredEntries <- LedgerService.findByAccountWithFiltersAndConcernedIndividual account.id mbFrom mbTo Nothing Nothing Nothing mbReferenceTypes mbConcernedIndividualIdFilter
 
           -- Apply pagination
           let paginatedEntries = take limit $ drop offset filteredEntries

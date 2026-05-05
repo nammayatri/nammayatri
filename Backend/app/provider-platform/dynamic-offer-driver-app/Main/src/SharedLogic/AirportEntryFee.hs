@@ -96,6 +96,7 @@ deductAirportEntryFeeAtEndRide ride booking = do
               isOnline = isOnline,
               counterpartyType = DRIVER,
               counterpartyId = ride.driverId.getId,
+              concernedIndividualId = Just ride.driverId.getId,
               referenceId = ride.id.getId,
               merchantName = Nothing,
               merchantShortId = Nothing,

@@ -232,6 +232,7 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       isOnline = isOnline,
       counterpartyType = RIDER,
       counterpartyId = riderId,
+      concernedIndividualId = Nothing,
       referenceId = referenceId,
       merchantName = merchantName,
       merchantShortId = merchantShortId,

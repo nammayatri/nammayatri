@@ -22,7 +22,6 @@ import Toll.Domain.Types.Toll
 import Toll.Storage.BeamFlow (BeamFlow)
 import Toll.Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
 
-
 tollStartGateTrackingKey :: Text -> Text
 tollStartGateTrackingKey driverId = "TollGateTracking:DriverId-" <> driverId
 
