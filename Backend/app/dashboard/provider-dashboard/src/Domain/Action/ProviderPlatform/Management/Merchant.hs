@@ -497,6 +497,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           isStrongNameCheckRequired = baseMerchant.isStrongNameCheckRequired,
           singleActiveSessionOnly = baseMerchant.singleActiveSessionOnly,
           trackLoginLogoutForRoles = baseMerchant.trackLoginLogoutForRoles,
+          twoFactorMandatoryForRoles = baseMerchant.twoFactorMandatoryForRoles,
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
           twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
           totpStepSize = baseMerchant.totpStepSize,
