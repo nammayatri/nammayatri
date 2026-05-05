@@ -177,6 +177,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver
 import qualified Domain.Types.SearchRequestForDriver as DSRD
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.StclMembership as DStclMembership
 import Domain.Types.TransporterConfig
 import Domain.Types.Vehicle (Vehicle (..), VehicleAPIEntity)
 import Domain.Types.VehicleCategory
@@ -320,6 +321,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
+import qualified Storage.Queries.StclMembership as QStclMembership
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import qualified Storage.Queries.VendorFee as QVF
@@ -478,7 +480,8 @@ data DriverInformationRes = DriverInformationRes
     upiId :: Maybe Text,
     driverReferralApplied :: Bool,
     fleetReferralApplied :: Bool,
-    operatorReferralApplied :: Bool
+    operatorReferralApplied :: Bool,
+    membershipId :: Maybe (Id DStclMembership.StclMembership)
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1602,6 +1605,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  membershipId <- if fromMaybe False merchantConfig.sendMembershipIdInProfile then ((.id) <$>) . listToMaybe <$> QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED else return Nothing
   bankDetails <-
     if merchant.onlinePayment
       then do
