@@ -137,6 +137,8 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._mock_sql_select(body)
         if path == "/mock/sql/update" and self.command == "POST":
             return self._mock_sql_update(body)
+        if path == "/mock/sql/insert" and self.command == "POST":
+            return self._mock_sql_insert(body)
 
         # ── Generic scheduler-job trigger (for scheduler tests) ──
         if path == "/mock/scheduler/trigger" and self.command == "POST":
@@ -428,6 +430,60 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "rowcount": rowcount})
         except Exception:
             log.exception("sql-update error")
+            return self._json({"error": "internal server error"}, status=500)
+
+    def _mock_sql_insert(self, body):
+        """POST /mock/sql/insert — run an INSERT into a dev DB table.
+        Body: {
+          "db_name": "atlas_dev",
+          "db_schema": "atlas_app",
+          "table_name": "purchased_pass",
+          "values": {"id": "...", "status": "Active", ...},   # column → value
+          "touch_timestamps": true,                            # optional, sets created_at/updated_at = NOW()
+          "on_conflict_do_nothing": true                       # optional, appends ON CONFLICT DO NOTHING
+        }
+        Returns: {"ok": true, "rowcount": N}"""
+        from psycopg2 import sql as psql
+        try:
+            data, db_name, schema, table = self._parse_sql_target(body)
+        except ValueError as ve:
+            return self._json({"error": str(ve)}, status=400)
+
+        values = data.get("values") or {}
+        if not isinstance(values, dict) or not values:
+            return self._json({"error": "values must be a non-empty object"}, status=400)
+
+        cols = list(values.keys())
+        params = list(values.values())
+        col_idents = psql.SQL(", ").join(psql.Identifier(c) for c in cols)
+        placeholders = psql.SQL(", ").join(psql.Placeholder() * len(cols))
+
+        if data.get("touch_timestamps"):
+            col_idents = col_idents + psql.SQL(", created_at, updated_at")
+            placeholders = placeholders + psql.SQL(", NOW(), NOW()")
+
+        on_conflict = psql.SQL(" ON CONFLICT DO NOTHING") if data.get("on_conflict_do_nothing") else psql.SQL("")
+        query = psql.SQL("INSERT INTO {sch}.{tbl} ({cols}) VALUES ({vals}){oc}").format(
+            sch=psql.Identifier(schema),
+            tbl=psql.Identifier(table),
+            cols=col_idents,
+            vals=placeholders,
+            oc=on_conflict,
+        )
+
+        try:
+            conn = self._pg_connect(db_name)
+            try:
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute(query, params)
+                rowcount = cur.rowcount
+                cur.close()
+            finally:
+                conn.close()
+            return self._json({"ok": True, "rowcount": rowcount})
+        except Exception:
+            log.exception("sql-insert error")
             return self._json({"error": "internal server error"}, status=500)
 
     # ── Generic scheduler job trigger (for scheduler tests) ──
@@ -784,7 +840,7 @@ def main():
 
     server = HTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/status, POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/status, POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()

@@ -1,0 +1,606 @@
+{
+	"info": {
+		"name": "Pass Expiry Reminder Master",
+		"description": "Tests PassExpiryReminderMaster scheduler job: seed an Active pass with endDate=today+N, trigger the master job, verify the rider received a PASS_EXPIRY_REMINDER push via mock-fcm. Negative case verifies riders with a PreBooked pass are excluded.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.collectionVariables.get('_pos_rider_number')) {",
+					"    pm.collectionVariables.set('_pos_rider_number', '8' + Math.floor(100000000 + Math.random() * 899999999));",
+					"}",
+					"if (!pm.collectionVariables.get('_neg_rider_number')) {",
+					"    pm.collectionVariables.set('_neg_rider_number', '8' + Math.floor(100000000 + Math.random() * 899999999));",
+					"}",
+					"if (!pm.collectionVariables.get('_pos_device_token')) {",
+					"    pm.collectionVariables.set('_pos_device_token', 'test-pass-expiry-pos-' + Date.now());",
+					"}",
+					"if (!pm.collectionVariables.get('_neg_device_token')) {",
+					"    pm.collectionVariables.set('_neg_device_token', 'test-pass-expiry-neg-' + Date.now());",
+					"}",
+					"console.log('Positive rider:', pm.collectionVariables.get('_pos_rider_number'), 'token:', pm.collectionVariables.get('_pos_device_token'));",
+					"console.log('Negative rider:', pm.collectionVariables.get('_neg_rider_number'), 'token:', pm.collectionVariables.get('_neg_device_token'));"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "_job_type",
+			"value": "PassExpiryReminderMaster",
+			"type": "string"
+		},
+		{
+			"key": "_reminder_days",
+			"value": "3",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Cleanup Scheduler State",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Cleanup OK', function () { pm.response.to.have.status(200); });",
+							"var r = pm.response.json();",
+							"console.log('Removed', r.removedJobs, 'jobs and', r.removedLocks, 'locks');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{_job_type}}\", \"target\": \"rider\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\"}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/clear",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "scheduler", "clear"]
+				}
+			}
+		},
+		{
+			"name": "Snapshot RiderConfig",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Snapshot OK', function () { pm.response.to.have.status(200); });",
+							"var rows = pm.response.json().rows || [];",
+							"var row = rows.length > 0 ? rows[0] : {};",
+							"var prev = row.pass_expiry_reminder_days;",
+							"pm.collectionVariables.set('_orig_reminder_days', prev === null || prev === undefined ? '' : String(prev));",
+							"// time_diff_from_utc (Seconds) is needed for endDate math: handler uses todayLocal = (now + timeDiffFromUtc).utctDay",
+							"var tz = row.time_diff_from_utc;",
+							"pm.collectionVariables.set('_time_diff_from_utc', tz === null || tz === undefined ? '0' : String(tz));",
+							"console.log('Original pass_expiry_reminder_days:', prev, '| time_diff_from_utc:', tz);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"select\": [\"pass_expiry_reminder_days\", \"time_diff_from_utc\"], \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/select",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "select"]
+				}
+			}
+		},
+		{
+			"name": "Set RiderConfig.pass_expiry_reminder_days",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Set OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"pass_expiry_reminder_days\": 3}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "update"]
+				}
+			}
+		},
+		{
+			"name": "Drain Pre-existing FCM (positive)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Drain OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Pre-existing FCM count for positive token:', (pm.response.json() || []).length);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mock_fcm_url}}/read/{{_pos_device_token}}",
+					"host": ["{{mock_fcm_url}}"],
+					"path": ["read", "{{_pos_device_token}}"]
+				}
+			}
+		},
+		{
+			"name": "Drain Pre-existing FCM (negative)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Drain OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Pre-existing FCM count for negative token:', (pm.response.json() || []).length);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mock_fcm_url}}/read/{{_neg_device_token}}",
+					"host": ["{{mock_fcm_url}}"],
+					"path": ["read", "{{_neg_device_token}}"]
+				}
+			}
+		},
+		{
+			"name": "Positive Rider Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Auth OK', function () { pm.response.to.have.status(200); });",
+							"pm.collectionVariables.set('_pos_auth_id', pm.response.json().authId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_pos_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Positive Rider OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Verify OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.collectionVariables.set('_pos_token', d.token);",
+							"pm.collectionVariables.set('_pos_person_id', d.person.id);",
+							"console.log('Positive person id:', d.person.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"{{_pos_device_token}}\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{_pos_auth_id}}/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", "{{_pos_auth_id}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Negative Rider Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Auth OK', function () { pm.response.to.have.status(200); });",
+							"pm.collectionVariables.set('_neg_auth_id', pm.response.json().authId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_neg_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Negative Rider OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Verify OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"pm.collectionVariables.set('_neg_token', d.token);",
+							"pm.collectionVariables.set('_neg_person_id', d.person.id);",
+							"console.log('Negative person id:', d.person.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"{{_neg_device_token}}\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{_neg_auth_id}}/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", "{{_neg_auth_id}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Seed Positive Active Pass",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Compute target endDate in city-local time so it matches the handler's todayLocal+N",
+							"var n = parseInt(pm.collectionVariables.get('_reminder_days'), 10) || 3;",
+							"var tzSec = parseInt(pm.collectionVariables.get('_time_diff_from_utc'), 10) || 0;",
+							"var localNow = new Date(Date.now() + tzSec * 1000);",
+							"var localTodayMs = Date.UTC(localNow.getUTCFullYear(), localNow.getUTCMonth(), localNow.getUTCDate());",
+							"pm.collectionVariables.set('_today_local', new Date(localTodayMs).toISOString().split('T')[0]);",
+							"pm.collectionVariables.set('_target_end_date', new Date(localTodayMs + n * 86400000).toISOString().split('T')[0]);",
+							"function uuid4(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);});}",
+							"pm.collectionVariables.set('_pos_pass_id', uuid4());",
+							"pm.collectionVariables.set('_neg_active_pass_id', uuid4());",
+							"pm.collectionVariables.set('_neg_prebooked_pass_id', uuid4());",
+							"pm.collectionVariables.set('_pos_pass_number', String(Math.floor(Math.random()*900000000)+100000000));",
+							"pm.collectionVariables.set('_neg_active_pass_number', String(Math.floor(Math.random()*900000000)+100000000));",
+							"pm.collectionVariables.set('_neg_prebooked_pass_number', String(Math.floor(Math.random()*900000000)+100000000));",
+							"console.log('endDate=' + pm.collectionVariables.get('_target_end_date') + ' tz=' + tzSec + 's');",
+							"console.log('positive Active pass:', pm.collectionVariables.get('_pos_pass_id'));",
+							"console.log('negative Active pass:', pm.collectionVariables.get('_neg_active_pass_id'));",
+							"console.log('negative PreBooked pass:', pm.collectionVariables.get('_neg_prebooked_pass_id'));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Seed positive Active OK', function () { pm.response.to.have.status(200); });",
+							"pm.test('Inserted 1 row', function () { pm.expect(pm.response.json().rowcount).to.eql(1); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"purchased_pass\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{_pos_pass_id}}\",\"person_id\":\"{{_pos_person_id}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"pass_type_id\":\"ulla-unlimited-pass-type\",\"pass_code\":\"ULLA1DAY\",\"pass_name\":\"Ulla 1 Day\",\"pass_description\":\"Test seed for PassExpiryReminderMaster\",\"pass_amount\":1.0,\"pass_number\":{{_pos_pass_number}},\"status\":\"Active\",\"start_date\":\"{{_today_local}}\",\"end_date\":\"{{_target_end_date}}\",\"device_id\":\"test-imei-pos\",\"applicable_vehicle_service_tiers\":[\"ORDINARY\"],\"benefit_description\":\"1 day unlimited\",\"device_switch_count\":0,\"verification_validity\":60,\"used_trip_count\":0,\"max_valid_trips\":100,\"max_valid_days\":0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/insert",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "insert"]
+				}
+			}
+		},
+		{
+			"name": "Seed Negative Active Pass",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Seed negative Active OK', function () { pm.response.to.have.status(200); });",
+							"pm.test('Inserted 1 row', function () { pm.expect(pm.response.json().rowcount).to.eql(1); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"purchased_pass\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{_neg_active_pass_id}}\",\"person_id\":\"{{_neg_person_id}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"pass_type_id\":\"ulla-unlimited-pass-type\",\"pass_code\":\"ULLA1DAY\",\"pass_name\":\"Ulla 1 Day\",\"pass_description\":\"Test seed for PassExpiryReminderMaster\",\"pass_amount\":1.0,\"pass_number\":{{_neg_active_pass_number}},\"status\":\"Active\",\"start_date\":\"{{_today_local}}\",\"end_date\":\"{{_target_end_date}}\",\"device_id\":\"test-imei-neg-a\",\"applicable_vehicle_service_tiers\":[\"ORDINARY\"],\"benefit_description\":\"1 day unlimited\",\"device_switch_count\":0,\"verification_validity\":60,\"used_trip_count\":0,\"max_valid_trips\":100,\"max_valid_days\":0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/insert",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "insert"]
+				}
+			}
+		},
+		{
+			"name": "Seed Negative PreBooked Pass",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Seed negative PreBooked OK', function () { pm.response.to.have.status(200); });",
+							"pm.test('Inserted 1 row', function () { pm.expect(pm.response.json().rowcount).to.eql(1); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"purchased_pass\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{_neg_prebooked_pass_id}}\",\"person_id\":\"{{_neg_person_id}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"pass_type_id\":\"ulla-unlimited-pass-type\",\"pass_code\":\"ULLA1DAY\",\"pass_name\":\"Ulla 1 Day\",\"pass_description\":\"Test seed for PassExpiryReminderMaster (PreBooked)\",\"pass_amount\":1.0,\"pass_number\":{{_neg_prebooked_pass_number}},\"status\":\"PreBooked\",\"start_date\":\"{{_today_local}}\",\"end_date\":\"{{_target_end_date}}\",\"device_id\":\"test-imei-neg-b\",\"applicable_vehicle_service_tiers\":[\"ORDINARY\"],\"benefit_description\":\"1 day unlimited\",\"device_switch_count\":0,\"verification_validity\":60,\"used_trip_count\":0,\"max_valid_trips\":100,\"max_valid_days\":0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/insert",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "insert"]
+				}
+			}
+		},
+		{
+			"name": "Trigger PassExpiryReminderMaster",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Trigger OK', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"console.log('Master job scheduled:', d.jobId, 'shard:', d.shardId, 'key:', d.zsetKey);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{_job_type}}\", \"delaySeconds\": 10, \"merchantId\": \"{{bap_merchant_id}}\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\", \"jobData\": {}, \"maxShards\": 1}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/trigger",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "scheduler", "trigger"]
+				}
+			}
+		},
+		{
+			"name": "Wait for Positive Rider FCM",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Poll mock-fcm /read/<token> until a PASS_EXPIRY_REMINDER notification arrives.",
+							"var MAX_ATTEMPTS = 5;",
+							"var POLL_INTERVAL_MS = 5000;",
+							"var fcmUrl = pm.environment.get('mock_fcm_url');",
+							"var token = pm.collectionVariables.get('_pos_device_token');",
+							"var n = parseInt(pm.collectionVariables.get('_reminder_days'), 10) || 3;",
+							"var attempt = 0;",
+							"var received = [];",
+							"",
+							"function poll() {",
+							"  attempt++;",
+							"  pm.sendRequest({",
+							"    url: fcmUrl + '/read/' + token,",
+							"    method: 'GET'",
+							"  }, function (err, res) {",
+							"    if (err) {",
+							"      console.log('FCM poll attempt', attempt, 'error:', err.message || err);",
+							"    } else {",
+							"      var msgs = res.json() || [];",
+							"      received = received.concat(msgs);",
+							"      console.log('FCM poll attempt', attempt, 'got', msgs.length, 'msgs (total', received.length + ')');",
+							"    }",
+							"    var done = received.length > 0 || attempt >= MAX_ATTEMPTS;",
+							"    if (done) {",
+							"      pm.test('Positive rider received an FCM notification', function () {",
+							"        pm.expect(received.length).to.be.above(0);",
+							"      });",
+							"      pm.test('Notification title mentions days-to-expire', function () {",
+							"        var titles = received.map(function (m) { return (m && m.notification && m.notification.title) || ''; });",
+							"        console.log('Titles:', titles);",
+							"        var expected = 'Pass expiring in ' + n + ' days';",
+							"        pm.expect(titles.some(function (t) { return t === expected; })).to.eql(true);",
+							"      });",
+							"    } else {",
+							"      setTimeout(poll, POLL_INTERVAL_MS);",
+							"    }",
+							"  });",
+							"}",
+							"poll();"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mockServerUrl}}/health",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["health"]
+				}
+			}
+		},
+		{
+			"name": "Verify Negative Rider Got No FCM",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('FCM read OK', function () { pm.response.to.have.status(200); });",
+							"var msgs = pm.response.json() || [];",
+							"console.log('Negative rider FCM count:', msgs.length);",
+							"pm.test('Negative rider (has PreBooked pass) received NO PASS_EXPIRY_REMINDER', function () {",
+							"  var titles = msgs.map(function (m) { return (m && m.notification && m.notification.title) || ''; });",
+							"  pm.expect(titles.some(function (t) { return t.indexOf('Pass expiring in') === 0; })).to.eql(false);",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{mock_fcm_url}}/read/{{_neg_device_token}}",
+					"host": ["{{mock_fcm_url}}"],
+					"path": ["read", "{{_neg_device_token}}"]
+				}
+			}
+		},
+		{
+			"name": "Restore RiderConfig",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var prev = pm.collectionVariables.get('_orig_reminder_days');",
+							"var setVal = (prev === '' || prev === undefined || prev === null) ? null : parseInt(prev, 10);",
+							"var mocId = pm.environment.get('bap_merchant_operating_city_id');",
+							"var payload = {",
+							"  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
+							"  set: { pass_expiry_reminder_days: setVal },",
+							"  touch_updated_at: true,",
+							"  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+							"};",
+							"pm.collectionVariables.set('_restore_payload', JSON.stringify(payload));",
+							"console.log('Restoring pass_expiry_reminder_days to:', setVal);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Restore OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{{_restore_payload}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/update",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "update"]
+				}
+			}
+		},
+		{
+			"name": "Cleanup Scheduler State (final)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Final cleanup OK', function () { pm.response.to.have.status(200); });",
+							"var r = pm.response.json();",
+							"console.log('Removed', r.removedJobs, 'jobs and', r.removedLocks, 'locks');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"jobType\": \"{{_job_type}}\", \"target\": \"rider\", \"merchantOperatingCityId\": \"{{bap_merchant_operating_city_id}}\"}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/scheduler/clear",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "scheduler", "clear"]
+				}
+			}
+		}
+	]
+}
