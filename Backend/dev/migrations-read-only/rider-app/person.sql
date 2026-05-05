@@ -268,6 +268,13 @@ ALTER TABLE atlas_app.person ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.person ALTER COLUMN business_email_hash TYPE text;
+ALTER TABLE atlas_app.person ALTER COLUMN business_email_encrypted TYPE text;
+ALTER TABLE atlas_app.person ADD COLUMN is_organization_pass_holder boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.person ADD COLUMN operator_badge_token text ;
 CREATE INDEX person_idx_customer_referral_code ON atlas_app.person USING btree (customer_referral_code);
 CREATE INDEX person_idx_device_token ON atlas_app.person USING btree (device_token);
