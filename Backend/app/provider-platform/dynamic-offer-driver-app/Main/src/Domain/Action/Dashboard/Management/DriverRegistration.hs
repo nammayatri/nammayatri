@@ -514,6 +514,7 @@ mapDocumentType Common.TDSCertificate = DVC.TDSCertificate
 mapDocumentType Common.TANCertificate = DVC.TANCertificate
 mapDocumentType Common.UDYAMCertificate = DVC.UDYAMCertificate
 mapDocumentType Common.PanAadhaarLink = DVC.PanAadhaarLinkage
+mapDocumentType Common.VoterIdCard = DVC.VoterIdCard
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

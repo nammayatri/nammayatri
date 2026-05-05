@@ -1689,7 +1689,8 @@ def cmd_import(args):
                     cols_result, col_types, not_null_cols, has_default_cols = fetch_target_table_columns(target_cursor, target_db_schema, table)
                     tgt_cols = cols_result if cols_result else None
                     if not tgt_cols:
-                        print(f"    [WARN] {table}: target table has no columns (doesn't exist in local?) — INSERT will use source columns as-is", flush=True)
+                        print(f"    [skip] {table}: target table doesn't exist in {target_db_schema} (deprecated locally or missing migration)", flush=True)
+                        continue
                     head_row = fetch_target_table_head(target_cursor, target_db_schema, table)
                 except Exception as e:
                     print(f"    [WARN] {table}: cannot read target schema ({e}) — INSERT will use source columns", flush=True)

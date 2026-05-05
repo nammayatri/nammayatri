@@ -216,6 +216,7 @@ data DocumentType
   | DrivingSchoolCertificate
   | BankAccount
   | PanAadhaarLink
+  | VoterIdCard
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

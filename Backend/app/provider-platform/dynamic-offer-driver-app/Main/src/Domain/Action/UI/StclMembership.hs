@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.StclMembership (postSubmitApplication, getMembership, stclMemberShipOrderStatusHandler) where
+module Domain.Action.UI.StclMembership (postSubmitApplication, putUpdateApplication, getMembership, stclMemberShipOrderStatusHandler) where
 
 import qualified API.Types.UI.StclMembership as APITypes
 import qualified Data.Text as T
@@ -22,6 +22,7 @@ import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
 import qualified Kernel.External.Payment.Types as PaymentService
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -160,6 +161,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.addressCity = req.address.city,
             Domain.addressState = req.address.stateName,
             Domain.addressPostalCode = req.address.postalCode,
+            Domain.addressProofType = req.addressProofType,
+            Domain.addressProofImageId = req.addressProofImageId,
             Domain.bankName = req.bankDetails.bankName,
             Domain.bankBranch = req.bankDetails.branch,
             Domain.accountNumber = encryptedAccountNumber,
@@ -187,6 +190,75 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
 
   -- Return PaymentTypes.CreateOrderResp from createOrderV2
   return createOrderResp
+
+putUpdateApplication ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
+      Kernel.Types.Id.Id Merchant.Merchant,
+      Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    APITypes.UpdateMembershipApplicationReq ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = do
+  driverId' <- mbDriverId & fromMaybeM (InvalidRequest "Driver ID not found in authentication context")
+
+  memberships <- QStclMembership.findByDriverIdAndStatus driverId' Domain.SUBMITTED
+  membership <- case memberships of
+    [] -> throwError $ InvalidRequest "No membership application found for this driver"
+    (m : _) -> pure m
+
+  -- Bank details: validate confirmAccountNumber matches and re-encrypt account number/IFSC.
+  (newBankBranch, newAccountNumber, newIfscCode) <- case req.bankDetails of
+    Nothing -> pure (membership.bankBranch, membership.accountNumber, membership.ifscCode)
+    Just bd -> do
+      unless (bd.accountNumber == bd.confirmAccountNumber) $
+        throwError $ InvalidRequest "Account number and confirm account number do not match"
+      encAcc <- encrypt bd.accountNumber
+      encIfsc <- encrypt bd.ifscCode
+      pure (bd.branch, encAcc, encIfsc)
+
+  let (newStreet1, newStreet2, newCity, newState, newPostal) = case req.address of
+        Nothing ->
+          ( membership.addressStreetAddress1,
+            membership.addressStreetAddress2,
+            membership.addressCity,
+            membership.addressState,
+            membership.addressPostalCode
+          )
+        Just a ->
+          ( a.streetAddress1,
+            a.streetAddress2,
+            a.city,
+            a.stateName,
+            a.postalCode
+          )
+
+  let newVehicleType = case req.vehicleType of
+        Nothing -> membership.vehicleType
+        Just APITypes.TwoWheeler -> "2Wheeler"
+        Just APITypes.ThreeWheeler -> "3Wheeler"
+        Just APITypes.FourWheeler -> "4Wheeler"
+
+  let newNomineeName = fromMaybe membership.nomineeName req.nomineeName
+
+  now <- getCurrentTime
+  let updatedMembership =
+        membership
+          { Domain.bankBranch = newBankBranch,
+            Domain.accountNumber = newAccountNumber,
+            Domain.ifscCode = newIfscCode,
+            Domain.addressStreetAddress1 = newStreet1,
+            Domain.addressStreetAddress2 = newStreet2,
+            Domain.addressCity = newCity,
+            Domain.addressState = newState,
+            Domain.addressPostalCode = newPostal,
+            Domain.vehicleType = newVehicleType,
+            Domain.nomineeName = newNomineeName,
+            Domain.updatedAt = now
+          }
+
+  QStclMembership.updateByPrimaryKey updatedMembership
+  pure Kernel.Types.APISuccess.Success
 
 getMembership ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
