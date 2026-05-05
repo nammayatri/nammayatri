@@ -208,9 +208,7 @@ data DriverDocument = DriverDocument
 validateDriverRCReq :: Validate DriverRCReq
 validateDriverRCReq DriverRCReq {..} =
   sequenceA_
-    [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber certNum]
-  where
-    certNum = LengthInRange 5 12 `And` star (P.latinUC \/ P.digit \/ ",")
+    [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber P.vehicleRegistrationCertNumberRule]
 
 validateDriverRCReqRegexFlow :: Validate DriverRCReq
 validateDriverRCReqRegexFlow DriverRCReq {..} =
