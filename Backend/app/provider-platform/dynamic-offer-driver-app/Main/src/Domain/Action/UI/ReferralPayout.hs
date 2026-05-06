@@ -21,8 +21,8 @@ import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Types as PaymentTypes
+import qualified Kernel.External.Payout.Interface as IPayout
 import qualified Kernel.External.Payout.Interface.Types as Payout
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -257,19 +257,26 @@ postPayoutCreateOrder ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Payout.CreatePayoutOrderReq ->
+    API.Types.UI.ReferralPayout.CreatePayoutOrderReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   void $ throwError $ InvalidRequest "You're Not Authorized To Use This API"
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
+  (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getCreatePayoutServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion merchantOpCityId person.id
+  let payoutVpaValid = case payoutServiceFlow of
+        IPayout.JuspayFlow -> isJust req.customerVpa
+        IPayout.StripeFlow -> True
+  unless payoutVpaValid $ throwError (InvalidRequest "customerVpa required")
   let entityName = DLP.MANUAL
-      createPayoutOrderCall = TP.createPayoutOrder merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
+      createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) req createPayoutOrderCall Nothing
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency req) createPayoutOrderCall Nothing
   pure Kernel.Types.APISuccess.Success
+
+mkCreatePayoutServiceReq :: Currency -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq
+mkCreatePayoutServiceReq currency API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} = Payout.CreatePayoutServiceReq {..}
 
 getPayoutOrderStatus ::
   (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
@@ -280,15 +287,14 @@ getPayoutOrderStatus ::
     Data.Text.Text ->
     m Payout.PayoutOrderStatusResp
   )
-getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
+getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   payoutOrder <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
   mbVehicle <- QVeh.findById personId
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   payoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCityId.getId)
-  payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
-  let payoutOrderStatusReq = Payout.PayoutOrderStatusReq {orderId = orderId, mbExpand = payoutConfig.expand}
+  let payoutOrderStatusReq = Payout.PayoutStatusServiceReq {orderId = orderId, mbExpand = payoutConfig.expand}
       shouldUpdate current new = current /= new
       onUpdate newStatus _statusResp = do
         when (maybe False (`elem` [DLP.DRIVER_DAILY_STATS, DLP.BACKLOG]) payoutOrder.entityName) do
@@ -296,10 +302,11 @@ getPayoutOrderStatus (mbPersonId, merchantId, merchantOpCityId) orderId = do
             forM_ dStatsIds $ \dStatsId -> do
               Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey personId.getId) 3 3 $ do
                 QDS.updatePayoutStatusById newStatus dStatsId
+  (_payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- TP.getPayoutStatusServiceFlow TP.MerchantServiceUsageConfigOption DEMSC.PayoutService person.clientSdkVersion merchantOpCityId personId
   PayoutStatus.refreshPayoutStatusWithResponse
     orderId
     payoutOrderStatusReq
-    (TP.payoutOrderStatus merchantId merchantOpCityId payoutServiceName (Just $ getId personId))
+    (TP.payoutOrderStatus payoutServiceName merchantOpCityId personId mbPersonBankAccount)
     (DAP.castPayoutOrderStatus payoutOrder.status)
     DAP.castPayoutOrderStatus
     shouldUpdate

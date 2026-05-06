@@ -13,10 +13,12 @@ import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
     expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
     id :: B.C f Kernel.Prelude.Text,
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,

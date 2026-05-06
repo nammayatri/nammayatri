@@ -709,6 +709,7 @@ mkFulfillmentHandler paymentServiceType merchantId orderId paymentStatusResp = c
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
 mkOrderStatusCheckKey orderId status = "lockKey:orderId:" <> orderId <> ":status" <> show status
 
+-- FIXME payout
 stripeWebhookHandler,
   stripeTestWebhookHandler ::
     ShortId DM.Merchant ->
@@ -906,9 +907,8 @@ getWalletBalance (personId, merchantId) = do
 --   ------------- call payout service here ---------------
 
 --   -- payoutConfig <- CPC.findByPrimaryKey merchOpCity vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchOpCity.getId)
---   -- payoutServiceName <- Payout.decidePayoutService (DEMSC.PayoutService TPayout.Juspay) person.clientSdkVersion person.merchantOperatingCityId
 --   -- let entityName = DPayment.BACKLOG
---   --     createPayoutOrderCall = Payout.createPayoutOrder person.merchantId merchOpCity payoutServiceName (Just person.id.getId)
+--   --     createPayoutOrderCall = Payout.createPayoutOrder person.clientSdkVersion person.merchantId merchOpCity (Just person.id.getId)
 --   --     createPayoutOrderReq = DPayment.mkCreatePayoutOrderReq uid pendingAmount phoneNo person.email personId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
 --   -- void $ DPayment.createPayoutService (cast person.merchantId) (Just $ cast merchOpCity) (cast personId) (Just statsIds) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
 

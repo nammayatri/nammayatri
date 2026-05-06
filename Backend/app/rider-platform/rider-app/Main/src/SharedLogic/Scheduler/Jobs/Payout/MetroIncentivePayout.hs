@@ -15,13 +15,11 @@
 module SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout where
 
 import qualified Domain.Action.Internal.Payout as DAP
-import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import Domain.Types.FRFSTicketBooking
 import Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.PayoutConfig
 import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payout.Types as PT
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -128,11 +126,11 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
             phoneNo <- mapM decrypt person.mobileNumber
             emailId <- mapM decrypt person.email
             let amount = fromMaybe 0 booking.eventDiscountAmount
+                currency = booking.totalPrice.currency
                 entityName = DLP.METRO_BOOKING_CASHBACK
-                createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId config.remark person.firstName payoutVpa config.orderType True
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType True
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
-            payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
-            let createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
+            let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
             mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
             errorCatchAndHandle booking.id person.id.getId uid mbPayoutOrderResp config statusForRetry (\_ -> pure ())
             pure ()

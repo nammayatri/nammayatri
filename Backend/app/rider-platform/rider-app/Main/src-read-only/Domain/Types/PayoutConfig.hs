@@ -11,10 +11,12 @@ import qualified Kernel.External.Payout.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Utils.Common
 import qualified Tools.Beam.UtilsTH
 
 data PayoutConfig = PayoutConfig
   { batchLimit :: Kernel.Prelude.Int,
+    currency :: Kernel.Utils.Common.Currency,
     expand :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand,
     id :: Kernel.Types.Id.Id Domain.Types.PayoutConfig.PayoutConfig,
     isPayoutEnabled :: Kernel.Prelude.Bool,
