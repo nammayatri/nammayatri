@@ -858,7 +858,8 @@ def _probe_ny_rn_ready(app: str) -> bool:
     return False
 
 
-def run_ny_rn_setup(app: str, platform: str, variant: str, ref: str | None = None):
+def run_ny_rn_setup(app: str, platform: str, variant: str, ref: str | None = None,
+                    firebase_override_path: str | None = None):
     """Run ny-react-native-setup.sh for a given app (customer or driver),
     streaming stdout into that app's state log. The script `exec`s into a
     long-running `wait` once Metros are up, so we only declare 'done'
@@ -891,7 +892,8 @@ def run_ny_rn_setup(app: str, platform: str, variant: str, ref: str | None = Non
             raise FileNotFoundError(f"setup script not found: {NY_RN_SETUP_SCRIPT}")
 
         ref_str = f" NY_RN_REF={ref}" if ref else ""
-        _append_log(f"$ NY_RN_APP={app} NY_RN_PLATFORM={platform} NY_RN_VARIANT={variant}{ref_str} bash {NY_RN_SETUP_SCRIPT}")
+        fb_str = f" NY_RN_FIREBASE_OVERRIDE={firebase_override_path}" if firebase_override_path else ""
+        _append_log(f"$ NY_RN_APP={app} NY_RN_PLATFORM={platform} NY_RN_VARIANT={variant}{ref_str}{fb_str} bash {NY_RN_SETUP_SCRIPT}")
         env_vars = {
             **os.environ,
             "NY_RN_APP": app,
@@ -901,6 +903,8 @@ def run_ny_rn_setup(app: str, platform: str, variant: str, ref: str | None = Non
         }
         if ref:
             env_vars["NY_RN_REF"] = ref
+        if firebase_override_path:
+            env_vars["NY_RN_FIREBASE_OVERRIDE"] = firebase_override_path
         p = subprocess.Popen(
             ["bash", str(NY_RN_SETUP_SCRIPT)],
             cwd=str(PROJECT_ROOT),
@@ -1134,10 +1138,15 @@ def _cleanup_stale_control_center() -> None:
     )
 
 
-def trigger_ny_rn(app: str, platform: str, variant: str, ref: str | None = None):
+def trigger_ny_rn(app: str, platform: str, variant: str, ref: str | None = None,
+                  firebase_override_path: str | None = None):
     """Kick off ny-react-native setup for a single app. Returns True if
     accepted, False if THAT app is already running (the other app may be
-    running concurrently — they are independent)."""
+    running concurrently — they are independent).
+
+    If `firebase_override_path` is set, the build runner copies that file
+    over the in-repo Firebase config (google-services.json for android,
+    ios/<variant>/GoogleService-Info.plist for ios) before the build."""
     if app not in _ny_rn_states:
         return False
     with _ny_rn_locks[app]:
@@ -1147,7 +1156,11 @@ def trigger_ny_rn(app: str, platform: str, variant: str, ref: str | None = None)
     # a prior run that crashed before its teardown trap fired. Cheap
     # (~150 ms typical) and safe — every kill is best-effort.
     _cleanup_stale_ny_rn(app)
-    threading.Thread(target=run_ny_rn_setup, args=(app, platform, variant, ref), daemon=True).start()
+    threading.Thread(
+        target=run_ny_rn_setup,
+        args=(app, platform, variant, ref, firebase_override_path),
+        daemon=True,
+    ).start()
     return True
 
 
@@ -2231,11 +2244,61 @@ class ContextHandler(BaseHTTPRequestHandler):
             if platform not in NY_RN_VALID_PLATFORMS:
                 self._send_json({"error": f"invalid platform '{platform}'", "valid": sorted(NY_RN_VALID_PLATFORMS)}, 400)
                 return True
-            accepted = trigger_ny_rn(app, platform, variant, ref=ref)
+
+            # Optional Firebase config override. Caller passes:
+            #   firebase_override: { filename: "google-services.json"|"GoogleService-Info.plist",
+            #                        content_base64: "<file bytes b64>" }
+            # We validate filename+size, decode, write to /tmp, and pass the path
+            # via env to the build runner. The runner backs up the in-repo file
+            # before copying and restores it on teardown.
+            firebase_override_path: str | None = None
+            fb = body.get("firebase_override")
+            if isinstance(fb, dict) and fb.get("content_base64"):
+                import base64 as _b64
+                fb_filename = (fb.get("filename") or "").strip()
+                expected = (
+                    "google-services.json" if platform == "android"
+                    else "GoogleService-Info.plist"
+                )
+                if fb_filename != expected:
+                    self._send_json({
+                        "error": f"firebase_override filename must be '{expected}' for platform '{platform}', got {fb_filename!r}",
+                    }, 400)
+                    return True
+                try:
+                    raw = _b64.b64decode(fb["content_base64"], validate=True)
+                except Exception as e:
+                    self._send_json({"error": f"firebase_override content_base64 invalid: {e}"}, 400)
+                    return True
+                # Sanity caps — these files are tiny in practice.
+                if len(raw) == 0 or len(raw) > 256 * 1024:
+                    self._send_json({
+                        "error": f"firebase_override size {len(raw)}B out of range (must be 1B..256KB)",
+                    }, 400)
+                    return True
+                # Write to a deterministic per-(app,platform) path so repeat
+                # uploads overwrite cleanly.
+                ext = "json" if platform == "android" else "plist"
+                firebase_override_path = f"/tmp/ny-rn-firebase-{app}-{platform}.{ext}"
+                try:
+                    with open(firebase_override_path, "wb") as f:
+                        f.write(raw)
+                except OSError as e:
+                    self._send_json({"error": f"could not write firebase override: {e}"}, 500)
+                    return True
+
+            accepted = trigger_ny_rn(
+                app, platform, variant, ref=ref,
+                firebase_override_path=firebase_override_path,
+            )
             if not accepted:
                 self._send_json({"error": f"{app} launcher is already running"}, 409)
                 return True
-            self._send_json({"started": True, "app": app, "platform": platform, "variant": variant, "ref": ref})
+            self._send_json({
+                "started": True, "app": app, "platform": platform,
+                "variant": variant, "ref": ref,
+                "firebase_override": firebase_override_path,
+            })
             return True
 
         if method == "GET" and path == "/api/git/refs":

@@ -60,6 +60,12 @@ export const NativeAppLauncher: React.FC<Props> = ({ app, label, icon = '📱' }
   const [isStarting, setIsStarting] = useState(false);
   // Same idea but for the in-modal "Clear MMKV cache" action.
   const [isClearing, setIsClearing] = useState(false);
+  // Optional Firebase config override. The user can attach a
+  // `google-services.json` (android) or `GoogleService-Info.plist` (ios) —
+  // when present, the build runner copies it over the in-repo default
+  // before building, then restores the original on teardown.
+  const [firebaseFile, setFirebaseFile] = useState<File | null>(null);
+  const [firebaseFileError, setFirebaseFileError] = useState<string | null>(null);
   const [tab, setTab] = useState<DeviceLogTab>('build');
   const [deviceLogs, setDeviceLogs] = useState<{ console: string[]; network: string[]; all: string[] }>({ console: [], network: [], all: [] });
   const [metroLog, setMetroLog] = useState<string[]>([]);
@@ -189,6 +195,25 @@ export const NativeAppLauncher: React.FC<Props> = ({ app, label, icon = '📱' }
     if (isStarting) return;
     setIsStarting(true);
     try {
+      // If the user attached a Firebase config, read it as base64 so it
+      // can ride along in the JSON body. These files are small (~1–4KB)
+      // so the encoding overhead is negligible vs. the multipart-parsing
+      // complexity it lets us avoid in the Python server.
+      let firebaseOverride: { filename: string; content_base64: string } | undefined;
+      if (firebaseFile) {
+        const buf = await firebaseFile.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        // Chunked btoa to avoid stack overflow on large files (256KB cap).
+        let bin = '';
+        const chunk = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunk) {
+          bin += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+        }
+        firebaseOverride = {
+          filename: firebaseFile.name,
+          content_base64: btoa(bin),
+        };
+      }
       const r = await fetch(`${PROXY_BASE}/api/ny-react-native/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,6 +222,7 @@ export const NativeAppLauncher: React.FC<Props> = ({ app, label, icon = '📱' }
           platform: selPlatform,
           variant: selVariant,
           ref: selRef.trim() || undefined,
+          firebase_override: firebaseOverride,
         }),
       });
       if (r.ok) {
@@ -377,6 +403,53 @@ export const NativeAppLauncher: React.FC<Props> = ({ app, label, icon = '📱' }
                     onChange={(v) => { setSelRef(v); saveUiState({ [`nativeApp.${app}.ref`]: v || null }); }}
                     disabled={!!data?.running}
                   />
+                </div>
+                <div className="tb-modal-form-field">
+                  <label htmlFor={`${app}-firebase`}>
+                    Firebase config (optional override)
+                  </label>
+                  <input
+                    id={`${app}-firebase`}
+                    type="file"
+                    accept={selPlatform === 'android' ? '.json,application/json' : '.plist'}
+                    disabled={!!data?.running}
+                    onChange={e => {
+                      const f = e.target.files?.[0] ?? null;
+                      setFirebaseFileError(null);
+                      if (!f) { setFirebaseFile(null); return; }
+                      const expected = selPlatform === 'android'
+                        ? 'google-services.json'
+                        : 'GoogleService-Info.plist';
+                      if (f.name !== expected) {
+                        setFirebaseFile(null);
+                        setFirebaseFileError(`Expected file named "${expected}" for ${selPlatform}, got "${f.name}".`);
+                        e.target.value = '';
+                        return;
+                      }
+                      if (f.size > 256 * 1024) {
+                        setFirebaseFile(null);
+                        setFirebaseFileError(`File too large (${f.size}B; cap is 256KB).`);
+                        e.target.value = '';
+                        return;
+                      }
+                      setFirebaseFile(f);
+                    }}
+                    title={
+                      selPlatform === 'android'
+                        ? 'Upload a google-services.json to override android/app/google-services.json for this build only.'
+                        : `Upload a GoogleService-Info.plist to override ios/${selVariant || '<variant>'}/GoogleService-Info.plist for this build only.`
+                    }
+                  />
+                  {firebaseFile && (
+                    <span style={{ fontSize: 12, opacity: 0.75, marginTop: 4 }}>
+                      ✓ {firebaseFile.name} ({firebaseFile.size}B) — will override default for this run
+                    </span>
+                  )}
+                  {firebaseFileError && (
+                    <span style={{ fontSize: 12, color: 'var(--tb-danger, #c33)', marginTop: 4 }}>
+                      {firebaseFileError}
+                    </span>
+                  )}
                 </div>
                 <div className="tb-modal-form-actions">
                   {!data?.running && (
