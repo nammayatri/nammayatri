@@ -308,7 +308,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                 phoneNo <- mapM decrypt person.mobileNumber
                 payoutServiceName <- TP.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion person.merchantOperatingCityId
                 let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid registrationAmount phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) vpa payoutConfig.orderType False
-                    entityName = DLP.DRIVER_DAILY_STATS
+                    entityName = DLP.REGISTRATION_REFUND
                     createPayoutOrderCall = TP.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
                 result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
