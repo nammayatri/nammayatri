@@ -62,7 +62,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDisability as PersonDisability
 import qualified Domain.Types.RiderConfig as DRC
-import qualified Domain.Types.VehicleCategory as VehicleCategory
 import qualified Email.Types
 import Environment
 import qualified EulerHS.Language as L
@@ -107,9 +106,8 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
@@ -376,8 +374,6 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
           else pure Nothing
       else pure person.customerReferralCode
   logInfo "[Profile.getPersonDetails] referralCode done"
-  mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing})
-  logInfo "[Profile.getPersonDetails] findPayoutConfig done"
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
     concatMapM
@@ -399,9 +395,9 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
         Nothing -> pure ()
   fork "Check customer cancellation rate blocking" $ CCR.nudgeOrBlockCustomer riderConfig person
   logInfo "[Profile.getPersonDetails] calling makeProfileRes (includes getGtfsVersion)"
-  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImage
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc integratedBPPConfigs isMultimodalRider includeProfileImage
   where
-    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc integratedBPPConfigs isMultimodalRider includeProfileImageParam = do
       logInfo $ "[Profile.makeProfileRes] calling getGtfsVersion for " <> show (length integratedBPPConfigs) <> " configs"
       gtfsVersion <-
         withTryCatch "getGtfsVersion:getPersonDetails" (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -432,7 +428,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             referralEarnings = Just personStats.referralEarnings,
             referredByEarnings = Just personStats.referredByEarnings,
             referralAmountPaid = Just personStats.referralAmountPaid,
-            isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
+            isPayoutEnabled = Just riderConfig.payoutReferralProgram,
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
