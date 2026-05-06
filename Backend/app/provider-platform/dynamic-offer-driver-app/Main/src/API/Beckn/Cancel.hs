@@ -109,12 +109,20 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                 (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
                 mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
                 fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
+                  -- Get ride ID before cancel (ride is still active at this point)
+                  mbPreCancelRide <- QRide.findActiveByRBId booking.id
                   (isReallocated, cancellationCharge) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
+                  -- Reload ride by primary key to get persisted cancellationFee/cancellationFeeTax from KV
+                  mbUpdatedRide <- case mbPreCancelRide of
+                    Just r -> QRide.findById r.id
+                    Nothing -> pure Nothing
                   let onCancelBuildReq =
                         OC.DBookingCancelledReqV2
                           { booking = booking,
                             cancellationSource = DBCR.ByUser,
-                            cancellationFee = cancellationCharge
+                            cancellationFee = cancellationCharge,
+                            cancellationReasonCode = cancelRideReq.cancellationReason,
+                            mbRide = mbUpdatedRide
                           }
                   unless isReallocated $ do
                     buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.CANCELLED) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
@@ -123,7 +131,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                         pure buildOnCancelMessageV2
             Just Enums.SOFT_CANCEL -> do
               mbRide <- QRide.findActiveByRBId booking.id
-              (cancellationCharges, mbLogicVersion) <- maybe (return (Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
+              (cancellationCharges, _mbTax, mbLogicVersion) <- maybe (return (Nothing, Nothing, Nothing)) (\ride -> DCancel.getCancellationCharges booking ride DCT.CancellationByCustomer $ DTCR.CancellationReasonCode <$> cancelRideReq.cancellationReason) mbRide
               void $ case (cancellationCharges, mbRide) of
                 (Just priceEntity, Just ride) -> QRide.updateCancellationFeeIfCancelledField (Just priceEntity.amount) mbLogicVersion ride.id
                 _ -> return ()
@@ -131,7 +139,9 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                     OC.DBookingCancelledReqV2
                       { booking = booking,
                         cancellationSource = DBCR.ByUser,
-                        cancellationFee = cancellationCharges
+                        cancellationFee = cancellationCharges,
+                        cancellationReasonCode = cancelRideReq.cancellationReason,
+                        mbRide = mbRide
                       }
               buildOnCancelMessageV2 <- ACL.buildOnCancelMessageV2 merchant (Just city) (Just country) (show Enums.SOFT_CANCEL) (OC.BookingCancelledBuildReqV2 onCancelBuildReq) (Just msgId)
               void $

@@ -433,4 +433,9 @@ ALTER TABLE atlas_app.ride ADD COLUMN offers_fraud_check_failure_reason text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.ride ADD COLUMN cancellation_fee_tax double precision ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.ride ADD COLUMN driver_arrival_status text ;

@@ -35,6 +35,7 @@ module SharedLogic.FareCalculator
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
+    mkProjectFareParamsTagBreakupItemsForCancellation,
     buildComponentMap,
     componentAmount,
     discountApplicableComponents,
@@ -112,6 +113,19 @@ mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams =
         mkBreakupItem (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE) (mkPrice b.parkingChargeTaxExclusive),
         mkBreakupItem (show Enums.PARKING_CHARGE_TAX) (mkPrice b.parkingChargeTax)
       ]
+
+-- | Cancellation-specific breakup items read from the ride table.
+-- Used by on_cancel to emit CANCELLATION_FEE_TAX_EXCLUSIVE and CANCELLATION_TAX.
+mkProjectFareParamsTagBreakupItemsForCancellation ::
+  (HighPrecMoney -> breakupItemPrice) ->
+  (Text -> breakupItemPrice -> breakupItem) ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  [breakupItem]
+mkProjectFareParamsTagBreakupItemsForCancellation mkPrice mkBreakupItem cancellationFee cancellationFeeTax =
+  [ mkBreakupItem (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE) (mkPrice cancellationFee),
+    mkBreakupItem (show Enums.CANCELLATION_TAX) (mkPrice cancellationFeeTax)
+  ]
 
 -- | Display-tag portion of the quotation.breakup (BASE_FARE,
 --   DISTANCE_FARE, PARKING_CHARGE, TOLL_CHARGES, …). Does NOT include
@@ -1156,7 +1170,7 @@ applyConfiguredCharges farePolicy fareParams = do
       tollExcl = fromMaybe 0 fareParams.tollCharges
       tollTax = fromMaybe 0 tollVatValue
       cancellationExcl = fromMaybe 0 fareParams.customerCancellationDues
-      cancellationTaxV = 0
+      cancellationTaxV = fromMaybe 0 fareParams.cancellationTax
       parkingExcl = parkingBase
       parkingTax = parkingTaxValue
 
