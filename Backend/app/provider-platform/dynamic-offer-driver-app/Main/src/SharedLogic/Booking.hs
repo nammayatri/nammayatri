@@ -29,6 +29,7 @@ import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.Ride
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import Storage.Queries.Booking as QRB
@@ -82,6 +83,17 @@ cancelBooking booking mbDriver transporter = do
       QRide.updateStatus ride.id SRide.CANCELLED
       updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
       void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
+
+    -- Terminal system/error cancel (ByApplication source): drop demand and release the
+    -- assigned driver's pickup-zone supply commitment. Idempotent on bookingId/requestId,
+    -- so it's safe even if a sibling cancel path also fires the helper for the same booking.
+    fork "specialZoneCountersReleaseOnApplicationCancel" $
+      SpecialZoneDriverDemand.releasePickupZoneCountersOnCancel
+        False
+        booking.id.getId
+        booking.pickupGateId
+        (show $ castServiceTierToVariant booking.vehicleServiceTier)
+        ((.id) <$> mbDriver)
 
     fork "cancelBooking - Notify BAP" $ do
       BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing mbRide
