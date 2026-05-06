@@ -31,6 +31,9 @@ import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPDOS
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
+import qualified Lib.Payment.Storage.Beam.WalletHistory as BeamWH
+import qualified Lib.Payment.Storage.Beam.WalletPayments as BeamWP
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 
 type BeamFlow m r =
@@ -47,6 +50,9 @@ type BeamFlow m r =
     HasSchemaName BeamOffer.PaymentOrderOfferT,
     HasSchemaName BeamPW.PersonWalletT,
     HasSchemaName BeamWRP.WalletRewardPostingT,
+    HasSchemaName BeamWallet.WalletT,
+    HasSchemaName BeamWP.WalletPaymentsT,
+    HasSchemaName BeamWH.WalletHistoryT,
     HasSchemaName BeamOF.OfferT,
     HasSchemaName BeamOS.OfferStatsT,
     HasSchemaName BeamPDOS.PersonDailyOfferStatsT,

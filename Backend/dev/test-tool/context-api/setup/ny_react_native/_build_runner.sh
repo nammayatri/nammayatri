@@ -591,6 +591,77 @@ for app in "${APPS[@]}"; do
   fi
 done
 
+# ── Firebase override (optional) ────────────────────────────────────
+# When NY_RN_FIREBASE_OVERRIDE points at a file uploaded via the dashboard,
+# copy it over the in-repo Firebase config for the chosen platform/variant
+# and queue the original for restore in cleanup. Keeps the repo dir clean
+# across launches even if the build crashes mid-flight.
+FIREBASE_BACKUPS=()  # space-separated "<orig>:<backup>" entries
+apply_firebase_override() {
+  if [ -z "${NY_RN_FIREBASE_OVERRIDE:-}" ]; then
+    return 0
+  fi
+  if [ ! -f "$NY_RN_FIREBASE_OVERRIDE" ]; then
+    echo "ny-react-native: WARN NY_RN_FIREBASE_OVERRIDE=$NY_RN_FIREBASE_OVERRIDE does not exist — ignoring"
+    return 0
+  fi
+  local app="${APPS[0]:-}"
+  if [ -z "$app" ]; then
+    return 0
+  fi
+  local app_dir="$NY_RN_DIR/$app"
+  local target=""
+  case "$NY_RN_PLATFORM" in
+    android)
+      target="$app_dir/android/app/google-services.json"
+      ;;
+    ios)
+      # Per-variant subdir (Lynx, Bridge, NammaYatri, …). The build picks
+      # the correct one based on the active scheme. If the variant subdir
+      # doesn't exist yet, fall back to the top-level ios/GoogleService-Info.plist.
+      if [ -n "${NY_RN_VARIANT:-}" ] && [ -d "$app_dir/ios/$NY_RN_VARIANT" ]; then
+        target="$app_dir/ios/$NY_RN_VARIANT/GoogleService-Info.plist"
+      else
+        target="$app_dir/ios/GoogleService-Info.plist"
+      fi
+      ;;
+    *)
+      echo "ny-react-native: unknown platform '$NY_RN_PLATFORM' for firebase override — skipping"
+      return 0
+      ;;
+  esac
+  local backup=""
+  if [ -f "$target" ]; then
+    backup="${target}.ny-rn-bak.$$"
+    cp -p "$target" "$backup"
+    FIREBASE_BACKUPS+=("$target|$backup")
+  else
+    # No original — record the path so cleanup deletes our copy.
+    FIREBASE_BACKUPS+=("$target|")
+  fi
+  cp "$NY_RN_FIREBASE_OVERRIDE" "$target"
+  echo "ny-react-native: applied firebase override -> $target"
+}
+
+restore_firebase_overrides() {
+  local entry orig backup
+  for entry in "${FIREBASE_BACKUPS[@]:-}"; do
+    [ -z "$entry" ] && continue
+    orig="${entry%%|*}"
+    backup="${entry#*|}"
+    if [ -n "$backup" ] && [ -f "$backup" ]; then
+      mv -f "$backup" "$orig" 2>/dev/null || true
+      echo "ny-react-native: restored $orig"
+    elif [ -z "$backup" ] && [ -f "$orig" ]; then
+      rm -f "$orig" 2>/dev/null || true
+      echo "ny-react-native: removed override-only $orig"
+    fi
+  done
+  FIREBASE_BACKUPS=()
+}
+
+apply_firebase_override
+
 # ── Build, install, launch ──────────────────────────────────────────
 METRO_PIDS=()
 cleanup() {
@@ -608,6 +679,7 @@ cleanup() {
   for pid in "${METRO_PIDS[@]:-}"; do
     kill "$pid" 2>/dev/null || true
   done
+  restore_firebase_overrides
 }
 trap cleanup EXIT INT TERM
 

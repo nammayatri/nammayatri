@@ -406,9 +406,12 @@ handleExit mobileNum mId stationCode exitTime = do
 
   logInfo $
     "[SVP:Exit] rider=" <> getId person.id
-      <> " entry=" <> entryStation
-      <> " exit=" <> stationCode
-      <> " fare=₹" <> show fareAmount
+      <> " entry="
+      <> entryStation
+      <> " exit="
+      <> stationCode
+      <> " fare=₹"
+      <> show fareAmount
 
   -- Mark journey EXITED and expire tktSlNo so next QR issues a fresh serial
   QSvpJourney.updateStatusAndExitDetailsById
@@ -423,11 +426,12 @@ handleExit mobileNum mId stationCode exitTime = do
 
   logInfo $ "[SVP:Exit] DONE rider=" <> getId person.id <> " " <> entryStation <> "→" <> stationCode
 
-  pure API.GateCallbackResp
-    { allowed = True,
-      reason = Nothing,
-      fareCharged = Just (fromRational (getHighPrecMoney fareAmount))
-    }
+  pure
+    API.GateCallbackResp
+      { allowed = True,
+        reason = Nothing,
+        fareCharged = Just (fromRational (getHighPrecMoney fareAmount))
+      }
 
 postSvpSignQR ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

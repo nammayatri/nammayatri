@@ -2,6 +2,12 @@
   "_comment": "Config tables registry with primary key dimensions for upsert. Curated from YAML specs + migrations + Beam schemas.",
   "_last_reviewed": "2026-03-26",
   "atlas_app": {
+    "special_location": {
+      "dim": []
+    },
+    "gate_info": {
+      "dim": []
+    },
     "geometry": {
       "dim": []
     },
@@ -211,6 +217,12 @@
     }
   },
   "atlas_driver_offer_bpp": {
+    "special_location": {
+      "dim": []
+    },
+    "gate_info": {
+      "dim": []
+    },
     "geometry": {
       "dim": []
     },
