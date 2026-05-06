@@ -34,6 +34,7 @@ module SharedLogic.SpecialZoneDriverDemand
     handleQueueSkipIfApplicable,
     completePickupZoneRequestsForDriver,
     cancelPickupZoneRequestsForDriver,
+    releasePickupZoneCountersOnCancel,
     filterByGateProximity,
     clearAirportPerKmFareCacheForPolicy,
     getAirportPerKmFare,
@@ -514,10 +515,11 @@ runDemandCheckForVariants ::
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
+  Text -> -- bookingId (idempotency key, symmetric with runDemandDecrementForBooking)
   Text -> -- pickupZoneGateId from SearchRequest
   [(Text, DVST.ServiceTierType)] -> -- (vehicleType key for queue/Redis, serviceTier for fare lookup)
   m ()
-runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants = do
+runDemandCheckForVariants merchantOpCityId merchantId bookingId pickupZoneGateId variants = do
   mbGate <- QGI.findById (Id pickupZoneGateId)
   case mbGate of
     Nothing -> logWarning $ "runDemandCheckForVariants: gate not found id=" <> pickupZoneGateId
@@ -528,9 +530,15 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
         logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
       when isQueueEnabled $
         forM_ variants $ \(variant, serviceTier) -> do
-          let demandTtl = 86400 -- 1 day
-          incrementGateSearchDemand pickupZoneGateId variant demandTtl
-          -- Customer/app path (called from Beckn Init); audit field on the queue request row.
+          -- Idempotency key mirrors runDemandDecrementForBooking so retried Init calls
+          -- (Beckn allows them) don't inflate demand vs the single-fire decrement.
+          let idempotencyKey = "DriverDemand:Incremented:" <> bookingId <> ":" <> variant
+          wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+          when wasSet $ do
+            let demandTtl = 86400 -- 1 day
+            incrementGateSearchDemand pickupZoneGateId variant demandTtl
+          -- Notification check runs every Init (driver pool / cooldown have their own
+          -- guards) — we just don't want to double-count demand on retries.
           checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just serviceTier) (Just DSZQR.App)
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
@@ -1078,6 +1086,29 @@ cancelPickupZoneRequestsForDriver driverId = do
         QSZQR.updateResponse (Just DSZQR.Cancelled) DSZQR.Expired req.id
         runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
         logInfo $ "Cancelled pickup zone request " <> req.id.getId <> " after ride cancel by driver " <> driverId.getId
+
+-- | Release pickup-zone counters for a cancelled booking. Single entry point used by every
+--   cancel path (user/application/merchant/driver) so all four flows stay in lockstep.
+--   Both underlying calls are idempotent (bookingId-keyed for demand, requestId-keyed for
+--   supply), so safe to invoke from multiple cancel sites for the same booking.
+--   demandStaysLive=True for ByDriver: that source triggers reallocation, so the booking's
+--   demand is still live for the next driver. All other sources terminate the booking.
+releasePickupZoneCountersOnCancel ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Bool -> -- demandStaysLive
+  Text -> -- bookingId
+  Maybe Text -> -- pickupGateId from booking
+  Text -> -- vehicleVariant string
+  Maybe (Id DP.Person) -> -- assigned driverId, if any
+  m ()
+releasePickupZoneCountersOnCancel demandStaysLive bookingId mbPickupGateId variant mbDriverId = do
+  unless demandStaysLive $
+    runDemandDecrementForBooking bookingId mbPickupGateId variant
+  forM_ mbDriverId cancelPickupZoneRequestsForDriver
 
 -- Queue skip handling
 
