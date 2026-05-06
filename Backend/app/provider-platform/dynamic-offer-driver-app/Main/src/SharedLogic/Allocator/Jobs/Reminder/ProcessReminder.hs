@@ -653,14 +653,14 @@ sendFleetAndOperatorNotifications driver merchantOpCityId title message entityDa
   mbFleetAssociation <- QFDA.findByDriverId driver.id True
   Kernel.Prelude.whenJust mbFleetAssociation $ \fleetAssoc -> do
     logInfo $ "Fleet owner found for driver " <> driver.id.getId <> ": " <> fleetAssoc.fleetOwnerId
-    notifyFleetWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message driver.id entityData
+    notifyFleetWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message driver.id Nothing entityData
 
   -- Send notification to operator(s) via GRPC (direct association or through fleet)
   operatorIdTexts <- AnalyticsExtra.findOperatorIdForDriver driver.id
   forM_ operatorIdTexts $ \operatorIdText -> do
     let operatorId = Id operatorIdText
     logInfo $ "Operator found for driver " <> driver.id.getId <> ": " <> operatorIdText
-    notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message operatorId entityData
+    notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message operatorId Nothing entityData
 
 -- Helper function to send document expiry notifications
 sendDocumentExpiryNotification ::
@@ -730,8 +730,8 @@ sendVehicleDocumentExpiryNotification reminder fallbackDriver merchantOpCityId i
                   then "A vehicle's " <> documentTypeName <> " in your fleet has expired. Please ensure an updated document is uploaded."
                   else "A vehicle's " <> documentTypeName <> " in your fleet will expire in " <> show (fromMaybe 0 mbDaysBefore) <> " days."
               entityData = Aeson.object ["driverId" Aeson..= fleetOwner.id.getId, "documentType" Aeson..= documentTypeName, "isExpired" Aeson..= isExpiredParam]
-          notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message fleetOwner.id entityData
-          forM_ operators $ \op -> notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message (Id op.operatorId) entityData
+          notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message fleetOwner.id Nothing entityData
+          forM_ operators $ \op -> notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title message (Id op.operatorId) Nothing entityData
     else forM_ currentDrivers $ \d -> sendDocumentExpiryNotification reminder d merchantOpCityId isExpiredParam mbDaysBefore
 
 -- Helper function to send inspection/training notifications
