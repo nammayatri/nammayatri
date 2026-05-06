@@ -143,15 +143,15 @@ getAirportPerKmFare ::
   Id SL.SpecialLocation ->
   LatLong -> -- gate's pickup point — used by getAllFareProducts to resolve the special location
   Text -> -- pickupGateId of the gate we're notifying for
-  Text -> -- driver's vehicle service-tier as Text
+  DVST.ServiceTierType -> -- driver's vehicle service tier
   m (Maybe HighPrecMoney)
-getAirportPerKmFare merchantId merchantOpCityId specialLocationId gateLatLong pickupGateId variantText = do
-  let cacheKey = mkAirportPerKmFareCacheKey specialLocationId variantText
+getAirportPerKmFare merchantId merchantOpCityId specialLocationId gateLatLong pickupGateId serviceTier = do
+  let cacheKey = mkAirportPerKmFareCacheKey specialLocationId (T.pack (show serviceTier))
   mbCached <- Redis.withCrossAppRedis $ Redis.safeGet @(Maybe HighPrecMoney) cacheKey
   case mbCached of
     Just cached -> pure cached
     Nothing -> do
-      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId variantText
+      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId serviceTier
       Redis.withCrossAppRedis $ Redis.setExp cacheKey mbFare airportPerKmFareCacheTtlSec
       pure mbFare
 
@@ -196,29 +196,26 @@ computeAirportPerKmFare ::
   Id DMOC.MerchantOperatingCity ->
   LatLong ->
   Text ->
-  Text ->
+  DVST.ServiceTierType ->
   m (Maybe HighPrecMoney)
-computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId variantText =
-  case readMaybe (T.unpack variantText) :: Maybe DVST.ServiceTierType of
+computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId serviceTier = do
+  let searchSources = SharedFareProduct.getSearchSources False
+      preferenceOrder =
+        [ DTC.OneWay DTC.OneWayOnDemandStaticOffer,
+          DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
+          DTC.OneWay DTC.OneWayRideOtp
+        ]
+      tryCategory tripCategory = do
+        res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
+        pure $ find (\fp -> fp.vehicleServiceTier == serviceTier) res.fareProducts
+  mbFareProduct <- firstJustM tryCategory preferenceOrder
+  case mbFareProduct of
     Nothing -> pure Nothing
-    Just serviceTier -> do
-      let searchSources = SharedFareProduct.getSearchSources False
-          preferenceOrder =
-            [ DTC.OneWay DTC.OneWayOnDemandStaticOffer,
-              DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
-              DTC.OneWay DTC.OneWayRideOtp
-            ]
-          tryCategory tripCategory = do
-            res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
-            pure $ find (\fp -> fp.vehicleServiceTier == serviceTier) res.fareProducts
-      mbFareProduct <- firstJustM tryCategory preferenceOrder
-      case mbFareProduct of
+    Just fp -> do
+      mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+      case mbFarePolicy of
         Nothing -> pure Nothing
-        Just fp -> do
-          mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
-          case mbFarePolicy of
-            Nothing -> pure Nothing
-            Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
+        Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
   where
     firstJustM _ [] = pure Nothing
     firstJustM f (x : xs) = do
@@ -294,9 +291,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId var
           -- not earnings per km.
           excludedFlat =
             fromMaybe 0 fareParams.tollCharges
-              + fromMaybe 0 fareParams.tollFareTax
               + fromMaybe 0 fareParams.parkingCharge
-              + fromMaybe 0 fareParams.parkingChargeTax
           variableFare = estimatedFare - excludedFlat
           distanceKm :: HighPrecMoney
           distanceKm = HighPrecMoney (toRational representativeAirportRideDistanceMeters / 1000)
@@ -509,7 +504,7 @@ runDemandCheckForVariants ::
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   Text -> -- pickupZoneGateId from SearchRequest
-  [Text] -> -- chosen vehicle variants (de-duplicated by caller)
+  [(Text, DVST.ServiceTierType)] -> -- (vehicleType key for queue/Redis, serviceTier for fare lookup)
   m ()
 runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants = do
   mbGate <- Esq.runInReplica $ QGI.findById (Id pickupZoneGateId)
@@ -521,11 +516,11 @@ runDemandCheckForVariants merchantOpCityId merchantId pickupZoneGateId variants 
       unless isQueueEnabled $
         logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
       when isQueueEnabled $
-        forM_ variants $ \variant -> do
+        forM_ variants $ \(variant, serviceTier) -> do
           let demandTtl = 86400 -- 1 day
           incrementGateSearchDemand pickupZoneGateId variant demandTtl
           -- Customer/app path (called from Beckn Init); audit field on the queue request row.
-          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just DSZQR.App)
+          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just serviceTier) (Just DSZQR.App)
 
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
 --   Compares per-variant demand against the gate's demand threshold; when it's hit and
@@ -547,10 +542,11 @@ checkAndNotifyDriverDemand ::
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
   DGI.GateInfo ->
-  Text -> -- vehicleVariant (service tier)
+  Text -> -- vehicleVariant (queue/Redis key)
+  Maybe DVST.ServiceTierType -> -- service tier for airport per-km fare lookup; Nothing skips fare calc
   Maybe DSZQR.TriggerSource -> -- trigger source threaded through to notifyDrivers
   m ()
-checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSource = do
+checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTier mbTriggerSource = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
@@ -604,7 +600,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbTriggerSou
                 <> show (length eligibleNearGate)
                 <> " toNotify="
                 <> show (min needed (length eligibleNearGate))
-            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource Nothing (take needed eligibleNearGate)
+            void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing (take needed eligibleNearGate)
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -636,10 +632,14 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       priorityDriverIds = fromMaybe [] mbPriorityDriverIds
       -- Dashboard is the only caller of this force path; stamp every row it produces.
       triggerSource = Just DSZQR.Dashboard
+      -- Dashboard's `vehicleType` is a free-form Text; try to parse it as ServiceTierType
+      -- so the airport per-km fare lookup can match the right fare product. If parsing
+      -- fails, fare calc is silently skipped (notification still sent without perKmFare).
+      mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
   eligiblePriority <- filterEligibleDrivers gateId priorityDriverIds
   eligiblePriorityNearGate <- filterByGateProximity gate eligiblePriority
-  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
+  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
   let remaining = max 0 (needed - priorityCount)
   -- Fill remaining from LTS queue
   queueCount <-
@@ -651,7 +651,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
             queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
         eligible <- filterEligibleDrivers gateId queueDriverIds
         eligibleNearGate <- filterByGateProximity gate eligible
-        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
+        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
       else pure 0
   pure (priorityCount + queueCount)
 
@@ -671,12 +671,13 @@ notifyDrivers ::
   DGI.GateInfo ->
   Text -> -- specialLocationId
   Text -> -- vehicleType
+  Maybe DVST.ServiceTierType -> -- service tier for airport per-km fare lookup; Nothing skips fare calc
   Int -> -- cooldown in seconds
   Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
   Maybe Bool -> -- isDemandHigh override (Nothing => default True)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType cooldown mbTriggerSource mbIsDemandHigh driverIds = do
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -688,7 +689,9 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType coo
   let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
       isDemandHigh = fromMaybe True mbIsDemandHigh
-  mbPerKmFare <- getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId vehicleType
+  mbPerKmFare <- case mbServiceTier of
+    Nothing -> pure Nothing
+    Just serviceTier -> getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId serviceTier
   mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
   let demandCount = fromMaybe 0 mbDemandCount
   foldM
