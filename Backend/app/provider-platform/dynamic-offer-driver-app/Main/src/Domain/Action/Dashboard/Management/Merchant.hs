@@ -167,6 +167,7 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SpecialLocationUpsert as SLU
+import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
@@ -1041,6 +1042,7 @@ castDDocumentType = \case
   DVC.TANCertificate -> Common.TANCertificate
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
   DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
+  DVC.VoterIdCard -> Common.VoterIdCard
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1144,6 +1146,7 @@ castDocumentType = \case
   Common.TANCertificate -> DVC.TANCertificate
   Common.UDYAMCertificate -> DVC.UDYAMCertificate
   Common.PanAadhaarLink -> DVC.PanAadhaarLinkage
+  Common.VoterIdCard -> DVC.VoterIdCard
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -1435,6 +1438,10 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
   updatedFarePolicy <- mkUpdatedFarePolicy farePolicy
   CQFP.update' updatedFarePolicy
   CQFP.clearCacheById farePolicyId
+  -- Per-(specialLocation, variant) per-km airport-fare results derived from this
+  -- policy live in a separate Redis cache; drop them here so the next pickup-zone
+  -- notification recomputes against the new policy.
+  SpecialZoneDriverDemand.clearAirportPerKmFareCacheForPolicy farePolicyId
   pure Success
   where
     mkUpdatedFarePolicy FarePolicy.FarePolicy {..} = do
@@ -3186,6 +3193,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
+            notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             ..
           }
 

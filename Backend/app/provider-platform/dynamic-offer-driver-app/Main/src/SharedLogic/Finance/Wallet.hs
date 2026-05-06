@@ -442,6 +442,7 @@ buildFinanceCtx booking ride mbDriver mbPanCard mbDriverInfo transporterConfig i
         isOnline = isOnline,
         counterpartyType = cType,
         counterpartyId = cId,
+        concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
         merchantName = mName,
         merchantShortId = mShortId,
@@ -519,6 +520,7 @@ financeCtxFromRide booking ride mbPanCard isOnline = do
         isOnline = isOnline,
         counterpartyType = cType,
         counterpartyId = cId,
+        concernedIndividualId = Just ride.driverId.getId,
         referenceId = booking.id.getId,
         merchantName = Nothing,
         merchantShortId = Nothing,
@@ -578,6 +580,10 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
       mbPlatformAccount <- getOrCreateAccount platformInput
       case (mbOwnerAccount, mbPlatformAccount) of
         (Right ownerAccount, Right platformAccount) -> do
+          let concernedIndividualId =
+                if counterpartyType == DRIVER
+                  then Just ownerId
+                  else Nothing
           let (fromAcc, toAcc, amount, eType) =
                 if delta > 0
                   then (platformAccount.id, ownerAccount.id, delta, Lib.Finance.Domain.Types.LedgerEntry.Expense)
@@ -586,6 +592,7 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
                 LedgerEntryInput
                   { fromAccountId = fromAcc,
                     toAccountId = toAcc,
+                    concernedIndividualId = concernedIndividualId,
                     amount = amount,
                     currency = currency,
                     entryType = eType,

@@ -21,6 +21,11 @@ types:
     branch: Text
     accountNumber: Text
     ifscCode: Text
+  UpdateBankDetails:
+    branch: Text
+    accountNumber: Text
+    confirmAccountNumber: Text
+    ifscCode: Text
   VehicleInfo:
     vehicleType: VehicleType
     fuelTypes: "[FuelType]"
@@ -49,12 +54,19 @@ types:
     emailId: Text
     fatherMotherName: Text
     address: Address
+    addressProofType: Maybe Text
+    addressProofImageId: Maybe Text
     bankDetails: BankDetails
     vehicleInfo: VehicleInfo
     nomineeInfo: NomineeInfo
     declaration: Declaration
     amount: Money
     paymentServiceType: Maybe PaymentServiceType
+  UpdateMembershipApplicationReq:
+    bankDetails: Maybe UpdateBankDetails
+    address: Maybe Address
+    vehicleType: Maybe VehicleType
+    nomineeName: Maybe Text
   MembershipApplicationResp:
     applicationId: Text
     status: ApplicationStatus
@@ -74,6 +86,8 @@ types:
     emailId: Text
     fatherMotherName: Text
     address: Address
+    addressProofType: Maybe Text
+    addressProofImageId: Maybe Text
     bankDetails: BankDetails
     vehicleInfo: VehicleInfo
     nomineeInfo: NomineeInfo
@@ -93,6 +107,13 @@ apis:
         type: MembershipApplicationReq
       response:
         type: CreateOrderResp
+  - PUT:
+      endpoint: /updateApplication
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: UpdateMembershipApplicationReq
+      response:
+        type: APISuccess
   - GET:
       endpoint: /membership
       auth: TokenAuth PROVIDER_TYPE

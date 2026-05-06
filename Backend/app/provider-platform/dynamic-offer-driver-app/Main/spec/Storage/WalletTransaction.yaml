@@ -1,0 +1,53 @@
+imports:
+  HighPrecMoney: Kernel.Types.Common
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  UTCTime: Kernel.Prelude
+
+
+WalletTransaction:
+  tableName: wallet_transaction
+
+  types:
+    WalletTransactionStatus:
+      enum: "INITIATED, PROCESSING, SUCCESS, FAILED, REFUNDED, EXPIRED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id WalletTransaction
+    driverId: Id Person
+    paymentOrderId: Id PaymentOrder
+    amount: HighPrecMoney
+    status: WalletTransactionStatus
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    paymentOrderId: SecondaryKey
+
+  queries:
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: paymentOrderId
+
+    updatePaymentOrderId:
+      kvFunction: updateOneWithKV
+      params: [paymentOrderId, updatedAt]
+      where: id
+
+    findByDriverIdAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [driverId, status]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <Domain.Types.WalletTransaction.WalletTransactionStatus>

@@ -44,6 +44,7 @@ data DocumentFlowGrouping
 data DocumentStatusItem = DocumentStatusItem
   { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verificationStatus :: ResponseStatus,
@@ -140,6 +141,7 @@ data VehicleDocumentItem = VehicleDocumentItem
   { dateOfUpload :: Kernel.Prelude.UTCTime,
     documents :: [DocumentStatusItem],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     isActive :: Kernel.Prelude.Bool,
     isApproved :: Kernel.Prelude.Bool,
     isVerified :: Kernel.Prelude.Bool,

@@ -26,6 +26,8 @@ imports:
   MediaFileDocumentType: Domain.Types.Common
   PaymentMode: Domain.Types.Extra.MerchantPaymentMethod
   MediaFile: IssueManagement.Domain.Types.MediaFile
+  HighPrecMoney: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
 IdfyVerification:
   tableName: idfy_verification
   fields:
@@ -560,7 +562,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
@@ -1125,6 +1127,8 @@ DriverRidePayoutBankAccount:
     bankIfscCode: Maybe (EncryptedHashedField e Text)
     driverId: Id Person
     rcId: Id VehicleRegistrationCertificate
+    vehicleBalance: Maybe HighPrecMoney
+    vehicleBalanceAdjustmentPercentage: Maybe Centesimal
 
   constraints:
     id: PrimaryKey
@@ -1154,6 +1158,8 @@ DriverRidePayoutBankAccount:
     bankAccountNumberHash: bytea
     bankIfscCodeEncrypted: character varying(255)
     bankIfscCodeHash: bytea
+    vehicleBalance: numeric(30,2)
+    vehicleBalanceAdjustmentPercentage: numeric(10,2)
 
   queries:
     findByRcId:

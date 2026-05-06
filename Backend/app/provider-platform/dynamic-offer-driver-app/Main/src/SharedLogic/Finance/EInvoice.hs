@@ -6,7 +6,9 @@ module SharedLogic.Finance.EInvoice
 where
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Text as AesonText
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock (utctDay)
 import qualified Domain.Types.DriverGstin as DDriverGstin
@@ -102,7 +104,10 @@ generateEInvoiceForInvoice invoice = do
                   <> maybe "" (\t -> " taxRate=" <> show t.taxRate <> " taxableValue=" <> show t.taxableValue) mbIndirectTax
                   <> ctx
               let payload = buildEInvoicePayload invoice dg decryptedGstin mbIndirectTax ciCfg
-              logDebug $ "GSTEInvoice: built payload, calling GSP generateEInvoice." <> ctx
+              logDebug $
+                "GSTEInvoice: built payload, calling GSP generateEInvoice. payload="
+                  <> TL.toStrict (AesonText.encodeToLazyText payload)
+                  <> ctx
               eInvResp <- GSTEInvoice.generateEInvoice cfg authToken payload
               logInfo $
                 "GSTEInvoice: GSP responded status="
@@ -133,15 +138,20 @@ buildEInvoicePayload ::
   CITypes.EInvoicePayload
 buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoConfig {..} =
   let hsnCode = fromMaybe "" (mbIndirectTax >>= (.sacCode))
-      gstRate = round3 $ fromMaybe 18 (mbIndirectTax >>= (.taxRate))
-      igstAmount = round2 $ maybe 0 (realToFrac . (.igstAmount)) mbIndirectTax
-      cgstAmount = round2 $ maybe 0 (realToFrac . (.cgstAmount)) mbIndirectTax
-      sgstAmount = round2 $ maybe 0 (realToFrac . (.sgstAmount)) mbIndirectTax
+      gstRate = money3 $ fromMaybe 18 (mbIndirectTax >>= (.taxRate))
+      igstAmount = money2 $ maybe 0 (realToFrac . (.igstAmount)) mbIndirectTax
+      cgstAmount = money2 $ maybe 0 (realToFrac . (.cgstAmount)) mbIndirectTax
+      sgstAmount = money2 $ maybe 0 (realToFrac . (.sgstAmount)) mbIndirectTax
       lineItems = case Aeson.fromJSON inv.lineItems of
         Aeson.Success xs -> xs :: [InvoiceLineItem]
         Aeson.Error _ -> []
-      assessableValue = round2 $ realToFrac (sum $ map (.lineTotal) lineItems)
-      totalInvoiceValue = round2 $ realToFrac inv.totalAmount
+      -- Assessable value is the pre-tax principal only — include only the
+      -- "Subscription Plan Fee" line; tax lines are reported separately on the
+      -- e-invoice via cgst/sgst/igst.
+      principalLineItems = filter (\li -> li.description == "Subscription Plan Fee") lineItems
+      assessableValue = money2 $ realToFrac (sum $ map (.lineTotal) principalLineItems)
+      totalInvoiceValue = money2 $ realToFrac inv.totalAmount
+      zeroMoney = 0 :: Double
       buyerAddr = clampAddr1 $ fromMaybe (fromMaybe "" inv.issuedToAddress) dg.address
       sellerAddr = clampAddr1 sellerGstinAddr
    in CITypes.EInvoicePayload
@@ -154,7 +164,7 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
           docDtls =
             CITypes.DocDtls
               { typ = "INV",
-                no = "BAJ252624WI27/1",
+                no = inv.invoiceNumber,
                 dt = formatInvoiceDate inv.issuedAt
               },
           sellerDtls =
@@ -185,8 +195,8 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
                   unit = "NOS",
                   unitPrice = assessableValue,
                   totAmt = assessableValue,
-                  discount = 0,
-                  preTaxVal = 0,
+                  discount = zeroMoney,
+                  preTaxVal = zeroMoney,
                   assAmt = assessableValue,
                   gstRt = gstRate,
                   igstAmt = igstAmount,
@@ -203,7 +213,7 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
                 igstVal = igstAmount,
                 totInvVal = totalInvoiceValue
               },
-          ewbDtls = Nothing
+          ewbDtls = Just CITypes.EwbDtls {distance = 0}
         }
 
 -- | Extract the 2-digit state code from a GSTIN. A GSTIN is structured as
@@ -212,13 +222,14 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
 gstinStateCode :: Text -> Text
 gstinStateCode = T.take 2
 
--- | Round to N decimals so JSON encoding does not produce floating-point noise
--- like 0.30000000000000004; the GSP regex caps decimals at 2 (or 3 for GST rate).
-round2 :: Double -> Double
-round2 x = fromIntegral (round (x * 100) :: Integer) / 100
+-- | Round a Double to 2 decimal places. The GSP regex `^\d+.?\d{0,2}$`
+-- rejects any value with more than 2 decimals, so we round before sending.
+money2 :: Double -> Double
+money2 x = fromIntegral (round (x * 100) :: Integer) / 100
 
-round3 :: Double -> Double
-round3 x = fromIntegral (round (x * 1000) :: Integer) / 1000
+-- | Same as `money2` but with 3 decimal places (used for gstRt only).
+money3 :: Double -> Double
+money3 x = fromIntegral (round (x * 1000) :: Integer) / 1000
 
 -- | GSP requires Address 1 to be 1-100 chars. Fall back to "NA" if empty, clip to 100.
 clampAddr1 :: Text -> Text

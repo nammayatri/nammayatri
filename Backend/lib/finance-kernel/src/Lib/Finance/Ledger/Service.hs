@@ -36,6 +36,7 @@ module Lib.Finance.Ledger.Service
     -- * Query by account (the main way domain queries)
     findByAccountAndStatus,
     findByAccountWithFilters,
+    findByAccountWithFiltersAndConcernedIndividual,
 
     -- * Aggregations (common for domain use)
     sumByAccountAndStatus,
@@ -91,6 +92,7 @@ createEntry input = do
           { id = Id entryId,
             fromAccountId = input.fromAccountId,
             toAccountId = input.toAccountId,
+            concernedIndividualId = input.concernedIndividualId,
             amount = input.amount,
             currency = input.currency,
             entryType = input.entryType,
@@ -152,6 +154,7 @@ createEntryWithBalanceUpdate input = do
               { id = Id entryId,
                 fromAccountId = input.fromAccountId,
                 toAccountId = input.toAccountId,
+                concernedIndividualId = input.concernedIndividualId,
                 amount = amount,
                 currency = input.currency,
                 entryType = input.entryType,
@@ -202,6 +205,7 @@ createReversal originalId reason = do
               { id = Id reversalId,
                 fromAccountId = original.toAccountId, -- Swap
                 toAccountId = original.fromAccountId,
+                concernedIndividualId = original.concernedIndividualId,
                 amount = original.amount,
                 currency = original.currency,
                 entryType = Reversal,
@@ -414,6 +418,34 @@ findByAccountWithFilters accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceT
             ]
       )
       entries
+
+findByAccountWithFiltersAndConcernedIndividual ::
+  (BeamFlow.BeamFlow m r) =>
+  Id Account ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe EntryStatus ->
+  Maybe [Text] ->
+  Maybe Text ->
+  m [LedgerEntry]
+findByAccountWithFiltersAndConcernedIndividual accountId mbFrom mbTo mbMin mbMax mbStatus mbReferenceTypes mbConcernedIndividualId =
+  findAllWithKV
+    [ Se.And $
+        [ Se.Or
+            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
+            ]
+        ]
+          <> [Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
+          <> [Se.Is BeamLE.timestamp $ Se.LessThanOrEq to | Just to <- [mbTo]]
+          <> [Se.Is BeamLE.amount $ Se.GreaterThanOrEq minAmt | Just minAmt <- [mbMin]]
+          <> [Se.Is BeamLE.amount $ Se.LessThanOrEq maxAmt | Just maxAmt <- [mbMax]]
+          <> [Se.Is BeamLE.status $ Se.Eq status | Just status <- [mbStatus]]
+          <> [Se.Is BeamLE.referenceType $ Se.In refs | Just refs <- [mbReferenceTypes]]
+          <> [Se.Is BeamLE.concernedIndividualId $ Se.Eq (Just cid) | Just cid <- [mbConcernedIndividualId]]
+    ]
 
 --------------------------------------------------------------------------------
 -- AGGREGATIONS (Common operations domain needs)

@@ -4,17 +4,13 @@
 module Lib.Payment.Domain.Types.PayoutRequest where
 
 import Data.Aeson
-import qualified Data.Bifunctor as BF
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as DT
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.TH
+import Kernel.Utils.TH
 import qualified Lib.Payment.Domain.Types.Common
-import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import qualified Tools.Beam.UtilsTH
 
 data PayoutRequest = PayoutRequest
   { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
@@ -65,20 +61,14 @@ data PayoutRequestStatus
 
 data PayoutType = INSTANT | SCHEDULED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutRequestStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutRequestStatus)
+$(mkHttpInstancesForEnum ''PayoutRequestStatus)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutType)
 
-instance FromHttpApiData [PayoutRequestStatus] where
-  parseUrlPiece = parseHeader . DT.encodeUtf8
-  parseQueryParam = parseUrlPiece
-  parseHeader bs = BF.first T.pack . eitherDecode . BSL.fromStrict $ bs
+$(mkHttpInstancesForEnum ''PayoutType)
 
-instance ToHttpApiData [PayoutRequestStatus] where
-  toUrlPiece = DT.decodeUtf8 . toHeader
-  toQueryParam = toUrlPiece
-  toHeader = BSL.toStrict . encode
+$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums ''PayoutRequestStatus)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''PayoutType)
+$(Kernel.Utils.TH.mkHttpInstancesForListOfEnums ''PayoutType)

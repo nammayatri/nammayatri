@@ -18,11 +18,11 @@ import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
-import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -169,6 +169,13 @@ getServiceNameConfigJSON = \case
     Tokenize.TtenTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Tten, toJSON cfg)
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> (Domain.PayoutService Payout.Juspay, toJSON cfg)
+    Payout.StripeConfig cfg -> do
+      let service = Domain.PayoutService $
+            case cfg.serviceMode of
+              Just Stripe.Live -> Payout.Stripe
+              Just Stripe.Test -> Payout.StripeTest
+              Nothing -> Payout.Stripe
+      (service, toJSON cfg)
   Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig cfg -> (Domain.MultiModalService MultiModal.GoogleTransit, toJSON cfg)
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
@@ -188,7 +195,4 @@ getServiceNameConfigJSON = \case
     SOSInterface.ERSSConfig cfg -> (Domain.SOSService SOS.ERSS, toJSON cfg)
     SOSInterface.GJ112Config cfg -> (Domain.SOSService SOS.GJ112, toJSON cfg)
     SOSInterface.TrinityConfig cfg -> (Domain.SOSService SOS.Trinity, toJSON cfg)
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig srcCfg -> (Domain.SettlementService Settlement.HyperPG, toJSON srcCfg)
-    Settlement.BillDeskConfig srcCfg -> (Domain.SettlementService Settlement.BillDesk, toJSON srcCfg)
-    Settlement.YesBizConfig srcCfg -> (Domain.SettlementService Settlement.YesBiz, toJSON srcCfg)
+  Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)

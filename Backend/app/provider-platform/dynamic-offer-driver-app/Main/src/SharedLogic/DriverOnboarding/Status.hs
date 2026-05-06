@@ -507,7 +507,9 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           when allDriverDocsVerified $ do
             driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let driverInspectionNotRequired = transporterConfig.requiresDriverOnboardingInspection /= Just True || driverInfo.approved == Just True
-            when driverInspectionNotRequired $ do
+                -- Allow first-time auto-enable even when dontAutoEnableDriver=true (enabledAt=Nothing means never enabled before)
+                autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
+            when (driverInspectionNotRequired && autoEnableAllowed) $ do
               enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
               whenJust onboardingVehicleCategory $ \category -> do
                 DIIQuery.updateOnboardingVehicleCategory (Just category) personId
@@ -518,9 +520,12 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
           let allDriverDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
           when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
-            enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
-            whenJust onboardingVehicleCategory $ \category -> do
-              DIIQuery.updateOnboardingVehicleCategory (Just category) personId
+            driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+            let autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
+            when autoEnableAllowed $ do
+              enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
+              whenJust onboardingVehicleCategory $ \category -> do
+                DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement (old combined logic - checks both driver and vehicle docs)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification False driverDocuments merchantOpCityId
 
@@ -594,13 +599,14 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
                 else ((allVehicleDocsVerified && inspectionNotRequired && role == DP.DRIVER) || isVehicleCategoryExcludedFromVerification) && allDriverDocsVerified
 
         -- Activate RC if vehicle docs are verified and inspection is not required/approved
+        -- isActive=False means RC was explicitly deactivated — skip auto-reactivation
         mbVehicle <- QVehicle.findById personId
-        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER) $ do
+        when (shouldActivateRc && isNothing mbVehicle && checkToActivateRC && role == DP.DRIVER && (isActive || not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver))) $ do
           void $ withTryCatch "activateRCAutomatically:statusHandler" (activateRCAutomatically personId entityImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
           -- Enable driver when RC is activated (only when flow is NOT separated)
           -- When separated, driver enablement is handled separately in the driver enablement section
           unless separateEnablement $ do
-            when checkToActivateRC $ do
+            when (checkToActivateRC && not (fromMaybe False entityImagesInfo.transporterConfig.dontAutoEnableDriver)) $ do
               case (isVehicleCategoryExcludedFromVerification, mDL) of
                 (True, _) -> enableDriver merchantOpCityId personId role Nothing entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId
                 (False, Just dl) -> enableDriver merchantOpCityId personId role dl.driverName entityImagesInfo.transporterConfig entityImagesInfo.merchantOperatingCity.merchantId

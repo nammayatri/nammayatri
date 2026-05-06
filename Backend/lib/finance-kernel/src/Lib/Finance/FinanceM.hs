@@ -102,6 +102,7 @@ data FinanceCtx = FinanceCtx
     isOnline :: Bool,
     counterpartyType :: CounterpartyType,
     counterpartyId :: Text,
+    concernedIndividualId :: Maybe Text,
     referenceId :: Text,
     -- Invoice fields (pre-resolved by caller)
     merchantName :: Maybe Text,
@@ -486,6 +487,7 @@ transfer fromRole toRole amount refType = do
             LedgerEntryInput
               { fromAccountId = fromAcc.id,
                 toAccountId = toAcc.id,
+                concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
                 entryType = LE.Expense,
@@ -520,6 +522,7 @@ transfer_ fromRole toRole amount refType = do
           LedgerEntryInput
             { fromAccountId = fromAcc.id,
               toAccountId = toAcc.id,
+              concernedIndividualId = ctx.concernedIndividualId,
               amount = amount,
               currency = ctx.currency,
               entryType = LE.Expense,
@@ -556,6 +559,7 @@ transferPending fromRole toRole amount refType = do
             LedgerEntryInput
               { fromAccountId = fromAcc.id,
                 toAccountId = toAcc.id,
+                concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
                 entryType = LE.Expense,
@@ -591,6 +595,7 @@ transferAllowZero fromRole toRole amount refType = do
             LedgerEntryInput
               { fromAccountId = fromAcc.id,
                 toAccountId = toAcc.id,
+                concernedIndividualId = ctx.concernedIndividualId,
                 amount = amount,
                 currency = ctx.currency,
                 entryType = LE.Expense,

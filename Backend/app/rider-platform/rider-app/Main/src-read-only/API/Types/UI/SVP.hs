@@ -22,7 +22,11 @@ data GateCallbackReq = GateCallbackReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GateCallbackResp = GateCallbackResp {allowed :: Kernel.Prelude.Bool, reason :: Kernel.Prelude.Maybe Data.Text.Text}
+data GateCallbackResp = GateCallbackResp
+  { allowed :: Kernel.Prelude.Bool,
+    fareCharged :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    reason :: Kernel.Prelude.Maybe Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -34,4 +38,12 @@ data ScanType
   = ENTRY
   | EXIT
   deriving stock (Show, Eq, Ord, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SignQRReq = SignQRReq {plaintext :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SignQRResp = SignQRResp {signature :: Data.Text.Text}
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -64,6 +64,7 @@ dependencies:
   - exceptions
   - containers
   - unordered-containers
+  - zip-archive
   - beam-core
   - beam-mysql
   - beam-postgres
@@ -105,4 +106,10 @@ library:
           - -O2
           - -j4
   dependencies:
+    - euler-hs
     - mobility-core
+    - process
+    - directory
+    - filepath
+    - base64-bytestring
+    - unix

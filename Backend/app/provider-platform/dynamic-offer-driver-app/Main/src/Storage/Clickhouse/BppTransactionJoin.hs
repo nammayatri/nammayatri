@@ -18,6 +18,7 @@ module Storage.Clickhouse.BppTransactionJoin where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified Data.Text as Text
 import Domain.Types.DriverReferral
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Domain.Types.Person
@@ -101,7 +102,8 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideDriverId :: C f Text,
     rideStatus :: C f RideStatus,
     rideTripStartTime :: C f (Maybe UTCTime),
-    ridePayoutRequestId :: C f (Maybe Text)
+    ridePayoutRequestId :: C f (Maybe Text),
+    bookingPaymentInstrument :: C f (Maybe DMPM.PaymentInstrument)
   }
   deriving (Generic)
 
@@ -173,7 +175,8 @@ bppTransactionJoinTTable =
       rideDriverId = "ride_driver_id",
       rideTripStartTime = "ride_trip_start_time",
       rideStatus = "ride_status",
-      ridePayoutRequestId = "ride_payout_request_id"
+      ridePayoutRequestId = "ride_payout_request_id",
+      bookingPaymentInstrument = "booking_payment_instrument"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
@@ -182,9 +185,13 @@ instance ClickhouseValue RideStatus
 
 instance ClickhouseValue Common.BookingStatus
 
+instance ClickhouseValue Common.PaymentMode
+
 instance ClickhouseValue Time.Months
 
 instance ClickhouseValue TripCategory
+
+instance ClickhouseValue DMPM.PaymentInstrument
 
 instance CH.ClickhouseValue PayoutFlagReason
 
@@ -198,6 +205,7 @@ findAllRideItems ::
   Int ->
   Int ->
   Maybe Common.BookingStatus ->
+  Maybe Common.PaymentMode ->
   Maybe (ShortId Ride) ->
   Maybe (Id Ride) ->
   Maybe DbHash ->
@@ -211,7 +219,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -234,6 +242,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbFromAmount (\fa -> bppTransaction.rideFareAmount CH.>=. fa)
                     CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
                     CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
+                    CH.&&. CH.whenJust_ mbPaymentMode (`mkPaymentModeCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItem bppTransaction
@@ -254,6 +263,9 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
     mkBookingStatusCond Common.ONGOING ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.>. Just subtract6Hrs
     mkBookingStatusCond Common.ONGOING_6HRS ride = ride.rideStatus CH.==. Ride.INPROGRESS CH.&&. ride.rideTripStartTime CH.<=. Just subtract6Hrs
     mkBookingStatusCond Common.CANCELLED ride = ride.rideStatus CH.==. Ride.CANCELLED
+
+    mkPaymentModeCond Common.CASH ride = ride.bookingPaymentInstrument CH.==. Just DMPM.Cash
+    mkPaymentModeCond Common.ONLINE ride = CH.not_ (ride.bookingPaymentInstrument CH.==. Just DMPM.Cash) CH.&&. CH.isNotNull ride.bookingPaymentInstrument
 
     mkRideItem bppTxn@BppTransactionJoinT {..} =
       QRE.RideItem
@@ -319,7 +331,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           traveledDistance = bppTxn.rideTravelledDistance,
           rideDistanceUnit = Just Meter,
           bookingDistanceUnit = Just Meter,
-          paymentInstrument = Nothing,
+          paymentInstrument = bppTxn.bookingPaymentInstrument,
           bookingStatus = mkBookingStatus bppTxn,
           tripCategory = bppTxn.bookingTripCategory,
           displayBookingId = bppTxn.bookingDisplayBookingId,
@@ -336,6 +348,7 @@ findAllRideItemsV2 ::
   Int ->
   Int ->
   Maybe Ride.RideStatus ->
+  Maybe Common.PaymentMode ->
   Maybe (ShortId Ride) ->
   Maybe (Id Ride) ->
   Maybe DbHash ->
@@ -346,7 +359,7 @@ findAllRideItemsV2 ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [QRE.RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -367,10 +380,14 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                     CH.&&. CH.whenJust_ mbFromAmount (\fa -> bppTransaction.rideFareAmount CH.>=. fa)
                     CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
                     CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
+                    CH.&&. CH.whenJust_ mbPaymentMode (`mkPaymentModeCond` bppTransaction)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItemV2 bppTransaction
   where
+    mkPaymentModeCond Common.CASH ride = ride.bookingPaymentInstrument CH.==. Just DMPM.Cash
+    mkPaymentModeCond Common.ONLINE ride = CH.not_ (ride.bookingPaymentInstrument CH.==. Just DMPM.Cash) CH.&&. CH.isNotNull ride.bookingPaymentInstrument
+
     mkRideItemV2 bppTxn =
       QRE.RideItemV2
         { rideShortId = bppTxn.rideShortId,

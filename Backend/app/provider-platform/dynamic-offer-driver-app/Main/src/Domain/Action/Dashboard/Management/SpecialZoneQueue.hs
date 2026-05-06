@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueAdd,
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
+    getSpecialZoneQueueDriverQueueHistory,
   )
 where
 
@@ -41,7 +42,7 @@ postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   gate <- Esq.runInReplica (QGI.findById (Kernel.Types.Id.Id req.gateId)) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
   let mbPriorityIds = fmap (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
-  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds
+  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds req.isDemandHigh
   logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId
   pure Kernel.Types.APISuccess.Success
 
@@ -51,7 +52,16 @@ postSpecialZoneQueueManualQueueAdd merchantShortId opCity req = do
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let driverId = Kernel.Types.Id.Id req.driverId :: Kernel.Types.Id.Id DP.Person
   -- Remove first (if already in queue), then add at desired position
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId
+  logError $
+    "[postSpecialZoneQueueManualQueueAdd] manualQueueRemove triggered: driverId=" <> req.driverId
+      <> ", specialLocationId="
+      <> req.specialLocationId
+      <> ", vehicleType="
+      <> req.vehicleType
+      <> ", queuePosition="
+      <> show req.queuePosition
+      <> ", reason=dashboard manual queue add (cleanup before re-add)"
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_re_add")
   void $ LTSFlow.manualQueueAdd req.specialLocationId req.vehicleType merchant.id driverId req.queuePosition
   logInfo $ "Dashboard: added driver " <> req.driverId <> " to queue at position " <> show req.queuePosition <> " for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
@@ -61,7 +71,14 @@ postSpecialZoneQueueManualQueueRemove merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let driverId = Kernel.Types.Id.Id req.driverId :: Kernel.Types.Id.Id DP.Person
-  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId
+  logError $
+    "[postSpecialZoneQueueManualQueueRemove] manualQueueRemove triggered: driverId=" <> req.driverId
+      <> ", specialLocationId="
+      <> req.specialLocationId
+      <> ", vehicleType="
+      <> req.vehicleType
+      <> ", reason=dashboard manual queue remove"
+  void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType merchant.id driverId (Just "dashboard_manual_remove")
   logInfo $ "Dashboard: removed driver " <> req.driverId <> " from queue for " <> req.specialLocationId <> "/" <> req.vehicleType
   pure Kernel.Types.APISuccess.Success
 
@@ -190,3 +207,29 @@ getSpecialZoneQueueDriverQueuePosition merchantShortId opCity driverIdText speci
       { queuePosition = mbPos,
         queueSize = posResp.queueSize
       }
+
+getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Environment.Flow SZQT.DriverQueueHistoryRes)
+getSpecialZoneQueueDriverQueueHistory merchantShortId opCity driverIdText = do
+  merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let driverId = Kernel.Types.Id.Id driverIdText :: Kernel.Types.Id.Id DP.Person
+  ltsResp <- LTSFlow.getDriverQueueHistory merchant.id driverId
+  pure
+    SZQT.DriverQueueHistoryRes
+      { trackingState = fmap mkTrackingState ltsResp.trackingState,
+        currentRank = ltsResp.currentRank,
+        events = map mkEvent ltsResp.events
+      }
+  where
+    mkTrackingState ts =
+      SZQT.QueueTrackingState
+        { specialLocationId = ts.specialLocationId,
+          vehicleType = ts.vehicleType,
+          consecutiveExitPings = ts.consecutiveExitPings,
+          lastRecordedRank = ts.lastRecordedRank
+        }
+    mkEvent ev =
+      SZQT.QueueHistoryEvent
+        { timestamp = ev.timestamp,
+          value = ev.value
+        }

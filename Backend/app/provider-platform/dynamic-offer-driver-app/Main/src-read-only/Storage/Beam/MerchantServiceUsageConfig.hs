@@ -15,6 +15,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
+import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Ticket.Types
 import qualified Kernel.External.Verification.Types
@@ -29,6 +30,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     categoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
+    createPayoutOrder :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     dashboardGstVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     dashboardPanVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
@@ -53,6 +55,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     panVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
+    payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
     rectifyDistantPointsFailure :: B.C f Kernel.External.Maps.Types.MapsService,
     retryBankAccountLink :: B.C f Kernel.External.Payment.Types.PaymentService,
     sdkVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,

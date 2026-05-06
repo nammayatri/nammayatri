@@ -251,3 +251,24 @@ data QueueDriversResponse = QueueDriversResponse
     queueSize :: Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueTrackingState = QueueTrackingState
+  { specialLocationId :: Text,
+    vehicleType :: Text,
+    consecutiveExitPings :: Int,
+    lastRecordedRank :: Int
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data QueueEvent = QueueEvent
+  { timestamp :: Double,
+    value :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data DriverQueueHistoryResp = DriverQueueHistoryResp
+  { trackingState :: Maybe QueueTrackingState,
+    currentRank :: Maybe Int,
+    events :: [QueueEvent]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

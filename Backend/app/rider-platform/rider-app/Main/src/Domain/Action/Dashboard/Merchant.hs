@@ -456,6 +456,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
+            notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             ..
           }
 
@@ -1478,7 +1479,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMinDriverThresholdsJson :: Maybe Text,
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
-    gateInfoId :: Maybe Text
+    gateInfoId :: Maybe Text,
+    gateInfoNotificationActiveTillInSec :: Maybe Text
   }
   deriving (Show)
 
@@ -1520,6 +1522,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_max_driver_thresholds")
       <*> optional (r .: "gate_info_demand_thresholds")
       <*> optional (r .: "gate_info_id")
+      <*> optional (r .: "gate_info_notification_active_till_in_sec")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1638,7 +1641,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 notificationCooldownInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationCooldownInSec) "Gate Info (notification_cooldown_in_sec)",
                 maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
                 pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
-                pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)"
+                pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
+                notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)"
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
@@ -1699,16 +1703,14 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
     mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
     mergeSpecialLocationWithExisting new Nothing = new
     mergeSpecialLocationWithExisting new (Just old) =
-      new
-        { DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
+      new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
           DSL.supportNumber = new.supportNumber <|> old.supportNumber
-        }
+         }
 
     mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo
     mergeGateInfoWithExisting new Nothing = new
     mergeGateInfoWithExisting new (Just old) =
-      new
-        { DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
+      new{DGI.entryFeeAmount = new.entryFeeAmount <|> old.entryFeeAmount,
           DGI.minDriverThresholds = new.minDriverThresholds <|> old.minDriverThresholds,
           DGI.maxDriverThresholds = new.maxDriverThresholds <|> old.maxDriverThresholds,
           DGI.demandThresholds = new.demandThresholds <|> old.demandThresholds,
@@ -1718,8 +1720,10 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           DGI.notificationCooldownInSec = new.notificationCooldownInSec <|> old.notificationCooldownInSec,
           DGI.maxRideSkipsBeforeQueueRemoval = new.maxRideSkipsBeforeQueueRemoval <|> old.maxRideSkipsBeforeQueueRemoval,
           DGI.pickupZoneArrivalTimeoutInSec = new.pickupZoneArrivalTimeoutInSec <|> old.pickupZoneArrivalTimeoutInSec,
-          DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec
-        }
+          DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec,
+          -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
+          DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec
+         }
 
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [Common.SpecialLocationWithPlatform]
 getMerchantConfigSpecialLocationList merchantShortId opCity mbLimit mbOffset mbSpecialLocationType mbSpecialLocationTypes = do

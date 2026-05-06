@@ -23,7 +23,6 @@ import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Plasma as Plasma
 import qualified Kernel.External.SMS.Interface as Sms
-import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Verification.Interface as Verification
@@ -79,14 +78,17 @@ getConfigJSON = \case
     Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
+    Payout.StripeConfig cfg -> toJSON cfg
   Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
+    Payout.StripeConfig cfg -> toJSON cfg
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
     Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig cfg -> toJSON cfg
+    Payout.StripeConfig cfg -> toJSON cfg
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
@@ -125,10 +127,7 @@ getConfigJSON = \case
   Domain.InsuranceDeclarationServiceConfig iffcoTokioCfg -> toJSON iffcoTokioCfg
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig cfg -> toJSON cfg
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig srcCfg -> toJSON srcCfg
-    Settlement.BillDeskConfig srcCfg -> toJSON srcCfg
-    Settlement.YesBizConfig srcCfg -> toJSON srcCfg
+  Domain.SettlementServiceConfig settlementCfg -> toJSON settlementCfg
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig cfg -> toJSON cfg
 
@@ -171,12 +170,9 @@ getServiceName = \case
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
   Domain.PaymentServiceConfig paymentCfg -> Domain.PaymentService $ getPaymentServiceConfigJson paymentCfg
-  Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
-    Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
-  Domain.RentalPayoutServiceConfig payoutCfg -> case payoutCfg of
-    Payout.JuspayConfig _ -> Domain.RentalPayoutService Payout.Juspay
-  Domain.RidePayoutServiceConfig payoutCfg -> case payoutCfg of
-    Payout.JuspayConfig _ -> Domain.RidePayoutService Payout.Juspay
+  Domain.PayoutServiceConfig payoutCfg -> Domain.PayoutService $ getPayoutServiceConfigJson payoutCfg
+  Domain.RentalPayoutServiceConfig payoutCfg -> Domain.RentalPayoutService $ getPayoutServiceConfigJson payoutCfg
+  Domain.RidePayoutServiceConfig payoutCfg -> Domain.RidePayoutService $ getPayoutServiceConfigJson payoutCfg
   Domain.RentalPaymentServiceConfig paymentCfg -> Domain.RentalPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.CautioPaymentServiceConfig paymentCfg -> Domain.CautioPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.MembershipPaymentServiceConfig paymentCfg -> Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
@@ -210,10 +206,7 @@ getServiceName = \case
   Domain.InsuranceDeclarationServiceConfig _ -> Domain.InsuranceDeclarationService Domain.IffcoTokio
   Domain.PartnerSdkServiceConfig partnerSdkCfg -> case partnerSdkCfg of
     PartnerSdk.AarokyaPartnerSdkConfig _ -> Domain.PartnerSdkService Domain.Aarokya
-  Domain.SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig _ -> Domain.SettlementService Settlement.HyperPG
-    Settlement.BillDeskConfig _ -> Domain.SettlementService Settlement.BillDesk
-    Settlement.YesBizConfig _ -> Domain.SettlementService Settlement.YesBiz
+  Domain.SettlementServiceConfig settlementCfg -> Domain.SettlementService settlementCfg.settlementService
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
 
@@ -227,6 +220,14 @@ getPaymentServiceConfigJson = \case
     Just Stripe.Test -> Payment.StripeTest
     Nothing -> Payment.Stripe
   Payment.PaytmEDCConfig _ -> Payment.PaytmEDC
+
+getPayoutServiceConfigJson :: Payout.PayoutServiceConfig -> Payout.PayoutService
+getPayoutServiceConfigJson = \case
+  Payout.JuspayConfig _ -> Payout.Juspay
+  Payout.StripeConfig cfg -> case cfg.serviceMode of
+    Just Stripe.Live -> Payout.Stripe
+    Just Stripe.Test -> Payout.StripeTest
+    Nothing -> Payout.Stripe
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -262,13 +263,10 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CallService Call.Knowlarity -> Left "No Config Found For Knowlarity."
   Domain.AadhaarVerificationService AadhaarVerification.Gridline -> Domain.AadhaarVerificationServiceConfig . AadhaarVerification.GridlineConfig <$> eitherValue configJSON
   Domain.PaymentService paymentServiceName -> Domain.PaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
-  Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
-  Domain.PayoutService Payout.AAJuspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
-  Domain.RentalPayoutService Payout.Juspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
-  Domain.RentalPayoutService Payout.AAJuspay -> Domain.RentalPayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.PayoutService payoutServiceName -> Domain.PayoutServiceConfig <$> mkPayoutServiceConfig configJSON payoutServiceName
+  Domain.RentalPayoutService payoutServiceName -> Domain.RentalPayoutServiceConfig <$> mkPayoutServiceConfig configJSON payoutServiceName
   Domain.RentalPaymentService paymentServiceName -> Domain.RentalPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
-  Domain.RidePayoutService Payout.Juspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
-  Domain.RidePayoutService Payout.AAJuspay -> Domain.RidePayoutServiceConfig . Payout.JuspayConfig <$> eitherValue configJSON
+  Domain.RidePayoutService payoutServiceName -> Domain.RidePayoutServiceConfig <$> mkPayoutServiceConfig configJSON payoutServiceName
   Domain.CautioPaymentService paymentServiceName -> Domain.CautioPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
@@ -289,9 +287,18 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.PlasmaService Plasma.LMS -> Domain.PlasmaServiceConfig . Plasma.LMSConfig <$> eitherValue configJSON
   Domain.InsuranceDeclarationService Domain.IffcoTokio -> Domain.InsuranceDeclarationServiceConfig <$> eitherValue configJSON
   Domain.PartnerSdkService Domain.Aarokya -> Domain.PartnerSdkServiceConfig . PartnerSdk.AarokyaPartnerSdkConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.HyperPG -> Domain.SettlementServiceConfig . Settlement.HyperPGConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.BillDesk -> Domain.SettlementServiceConfig . Settlement.BillDeskConfig <$> eitherValue configJSON
-  Domain.SettlementService Settlement.YesBiz -> Domain.SettlementServiceConfig . Settlement.YesBizConfig <$> eitherValue configJSON
+  Domain.SettlementService svc ->
+    case eitherValue configJSON of
+      Right cfg
+        | cfg.settlementService == svc -> Right $ Domain.SettlementServiceConfig cfg
+        | otherwise ->
+          Left $
+            "settlementService in JSON ("
+              <> show cfg.settlementService
+              <> ") does not match merchant_service_config row ("
+              <> show svc
+              <> ")"
+      Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
@@ -306,3 +313,10 @@ mkPaymentServiceConfig configJSON = \case
   Payment.Stripe -> Payment.StripeConfig <$> eitherValue configJSON
   Payment.StripeTest -> Payment.StripeConfig <$> eitherValue configJSON
   Payment.PaytmEDC -> Payment.PaytmEDCConfig <$> eitherValue configJSON
+
+mkPayoutServiceConfig :: A.Value -> Payout.PayoutService -> Either Text Payout.PayoutServiceConfig
+mkPayoutServiceConfig configJSON = \case
+  Payout.Juspay -> Payout.JuspayConfig <$> eitherValue configJSON
+  Payout.AAJuspay -> Payout.JuspayConfig <$> eitherValue configJSON
+  Payout.Stripe -> Payout.StripeConfig <$> eitherValue configJSON
+  Payout.StripeTest -> Payout.StripeConfig <$> eitherValue configJSON

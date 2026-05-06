@@ -83,6 +83,10 @@ findByIdAndLanguage issueOptionId language = do
 findById :: BeamFlow m r => Id IssueOption -> m (Maybe IssueOption)
 findById (Id issueOptionId) = findOneWithKV [Is BeamIO.id $ Eq issueOptionId]
 
+findAllByCategoryId :: BeamFlow m r => Id IssueCategory -> m [IssueOption]
+findAllByCategoryId (Id issueCategoryId) =
+  findAllIssueOptionWithSeCondition [Is BeamIO.issueCategoryId $ Eq $ Just issueCategoryId] (Asc BeamIO.priority) Nothing Nothing
+
 findByIGMIssueSubCategory :: BeamFlow m r => Maybe Spec.IssueSubCategory -> m (Maybe IssueOption)
 findByIGMIssueSubCategory igmSubCategory = findOneWithKV [Is BeamIO.igmSubCategory $ Eq igmSubCategory]
 

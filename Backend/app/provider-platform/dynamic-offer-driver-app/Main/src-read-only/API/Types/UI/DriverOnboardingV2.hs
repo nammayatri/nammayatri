@@ -15,6 +15,7 @@ import qualified Domain.Types.Image
 import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -56,7 +57,13 @@ data BankAccountLinkResp = BankAccountLinkResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, detailsSubmitted :: Kernel.Prelude.Bool, paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode}
+data BankAccountResp = BankAccountResp
+  { chargesEnabled :: Kernel.Prelude.Bool,
+    detailsSubmitted :: Kernel.Prelude.Bool,
+    futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
+    paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
+    requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

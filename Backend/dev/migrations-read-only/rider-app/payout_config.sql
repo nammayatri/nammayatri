@@ -30,3 +30,8 @@ ALTER TABLE atlas_app.payout_config ALTER COLUMN payout_entity SET DEFAULT 'PAYO
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.payout_config ADD COLUMN schedule_cashback_payout_after integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_config ADD COLUMN currency text  default 'INR';

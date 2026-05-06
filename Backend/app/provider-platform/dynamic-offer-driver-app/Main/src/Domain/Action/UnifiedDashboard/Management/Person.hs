@@ -26,8 +26,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as QPExtra
-import Tools.Auth
-import Tools.Error
 import qualified Tools.SMS as Sms
 
 postPersonCreate :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.UnifiedDashboard.Management.Person.CreatePersonReq -> Environment.Flow API.Types.UnifiedDashboard.Management.Person.CreatePersonResp)

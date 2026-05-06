@@ -1,0 +1,69 @@
+# Finance Kernel - Settlement File Info
+# Namma-DSL YAML specification
+#
+# Tracks ingestion state per settlement report file (SFTP, email, etc.): which
+# gateway/source file is being processed, status, and resume position (row index).
+
+imports:
+  UTCTime: Kernel.Prelude
+
+SettlementFileInfo:
+  tableName: settlement_file_info
+  derives: "Generic"
+
+  types:
+    SettlementFileStatus:
+      enum: "PENDING,IN_PROGRESS,COMPLETED,FAILED"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id SettlementFileInfo
+    paymentGatewayName: Text
+    fileName: Text
+    status: SettlementFileStatus
+    lastProcessedIndex: Int
+    merchantId: Text
+    merchantOperatingCityId: Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  default:
+    status: "'PENDING'"
+    # Next row to read = lastProcessedIndex + 1; -1 means “no data rows ingested yet”.
+    lastProcessedIndex: "-1"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByMerchantCityGatewayAndFileName:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantId, merchantOperatingCityId, paymentGatewayName, fileName]
+
+    findByPaymentGatewayNameAndFileName:
+      kvFunction: findOneWithKV
+      where:
+        and: [paymentGatewayName, fileName]
+
+    findAllByPaymentGatewayMerchantCityAndStatus:
+      kvFunction: findAllWithKV
+      where:
+        and: [paymentGatewayName, merchantId, merchantOperatingCityId, status]
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateProgress:
+      kvFunction: updateWithKV
+      params: [status, lastProcessedIndex, updatedAt]
+      where: id
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

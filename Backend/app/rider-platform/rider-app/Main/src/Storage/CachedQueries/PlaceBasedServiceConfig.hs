@@ -22,11 +22,11 @@ import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.Payment.Interface as Payment
+import qualified Kernel.External.Payment.Stripe.Config as Stripe
 import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
-import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -127,6 +127,11 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     Tokenize.TtenTokenizationServiceConfig _ -> TokenizationService Tokenize.Tten
   PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> PayoutService Payout.Juspay
+    Payout.StripeConfig cfg -> PayoutService $
+      case cfg.serviceMode of
+        Just Stripe.Live -> Payout.Stripe
+        Just Stripe.Test -> Payout.StripeTest
+        Nothing -> Payout.Stripe
   MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
     MultiModal.GoogleTransitConfig _ -> MultiModalService MultiModal.GoogleTransit
     MultiModal.OTPTransitConfig _ -> MultiModalService MultiModal.OTPTransit
@@ -146,7 +151,4 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     SOSInterface.ERSSConfig _ -> SOSService SOS.ERSS
     SOSInterface.GJ112Config _ -> SOSService SOS.GJ112
     SOSInterface.TrinityConfig _ -> SOSService SOS.Trinity
-  SettlementServiceConfig settlementCfg -> case settlementCfg of
-    Settlement.HyperPGConfig _ -> SettlementService Settlement.HyperPG
-    Settlement.BillDeskConfig _ -> SettlementService Settlement.BillDesk
-    Settlement.YesBizConfig _ -> SettlementService Settlement.YesBiz
+  SettlementServiceConfig cfg -> SettlementService cfg.settlementService

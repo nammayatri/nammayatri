@@ -30,8 +30,8 @@ module Tools.PlaceCache
   )
 where
 
-import qualified Data.Map.Strict as Map
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Kernel.Prelude
 import System.IO.Unsafe (unsafePerformIO)

@@ -29,6 +29,7 @@ import qualified Data.Text.Lazy.Encoding as TE
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.Maps (makeAutoCompleteKey)
 import qualified Domain.Action.UI.Maps as DMaps
+import qualified Domain.Action.UI.Serviceability as DSrv
 import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
@@ -75,7 +76,6 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Referral as Referral
 import SharedLogic.Search
 import qualified SharedLogic.Search as SLS
-import qualified Domain.Action.UI.Serviceability as DSrv
 import qualified SharedLogic.Serviceability as Serviceability
 import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()

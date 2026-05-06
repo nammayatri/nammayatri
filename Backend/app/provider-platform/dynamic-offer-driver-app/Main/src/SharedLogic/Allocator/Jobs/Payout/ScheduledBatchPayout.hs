@@ -20,7 +20,6 @@ import Domain.Action.UI.DriverWallet
   ( PayoutContext (..),
     counterpartyFromRole,
     initiateWalletPayout,
-    resolvePayoutVpa,
   )
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
@@ -148,7 +147,7 @@ processWalletPayouts config jobData = do
       merchantOpCityId = jobData.merchantOperatingCityId
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout
+  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout -- TODO :: This also can be (||), but not changing it for now.
   if not walletEnabled
     then do
       logInfo "Wallet payouts disabled at transporter level"
@@ -249,10 +248,9 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       let payoutableBalance = walletBalance - nonRedeemable
 
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
-        vpa <- resolvePayoutVpa ctx
         -- Skip manually-added VPAs
         unless isManuallyAdded $ do
-          initiateWalletPayout ctx vpa payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds)
+          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds)
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()

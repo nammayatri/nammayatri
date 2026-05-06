@@ -393,7 +393,7 @@ handler ValidatedDSearchReq {..} sReq = do
             SL.PickupDrop slId _ -> Just slId
             _ -> Nothing
       mbPickupZone <- case mbSlId of
-        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 20.0
+        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 2000.0
         Nothing -> pure Nothing
       logDebug $
         "getSpecialPickupZoneInfo area=" <> show area

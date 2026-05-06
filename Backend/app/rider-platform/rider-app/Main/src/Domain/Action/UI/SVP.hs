@@ -1,45 +1,48 @@
 module Domain.Action.UI.SVP
   ( getSvpQr,
+    getSvpPublicKey,
     postSvpGate,
+    postSvpSignQR,
   )
 where
 
 import qualified API.Types.UI.SVP as API
+import qualified BecknV2.FRFS.Enums as FRFSSpec
 import qualified BecknV2.OnDemand.Enums as Spec
 import qualified Crypto.Hash as Hash
 import qualified Crypto.PubKey.RSA as RSA
 import qualified Crypto.PubKey.RSA.PKCS15 as RSA.PKCS15
 import qualified Crypto.Store.PKCS8 as PKCS8
+import qualified Crypto.Store.X509 as X509Store
 import Data.Bits ((.&.), (.|.))
 import qualified Data.ByteString.Base64 as B64
 import Data.Char (isDigit, toUpper)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Time.Format (defaultTimeLocale, formatTime)
 import Data.Word (Word32)
-import Data.X509 (PrivKey (..))
-import Domain.Types.IntegratedBPPConfig (ProviderConfig (..))
+import Data.X509 (PrivKey (..), PubKey (PubKeyRSA))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SvpJourney as DSvp
-import qualified ExternalBPP.ExternalAPI.Metro.CMRL.V2.GetFare as CMRLV2GetFare
+import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import Kernel.External.Encryption (decrypt, getDbHash)
-import Kernel.External.Wallet.Interface.Types (WalletPostingReq (..), WalletPostingType (REDEEM))
+import Kernel.External.Types (ServiceFlow)
+import qualified Kernel.External.Wallet.Interface.Types as Wallet
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Storage.Queries.PersonWallet as QPersonWallet
 import Numeric (showHex)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.Queries.Person as QPersonBase
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.SvpJourney as QSvpJourney
 import Tools.Error
-import qualified Tools.Wallet as TWallet
+import qualified Tools.LoyaltyWallet as LoyaltyWallet
 
 -- ── Redis keys ────────────────────────────────────────────
 
@@ -199,21 +202,36 @@ parsePrivateKeyPem pem = case PKCS8.readKeyFileFromMemory (TE.encodeUtf8 pem) of
   (PKCS8.Unprotected (PrivKeyRSA k) : _) -> Just k
   _ -> Nothing
 
+getSvpPublicKey :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => m Text
+getSvpPublicKey = do
+  logInfo "[SVP:PublicKey] Request received"
+  privateKey <- loadOrBootstrapKey
+  let pubKey = PubKeyRSA (RSA.private_pub privateKey)
+      pemBytes = X509Store.writePubKeyFileToMemory [pubKey]
+      keyBits = RSA.public_size (RSA.private_pub privateKey) * 8
+  logInfo $ "[SVP:PublicKey] Returning RSA-" <> show keyBits <> " public key"
+  pure $ TE.decodeUtf8 pemBytes
+
 getSvpQr ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r, CoreMetrics m) =>
   (Maybe (Id DP.Person), Id DM.Merchant) ->
   Maybe Double ->
   Maybe Double ->
   m API.GenerateQrResp
-getSvpQr (Just riderId, _) mbLat mbLon = do
+getSvpQr (Just riderId, merchantId) mbLat mbLon = do
   tktSlNo' <- getOrCreateTktSlNo riderId
   person <- QPersonBase.findById riderId >>= fromMaybeM (PersonNotFound (getId riderId))
   decMobile <- mapM decrypt person.mobileNumber
   let mobile = encodeMobile (fromMaybe "0000000000" decMobile)
-  mbWallet <- QPersonWallet.findByPersonId (getId riderId)
-  let balancePaisa = case mbWallet of
-        Just pw -> floor (getHighPrecMoney pw.usableCashAmount * 100) :: Int
-        Nothing -> 0
+  -- Fetch live balance from Juspay wallet API
+  balancePaisa <- do
+    let balanceReq = Wallet.WalletBalanceReq {customerId = getId riderId, requireHistory = Just False}
+    walletResp <- LoyaltyWallet.svpWalletBalance merchantId person.merchantOperatingCityId balanceReq
+    if walletResp.success
+      then pure (floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int)
+      else do
+        logWarning $ "[SVP:QR] walletBalance failed for rider=" <> getId riderId <> " — balance=0"
+        pure (0 :: Int)
   let txnRef = T.take 22 $ T.filter (/= '-') (getId riderId)
       bookingLat = encodeCoord mbLat
       bookingLon = encodeCoord mbLon
@@ -237,9 +255,13 @@ svpMinFarePaisa = 5000
 postSvpGate ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     MonadFlow m,
+    MonadTime m,
     EncFlow m r,
     CoreMetrics m,
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c,
     HasRequestId r,
     MonadReader r m
   ) =>
@@ -261,7 +283,7 @@ findRiderByMobile mobileNum mId = do
     >>= fromMaybeM (PersonNotFound $ "mobile=" <> mobileNum)
 
 handleEntry ::
-  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EncFlow m r, CoreMetrics m) =>
   Text ->
   Id DM.Merchant ->
   Text ->
@@ -269,15 +291,24 @@ handleEntry ::
   m API.GateCallbackResp
 handleEntry mobileNum mId stationCode entryTime = do
   person <- findRiderByMobile mobileNum mId
-  mbWallet <- QPersonWallet.findByPersonId (getId person.id)
-  let balance = case mbWallet of
-        Just pw -> floor (getHighPrecMoney pw.usableCashAmount * 100) :: Int
-        Nothing -> 0
+  -- Fetch live balance from Juspay wallet API
+  balance <- do
+    let balanceReq = Wallet.WalletBalanceReq {customerId = getId person.id, requireHistory = Just False}
+    walletResp <- LoyaltyWallet.svpWalletBalance person.merchantId person.merchantOperatingCityId balanceReq
+    if walletResp.success
+      then do
+        let livePaisa = floor (getHighPrecMoney walletResp.walletData.usableCashAmount * 100) :: Int
+        logInfo $ "[SVP:Entry] Balance for rider=" <> getId person.id <> " ₹" <> show (livePaisa `div` 100)
+        pure livePaisa
+      else do
+        logWarning $ "[SVP:Entry] walletBalance failed for rider=" <> getId person.id <> " — balance=0"
+        pure (0 :: Int)
   if balance < svpMinFarePaisa
     then
       pure
         API.GateCallbackResp
           { allowed = False,
+            fareCharged = Nothing,
             reason =
               Just $
                 "Insufficient balance. Minimum ₹"
@@ -287,39 +318,60 @@ handleEntry mobileNum mId stationCode entryTime = do
     else do
       mbTktSlNo <- Hedis.get (tktSlNoRedisKey person.id)
       tktSlNo' <- fromMaybeM (InvalidRequest "SVP: QR not generated. Please open the app and generate a QR first.") mbTktSlNo
-      svpJourneyId <- generateGUID
-      now <- getCurrentTime
-      QSvpJourney.create
-        DSvp.SvpJourney
-          { id = Id svpJourneyId,
-            riderId = person.id,
-            tktSlNo = tktSlNo',
-            status = DSvp.ENTERED,
-            entryStationCode = Just stationCode,
-            entryTime = Just entryTime,
-            exitStationCode = Nothing,
-            exitTime = Nothing,
-            fareCharged = Nothing,
-            currency = Nothing,
-            merchantId = person.merchantId,
-            merchantOperatingCityId = person.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now
-          }
-      logInfo $
-        "[SVP:Entry] rider=" <> getId person.id
-          <> " station="
-          <> stationCode
-          <> " balance=₹"
-          <> show (balance `div` 100)
-      pure API.GateCallbackResp {allowed = True, reason = Nothing}
+      -- Prevent duplicate active journeys
+      mbActiveJourney <- QSvpJourney.findByRiderIdAndStatus person.id DSvp.ENTERED
+      case mbActiveJourney of
+        Just activeJourney ->
+          pure
+            API.GateCallbackResp
+              { allowed = False,
+                fareCharged = Nothing,
+                reason =
+                  Just $
+                    "Already inside the metro at station "
+                      <> fromMaybe "UNKNOWN" activeJourney.entryStationCode
+                      <> ". Please exit first."
+              }
+        Nothing -> do
+          svpJourneyId <- generateGUID
+          now <- getCurrentTime
+          QSvpJourney.create
+            DSvp.SvpJourney
+              { id = Id svpJourneyId,
+                riderId = person.id,
+                tktSlNo = tktSlNo',
+                status = DSvp.ENTERED,
+                entryStationCode = Just stationCode,
+                entryTime = Just entryTime,
+                exitStationCode = Nothing,
+                exitTime = Nothing,
+                fareCharged = Nothing,
+                currency = Nothing,
+                merchantId = person.merchantId,
+                merchantOperatingCityId = person.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+          logInfo $
+            "[SVP:Entry] rider=" <> getId person.id
+              <> " tktSlNo="
+              <> tktSlNo'
+              <> " station="
+              <> stationCode
+              <> " balance=₹"
+              <> show (balance `div` 100)
+          pure API.GateCallbackResp {allowed = True, fareCharged = Nothing, reason = Nothing}
 
 handleExit ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
     MonadFlow m,
+    MonadTime m,
     EncFlow m r,
     CoreMetrics m,
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c,
     HasRequestId r,
     MonadReader r m
   ) =>
@@ -336,56 +388,27 @@ handleExit mobileNum mId stationCode exitTime = do
 
   integratedBPPConfig <-
     SIBC.findIntegratedBPPConfig Nothing person.merchantOperatingCityId Spec.METRO DIBC.APPLICATION
-  fareAmount <- case integratedBPPConfig.providerConfig of
-    CMRLV2 cmrlCfg -> do
-      let travelDatetime = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" exitTime
-      fares <-
-        CMRLV2GetFare.getFare
-          integratedBPPConfig
-          cmrlCfg
-          (getId person.id)
-          CMRLV2GetFare.GetFareReq
-            { operatorNameId = cmrlCfg.operatorNameId,
-              fromStationId = entryStation,
-              toStationId = stationCode,
-              ticketTypeId = cmrlCfg.ticketTypeId,
-              merchantId = cmrlCfg.merchantId,
-              travelDatetime = travelDatetime,
-              fareTypeId = cmrlCfg.fareTypeId
-            }
-      pure $ case fares of
+  fares <-
+    CallAPI.getFares
+      person.id
+      person.merchantId
+      person.merchantOperatingCityId
+      integratedBPPConfig
+      (CallAPI.BasicRouteDetail {routeCode = "", startStopCode = entryStation, endStopCode = stationCode} :| [])
+      FRFSSpec.METRO
+      Nothing
+      Nothing
+  let fareAmount = case fares of
         (f : _) -> case f.categories of
           (cat : _) -> cat.offeredPrice.amount
           _ -> HighPrecMoney 0
         _ -> HighPrecMoney 0
-    _ -> do
-      logWarning "[SVP:Exit] No CMRLV2 config — fare defaulting to ₹0"
-      pure (HighPrecMoney 0)
 
   logInfo $
     "[SVP:Exit] rider=" <> getId person.id
-      <> " entry="
-      <> entryStation
-      <> " exit="
-      <> stationCode
-      <> " fare=₹"
-      <> show fareAmount
-
-  -- Deduct fare from wallet; gate stays closed if deduction fails
-  when (fareAmount > HighPrecMoney 0) $ do
-    let farePaisa = round (getHighPrecMoney fareAmount * 100) :: Int
-    walletResp <-
-      TWallet.walletPosting person.merchantId person.merchantOperatingCityId
-        WalletPostingReq
-          { customerId   = getId person.id,
-            postingType  = REDEEM,
-            operationId  = getId journey.id,   -- unique per journey
-            pointsAmount = farePaisa
-          }
-    unless walletResp.success $
-      throwError $ InternalError $
-        "[SVP] Wallet deduction failed for rider " <> getId person.id
-          <> ": " <> walletResp.message
+      <> " entry=" <> entryStation
+      <> " exit=" <> stationCode
+      <> " fare=₹" <> show fareAmount
 
   -- Mark journey EXITED and expire tktSlNo so next QR issues a fresh serial
   QSvpJourney.updateStatusAndExitDetailsById
@@ -398,9 +421,18 @@ handleExit mobileNum mId stationCode exitTime = do
 
   Hedis.del (tktSlNoRedisKey person.id)
 
-  logInfo $
-    "[SVP:Exit] DONE rider=" <> getId person.id
-      <> " " <> entryStation <> "→" <> stationCode
-      <> " fare=₹" <> show fareAmount
+  logInfo $ "[SVP:Exit] DONE rider=" <> getId person.id <> " " <> entryStation <> "→" <> stationCode
 
-  pure API.GateCallbackResp {allowed = True, reason = Nothing}
+  pure API.GateCallbackResp
+    { allowed = True,
+      reason = Nothing,
+      fareCharged = Just (fromRational (getHighPrecMoney fareAmount))
+    }
+
+postSvpSignQR ::
+  (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
+  API.SignQRReq ->
+  m API.SignQRResp
+postSvpSignQR API.SignQRReq {plaintext} = do
+  sig <- signPlaintext plaintext
+  pure API.SignQRResp {signature = sig}

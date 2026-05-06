@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 
 data LedgerEntry = LedgerEntry
   { amount :: Kernel.Types.Common.HighPrecMoney,
+    concernedIndividualId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     entryType :: Lib.Finance.Domain.Types.LedgerEntry.EntryType,

@@ -28,6 +28,7 @@ import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPay
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
 import qualified Lib.Finance.Storage.Beam.ReconciliationEntry as BeamReconciliationEntry
 import qualified Lib.Finance.Storage.Beam.ReconciliationSummary as BeamReconciliationSummary
+import qualified Lib.Finance.Storage.Beam.SettlementFileInfo as BeamSettlementFileInfo
 import qualified Lib.Finance.Storage.Beam.StateTransition as BeamStateTransition
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 
@@ -59,6 +60,9 @@ instance HasSchemaName BeamReconciliationEntry.ReconciliationEntryT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamReconciliationSummary.ReconciliationSummaryT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamSettlementFileInfo.SettlementFileInfoT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamStateTransition.StateTransitionT where

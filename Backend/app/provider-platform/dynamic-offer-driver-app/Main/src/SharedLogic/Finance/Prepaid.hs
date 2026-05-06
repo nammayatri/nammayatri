@@ -302,6 +302,7 @@ createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOp
                 LedgerEntryInput
                   { fromAccountId = ownerAccount.id,
                     toAccountId = sellerRideCredit.id,
+                    concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
                     amount = amount,
                     currency = currency,
                     entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
@@ -463,6 +464,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                       LedgerEntryInput
                         { fromAccountId = sellerAsset.id,
                           toAccountId = governmentLiability.id,
+                          concernedIndividualId = Nothing,
                           amount = gstAmount',
                           currency = currency,
                           entryType = LiabilityCreated,
@@ -490,6 +492,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           LedgerEntryInput
                             { fromAccountId = sellerAsset.id,
                               toAccountId = sellerLiability.id,
+                              concernedIndividualId = Nothing,
                               amount = netAmount,
                               currency = currency,
                               entryType = LiabilityCreated,
@@ -519,6 +522,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                           LedgerEntryInput
                             { fromAccountId = govtDirectAsset.id,
                               toAccountId = govtDirectExpense.id,
+                              concernedIndividualId = Nothing,
                               amount = tdsAmount,
                               currency = currency,
                               entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
@@ -545,6 +549,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                       LedgerEntryInput
                         { fromAccountId = sellerRideCredit.id,
                           toAccountId = ownerAccount.id,
+                          concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
                           amount = creditAmount,
                           currency = currency,
                           entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,
@@ -679,6 +684,7 @@ debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency me
                   LedgerEntryInput
                     { fromAccountId = sellerLiability.id,
                       toAccountId = sellerRevenue.id,
+                      concernedIndividualId = Nothing,
                       amount = revenueAmount,
                       currency = currency,
                       entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
@@ -753,6 +759,7 @@ handleSubscriptionExpiry purchase = do
                   LedgerEntryInput
                     { fromAccountId = sellerLiability.id,
                       toAccountId = sellerRevenue.id,
+                      concernedIndividualId = Nothing,
                       amount = revenueAmount,
                       currency = currency,
                       entryType = Lib.Finance.Domain.Types.LedgerEntry.Revenue,
@@ -772,6 +779,7 @@ handleSubscriptionExpiry purchase = do
                 LedgerEntryInput
                   { fromAccountId = ownerAccount.id,
                     toAccountId = sellerRideCredit.id,
+                    concernedIndividualId = if counterpartyType == counterpartyDriver then Just ownerId else Nothing,
                     amount = expiredCredits,
                     currency = currency,
                     entryType = Lib.Finance.Domain.Types.LedgerEntry.Expense,

@@ -85,11 +85,11 @@ synthesiseSuggestions centre input =
    in -- Every offset is non-zero so haversine and OSRM both produce a
       -- non-zero distance. Bearings spread roughly NE/SE/W/NW so the
       -- rider-app's "X km away" hints look varied.
-      [ mk    0.0010    0.0010  ""
-      , mk    0.0030    0.0040  " · Centre"
-      , mk    0.0070   (-0.0050) " · Junction"
-      , mk  (-0.0090)   0.0080  " · Plaza"
-      , mk    0.0150   (-0.0100) " · Market"
+      [ mk 0.0010 0.0010 "",
+        mk 0.0030 0.0040 " · Centre",
+        mk 0.0070 (-0.0050) " · Junction",
+        mk (-0.0090) 0.0080 " · Plaza",
+        mk 0.0150 (-0.0100) " · Market"
       ]
 
 -- ─── output construction ─────────────────────────────────────────────
@@ -165,4 +165,3 @@ haversineMeters c (_, la, lo) =
           + cos (toRad c.latitude) * cos (toRad la) * sin (dLon / 2) ** 2
       c2 = 2 * atan2 (sqrt a) (sqrt (1 - a))
    in 6371000 * c2
-
