@@ -153,7 +153,7 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payments.IS_VISIBLE else Nothing,
             staticCustomerId = Nothing,
             deviceImei = Nothing,
-            membershipStatus = if isMember then Just (Payment.MembershipStatus True) else Nothing
+            membershipStatus = Payment.MembershipStatus <$> isMember
           }
 
 switchPlanNudge :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => DP.Person -> Int -> HighPrecMoney -> Text -> m ()

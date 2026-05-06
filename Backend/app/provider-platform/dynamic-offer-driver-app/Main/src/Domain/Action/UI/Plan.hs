@@ -1279,7 +1279,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing,
             staticCustomerId = Nothing,
             deviceImei = Nothing,
-            membershipStatus = if isMemberEligibleForOffers then Just (Payment.MembershipStatus True) else Nothing
+            membershipStatus = Payment.MembershipStatus <$> isMemberEligibleForOffers
           }
     mkPlanFareBreakup currency offers now = do
       let baseAmount = getPlanAmount plan.planBaseAmount
