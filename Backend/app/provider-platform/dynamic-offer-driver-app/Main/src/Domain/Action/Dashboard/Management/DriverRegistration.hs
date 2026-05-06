@@ -57,6 +57,7 @@ import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as Ba
 import Domain.Action.UI.DriverOnboarding.DriverLicense
 import Domain.Action.UI.DriverOnboarding.Image
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamVerification
+import qualified Domain.Action.UI.DriverOnboarding.Status as DStatus
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
@@ -797,8 +798,98 @@ postDriverRegistrationRegisterVerifyAadhaarOtp merchantShortId opCity driverId_ 
 getDriverRegistrationUnderReviewDrivers :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.UnderReviewDriversListResponse
 getDriverRegistrationUnderReviewDrivers _merchantShortId _opCity _limit _offset = throwError (InternalError "Not Implemented")
 
-getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow [Common.DriverDocument]
-getDriverRegistrationDocumentsInfo _merchantShortId _opCity _driverId = throwError (InternalError "Not Implemented")
+getDriverRegistrationDocumentsInfo :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.StatusRes
+getDriverRegistrationDocumentsInfo merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  statusRes <- DStatus.statusHandler (Id driverId.getId, merchant.id, merchantOpCity.id) Nothing Nothing Nothing Nothing Nothing Nothing
+  pure $ castToManagementStatusRes statusRes
+
+castToManagementStatusRes :: DStatus.StatusRes -> Common.StatusRes
+castToManagementStatusRes res =
+  Common.StatusRes
+    { driverDocuments = castDocStatusItem <$> res.driverDocuments,
+      driverLicenseDetails = fmap (castMgmtDLDetails <$>) res.driverLicenseDetails,
+      vehicleDocuments = castVehicleDocItem <$> res.vehicleDocuments,
+      vehicleRegistrationCertificateDetails = fmap (castMgmtRCDetails <$>) res.vehicleRegistrationCertificateDetails,
+      enabled = res.enabled,
+      manualVerificationRequired = res.manualVerificationRequired
+    }
+
+castDocStatusItem :: SStatus.DocumentStatusItem -> Common.DocumentStatusItem
+castDocStatusItem item =
+  Common.DocumentStatusItem
+    { documentType = SDO.castDocumentType item.documentType,
+      verificationStatus = castMgmtResponseStatus item.verificationStatus,
+      verificationMessage = item.verificationMessage,
+      s3Path = item.s3Path,
+      expiryDate = item.documentExpiry
+    }
+
+castMgmtDLDetails :: SStatus.DLDetails -> Common.DLDetails
+castMgmtDLDetails dl =
+  Common.DLDetails
+    { driverName = dl.driverName,
+      driverLicenseNumber = dl.driverLicenseNumber,
+      operatingCity = dl.operatingCity,
+      driverDateOfBirth = dl.driverDateOfBirth,
+      classOfVehicles = dl.classOfVehicles,
+      imageId1 = dl.imageId1,
+      imageId2 = dl.imageId2,
+      dateOfIssue = dl.dateOfIssue,
+      createdAt = dl.createdAt
+    }
+
+castMgmtRCDetails :: SStatus.RCDetails -> Common.RCDetails
+castMgmtRCDetails rc =
+  Common.RCDetails
+    { vehicleRegistrationCertNumber = rc.vehicleRegistrationCertNumber,
+      imageId = rc.imageId,
+      operatingCity = rc.operatingCity,
+      dateOfRegistration = rc.dateOfRegistration,
+      vehicleCategory = rc.vehicleCategory,
+      airConditioned = rc.airConditioned,
+      vehicleManufacturer = rc.vehicleManufacturer,
+      vehicleModel = rc.vehicleModel,
+      vehicleColor = rc.vehicleColor,
+      vehicleDoors = rc.vehicleDoors,
+      vehicleSeatBelts = rc.vehicleSeatBelts,
+      vehicleModelYear = rc.vehicleModelYear,
+      oxygen = rc.oxygen,
+      ventilator = rc.ventilator,
+      createdAt = rc.createdAt,
+      failedRules = rc.failedRules,
+      verificationStatus = DCommon.castVerificationStatus <$> rc.verificationStatus
+    }
+
+castVehicleDocItem :: SStatus.VehicleDocumentItem -> Common.VehicleDocumentItem
+castVehicleDocItem vd =
+  Common.VehicleDocumentItem
+    { registrationNo = vd.registrationNo,
+      userSelectedVehicleCategory = vd.userSelectedVehicleCategory,
+      verifiedVehicleCategory = vd.verifiedVehicleCategory,
+      isVerified = vd.isVerified,
+      isActive = vd.isActive,
+      isApproved = vd.isApproved,
+      vehicleModel = vd.vehicleModel,
+      documents = castDocStatusItem <$> vd.documents,
+      dateOfUpload = vd.dateOfUpload,
+      s3Path = vd.s3Path,
+      expiryDate = vd.documentExpiry
+    }
+
+castMgmtResponseStatus :: SStatus.ResponseStatus -> Common.VerificationStatus
+castMgmtResponseStatus = \case
+  SStatus.NO_DOC_AVAILABLE -> Common.PENDING
+  SStatus.PENDING -> Common.PENDING
+  SStatus.VALID -> Common.VALID
+  SStatus.FAILED -> Common.INVALID
+  SStatus.INVALID -> Common.INVALID
+  SStatus.LIMIT_EXCEED -> Common.INVALID
+  SStatus.MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
+  SStatus.UNAUTHORIZED -> Common.UNAUTHORIZED
+  SStatus.PULL_REQUIRED -> Common.PENDING
+  SStatus.CONSENT_DENIED -> Common.INVALID
 
 approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateRC req merchantId merchantOpCityId = do
@@ -1735,8 +1826,9 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
         Just driver -> do
           let docType = show image.imageType
               reason = imageRejectReq.reason
-          void $ withTryCatch "ImageDocuments:sendRejectionNotification" $
-            sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
+          void $
+            withTryCatch "ImageDocuments:sendRejectionNotification" $
+              sendDocumentRejectionNotification merchantOperatingCityId docType reason driver
     Common.CommonDocumentReject commonRejectReq -> do
       let documentId = Id commonRejectReq.documentId.getId
       document <- QCommonDriverOnboardingDocuments.findById documentId >>= fromMaybeM (DocumentNotFound documentId.getId)
@@ -1749,15 +1841,17 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
             let merchantOpCityId = document.merchantOperatingCityId
                 docType = show document.documentType
                 reason = commonRejectReq.reason
-            void $ withTryCatch "CommonDocumentReject:sendRejectionNotification" $
-              sendDocumentRejectionNotification merchantOpCityId docType reason driver
+            void $
+              withTryCatch "CommonDocumentReject:sendRejectionNotification" $
+                sendDocumentRejectionNotification merchantOpCityId docType reason driver
     Common.UDYAMReject udyamRejectReq -> do
       let udyamId = Id udyamRejectReq.udyamId.getId :: Id DUdyam.DriverUdyam
       driverUdyam <- QUdyam.findById udyamId >>= fromMaybeM (DocumentNotFound udyamId.getId)
       driver <- QDriver.findById driverUdyam.driverId >>= fromMaybeM (PersonNotFound driverUdyam.driverId.getId)
       let notifyOpCityId = fromMaybe merchantOperatingCityId driverUdyam.merchantOperatingCityId
-      void $ withTryCatch "CommonDocumentReject:sendRejectionNotification" $
-        sendDocumentRejectionNotification notifyOpCityId (show DVC.UDYAMCertificate) udyamRejectReq.reason driver
+      void $
+        withTryCatch "CommonDocumentReject:sendRejectionNotification" $
+          sendDocumentRejectionNotification notifyOpCityId (show DVC.UDYAMCertificate) udyamRejectReq.reason driver
       rejectAndUpdateUdyamDocument udyamRejectReq merchantOperatingCityId
   where
     notificationType = FCM.DOCUMENT_INVALID
@@ -1863,8 +1957,9 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just _opCity)
   let updateAndFetchEnabled mbPersonId = case mbPersonId of
         Just personId -> do
-          result <- withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
-            fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
+          result <-
+            withTryCatch "updateAndFetchEnabled:PersonDocChangedEvent" $
+              fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
           case result of
             Right isEnabled -> pure isEnabled
             Left _ -> do

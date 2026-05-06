@@ -742,7 +742,6 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
             B.ifThenElse_ (ride.status B.==. B.val_ Ride.INPROGRESS B.&&. B.not_ (ride.tripStartTime B.<=. B.val_ (Just $ addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now))) (B.val_ Common.ONGOING) $
               B.ifThenElse_ (ride.status B.==. B.val_ Ride.CANCELLED) (B.val_ Common.CANCELLED) (B.val_ Common.ONGOING_6HRS)
 
-
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
     thd' (_, _, z, _) = z

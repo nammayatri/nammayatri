@@ -236,7 +236,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             offers = Nothing,
             validTill = order.validTill,
             paymentFulfillmentStatus = Nothing,
-            domainEntityId = Nothing
+            domainEntityId = Nothing,
+            orderLoyaltyInfo = Nothing
           }
     else do
       -- Check if this is a STCL membership payment order
@@ -423,7 +424,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                           paymentFulfillmentStatus = order.paymentFulfillmentStatus,
                           domainEntityId = order.domainEntityId,
                           amount = order.amount,
-                          validTill = order.validTill
+                          validTill = order.validTill,
+                          orderLoyaltyInfo = Nothing
                         }
                 DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
