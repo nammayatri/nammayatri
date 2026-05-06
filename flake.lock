@@ -282,11 +282,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1758918765,
+        "lastModified": 1758980697,
         "narHash": "sha256-PH9gUSWPHMjp8DK9Ij6weRuUcL0s0kEgM16u48Xp9iU=",
         "owner": "nammayatri",
         "repo": "common",
-        "rev": "3c6f4a5f658fcd053c1f7ec5467d482bd0dc7a0c",
+        "rev": "c468842996fb9925865a91adbee6d192c2b90a15",
         "type": "github"
       },
       "original": {
@@ -1629,11 +1629,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1718094618,
-        "narHash": "sha256-kXnm2lZ2dbQ9wPdHqTcgOcrW7aENTC4qvMq1YOP0F4A=",
+        "lastModified": 1719571168,
+        "narHash": "sha256-H0N0ITJhE/Ky1TlMVIGPIKVrhjtzdJMn32WgAuE5pao=",
         "owner": "piyushKumar-1",
         "repo": "haskell_cac_client",
-        "rev": "26bcb2cd5c0c42fe179be733bb694fcd0967a3c4",
+        "rev": "824af7421f3cebd3a91db7fa12bff880c1487ae3",
         "type": "github"
       },
       "original": {
@@ -1757,11 +1757,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1729878913,
-        "narHash": "sha256-ahpXlsVQW/b7jTK465Jo/nUijQPshK+83J+htfRqNug=",
+        "lastModified": 1773315449,
+        "narHash": "sha256-5z9ud+gK6OmGGbmom+fZBdlzqCVrW5O4lL+r4J+Xd8g=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "d2d9945c64ffdcb1053dc5592d59c8da10b5fcf2",
+        "rev": "22b8533a544067d7e0eb66b75fac0415a538d52b",
         "type": "github"
       },
       "original": {
@@ -1807,11 +1807,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1771503695,
-        "narHash": "sha256-zw8fKOzDCy8W5ccF2ArssCL+Otinpn33xDpBTEyQrT8=",
+        "lastModified": 1777904876,
+        "narHash": "sha256-GAYqkLF3wGJ5U/Ou/HXR5dyvtgI5N6LPdszASWejzKY=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "0e9a41b0ac1b2d58e78e1ef6924309fb2b1e688c",
+        "rev": "3460e84fc4b3c3bfbb3011bbdeb6fddffa9b05b1",
         "type": "github"
       },
       "original": {
@@ -2617,11 +2617,11 @@
     },
     "nixpkgs-unstable": {
       "locked": {
-        "lastModified": 1777425547,
-        "narHash": "sha256-d57AbflkNfZNoFaZDzssEq1RfPoM9dLtOGI2O+N/68Q=",
+        "lastModified": 1778036283,
+        "narHash": "sha256-62EWg6lI0qyzm7oAx5cAnGkLutvJsRBe0KkEW2JDZCE=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "ebc08544afa77957cc348ba72dc490ec73b87f68",
+        "rev": "ed67bc86e84e51d4a88e73c7fd36006dc876476f",
         "type": "github"
       },
       "original": {
@@ -3188,11 +3188,11 @@
         "treefmt-nix": "treefmt-nix_4"
       },
       "locked": {
-        "lastModified": 1768368277,
-        "narHash": "sha256-5Ho1qmnUt0JEaR1gJ3kvQCV2xsWNc8wfAWUZ1FGb0Qg=",
+        "lastModified": 1778068792,
+        "narHash": "sha256-nOJBIxRfV9W3H315OdCsU9AzsYzhr229dGTyt7MHmWY=",
         "owner": "nammayatri",
         "repo": "notification-service",
-        "rev": "02e4346bcde205442268ee1e581591b4270b84a5",
+        "rev": "c281638ce38caa85763c0de05c4e9219f23b07ae",
         "type": "github"
       },
       "original": {
@@ -3923,11 +3923,11 @@
     },
     "services-flake_3": {
       "locked": {
-        "lastModified": 1717893266,
-        "narHash": "sha256-pC/B4DnjcvaM1WPKm6rZe+0x3OfGdpRmTTb8mdTg1Kw=",
+        "lastModified": 1777770589,
+        "narHash": "sha256-BtAZ4DVy0Xr2Q4VzlEf0E3Cf9fqrWJU3tM88RH88jlY=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "3e68d66e04bb26443249b20fd89646b9f89993f1",
+        "rev": "684700114e37d4335459174cf7213552c85c1a58",
         "type": "github"
       },
       "original": {
