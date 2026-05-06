@@ -94,6 +94,7 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoDemandThresholdsJson :: Maybe Text,
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
+    enforceTollRoute :: Maybe Text,
     render :: Maybe Text
   }
   deriving (Show)
@@ -137,6 +138,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_demand_thresholds")
       <*> optional (r .: "gate_info_id")
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
+      <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
 
 ---------------------------------------------------------------------
@@ -257,6 +259,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"
   gateInfoHasGeom :: Bool <- readCSVField idx row.gateInfoHasGeom "Gate Info (geom)"
   gateInfoCanQueueUpOnGate :: Bool <- readCSVField idx row.gateInfoCanQueueUpOnGate "Gate Info (can_queue_up_on_gate)"
+  let mbEnforceTollRoute :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.enforceTollRoute) "Enforce Toll Route"
   gateInfoGeom <- do
     if gateInfoHasGeom
       then do
@@ -282,7 +285,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             createdAt = now,
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
-            enforceTollRoute = Nothing,
+            enforceTollRoute = mbEnforceTollRoute,
             render = mbRender,
             supportNumber = supportNumber
           }
