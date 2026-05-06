@@ -18,6 +18,7 @@ data PayoutConfigT f = PayoutConfigT
   { batchLimit :: B.C f Kernel.Prelude.Int,
     coinRedemptionMinimumLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     d2dPayoutType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PayoutConfig.D2DPayoutTypeEnum),
+    enableReferrals :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
     isAutoRefundEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,

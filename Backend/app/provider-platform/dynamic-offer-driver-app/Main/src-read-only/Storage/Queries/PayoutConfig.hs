@@ -59,6 +59,7 @@ updateByPrimaryKey (Domain.Types.PayoutConfig.PayoutConfig {..}) = do
     [ Se.Set Beam.batchLimit batchLimit,
       Se.Set Beam.coinRedemptionMinimumLimit coinRedemptionMinimumLimit,
       Se.Set Beam.d2dPayoutType (Just d2dPayoutType),
+      Se.Set Beam.enableReferrals (Just enableReferrals),
       Se.Set Beam.expand expand,
       Se.Set Beam.isAutoRefundEnabled (Just isAutoRefundEnabled),
       Se.Set Beam.isPayoutEnabled isPayoutEnabled,
