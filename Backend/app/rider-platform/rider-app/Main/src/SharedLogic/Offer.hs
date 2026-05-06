@@ -235,7 +235,8 @@ mkOfferListReq person price = do
         registrationDate = addUTCTime 19800 now,
         dutyDate = addUTCTime 19800 now,
         numOfRides = 0,
-        offerListingMetric = Nothing
+        offerListingMetric = Nothing,
+        membershipStatus = Nothing
       }
 
 -------------------------------------------------------------------------------------------------------
@@ -312,7 +313,8 @@ mkOfferListReqWithBasket person totalAmount currency basketItems = do
         registrationDate = addUTCTime 19800 now,
         dutyDate = addUTCTime 19800 now,
         numOfRides = 0,
-        offerListingMetric = Nothing
+        offerListingMetric = Nothing,
+        membershipStatus = Nothing
       }
 
 getDeviceIdentifier :: (MonadFlow m, EncFlow m r) => Person.Person -> m (Maybe Text)

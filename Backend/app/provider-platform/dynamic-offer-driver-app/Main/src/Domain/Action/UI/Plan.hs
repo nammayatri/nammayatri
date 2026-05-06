@@ -328,6 +328,7 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
         then return (Just order.id, Just CLEAR_DUE)
         else return (Nothing, Nothing)
 
+
 class Subscription a where
   getSubcriptionStatusWithPlan :: (BeamFlow m r, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> Id SP.Person -> m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
   updateSubscriptionStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DI.DriverAutoPayStatus -> Maybe Text -> m ()
@@ -1246,6 +1247,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
 
+      isMemberEligibleForOffers <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName subscriptionConfig
       let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = paymentCurrency, basket = Nothing}
           customerReq = Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing}
       return
@@ -1257,7 +1259,8 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = getPaymentModeAndVehicleCategoryKey plan,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing
+            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing,
+            membershipStatus = Payment.MembershipStatus <$> isMemberEligibleForOffers
           }
     mkPlanFareBreakup currency offers now = do
       let baseAmount = getPlanAmount plan.planBaseAmount
