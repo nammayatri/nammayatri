@@ -58,9 +58,8 @@ incrementDailyCount ::
   (DFODS.FleetOperatorDailyStats -> Maybe Int) -> -- Getter for the counter from existing row
   (Maybe Int -> Text -> Text -> Day -> m ()) -> -- Update action for that counter (value -> fleetOperatorId -> fleetDriverId -> merchantLocalDate -> m ())
   (DFODS.FleetOperatorDailyStats -> DFODS.FleetOperatorDailyStats) -> -- Setter for initial row (set counter = Just 1)
-  Bool ->
   m ()
-incrementDailyCount fleetOperatorId driverId transporterConfig getField updateCounter setInitField enableOperatorToDriverEntry = do
+incrementDailyCount fleetOperatorId driverId transporterConfig getField updateCounter setInitField = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
   let merchantLocalDate = utctDay now
@@ -79,8 +78,8 @@ incrementDailyCount fleetOperatorId driverId transporterConfig getField updateCo
     (\fleetStats -> updateCounter (Just (fromMaybe 0 (getField fleetStats) + 1)) fleetOperatorId fleetOperatorId merchantLocalDate)
     setInitField
 
-  -- Update or create driver-level stats
-  when enableOperatorToDriverEntry $ do
+  -- Update or create driver-level stats (only when driver differs from fleet operator to avoid double-counting)
+  when (driverId /= fleetOperatorId) $
     updateOrCreateFleetDriverStats
       fleetOperatorId
       driverId
@@ -91,8 +90,8 @@ incrementDailyCount fleetOperatorId driverId transporterConfig getField updateCo
       (\driverStats -> updateCounter (Just (fromMaybe 0 (getField driverStats) + 1)) fleetOperatorId driverId merchantLocalDate)
       setInitField
 
-incrementApprovedDriverRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Bool -> m ()
-incrementApprovedDriverRequestsDaily fleetOperatorId driverId transporterConfig enableOperatorToDriverEntry =
+incrementApprovedDriverRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> m ()
+incrementApprovedDriverRequestsDaily fleetOperatorId driverId transporterConfig =
   incrementDailyCount
     fleetOperatorId
     driverId
@@ -100,10 +99,9 @@ incrementApprovedDriverRequestsDaily fleetOperatorId driverId transporterConfig 
     (.approvedDriverRequests)
     QFleetOpsDaily.updateApprovedDriverRequestsByFleetOperatorIdAndDate
     (\s -> s {DFODS.approvedDriverRequests = Just 1})
-    enableOperatorToDriverEntry
 
-incrementApprovedVehicleRequests :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Bool -> m ()
-incrementApprovedVehicleRequests fleetOperatorId driverId transporterConfig enableOperatorToDriverEntry =
+incrementApprovedVehicleRequests :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> m ()
+incrementApprovedVehicleRequests fleetOperatorId driverId transporterConfig =
   incrementDailyCount
     fleetOperatorId
     driverId
@@ -111,10 +109,9 @@ incrementApprovedVehicleRequests fleetOperatorId driverId transporterConfig enab
     (.approvedVehicleRequests)
     QFleetOpsDaily.updateApprovedVehicleRequestsByFleetOperatorIdAndDate
     (\s -> s {DFODS.approvedVehicleRequests = Just 1})
-    enableOperatorToDriverEntry
 
-incrementRejectedDriverRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Bool -> m ()
-incrementRejectedDriverRequestsDaily fleetOperatorId driverId transporterConfig enableOperatorToDriverEntry =
+incrementRejectedDriverRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> m ()
+incrementRejectedDriverRequestsDaily fleetOperatorId driverId transporterConfig =
   incrementDailyCount
     fleetOperatorId
     driverId
@@ -122,10 +119,9 @@ incrementRejectedDriverRequestsDaily fleetOperatorId driverId transporterConfig 
     (.rejectedDriverRequests)
     QFleetOpsDaily.updateRejectedDriverRequestsByFleetOperatorIdAndDate
     (\s -> s {DFODS.rejectedDriverRequests = Just 1})
-    enableOperatorToDriverEntry
 
-incrementRejectedVehicleRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Bool -> m ()
-incrementRejectedVehicleRequestsDaily fleetOperatorId driverId transporterConfig enableOperatorToDriverEntry =
+incrementRejectedVehicleRequestsDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> m ()
+incrementRejectedVehicleRequestsDaily fleetOperatorId driverId transporterConfig =
   incrementDailyCount
     fleetOperatorId
     driverId
@@ -133,7 +129,6 @@ incrementRejectedVehicleRequestsDaily fleetOperatorId driverId transporterConfig
     (.rejectedVehicleRequests)
     QFleetOpsDaily.updateRejectedVehicleRequestsByFleetOperatorIdAndDate
     (\s -> s {DFODS.rejectedVehicleRequests = Just 1})
-    enableOperatorToDriverEntry
 
 incrementOverallCount ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -368,7 +363,6 @@ incrementDriverCancellationCountDaily fleetOperatorId driverId transporterConfig
     (.driverCancellationCount)
     QFleetOpsDaily.updateDriverCancellationCountByFleetOperatorIdAndDate
     (\s -> s {DFODS.driverCancellationCount = Just 1})
-    True
 
 -- Daily: increment CustomerCancellationCount
 incrementCustomerCancellationCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> m ()
@@ -380,7 +374,6 @@ incrementCustomerCancellationCountDaily fleetOperatorId driverId transporterConf
     (.customerCancellationCount)
     QFleetOpsDaily.updateCustomerCancellationCountByFleetOperatorIdAndDate
     (\s -> s {DFODS.customerCancellationCount = Just 1})
-    True
 
 -- Daily: increment totals for earning, distance, and completed rides (aka ride completed)
 incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DBooking.Booking -> DTTC.TransporterConfig -> m ()
@@ -487,7 +480,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking
     setInitEarningDistanceRides
 
 -- Daily: increment total rating count and total rating score
-incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()
+incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Int -> Bool ->m ()
 incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId driverId transporterConfig ratingValue shouldIncrementCount = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
