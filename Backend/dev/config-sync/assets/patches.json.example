@@ -82,7 +82,7 @@
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send/",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "_comment": "Google Maps -> mock-google :8019"
@@ -263,11 +263,11 @@
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/fleetx-f2519/messages:send/",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/fleetx-f2519/messages:send",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "_comment": "Google Maps \u2014 without trailing slash variants"
@@ -492,7 +492,7 @@
       },
       {
         "find": "https://fcm.googleapis.com/v1/projects/jp-beckn-dev/messages:send",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "_comment": "BAP app/v2 media URLs"
@@ -2350,7 +2350,7 @@
       },
       {
         "find": "https://fcm.googleapis.com",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "_comment": "Prod Google Maps"
@@ -4380,7 +4380,7 @@
       },
       {
         "find": "https://fcm.googleapis.com",
-        "replace": "http://localhost:4545/fcm"
+        "replace": "http://localhost:4545"
       },
       {
         "_comment": "Prod Google Maps"

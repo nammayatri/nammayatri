@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Clickhouse.FleetOwnerInformation where
 
 import qualified Domain.Types.DocsVerificationStatus as DDVS
@@ -52,7 +53,7 @@ getFleetOwnerIdsByCityId ::
   m [Id DP.Person]
 getFleetOwnerIdsByCityId cityId =
   CH.findAll $
-    CH.select_ (\info -> CH.notGrouped info.fleetOwnerPersonId)
-      $ CH.filter_
+    CH.select_ (\info -> CH.notGrouped info.fleetOwnerPersonId) $
+      CH.filter_
         (\info -> info.merchantOperatingCityId CH.==. Just cityId)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOwnerInformationTTable)

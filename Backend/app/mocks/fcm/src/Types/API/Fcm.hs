@@ -23,4 +23,6 @@ type ReadFcmAPI =
     :> Capture "token" FCMRecipientToken
     :> Get '[JSON] ReadFcmRes
 
-type ReadFcmRes = [FCMMessage Value Value]
+-- mock-fcm stores the entire request body (raw JSON) keyed by recipient token; the test
+-- reads fields like message.apns.payload.aps.alert.title directly from this Value
+type ReadFcmRes = [Value]

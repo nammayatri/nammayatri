@@ -93,7 +93,7 @@ import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
-import Kernel.External.Wallet as Wallet hiding (loyaltyInfo)
+import qualified Kernel.External.Wallet as Wallet
 -- import qualified Tools.Wallet as TWallet
 
 import Kernel.Prelude

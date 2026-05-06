@@ -39,8 +39,8 @@ import Domain.Types.DriverFee
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
-import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
 import qualified Domain.Types.Invoice as INV
+import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC

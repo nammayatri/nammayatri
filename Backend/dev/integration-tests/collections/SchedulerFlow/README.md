@@ -1,6 +1,6 @@
 # Scheduler Integration Tests
 
-Tests for rider-app scheduler jobs (DailyPassStatusUpdate, etc.).
+Tests for rider-app scheduler jobs (DailyPassStatusUpdate, PassExpiryReminderMaster, etc.).
 
 ## How it works
 
@@ -19,6 +19,7 @@ The full dev stack must be running (`, run-mobility-stack-dev`), including:
 - rider-app-scheduler (8058) — executes jobs
 - rider-producer (9990) — moves jobs from Redis sorted set to stream
 - mock-server (8080) — provides `/mock/sql/select` + `/mock/sql/update` for DB seeding/verification
+- mock-fcm (4545) — captures push notifications; required by Chennai-only tests that assert on FCM delivery (e.g. `02-PassExpiryReminderMaster.json`, polled via `GET {{mock_fcm_url}}/read/<token>`; `mock_fcm_url` is only set in `Local_NY_Chennai.postman_environment.json`)
 - PostgreSQL (5434), Redis cluster (30001-30006)
 
 ## Adding a new scheduler job test

@@ -5,6 +5,7 @@ module Domain.Action.UI.Invoice
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
+import Domain.Types.Invoice (InvoiceType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -12,7 +13,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Domain.Types.Invoice (InvoiceType)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
