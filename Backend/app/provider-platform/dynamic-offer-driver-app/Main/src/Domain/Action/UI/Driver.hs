@@ -220,6 +220,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
+import Kernel.Types.Price
 import Kernel.Types.Predicate
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
@@ -2074,7 +2075,7 @@ getStats (driverId, _, merchantOpCityId) date = do
         tipsEarning = PriceAPIEntity tipsEarningOfDay currency,
         totalRidesOfDay = maybe 0 (.numRides) driverDailyStats,
         totalEarningsOfDay = roundToIntegral totalEarningsOfDay,
-        totalEarningsOfDayWithCurrency = PriceAPIEntity (fromIntegral (round totalEarningsOfDay :: Integer)) currency,
+        totalEarningsOfDayWithCurrency = PriceAPIEntity (roundAmountByCurrency' currency totalEarningsOfDay) currency,
         totalValidRidesOfDay = validRideCountOfDriver,
         totalEarningsOfDayPerKm = roundToIntegral totalEarningsOfDayPerKm,
         totalEarningsOfDayPerKmWithCurrency = PriceAPIEntity totalEarningsOfDayPerKm currency,
