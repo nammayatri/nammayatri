@@ -196,15 +196,16 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
             cancelRideTransaction booking ride bookingCReason merchant rideEndedBy userNoShowChargesFee userNoShowChargesLogicVersion transporterConfig driver
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
-            -- Demand decrement: customer cancelled before ride start → demand retracted.
-            -- Only applies to pickup-gate bookings cancelled by the user (ByDriver cancels keep demand live).
-            when (bookingCReason.source == SBCR.ByUser && isJust booking.pickupGateId) $
-              fork "specialZoneDemandDecrementOnCancel" $
-                SpecialZoneDriverDemand.runDemandDecrementForBooking booking.id.getId booking.pickupGateId (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
-            -- Supply decrement: driver cancelled pre-start ride → retract the pickup-zone commitment.
-            when (bookingCReason.source == SBCR.ByDriver) $
-              fork "specialZoneSupplyDecrementOnDriverCancel" $
-                SpecialZoneDriverDemand.cancelPickupZoneRequestsForDriver ride.driverId
+            -- Release pickup-zone counters (idempotent). ByDriver triggers reallocation,
+            -- so demand stays live for the next match; every other source terminates the booking.
+            -- Supply for the assigned driver's pickup-zone request is released regardless.
+            fork "specialZoneCountersReleaseOnCancel" $
+              SpecialZoneDriverDemand.releasePickupZoneCountersOnCancel
+                (bookingCReason.source == SBCR.ByDriver)
+                booking.id.getId
+                booking.pickupGateId
+                (show $ Veh.castServiceTierToVariant booking.vehicleServiceTier)
+                (Just ride.driverId)
 
             fork "DriverRideCancelledCoin Event : " $ do
               mbLocation <- do

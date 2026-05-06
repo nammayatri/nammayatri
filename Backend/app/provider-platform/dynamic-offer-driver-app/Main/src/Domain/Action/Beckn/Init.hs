@@ -185,6 +185,7 @@ handler merchantId req validatedReq = do
       SpecialZoneDriverDemand.runDemandCheckForVariants
         searchRequest.merchantOperatingCityId
         merchantId
+        booking.id.getId
         pickupZoneGateId
         [(show vehicleVariant, serviceTier)]
   fork "Updating Demand Hotspots on booking" $ do
