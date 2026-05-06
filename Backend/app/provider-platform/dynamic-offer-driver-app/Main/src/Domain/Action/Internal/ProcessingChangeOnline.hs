@@ -18,6 +18,7 @@ import qualified SharedLogic.FleetOperatorStats as FOS
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFleetOpsDailyExtra
@@ -89,7 +90,12 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
   when (lastOnlineFromLocalLimited == limitNumDaysAgoLocal) . logError $
     "The limit of " <> show numDaysAgo <> " days has been reached during the calculation of onlineDuration. DriverId: " <> driverId.getId <> "; duration: " <> show newOnlineDuration
   whenNothing_ driverInfo.onlineDurationRefreshedAt . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
-  calcAndUpdateOnlineDurationForFleetOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited
+  mbFleetDriverAssociation <- QFDA.findByDriverId driverId True
+  whenJust mbFleetDriverAssociation $ \fleetDriverAssociation ->
+    calcAndUpdateOnlineDurationForOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited fleetDriverAssociation.fleetOwnerId
+  mbDriverOperatorAssociation <- QDOA.findByDriverId driverId True
+  whenJust mbDriverOperatorAssociation $ \driverOperatorAssociation ->
+    calcAndUpdateOnlineDurationForOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited driverOperatorAssociation.operatorId
   addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDurationDaily
   QDI.updateOnlineDurationRefreshedAt driverId now
   when (lastOnlineFromLocalLimited < startDayTimeLocal) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFromLocalLimited
@@ -158,8 +164,8 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
 updateDriverOnlineDurationLockKey :: Id DP.Person -> Text
 updateDriverOnlineDurationLockKey id = "DriveOnlineDuration:PersonId-" <> id.getId
 
-updateFleetOnlineDurationLockKey :: Text -> Text
-updateFleetOnlineDurationLockKey fleetOwnerId = "FleetOnlineDuration:FleetOwnerId-" <> fleetOwnerId
+updateEntityOnlineDurationLockKey :: Text -> Text
+updateEntityOnlineDurationLockKey entityId = "EntityOnlineDuration:EntityId-" <> entityId
 
 calcOnlineDuration ::
   UTCTime ->
@@ -189,21 +195,19 @@ diffUTCTimeInSeconds to from = Seconds (round $ diffUTCTime (roundUTCTimeToSecon
 roundUTCTimeToSecond :: UTCTime -> UTCTime
 roundUTCTimeToSecond (UTCTime day dt) = UTCTime day (fromIntegral $ floor @DiffTime @Integer dt)
 
-calcAndUpdateOnlineDurationForFleetOwner ::
+calcAndUpdateOnlineDurationForOwner ::
   (CacheFlow m r, EsqDBFlow m r) =>
   DTC.TransporterConfig ->
   UTCTime ->
   Id DP.Person ->
   Day ->
   UTCTime ->
+  Text ->
   m ()
-calcAndUpdateOnlineDurationForFleetOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited = do
-  mbFleetDriverAssociation <- QFDA.findByDriverId driverId True
-  whenJust mbFleetDriverAssociation $ \fleetDriverAssociation -> do
-    let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
-    Redis.whenWithLockRedis (updateFleetOnlineDurationLockKey fleetOwnerId) 60 $ do
-      statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds fleetOwnerId driverId.getId merchantLocalDate
-      let (mbFleetStats, mbDriverStats) = FOS.separateFleetAndDriverStats fleetOwnerId driverId.getId statsList
-      let newOnlineDurationFleet = calcOnlineDuration localTime (mbFleetStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
-      let newOnlineDurationDriver = calcOnlineDuration localTime (mbDriverStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
-      FOS.updateOnlineDurationDaily fleetOwnerId driverId.getId transporterConfig newOnlineDurationFleet newOnlineDurationDriver mbFleetStats mbDriverStats merchantLocalDate
+calcAndUpdateOnlineDurationForOwner transporterConfig localTime driverId merchantLocalDate lastOnlineFromLocalLimited ownerId = do
+  Redis.whenWithLockRedis (updateEntityOnlineDurationLockKey ownerId) 60 $ do
+    statsList <- QFleetOpsDailyExtra.findByFleetOperatorIdAndDateWithDriverIds ownerId driverId.getId merchantLocalDate
+    let (mbOwnerStats, mbDriverStats) = FOS.separateFleetAndDriverStats ownerId driverId.getId statsList
+    let newOnlineDurationOwner = calcOnlineDuration localTime (mbOwnerStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
+    let newOnlineDurationDriver = calcOnlineDuration localTime (mbDriverStats >>= (.onlineDuration)) lastOnlineFromLocalLimited
+    FOS.updateOnlineDurationDaily ownerId driverId.getId transporterConfig newOnlineDurationOwner newOnlineDurationDriver mbOwnerStats mbDriverStats merchantLocalDate
