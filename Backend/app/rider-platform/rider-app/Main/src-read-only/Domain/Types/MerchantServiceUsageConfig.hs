@@ -14,6 +14,7 @@ import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
+import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
 import qualified Kernel.External.Ticket.Types
 import qualified Kernel.External.Whatsapp.Types
@@ -29,6 +30,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     createEphemeralKeys :: Kernel.External.Payment.Types.PaymentService,
     createPaymentCustomer :: Kernel.External.Payment.Types.PaymentService,
     createPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
+    createPayoutOrder :: Kernel.External.Payout.Types.PayoutService,
     createRefunds :: Kernel.External.Payment.Types.PaymentService,
     createSetupIntent :: Kernel.External.Payment.Types.PaymentService,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -56,6 +58,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     notifyPerson :: Kernel.External.Notification.Types.NotificationService,
+    payoutOrderStatus :: Kernel.External.Payout.Types.PayoutService,
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,
     updateAmountInPaymentIntent :: Kernel.External.Payment.Types.PaymentService,

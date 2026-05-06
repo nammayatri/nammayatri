@@ -1042,6 +1042,7 @@ castDDocumentType = \case
   DVC.TANCertificate -> Common.TANCertificate
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
   DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
+  DVC.VoterIdCard -> Common.VoterIdCard
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1145,6 +1146,7 @@ castDocumentType = \case
   Common.TANCertificate -> DVC.TANCertificate
   Common.UDYAMCertificate -> DVC.UDYAMCertificate
   Common.PanAadhaarLink -> DVC.PanAadhaarLinkage
+  Common.VoterIdCard -> DVC.VoterIdCard
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
@@ -3191,6 +3193,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
+            notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             ..
           }
 

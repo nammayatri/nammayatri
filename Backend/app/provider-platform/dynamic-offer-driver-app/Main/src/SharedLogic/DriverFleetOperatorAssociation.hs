@@ -82,7 +82,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           whenJust mbMerchantPN $ \merchantPN -> do
             let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
             let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
-            TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_FLEET title body (Id existingAssociation.fleetOwnerId) ()
+            TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_FLEET title body (Id existingAssociation.fleetOwnerId) Nothing ()
       else throwError (InvalidRequest "Driver is already associated with a fleet")
 
   existingDOAssociations <- QDOA.findAllByDriverId driver.id True
@@ -110,7 +110,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
           whenJust mbMerchantPN $ \merchantPN -> do
             let title = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.title
             let body = T.replace "{#driverName#}" driverFullName . T.replace "{#driverNo#}" driverMobile $ merchantPN.body
-            TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
+            TN.notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) Nothing ()
       else throwError (InvalidRequest "Driver already associated with another operator")
 
 endFleetAssociationsIfAllowed ::
@@ -141,7 +141,7 @@ endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetO
           let title = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.title
           let body = T.replace "{#fleetName#}" fleetOwnerFullName . T.replace "{#fleetNo#}" fleetOwnerMobile $ merchantPN.body
 
-          TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) ()
+          TN.notifyWithGRPCProvider merchantOpCityId Notification.FLEET_UNLINK_FROM_OPERATOR title body (Id existingAssociation.operatorId) Nothing ()
 
 makeFleetOperatorAssociation ::
   (MonadFlow m) =>

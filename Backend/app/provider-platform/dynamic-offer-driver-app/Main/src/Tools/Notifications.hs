@@ -1406,7 +1406,8 @@ notifyDriverOnEvents merchantOpCityId personId mbDeviceToken entityData notifTyp
           [ entityData.message
           ]
 
-{- Run this to trigger realtime GRPC notifications -}
+{- Run this to trigger realtime GRPC notifications. `mbTtl` is forwarded to
+   notifyWithGRPCProvider; see its docs. -}
 notifyFleetWithGRPCProvider ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1419,17 +1420,22 @@ notifyFleetWithGRPCProvider ::
   Text ->
   Text ->
   Id Person ->
+  Maybe UTCTime ->
   a ->
   m ()
-notifyFleetWithGRPCProvider merchantOpCityId category title body driverId entityData = do
+notifyFleetWithGRPCProvider merchantOpCityId category title body driverId mbTtl entityData = do
   clientId <-
     QFDA.findByDriverId driverId True
       >>= \case
         Just fleetDriverAssociation -> pure (Id fleetDriverAssociation.fleetOwnerId)
         Nothing -> pure driverId
-  notifyWithGRPCProvider merchantOpCityId category title body clientId entityData
+  notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData
 
-{- Run this to trigger realtime GRPC notifications -}
+{- Run this to trigger realtime GRPC notifications.
+   `mbTtl` controls the GRPC NotificationReq.ttl (Maybe UTCTime); pass Nothing to
+   preserve historical "no expiry advertised" behaviour. Pass Just <wall-clock>
+   to tell the receiver to drop the notification after that instant — used for
+   pickup-zone-request banners whose UI lifetime is gate-configured. -}
 notifyWithGRPCProvider ::
   ( ServiceFlow m r,
     CacheFlow m r,
@@ -1442,9 +1448,10 @@ notifyWithGRPCProvider ::
   Text ->
   Text ->
   Id Person ->
+  Maybe UTCTime ->
   a ->
   m ()
-notifyWithGRPCProvider merchantOpCityId category title body clientId entityData = do
+notifyWithGRPCProvider merchantOpCityId category title body clientId mbTtl entityData = do
   merchantNotificationServiceConfig <-
     QMSC.findByServiceAndCity (DMSC.NotificationService Notification.GRPC) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Notification" "GRPC")
@@ -1465,7 +1472,7 @@ notifyWithGRPCProvider merchantOpCityId category title body clientId entityData 
           body = body,
           title = title,
           auth = Notification.Auth clientId.getId Nothing Nothing,
-          ttl = Nothing,
+          ttl = mbTtl,
           sound = Nothing
         }
 
@@ -1739,6 +1746,8 @@ data PickupZoneRequestEntityData = PickupZoneRequestEntityData
     gateId :: Text,
     vehicleType :: Text,
     validTill :: UTCTime,
+    notificationDuration :: Int,
+    notificationValidTill :: UTCTime,
     requestType :: Text,
     perKmFare :: Maybe HighPrecMoney,
     isDemandHigh :: Bool,
@@ -1783,6 +1792,7 @@ notifyPickupZoneRequest merchantOpCityId driverId entityData = do
         "PICKUP_ZONE_REQUEST"
         ("Move to " <> entityData.gateName <> " at " <> entityData.specialLocationName)
         driverId
+        (Just entityData.notificationValidTill)
         entityData
   case grpcResult of
     Left e -> logWarning $ "GRPC pickup zone notification failed for driver " <> driverId.getId <> ": " <> show e
@@ -1814,6 +1824,7 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
       ("specialLocationName", entityData.specialLocationName)
     ]
     Nothing
+  -- Same convention as notifyPickupZoneRequest — bound the no-show toast lifetime.
   grpcResult <-
     try @_ @SomeException $
       notifyWithGRPCProvider
@@ -1822,6 +1833,7 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
         "PICKUP_ZONE_NO_SHOW"
         ("No show to" <> entityData.gateName <> " at " <> entityData.specialLocationName)
         driverId
+        (Just entityData.notificationValidTill)
         entityData
   case grpcResult of
     Left e -> logWarning $ "GRPC pickup zone no-show notification failed for driver " <> driverId.getId <> ": " <> show e

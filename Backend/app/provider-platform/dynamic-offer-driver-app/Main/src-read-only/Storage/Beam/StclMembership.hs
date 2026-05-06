@@ -18,6 +18,8 @@ data StclMembershipT f = StclMembershipT
     accountNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     addressCity :: B.C f Kernel.Prelude.Text,
     addressPostalCode :: B.C f Kernel.Prelude.Text,
+    addressProofImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    addressProofType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     addressState :: B.C f Kernel.Prelude.Text,
     addressStreetAddress1 :: B.C f Kernel.Prelude.Text,
     addressStreetAddress2 :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

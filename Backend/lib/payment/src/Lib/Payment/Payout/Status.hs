@@ -25,8 +25,8 @@ refreshPayoutStatus ::
   ) =>
   Id Merchant ->
   Id Person ->
-  IPayout.PayoutOrderStatusReq ->
-  (IPayout.PayoutOrderStatusReq -> m IPayout.PayoutOrderStatusResp) ->
+  DPayment.PayoutStatusServiceReq ->
+  (Maybe Text -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
   (JPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
@@ -46,16 +46,16 @@ refreshPayoutStatusWithResponse ::
     BeamFlow.BeamFlow m r
   ) =>
   Text ->
-  IPayout.PayoutOrderStatusReq ->
-  (IPayout.PayoutOrderStatusReq -> m IPayout.PayoutOrderStatusResp) ->
+  DPayment.PayoutStatusServiceReq ->
+  (Maybe Text -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
   (JPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
   (status -> IPayout.PayoutOrderStatusResp -> m ()) ->
   m IPayout.PayoutOrderStatusResp
 refreshPayoutStatusWithResponse orderId statusReq statusCall currentStatus mapStatus shouldUpdate onUpdate = do
-  _ <- QPO.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
-  statusResp <- statusCall statusReq
+  payoutOrder <- QPO.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
+  statusResp <- statusCall payoutOrder.idAssignedByServiceProvider statusReq
   PayoutUpdates.payoutStatusUpdates statusResp.status orderId (Just statusResp)
   let newStatus = mapStatus statusResp.status
   when (shouldUpdate currentStatus newStatus) $

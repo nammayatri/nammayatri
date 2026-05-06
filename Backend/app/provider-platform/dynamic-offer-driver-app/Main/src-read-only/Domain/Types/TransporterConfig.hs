@@ -275,6 +275,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     scheduledRideJobRescheduleTime :: Kernel.Prelude.NominalDiffTime,
     scheduledRideSearchRepeatLimit :: Kernel.Prelude.Int,
     searchRepeatLimit :: Kernel.Prelude.Int,
+    sendMembershipIdInProfile :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sendSmsOnEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     separateDriverVehicleEnablement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     snapToRoadConfidenceThreshold :: Kernel.Prelude.Double,
