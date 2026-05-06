@@ -53,4 +53,4 @@ getDriverPerformance (driverId, _, merchantOpCityId) = do
   let eligiblePayoutAmount = driverStats.totalPayoutEarnings
       totalPayoutAmountPaid = fromMaybe 0.0 driverStats.totalPayoutAmountPaid
   mbLatestPayoutOrder <- QPayoutOrder.findLatestPaidPayoutByCustomerId driverId.getId
-  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.isPayoutEnabled di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)) (Just payoutConfig.vpaVerificationMode))
+  pure $ PerformanceRes (Results (length allRefferedCustomers) (length ridesTakenList) totalReferredDrivers payoutConfig.enableReferrals di.payoutVpa eligiblePayoutAmount totalPayoutAmountPaid (mbLatestPayoutOrder <&> (.createdAt)) (Just payoutConfig.vpaVerificationMode))
