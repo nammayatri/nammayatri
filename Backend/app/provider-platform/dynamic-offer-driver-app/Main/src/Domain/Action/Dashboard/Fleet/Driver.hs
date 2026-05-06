@@ -4694,7 +4694,7 @@ postDriverFleetScheduledBookingReassign merchantShortId _opCity fleetOwnerId Com
             distanceUnit = oldBooking.distanceUnit,
             merchantOperatingCityId = Just oldBooking.merchantOperatingCityId
           }
-  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing transporterConfig oldDriver
+  RideCancelInternal.cancelRideTransaction oldBooking oldRide bookingCReason merchant DRide.FleetOwner Nothing Nothing Nothing transporterConfig oldDriver
 
   -- 6. Create new booking and quote (similar to performStaticOfferReallocation)
   newBookingId <- generateGUID

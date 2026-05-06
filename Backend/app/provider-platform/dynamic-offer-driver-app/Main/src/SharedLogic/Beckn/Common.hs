@@ -75,7 +75,8 @@ data DBookingCancelledReq = DBookingCancelledReq
     bookingDetails :: Maybe BookingDetails,
     cancellationSource :: SBCR.CancellationSource,
     cancellationFee :: Maybe Common.PriceAPIEntity,
-    estimateId :: Maybe Text
+    estimateId :: Maybe Text,
+    cancellationReasonCode :: Maybe Text
   }
 
 data DDriverArrivedReq = DDriverArrivedReq

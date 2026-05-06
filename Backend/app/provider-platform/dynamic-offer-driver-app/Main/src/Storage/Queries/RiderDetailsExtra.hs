@@ -88,6 +88,16 @@ updateCancellationDueRidesCount riderId = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
+decrementCancellationDueRidesCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
+decrementCancellationDueRidesCount riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDueRides (Just (max 0 (riderDetails.cancellationDueRides - 1))),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
 updateTotalBookingsCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
 updateTotalBookingsCount riderId = do
   now <- getCurrentTime
@@ -114,6 +124,19 @@ updateNoOfTimesCanellationDuesPaid riderId = do
   riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
   updateOneWithKV
     [ Se.Set BeamRD.noOfTimesCanellationDuesPaid (Just (riderDetails.noOfTimesCanellationDuesPaid + 1)),
+      Se.Set BeamRD.updatedAt now
+    ]
+    [Se.Is BeamRD.id (Se.Eq riderId)]
+
+updateCancellationDuesPaymentInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Text -> m ()
+updateCancellationDuesPaymentInfo amountPaid riderId = do
+  now <- getCurrentTime
+  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
+  updateOneWithKV
+    [ Se.Set BeamRD.cancellationDuesPaid (Just (riderDetails.cancellationDuesPaid + amountPaid)),
+      Se.Set BeamRD.noOfTimesCanellationDuesPaid (Just (riderDetails.noOfTimesCanellationDuesPaid + 1)),
+      Se.Set BeamRD.validCancellations (Just (riderDetails.validCancellations + 1)),
+      Se.Set BeamRD.cancellationDueRides (Just (max 0 (riderDetails.cancellationDueRides - 1))),
       Se.Set BeamRD.updatedAt now
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
