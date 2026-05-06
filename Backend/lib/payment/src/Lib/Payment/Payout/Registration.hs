@@ -12,6 +12,7 @@ where
 
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Payout.Interface.Types as IPayout
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InternalError, InvalidRequest))
@@ -150,12 +151,13 @@ processRegistrationPayment ::
   Payment.TransactionStatus ->
   Maybe Text -> -- payerVpa from Juspay response
   Bool -> -- autoRefund
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
   Text -> -- remark for payout
   Text -> -- orderType for payout
   Text -> -- city
+  Payout.PayoutServiceFlow ->
   m RegistrationStatusResult
-processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund createPayoutOrderCall remark orderType city = do
+processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund createPayoutOrderCall remark orderType city payoutServiceFlow = do
   logDebug $ "Processing registration payment for order " <> orderId.getId <> " | status: " <> show transactionStatus
 
   case transactionStatus of
@@ -170,7 +172,7 @@ processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund creat
         if autoRefund
           then do
             logInfo $ "Auto-refunding registration amount for order " <> orderId.getId
-            result <- try @_ @SomeException $ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city
+            result <- try @_ @SomeException $ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow
             case result of
               Right (Just (PayoutRequest.PayoutInitiated _ _)) -> pure True
               Right _ -> pure False
@@ -206,12 +208,13 @@ refundRegistrationAmount ::
     FinanceBeamFlow.BeamFlow m r
   ) =>
   Id DOrder.PaymentOrder ->
-  (IPayout.CreatePayoutOrderReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
+  (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) -> -- payout call
   Text -> -- remark
   Text -> -- orderType
   Text -> -- city
+  Payout.PayoutServiceFlow ->
   m (Maybe PayoutRequest.PayoutResult)
-refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = do
+refundRegistrationAmount orderId createPayoutOrderCall remark orderType city payoutServiceFlow = do
   -- 1. Look up the PaymentOrder
   order <- QOrder.findById orderId >>= maybe (throwError $ InvalidRequest $ "Registration order not found: " <> orderId.getId) pure
 
@@ -228,9 +231,10 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
       pure Nothing
     Nothing -> do
       -- 4. Get VPA from order.vpa (stored during processRegistrationPayment)
-      vpa <- case order.vpa of
-        Just v -> pure v
-        Nothing -> do
+      vpa <- case (order.vpa, payoutServiceFlow) of
+        (Just v, _) -> pure (Just v)
+        (Nothing, Payout.StripeFlow) -> pure Nothing
+        (Nothing, Payout.JuspayFlow) -> do
           logError $ "No VPA found on registration order " <> orderId.getId <> ", cannot refund"
           throwError $ InvalidRequest "No VPA captured for this registration order"
 
@@ -242,6 +246,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 entityId = orderId.getId,
                 entityRefId = Nothing,
                 amount = order.amount,
+                currency = order.currency,
                 payoutFee = Nothing,
                 merchantId = order.merchantId.getId,
                 merchantOpCityId = maybe "" (.getId) order.merchantOperatingCityId,
@@ -256,9 +261,10 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city = d
                 payoutType = Nothing,
                 coverageFrom = Nothing,
                 coverageTo = Nothing,
-                ledgerEntryIds = []
+                ledgerEntryIds = [],
+                payoutServiceFlow
               }
 
-      logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> " | vpa: " <> vpa
+      logInfo $ "Initiating registration refund for order " <> orderId.getId <> " | amount: " <> show order.amount <> maybe "" ("| vpa: " <>) vpa
       result <- PayoutRequest.submitPayoutRequest submission createPayoutOrderCall
       pure $ Just result

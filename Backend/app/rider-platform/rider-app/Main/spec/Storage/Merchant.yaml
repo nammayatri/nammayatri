@@ -28,12 +28,14 @@ imports:
   Category: Kernel.External.Notification.Interface.Types
   SubCategory: Kernel.External.Notification.Interface.Types
   PaymentService: Kernel.External.Payment.Types
+  PayoutService: Kernel.External.Payout.Types
   TripCategory: Domain.Types.Trip
   MultiModalService: Kernel.External.MultiModal.Types
   GatewayAndRegistryService: Domain.Types
   VehicleCategory: Domain.Types.VehicleCategory
   Expand: Kernel.External.Payout.Interface.Types
   InsuranceService: Kernel.External.Insurance.Types
+  Currency: Kernel.Utils.Common
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -331,6 +333,8 @@ MerchantServiceUsageConfig:
     cancelPaymentIntent: PaymentService
     createRefunds: PaymentService
     getRefunds: PaymentService
+    createPayoutOrder: PayoutService
+    payoutOrderStatus: PayoutService
     updatedAt: UTCTime
     createdAt: UTCTime
     getMultiModalService: MultiModalService
@@ -346,6 +350,8 @@ MerchantServiceUsageConfig:
     insuranceService: Maybe InsuranceService
     createRefunds: Maybe PaymentService
     getRefunds: Maybe PaymentService
+    createPayoutOrder: Maybe PayoutService
+    payoutOrderStatus: Maybe PayoutService
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
@@ -355,6 +361,8 @@ MerchantServiceUsageConfig:
     insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
     createRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
     getRefunds: fromMaybe (Kernel.External.Payment.Types.Stripe)|I
+    createPayoutOrder: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
+    payoutOrderStatus: fromMaybe (Kernel.External.Payout.Types.Juspay)|I
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
@@ -364,6 +372,8 @@ MerchantServiceUsageConfig:
     insuranceService: Kernel.Prelude.Just|I
     createRefunds: Kernel.Prelude.Just|I
     getRefunds: Kernel.Prelude.Just|I
+    createPayoutOrder: Kernel.Prelude.Just|I
+    payoutOrderStatus: Kernel.Prelude.Just|I
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
@@ -423,6 +433,8 @@ MerchantServiceUsageConfig:
     deleteCard: "'Stripe'"
     createRefunds: "'Stripe'"
     getRefunds: "'Stripe'"
+    createPayoutOrder: "'Juspay'"
+    payoutOrderStatus: "'Juspay'"
     getDistancesForScheduledRides: "'OSRM'"
     getFrfsAutocompleteDistances: "'OSRM'"
     getInstructionRoute: "'OSRM'"
@@ -629,6 +641,7 @@ PayoutConfig:
     vehicleCategory: Maybe VehicleCategory|NoRelation
     referralRewardAmountPerRide: HighPrecMoney
     thresholdPayoutAmountPerPerson: HighPrecMoney
+    currency: Currency
     referredByRewardAmount: HighPrecMoney
     maxPayoutReferralForADay: Int
     scheduleCashbackPayoutAfter: Int
@@ -639,6 +652,7 @@ PayoutConfig:
     referredByRewardAmount: Maybe HighPrecMoney
     maxPayoutReferralForADay: Maybe Int
     scheduleCashbackPayoutAfter: Maybe Int
+    currency: Maybe Currency
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     referralRewardAmountPerRide: Just referralRewardAmountPerRide|E
@@ -646,6 +660,7 @@ PayoutConfig:
     referredByRewardAmount: Just referredByRewardAmount|E
     maxPayoutReferralForADay: Just maxPayoutReferralForADay|E
     scheduleCashbackPayoutAfter: Just scheduleCashbackPayoutAfter|E
+    currency: Just currency|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
     referralRewardAmountPerRide: fromMaybe 0 referralRewardAmountPerRide|E
@@ -653,6 +668,7 @@ PayoutConfig:
     referredByRewardAmount:  fromMaybe 0 referredByRewardAmount|E
     maxPayoutReferralForADay: fromMaybe 10 maxPayoutReferralForADay|E
     scheduleCashbackPayoutAfter: fromMaybe 86400 scheduleCashbackPayoutAfter|E
+    currency: fromMaybe Kernel.Types.Price.INR currency|E
 
   default:
     timeDiff: "86400"
@@ -662,6 +678,7 @@ PayoutConfig:
     remark: "'Cashback for metro ticket booking with NammaYatri'"
     orderType: "'FULFILL_ONLY'"
     payoutEntity: "'PAYOUT_AWARD'"
+    currency: "'INR'"
   constraints:
     id: PrimaryKey
   queries:
