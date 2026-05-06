@@ -698,6 +698,9 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
   now <- getCurrentTime
   let responseTimeoutSec = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
       validTill = addUTCTime (fromIntegral responseTimeoutSec) now
+      notificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+      notificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
+      notificationValidTill = addUTCTime (fromIntegral notificationActiveTillInSec) now
       isDemandHigh = fromMaybe True mbIsDemandHigh
   mbPerKmFare <- case mbServiceTier of
     Nothing -> pure Nothing
@@ -767,6 +770,8 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
               gateId = gateId,
               vehicleType = vehicleType,
               validTill = validTill,
+              notificationDuration = notificationDuration,
+              notificationValidTill = notificationValidTill,
               requestType = "PICKUP_ZONE_REQUEST",
               perKmFare = mbPerKmFare,
               isDemandHigh = isDemandHigh,

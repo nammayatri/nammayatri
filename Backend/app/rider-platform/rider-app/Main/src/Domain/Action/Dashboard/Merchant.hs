@@ -452,6 +452,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             maxRideSkipsBeforeQueueRemoval = mbGate >>= (.maxRideSkipsBeforeQueueRemoval),
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
+            notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             ..
           }
 
@@ -1457,7 +1458,9 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
-    supportNumber :: Maybe Text
+    supportNumber :: Maybe Text,
+    gateInfoNotificationActiveTillInSec :: Maybe Text
+
   }
   deriving (Show)
 
@@ -1487,6 +1490,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
       <*> optional (r .: "support_number")
+      <*> optional (r .: "gate_info_notification_active_till_in_sec")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1604,7 +1608,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 notificationCooldownInSec = Nothing,
                 maxRideSkipsBeforeQueueRemoval = Nothing,
                 pickupZoneArrivalTimeoutInSec = Nothing,
-                pickupRequestResponseTimeoutInSec = Nothing
+                pickupRequestResponseTimeoutInSec = Nothing,
+                notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)"
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
