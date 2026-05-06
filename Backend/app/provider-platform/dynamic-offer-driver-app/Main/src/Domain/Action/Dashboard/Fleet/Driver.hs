@@ -763,11 +763,11 @@ postDriverFleetUnlink ::
   Maybe Text ->
   Flow APISuccess
 postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  case entityRole of
-    DP.FLEET_OWNER -> do
+  case (mbEntityRole, mbEntityId) of
+    (Just DP.FLEET_OWNER, Just entityId) -> do
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId personId entityId True
       case isFleetDriver of
@@ -775,7 +775,7 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
         Just fleetDriver -> do
           unless fleetDriver.isActive $ throwError DriverNotActiveWithFleet
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.FLEET_OWNER
-    DP.OPERATOR -> do
+    (Just DP.OPERATOR, Just entityId) -> do
       isDriverOperator <- DDriver.checkDriverOperatorAssociation personId (Id entityId)
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.OPERATOR
@@ -1102,13 +1102,13 @@ postDriverFleetRemoveDriver ::
   Maybe Text ->
   Flow APISuccess
 postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let personId = cast @Common.Driver @DP.Person driverId
-  case entityRole of
-    DP.FLEET_OWNER -> do
+  case (mbEntityRole, mbEntityId) of
+    (Just DP.FLEET_OWNER, Just entityId) -> do
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       associationList <- QRCAssociation.findAllLinkedByDriverId personId
       forM_ associationList $ \assoc -> do
@@ -1133,7 +1133,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           ( \driverInfo -> do
               DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
           )
-    DP.OPERATOR -> do
+    (Just DP.OPERATOR, Just entityId) -> do
       -- Check if there's an active association before ending it
       mbActiveAssociation <- DOV.findByDriverIdAndOperatorId personId (Id entityId) True
       DOV.endOperatorDriverAssociation entityId personId
@@ -1153,27 +1153,29 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
 
-validateRequestorRoleAndGetEntityId :: Text -> Maybe Text -> Flow (DP.Role, Text)
+validateRequestorRoleAndGetEntityId :: Text -> Maybe Text -> Flow (Maybe DP.Role, Maybe Text)
 validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
   reqPerson <- QPerson.findById (Id requestorId)
   case reqPerson of
     Nothing -> do
-      fleetOwnerOrOperatorId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
-      fleetOwnerOrOperator <- QPerson.findById (Id fleetOwnerOrOperatorId) >>= fromMaybeM (PersonNotFound fleetOwnerOrOperatorId)
-      pure (fleetOwnerOrOperator.role, fleetOwnerOrOperatorId)
+      case mbFleetOwnerId of
+        Nothing -> pure (Nothing, Nothing)
+        Just fleetOwnerOrOperatorId -> do
+          fleetOwnerOrOperator <- QPerson.findById (Id fleetOwnerOrOperatorId) >>= fromMaybeM (PersonNotFound fleetOwnerOrOperatorId)
+          pure (Just fleetOwnerOrOperator.role, Just fleetOwnerOrOperatorId)
     Just requestedPerson -> do
       case requestedPerson.role of
         DP.FLEET_OWNER -> do
           -- Fleet Owner tries to do operation
           fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
-          pure (DP.FLEET_OWNER, fleetOwnerid)
+          pure (Just DP.FLEET_OWNER, Just fleetOwnerid)
         DP.OPERATOR -> do
           case mbFleetOwnerId of
             Just fleetOwnerId -> do
               -- Operator tries to do operation on behalf of the fleet
               validateOperatorToFleetAssoc requestedPerson.id.getId fleetOwnerId
-              pure (DP.FLEET_OWNER, fleetOwnerId)
-            Nothing -> pure (DP.OPERATOR, requestedPerson.id.getId) -- Operator tries to do operation
+              pure (Just DP.FLEET_OWNER, Just fleetOwnerId)
+            Nothing -> pure (Just DP.OPERATOR, Just requestedPerson.id.getId) -- Operator tries to do operation
         _ -> throwError (InternalError "Invalid Data")
 
 validateFleetOwnerWithDriverAndVehicle :: Id DP.Person -> Text -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Flow ()
@@ -1375,7 +1377,8 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   unless allowCacheDriverFlowStatus $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  (entityRole, entityId) <- (,) <$> mbEntityRole <*> mbEntityId & fromMaybeM AccessDenied
   let allKeys = DDF.allKeys entityId
   logTagInfo "DriverStatus" $ "Checking Redis for keys: " <> show allKeys <> ", entityRole: " <> show entityRole <> ", entityId: " <> entityId
   redisCounts <-
@@ -2166,15 +2169,15 @@ postDriverFleetVehicleDriverRcStatus ::
   Common.RCStatusReq ->
   Flow APISuccess
 postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requestorId mbFleetOwnerId req = do
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  case entityRole of
-    DP.FLEET_OWNER -> do
+  case (mbEntityRole, mbEntityId) of
+    (Just DP.FLEET_OWNER, Just entityId) -> do
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       validateFleetOwnerWithDriverAndVehicle personId entityId merchant.id merchantOpCityId req.rcNo
-    DP.OPERATOR -> validateOperatorWithDriver personId entityId
+    (Just DP.OPERATOR, Just entityId) -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) False (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
   logTagInfo "dashboard -> addVehicle : " (show personId)
@@ -2207,10 +2210,10 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
     case mbRequestor of
       Nothing -> DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       Just requestor -> do
-        (role, entityId) <- validateRequestorRoleAndGetEntityId requestor.id.getId (Just fleetOwnerId)
-        case role of
-          DP.FLEET_OWNER -> DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
-          DP.OPERATOR -> pure ()
+        (mbRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestor.id.getId (Just fleetOwnerId)
+        case (mbRole, mbEntityId) of
+          (Just DP.FLEET_OWNER, Just eid) -> DCommon.checkFleetOwnerVerification eid merchant.fleetOwnerEnabledCheck
+          (Just DP.OPERATOR, Just _) -> pure ()
           _ -> throwError (InvalidRequest "Invalid Data")
   now <- getCurrentTime
   let mbCert = nonEmptyStripMb certificateNumber
