@@ -1807,11 +1807,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1777904876,
-        "narHash": "sha256-GAYqkLF3wGJ5U/Ou/HXR5dyvtgI5N6LPdszASWejzKY=",
+        "lastModified": 1778089614,
+        "narHash": "sha256-2xMQBRflPbVkGwI9jD6mPr7O8d13pAmpaS19WLdEc4U=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "3460e84fc4b3c3bfbb3011bbdeb6fddffa9b05b1",
+        "rev": "62091e111076dc693b94247c399722c42e7c7bc6",
         "type": "github"
       },
       "original": {
@@ -3923,11 +3923,11 @@
     },
     "services-flake_3": {
       "locked": {
-        "lastModified": 1777770589,
-        "narHash": "sha256-BtAZ4DVy0Xr2Q4VzlEf0E3Cf9fqrWJU3tM88RH88jlY=",
+        "lastModified": 1717893266,
+        "narHash": "sha256-pC/B4DnjcvaM1WPKm6rZe+0x3OfGdpRmTTb8mdTg1Kw=",
         "owner": "juspay",
         "repo": "services-flake",
-        "rev": "684700114e37d4335459174cf7213552c85c1a58",
+        "rev": "3e68d66e04bb26443249b20fd89646b9f89993f1",
         "type": "github"
       },
       "original": {
