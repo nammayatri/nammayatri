@@ -390,6 +390,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                                 then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
                                 else Nothing
                             ],
+                referenceId = Nothing,
                 isVat = False,
                 issuedToTaxNo = Nothing,
                 issuedByTaxNo = Nothing

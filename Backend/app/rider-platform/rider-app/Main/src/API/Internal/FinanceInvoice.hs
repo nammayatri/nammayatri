@@ -24,6 +24,7 @@ type PdfAPI =
     :> "bpp"
     :> Header "token" Text
     :> QueryParam "bppBookingId" Text
+    :> QueryParam "invoiceId" Text
     :> QueryParam "from" DateOrTime
     :> QueryParam "to" DateOrTime
     :> QueryParam "invoiceType" InvoiceType
@@ -49,12 +50,13 @@ handler = getFinanceInvoicePdfByBppBookingId :<|> getFinanceInvoiceListBySupplie
 getFinanceInvoicePdfByBppBookingId ::
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe DateOrTime ->
   Maybe DateOrTime ->
   Maybe InvoiceType ->
   FlowHandler API.FinanceInvoicePdfResp
-getFinanceInvoicePdfByBppBookingId token mbBppBookingId mbFrom mbTo mbInvoiceType =
-  withFlowHandlerAPI $ Domain.getFinanceInvoicePdfByBppBookingId token mbBppBookingId mbFrom mbTo mbInvoiceType
+getFinanceInvoicePdfByBppBookingId token mbBppBookingId mbInvoiceId mbFrom mbTo mbInvoiceType =
+  withFlowHandlerAPI $ Domain.getFinanceInvoicePdfByBppBookingId token mbBppBookingId mbInvoiceId mbFrom mbTo mbInvoiceType
 
 getFinanceInvoiceListBySupplier ::
   Maybe Text ->

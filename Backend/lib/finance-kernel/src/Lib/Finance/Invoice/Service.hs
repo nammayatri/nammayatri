@@ -107,6 +107,7 @@ createInvoice input entryIds = do
             supplierGSTIN = input.supplierGSTIN,
             supplierTaxNo = input.supplierTaxNo,
             supplierId = input.supplierId,
+            referenceId = input.referenceId,
             lineItems = lineItemsJson,
             subtotal = subtotal,
             taxBreakdown = Nothing,

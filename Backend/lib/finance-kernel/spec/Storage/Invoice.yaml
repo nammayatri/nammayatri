@@ -36,6 +36,7 @@ Invoice:
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
     supplierId: Maybe Text
+    referenceId: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value
@@ -58,6 +59,7 @@ Invoice:
     issuedToId: "!SecondaryKey"
     paymentOrderId: "!SecondaryKey"
     supplierId: "!SecondaryKey"
+    referenceId: "!SecondaryKey"
 
   queries:
     findById:
@@ -82,6 +84,10 @@ Invoice:
       kvFunction: updateWithKV
       params: [irn]
       where: id
+
+    findByReferenceId:
+      kvFunction: findAllWithKV
+      where: referenceId
 
   extraOperations:
     - EXTRA_QUERY_FILE

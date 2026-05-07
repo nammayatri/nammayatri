@@ -17,6 +17,7 @@ import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedgerEntry
@@ -32,70 +33,82 @@ import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 getFinanceInvoicePdfByBppBookingId ::
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe DateOrTime ->
   Maybe DateOrTime ->
   Maybe InvoiceType ->
   Flow API.FinanceInvoicePdfResp
-getFinanceInvoicePdfByBppBookingId mbToken mbBppBookingId mbFrom mbTo mbInvoiceType = do
+getFinanceInvoicePdfByBppBookingId mbToken mbBppBookingId mbInvoiceId mbFrom mbTo mbInvoiceType = do
   internalAPIKey <- asks (.internalAPIKey)
   unless (mbToken == Just internalAPIKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
-  bppBookingId <- mbBppBookingId & fromMaybeM (InvalidRequest "bppBookingId is required")
+  case mbInvoiceId of
+    Just invoiceId -> fetchByInvoiceId invoiceId
+    Nothing -> fetchByBppBookingId
+  where
+    fetchByInvoiceId invoiceId = do
+      inv <- QInvoice.findById (Id invoiceId) >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> invoiceId)
+      merchantOpCity <-
+        CQMOC.findById (Id inv.merchantOperatingCityId)
+          >>= fromMaybeM (MerchantOperatingCityNotFound inv.merchantOperatingCityId)
+      mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = inv.merchantOperatingCityId})
+      renderPdf merchantOpCity mbRiderConfig [inv]
 
-  booking <- QBooking.findByBPPBookingId (Id bppBookingId :: Id BPPBooking) >>= fromMaybeM (BookingDoesNotExist bppBookingId)
+    fetchByBppBookingId = do
+      bppBookingId <- mbBppBookingId & fromMaybeM (InvalidRequest "bppBookingId or invoiceId is required")
+      booking <- QBooking.findByBPPBookingId (Id bppBookingId :: Id BPPBooking) >>= fromMaybeM (BookingDoesNotExist bppBookingId)
+      merchantOpCity <-
+        CQMOC.findById booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
+      mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+      let fromTime = toUTCTimeFrom <$> mbFrom
+          toTime = toUTCTimeTo <$> mbTo
+      invoices <-
+        QInvoiceExtra.findByMerchantOpCityIdAndDateRange
+          booking.merchantOperatingCityId.getId
+          fromTime
+          toTime
+          mbInvoiceType
+          Nothing
+          (Just booking.riderId.getId)
+          Nothing
+          (Just 10)
+          (Just 0)
+      renderPdf merchantOpCity mbRiderConfig invoices
 
-  merchantOpCity <-
-    CQMOC.findById booking.merchantOperatingCityId
-      >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+    renderPdf merchantOpCity mbRiderConfig invoices = do
+      when (null invoices) $
+        throwError $ InvalidRequest "No invoices found for the given criteria"
 
-  let fromTime = toUTCTimeFrom <$> mbFrom
-      toTime = toUTCTimeTo <$> mbTo
+      let locale = countryToLocale merchantOpCity.country
+          tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
+          cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
 
-  invoices <-
-    QInvoiceExtra.findByMerchantOpCityIdAndDateRange
-      booking.merchantOperatingCityId.getId
-      fromTime
-      toTime
-      mbInvoiceType
-      Nothing
-      (Just booking.riderId.getId)
-      Nothing
-      (Just 10)
-      (Just 0)
+      pdfDatas <- forM invoices $ \inv -> do
+        let items = parseLineItems inv.lineItems
+        taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
+        let mbTaxTxn = listToMaybe taxTxns
+        (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+          Just orderId -> do
+            txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+            let mbTxn = listToMaybe txns
+            pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+          Nothing -> pure (Nothing, Nothing, Nothing)
+        pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
 
-  when (null invoices) $
-    throwError $ InvalidRequest "No invoices found for the given criteria"
+      let lastInv = last invoices
+          html = case pdfDatas of
+            [single] -> renderInvoiceHtml cfg single
+            batch -> renderBatchInvoiceHtml cfg batch
 
-  let locale = countryToLocale merchantOpCity.country
-      tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+      pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
 
-  pdfDatas <- forM invoices $ \inv -> do
-    let items = parseLineItems inv.lineItems
-    taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
-    let mbTaxTxn = listToMaybe taxTxns
-    (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
-      Just orderId -> do
-        txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-        let mbTxn = listToMaybe txns
-        pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
-      Nothing -> pure (Nothing, Nothing, Nothing)
-    pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
-
-  let lastInv = last invoices
-      html = case pdfDatas of
-        [single] -> renderInvoiceHtml cfg single
-        batch -> renderBatchInvoiceHtml cfg batch
-
-  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
-
-  pure $
-    API.FinanceInvoicePdfResp
-      { pdfBase64 = pdfBase64,
-        invoiceNumber = lastInv.invoiceNumber
-      }
+      pure $
+        API.FinanceInvoicePdfResp
+          { pdfBase64 = pdfBase64,
+            invoiceNumber = lastInv.invoiceNumber
+          }
 
 getFinanceInvoiceListBySupplier ::
   Maybe Text ->

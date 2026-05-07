@@ -628,6 +628,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   (Just $ show merchantOperatingCity.city)
                   booking.fromLocation.address.city
                   (taxAmount + absorbedVat),
+              referenceId = Nothing,
               isVat = isVat,
               issuedToTaxNo = Nothing, -- Ride invoice: Nothing. Commission/Subscription invoice: fleet's VAT/GST number
               issuedByTaxNo = Nothing -- populated from Merchant.gstin via FinanceCtx.merchantGstin in invoice()

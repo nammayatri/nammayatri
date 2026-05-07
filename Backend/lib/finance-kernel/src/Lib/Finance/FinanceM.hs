@@ -133,6 +133,7 @@ data InvoiceConfig = InvoiceConfig
     issuedToId :: Text,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,
+    referenceId :: Maybe Text,
     lineItems :: [InvoiceLineItem],
     gstBreakdown :: Maybe GstAmountBreakdown,
     -- VAT integration fields
@@ -670,6 +671,7 @@ invoiceInner ctx config = do
             supplierGSTIN = ctx.supplierGSTIN,
             supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
             supplierId = ctx.supplierId,
+            referenceId = config.referenceId,
             gstinOfParty = Nothing,
             panOfParty = ctx.panOfParty,
             panType = ctx.panType,

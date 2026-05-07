@@ -32,6 +32,7 @@ data Invoice = Invoice
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     paymentOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
     subtotal :: Kernel.Types.Common.HighPrecMoney,
     supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
