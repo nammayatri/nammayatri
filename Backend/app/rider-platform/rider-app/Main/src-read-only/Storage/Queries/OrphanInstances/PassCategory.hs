@@ -22,6 +22,7 @@ instance FromTType' Beam.PassCategory Domain.Types.PassCategory.PassCategory whe
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             name = name,
+            order = order,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -34,6 +35,7 @@ instance ToTType' Beam.PassCategory Domain.Types.PassCategory.PassCategory where
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.name = name,
+        Beam.order = order,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }
