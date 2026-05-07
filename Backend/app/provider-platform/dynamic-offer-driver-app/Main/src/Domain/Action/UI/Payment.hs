@@ -460,7 +460,6 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     processWalletTopupAndUpdateStatus driver order transactionStatus = do
       processWalletTopupWebhook driver order transactionStatus
       QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
-      QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
 
     getInvoicesAndServiceWithServiceConfigByOrderId ::
       (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
@@ -489,6 +488,7 @@ processWalletTopupWebhook ::
   Payment.TransactionStatus ->
   m ()
 processWalletTopupWebhook driver order transactionStatus = do
+  QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   when (transactionStatus == Payment.CHARGED) $ do
     let lockKey = "wallet:topup:lock:" <> order.id.getId
     Redis.withLockRedis lockKey 60 $ do
