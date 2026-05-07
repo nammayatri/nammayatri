@@ -72,6 +72,7 @@ data RiderJobType
   | UpdateCRISRDSBalance
   | FRFSSeatHoldReaper
   | DailyPassStatusUpdate
+  | PassExpiryReminderMaster
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -116,6 +117,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SUpdateCRISRDSBalance jobData = AnyJobInfo <$> restoreJobInfo SUpdateCRISRDSBalance jobData
   restoreAnyJobInfo SFRFSSeatHoldReaper jobData = AnyJobInfo <$> restoreJobInfo SFRFSSeatHoldReaper jobData
   restoreAnyJobInfo SDailyPassStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SDailyPassStatusUpdate jobData
+  restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -371,6 +373,15 @@ type instance JobContent 'NyRegularInstance = NyRegularInstanceJobData
 instance JobInfoProcessor 'NyRegularMaster
 
 type instance JobContent 'NyRegularMaster = ()
+
+newtype PassExpiryReminderMasterJobData = PassExpiryReminderMasterJobData
+  { cursor :: Maybe Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'PassExpiryReminderMaster
+
+type instance JobContent 'PassExpiryReminderMaster = PassExpiryReminderMasterJobData
 
 data CrisReconJobData = CrisReconJobData
   { merchantId :: Id DM.Merchant,

@@ -23,6 +23,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PurchasedPass.PurchasedPass] -> m ())
 createMany = traverse_ create
 
+findAllByPersonIdsAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Domain.Types.PurchasedPass.StatusType -> m [Domain.Types.PurchasedPass.PurchasedPass])
+findAllByPersonIdsAndStatus personId status = do findAllWithKV [Se.And [Se.Is Beam.personId $ Se.In (Kernel.Types.Id.getId <$> personId), Se.Is Beam.status $ Se.Eq status]]
+
 findByPassNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> m (Maybe Domain.Types.PurchasedPass.PurchasedPass))
 findByPassNumber passNumber = do findOneWithKV [Se.Is Beam.passNumber $ Se.Eq passNumber]
 

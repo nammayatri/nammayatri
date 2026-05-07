@@ -107,6 +107,10 @@ RiderConfig:
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
+    passExpiryReminderDays: Maybe Int
+    remindEverydayUntilPassExpiry: Maybe Bool
+    passExpiryReminderBatchSize: Maybe Int
+    passExpiryReminderNextRunLocalTime: Maybe TimeOfDay
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
