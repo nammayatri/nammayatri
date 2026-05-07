@@ -363,7 +363,7 @@ runDemandDecrementForBooking ::
 runDemandDecrementForBooking _ Nothing _ = pure ()
 runDemandDecrementForBooking bookingId (Just gateId) variant = do
   let idempotencyKey = "DriverDemand:Decremented:" <> bookingId
-  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ decrementGateSearchDemand gateId variant
 
 -- | Increment the gate supply counter. Supply reflects drivers who have accepted a
@@ -405,7 +405,7 @@ runSupplyIncrementForRequest ::
   m ()
 runSupplyIncrementForRequest requestId gateId variant = do
   let idempotencyKey = "DriverSupply:Incremented:" <> requestId
-  wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+  wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ incrementGateSearchSupply gateId variant
 
 -- | Idempotent supply decrement keyed by pickup-zone requestId. Safe to call from any
@@ -711,7 +711,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
   mbPerKmFare <- case mbServiceTier of
     Nothing -> pure Nothing
     Just serviceTier -> getAirportPerKmFare merchantId merchantOpCityId (Id specialLocationId) gate.point gateId serviceTier
-  mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
+  mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId vehicleType)
   let demandCount = fromMaybe 0 mbDemandCount
   -- Callers funnel through 'filterEligibleDrivers' which has already done the
   -- bulk cooldown / Accepted / Active-pending / on-ride filtering. We trust
@@ -1072,7 +1072,7 @@ cancelPickupZoneRequestsForDriver driverId = do
   mbReq <- QSZQR.findLastAcceptedByDriverId driverId
   forM_ mbReq $ \req -> do
     let idempotencyKey = "PickupZoneCancel:Done:" <> req.id.getId
-    wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
+    wasSet <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
     when wasSet $
       unless (req.status == DSZQR.Completed) $ do
         QSZQR.updateResponse (Just DSZQR.Cancelled) DSZQR.Expired req.id
