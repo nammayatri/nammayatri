@@ -6,6 +6,7 @@ imports:
   AuthVerifyRes: Domain.Action.UI.Registration
   ResendAuthRes: Domain.Action.UI.Registration
   Person: Domain.Types.Person
+  IdentifierType: Domain.Types.Person
 
 importPackageOverrides:
   Domain.Action.UI.Registration: "rider-app"
@@ -60,6 +61,7 @@ apis:
 
 types:
   CustomerAuthReq:
-    - mobileNumber: Text
-    - mobileCountryCode: Text
+    - mobileNumber: Maybe Text
+    - mobileCountryCode: Maybe Text
     - otpChannel: Maybe OTPChannel
+    - email: Maybe Text
