@@ -171,6 +171,7 @@ data RiderConfigT f = RiderConfigT
     specialVehicleNotificationConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
     staticCustomerIdThresholdDay :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
+    studentPassVerifyConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     suburbanBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     suburbanFareCachingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     suburbanTicketAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

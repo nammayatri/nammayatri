@@ -32,6 +32,10 @@ RiderConfig:
       radiusInMeters: Meters
       vehVariant: VehicleVariant
       size: Int
+    StudentPassVerifyConfig:
+      derive: "Eq"
+      distanceThresholdMeters: Meters
+      minMatchingStops: Int
     BusTrackingConfig:
       derive: "Eq"
       maxScoreDistanceInMeters: Double
@@ -192,6 +196,7 @@ RiderConfig:
     variantListForNearByReq: "Maybe [VehicleVariant]"
     nearByDriverRingBucketCfg: "Maybe [RingBucketCfg]"
     nearbyDriverSearchRadius: Maybe Double
+    studentPassVerifyConfig: Maybe StudentPassVerifyConfig
     isDeviceIdCheckDisabled: Maybe Bool
     enableBusFiltering: Maybe Bool
     fareCacheRentalsConfig: "Maybe [RentalsConfig]"
@@ -288,6 +293,7 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Maybe Int
     variantListForNearByReq: Maybe [Text]
     nearByDriverRingBucketCfg: Maybe Value
+    studentPassVerifyConfig: Maybe Value
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
@@ -355,6 +361,7 @@ RiderConfig:
     payoutReferralThresholdPerMonth: fromMaybe 50 payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= traverse (readMaybe . Data.Text.unpack)|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Kernel.Utils.JSON.valueToMaybe|E
+    studentPassVerifyConfig: studentPassVerifyConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
@@ -413,6 +420,7 @@ RiderConfig:
     payoutReferralThresholdPerMonth: Just payoutReferralThresholdPerMonth|E
     variantListForNearByReq: variantListForNearByReq >>= Just . map show|E
     nearByDriverRingBucketCfg: nearByDriverRingBucketCfg >>= Just . Data.Aeson.toJSON|E
+    studentPassVerifyConfig: studentPassVerifyConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
@@ -526,6 +534,7 @@ RiderConfig:
     intercitySearchLocations : text []
     variantListForNearByReq: text []
     nearByDriverRingBucketCfg: "json"
+    studentPassVerifyConfig: "json"
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"

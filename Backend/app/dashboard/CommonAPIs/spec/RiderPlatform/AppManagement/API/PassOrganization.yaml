@@ -1,0 +1,111 @@
+imports:
+  PassDetails: Domain.Types.PassDetails
+  PassOrganization: Domain.Types.PassOrganization
+  VerificationStatus: Domain.Types.PassDetails
+  RoutePair: Domain.Types.PassDetails
+  Person: Domain.Types.Person
+  UTCTime: Data.Time
+  APISuccess: Kernel.Types.APISuccess
+  PassEnum: Domain.Types.PassType
+  Gender: Domain.Types.Person
+
+importPackageOverrides:
+  Domain.Types.Person: "rider-app"
+  Domain.Types.PassDetails: "rider-app"
+  Domain.Types.PassOrganization: "rider-app"
+  Domain.Types.PassType: "rider-app"
+
+module: PassOrganization
+
+types:
+  PassDetailsInfoResp:
+    passDetailsId: Id PassDetails
+    personId: Id Person
+    name: Text
+    idCardPicture: Maybe Text
+    verificationStatus: VerificationStatus
+    validTill: UTCTime
+    address: Maybe Text
+    gender: Gender
+    pincode: Maybe Text
+    selfImage: Text
+    routePairs: "[RoutePair]"
+    age: Maybe Int
+    guardianName: Maybe Text
+    studentClass: Maybe Text
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    remark: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  PassDetailsListResp:
+    passDetails: "[PassDetailsInfoResp]"
+    limit: Int
+    offset: Int
+
+  PassDetailsVerification:
+    passDetailsId: Id PassDetails
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    verificationStatus: VerificationStatus
+    remark: Maybe Text
+
+  VerifyPassDetailsReq:
+    verifications: "[PassDetailsVerification]"
+    derive: "'HideSecrets"
+
+  PassOrganizationUpdateReq:
+    name: Text
+    address: Maybe Text
+    passEnum: PassEnum
+    derive: "'HideSecrets"
+
+  GetOrganizationResp:
+    id: Id PassOrganization
+    name: Text
+    address: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /getPassOrganization/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      response:
+        type: GetOrganizationResp
+  - GET:
+      endpoint: /passDetails/{passEnum}
+      auth: ApiAuthV2
+      params:
+        passEnum: Text
+      query:
+        - passOrganizationId: Id PassOrganization
+        - status: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: PassDetailsListResp
+  - POST:
+      endpoint: /passDetails/verify
+      auth: ApiAuthV2
+      request:
+        type: VerifyPassDetailsReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /update/{personId}
+      auth: ApiAuthV2
+      params:
+        personId: Id Person
+      request:
+        type: PassOrganizationUpdateReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /getOrganizations/{passEnum}
+      auth: ApiAuthV2
+      params:
+        passEnum: Text
+      response:
+        type: "[GetOrganizationResp]"

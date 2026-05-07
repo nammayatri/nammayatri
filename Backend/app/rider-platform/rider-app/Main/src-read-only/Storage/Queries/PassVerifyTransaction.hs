@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByPurchasePassId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m ([Domain.Types.PassVerifyTransaction.PassVerifyTransaction]))
+  (Kernel.Types.Id.Id Domain.Types.PurchasedPass.PurchasedPass -> m [Domain.Types.PassVerifyTransaction.PassVerifyTransaction])
 findAllByPurchasePassId purchasePassId = do findAllWithKV [Se.Is Beam.purchasePassId $ Se.Eq (Kernel.Types.Id.getId purchasePassId)]
 
 findByPrimaryKey ::
@@ -40,9 +40,11 @@ updateByPrimaryKey (Domain.Types.PassVerifyTransaction.PassVerifyTransaction {..
       Se.Set Beam.destinationStopCode destinationStopCode,
       Se.Set Beam.fleetId fleetId,
       Se.Set Beam.isActuallyValid isActuallyValid,
+      Se.Set Beam.passEnum passEnum,
       Se.Set Beam.purchasePassId (Kernel.Types.Id.getId purchasePassId),
       Se.Set Beam.sourceStopCode sourceStopCode,
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.verifiedAt verifiedAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),

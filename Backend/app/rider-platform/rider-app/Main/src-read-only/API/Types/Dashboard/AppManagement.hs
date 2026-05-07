@@ -8,6 +8,7 @@ import qualified API.Types.Dashboard.AppManagement.EventManagement
 import qualified API.Types.Dashboard.AppManagement.FRFSTicketService
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified API.Types.Dashboard.AppManagement.Pass
+import qualified API.Types.Dashboard.AppManagement.PassOrganization
 import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified API.Types.Dashboard.AppManagement.Tickets
@@ -26,6 +27,7 @@ data AppManagementUserActionType
   | FRFS_TICKET_SERVICE API.Types.Dashboard.AppManagement.FRFSTicketService.FRFSTicketServiceUserActionType
   | MERCHANT_ONBOARDING API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingUserActionType
   | PASS API.Types.Dashboard.AppManagement.Pass.PassUserActionType
+  | PASS_ORGANIZATION API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUserActionType
   | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | TICKET_DASHBOARD API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardUserActionType
   | TICKETS API.Types.Dashboard.AppManagement.Tickets.TicketsUserActionType
@@ -41,6 +43,7 @@ instance Text.Show.Show AppManagementUserActionType where
     FRFS_TICKET_SERVICE e -> "FRFS_TICKET_SERVICE/" <> show e
     MERCHANT_ONBOARDING e -> "MERCHANT_ONBOARDING/" <> show e
     PASS e -> "PASS/" <> show e
+    PASS_ORGANIZATION e -> "PASS_ORGANIZATION/" <> show e
     PAYMENT e -> "PAYMENT/" <> show e
     TICKET_DASHBOARD e -> "TICKET_DASHBOARD/" <> show e
     TICKETS e -> "TICKETS/" <> show e
@@ -81,6 +84,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "PASS/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PASS_ORGANIZATION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PASS_ORGANIZATION/" r,
                    ( v1,
                      r2
                      ) <-
@@ -136,4 +148,4 @@ instance Text.Read.Read AppManagementUserActionType where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''AppManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''AppManagementUserActionType])

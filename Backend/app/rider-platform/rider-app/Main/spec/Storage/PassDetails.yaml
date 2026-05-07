@@ -1,0 +1,152 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PassOrganization: Domain.Types.PassOrganization
+  UTCTime: Data.Time
+  Value: Data.Aeson
+  PassEnum: Domain.Types.PassType
+  Gender: Domain.Types.Person
+  LatLong: Kernel.External.Maps.Types
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
+
+PassDetails:
+  tableName: pass_details
+
+  types:
+    VerificationStatus:
+      enum: "PENDING, CLG_VERIFIED, MTC_VERIFIED, REJECTED, EXPIRED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    RoutePair:
+      srcStopName: Text
+      srcStopId: Text
+      destStopName: Text
+      destStopId: Text
+      srcLatLong: LatLong
+      destLatLong: LatLong
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <VerificationStatus>
+
+  fields:
+    id: Id PassDetails
+    personId: Id Person
+    passOrganizationId: Id PassOrganization
+    name: Text
+    registerNo: Maybe Text
+    studentClass: Maybe Text
+    age: Maybe Int
+    gender: Gender
+    guardianName: Maybe Text
+    address: Maybe Text
+    pincode: Maybe Text
+    idCardPicture: Maybe Text
+    selfImage: Text
+    verificationStatus: VerificationStatus
+    validTill: UTCTime
+    aadharNo: Maybe (EncryptedHashedField e Text)
+    remark: Maybe Text
+    routePairs: "[RoutePair]"
+    graduationDate: Maybe UTCTime
+    numberOfStages: Maybe Int
+    referenceNumber: Maybe Int
+    createdAt: UTCTime
+    updatedAt: UTCTime
+    passEnum: PassEnum
+    applicableRouteIds: "Maybe [Text]"
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  beamType:
+    routePairs: Maybe Value
+
+  beamFields:
+    aadharNo:
+      aadharNoEncrypted: Maybe Text
+      aadharNoHash: Maybe DbHash
+
+  fromTType:
+    routePairs: |-
+      fromMaybe [] ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs)|E
+    aadharNo: EncryptedHashed <$> (Encrypted <$> aadharNoEncrypted) <*> aadharNoHash|E
+  toTType:
+    routePairs: Just (Kernel.Prelude.toJSON routePairs)|E
+    aadharNoEncrypted: (aadharNo <&> unEncrypted . (.encrypted))|E
+    aadharNoHash: (aadharNo <&> (.hash))|E
+
+  constraints:
+    personId: PrimaryKey
+    id: SecondaryKey
+    passOrganizationId: SecondaryKey
+
+  sqlType:
+    name: text
+    idCardPicture: text
+    verificationStatus: text
+    address: text
+    guardianName: text
+    studentClass: text
+    routePairs: jsonb
+    remark: text
+    passEnum: text
+    aadharNoEncrypted: character varying(255)
+    aadharNoHash: bytea
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where:
+        id
+
+    findByPersonId:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, passEnum]
+
+    findAllByPassOrganizationIdAndVerificationStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - passOrganizationId
+          - in:
+            - verificationStatus
+      limit: limit
+      offset: offset
+
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, validTill, remark, graduationDate, numberOfStages]
+      where:
+        in: [id]
+
+    updatePassDetails:
+      kvFunction: updateWithKV
+      params: [name, passOrganizationId, idCardPicture, address, age, guardianName, studentClass, routePairs, graduationDate, verificationStatus, numberOfStages, applicableRouteIds, updatedAt]
+      where:
+        and: [personId, passEnum]
+
+    findAllByMerchantIdAndMerchantOperatingCityId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - merchantId
+          - merchantOperatingCityId
+          - passEnum
+          - in:
+            - verificationStatus
+      limit: limit
+      offset: offset
+
+  extraIndexes:
+    - columns: [personId, passEnum]
+    - columns: [referenceNumber]
+
+  extraOperations:
+    - GENERATE_INDEXES
+    - EXTRA_QUERY_FILE
+
+  excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

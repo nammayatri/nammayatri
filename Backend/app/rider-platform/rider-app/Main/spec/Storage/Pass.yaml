@@ -41,6 +41,7 @@ Pass:
     applicableVehicleServiceTiers: "[ServiceTierType]"
     purchaseEligibilityJsonLogic: "[Value]"
     redeemEligibilityJsonLogic: "[Value]"
+    pricingTiers: "Maybe Value"
     maxValidTrips: Maybe Int
     maxValidDays: Maybe Int
     verificationValidity: Seconds
@@ -51,6 +52,8 @@ Pass:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     passConfig: Maybe PassConfig
+    minFare: Maybe HighPrecMoney
+    maxFare: Maybe HighPrecMoney
 
   beamFields:
     passConfig:
@@ -77,6 +80,7 @@ Pass:
     documentsRequired: text[]
     purchaseEligibilityJsonLogic: jsonb[]
     redeemEligibilityJsonLogic: jsonb[]
+    pricingTiers: jsonb
 
   extraOperations:
     - EXTRA_QUERY_FILE
