@@ -53,3 +53,10 @@ CREATE INDEX purchased_pass_idx_pass_number ON atlas_app.purchased_pass USING bt
 
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN preferred_source text ;
 ALTER TABLE atlas_app.purchased_pass ADD COLUMN preferred_destination text ;
+
+
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY purchased_pass_idx_person_id ON atlas_app.purchased_pass USING btree (person_id);
