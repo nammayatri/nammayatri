@@ -9,6 +9,7 @@ import qualified Domain.Types.UtilsTH
 import qualified Kernel.External.AadhaarVerification
 import qualified Kernel.External.Call.Types
 import Kernel.External.Encryption
+import qualified Kernel.External.EventTracking
 import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
@@ -36,6 +37,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     deleteCard :: B.C f Kernel.External.Payment.Types.PaymentService,
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
+    eventTrackingProviders :: B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService]),
     getCardList :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
     getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,

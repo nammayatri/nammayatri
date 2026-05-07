@@ -6,6 +6,8 @@ module Storage.Queries.OrphanInstances.MerchantServiceUsageConfig where
 import qualified Domain.Types.MerchantServiceUsageConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.EventTracking
+import qualified Kernel.External.EventTracking.Types
 import qualified Kernel.External.Insurance.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Types
@@ -36,6 +38,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             createdAt = createdAt,
             deleteCard = deleteCard,
             enableDashboardSms = enableDashboardSms,
+            eventTrackingProviders = fromMaybe [Kernel.External.EventTracking.Types.Moengage] eventTrackingProviders,
             getCardList = getCardList,
             getDistances = getDistances,
             getDistancesForCancelRide = getDistancesForCancelRide,
@@ -84,6 +87,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.createdAt = createdAt,
         Beam.deleteCard = deleteCard,
         Beam.enableDashboardSms = enableDashboardSms,
+        Beam.eventTrackingProviders = Kernel.Prelude.Just eventTrackingProviders,
         Beam.getCardList = getCardList,
         Beam.getDistances = getDistances,
         Beam.getDistancesForCancelRide = getDistancesForCancelRide,

@@ -98,3 +98,9 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN get_instruction_r
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN payout_order_status text  default 'Juspay';
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_payout_order text  default 'Juspay';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN event_tracking_providers text[] ;
