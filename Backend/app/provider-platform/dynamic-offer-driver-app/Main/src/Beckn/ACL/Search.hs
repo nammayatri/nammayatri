@@ -35,3 +35,16 @@ buildSearchReqV2 subscriber req actualBapUri = do
   messageId <- Utils.getMessageId context
   let message = req.searchReqMessage
   TSearch.buildSearchReq messageId subscriber message context actualBapUri
+
+buildSearchReqV2Raw ::
+  (HasFlowEnv m r '["_version" ::: Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  Text ->
+  BaseUrl ->
+  Search.SearchReqV2 ->
+  BaseUrl ->
+  m DSearch.DSearchReq
+buildSearchReqV2Raw bapSubscriberId bapSubscriberUrl req actualBapUri = do
+  let context = req.searchReqContext
+  messageId <- Utils.getMessageId context
+  let message = req.searchReqMessage
+  TSearch.buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl message context actualBapUri

@@ -7,6 +7,7 @@ imports:
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
+  SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
@@ -135,6 +136,7 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
@@ -312,6 +314,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
+    syncSearchDispatchConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -377,6 +380,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -434,6 +438,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
     invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
+    syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
 
 
   default:
@@ -536,6 +541,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
     invoiceConfig: "json"
+    syncSearchDispatchConfig: "jsonb"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

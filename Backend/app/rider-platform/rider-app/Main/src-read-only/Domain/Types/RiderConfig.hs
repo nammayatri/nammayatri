@@ -179,6 +179,7 @@ data RiderConfig = RiderConfig
     subwayRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     subwayRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    syncSearchDispatchConfig :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.SyncSearchDispatchConfig,
     thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ticketAssetDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketingPermissionConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,

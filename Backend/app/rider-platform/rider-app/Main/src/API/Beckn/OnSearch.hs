@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Beckn.OnSearch (API, handler) where
+module API.Beckn.OnSearch (API, handler, processOnSearchInline) where
 
 import qualified Beckn.ACL.OnSearch as TaxiACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -45,6 +45,16 @@ onSearch ::
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
 onSearch _ reqV2 = withFlowHandlerBecknAPI do
+  processOnSearchPayload reqV2 ProcessAsync
+  pure Ack
+
+data ProcessingMode = ProcessSync | ProcessAsync
+
+processOnSearchInline :: OnSearch.OnSearchReqV2 -> Flow ()
+processOnSearchInline reqV2 = processOnSearchPayload reqV2 ProcessSync
+
+processOnSearchPayload :: OnSearch.OnSearchReqV2 -> ProcessingMode -> Flow ()
+processOnSearchPayload reqV2 mode = do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
   L.setOptionLocal TxnIdKey transactionId
   Utils.withTransactionIdLogTag transactionId $ do
@@ -60,13 +70,22 @@ onSearch _ reqV2 = withFlowHandlerBecknAPI do
         validatedRequest <- DOnSearch.validateRequest request searchRequest
         fork "on search received pushing ondc logs" do
           void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"
-        fork "on search processing" $ do
-          Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
-            DOnSearch.onSearch transactionId validatedRequest
-    pure Ack
+        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId) (60 :: Int) (True :: Bool)
+        if not isFirst
+          then logInfo $ "OnSearch already persisted for txn " <> transactionId <> "; skipping duplicate"
+          else do
+            let runProcessing =
+                  Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
+                    DOnSearch.onSearch transactionId validatedRequest
+            case mode of
+              ProcessAsync -> fork "on search processing" runProcessing
+              ProcessSync -> runProcessing
 
 onSearchLockKey :: Text -> Text -> Text
 onSearchLockKey msgId bppSubscriberId = "Customer:OnSearch:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId
 
 onSearchProcessingLockKey :: Text -> Text -> Text
 onSearchProcessingLockKey msgId bppSubscriberId = "Customer:OnSearch:Processing:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId
+
+onSearchHandledKey :: Text -> Text
+onSearchHandledKey txnId = "Customer:OnSearch:Handled:Txn-" <> txnId
