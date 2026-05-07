@@ -645,3 +645,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sos_tracking_link text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb ;

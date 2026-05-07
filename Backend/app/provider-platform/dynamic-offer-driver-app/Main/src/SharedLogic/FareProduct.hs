@@ -190,6 +190,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
       logInfo $ "DEBUG getFareProducts: tripCategory=" <> show tripCategory <> " area=" <> show area <> " merchantOpCityId=" <> show merchantOpCityId <> " fareProductsCount=" <> show (length fareProducts) <> " otherFareProductsCount=" <> show (length otherFareProducts) <> " fareProductVariants=" <> show (map (.vehicleServiceTier) fareProducts)
       if null fareProducts && baseArea /= SL.Default && null otherFareProducts
         then do
+          logInfo $ "DEBUG getFareProducts: falling back to Default for tripCategory=" <> show tripCategory
           defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
           mapM getBoundedOrDefaultFareProduct defFareProducts
         else do

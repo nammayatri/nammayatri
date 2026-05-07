@@ -15,7 +15,7 @@
 module API.UI.Search
   ( DSearch.SearchReq (..),
     DSearch.SearchRes (..),
-    DSearch.SearchResp (..),
+    SearchResp (..),
     DSearch.OneWaySearchReq (..),
     DSearch.PublicTransportSearchReq (..),
     DSearch.RentalSearchReq (..),
@@ -29,11 +29,13 @@ module API.UI.Search
   )
 where
 
+import qualified API.Beckn.OnSearch as BeckOnSearch
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.Types.UI.RiderLocation as RL
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
+import qualified Beckn.Types.Core.Taxi.API.Search as BecknSearchAPI
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -63,6 +65,9 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import qualified EulerHS.Language as L
+import EulerHS.Types (AwaitingError (..))
+import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as RouteFareV3
 import ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
@@ -96,6 +101,7 @@ import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
+import qualified SharedLogic.SyncSearchDispatch as SSD
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -114,6 +120,18 @@ import qualified Tools.MultiModal as TMultiModal
 import TransactionLogs.Types
 
 -------- Search Flow --------
+
+-- /rideSearch response. Defined here (not in SharedLogic.Search) so it can
+-- carry a typed Maybe DQuote.GetQuotesRes inline payload without creating a
+-- circular import — Domain.Action.UI.Quote already imports SharedLogic.Search
+-- for unrelated helpers.
+data SearchResp = SearchResp
+  { searchId :: Id SearchRequest.SearchRequest,
+    searchExpiry :: UTCTime,
+    routeInfo :: Maybe Maps.RouteInfo,
+    results :: Maybe DQuote.GetQuotesRes
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 data MultimodalWarning
   = NoSingleModeRoutes
@@ -166,7 +184,7 @@ type SearchAPI =
     :> Header "is-dashboard-request" Bool
     :> QueryParam "filterServiceAndJrnyType" Bool
     :> QueryParam "newServiceTiers" [Spec.ServiceTierType]
-    :> Post '[JSON] DSearch.SearchResp
+    :> Post '[JSON] SearchResp
 
 handler :: FlowServer API
 handler = search :<|> multimodalSearchHandler
@@ -201,7 +219,8 @@ search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfig
 
 search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Flow DSearch.SearchResp
 search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers = withPersonIdLogTag personId $ do
-  checkSearchRateLimit personId
+  let isDashboardRequest = fromMaybe False mbIsDashboardRequest
+  unless isDashboardRequest $ checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
   -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -224,19 +243,24 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) False Nothing
-  fork "search cabs" . withShortRetry $ do
-    becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
-    let generatedJson = encode becknTaxiReqV2
-    logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing
+  becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+  let generatedJson = encode becknTaxiReqV2
+  logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+  inlineResults <- dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2
   fork "Multimodal Search" $ do
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let mbDoMultimodalSearch = getDoMultimodalSearch req
     if riderConfig.makeMultiModalSearch && (isNothing mbDoMultimodalSearch || fromMaybe False mbDoMultimodalSearch)
       then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId Nothing mbFilterServiceAndJrnyType mbNewServiceTiers)
       else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
-  return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  return $
+    SearchResp
+      { searchId = dSearchRes.searchRequest.id,
+        searchExpiry = dSearchRes.searchRequestExpiry,
+        routeInfo = dSearchRes.shortestRouteInfo,
+        results = inlineResults
+      }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
     --BEGIN
@@ -245,6 +269,59 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
       let isNonScheduled = diffUTCTime sReq.startTime sReq.createdAt < scheduleRideBufferTime
           isValid = sReq.validTill > now
       return $ isNonScheduled && isValid
+
+syncSearchTimeoutMicros :: ET.Microseconds
+syncSearchTimeoutMicros = ET.Microseconds 10000000 -- 10 seconds
+
+dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
+dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2 = do
+  fork "search cabs" . withShortRetry $
+    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId})
+  let mbSyncCfg = mbRiderConfig >>= (.syncSearchDispatchConfig)
+      mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
+  if SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
+    then awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+    else pure Nothing
+
+awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
+awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 = do
+  let txnId = dSearchRes.searchRequest.id.getId
+  awaitable <- awaitableFork "syncSearchDispatch" $ trySyncSearch dSearchRes becknTaxiReqV2
+  L.await (Just syncSearchTimeoutMicros) awaitable >>= \case
+    Right r -> pure r
+    Left AwaitingTimeout -> do
+      logWarning $ "sync_search exceeded timeout for txn " <> txnId <> "; returning legacy /rideSearch response"
+      pure Nothing
+    Left (ForkedFlowError e) -> do
+      logError $ "sync_search fork failed for txn " <> txnId <> ": " <> e
+      pure Nothing
+
+trySyncSearch :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
+trySyncSearch dSearchRes becknTaxiReqV2 = do
+  let txnId = dSearchRes.searchRequest.id.getId
+      bppUrl = dSearchRes.merchant.driverOfferBaseUrl
+      bppMerchantId = dSearchRes.merchant.driverOfferMerchantId
+      token = dSearchRes.merchant.driverOfferApiKey
+  eRes <- withTryCatch "syncSearchDispatch" $ CallBPP.searchV2Sync bppUrl bppMerchantId token becknTaxiReqV2
+  case eRes of
+    Right onSearchReq -> do
+      logInfo $ "sync_search succeeded for txn " <> txnId <> "; processing inline"
+      eProc <- withTryCatch "processOnSearchInline" $ BeckOnSearch.processOnSearchInline onSearchReq
+      case eProc of
+        Right _ -> do
+          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotes dSearchRes.searchRequest.id Nothing
+          case eQuotes of
+            Right quotes -> pure (Just quotes)
+            Left e -> do
+              logError $ "Inline getQuotes failed for txn " <> txnId <> ": " <> T.pack (show e)
+              pure Nothing
+        Left e -> do
+          logError $ "Inline OnSearch processing failed for txn " <> txnId <> ": " <> T.pack (show e)
+          pure Nothing
+    Left e -> do
+      logWarning $ "sync_search failed for txn " <> txnId <> ": " <> T.pack (show e) <> "; falling back to legacy poll flow"
+      pure Nothing
 
 handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Seconds -> Id SearchRequest.SearchRequest -> DSearch.SearchReq -> Flow ()
 handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer sReqId req = do
@@ -933,7 +1010,7 @@ searchTrigger' ::
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Maybe Bool ->
-  m DSearch.SearchResp
+  m SearchResp
 searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
   checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -967,7 +1044,13 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
   fork "Multimodal Search" $ do
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $ throwError $ InvalidRequest "Multimodal not supported currently for Ny Regular" -------- will support multimodal in future
-  return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  return $
+    SearchResp
+      { searchId = dSearchRes.searchRequest.id,
+        searchExpiry = dSearchRes.searchRequestExpiry,
+        routeInfo = dSearchRes.shortestRouteInfo,
+        results = Nothing
+      }
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
     --BEGIN

@@ -19,7 +19,6 @@ import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import qualified Domain.Types.SearchRequest as DSearchReq
-import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -81,12 +80,6 @@ fareProductSchemaOptions =
       OpenApi.constructorTagModifier = fareProductConstructorModifier
     }
 
-data SearchResp = SearchResp
-  { searchId :: Id SearchRequest.SearchRequest,
-    searchExpiry :: UTCTime,
-    routeInfo :: Maybe Maps.RouteInfo
-  }
-  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
 fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case

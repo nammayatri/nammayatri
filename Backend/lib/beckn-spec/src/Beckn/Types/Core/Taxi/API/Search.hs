@@ -50,3 +50,15 @@ type SearchAPIV2 =
 
 searchAPIV2 :: Proxy SearchAPIV2
 searchAPIV2 = Proxy
+
+type SyncSearchRes = Spec.OnSearchReq
+
+type SyncSearchAPI =
+  "sync_search"
+    :> Capture "merchantId" Text
+    :> Header "token" Text
+    :> ReqBody '[JSON] SearchReqV2
+    :> Post '[JSON] SyncSearchRes
+
+syncSearchAPI :: Proxy SyncSearchAPI
+syncSearchAPI = Proxy

@@ -522,6 +522,7 @@ library
       SharedLogic.Search
       SharedLogic.Serviceability
       SharedLogic.SosLocationTracking
+      SharedLogic.SyncSearchDispatch
       SharedLogic.TicketRule.Apply
       SharedLogic.TicketRule.Core
       SharedLogic.TicketUtils
