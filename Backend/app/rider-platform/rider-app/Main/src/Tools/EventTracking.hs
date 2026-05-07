@@ -16,7 +16,8 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 data TrackingEvent
   = FirstRideCompleted Text
@@ -32,19 +33,14 @@ trackEvent ::
   TrackingEvent ->
   m ()
 trackEvent merchantId merchantOperatingCityId event = do
-  mbConfig <-
-    getOneConfig
-      ( MerchantServiceConfigDimensions
-          { merchantOperatingCityId = merchantOperatingCityId.getId,
-            merchantId = merchantId.getId,
-            serviceName = Just (DMSC.EventTrackingService EventTracking.Moengage)
-          }
-      )
-  case mbConfig of
-    Nothing -> logDebug "EventTracking: not configured, skipping event"
-    Just config -> do
-      case config.serviceConfig of
-        DMSC.EventTrackingServiceConfig msc -> do
+  mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  case mbMerchantConfig of
+    Nothing -> logDebug "EventTracking: MerchantServiceUsageConfig not found, skipping event"
+    Just merchantConfig -> do
+      let providers = merchantConfig.eventTrackingProviders
+      if null providers
+        then logDebug "EventTracking: no providers configured for merchantOperatingCity, skipping event"
+        else do
           let (customerId, actionName, attrs) = eventToAction event
               req =
                 MT.MoengageEventReq
@@ -52,11 +48,36 @@ trackEvent merchantId merchantOperatingCityId event = do
                     MT.customer_id = customerId,
                     MT.actions = [MT.MoengageAction {MT.action = actionName, MT.attributes = attrs}]
                   }
-          result <- try @_ @SomeException $ EventTracking.pushEvent msc req
-          case result of
-            Left err -> logError $ "EventTracking event " <> actionName <> " failed: " <> show err
-            Right _ -> logDebug $ "EventTracking event " <> actionName <> " sent"
-        _ -> logError "Unexpected service config type for EventTracking"
+          forM_ providers $ \provider ->
+            sendToProvider merchantId merchantOperatingCityId provider actionName req
+
+sendToProvider ::
+  (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  EventTracking.EventTrackingService ->
+  Text ->
+  MT.MoengageEventReq ->
+  m ()
+sendToProvider merchantId merchantOperatingCityId provider actionName req = do
+  mbConfig <-
+    getOneConfig
+      ( MerchantServiceConfigDimensions
+          { merchantOperatingCityId = merchantOperatingCityId.getId,
+            merchantId = merchantId.getId,
+            serviceName = Just (DMSC.EventTrackingService provider)
+          }
+      )
+  case mbConfig of
+    Nothing ->
+      logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"
+    Just config -> case config.serviceConfig of
+      DMSC.EventTrackingServiceConfig msc -> do
+        result <- try @_ @SomeException $ EventTracking.pushEvent msc req
+        case result of
+          Left err -> logError $ "EventTracking event " <> actionName <> " (" <> show provider <> ") failed: " <> show err
+          Right _ -> logDebug $ "EventTracking event " <> actionName <> " (" <> show provider <> ") sent"
+      _ -> logError "Unexpected service config type for EventTracking"
 
 eventToAction :: TrackingEvent -> (Text, Text, Value)
 eventToAction = \case
