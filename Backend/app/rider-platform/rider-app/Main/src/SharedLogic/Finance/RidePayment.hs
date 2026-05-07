@@ -940,6 +940,7 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
                     isExternalCharge = False
                   }
               ],
+          referenceId = Just ctx.referenceId,
           gstBreakdown = Nothing,
           isVat = False,
           issuedToTaxNo = Nothing,
