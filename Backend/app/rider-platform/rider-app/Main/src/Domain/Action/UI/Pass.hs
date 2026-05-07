@@ -41,7 +41,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
 import qualified Domain.Types.RiderConfig
-import qualified SharedLogic.External.Nandi.Types
 import qualified Environment
 import qualified EulerHS.Prelude as EHS
 import qualified JsonLogic
@@ -67,6 +66,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
@@ -433,7 +433,6 @@ calculatePassEndDate startDate mbMaxValidDays =
     Just days -> DT.addDays (fromIntegral days) startDate
     Nothing -> startDate
 
-
 -- Construct message keys for Pass fields
 mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
 mkPassMessageKey passId name = passId.getId <> "-" <> name
@@ -463,7 +462,6 @@ buildPassAPIEntity ::
   DPass.Pass ->
   Environment.Flow PassAPI.PassAPIEntity
 buildPassAPIEntity mbLanguage person pass = do
-
   passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
 
   mbPassDetails <-
@@ -548,7 +546,8 @@ buildPassAPIEntity mbLanguage person pass = do
         autoApply = pass.autoApply,
         minFare = pass.minFare,
         maxFare = pass.maxFare,
-        verificationStatus = (.verificationStatus) <$> mbPassDetails
+        verificationStatus = (.verificationStatus) <$> mbPassDetails,
+        formVerificationConfig = pass.formVerificationConfig
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -602,7 +601,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         autoApply = False, -- Auto-apply not relevant for already purchased passes
         minFare = Nothing,
         maxFare = Nothing,
-        verificationStatus = Nothing
+        verificationStatus = Nothing,
+        formVerificationConfig = Nothing
       }
 
 -- Check eligibility using JSON logic rules

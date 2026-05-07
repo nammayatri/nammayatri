@@ -38,6 +38,7 @@ updateByPrimaryKey (Domain.Types.Pass.Pass {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.documentsRequired documentsRequired,
       Se.Set Beam.enable enable,
+      Se.Set Beam.formVerificationConfig formVerificationConfig,
       Se.Set Beam.maxFare maxFare,
       Se.Set Beam.maxValidDays maxValidDays,
       Se.Set Beam.maxValidTrips maxValidTrips,

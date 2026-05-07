@@ -24,6 +24,7 @@ data PassT f = PassT
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     documentsRequired :: B.C f [Domain.Types.Pass.PassDocumentType],
     enable :: B.C f Kernel.Prelude.Bool,
+    formVerificationConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     id :: B.C f Kernel.Prelude.Text,
     maxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     maxValidDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

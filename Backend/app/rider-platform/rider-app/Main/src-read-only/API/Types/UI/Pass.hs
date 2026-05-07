@@ -3,6 +3,7 @@
 module API.Types.UI.Pass where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
@@ -31,6 +32,7 @@ data PassAPIEntity = PassAPIEntity
     description :: Data.Maybe.Maybe Data.Text.Text,
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     eligibility :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Data.Maybe.Maybe Data.Aeson.Value,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
     maxFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,

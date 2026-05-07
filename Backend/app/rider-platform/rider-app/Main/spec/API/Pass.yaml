@@ -18,6 +18,7 @@ imports:
   Language: Kernel.External.Types
   CumulativeOfferResp: SharedLogic.Offer
   VerificationStatus: Domain.Types.PassDetails
+  Value: Data.Aeson
 
 module: Pass
 types:
@@ -56,6 +57,7 @@ types:
     minFare: Maybe HighPrecMoney
     maxFare: Maybe HighPrecMoney
     verificationStatus: Maybe VerificationStatus
+    formVerificationConfig: Maybe Value
     derive: "Show"
 
   PassInfoAPIEntity:

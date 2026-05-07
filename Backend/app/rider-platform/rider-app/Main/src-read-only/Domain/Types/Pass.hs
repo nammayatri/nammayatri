@@ -25,6 +25,7 @@ data Pass = Pass
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     enable :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

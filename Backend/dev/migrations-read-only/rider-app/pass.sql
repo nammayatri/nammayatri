@@ -98,3 +98,9 @@ ALTER TABLE atlas_app.pass ADD COLUMN max_fare double precision ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass ADD COLUMN form_verification_config jsonb ;
