@@ -179,6 +179,10 @@ tripCategoryToFulfillmentType = \case
   OneWay OneWayRideOtp -> show Enums.RIDE_OTP
   CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
   RideShare RideOtp -> show Enums.RIDE_OTP
+  -- Rental RideOtp uses on-us encoding so the BAP's readMaybe @TripCategory
+  -- fast-path can distinguish it from Rental OnDemandStaticOffer; "RENTAL"
+  -- alone is lossy and decodes back to OnDemandStaticOffer.
+  r@(Rental RideOtp) -> show r
   Rental _ -> show Enums.RENTAL
   i@(InterCity OneWayRideOtp _) -> show i
   InterCity _ _ -> show Enums.INTER_CITY
