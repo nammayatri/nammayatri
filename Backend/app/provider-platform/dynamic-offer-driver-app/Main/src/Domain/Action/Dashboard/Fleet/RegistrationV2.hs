@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     fleetOwnerLogin,
     enableFleetIfPossible,
     castRoleToFleetType,
+    castFleetTypeToRole,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
     checkRequestorAccessToFleet,
@@ -115,7 +116,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   fleetOwnerId <- (mbPersonId <|> (Id <$> mbRequestorId)) & fromMaybeM (InvalidRequest "personId required")
 
   person <- QP.findById fleetOwnerId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId.getId)
-  unless (person.role == DP.FLEET_OWNER) $
+  unless (person.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
     throwError (InvalidRequest "personId should be fleet owner")
   -- Validate fleet owner also belongs to the same merchant and city
   unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCityId) $
@@ -147,7 +148,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   mbRequestedOperatorId <- case mbRequestorId of
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
-      when (requestor.role == DP.FLEET_OWNER) $
+      when (requestor.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
         unless (requestor.id == fleetOwnerId) $ throwError AccessDenied
       if (requestor.role == DP.OPERATOR) then pure (Just requestor.id.getId) else pure Nothing
     Nothing -> pure Nothing
@@ -287,6 +288,12 @@ castRoleToFleetType = \case
   DP.FLEET_OWNER -> Just FOI.NORMAL_FLEET
   DP.FLEET_BUSINESS -> Just FOI.BUSINESS_FLEET
   _ -> Nothing
+
+castFleetTypeToRole :: FOI.FleetType -> DP.Role
+castFleetTypeToRole = \case
+  FOI.NORMAL_FLEET -> DP.FLEET_OWNER
+  FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
+  FOI.RENTAL_FLEET -> DP.FLEET_OWNER
 
 castFleetTypeToDomain :: FOI.FleetType -> Common.FleetType
 castFleetTypeToDomain = \case
@@ -452,12 +459,16 @@ updateFleetOwnerInfo ::
   Flow ()
 updateFleetOwnerInfo fleetOwnerInfo Common.FleetOwnerRegisterReqV2 {..} = do
   now <- getCurrentTime
-  let updFleetOwnerInfo =
+  let newFleetType = fromMaybe fleetOwnerInfo.fleetType (castFleetType <$> fleetType)
+      updFleetOwnerInfo =
         fleetOwnerInfo
-          { FOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (castFleetType <$> fleetType),
+          { FOI.fleetType = newFleetType,
             FOI.registeredAt = Just now
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo -- this update will backfill encrypted docs numbers
+  -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
+  when (newFleetType /= fleetOwnerInfo.fleetType) $
+    QP.updatePersonRole fleetOwnerInfo.fleetOwnerPersonId (castFleetTypeToRole newFleetType)
 
 mkFleetOwnerVerifyReq ::
   ShortId DMerchant.Merchant ->

@@ -752,10 +752,21 @@ getVehicleDocTypes ::
   m [DVC.DocumentType]
 getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs = do
   let vehicleCategory = fromMaybe userSelectedVehicleCategory verifiedVehicleCategory
-  let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
+      isVehicleSideDoc config = case config.documentCategory of
+        Just DDVC.Vehicle -> True
+        Just _ -> False
+        Nothing -> config.documentType `elem` SDO.defaultVehicleDocumentTypes
+      mandatoryVehicleDocumentVerificationConfigs =
+        filter
+          ( \config ->
+              fromMaybe config.isMandatory config.isMandatoryForEnabling
+                && config.vehicleCategory == vehicleCategory
+                && isVehicleSideDoc config
+          )
+          allDocumentVerificationConfigs
   if onlyMandatoryDocs == Just True
     then do
-      let vehicleDocumentTypes = filter (\doc -> doc `elem` (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultVehicleDocumentTypes
+      let vehicleDocumentTypes = nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))
       logInfo $
         "Fetch only mandatory vehicle docs types: merchantOpCityId: "
           <> merchantOpCityId.getId
@@ -776,18 +787,45 @@ getDriverDocTypes ::
 getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs = do
   case allDocVerificationConfigs of
     Left fleetConfigs -> do
-      let roleConfigs = filter (\config -> config.role == role) fleetConfigs
-          mandatoryDocTypes = nub $ map (.documentType) $ filter (.isMandatory) roleConfigs
-          allRoleDocTypes = nub $ map (.documentType) roleConfigs
+      -- Fleet-role drift defense: person.role and fleet_owner_information.fleet_type
+      -- can drift apart (e.g. role=FLEET_OWNER but fleet_type=BUSINESS_FLEET, so
+      -- configs are seeded for FLEET_BUSINESS). For any fleet role, if no configs
+      -- match the exact role, fall back to configs for any fleet role in the city.
+      let exactRoleConfigs = filter (\config -> config.role == role) fleetConfigs
+          anyFleetRoleConfigs = filter (\config -> isFleetRole config.role) fleetConfigs
+          effectiveConfigs =
+            if isFleetRole role && null exactRoleConfigs
+              then anyFleetRoleConfigs
+              else exactRoleConfigs
+          mandatoryDocTypes = nub $ map (.documentType) $ filter (.isMandatory) effectiveConfigs
+          allRoleDocTypes = nub $ map (.documentType) effectiveConfigs
+      when (isFleetRole role && null exactRoleConfigs && not (null anyFleetRoleConfigs)) $
+        logInfo $
+          "getDriverDocTypes: no fleet configs for role=" <> show role
+            <> " in merchantOpCityId=" <> merchantOpCityId.getId
+            <> "; falling back to any-fleet-role configs to mitigate fleet_type/role drift"
       pure $
         if onlyMandatoryDocs == Just True
           then if null mandatoryDocTypes then SDO.defaultFleetDocumentTypes else mandatoryDocTypes
           else if null allRoleDocTypes then SDO.defaultFleetDocumentTypes else allRoleDocTypes
     Right driverConfigs -> do
-      let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory `elem` possibleVehicleCategories) driverConfigs
+      let isDriverSideDoc config = case config.documentCategory of
+            Just DDVC.Driver -> True
+            Just DDVC.Training -> True
+            Just DDVC.Vehicle -> False
+            Just DDVC.Permission -> False
+            Nothing -> config.documentType `elem` SDO.defaultDriverDocumentTypes
+          mandatoryDriverConfigs =
+            filter
+              ( \config ->
+                  fromMaybe config.isMandatory config.isMandatoryForEnabling
+                    && config.vehicleCategory `elem` possibleVehicleCategories
+                    && isDriverSideDoc config
+              )
+              driverConfigs
       if onlyMandatoryDocs == Just True
         then do
-          let driverDocumentTypes = filter (\doc -> doc `elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultDriverDocumentTypes
+          let driverDocumentTypes = nub (mandatoryDriverConfigs <&> (.documentType))
           logInfo $
             "Fetch only mandatory driver docs types: merchantOpCityId: "
               <> merchantOpCityId.getId
@@ -1247,6 +1285,7 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
       return (status, reason, url, Nothing, mbS3Path, mbImageId)
     DVC.TAXDetails -> commonDocStatus DVC.TAXDetails
     DVC.FinnishIDResidencePermit -> commonDocStatus DVC.FinnishIDResidencePermit
+    DVC.TaxiDriverPermit -> commonDocStatus DVC.TaxiDriverPermit
     _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
