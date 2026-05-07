@@ -109,13 +109,7 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                 (_merchant, _booking) <- DCancel.validateCancelRequest transporterId subscriber cancelRideReq
                 mbActiveSearchTry <- QST.findActiveTryByQuoteId _booking.quoteId
                 fork ("cancelBooking:" <> cancelRideReq.bookingId.getId) $ do
-                  -- Get ride ID before cancel (ride is still active at this point)
-                  mbPreCancelRide <- QRide.findActiveByRBId booking.id
-                  (isReallocated, cancellationCharge) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
-                  -- Reload ride by primary key to get persisted cancellationFee/cancellationFeeTax from KV
-                  mbUpdatedRide <- case mbPreCancelRide of
-                    Just r -> QRide.findById r.id
-                    Nothing -> pure Nothing
+                  (isReallocated, cancellationCharge, mbUpdatedRide) <- DCancel.cancel cancelRideReq merchant booking mbActiveSearchTry
                   let onCancelBuildReq =
                         OC.DBookingCancelledReqV2
                           { booking = booking,

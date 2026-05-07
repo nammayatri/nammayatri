@@ -115,8 +115,6 @@ module SharedLogic.Finance.RidePayment
     createTipLedger,
     createCancellationFeeLedger,
     createPendingCancellationFeeLedger,
-    voidCancellationFeeLedger,
-    markDueCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
     markRideInvoicePaid,
@@ -762,30 +760,6 @@ voidRidePaymentLedger entryIds = do
 
 -- | Void cancellation fee ledger entries + mark invoice Voided.
 --   Use only when there is genuinely no debt (e.g. zero effective amount).
-voidCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
-  Maybe (Id FInvoice.Invoice) ->
-  [Id LE.LedgerEntry] ->
-  m ()
-voidCancellationFeeLedger mbInvoiceId entryIds = do
-  voidRidePaymentLedger entryIds
-  whenJust mbInvoiceId $ \invoiceId -> do
-    FInvoiceService.updateInvoiceStatus invoiceId FInvoice.Voided
-    logInfo $ "Voided cancellation fee invoice: " <> invoiceId.getId
-
--- | Mark cancellation fee ledger entries as DUE + mark invoice Issued.
---   Use when payment collection failed (Stripe error, cash/UPI) so the
---   pending-dues API (findDueRidePaymentEntries) can retry collection later.
-markDueCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
-  Maybe (Id FInvoice.Invoice) ->
-  [Id LE.LedgerEntry] ->
-  m ()
-markDueCancellationFeeLedger mbInvoiceId entryIds = do
-  markEntriesAsDue entryIds
-  whenJust mbInvoiceId $ \invoiceId -> do
-    FInvoiceService.updateInvoiceStatus invoiceId FInvoice.Issued
-    logInfo $ "Marked cancellation fee invoice as Issued (DUE): " <> invoiceId.getId
 
 -- | Mark cancellation fee invoice as Paid after successful Stripe capture.
 markCancellationFeeInvoicePaid ::
@@ -927,8 +901,8 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
     Right (mbInvoiceId, entryIds) -> pure $ Right (mbInvoiceId, entryIds)
 
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
---   cancellation fee. Call 'settleRidePaymentLedger' on success or
---   'voidRidePaymentLedger' on failure.
+--   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
+--   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
 createPendingCancellationFeeLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   FinanceCtx ->
@@ -1051,8 +1025,13 @@ markEntriesAsDue ::
   (BeamFlow.BeamFlow m r) =>
   [Id LE.LedgerEntry] ->
   m ()
-markEntriesAsDue entryIds =
+markEntriesAsDue entryIds = do
   forM_ entryIds $ \entryId -> updateEntryStatus entryId LE.DUE
+  -- Mark linked invoices as Issued
+  mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
+  let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
+  forM_ uniqueInvoiceIds $ \invId ->
+    FInvoiceService.updateInvoiceStatus invId FInvoice.Issued
 
 -- | Check if ride payment is settled (captured).
 --   Replaces: checking PaymentInvoice.paymentStatus == CAPTURED
