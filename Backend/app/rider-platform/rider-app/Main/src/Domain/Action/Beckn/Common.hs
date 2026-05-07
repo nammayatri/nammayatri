@@ -1288,12 +1288,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         (Just True, Just ride) -> do
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
-<<<<<<< HEAD
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
               ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
-=======
-              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing
->>>>>>> 3f48fafb1a (fix: resolved comments)
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
           mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
           let countryCode = fromMaybe "+91" personD.mobileCountryCode
