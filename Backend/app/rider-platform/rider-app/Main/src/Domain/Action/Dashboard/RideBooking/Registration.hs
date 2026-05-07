@@ -10,6 +10,7 @@ import qualified API.Types.Dashboard.RideBooking.Registration
 import qualified "this" Domain.Action.UI.Registration
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
+import qualified "this" Domain.Types.Person as SP
 import qualified "this" Domain.Types.RegistrationToken
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -25,7 +26,7 @@ postRegistrationAuth ::
   Environment.Flow Domain.Action.UI.Registration.AuthRes
 postRegistrationAuth merchantShortId _opCity req = do
   let authReq = buildAuthReq merchantShortId req
-  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+  Domain.Action.UI.Registration.auth authReq Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just True)
 
 postRegistrationVerify ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -55,9 +56,12 @@ buildAuthReq ::
   Domain.Action.UI.Registration.AuthReq
 buildAuthReq merchantShortId req =
   Domain.Action.UI.Registration.AuthReq
-    { mobileNumber = Just req.mobileNumber,
-      mobileCountryCode = Just req.mobileCountryCode,
-      identifierType = Nothing,
+    { mobileNumber = req.mobileNumber,
+      mobileCountryCode = req.mobileCountryCode,
+      identifierType =
+        if isJust req.email && isNothing req.mobileNumber
+          then Just SP.EMAIL
+          else Nothing,
       merchantId = merchantShortId,
       deviceToken = Nothing,
       notificationToken = Nothing,
@@ -65,7 +69,7 @@ buildAuthReq merchantShortId req =
       firstName = Nothing,
       middleName = Nothing,
       lastName = Nothing,
-      email = Nothing,
+      email = req.email,
       businessEmail = Nothing,
       language = Nothing,
       gender = Nothing,

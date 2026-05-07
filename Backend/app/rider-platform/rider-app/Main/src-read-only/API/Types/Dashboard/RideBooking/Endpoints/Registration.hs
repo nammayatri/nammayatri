@@ -17,7 +17,12 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data CustomerAuthReq = CustomerAuthReq {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, otpChannel :: Kernel.Prelude.Maybe Domain.Action.UI.Registration.OTPChannel}
+data CustomerAuthReq = CustomerAuthReq
+  { mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    otpChannel :: Kernel.Prelude.Maybe Domain.Action.UI.Registration.OTPChannel,
+    email :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
