@@ -202,7 +202,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                       let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                       transactions <- HQPaymentTransaction.findAllByOrderId paymentOrder.id
                       txnId <- getSuccessTransactionId transactions
-                      isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                      isLockAcquired <- Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                       if isLockAcquired
                         then do
                           void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
