@@ -12,6 +12,7 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Domain.Types.Invoice (InvoiceType)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
@@ -96,7 +97,7 @@ getInvoice (mbPersonId, merchantId) from to = do
 --   via 'finance_invoice_ledger_link'.
 getInvoiceList ::
   (Maybe (Id DP.Person), Id DM.Merchant) ->
-  Maybe FinanceInvoice.InvoiceType ->
+  Maybe InvoiceType ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->

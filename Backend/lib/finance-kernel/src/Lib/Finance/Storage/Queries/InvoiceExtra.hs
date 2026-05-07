@@ -1,6 +1,7 @@
 module Lib.Finance.Storage.Queries.InvoiceExtra where
 
 import Data.Time (UTCTime (UTCTime), utctDay)
+import qualified Domain.Types.Invoice as DInvoiceSpec
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Lib.Finance.Domain.Types.Invoice as DInvoice
@@ -32,7 +33,7 @@ findByMerchantOpCityIdAndDateRange ::
   Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe UTCTime ->
   Kernel.Prelude.Maybe UTCTime ->
-  Kernel.Prelude.Maybe DInvoice.InvoiceType ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
   Kernel.Prelude.Maybe DInvoice.InvoiceStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- issuedToId (driver/fleet owner)
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- supplierId (driver for Ride invoices)
@@ -59,7 +60,7 @@ findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mb
 findByIssuedToAndType ::
   (BeamFlow.BeamFlow m r) =>
   Kernel.Prelude.Text -> -- issuedToId (driverId or fleetOwnerId)
-  Kernel.Prelude.Maybe DInvoice.InvoiceType ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
   Kernel.Prelude.Maybe UTCTime ->
   Kernel.Prelude.Maybe UTCTime ->
   Kernel.Prelude.Maybe Int ->
@@ -82,7 +83,7 @@ findByIssuedToAndType issuedToId mbInvoiceType mbFrom mbTo mbLimit mbOffset = do
 findBySupplierAndType ::
   (BeamFlow.BeamFlow m r) =>
   Kernel.Prelude.Text -> -- supplierId (driverId)
-  Kernel.Prelude.Maybe DInvoice.InvoiceType ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
   Kernel.Prelude.Maybe UTCTime ->
   Kernel.Prelude.Maybe UTCTime ->
   Kernel.Prelude.Maybe Int ->

@@ -123,7 +123,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
                   nowTs <- getCurrentTime
-                  let nsNotificationDuration =  fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+                  let nsNotificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
                       nsNotificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
                       nsNotificationValidTill = addUTCTime (fromIntegral nsNotificationActiveTillInSec) nowTs
                   let entityData =

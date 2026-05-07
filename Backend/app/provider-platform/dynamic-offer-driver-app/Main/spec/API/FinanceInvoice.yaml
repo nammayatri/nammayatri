@@ -4,6 +4,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   InvoiceType: Lib.Finance.Domain.Types.Invoice
   Value: Data.Aeson
+  DateOrTime: Lib.Finance.Invoice.PdfService
 
 module: FinanceInvoice
 types:
@@ -41,6 +42,9 @@ types:
   FinanceInvoiceListRes:
     invoices: "[FinanceInvoiceItem]"
     totalItems: Int
+  FinanceInvoicePdfResp:
+    pdfBase64: Text
+    invoiceNumber: Text
 apis:
   - GET:
       endpoint: /subscription/invoices
@@ -53,3 +57,15 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: FinanceInvoiceListRes
+  - GET:
+      endpoint: /finance/invoice/pdf
+      query:
+        referenceId: Text
+        invoiceType: InvoiceType
+        from: DateOrTime
+        to: DateOrTime
+        limit: Int
+        offset: Int
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: FinanceInvoicePdfResp

@@ -32,6 +32,7 @@ module Lib.Finance
     module Lib.Finance.Domain.Types.Invoice,
     module Lib.Finance.Invoice.Interface,
     module Lib.Finance.Invoice.Service,
+    module Lib.Finance.Invoice.PdfService,
 
     -- * State Machine
     module Lib.Finance.Domain.Types.CurrentState,
@@ -73,6 +74,7 @@ import Lib.Finance.Domain.Types.LedgerEntry hiding (Expense, Revenue)
 import Lib.Finance.Error.Types
 import Lib.Finance.FinanceM
 import Lib.Finance.Invoice.Interface
+import Lib.Finance.Invoice.PdfService
 import Lib.Finance.Invoice.Service
 import Lib.Finance.Ledger.Interface
 import Lib.Finance.Ledger.Service

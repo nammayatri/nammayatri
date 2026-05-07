@@ -64,7 +64,7 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
-import qualified Lib.Finance.Domain.Types.Invoice as Invoice
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -358,7 +358,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
             void $ transfer GovtIndirect OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
           invoice
             InvoiceConfig
-              { invoiceType = Invoice.RideCancellation,
+              { invoiceType = RideCancellation,
                 issuedToType = "CUSTOMER",
                 issuedToId = rid.getId,
                 issuedToName = booking.riderName,

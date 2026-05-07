@@ -11,6 +11,7 @@ import qualified API.Types.UI.Invoice
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Domain.Action.UI.Invoice
+import qualified Domain.Types.Invoice
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -26,14 +27,14 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "invoice" :> MandatoryQueryParam "from" Kernel.Prelude.UTCTime :> MandatoryQueryParam "to" Kernel.Prelude.UTCTime
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Invoice.InvoiceRes]
       :<|> TokenAuth
       :> "invoice"
       :> "list"
       :> QueryParam
            "invoiceType"
-           Lib.Finance.Domain.Types.Invoice.InvoiceType
+           Domain.Types.Invoice.InvoiceType
       :> QueryParam
            "limit"
            Kernel.Prelude.Int
@@ -44,7 +45,7 @@ type API =
            "referenceId"
            Data.Text.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.Invoice.FinanceInvoiceListRes
   )
 
@@ -65,10 +66,10 @@ getInvoiceList ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Lib.Finance.Domain.Types.Invoice.InvoiceType) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe Domain.Types.Invoice.InvoiceType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Environment.FlowHandler API.Types.UI.Invoice.FinanceInvoiceListRes
   )
 getInvoiceList a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoiceList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

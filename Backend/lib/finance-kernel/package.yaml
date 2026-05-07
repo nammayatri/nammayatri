@@ -108,8 +108,11 @@ library:
   dependencies:
     - euler-hs
     - mobility-core
+    - servant-server
+    - openapi3
     - process
     - directory
     - filepath
     - base64-bytestring
     - unix
+    - beckn-spec

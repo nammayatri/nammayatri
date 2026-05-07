@@ -136,6 +136,7 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logError, logInfo, throwError)
 import Lib.Finance
+import Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -223,8 +224,9 @@ buildRiderFinanceCtx ::
   Text -> -- referenceId (ride ID)
   Maybe Text -> -- merchantName
   Maybe Text -> -- merchantShortId
+  Maybe Text -> -- fromLocationAddress
   FinanceCtx
-buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId =
+buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId fromLocationAddress =
   FinanceCtx
     { merchantId = merchantId,
       merchantOpCityId = merchantOpCityId,
@@ -247,7 +249,9 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,
-      emitLedgerEntries = True
+      emitLedgerEntries = True,
+      fromLocationAddress = fromLocationAddress,
+      issuedToName = Nothing
     }
 
 -- ---------------------------------------------------------------------------
@@ -702,11 +706,11 @@ buildRidePaymentInvoiceConfig ::
   InvoiceConfig
 buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
   InvoiceConfig
-    { invoiceType = FInvoice.Ride,
+    { invoiceType = Ride,
       issuedToType = "RIDER",
       issuedToId = ctx.counterpartyId,
-      issuedToName = Nothing,
-      issuedToAddress = Nothing,
+      issuedToName = ctx.issuedToName,
+      issuedToAddress = ctx.fromLocationAddress,
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
@@ -793,11 +797,11 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
     -- Invoice for cancellation
     invoice
       InvoiceConfig
-        { invoiceType = FInvoice.RideCancellation,
+        { invoiceType = RideCancellation,
           issuedToType = "RIDER",
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
-          issuedToAddress = Nothing,
+          issuedToAddress = ctx.fromLocationAddress,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)

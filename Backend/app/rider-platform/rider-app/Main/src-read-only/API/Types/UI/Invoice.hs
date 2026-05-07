@@ -5,6 +5,7 @@ module API.Types.UI.Invoice where
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.Invoice
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -20,7 +21,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
   { invoiceDate :: Kernel.Prelude.UTCTime,
     invoiceNumber :: Data.Text.Text,
     invoiceStatus :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
-    invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
+    invoiceType :: Domain.Types.Invoice.InvoiceType,
     issuedByAddress :: Kernel.Prelude.Maybe Data.Text.Text,
     issuedByName :: Kernel.Prelude.Maybe Data.Text.Text,
     issuedByTaxNo :: Kernel.Prelude.Maybe Data.Text.Text,

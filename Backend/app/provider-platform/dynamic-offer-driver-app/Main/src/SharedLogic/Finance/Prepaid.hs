@@ -38,6 +38,7 @@ import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
 import Lib.Finance
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)

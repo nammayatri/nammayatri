@@ -18,6 +18,7 @@ import qualified API.Action.UI.EditLocation as EditLocation
 import qualified API.Action.UI.EstimateBP as EstimateBP
 import qualified API.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
+import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
@@ -121,6 +122,7 @@ type API =
            :<|> AadhaarVerification.API
            :<|> Issue.API
            :<|> TicketService.API
+           :<|> FinanceInvoice.API
            :<|> Invoice.API
            :<|> PriceBreakup.API
            :<|> FollowRide.API
@@ -199,6 +201,7 @@ handler =
     :<|> AadhaarVerification.handler
     :<|> Issue.handler
     :<|> TicketService.handler
+    :<|> FinanceInvoice.handler
     :<|> Invoice.handler
     :<|> PriceBreakup.handler
     :<|> FollowRide.handler

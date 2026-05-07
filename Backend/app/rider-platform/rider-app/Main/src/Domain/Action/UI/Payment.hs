@@ -790,6 +790,7 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
                             rideId
                             Nothing
                             Nothing
+                            Nothing
                     RidePaymentFinance.settleRidePaymentLedger ctx entryIds RidePaymentFinance.settledReasonRidePayment
                       >>= \case
                         Right () -> logInfo $ "Settled " <> show (length entryIds) <> " pending ledger entries via webhook for ride: " <> rideId
