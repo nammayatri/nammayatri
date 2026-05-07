@@ -57,12 +57,12 @@ instance Default UserCancellationDuesData where
 
 data UserCancellationDuesResult = UserCancellationDuesResult
   { cancellationCharges :: HighPrecMoney,
-    cancellationChargesTax :: HighPrecMoney
+    cancellationChargesTax :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance Default UserCancellationDuesResult where
-  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = 0}
+  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = Nothing}
 
 data UserCancellationDuesWaiveOffData = UserCancellationDuesWaiveOffData
   { cancellationDues :: HighPrecMoney,

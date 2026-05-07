@@ -118,7 +118,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" req.customerMobileNumber)
   case (reqCancellationCharges, req.disputeChancesUsed) of
     (Just amountPaid, Nothing) -> do
-      when (amountPaid > riderDetails.cancellationDues || amountPaid < 0.0) $ do
+      when (amountPaid > riderDetails.cancellationDues || amountPaid <= 0.0) $ do
         throwError (CustomerCancellationDuesLimitNotMet riderDetails.id.getId)
 
       when (req.paymentMadeToDriver) $ do

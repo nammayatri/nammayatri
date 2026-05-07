@@ -1288,8 +1288,12 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         (Just True, Just ride) -> do
           -- creating cancellation execution payment intent which charges cancellation fee from users stripe account
           let currentPaymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
+<<<<<<< HEAD
               pickupAddress = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
               ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing pickupAddress
+=======
+              ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId fee.currency True booking.riderId.getId ride.id.getId Nothing Nothing
+>>>>>>> 3f48fafb1a (fix: resolved comments)
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
           mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
           let countryCode = fromMaybe "+91" personD.mobileCountryCode
@@ -1340,12 +1344,31 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                       _ -> Nothing
                 -- Step 3: Create new payment intent for cancellation fee (wrapped to catch Stripe errors)
                 logDebug $ "[CancellationSettlement] Creating cancellation payment intent amount=" <> show fee.amount <> " currency=" <> show fee.currency
+                let cancellationLedgerInfo =
+                      SPayment.RidePaymentLedgerInfo
+                        { rideFare = cancellationBase,
+                          gstAmount = cancellationGST,
+                          tollFare = 0,
+                          tollVatAmount = 0,
+                          parkingCharge = 0,
+                          parkingChargeVat = 0,
+                          platformFee = 0,
+                          offerDiscountAmount = 0,
+                          cashbackPayoutAmount = 0,
+                          rideVatAbsorbedOnDiscount = 0,
+                          financeCtx = ledgerCtx
+                        }
                 eitherMbIntent <-
                   withTryCatch "[CancellationSettlement] makePaymentIntent" $
-                    SPayment.makePaymentIntent personD.merchantId personD.merchantOperatingCityId booking.paymentMode personD.id (Just ride.id) Nothing DOrder.RideHailing createPaymentIntentServiceReq Nothing
+                    SPayment.makePaymentIntent personD.merchantId personD.merchantOperatingCityId booking.paymentMode personD.id (Just ride.id) Nothing DOrder.RideHailing createPaymentIntentServiceReq (Just cancellationLedgerInfo)
+                let markDueOnFailure = case ledgerResp of
+                      Right (_inv, entryIds) ->
+                        RidePaymentFinance.markEntriesAsDue entryIds
+                      _ -> return ()
                 case eitherMbIntent of
                   Left err -> do
-                    logError $ "[CancellationSettlement] Stripe error creating cancellation intent: " <> show err
+                    logError $ "[CancellationSettlement] Stripe error creating cancellation intent, marking DUE: " <> show err
+                    markDueOnFailure
                   Right mbCancellationPaymentIntentResp ->
                     case mbCancellationPaymentIntentResp of
                       Nothing -> logDebug $ "[CancellationSettlement] Cancellation payment intent skipped (zero effective amount) for booking: " <> show booking.id
@@ -1360,14 +1383,15 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                           Right True -> do
                             RidePaymentFinance.markCancellationFeeInvoicePaid mbCancelInvoiceId
                             logDebug "[CancellationSettlement] Captured, invoice marked Paid"
-                          _ -> logError $ "[CancellationSettlement] Charge failed for PI: " <> cancellationPaymentIntentResp.paymentIntentId
+                          _ -> do
+                            logError $ "[CancellationSettlement] Charge failed for PI: " <> cancellationPaymentIntentResp.paymentIntentId
+                            markDueOnFailure
               _ -> do
                 -- Cash/UPI: create pending entries then mark as DUE for later collection
                 cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationGST
                 case cashLedgerResp of
-                  Right (_mbInvoiceId, pendingEntryIds) -> do
+                  Right (_mbInvoiceId, pendingEntryIds) ->
                     RidePaymentFinance.markEntriesAsDue pendingEntryIds
-                    RidePaymentFinance.markRideInvoiceIssued ride.id.getId
                   _ -> return ()
             else do
               let scheduleAfter = riderConfig.cancellationPaymentDelay

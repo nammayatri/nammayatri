@@ -115,7 +115,7 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity)
+  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -163,7 +163,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing)
+        return (isReallocated, Nothing, Nothing)
       else do
         cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
@@ -239,11 +239,15 @@ cancel req merchant booking mbActiveSearchTry = do
                 baseCancellation = fee.amount - cancellationTaxAmount
             QRide.updateCancellationFeeAndTax (Just baseCancellation) (Just cancellationTaxAmount) ride.id
             let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-            when (isPrepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableDriverWallet && fee.amount > 0) $
+            when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && fee.amount > 0) $
               createCancellationLedgerEntries booking ride fee cancellationTaxAmount transporterConfig
 
         whenJust mbActiveSearchTry $ cancelSearch merchant.id
-        return (isReallocated, cancelCharges)
+        -- Reload ride by primary key to pick up persisted cancellationFee/cancellationFeeTax
+        updatedRide <- case mbRide of
+          Just ride -> QRide.findById ride.id
+          Nothing -> pure Nothing
+        return (isReallocated, cancelCharges, updatedRide)
   where
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $

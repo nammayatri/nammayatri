@@ -500,10 +500,10 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
           case (A.fromJSON resp.result :: Result UserCancellationDues.UserCancellationDuesResult) of
             A.Success result -> do
               logTagInfo ("bookingId-" <> getId booking.id) ("result.cancellationCharges: " <> show result.cancellationCharges <> " tax: " <> show result.cancellationChargesTax)
-              return (Just result.cancellationCharges, Just result.cancellationChargesTax)
+              return (Just result.cancellationCharges, result.cancellationChargesTax)
             A.Error e -> do
               logError $ "Error in parsing UserCancellationDuesResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
-              return (Just 0, Just 0)
+              return (Just 0, Nothing)
       when (reasonCode == Just userNoShowCancellationReason && fromMaybe 0 cancellationCharge <= 0) $
         logError $ "User no show charges was not applied: " <> show cancellationCharge <> ": rideId: " <> ride.id.getId <> ". Please check dynamic logic"
       pure (cancellationCharge, cancellationTax, mbVersion)
