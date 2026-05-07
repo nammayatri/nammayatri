@@ -220,8 +220,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
-import Kernel.Types.Price
 import Kernel.Types.Predicate
+import Kernel.Types.Price
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance

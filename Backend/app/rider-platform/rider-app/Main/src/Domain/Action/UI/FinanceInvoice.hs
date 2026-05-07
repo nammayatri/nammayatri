@@ -2,7 +2,7 @@ module Domain.Action.UI.FinanceInvoice (getFinanceInvoicePdf) where
 
 import qualified API.Types.UI.FinanceInvoice as API
 import qualified Data.Time as DT
-import Domain.Types.Invoice (InvoiceType)
+import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment (Flow)
@@ -10,16 +10,19 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (last, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
-import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
+import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
@@ -28,13 +31,14 @@ getFinanceInvoicePdf ::
     Id DM.Merchant
   ) ->
   Maybe DateOrTime ->
+  Maybe Text ->
   Maybe InvoiceType ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->
   Maybe DateOrTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
+getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantOpCity <-
@@ -45,22 +49,28 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceType mbLimit mbOffset mbRef
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo
 
-  invoices <- case mbReferenceId of
-    Just invoiceNumber ->
-      QInvoice.findByNumber invoiceNumber >>= \case
-        Just inv -> pure [inv]
-        Nothing -> pure []
-    Nothing ->
-      QInvoiceExtra.findByMerchantOpCityIdAndDateRange
-        person.merchantOperatingCityId.getId
-        fromTime
-        toTime
-        mbInvoiceType
-        Nothing
-        (Just personId.getId)
-        Nothing
-        (if isJust mbFrom || isJust mbTo then Nothing else mbLimit <|> Just 1)
-        (mbOffset <|> Just 0)
+  invoices <- case mbInvoiceId of
+    Just invoiceId -> do
+      inv <- QFinanceInvoice.findById (Id invoiceId) >>= fromMaybeM (InvalidRequest $ "Invoice not found: " <> invoiceId)
+      unless (inv.issuedToId == personId.getId) $
+        throwError $ InvalidRequest "Invoice does not belong to this rider"
+      pure [inv]
+    Nothing -> case (mbInvoiceType, mbReferenceId) of
+      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId
+      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId
+      (Just Ride, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Ride"
+      (Just RideCancellation, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=RideCancellation"
+      _ ->
+        QInvoiceExtra.findByMerchantOpCityIdAndDateRange
+          person.merchantOperatingCityId.getId
+          fromTime
+          toTime
+          mbInvoiceType
+          Nothing
+          (Just personId.getId)
+          Nothing
+          (if isJust mbFrom || isJust mbTo then Nothing else mbLimit <|> Just 1)
+          (mbOffset <|> Just 0)
 
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
@@ -93,3 +103,11 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceType mbLimit mbOffset mbRef
       { pdfBase64 = pdfBase64,
         invoiceNumber = lastInv.invoiceNumber
       }
+
+fetchInvoicesByRideId :: Text -> Id DP.Person -> Flow [FInvoice.Invoice]
+fetchInvoicesByRideId rideId personId = do
+  ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  unless (booking.riderId == personId) $
+    throwError $ InvalidRequest "Ride does not belong to this rider"
+  QFinanceInvoice.findByReferenceId (Just rideId)

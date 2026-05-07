@@ -34,6 +34,7 @@ data InvoiceT f = InvoiceT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     paymentOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceStatus),
     subtotal :: (B.C f Kernel.Types.Common.HighPrecMoney),
     supplierAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -53,6 +54,6 @@ instance B.Table InvoiceT where
 
 type Invoice = InvoiceT Identity
 
-$(enableKVPG (''InvoiceT) [('id)] [[('invoiceNumber)], [('issuedToId)], [('paymentOrderId)], [('supplierId)]])
+$(enableKVPG (''InvoiceT) [('id)] [[('invoiceNumber)], [('issuedToId)], [('paymentOrderId)], [('referenceId)], [('supplierId)]])
 
 $(mkTableInstancesGenericSchema (''InvoiceT) "finance_invoice")

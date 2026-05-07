@@ -40,3 +40,8 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN supplier_tax_no te
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN irn text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN reference_id text ;

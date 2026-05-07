@@ -32,6 +32,9 @@ findByIssuedTo issuedToType issuedToId = do findAllWithKV [Se.And [Se.Is Beam.is
 findByNumber :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findByNumber invoiceNumber = do findOneWithKV [Se.Is Beam.invoiceNumber $ Se.Eq invoiceNumber]
 
+findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Invoice.Invoice]))
+findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
+
 updateIrnByInvoiceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
 updateIrnByInvoiceId irn id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.irn irn, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -63,6 +66,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.paymentOrderId paymentOrderId,
+      Se.Set Beam.referenceId referenceId,
       Se.Set Beam.status status,
       Se.Set Beam.subtotal subtotal,
       Se.Set Beam.supplierAddress supplierAddress,

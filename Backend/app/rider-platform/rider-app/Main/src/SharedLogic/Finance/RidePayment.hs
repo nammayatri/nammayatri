@@ -129,6 +129,7 @@ module SharedLogic.Finance.RidePayment
 where
 
 import qualified Data.List as List
+import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
@@ -136,7 +137,6 @@ import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (MonadFlow, getCurrentTime, logError, logInfo, throwError)
 import Lib.Finance
-import Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Service as InvoiceSvc
@@ -711,6 +711,7 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
       issuedToId = ctx.counterpartyId,
       issuedToName = ctx.issuedToName,
       issuedToAddress = ctx.fromLocationAddress,
+      referenceId = Just ctx.referenceId,
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
@@ -802,6 +803,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = ctx.fromLocationAddress,
+          referenceId = Just ctx.referenceId,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)

@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -38,7 +39,6 @@ import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
@@ -1323,6 +1323,7 @@ getFinanceManagementFinanceInvoicePdf ::
   ShortId DM.Merchant ->
   Context.City ->
   Maybe DateOrTime ->
+  Maybe Text ->
   Maybe API.InvoiceSource ->
   Maybe InvoiceType ->
   Maybe Int ->
@@ -1330,21 +1331,25 @@ getFinanceManagementFinanceInvoicePdf ::
   Maybe Text ->
   Maybe DateOrTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceSource mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceId mbInvoiceSource mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
   case mbInvoiceSource of
     Just API.Rider -> fetchRiderInvoicePdf
     _ -> fetchDriverInvoicePdf
   where
     fetchRiderInvoicePdf = do
-      rideId <- mbReferenceId & fromMaybeM (InvalidRequest "referenceId (driver ride ID) is required for Rider invoice source")
-      ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-      let bppBookingId = ride.bookingId.getId
       appBackendBapInternal <- asks (.appBackendBapInternal)
+      (mbBppBookingId, bapInvoiceId) <- case mbInvoiceId of
+        Just _ -> pure (Nothing, mbInvoiceId)
+        Nothing -> do
+          rideId <- mbReferenceId & fromMaybeM (InvalidRequest "referenceId (driver ride ID) is required for Rider invoice source")
+          ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+          pure (Just ride.bookingId.getId, Nothing)
       resp <-
         CallBAPInternal.getRiderFinanceInvoicePdf
           appBackendBapInternal.apiKey
           appBackendBapInternal.url
-          bppBookingId
+          mbBppBookingId
+          bapInvoiceId
           mbFrom
           mbTo
           mbInvoiceType
@@ -1363,24 +1368,28 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceSou
       let fromTime = toUTCTimeFrom <$> mbFrom
           toTime = toUTCTimeTo <$> mbTo
 
-      let mbIssuedToId = case mbInvoiceType of
-            Just Ride -> Nothing
-            _ -> mbReferenceId
-          mbSupplierId = case mbInvoiceType of
-            Just Ride -> mbReferenceId
-            _ -> Nothing
-
-      invoices <-
-        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-          merchantOpCity.id.getId
-          fromTime
-          toTime
-          mbInvoiceType
-          Nothing
-          mbIssuedToId
-          mbSupplierId
-          (mbLimit <|> Just 10)
-          (mbOffset <|> Just 0)
+      invoices <- case mbInvoiceId of
+        Just invoiceId ->
+          QFinanceInvoice.findById (Id invoiceId) >>= \case
+            Just inv -> pure [inv]
+            Nothing -> throwError $ InvalidRequest $ "Invoice not found: " <> invoiceId
+        Nothing -> do
+          let mbIssuedToId = case mbInvoiceType of
+                Just Ride -> Nothing
+                _ -> mbReferenceId
+              mbSupplierId = case mbInvoiceType of
+                Just Ride -> mbReferenceId
+                _ -> Nothing
+          QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+            merchantOpCity.id.getId
+            fromTime
+            toTime
+            mbInvoiceType
+            Nothing
+            mbIssuedToId
+            mbSupplierId
+            (mbLimit <|> Just 10)
+            (mbOffset <|> Just 0)
 
       when (null invoices) $
         throwError $ InvalidRequest "No invoices found for the given criteria"

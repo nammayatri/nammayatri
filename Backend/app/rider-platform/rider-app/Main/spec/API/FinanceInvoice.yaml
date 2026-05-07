@@ -2,7 +2,7 @@ imports:
   Id: Kernel.Types.Id
   UTCTime: Data.Time
   HighPrecMoney: Kernel.Types.Common
-  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  InvoiceType: Domain.Types.Invoice
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
@@ -54,6 +54,7 @@ apis:
   - GET:
       endpoint: /finance/invoice/pdf
       query:
+        invoiceId: Text
         referenceId: Text
         invoiceType: InvoiceType
         from: DateOrTime

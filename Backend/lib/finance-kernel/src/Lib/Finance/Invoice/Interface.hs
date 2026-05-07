@@ -50,6 +50,7 @@ data InvoiceInput = InvoiceInput
     supplierGSTIN :: Maybe Text,
     supplierTaxNo :: Maybe Text,
     supplierId :: Maybe Text,
+    referenceId :: Maybe Text,
     gstinOfParty :: Maybe Text,
     panOfParty :: Maybe Text,
     panType :: Maybe Text,

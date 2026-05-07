@@ -15,6 +15,9 @@ imports:
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
 
+importPackageOverrides:
+  Domain.Types.Invoice: "beckn-spec"
+
 module: FinanceManagement
 
 apis:
@@ -42,6 +45,7 @@ apis:
   - GET: # InvoiceDownloadPdfAPI
       endpoint: /finance/invoice/pdf
       query:
+        invoiceId: Text
         referenceId: Text
         invoiceType: InvoiceType
         from: DateOrTime

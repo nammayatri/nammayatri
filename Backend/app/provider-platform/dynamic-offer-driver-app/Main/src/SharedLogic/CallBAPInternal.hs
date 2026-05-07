@@ -48,12 +48,13 @@ type GetRiderFinanceInvoicePdfAPI =
     :> "bpp"
     :> Header "token" Text
     :> QueryParam "bppBookingId" Text
+    :> QueryParam "invoiceId" Text
     :> QueryParam "from" DateOrTime
     :> QueryParam "to" DateOrTime
     :> QueryParam "invoiceType" InvoiceType
     :> Get '[JSON] FinanceInvoicePdfResp
 
-getRiderFinanceInvoicePdfClient :: Maybe Text -> Maybe Text -> Maybe DateOrTime -> Maybe DateOrTime -> Maybe InvoiceType -> EulerClient FinanceInvoicePdfResp
+getRiderFinanceInvoicePdfClient :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe DateOrTime -> Maybe DateOrTime -> Maybe InvoiceType -> EulerClient FinanceInvoicePdfResp
 getRiderFinanceInvoicePdfClient = client (Proxy @GetRiderFinanceInvoicePdfAPI)
 
 getRiderFinanceInvoicePdfAPI :: Proxy GetRiderFinanceInvoicePdfAPI
@@ -67,14 +68,15 @@ getRiderFinanceInvoicePdf ::
   ) =>
   Text ->
   BaseUrl ->
-  Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe DateOrTime ->
   Maybe DateOrTime ->
   Maybe InvoiceType ->
   m FinanceInvoicePdfResp
-getRiderFinanceInvoicePdf apiKey internalUrl bppBookingId mbFrom mbTo mbInvoiceType = do
+getRiderFinanceInvoicePdf apiKey internalUrl mbBppBookingId mbInvoiceId mbFrom mbTo mbInvoiceType = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRiderFinanceInvoicePdfClient (Just apiKey) (Just bppBookingId) mbFrom mbTo mbInvoiceType) "GetRiderFinanceInvoicePdf" getRiderFinanceInvoicePdfAPI
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRiderFinanceInvoicePdfClient (Just apiKey) mbBppBookingId mbInvoiceId mbFrom mbTo mbInvoiceType) "GetRiderFinanceInvoicePdf" getRiderFinanceInvoicePdfAPI
 
 data FinanceInvoiceListItem = FinanceInvoiceListItem
   { invoiceId :: Text,

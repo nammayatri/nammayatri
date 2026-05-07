@@ -39,6 +39,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
@@ -64,7 +65,6 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -390,6 +390,7 @@ cancelRideTransaction booking ride bookingCReason merchant rideEndedBy cancellat
                                 then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
                                 else Nothing
                             ],
+                referenceId = Nothing,
                 isVat = False,
                 issuedToTaxNo = Nothing,
                 issuedByTaxNo = Nothing
