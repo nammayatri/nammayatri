@@ -9,6 +9,7 @@ PassCategory:
     id: Id PassCategory
     name: Text
     description: Text
+    order: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
 
