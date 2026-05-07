@@ -233,9 +233,16 @@ confirm DConfirmReq {..} = do
           scheduledRidePopupToRiderJobData = ScheduledRidePopupToRiderJobData {bookingId = booking.id}
       createJobIn @_ @'ScheduledRidePopupToRider (Just searchRequest.merchantId) (Just merchantOperatingCityId) dfCalculationJobTs (scheduledRidePopupToRiderJobData :: ScheduledRidePopupToRiderJobData)
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  let isDashboardRequest = searchRequest.isDashboardRequest == Just True
+      dashboardPlaceholderPhone = "1111111111"
   riderPhone <-
     if isValueAddNP
-      then mapM decrypt person.mobileNumber
+      then do
+        mbDecrypted <- mapM decrypt person.mobileNumber
+        pure $ case mbDecrypted of
+          Just _ -> mbDecrypted
+          Nothing | isDashboardRequest -> Just dashboardPlaceholderPhone
+          Nothing -> Nothing
       else pure . Just $ prependZero booking.primaryExophone
   let riderName = person.firstName
   triggerBookingCreatedEvent BookingEventData {booking = booking}
