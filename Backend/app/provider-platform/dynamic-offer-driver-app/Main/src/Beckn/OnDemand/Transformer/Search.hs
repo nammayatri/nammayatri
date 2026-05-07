@@ -45,15 +45,21 @@ import Servant.Client.Core (BaseUrl)
 import Tools.Error
 
 buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], EncFlow m r) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> BaseUrl -> m Domain.Action.Beckn.Search.DSearchReq
-buildSearchReq messageId subscriber req context actualBapUri = do
+buildSearchReq messageId subscriber = buildSearchReqRaw messageId subscriber.subscriber_id subscriber.subscriber_url
+
+-- Same as buildSearchReq but takes (bapId, bapUri) directly instead of a full
+-- Subscriber. Used by the internal sync_search endpoint where there's no
+-- BECKN signature middleware to populate a Subscriber.
+buildSearchReqRaw :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text, "cloudType" ::: Maybe CloudType, "bapHostRedirectMap" ::: BapHostRedirectMap], EncFlow m r) => Data.Text.Text -> Data.Text.Text -> BaseUrl -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> BaseUrl -> m Domain.Action.Beckn.Search.DSearchReq
+buildSearchReqRaw messageId bapSubscriberId bapSubscriberUrl req context actualBapUri = do
   cloudType_ <- asks (.cloudType)
   bapHostRedirectMap <- asks (.bapHostRedirectMap)
   -- If driver's cloud is in bapHostRedirectMap, use actualBapUri (from request); else use subscriber URL.
   let newBapUri_ = case cloudType_ of
         Just c | H.member (T.pack (show c)) bapHostRedirectMap -> actualBapUri
-        _ -> subscriber.subscriber_url
+        _ -> bapSubscriberUrl
   now <- Kernel.Types.Common.getCurrentTime
-  let bapId_ = subscriber.subscriber_id
+  let bapId_ = bapSubscriberId
       bapUri_ = newBapUri_
       customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
       customerNammaTags_ = Beckn.OnDemand.Utils.Search.buildCustomerNammaTags req

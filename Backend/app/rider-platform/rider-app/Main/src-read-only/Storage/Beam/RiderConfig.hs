@@ -171,6 +171,7 @@ data RiderConfigT f = RiderConfigT
     subwayRestrictionEndTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     subwayRestrictionStartTime :: B.C f (Kernel.Prelude.Maybe Data.Time.TimeOfDay),
     subwayTransitTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
+    syncSearchDispatchConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     thresholdCancellationPercentageToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     ticketAssetDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ticketingPermissionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
