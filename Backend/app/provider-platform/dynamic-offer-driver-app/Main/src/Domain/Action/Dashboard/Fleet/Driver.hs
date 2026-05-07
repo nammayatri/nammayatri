@@ -1005,7 +1005,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
         mbFleetOwnerId <- case mbFleetNo of
           Just fleetNo -> do
             phoneHash <- getDbHash fleetNo
-            QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
+            QPerson.findByMobileNumberAndMerchantAndRoles mobileCountryCode phoneHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS] >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
           Nothing -> pure Nothing
 
         postDriverFleetAddVehicleHelper True merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
@@ -2297,15 +2297,19 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   mbFleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId)
   whenJust mbFleetOwnerInfo $ \fleetOwnerInfo -> do
     reqStripeIdNumber <- forM req.stripeIdNumber encrypt
-    let updFleetOwnerInfo =
+    let newFleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+        updFleetOwnerInfo =
           fleetOwnerInfo
             { DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
               DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
               DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
               DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-              DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+              DFOI.fleetType = newFleetType
             }
     FOI.updateFleetOwnerInfo updFleetOwnerInfo
+    -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
+    when (newFleetType /= fleetOwnerInfo.fleetType) $
+      QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
 
   QPerson.updateFleetOwnerDetails personId updDriver
   pure Success
@@ -3315,13 +3319,13 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         Just id -> pure id
       DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-      unless (fleetOwner.role == DP.FLEET_OWNER) $
+      unless (DCommon.checkFleetOwnerRole fleetOwner.role) $
         throwError (InvalidRequest "Invalid fleet owner")
       process (processDriverByFleetOwner merchant merchantOpCity transporterConfig fleetOwner)
     Just requestorId -> do
       requestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
       case requestor.role of
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           -- fleetOwner is in req, should be the same as requestor
           whenJust req.fleetOwnerId \id -> do
             unless (id == requestorId) $ throwError AccessDenied
@@ -3344,7 +3348,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         mobileNumberHash <- getDbHash fleetPhoneNo
         fleetOwnerCsv <-
           B.runInReplica $
-            QP.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+            QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
               >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
         unless (fleetOwnerCsv.id == fleetOwner.id) $
           throwError AccessDenied
@@ -3363,7 +3367,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
           mobileNumberHash <- getDbHash fleetPhoneNo
           fleetOwner <-
             B.runInReplica $
-              QP.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash merchant.id DP.FLEET_OWNER
+              QP.findByMobileNumberAndMerchantAndRoles mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
                 >>= fromMaybeM (FleetOwnerNotFound fleetPhoneNo)
           DCommon.checkFleetOwnerVerification fleetOwner.id.getId merchant.fleetOwnerEnabledCheck
           association <-
@@ -4350,15 +4354,19 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         DP.FLEET_OWNER -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
           reqStripeIdNumber <- forM req.stripeIdNumber encrypt
-          let updFleetOwnerInfo =
+          let newFleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+              updFleetOwnerInfo =
                 fleetOwnerInfo
                   { DFOI.fleetDob = req.fleetDob <|> fleetOwnerInfo.fleetDob,
                     DFOI.stripeAddress = req.stripeAddress <|> fleetOwnerInfo.stripeAddress,
                     DFOI.stripeIdNumber = reqStripeIdNumber <|> fleetOwnerInfo.stripeIdNumber,
                     DFOI.fleetName = req.fleetName <|> fleetOwnerInfo.fleetName,
-                    DFOI.fleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)
+                    DFOI.fleetType = newFleetType
                   }
           FOI.updateFleetOwnerInfo updFleetOwnerInfo
+          -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
+          when (newFleetType /= fleetOwnerInfo.fleetType) $
+            QPerson.updatePersonRole personId (DRegV2.castFleetTypeToRole newFleetType)
         _ -> pure ()
 
   pure Success
@@ -4746,7 +4754,7 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
     Common.DRIVER_STATUS -> do
       driverIds <- case mbRequestor of
         Just person
-          | person.role == DP.FLEET_OWNER ->
+          | DCommon.checkFleetOwnerRole person.role ->
             fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
         _ -> do
           fleetOwnerIds <- map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
@@ -4755,7 +4763,7 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
       pure $ mkStatusSummaryResponse statusCounts
     Common.VEHICLE_STATUS -> do
       fleetOwnerIds <- case mbRequestor of
-        Just person | person.role == DP.FLEET_OWNER -> pure [person.id.getId]
+        Just person | DCommon.checkFleetOwnerRole person.role -> pure [person.id.getId]
         _ -> map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
       statusCounts <- CHVRC.getStatusCountsByFleetOwnerIds fleetOwnerIds
       pure $ mkStatusSummaryResponse statusCounts

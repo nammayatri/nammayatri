@@ -641,7 +641,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     unlinkPersonDocument :: Id DMOC.MerchantOperatingCity -> DP.Person -> Flow Bool
     unlinkPersonDocument merchantOpCityId person = do
       case person.role of
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           case documentType of
             Common.PanCard -> QFOI.updatePanImage Nothing Nothing person.id
             Common.GSTCertificate -> QFOI.updateGstImage Nothing Nothing person.id
@@ -1962,7 +1962,8 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
               fromMaybe False <$> SStatus.processStatusEvent Nothing Nothing (SStatus.PersonDocChangedEvent personId)
           case result of
             Right isEnabled -> pure isEnabled
-            Left _ -> do
+            Left e -> do
+              logError $ "updateAndFetchEnabled:PersonDocChangedEvent failed for personId=" <> personId.getId <> ", error=" <> show e <> " — falling back to current enabled flag without refreshing docs_verification_status"
               person <- QDriver.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
               if DCommon.checkFleetOwnerRole person.role
                 then do
