@@ -547,7 +547,8 @@ buildPassAPIEntity mbLanguage person pass = do
         minFare = pass.minFare,
         maxFare = pass.maxFare,
         verificationStatus = (.verificationStatus) <$> mbPassDetails,
-        formVerificationConfig = pass.formVerificationConfig
+        formVerificationConfig = pass.formVerificationConfig,
+        referenceNumber = (.referenceNumber) =<< mbPassDetails
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -602,7 +603,8 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         minFare = Nothing,
         maxFare = Nothing,
         verificationStatus = Nothing,
-        formVerificationConfig = Nothing
+        formVerificationConfig = Nothing,
+        referenceNumber = Nothing
       }
 
 -- Check eligibility using JSON logic rules

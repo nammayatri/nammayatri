@@ -58,6 +58,7 @@ types:
     maxFare: Maybe HighPrecMoney
     verificationStatus: Maybe VerificationStatus
     formVerificationConfig: Maybe Value
+    referenceNumber: Maybe Int
     derive: "Show"
 
   PassInfoAPIEntity:

@@ -41,6 +41,7 @@ data PassAPIEntity = PassAPIEntity
     name :: Data.Maybe.Maybe Data.Text.Text,
     offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
+    referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
     verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
