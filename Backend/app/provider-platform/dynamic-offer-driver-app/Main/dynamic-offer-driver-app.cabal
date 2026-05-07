@@ -79,6 +79,7 @@ library
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
+      API.Internal.SyncSearch
       API.Internal.ViolationDetection
       API.Types.UI.TicketKapture
       API.UI

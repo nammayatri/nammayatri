@@ -685,3 +685,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_batch_size in
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_next_run_local_time time without time zone ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb ;

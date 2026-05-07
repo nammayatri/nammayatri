@@ -73,6 +73,27 @@ searchV2 gatewayUrl req merchantId = do
     ApiCallLogger.pushInternalApiCallDataToKafka "searchV2" "BAP" transactionId (Just req) res
   pure res
 
+type InternalSyncSearchAPI = "internal" :> API.SyncSearchAPI
+
+internalSyncSearchAPI :: Proxy InternalSyncSearchAPI
+internalSyncSearchAPI = Proxy
+
+searchV2Sync ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  BaseUrl ->
+  Text ->
+  Text ->
+  API.SearchReqV2 ->
+  m API.SyncSearchRes
+searchV2Sync bppUrl bppMerchantId token req = do
+  let cl = Euler.client internalSyncSearchAPI bppMerchantId (Just token) req
+  callAPI bppUrl cl "internalSyncSearch" internalSyncSearchAPI
+    >>= fromEitherM (ExternalAPICallError (Just "INTERNAL_SYNC_SEARCH_FAILED") bppUrl)
+
 searchMetro ::
   ( MonadFlow m,
     CoreMetrics m,
