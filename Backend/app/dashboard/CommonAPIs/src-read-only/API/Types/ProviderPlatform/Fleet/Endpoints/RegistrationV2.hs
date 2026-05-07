@@ -22,6 +22,7 @@ import Servant.Client
 
 data FleetBankAccountLinkResp = FleetBankAccountLinkResp
   { chargesEnabled :: Kernel.Prelude.Bool,
+    payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     detailsSubmitted :: Kernel.Prelude.Bool,
     accountLink :: Kernel.Prelude.BaseUrl,
     accountUrlExpiry :: Kernel.Prelude.UTCTime,
@@ -32,6 +33,7 @@ data FleetBankAccountLinkResp = FleetBankAccountLinkResp
 
 data FleetBankAccountResp = FleetBankAccountResp
   { chargesEnabled :: Kernel.Prelude.Bool,
+    payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     detailsSubmitted :: Kernel.Prelude.Bool,
     paymentMode :: Domain.Types.PaymentMode.PaymentMode,
     requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,

@@ -144,12 +144,14 @@ types:
     - recordType: NewType
   FleetBankAccountLinkResp:
     - chargesEnabled: Bool
+    - payoutsEnabled: Maybe Bool
     - detailsSubmitted: Bool
     - accountLink: BaseUrl
     - accountUrlExpiry: UTCTime
     - paymentMode: PaymentMode
   FleetBankAccountResp:
     - chargesEnabled: Bool
+    - payoutsEnabled: Maybe Bool
     - detailsSubmitted: Bool
     - paymentMode: PaymentMode
     - requirements: Maybe RequirementsInfo

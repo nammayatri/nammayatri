@@ -57,9 +57,9 @@ getDriverOrFleetBankAccounts mbPaymentMode driverIds = do
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateAccountStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Bool -> Id DP.Person -> m ()
-updateAccountStatus chargesEnabled detailsSubmitted driverId = do
+updateAccountStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Bool -> Bool -> Id DP.Person -> m ()
+updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted driverId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.chargesEnabled chargesEnabled, Se.Set Beam.detailsSubmitted detailsSubmitted, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
+  updateOneWithKV [Se.Set Beam.chargesEnabled chargesEnabled, Se.Set Beam.payoutsEnabled (Just payoutsEnabled), Se.Set Beam.detailsSubmitted detailsSubmitted, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.chargesEnabled = LTSSync.Set chargesEnabled}
