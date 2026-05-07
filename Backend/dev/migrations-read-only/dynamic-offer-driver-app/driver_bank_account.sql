@@ -22,3 +22,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN payment_mode t
 
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN name_at_bank text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN ifsc_code text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_bank_account ADD COLUMN payouts_enabled boolean ;

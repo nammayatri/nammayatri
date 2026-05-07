@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.DriverBankAccount.DriverBankAccount {..}) = do
       Se.Set Beam.ifscCode ifscCode,
       Se.Set Beam.nameAtBank nameAtBank,
       Se.Set Beam.paymentMode paymentMode,
+      Se.Set Beam.payoutsEnabled payoutsEnabled,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

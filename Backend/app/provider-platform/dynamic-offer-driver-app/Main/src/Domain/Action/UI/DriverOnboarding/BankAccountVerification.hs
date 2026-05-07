@@ -77,6 +77,7 @@ getInfoBankAccount (personId, merchantId, merchantOpCityId) requestId = do
             DDBA.DriverBankAccount
               { accountId = fromMaybe "" resp.bankAccountNumber,
                 chargesEnabled = False,
+                payoutsEnabled = Nothing,
                 currentAccountLink = Nothing,
                 currentAccountLinkExpiry = Nothing,
                 detailsSubmitted = False,

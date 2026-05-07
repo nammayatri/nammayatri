@@ -1059,6 +1059,7 @@ DriverBankAccount:
     driverId: Id Person
     accountId: AccountId
     chargesEnabled: Bool
+    payoutsEnabled: Maybe Bool
     detailsSubmitted: Bool
     currentAccountLink: Maybe BaseUrl
     currentAccountLinkExpiry: Maybe UTCTime

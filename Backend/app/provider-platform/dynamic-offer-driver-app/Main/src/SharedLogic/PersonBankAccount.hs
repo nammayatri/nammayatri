@@ -55,6 +55,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
               return $
                 API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
                   { chargesEnabled = bankAccount.chargesEnabled,
+                    payoutsEnabled = bankAccount.payoutsEnabled,
                     accountLink = link,
                     accountUrlExpiry = expiry,
                     detailsSubmitted = bankAccount.detailsSubmitted,
@@ -72,6 +73,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
           { chargesEnabled = bankAccount.chargesEnabled,
+            payoutsEnabled = bankAccount.payoutsEnabled,
             accountLink = accountUrl,
             accountUrlExpiry = resp.accountUrlExpiry,
             detailsSubmitted = bankAccount.detailsSubmitted,
@@ -137,6 +139,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
             DDBA.DriverBankAccount
               { accountId = resp.accountId,
                 chargesEnabled = resp.chargesEnabled,
+                payoutsEnabled = Just resp.payoutsEnabled,
                 currentAccountLink = Just accountUrl,
                 currentAccountLinkExpiry = Just resp.accountUrlExpiry,
                 detailsSubmitted = resp.detailsSubmitted,
@@ -153,6 +156,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
           { chargesEnabled = resp.chargesEnabled,
+            payoutsEnabled = Just resp.payoutsEnabled,
             accountLink = accountUrl,
             accountUrlExpiry = resp.accountUrlExpiry,
             detailsSubmitted = resp.detailsSubmitted,
@@ -180,11 +184,14 @@ getPersonRegisterBankAccountStatus ::
 getPersonRegisterBankAccountStatus person = do
   driverBankAccount <- runInReplica $ QDBA.findByPrimaryKey person.id >>= fromMaybeM (DriverBankAccountNotFound person.id.getId)
   let paymentMode = fromMaybe DMPM.LIVE driverBankAccount.paymentMode
-  if driverBankAccount.chargesEnabled
+  -- Skip the Stripe poll only when both flags are already true in our cache. Legacy rows
+  -- without payoutsEnabled (Nothing) fail the && so we re-poll Stripe and cache the value.
+  if driverBankAccount.chargesEnabled && fromMaybe False driverBankAccount.payoutsEnabled
     then
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = driverBankAccount.chargesEnabled,
+            payoutsEnabled = driverBankAccount.payoutsEnabled,
             detailsSubmitted = driverBankAccount.detailsSubmitted,
             paymentMode,
             requirements = Nothing,
@@ -192,10 +199,11 @@ getPersonRegisterBankAccountStatus person = do
           }
     else do
       resp <- TPayment.getAccount person.merchantId person.merchantOperatingCityId (Just paymentMode) driverBankAccount.accountId
-      QDBA.updateAccountStatus resp.chargesEnabled resp.detailsSubmitted person.id
+      QDBA.updateAccountStatus resp.chargesEnabled resp.payoutsEnabled resp.detailsSubmitted person.id
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountResp
           { chargesEnabled = resp.chargesEnabled,
+            payoutsEnabled = Just resp.payoutsEnabled,
             detailsSubmitted = resp.detailsSubmitted,
             paymentMode,
             requirements = resp.requirements,
