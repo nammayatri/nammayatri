@@ -20,9 +20,9 @@ module App.Routes
 where
 
 import App.Types
-import Data.Aeson
+import Data.Aeson (Value)
 import EulerHS.Prelude
-import Kernel.External.Notification.FCM.Flow as API
+import Kernel.External.Notification.FCM.Types
 import Kernel.Types.App (FlowServerR)
 import qualified Product.Fcm as P
 import Servant hiding (throwError)
@@ -30,7 +30,7 @@ import Types.API.Fcm as API
 
 type MockFcmAPI =
   Get '[JSON] Text
-    :<|> API.FCMSendMessageAPI Value Value
+    :<|> Header "Authorization" FCMAuthToken :> ReqBody '[JSON] Value :> Post '[JSON] FCMResponse
     :<|> API.ReadFcmAPI
 
 mockFcmAPI :: Proxy MockFcmAPI

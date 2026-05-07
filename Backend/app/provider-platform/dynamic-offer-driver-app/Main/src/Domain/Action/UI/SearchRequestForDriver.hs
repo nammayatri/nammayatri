@@ -33,7 +33,7 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Price()
+import Kernel.Types.Price ()
 import SharedLogic.Type
 
 data IOSSearchRequestForDriverAPIEntity = IOSSearchRequestForDriverAPIEntity

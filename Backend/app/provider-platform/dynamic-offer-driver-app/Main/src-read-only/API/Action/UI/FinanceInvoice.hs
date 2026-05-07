@@ -11,6 +11,7 @@ import qualified API.Types.UI.FinanceInvoice
 import qualified Control.Lens
 import qualified Data.Time
 import qualified Domain.Action.UI.FinanceInvoice
+import qualified "beckn-spec" Domain.Types.Invoice
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -19,7 +20,6 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "beckn-spec" Domain.Types.Invoice
 import qualified Lib.Finance.Invoice.PdfService
 import Servant
 import Storage.Beam.SystemConfigs ()

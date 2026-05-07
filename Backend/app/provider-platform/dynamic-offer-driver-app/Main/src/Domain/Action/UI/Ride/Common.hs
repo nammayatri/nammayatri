@@ -44,9 +44,9 @@ import Kernel.Beam.Functions (runInReplica)
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
-import Kernel.Types.Price
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
+import Kernel.Types.Price
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import SharedLogic.FareCalculator (fareSum)

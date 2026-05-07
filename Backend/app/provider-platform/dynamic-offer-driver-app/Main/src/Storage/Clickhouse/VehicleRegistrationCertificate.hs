@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Clickhouse.VehicleRegistrationCertificate where
 
 import qualified Domain.Types.DocsVerificationStatus as DDVS

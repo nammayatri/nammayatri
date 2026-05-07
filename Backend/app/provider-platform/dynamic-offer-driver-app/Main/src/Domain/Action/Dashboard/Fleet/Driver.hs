@@ -4745,8 +4745,9 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
   case entityOperationType of
     Common.DRIVER_STATUS -> do
       driverIds <- case mbRequestor of
-        Just person | person.role == DP.FLEET_OWNER ->
-          fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
+        Just person
+          | person.role == DP.FLEET_OWNER ->
+            fromMaybe [] <$> CFDA.getDriverIdsByFleetOwnerId person.id.getId
         _ -> do
           fleetOwnerIds <- map getId <$> CHFOI.getFleetOwnerIdsByCityId merchantOpCity.id.getId
           CFDA.getDriverIdsByFleetOwnerIds fleetOwnerIds

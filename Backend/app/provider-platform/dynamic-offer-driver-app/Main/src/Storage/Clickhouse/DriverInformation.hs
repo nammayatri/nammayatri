@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 module Storage.Clickhouse.DriverInformation where
 
 import qualified Domain.Types.DocsVerificationStatus as DDVS

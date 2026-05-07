@@ -17,26 +17,36 @@ module Product.Fcm where
 import App.Types
 import Control.Concurrent.MVar (modifyMVar, modifyMVar_)
 import Data.Aeson
+import Data.Aeson.Types (parseMaybe)
 import qualified Data.Map as Map
 import EulerHS.Prelude
 import Kernel.External.Notification.FCM.Types
 import Kernel.Types.Error
 import Kernel.Utils.Error
 import Kernel.Utils.Logging
-import Kernel.Utils.Text
 import Types.API.Fcm
 
 sendFcm ::
   Maybe FCMAuthToken ->
-  FCMRequest Value Value ->
+  Value ->
   FlowHandler FCMResponse
-sendFcm _authToken (FCMRequest ntf) = withFlowHandler' $ do
-  to <- ntf.fcmToken & fromMaybeM (InvalidRequest "No token")
-  logPretty INFO ("Message for " <> encodeToText to) ntf
+sendFcm _authToken body = withFlowHandler' $ do
+  to <- maybe (throwError $ InvalidRequest "No message.token in body") pure (extractToken body)
+  logPretty INFO ("Message for " <> show to) body
   asks notificationsMap >>= liftIO . (`modifyMVar_` (pure . set to))
   return $ FCMResponse Nothing Nothing
   where
-    set to ntfs = Map.insert to (ntf : fromMaybe [] (Map.lookup to ntfs)) ntfs
+    set to ntfs = Map.insert to (body : fromMaybe [] (Map.lookup to ntfs)) ntfs
+
+-- Pulls message.token out of the raw FCM request body without typed parsing of the rest,
+-- so payload shape variations (missing apns.payload.aps.badge etc.) don't fail the route.
+extractToken :: Value -> Maybe FCMRecipientToken
+extractToken =
+  parseMaybe $
+    withObject "body" $ \o -> do
+      msg <- o .: "message"
+      tkn <- msg .: "token"
+      pure (FCMRecipientToken tkn)
 
 readFcm :: FCMRecipientToken -> FlowHandler ReadFcmRes
 readFcm number = withFlowHandler' $ do

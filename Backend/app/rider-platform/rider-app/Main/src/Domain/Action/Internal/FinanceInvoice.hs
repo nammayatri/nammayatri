@@ -7,12 +7,12 @@ where
 import qualified API.Types.UI.FinanceInvoice as API
 import qualified Data.Time as DT
 import Domain.Types.Booking (BPPBooking)
+import Domain.Types.Invoice (InvoiceType)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (last, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Domain.Types.Invoice (InvoiceType)
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import Lib.Finance.Invoice.PdfService

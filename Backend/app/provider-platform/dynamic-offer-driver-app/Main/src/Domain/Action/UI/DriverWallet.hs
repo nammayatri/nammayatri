@@ -40,6 +40,7 @@ import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
@@ -73,7 +74,6 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry

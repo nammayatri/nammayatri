@@ -492,6 +492,7 @@ library
       SharedLogic.NySubscription
       SharedLogic.Offer
       SharedLogic.OTP
+      SharedLogic.PassExpiryReminder
       SharedLogic.PassRestore
       SharedLogic.Payment
       SharedLogic.PaymentVendorSplits
@@ -519,6 +520,7 @@ library
       SharedLogic.Scheduler.Jobs.NyRegularInstance
       SharedLogic.Scheduler.Jobs.NyRegularMaster
       SharedLogic.Scheduler.Jobs.PartnerInvoiceDataExport
+      SharedLogic.Scheduler.Jobs.PassExpiryReminderMaster
       SharedLogic.Scheduler.Jobs.PaymentOrderStatusCheck
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
