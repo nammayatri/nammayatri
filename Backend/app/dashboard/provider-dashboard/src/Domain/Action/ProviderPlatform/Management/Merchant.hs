@@ -37,6 +37,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigFarePolicyUpsert,
     getMerchantConfigFarePolicyExport,
     getMerchantConfigFarePolicyDetails,
+    getMerchantConfigFareProductList,
     postMerchantConfigOperatingCityCreate,
     postMerchantSchedulerTrigger,
     postMerchantUpdateOnboardingVehicleVariantMapping,
@@ -513,6 +514,24 @@ getMerchantConfigFarePolicyDetails :: ShortId DM.Merchant -> City.City -> ApiTok
 getMerchantConfigFarePolicyDetails merchantShortId opCity apiTokenInfo farePolicyId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigFarePolicyDetails) farePolicyId
+
+getMerchantConfigFareProductList ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  SL.Area ->
+  Bool ->
+  Dashboard.Common.TripCategory ->
+  Flow Common.FareProductListRes
+getMerchantConfigFareProductList merchantShortId opCity apiTokenInfo area enabled tripCategory = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI
+    checkedMerchantId
+    opCity
+    (.merchantDSL.getMerchantConfigFareProductList)
+    area
+    enabled
+    tripCategory
 
 getMerchantConfigVehicleServiceTier :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Dashboard.Common.ServiceTierType -> Environment.Flow Common.VehicleServiceTierRes)
 getMerchantConfigVehicleServiceTier merchantShortId opCity apiTokenInfo serviceTierType = do

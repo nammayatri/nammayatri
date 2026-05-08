@@ -106,6 +106,23 @@ findAllUnboundedFareProductForVariants (Id merchantOperatingCityId) area tripCat
         else return fareProducts
     else findAllUnboundedFareProductForVariants' (Id merchantOperatingCityId) area tripCategory timeBounds enabled searchSources
 
+findAllByMerchantOpCityIdAreaTripCategoryEnabled ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  SL.Area ->
+  DTC.TripCategory ->
+  Bool ->
+  m [Domain.FareProduct]
+findAllByMerchantOpCityIdAreaTripCategoryEnabled (Id merchantOperatingCityId) area tripCategory enabled =
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.area $ Se.Eq area,
+          Se.Is Beam.tripCategory $ Se.Eq tripCategory,
+          Se.Is Beam.enabled $ Se.Eq enabled
+        ]
+    ]
+
 removeCityFromTripCategory :: DTC.TripCategory -> DTC.TripCategory
 removeCityFromTripCategory (DTC.InterCity mode _) = DTC.InterCity mode Nothing
 removeCityFromTripCategory (DTC.CrossCity mode _) = DTC.CrossCity mode Nothing
