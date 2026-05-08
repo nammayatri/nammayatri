@@ -50,6 +50,7 @@ Invoice:
     merchantOperatingCityId: Text
     createdAt: UTCTime
     irn : Maybe Text
+    paymentMode: Maybe Text
 
   sqlType:
     lineItems: jsonb

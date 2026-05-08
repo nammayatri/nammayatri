@@ -1302,7 +1302,9 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  let locale = countryToLocale merchantOpCity.country
+  -- Use the first invoice's driver preferred language; falls back to EN if driver not found / language unset.
+  mbDriver <- QPerson.findById (Id (Kernel.Prelude.head invoices).issuedToId)
+  let locale = languageToLocale (mbDriver >>= (.language))
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
       cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
 

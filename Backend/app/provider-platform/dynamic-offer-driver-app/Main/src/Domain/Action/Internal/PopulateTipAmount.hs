@@ -16,6 +16,7 @@ module Domain.Action.Internal.PopulateTipAmount where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.List as List
+import qualified Data.Text as T
 import Data.Time
 import Domain.Types.Ride
 import Environment
@@ -91,14 +92,16 @@ populateTipAmount rideId tipAmount apiKey = do
                     priorLineItems = parseLineItems priorInv.lineItems
                     tipLineItem =
                       InvoiceI.InvoiceLineItem
-                        { description = "Tip",
+                        { description = InvoiceI.Tip,
                           quantity = 1,
                           unitPrice = tipAmount,
                           lineTotal = tipAmount,
-                          isExternalCharge = False
+                          isExternalCharge = False,
+                          groupId = Nothing,
+                          itemType = InvoiceI.Adjustment
                         }
                     -- Avoid duplicate Tip rows if this is run multiple times
-                    nonTipLineItems = List.filter (\li -> li.description /= "Tip") priorLineItems
+                    nonTipLineItems = List.filter (\li -> li.description /= InvoiceI.Tip) priorLineItems
                     newLineItems = nonTipLineItems <> [tipLineItem]
                     newInvoiceInput = invoiceToInput priorInv ctx newLineItems
                     -- Exclude any prior Tips entries — the new Tips entry supersedes them.
@@ -115,7 +118,7 @@ populateTipAmount rideId tipAmount apiKey = do
     parseLineItems :: Aeson.Value -> [InvoiceI.InvoiceLineItem]
     parseLineItems v = case Aeson.fromJSON v of
       Aeson.Success xs -> xs
-      Aeson.Error _ -> []
+      Aeson.Error err -> error $ "PopulateTipAmount.parseLineItems: prior invoice lineItems failed to decode: " <> T.pack err
 
     invoiceToInput :: FInvoice.Invoice -> FinanceCtx -> [InvoiceI.InvoiceLineItem] -> InvoiceI.InvoiceInput
     invoiceToInput inv ctx lineItems =
@@ -152,5 +155,6 @@ populateTipAmount rideId tipAmount apiKey = do
           merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,
           isVat = False, -- regeneration path: tax records unchanged, no need to re-create indirect_tax_transaction
           issuedToTaxNo = Nothing,
-          issuedByTaxNo = Nothing
+          issuedByTaxNo = Nothing,
+          paymentMode = inv.paymentMode -- preserve original; tip regen doesn't change payment method
         }

@@ -604,22 +604,26 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                 then
                                   Just
                                     InvoiceLineItem
-                                      { description = "Subscription Plan Fee",
+                                      { description = SubscriptionPlanFee,
                                         quantity = 1,
                                         unitPrice = lineItemNetAmount,
                                         lineTotal = lineItemNetAmount,
-                                        isExternalCharge = False
+                                        isExternalCharge = False,
+                                        groupId = Just "g-subscription",
+                                        itemType = Fare
                                       }
                                 else Nothing,
                               if lineItemGstAmount > 0
                                 then
                                   Just
                                     InvoiceLineItem
-                                      { description = "GST",
+                                      { description = Gst,
                                         quantity = 1,
                                         unitPrice = lineItemGstAmount,
                                         lineTotal = lineItemGstAmount,
-                                        isExternalCharge = False
+                                        isExternalCharge = False,
+                                        groupId = Just "g-subscription",
+                                        itemType = Tax
                                       }
                                 else Nothing
                             ],
@@ -632,7 +636,8 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     -- Subscription purchases are always GST (not VAT)
                     isVat = False,
                     issuedToTaxNo = invoiceParams.gstinOfParty,
-                    issuedByTaxNo = Nothing
+                    issuedByTaxNo = Nothing,
+                    paymentMode = Just "ONLINE" -- subscription paid via Juspay autopay/manual
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of

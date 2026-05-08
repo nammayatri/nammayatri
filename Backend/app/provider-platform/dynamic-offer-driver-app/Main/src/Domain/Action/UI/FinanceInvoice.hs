@@ -23,7 +23,6 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
-import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
@@ -152,9 +151,7 @@ getFinanceInvoicePdf ::
   Flow API.FinanceInvoicePdfResp
 getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLimit mbOffset _mbReferenceId mbTo = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  merchantOpCity <-
-    CQMOC.findById merchantOpCityId
-      >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  mbDriver <- QPerson.findById driverId
   mbTransporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing
 
   let fromTime = toUTCTimeFrom <$> mbFrom
@@ -189,7 +186,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
     Nothing -> pure (Nothing, Nothing, Nothing)
 
-  let locale = countryToLocale merchantOpCity.country
+  let locale = languageToLocale (mbDriver >>= (.language))
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
       cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
       pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4

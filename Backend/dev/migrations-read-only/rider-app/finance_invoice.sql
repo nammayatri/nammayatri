@@ -45,3 +45,8 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN irn text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN reference_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN payment_mode text ;

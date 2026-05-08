@@ -334,29 +334,27 @@ createRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFe
       pure $ Right RidePaymentLedgerResult {invoiceId = mbInvoiceId, entryIds}
 
 -- Invoice line item helpers
-mkLineItem :: Text -> HighPrecMoney -> Bool -> Maybe InvoiceLineItem
-mkLineItem desc amt isExt
-  | amt > 0 = Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt}
+mkLineItem :: LineItemDescription -> HighPrecMoney -> Bool -> ItemType -> Maybe Text -> Maybe InvoiceLineItem
+mkLineItem desc amt isExt typ groupIdStr
+  | amt > 0 = Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt, groupId = groupIdStr, itemType = typ}
   | otherwise = Nothing
 
 -- | Deduction line: positive input amount is rendered as a negative lineTotal
 --   so the invoice shows it as a credit reducing the rider's total.
-mkDeductionLineItem :: Text -> HighPrecMoney -> Bool -> Maybe InvoiceLineItem
+mkDeductionLineItem :: LineItemDescription -> HighPrecMoney -> Bool -> Maybe InvoiceLineItem
 mkDeductionLineItem desc amt isExt
-  | amt > 0 = Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = - amt, lineTotal = - amt, isExternalCharge = isExt}
+  | amt > 0 = Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = - amt, lineTotal = - amt, isExternalCharge = isExt, groupId = Nothing, itemType = Adjustment}
   | otherwise = Nothing
 
--- | Ride-fare invoice line. When a discount is applied, the description is
---   appended with @Post Discount (<currency> <discountAmount>)@ so the
---   rider invoice shows the post-discount fare with a human-readable
---   discount summary, without a separate deduction line.
+-- | Ride-fare invoice line. Discount, when present, is captured in the
+--   'RideFarePostDiscount' description so the renderer shows the post-discount
+--   fare with a human-readable discount summary (no separate deduction line).
 mkRideFareLineItem :: HighPrecMoney -> Currency -> HighPrecMoney -> Maybe InvoiceLineItem
 mkRideFareLineItem amt currency discountAmount
   | amt <= 0 = Nothing
   | discountAmount > 0 =
-    let desc = "Ride Fare Post Discount (" <> show currency <> " " <> show discountAmount <> ")"
-     in Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False}
-  | otherwise = Just InvoiceLineItem {description = "Ride Fare", quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False}
+    Just InvoiceLineItem {description = RideFarePostDiscount currency discountAmount, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Fare}
+  | otherwise = Just InvoiceLineItem {description = RideFare, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = False, groupId = Just "g-ride", itemType = Fare}
 
 -- ---------------------------------------------------------------------------
 -- 1a. Upsert core ride payment ledger on amount change
@@ -737,15 +735,16 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
-            mkLineItem "Ride Tax" gstAmount False,
-            mkLineItem "Toll Fare" tollFare True,
-            mkLineItem "Toll Tax" tollVatAmount True,
-            mkDeductionLineItem "Cashback Offer" cashbackPayoutAmount False
+            mkLineItem RideTax gstAmount False Tax (Just "g-ride"),
+            mkLineItem TollFare tollFare True Fare (Just "g-toll"),
+            mkLineItem TollTax tollVatAmount True Tax (Just "g-toll"),
+            mkDeductionLineItem CashbackOffer cashbackPayoutAmount False
           ],
       gstBreakdown = Nothing,
       isVat = gstAmount > 0 || tollVatAmount > 0,
       issuedToTaxNo = Nothing,
-      issuedByTaxNo = Nothing
+      issuedByTaxNo = Nothing,
+      paymentMode = Just "ONLINE"
     }
 
 -- ---------------------------------------------------------------------------
@@ -891,24 +890,29 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
             filter
               (\li -> li.lineTotal > 0)
               [ InvoiceLineItem
-                  { description = ridePaymentRefCancellationFee,
+                  { description = CancellationFee,
                     quantity = 1,
                     unitPrice = cancellationFee,
                     lineTotal = cancellationFee,
-                    isExternalCharge = False
+                    isExternalCharge = False,
+                    groupId = Just "g-cancel",
+                    itemType = Fare
                   },
                 InvoiceLineItem
-                  { description = ridePaymentRefCancellationGST,
+                  { description = CancellationFeeVat,
                     quantity = 1,
                     unitPrice = cancellationGST,
                     lineTotal = cancellationGST,
-                    isExternalCharge = False
+                    isExternalCharge = False,
+                    groupId = Just "g-cancel",
+                    itemType = Tax
                   }
               ],
           gstBreakdown = Nothing,
           isVat = False,
           issuedToTaxNo = Nothing,
-          issuedByTaxNo = Nothing
+          issuedByTaxNo = Nothing,
+          paymentMode = Just "ONLINE" -- BAP cancellation fee is settled via Stripe at this point
         }
   case result of
     Left err -> do
@@ -942,25 +946,30 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
             filter
               (\li -> li.lineTotal > 0)
               [ InvoiceLineItem
-                  { description = "Cancellation Fee",
+                  { description = CancellationFee,
                     quantity = 1,
                     unitPrice = cancellationFee,
                     lineTotal = cancellationFee,
-                    isExternalCharge = False
+                    isExternalCharge = False,
+                    groupId = Just "g-cancel",
+                    itemType = Fare
                   },
                 InvoiceLineItem
-                  { description = "Cancellation Fee VAT",
+                  { description = CancellationFeeVat,
                     quantity = 1,
                     unitPrice = cancellationGST,
                     lineTotal = cancellationGST,
-                    isExternalCharge = False
+                    isExternalCharge = False,
+                    groupId = Just "g-cancel",
+                    itemType = Tax
                   }
               ],
           referenceId = Just ctx.referenceId,
           gstBreakdown = Nothing,
           isVat = False,
           issuedToTaxNo = Nothing,
-          issuedByTaxNo = Nothing
+          issuedByTaxNo = Nothing,
+          paymentMode = Nothing
         }
   case result of
     Left err -> do

@@ -139,7 +139,8 @@ data InvoiceConfig = InvoiceConfig
     -- VAT integration fields
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    paymentMode :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -688,7 +689,8 @@ invoiceInner ctx config = do
             -- VAT integration fields
             isVat = config.isVat,
             issuedToTaxNo = config.issuedToTaxNo,
-            issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin
+            issuedByTaxNo = if config.isVat then ctx.merchantVatNumber else ctx.merchantGstin,
+            paymentMode = config.paymentMode
           }
   inv <- liftFinanceM (createInvoice invoiceInput ids)
   pure (Just inv.id)

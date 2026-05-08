@@ -106,7 +106,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transfer_)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -590,28 +590,73 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
           let rideInclusiveLine = rawBaseFare + rawTaxAmount
               tollInclusiveLine = tollAmount + tollVatAmount
               parkingInclusiveLine = parkingAmount + parkingVatAmount
-              mkLine desc amt isExt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt} else Nothing
-              mkDeductionLine desc amt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False} else Nothing
+              -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
+              -- collapses them into one main-table row.
+              mkPair gId ty isExt desc amt =
+                if amt > 0
+                  then
+                    Just
+                      InvoiceLineItem
+                        { description = desc,
+                          quantity = 1,
+                          unitPrice = amt,
+                          lineTotal = amt,
+                          isExternalCharge = isExt,
+                          groupId = Just gId,
+                          itemType = ty
+                        }
+                  else Nothing
+              -- Standalone Fare line, no Tax pair (groupId = Nothing).
+              mkStandaloneFare desc amt =
+                if amt > 0
+                  then
+                    Just
+                      InvoiceLineItem
+                        { description = desc,
+                          quantity = 1,
+                          unitPrice = amt,
+                          lineTotal = amt,
+                          isExternalCharge = False,
+                          groupId = Nothing,
+                          itemType = Fare
+                        }
+                  else Nothing
+              -- Adjustment line (Tip positive / Platform Commission negative).
+              -- Renders below "Total" in the right-block ladder; contributes to Net Total.
+              mkAdjustment desc signedAmt =
+                if signedAmt /= 0
+                  then
+                    Just
+                      InvoiceLineItem
+                        { description = desc,
+                          quantity = 1,
+                          unitPrice = signedAmt,
+                          lineTotal = signedAmt,
+                          isExternalCharge = False,
+                          groupId = Nothing,
+                          itemType = Adjustment
+                        }
+                  else Nothing
               rideAndTollLines =
                 if clubVatInclusive
                   then
-                    [ mkLine "Ride Fare (Incl. VAT)" rideInclusiveLine False,
-                      mkLine "Toll Fare (Incl. VAT)" tollInclusiveLine True,
-                      mkLine "Parking Charges (Incl. VAT)" parkingInclusiveLine True
+                    [ mkPair "g-ride" Fare False RideFareInclVat rideInclusiveLine,
+                      mkPair "g-toll" Fare True TollFareInclVat tollInclusiveLine,
+                      mkPair "g-parking" Fare True ParkingChargesInclVat parkingInclusiveLine
                     ]
                   else
-                    [ mkLine "Base Fare" rawBaseFare False,
-                      mkLine "Tax" rawTaxAmount False,
-                      mkLine "Toll Charges" tollAmount True,
-                      mkLine "Toll Charges Tax" tollVatAmount True,
-                      mkLine "Parking Charges" parkingAmount True,
-                      mkLine "Parking Charges Tax" parkingVatAmount True
+                    [ mkPair "g-ride" Fare False BaseFare rawBaseFare,
+                      mkPair "g-ride" Tax False RideTax rawTaxAmount,
+                      mkPair "g-toll" Fare True TollCharges tollAmount,
+                      mkPair "g-toll" Tax True TollChargesTax tollVatAmount,
+                      mkPair "g-parking" Fare True ParkingCharges parkingAmount,
+                      mkPair "g-parking" Tax True ParkingChargesTax parkingVatAmount
                     ]
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
-                [ mkLine "Tip" tipAmount False,
-                  mkDeductionLine "Platform Commission" commissionAmount,
-                  if showVatInput then mkLine "VAT Input" serviceVatAmount False else Nothing
+                [ mkAdjustment Tip tipAmount,
+                  mkAdjustment PlatformCommission (negate commissionAmount),
+                  if showVatInput then mkStandaloneFare VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         rideGstBreakdown =
@@ -636,7 +681,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               referenceId = Nothing,
               isVat = isVat,
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
             }
         -- DRIVER / FLEET_OWNER copy of the same Ride invoice. Honors
         -- driverInvoiceLineItemsVatInclusive so the supplier-side invoice
@@ -657,7 +703,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               referenceId = Nothing,
               isVat = isVat,
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
             }
     let taxRefOnline = if isVat then walletReferenceVATOnline else walletReferenceGSTOnline
         taxRefCash = if isVat then walletReferenceVATCash else walletReferenceGSTCash
@@ -746,12 +793,13 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 referenceId = Nothing,
                 lineItems =
                   catMaybes
-                    [ Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False}
+                    [ Just InvoiceLineItem {description = PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Fare}
                     ],
                 gstBreakdown = Nothing,
                 isVat = isVat,
                 issuedToTaxNo = Nothing,
-                issuedByTaxNo = Nothing
+                issuedByTaxNo = Nothing,
+                paymentMode = Nothing -- Commission is deducted from driver earnings; no rider payment involved.
               }
       commissionResult <- runFinance ctx $ do
         void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef

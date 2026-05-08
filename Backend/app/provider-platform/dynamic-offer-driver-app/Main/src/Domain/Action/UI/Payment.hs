@@ -79,6 +79,8 @@ import Lib.Finance
   ( AccountRole (OwnerLiability, PlatformAsset),
     InvoiceConfig (..),
     InvoiceLineItem (..),
+    ItemType (..),
+    LineItemDescription (..),
     getEntriesByReference,
     invoice,
     runFinance,
@@ -501,11 +503,12 @@ processWalletTopupWebhook driver order transactionStatus = do
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
                   referenceId = Nothing,
-                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
+                  lineItems = [InvoiceLineItem {description = WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Fare}],
                   gstBreakdown = Nothing,
                   isVat = False,
                   issuedToTaxNo = Nothing,
-                  issuedByTaxNo = Nothing
+                  issuedByTaxNo = Nothing,
+                  paymentMode = Just "ONLINE" -- wallet topup goes through Juspay; always online
                 }
         result <- runFinance ctx $ do
           _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup

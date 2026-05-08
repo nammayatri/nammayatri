@@ -26,7 +26,7 @@ import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
-import Lib.Finance.Invoice.Interface (InvoiceLineItem)
+import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
@@ -144,11 +144,11 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
       sgstAmount = money2 $ maybe 0 (realToFrac . (.sgstAmount)) mbIndirectTax
       lineItems = case Aeson.fromJSON inv.lineItems of
         Aeson.Success xs -> xs :: [InvoiceLineItem]
-        Aeson.Error _ -> []
+        Aeson.Error err -> error $ "EInvoice.buildEInvoicePayload: invoice lineItems JSON failed to decode: " <> T.pack err
       -- Assessable value is the pre-tax principal only — include only the
       -- "Subscription Plan Fee" line; tax lines are reported separately on the
       -- e-invoice via cgst/sgst/igst.
-      principalLineItems = filter (\li -> li.description == "Subscription Plan Fee") lineItems
+      principalLineItems = filter (\li -> li.description == SubscriptionPlanFee) lineItems
       assessableValue = money2 $ realToFrac (sum $ map (.lineTotal) principalLineItems)
       totalInvoiceValue = money2 $ realToFrac inv.totalAmount
       zeroMoney = 0 :: Double

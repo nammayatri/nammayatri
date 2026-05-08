@@ -9,6 +9,8 @@
 module Lib.Finance.Invoice.Interface
   ( InvoiceInput (..),
     InvoiceLineItem (..),
+    ItemType (..),
+    LineItemDescription (..),
     GstAmountBreakdown (..),
     IndirectTaxInput (..),
     DirectTaxInput (..),
@@ -23,13 +25,54 @@ import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 
--- | Single line item in an invoice
+-- | 'Fare'/'Tax' pair via shared 'groupId' and render together in the main table.
+-- 'Adjustment' (Tip, Commission, discounts) renders below Total. External
+-- charges (Toll, Parking) are flagged via 'isExternalCharge', not a separate type.
+data ItemType = Tax | Fare | Adjustment
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+-- | Typed description key. The renderer maps each constructor to a locale-
+-- specific display string. Keep this enum in sync with the creators that emit
+-- new invoice line types.
+data LineItemDescription
+  = BaseFare
+  | RideFare
+  | RideFareInclVat
+  | RideFarePostDiscount Currency HighPrecMoney
+  | RideTax
+  | TollFare
+  | TollCharges
+  | TollFareInclVat
+  | TollTax
+  | TollChargesTax
+  | ParkingCharges
+  | ParkingChargesInclVat
+  | ParkingChargesTax
+  | Tip
+  | PlatformCommission
+  | CancellationFee
+  | CancellationFeeVat
+  | CancellationFeeInclVat
+  | CustomerCancellationFee
+  | GstOnCancellationFee
+  | DriverCancellationPenalty
+  | SubscriptionPlanFee
+  | Gst
+  | WalletTopup
+  | AirportCashRecharge
+  | CashbackOffer
+  | VatInput
+  deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
+
+-- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.
 data InvoiceLineItem = InvoiceLineItem
-  { description :: Text,
+  { description :: LineItemDescription,
     quantity :: Int,
     unitPrice :: HighPrecMoney,
     lineTotal :: HighPrecMoney,
-    isExternalCharge :: Bool
+    isExternalCharge :: Bool,
+    groupId :: Maybe Text,
+    itemType :: ItemType
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
@@ -67,7 +110,8 @@ data InvoiceInput = InvoiceInput
     -- VAT integration fields
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
-    issuedByTaxNo :: Maybe Text
+    issuedByTaxNo :: Maybe Text,
+    paymentMode :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
