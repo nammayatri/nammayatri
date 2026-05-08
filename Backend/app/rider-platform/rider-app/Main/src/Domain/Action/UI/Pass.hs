@@ -24,6 +24,8 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Key as AKey
+import qualified Data.Aeson.KeyMap as AKeyMap
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Data.Time as DT
@@ -32,11 +34,13 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Pass as DPass
 import qualified Domain.Types.PassCategory as DPassCategory
+import qualified Domain.Types.PassDetails as DPassDetails
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.PassVerifyTransaction as DPassVerifyTransaction
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.PurchasedPassPayment as DPurchasedPassPayment
+import qualified Domain.Types.RiderConfig
 import qualified Environment
 import qualified EulerHS.Prelude as EHS
 import qualified JsonLogic
@@ -62,6 +66,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
+import qualified SharedLogic.External.Nandi.Types
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Offer as SOffer
@@ -76,6 +81,7 @@ import qualified Storage.CachedQueries.Translations as QT
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
+import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassExtra as QPass
 import qualified Storage.Queries.PassTypeExtra as QPassType
 import qualified Storage.Queries.PassVerifyTransaction as QPassVerifyTransaction
@@ -213,6 +219,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             return $ Just pendingPass
           Nothing -> return Nothing
 
+  passType <- CQPassType.findById pass.passTypeId
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
   purchasedPassId <-
     case mbSamePass of
@@ -261,7 +268,6 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
 
         QPurchasedPass.create purchasedPass
         return newPurchasedPassId
-  passType <- CQPassType.findById pass.passTypeId
 
   let purchasedPassPayment =
         DPurchasedPassPayment.PurchasedPassPayment
@@ -456,6 +462,13 @@ buildPassAPIEntity ::
   DPass.Pass ->
   Environment.Flow PassAPI.PassAPIEntity
 buildPassAPIEntity mbLanguage person pass = do
+  passType <- B.runInReplica $ QPassType.findById pass.passTypeId >>= fromMaybeM (PassTypeNotFound pass.passTypeId.getId)
+
+  mbPassDetails <-
+    case passType.passEnum of
+      Just DPassType.StudentPass -> B.runInReplica $ QPassDetails.findByPersonId person.id DPassType.StudentPass
+      _ -> return Nothing
+
   -- Create person data for eligibility check with relevant fields
   let personData =
         A.object
@@ -468,11 +481,29 @@ buildPassAPIEntity mbLanguage person pass = do
             "customerNammaTags" A..= person.customerNammaTags,
             "aadhaarVerified" A..= (person.aadhaarVerified :: Bool),
             "enabled" A..= (person.enabled :: Bool),
-            "blocked" A..= (person.blocked :: Bool)
+            "blocked" A..= (person.blocked :: Bool),
+            "verificationStatus" A..= ((.verificationStatus) <$> mbPassDetails),
+            "numberOfStages" A..= ((.numberOfStages) =<< mbPassDetails)
           ]
 
   -- Check purchase eligibility using JSON logic
   eligibility <- checkEligibility pass.purchaseEligibilityJsonLogic personData
+
+  -- Get pass amount: use pricing tiers if verified organization holder, else default pass amount
+  let mbTierAmount = do
+        pd <- mbPassDetails
+        guard eligibility
+        stages <- pd.numberOfStages
+        tiers <- pass.pricingTiers
+        case tiers of
+          A.Object obj -> do
+            val <- AKeyMap.lookup (AKey.fromText . T.pack $ show stages) obj <|> AKeyMap.lookup (AKey.fromText "default") obj
+            case val of
+              A.Number n -> Just . HighPrecMoney $ toRational n
+              _ -> Nothing
+          _ -> Nothing
+
+  let passAmount = fromMaybe pass.amount mbTierAmount
 
   let language = fromMaybe Lang.ENGLISH mbLanguage
   let moid = person.merchantOperatingCityId
@@ -490,15 +521,15 @@ buildPassAPIEntity mbLanguage person pass = do
         Right offersResp -> SOffer.mkCumulativeOfferResp person.merchantOperatingCityId offersResp [] Nothing
 
   let originalAmount = case pass.benefit of
-        Just DPass.FullSaving -> pass.amount
-        Just (DPass.FixedSaving value) -> pass.amount + value
-        Just (DPass.PercentageSaving percentage) -> pass.amount / (1 - (percentage / 100))
-        Nothing -> pass.amount
+        Just DPass.FullSaving -> passAmount
+        Just (DPass.FixedSaving value) -> passAmount + value
+        Just (DPass.PercentageSaving percentage) -> passAmount / (1 - (percentage / 100))
+        Nothing -> passAmount
 
   return $
     PassAPI.PassAPIEntity
       { id = pass.id,
-        amount = pass.amount,
+        amount = passAmount,
         originalAmount,
         savings = Nothing, -- TODO: Calculate based on benefit
         benefit = pass.benefit,
@@ -512,7 +543,12 @@ buildPassAPIEntity mbLanguage person pass = do
         description = description,
         code = pass.code,
         offer,
-        autoApply = pass.autoApply
+        autoApply = pass.autoApply,
+        minFare = pass.minFare,
+        maxFare = pass.maxFare,
+        verificationStatus = (.verificationStatus) <$> mbPassDetails,
+        formVerificationConfig = pass.formVerificationConfig,
+        referenceNumber = (.referenceNumber) =<< mbPassDetails
       }
 
 -- Build Pass API Entity from PurchasedPass snapshot (for viewing purchased passes)
@@ -563,7 +599,12 @@ buildPassAPIEntityFromPurchasedPass mbLanguage _personId purchasedPass = do
         name = name,
         code = purchasedPass.passCode,
         offer = Nothing,
-        autoApply = False -- Auto-apply not relevant for already purchased passes
+        autoApply = False, -- Auto-apply not relevant for already purchased passes
+        minFare = Nothing,
+        maxFare = Nothing,
+        verificationStatus = Nothing,
+        formVerificationConfig = Nothing,
+        referenceNumber = Nothing
       }
 
 -- Check eligibility using JSON logic rules
@@ -954,6 +995,23 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             Left _ -> return []
             Right rsm -> return rsm
       Nothing -> return []
+
+  -- StudentPass-specific verification: route-id match → proximity fallback → reject.
+  -- Result is captured on the PassVerifyTransaction record for analytics regardless of outcome.
+  mbPassType <- CQPassType.findById purchasedPass.passTypeId
+  let mbPassEnum = mbPassType >>= (.passEnum)
+  mbStudentPassDetails <- case mbPassEnum of
+    Just DPassType.StudentPass -> QPassDetails.findByPersonId purchasedPass.personId DPassType.StudentPass
+    _ -> pure Nothing
+  mbVerifyStatus <- case mbPassEnum of
+    Just DPassType.StudentPass ->
+      case mbStudentPassDetails of
+        Nothing -> pure $ Just DPassVerifyTransaction.NOT_VERIFIED
+        Just passDetails -> do
+          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          pure $ Just $ verifyStudentPass passDetails vehicleInfo.routeCode routeStopMapping riderConfig
+    _ -> pure Nothing
+
   let sourceStop =
         getNearestStop routeStopMapping passVerifyReq.currentLat passVerifyReq.currentLon
           <|> ((listToMaybe routeStopMapping) <&> (.stopCode))
@@ -974,9 +1032,19 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             updatedAt = now,
             merchantId = Just merchantId,
             merchantOperatingCityId = Just person.merchantOperatingCityId,
-            isActuallyValid = Just $ fromMaybe True vehicleInfo.isActuallyValid
+            isActuallyValid = Just $ fromMaybe True vehicleInfo.isActuallyValid,
+            verificationStatus = mbVerifyStatus,
+            passEnum = mbPassEnum
           }
   QPassVerifyTransaction.create passVerifyTransaction
+
+  -- Reject failed StudentPass verifications; bump daily counter for successful ones.
+  case mbVerifyStatus of
+    Just DPassVerifyTransaction.NOT_VERIFIED ->
+      throwError $ PassVerificationFailed purchasedPassId.getId "This pass is not valid for this bus route"
+    Just _ -> enforceAndBumpStudentPassActivationCounter purchasedPass mbStudentPassDetails istTime
+    Nothing -> pure ()
+
   return APISuccess.Success
   where
     safeTail :: [a] -> Maybe a
@@ -997,6 +1065,65 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
               )
               routeStopMapping
        in Just nearestStop.stopCode
+
+-- | Redis key for the per-person per-passType daily activation counter.
+mkPassRouteActivationCountKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> Text
+mkPassRouteActivationCountKey personId passTypeId =
+  "PassRouteActivation:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
+
+-- | Decide a StudentPass verification outcome for the scanned bus.
+-- Primary: bus's routeCode matches one of the user's applicableRouteIds → FULLY_VERIFIED.
+-- Fallback: count bus stops within configured threshold of any user RoutePair stop;
+-- if matchingStopCount >= configured minMatchingStops → PARTIALLY_VERIFIED. Else NOT_VERIFIED.
+-- Defaults: 2000m threshold, 1 minimum matching stop.
+verifyStudentPass ::
+  DPassDetails.PassDetails ->
+  Maybe Text ->
+  [SharedLogic.External.Nandi.Types.RouteStopMappingInMemoryServer] ->
+  Domain.Types.RiderConfig.RiderConfig ->
+  DPassVerifyTransaction.PassVerifiedStatus
+verifyStudentPass passDetails mbBusRouteCode routeStopMapping riderConfig =
+  let cfg = riderConfig.studentPassVerifyConfig
+      thresholdMeters = maybe 2000 ((.distanceThresholdMeters) >>> getMeters) cfg
+      minMatchingStops = maybe 0 (.minMatchingStops) cfg
+      applicableRouteIds = filter (not . T.null) (map T.strip (fromMaybe [] passDetails.applicableRouteIds))
+      primaryMatch = case T.strip <$> mbBusRouteCode of
+        Just rc | not (T.null rc) -> rc `elem` applicableRouteIds
+        _ -> False
+   in if primaryMatch
+        then DPassVerifyTransaction.FULLY_VERIFIED
+        else
+          let userStops = concatMap (\rp -> [rp.srcLatLong, rp.destLatLong]) passDetails.routePairs
+              busStops = map (.stopPoint) routeStopMapping
+              isWithinThreshold bus user =
+                getMeters (highPrecMetersToMeters (distanceBetweenInMeters bus user)) <= thresholdMeters
+              matchingStopCount = length [() | bus <- busStops, user <- userStops, isWithinThreshold bus user]
+           in if matchingStopCount >= minMatchingStops
+                then DPassVerifyTransaction.PARTIALLY_VERIFIED
+                else DPassVerifyTransaction.NOT_VERIFIED
+
+-- | Enforce the daily activation cap for a StudentPass holder; throws if at limit, else bumps the counter
+-- with a TTL set to expire at next midnight IST. Limit = number of declared route pairs (with fallback 6).
+enforceAndBumpStudentPassActivationCounter ::
+  DPurchasedPass.PurchasedPass ->
+  Maybe DPassDetails.PassDetails ->
+  DT.UTCTime ->
+  Environment.Flow ()
+enforceAndBumpStudentPassActivationCounter purchasedPass mbPassDetails istTime = do
+  let routePairCount = maybe 0 (length . (.routePairs)) mbPassDetails
+      activationLimit = if routePairCount > 0 then routePairCount else 6
+      countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
+  count <- fromMaybe (0 :: Integer) <$> Hedis.safeGet countKey
+  when (count >= fromIntegral activationLimit) $
+    throwError (InvalidRequest "Pass activation limit reached for this pass type")
+  void $ Hedis.incr countKey
+  -- Reset at midnight IST (offset 19800s).
+  let istOffset = 19800 :: NominalDiffTime
+      tomorrowMidnightIST = DT.UTCTime (DT.addDays 1 (DT.utctDay istTime)) 0
+      tomorrowMidnightUTC = DT.addUTCTime (negate istOffset) tomorrowMidnightIST
+  now <- getCurrentTime
+  let secsUntilMidnight = max 1 (round (DT.diffUTCTime tomorrowMidnightUTC now) :: Int)
+  void $ Hedis.expire countKey secsUntilMidnight
 
 postMultimodalPassSwitchDeviceId ::
   ( ( Maybe (Id.Id DP.Person),

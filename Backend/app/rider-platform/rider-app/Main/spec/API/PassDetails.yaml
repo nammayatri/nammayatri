@@ -1,0 +1,96 @@
+imports:
+  PassDetails: Domain.Types.PassDetails
+  PassOrganization: Domain.Types.PassOrganization
+  VerificationStatus: Domain.Types.PassDetails
+  RoutePair: Domain.Types.PassDetails
+  Pass: Domain.Types.Pass
+  UTCTime: Data.Time
+  APISuccess: Kernel.Types.APISuccess
+  Gender: Domain.Types.Person
+module: PassDetails
+
+types:
+  RouteDetails:
+    srcStopName: Text
+    srcStopId: Text
+    destStopName: Text
+    destStopId: Text
+
+  PassDetailsUpdateReq:
+    passOrganizationId: Id PassOrganization
+    name: Text
+    idCardPicture: Maybe Text
+    address: Maybe Text
+    age: Maybe Int
+    gender: Gender
+    pincode: Maybe Text
+    selfImage: Text
+    guardianName: Maybe Text
+    studentClass: Maybe Text
+    routeDetails: "[RouteDetails]"
+    registerNo: Maybe Text
+    aadharNo: Maybe Text
+    graduationDate: Maybe UTCTime
+
+  PassDetailsDataResp:
+    passDetailsId: Id PassDetails
+    name: Text
+    age: Maybe Int
+    guardianName: Maybe Text
+    address: Maybe Text
+    studentClass: Maybe Text
+    idCardPicture: Maybe Text
+    routePairs: "[RoutePair]"
+    selfImage: Text
+    gender: Gender
+    pincode: Maybe Text
+    passOrganizationId: Id PassOrganization
+    passOrganizationName: Text
+    registerNo: Maybe Text
+    graduationDate: Maybe UTCTime
+    verificationStatus: VerificationStatus
+    validTill: UTCTime
+    remark: Maybe Text
+
+
+  PassStatusResp:
+    verificationStatus: VerificationStatus
+    validTill: UTCTime
+    remark: Maybe Text
+
+  GetOrganizationResp:
+    id: Id PassOrganization
+    name: Text
+    address: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /getOrganizations/{passEnum}
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      response:
+        type: "[GetOrganizationResp]"
+  - POST:
+      endpoint: /passDetails/{passEnum}/update
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      request:
+        type: PassDetailsUpdateReq
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /passDetails/{passEnum}/data
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      response:
+        type: PassDetailsDataResp
+  - GET:
+      endpoint: /passDetails/{passEnum}/verificationStatus
+      auth: TokenAuth
+      params:
+        passEnum: Text
+      response:
+        type: PassStatusResp

@@ -293,6 +293,8 @@ data PassError
   | PassTypeNotFound Text
   | PurchasedPassNotFound Text
   | PurchasedPassPaymentNotFound Text
+  | PassDetailsNotFound Text
+  | PassOrganizationNotFound Text
   | PassNotEnabled Text
   | PassActivationNotReady Text Text -- passId, reason
   | PassActivationOverlap Text -- passId
@@ -310,6 +312,8 @@ instance IsBaseError PassError where
   toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
   toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
   toMessage (PurchasedPassPaymentNotFound purchasedPassPaymentId) = Just $ "Purchased pass payment not found: " <> show purchasedPassPaymentId
+  toMessage (PassDetailsNotFound passDetailId) = Just $ "Pass details not found for the (PersonId | PassDetailId) : id" <> show passDetailId
+  toMessage (PassOrganizationNotFound organizationId) = Just $ "Pass organization not found: " <> show organizationId
   toMessage (PassNotEnabled passId) = Just $ "Pass is not enabled: " <> show passId
   toMessage (PassActivationNotReady _passId reason) = Just reason
   toMessage (PassActivationOverlap _passId) = Just "Cannot activate pass: date range overlaps with another active or prebooked pass"
@@ -325,6 +329,8 @@ instance IsHTTPError PassError where
     PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
     PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
     PurchasedPassPaymentNotFound _ -> "PURCHASED_PASS_PAYMENT_NOT_FOUND"
+    PassDetailsNotFound _ -> "PASS_DETAILS_NOT_FOUND"
+    PassOrganizationNotFound _ -> "PASS_ORGANIZATION_NOT_FOUND"
     PassNotEnabled _ -> "PASS_NOT_ENABLED"
     PassActivationNotReady _ _ -> "PASS_ACTIVATION_NOT_READY"
     PassActivationOverlap _ -> "PASS_ACTIVATION_OVERLAP"
@@ -338,6 +344,8 @@ instance IsHTTPError PassError where
     PassTypeNotFound _ -> E500
     PurchasedPassNotFound _ -> E500
     PurchasedPassPaymentNotFound _ -> E500
+    PassDetailsNotFound _ -> E500
+    PassOrganizationNotFound _ -> E500
     PassNotEnabled _ -> E400
     PassActivationNotReady _ _ -> E400
     PassActivationOverlap _ -> E409

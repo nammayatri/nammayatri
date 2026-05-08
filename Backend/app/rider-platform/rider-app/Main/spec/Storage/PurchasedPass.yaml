@@ -245,6 +245,15 @@ PurchasedPassPayment:
 PassVerifyTransaction:
   tableName: pass_verify_transaction
 
+  types:
+    PassVerifiedStatus:
+      enum: "FULLY_VERIFIED, PARTIALLY_VERIFIED, NOT_VERIFIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <PassVerifiedStatus>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PassVerifiedStatus>
+
   fields:
     id: Id PassVerifyTransaction
     purchasePassId: Id PurchasedPass
@@ -255,6 +264,12 @@ PassVerifyTransaction:
     fleetId: Text
     isActuallyValid: Maybe Bool
     autoActivated: Maybe Bool
+    verificationStatus: Maybe PassVerifiedStatus
+    passEnum: Maybe PassEnum
+
+  sqlType:
+    verificationStatus: text
+    passEnum: text
 
   constraints:
     id: PrimaryKey

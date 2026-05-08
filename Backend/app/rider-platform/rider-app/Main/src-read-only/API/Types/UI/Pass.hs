@@ -3,12 +3,14 @@
 module API.Types.UI.Pass where
 
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Data.Time
 import qualified Domain.Types.Pass
 import qualified Domain.Types.PassCategory
+import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassType
 import qualified Domain.Types.PurchasedPass
 import qualified Domain.Types.PurchasedPassPayment
@@ -30,14 +32,19 @@ data PassAPIEntity = PassAPIEntity
     description :: Data.Maybe.Maybe Data.Text.Text,
     documentsRequired :: [Domain.Types.Pass.PassDocumentType],
     eligibility :: Kernel.Prelude.Bool,
+    formVerificationConfig :: Data.Maybe.Maybe Data.Aeson.Value,
     id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
     maxDays :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    maxFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     maxTrips :: Data.Maybe.Maybe Kernel.Prelude.Int,
+    minFare :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     name :: Data.Maybe.Maybe Data.Text.Text,
     offer :: Data.Maybe.Maybe SharedLogic.Offer.CumulativeOfferResp,
     originalAmount :: Kernel.Types.Common.HighPrecMoney,
+    referenceNumber :: Data.Maybe.Maybe Kernel.Prelude.Int,
     savings :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
-    vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType]
+    vehicleServiceTierType :: [BecknV2.FRFS.Enums.ServiceTierType],
+    verificationStatus :: Data.Maybe.Maybe Domain.Types.PassDetails.VerificationStatus
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

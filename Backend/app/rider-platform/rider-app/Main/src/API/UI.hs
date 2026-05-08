@@ -30,6 +30,7 @@ import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
 import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
+import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
@@ -158,6 +159,7 @@ type API =
            :<|> Dispatcher.API
            :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
+           :<|> PassDetails.API
            :<|> SVP.API
        )
 
@@ -237,4 +239,5 @@ handler =
     :<|> Dispatcher.handler
     :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler
+    :<|> PassDetails.handler
     :<|> SVP.handler

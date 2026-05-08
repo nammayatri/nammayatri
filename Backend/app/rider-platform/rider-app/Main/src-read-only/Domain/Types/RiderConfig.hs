@@ -173,6 +173,7 @@ data RiderConfig = RiderConfig
     specialVehicleNotificationConfigs :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.SpecialVehicleNotificationConfig],
     specialZoneRadius :: Kernel.Prelude.Int,
     staticCustomerIdThresholdDay :: Kernel.Prelude.Maybe Data.Time.Day,
+    studentPassVerifyConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.StudentPassVerifyConfig,
     suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     suburbanFareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     suburbanTicketAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -252,6 +253,9 @@ data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [Bec
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
