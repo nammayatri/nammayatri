@@ -241,24 +241,28 @@ spec = describe "BecknV2.OnDemand.Types" $ do
       let json = "{\"cancelled_by\": \"CONSUMER\"}" :: BL.ByteString
       let decoded = decode json :: Maybe Spec.Cancellation
       decoded `shouldSatisfy` isJust
-      Spec.cancellationReasonDescriptor (fromJust decoded) `shouldBe` Nothing
+      Spec.cancellationReason (fromJust decoded) `shouldBe` Nothing
 
   -- ================================================================
   -- Cancellation type: v2.1.0 reason descriptor
   -- ================================================================
 
   describe "Cancellation v2.1.0 fields" $ do
-    it "preserves cancellationReasonDescriptor through JSON" $ do
+    it "preserves cancellationReason through JSON" $ do
       let cancellation =
             Spec.Cancellation
               { cancellationCancelledBy = Just "CONSUMER",
-                cancellationReasonDescriptor =
+                cancellationReason =
                   Just
-                    Spec.Descriptor
-                      { descriptorCode = Just "013",
-                        descriptorName = Just "Ride accepted mistakenly",
-                        descriptorShortDesc = Nothing,
-                        descriptorLongDesc = Nothing
+                    Spec.Reason
+                      { reasonDescriptor =
+                          Just
+                            Spec.Descriptor
+                              { descriptorCode = Just "013",
+                                descriptorName = Just "Ride accepted mistakenly",
+                                descriptorShortDesc = Nothing,
+                                descriptorLongDesc = Nothing
+                              }
                       }
               }
       roundTrip cancellation
@@ -267,13 +271,17 @@ spec = describe "BecknV2.OnDemand.Types" $ do
       let cancellation =
             Spec.Cancellation
               { cancellationCancelledBy = Just "CONSUMER",
-                cancellationReasonDescriptor =
+                cancellationReason =
                   Just
-                    Spec.Descriptor
-                      { descriptorCode = Just "013",
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing,
-                        descriptorLongDesc = Nothing
+                    Spec.Reason
+                      { reasonDescriptor =
+                          Just
+                            Spec.Descriptor
+                              { descriptorCode = Just "013",
+                                descriptorName = Nothing,
+                                descriptorShortDesc = Nothing,
+                                descriptorLongDesc = Nothing
+                              }
                       }
               }
       cancellation `hasJsonKey` "reason"
@@ -283,7 +291,7 @@ spec = describe "BecknV2.OnDemand.Types" $ do
       let cancellation =
             Spec.Cancellation
               { cancellationCancelledBy = Just "PROVIDER",
-                cancellationReasonDescriptor = Nothing
+                cancellationReason = Nothing
               }
       roundTrip cancellation
 
@@ -357,12 +365,12 @@ spec = describe "BecknV2.OnDemand.Types" $ do
       Spec.personGender (fromJust decoded) `shouldBe` Just "FEMALE"
 
     it "parses Cancellation with reason descriptor from raw JSON" $ do
-      let json = "{\"cancelled_by\": \"PROVIDER\", \"reason\": {\"code\": \"011\", \"name\": \"No drivers available\"}}" :: BL.ByteString
+      let json = "{\"cancelled_by\": \"PROVIDER\", \"reason\": {\"descriptor\": {\"code\": \"011\", \"name\": \"No drivers available\"}}}" :: BL.ByteString
       let decoded = decode json :: Maybe Spec.Cancellation
       decoded `shouldSatisfy` isJust
       let canc = fromJust decoded
       Spec.cancellationCancelledBy canc `shouldBe` Just "PROVIDER"
-      (Spec.cancellationReasonDescriptor canc >>= Spec.descriptorCode) `shouldBe` Just "011"
+      (Spec.cancellationReason canc >>= Spec.reasonDescriptor >>= Spec.descriptorCode) `shouldBe` Just "011"
 
   -- ================================================================
   -- omitNothingFields behavior (wire format correctness)
@@ -1034,7 +1042,7 @@ sampleOrder =
         Just
           Spec.Cancellation
             { cancellationCancelledBy = Just "CONSUMER",
-              cancellationReasonDescriptor = Nothing
+              cancellationReason = Nothing
             },
       Spec.orderCancellationTerms = Just [sampleCancellationTerm],
       Spec.orderBilling =
