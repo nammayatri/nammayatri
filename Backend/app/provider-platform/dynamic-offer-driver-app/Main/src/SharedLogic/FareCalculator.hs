@@ -1243,7 +1243,7 @@ applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, p
 -- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
 --   Returns 0 if gate not found or no fee configured.
 entryFeeForGateId ::
-  (Esq.EsqDBFlow m r, MonadFlow m) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   Id DGI.GateInfo ->
   m HighPrecMoney
 entryFeeForGateId gateId = do
