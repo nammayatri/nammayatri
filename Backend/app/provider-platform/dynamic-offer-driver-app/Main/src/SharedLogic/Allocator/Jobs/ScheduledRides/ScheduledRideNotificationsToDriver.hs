@@ -62,7 +62,7 @@ type ScheduleNotificationFlow m r =
     EsqDBFlow m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     SchedulerFlow r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   )
 
 sendScheduledRideNotificationsToDriver ::
@@ -131,7 +131,7 @@ data SendCommunicationToDriverReq = SendCommunicationToDriverReq
   }
 
 sendCommunicationToDriver ::
-  (ScheduleNotificationFlow m r, HasKafkaProducer r) =>
+  (ScheduleNotificationFlow m r, HasKafkaProducer r, Hedis.HedisLTSFlowEnv r) =>
   SendCommunicationToDriverReq ->
   m ()
 sendCommunicationToDriver SendCommunicationToDriverReq {..} = do

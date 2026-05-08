@@ -65,7 +65,7 @@ getProfile admin = do
   let personAPIEntity = SP.makePersonAPIEntity decAdmin
   return $ makeOrgAdminProfileRes personAPIEntity (DM.makeMerchantAPIEntity org)
 
-updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
+updateProfile :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, MonadFlow m, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => SP.Person -> UpdateOrgAdminProfileReq -> m UpdateOrgAdminProfileRes
 updateProfile admin req = do
   let merchantId = admin.merchantId
       updAdmin =

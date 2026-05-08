@@ -529,8 +529,7 @@ verify ::
     EsqDBReplicaFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasKafkaProducer r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id SR.RegistrationToken ->
   AuthVerifyReq ->
@@ -653,10 +652,9 @@ getPersonOTPChannel personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess

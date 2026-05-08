@@ -36,8 +36,7 @@ sendFeedbackPN ::
     EsqDBFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "kafkaProducerTools" ::: KafkaProducerTools],
-    Hedis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   Job 'SendFeedbackPN ->
   m ExecutionResult

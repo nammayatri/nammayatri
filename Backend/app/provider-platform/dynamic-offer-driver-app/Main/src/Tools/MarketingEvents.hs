@@ -27,7 +27,7 @@ data EventDestination = CLEVERTAP | FIREBASE deriving (Show, ToJSON, FromJSON, G
 
 data MerchantOperatingCityData = MerchantOperatingCityId (Id DMOC.MerchantOperatingCity) | MerchantOperatingCityEntity DMOC.MerchantOperatingCity
 
-notifyMarketingEvents :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasKafkaProducer r, Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Id Person -> Maybe FCMRecipientToken -> MarketingEventsType -> Maybe VehicleCategory -> MerchantOperatingCityData -> [EventDestination] -> m ()
+notifyMarketingEvents :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r, HasFlowEnv m r '["maxNotificationShards" ::: Int], HasKafkaProducer r, Hedis.HedisLTSFlowEnv r) => Id Person -> Maybe FCMRecipientToken -> MarketingEventsType -> Maybe VehicleCategory -> MerchantOperatingCityData -> [EventDestination] -> m ()
 notifyMarketingEvents driverId deviceToken marketingEventsType vehicleCategory cityData eventDestination = fork "marketing-events" $ do
   (city, merchantOpCityId, shortId) <- case cityData of
     MerchantOperatingCityEntity city ->

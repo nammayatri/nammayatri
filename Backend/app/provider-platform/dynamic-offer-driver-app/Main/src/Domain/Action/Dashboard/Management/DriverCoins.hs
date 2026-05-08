@@ -77,8 +77,7 @@ bulkUpdateByDriverId ::
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
@@ -152,8 +151,7 @@ bulkUpdateByDriverIdV2 ::
     CacheFlow m r,
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

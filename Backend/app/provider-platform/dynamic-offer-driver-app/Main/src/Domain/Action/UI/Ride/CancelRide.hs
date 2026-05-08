@@ -101,7 +101,6 @@ cancelRideHandle ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r,
     EventStreamFlow m r,
     MonadFlow m,
     Metrics.HasCoreMetrics r,
@@ -113,8 +112,7 @@ cancelRideHandle ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r
   ) =>
   ServiceHandle m
@@ -192,7 +190,6 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    Redis.HedisFlow m r,
     HasField "ltsHedisEnv" r Redis.HedisEnv
   ) =>
   ServiceHandle m ->

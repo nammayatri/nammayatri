@@ -64,8 +64,7 @@ handleConsequences ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
@@ -90,12 +89,11 @@ dispatchConsequence ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r,
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
     HasShortDurationRetryCfg r c,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -204,8 +202,7 @@ sendOverlayByKey ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DispatchContext ->
   Id DP.Person ->
