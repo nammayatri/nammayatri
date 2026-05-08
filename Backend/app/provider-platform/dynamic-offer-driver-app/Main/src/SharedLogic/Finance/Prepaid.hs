@@ -589,7 +589,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     supplierGSTIN = Nothing,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,
-                    referenceId = Nothing,
+                    referenceId = Just invoiceParams.paymentOrderId,
                     gstinOfParty = invoiceParams.gstinOfParty,
                     panOfParty = panDecrypted,
                     panType = panTypeText,

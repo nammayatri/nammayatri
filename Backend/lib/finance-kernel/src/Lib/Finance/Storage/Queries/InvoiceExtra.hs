@@ -55,6 +55,24 @@ findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mb
     mbLimit
     mbOffset
 
+-- | Find invoices by referenceId (rideId) with limit/offset.
+findByReferenceIdWithOptions ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
+  Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe Int ->
+  m [DInvoice.Invoice]
+findByReferenceIdWithOptions referenceId mbInvoiceType mbLimit mbOffset = do
+  let conds =
+        [Se.Is Beam.referenceId $ Se.Eq (Just referenceId)]
+          <> [Se.Is Beam.invoiceType $ Se.Eq ty | Just ty <- [mbInvoiceType]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Desc Beam.issuedAt)
+    mbLimit
+    mbOffset
+
 -- | Find invoices issued TO a specific person (driver/fleet) with optional type and date filters.
 -- Used for SubscriptionPurchase and RideCancellation where the driver is the issuedTo party.
 findByIssuedToAndType ::

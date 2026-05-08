@@ -190,7 +190,15 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
 
   let locale = countryToLocale merchantOpCity.country
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
+            cfgSupplierName = Nothing,
+            cfgSupplierAddress = Nothing,
+            cfgSupplierVatNumber = Nothing
+          }
       pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
       html = renderInvoiceHtml cfg pdfData
 

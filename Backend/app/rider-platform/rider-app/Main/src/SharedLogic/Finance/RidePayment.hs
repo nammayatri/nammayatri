@@ -717,7 +717,7 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
       issuedToId = ctx.counterpartyId,
       issuedToName = ctx.issuedToName,
       issuedToAddress = ctx.fromLocationAddress,
-      referenceId = Just ctx.referenceId,
+      referenceId = ctx.referenceId,
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
@@ -870,7 +870,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = ctx.fromLocationAddress,
-          referenceId = Just ctx.referenceId,
+          referenceId = ctx.referenceId,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)
@@ -940,7 +940,7 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
                     isExternalCharge = False
                   }
               ],
-          referenceId = Just ctx.referenceId,
+          referenceId = ctx.referenceId,
           gstBreakdown = Nothing,
           isVat = False,
           issuedToTaxNo = Nothing,
