@@ -77,7 +77,6 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     TranslateFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Redis.HedisFlow m r,
     EventStreamFlow m r,
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
@@ -87,8 +86,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
@@ -286,10 +284,8 @@ cancelOrReallocate ::
     HasField "singleBatchProcessingTempDelay" r NominalDiffTime,
     TranslateFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    Redis.HedisFlow m r,
     EventStreamFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,

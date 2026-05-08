@@ -195,7 +195,7 @@ endRideTransaction ::
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     CoreMetrics m
   ) =>
   Id DP.Driver ->
@@ -314,8 +314,7 @@ processEndRideFinance ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     BeamFlow m r
   ) =>
   Merchant ->
@@ -719,8 +718,7 @@ sendReferralFCM ::
     Esq.EsqDBReplicaFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -863,8 +861,7 @@ sendDriverToDriverReferralReward ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Bool ->
   Ride.Ride ->
@@ -1257,8 +1254,7 @@ createDriverFee ::
     JobCreatorEnv r,
     HasField "schedulerType" r SchedulerType,
     HasKafkaProducer r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Merchant ->
   Id DMOC.MerchantOperatingCity ->

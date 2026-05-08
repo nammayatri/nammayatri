@@ -95,15 +95,13 @@ reAllocateBookingIfPossible ::
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r,
     HasKafkaProducer r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     ClickhouseFlow m r
   ) =>
   Bool ->

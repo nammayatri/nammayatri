@@ -52,8 +52,7 @@ cancelBooking ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
   Maybe DPerson.Person ->

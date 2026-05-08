@@ -847,7 +847,7 @@ getInformationV2 ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -881,7 +881,7 @@ getInformation ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "cloudType" r (Maybe CloudType),
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Text ->
@@ -932,7 +932,7 @@ setActivity ::
     EsqDBFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Bool ->
@@ -1045,7 +1045,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
     buildActivateGoHomeKey :: Id SP.Person -> Text
     buildActivateGoHomeKey driverId' = "Driver:GoHome:Activate:" <> show driverId'
 
-deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
+deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
   goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1093,7 +1093,7 @@ buildDriverHomeLocation driverId req = do
         ..
       }
 
-updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
+updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
   goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1128,7 +1128,7 @@ getHomeLocations (driverId, _, _) = do
   driverHomeLocations <- QDHL.findAllByDriverId driverId
   return . GetHomeLocationsRes $ DDHL.makeDriverHomeLocationAPIEntity <$> driverHomeLocations
 
-deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
+deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
   goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
@@ -1149,7 +1149,7 @@ buildDriverEntityRes ::
     HasField "s3Env" r (S3.S3Env m),
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     EsqDBFlow m r
   ) =>
   (SP.Person, DriverInformation, DStats.DriverStats, Id DMOC.MerchantOperatingCity) ->
@@ -1347,7 +1347,7 @@ updateDriver ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "version" r DeploymentVersion,
     HasField "cloudType" r (Maybe CloudType),
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   Maybe Version ->
@@ -2933,7 +2933,7 @@ getDummyRideRequest ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   m DummyRideRequestRes

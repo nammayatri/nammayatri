@@ -27,12 +27,10 @@ import qualified Storage.Queries.Vehicle as QV
 -- Subsequent calls hit Redis directly.
 getOrBuildDriverPoolDataBatch ::
   ( BeamFlow m r,
-    Redis.HedisFlow m r,
     MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+    Redis.HedisLTSFlowEnv r
   ) =>
   [Id Driver] ->
   m [DriverPoolData]

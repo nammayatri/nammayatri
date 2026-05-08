@@ -213,7 +213,7 @@ updateWaiveOffPercantageAndType waiveOffEntity = do
 
 -- Wrapper for src-read-only function with LTS sync
 
-updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
+updateEnableServiceUsageChargeByDriverIdAndServiceName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person -> DExtraPlan.ServiceNames -> m ()
 updateEnableServiceUsageChargeByDriverIdAndServiceName enableServiceUsageCharge driverId serviceName = do
   _now <- getCurrentTime
   updateOneWithKV

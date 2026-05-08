@@ -85,7 +85,7 @@ triggerDummyRideRequest ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c,
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   DP.Person ->
   Id DMOC.MerchantOperatingCity ->

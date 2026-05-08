@@ -60,8 +60,7 @@ paymentOrderStatusCheckJob ::
     Metrics.HasBAPMetrics m r,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text]

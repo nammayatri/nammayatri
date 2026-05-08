@@ -62,7 +62,7 @@ retryDocumentVerificationJob ::
     ServiceFlow m r,
     HasField "blackListedJobs" r [Text],
     HasSchemaName SchedulerJobT,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Job 'RetryDocumentVerification ->
   m ExecutionResult
@@ -84,7 +84,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
       IVQuery.updateStatus "source_down_failed" verificationReq.requestId
   return Complete
   where
-    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
+    callVerifyRC :: (VerificationFlow m r, HasField "ttenTokenCacheExpiry" r Seconds, SchedulerFlow r, ServiceFlow m r, HasField "blackListedJobs" r [Text], HasSchemaName SchedulerJobT, EsqDBReplicaFlow m r, Redis.HedisLTSFlowEnv r) => Text -> DP.Person -> DIdfyVerification.IdfyVerification -> m ()
     callVerifyRC documentNum person verificationReq = do
       verifyRes <-
         Verification.verifyRC person.merchantId person.merchantOperatingCityId Nothing verificationReq.vehicleCategory (Verification.VerifyRCReq {rcNumber = documentNum, driverId = person.id.getId, token = Nothing, udinNo = Nothing, engineNumber = Nothing, chassisNumber = Nothing, applicantMobile = Nothing})

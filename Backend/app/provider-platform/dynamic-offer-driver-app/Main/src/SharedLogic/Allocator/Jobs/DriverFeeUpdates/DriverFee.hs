@@ -88,7 +88,7 @@ calculateDriverFeeForDrivers ::
     HasField "schedulerType" r SchedulerType,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "blackListedJobs" r [Text],
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    Redis.HedisLTSFlowEnv r,
     HasKafkaProducer r
   ) =>
   Job 'CalculateDriverFees ->

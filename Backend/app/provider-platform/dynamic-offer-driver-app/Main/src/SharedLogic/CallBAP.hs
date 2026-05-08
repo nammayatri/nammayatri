@@ -519,7 +519,7 @@ sendRideAssignedUpdateToBAP ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -560,7 +560,7 @@ sendRideStartedUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->
@@ -599,7 +599,7 @@ sendRideEstimatedEndTimeRangeUpdateToBAP ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasField "ltsHedisEnv" r Hedis.HedisEnv
+    Hedis.HedisLTSFlowEnv r
   ) =>
   DRB.Booking ->
   SRide.Ride ->

@@ -33,7 +33,6 @@ notificationAndOrderStatusUpdate ::
     Esq.Transactionable m,
     EncFlow m r,
     EventStreamFlow m r,
-    Redis.HedisFlow m r,
     HasShortDurationRetryCfg r c,
     SchedulerFlow r,
     JobCreatorEnv r,
@@ -42,7 +41,7 @@ notificationAndOrderStatusUpdate ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasField "blackListedJobs" r [Text],
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Job 'OrderAndNotificationStatusUpdate ->
   m ExecutionResult

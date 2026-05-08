@@ -542,8 +542,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
     CoreMetrics m,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   [NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
@@ -734,8 +733,7 @@ calculateDriverPool ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+    Redis.HedisLTSFlowEnv r
   ) =>
   CalculateDriverPoolReq a ->
   m ([DriverPoolResult], [DriverPoolResult], [QP.NearestDriversResult]) -- (offRide, onRide, rawApproxPool)
@@ -834,9 +832,7 @@ calculateDriverPoolWithActualDist ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+    Redis.HedisLTSFlowEnv r
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->

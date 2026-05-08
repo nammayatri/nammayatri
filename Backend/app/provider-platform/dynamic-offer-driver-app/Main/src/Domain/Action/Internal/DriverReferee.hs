@@ -78,8 +78,7 @@ linkReferee ::
     EncFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    Redis.HedisLTSFlowEnv r
   ) =>
   Id Merchant ->
   Maybe Text ->
