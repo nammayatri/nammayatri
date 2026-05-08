@@ -67,6 +67,7 @@ library
       API.Internal.GeometryUpdate
       API.Internal.InMemManagement
       API.Internal.KnowYourDriver
+      API.Internal.MasterCloudForward
       API.Internal.Multimodal
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
