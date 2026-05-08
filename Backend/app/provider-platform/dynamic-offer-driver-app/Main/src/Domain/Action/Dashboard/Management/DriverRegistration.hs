@@ -228,6 +228,12 @@ validateInvoiceEntry entry = do
 
   pure (invoiceErrors <> taxErrors)
 
+extractInvoiceIds :: Text -> [Text]
+extractInvoiceIds docData =
+  case A.eitherDecode (BSL.fromStrict $ TE.encodeUtf8 docData) of
+    Right tdsData -> map (.invoiceId) (tdsData :: API.Types.UI.DriverOnboardingV2.TDSCertificateData).tdsCertificates
+    Left _ -> []
+
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -593,6 +599,14 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
     unless (Kernel.Prelude.null validationErrors) $ do
       let errorJson = TE.decodeUtf8 $ BSL.toStrict $ A.encode validationErrors
       throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
+
+    -- Check for duplicate invoiceIds across existing TDS documents for this driver
+    let newInvoiceIds = map (.invoiceId) tdsData.tdsCertificates
+    existingDocs <- QCommonDriverOnboardingDocuments.findByDriverIdAndDocumentType (Just driverPersonId) DVC.TDSCertificate
+    let existingInvoiceIds = Kernel.Prelude.concatMap (extractInvoiceIds . (.documentData)) existingDocs
+        duplicateIds = filter (`elem` existingInvoiceIds) newInvoiceIds
+    unless (Kernel.Prelude.null duplicateIds) $
+      throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
 
   documentId <- generateGUID
   now <- getCurrentTime
