@@ -27,6 +27,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SvpJourney as DSvp
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Wallet.Interface.Types as Wallet
@@ -263,7 +264,8 @@ postSvpGate ::
     ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    MonadReader r m
+    MonadReader r m,
+    HasMasterCloudForwarder r
   ) =>
   API.GateCallbackReq ->
   m API.GateCallbackResp
@@ -373,7 +375,8 @@ handleExit ::
     ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    MonadReader r m
+    MonadReader r m,
+    HasMasterCloudForwarder r
   ) =>
   Text ->
   Id DM.Merchant ->

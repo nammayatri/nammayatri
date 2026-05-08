@@ -13,6 +13,7 @@ import Domain.Types.FRFSQuoteCategoryType
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -53,7 +54,7 @@ type FareByOriginDestAPI =
 fareByOriginDestAPI :: Proxy FareByOriginDestAPI
 fareByOriginDestAPI = Proxy
 
-getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r) => IntegratedBPPConfig -> CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
+getFareByOriginDest :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasMasterCloudForwarder r) => IntegratedBPPConfig -> CMRLConfig -> FareByOriginDestReq -> m [FRFSUtils.FRFSFare]
 getFareByOriginDest integrationBPPConfig config fareReq = do
   let eulerClient = \accessToken -> ET.client fareByOriginDestAPI (Just $ "Bearer " <> accessToken) (getStationCode fareReq.origin) (getStationCode fareReq.destination) fareReq.ticketType cmrlAppType
   fareByODRes <- callCMRLAPI config eulerClient "getFareByOriginDest" fareByOriginDestAPI

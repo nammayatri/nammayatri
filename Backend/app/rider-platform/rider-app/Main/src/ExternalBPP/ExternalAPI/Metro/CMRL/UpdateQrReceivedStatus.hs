@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -46,7 +47,7 @@ updateQrReceivedStatusAPI :: Proxy UpdateQrReceivedStatusAPI
 updateQrReceivedStatusAPI = Proxy
 
 updateQrReceivedStatus ::
-  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) =>
+  (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) =>
   CMRLConfig ->
   UpdateQrReceivedStatusReq ->
   m UpdateQrReceivedStatusResult

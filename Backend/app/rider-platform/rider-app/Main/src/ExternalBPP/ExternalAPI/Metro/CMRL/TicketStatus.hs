@@ -12,6 +12,7 @@ import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
 import ExternalBPP.ExternalAPI.Types
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Types.App
 import Kernel.Utils.Common
@@ -64,7 +65,7 @@ type TicketStatusAPI =
 ticketStatusAPI :: Proxy TicketStatusAPI
 ticketStatusAPI = Proxy
 
-getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CMRLConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasMasterCloudForwarder r) => CMRLConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus config booking = do
   tickets <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   updatedTickets <-

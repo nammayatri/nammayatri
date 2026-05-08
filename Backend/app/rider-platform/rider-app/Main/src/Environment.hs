@@ -42,6 +42,7 @@ import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
+import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -201,7 +202,8 @@ data AppCfg = AppCfg
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic, FromDhall)
 
@@ -321,7 +323,8 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic)
 
@@ -419,6 +422,9 @@ data BAPs a = BAPs
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
+
+instance MCF.HasMasterCloudForwarder AppEnv where
+  masterCloudProxyConfig appEnv = appEnv.masterCloudProxyConfig
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache performLookup
