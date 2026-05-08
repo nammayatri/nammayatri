@@ -33,6 +33,13 @@ import Kernel.Utils.TH
 import Servant.API (FromHttpApiData (..), ToHttpApiData (..))
 import Text.Show
 
+data RenderType
+  = GATES_BASED
+  | ZONE_BASED
+  deriving (Show, Read, Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+$(mkBeamInstancesForEnum ''RenderType)
+
 data Merchant
 
 data MerchantOperatingCity
@@ -51,6 +58,7 @@ data SpecialLocation = SpecialLocation
     isOpenMarketEnabled :: Bool,
     isQueueEnabled :: Maybe Bool,
     enforceTollRoute :: Maybe Bool,
+    render :: Maybe RenderType,
     priority :: Int,
     supportNumber :: Maybe Text,
     createdAt :: UTCTime,

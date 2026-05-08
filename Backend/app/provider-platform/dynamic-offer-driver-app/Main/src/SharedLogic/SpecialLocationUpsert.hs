@@ -84,7 +84,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationCooldownInSec :: Maybe Text,
     gateInfoMaxRideSkipsBeforeQueueRemoval :: Maybe Text,
     gateInfoPickupZoneArrivalTimeoutInSec :: Maybe Text,
-    gateInfoPickupRequestResponseTimeoutInSec :: Maybe Text
+    gateInfoPickupRequestResponseTimeoutInSec :: Maybe Text,
+    render :: Maybe Text
   }
   deriving (Show)
 
@@ -121,6 +122,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_max_ride_skips_before_queue_removal")
       <*> optional (r .: "gate_info_pickup_zone_arrival_timeout_in_sec")
       <*> optional (r .: "gate_info_pickup_request_response_timeout_in_sec")
+      <*> optional (r .: "render")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -220,6 +222,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
+      mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- generateGUID
@@ -260,6 +263,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
             enforceTollRoute = Nothing,
+            render = mbRender,
             supportNumber = supportNumber
           }
       gateInfo =
