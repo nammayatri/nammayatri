@@ -57,6 +57,7 @@ import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.HideSecrets
 import Kernel.Types.Id (Id (..))
@@ -86,6 +87,7 @@ import qualified Lib.Payment.Payout.PayoutItems as PayoutItems
 import qualified Lib.Payment.Payout.Request as PayoutRequest
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import SharedLogic.Finance.Wallet
+import SharedLogic.FinancialCommunication (FinancialEventType (..), resolveFleetOwner, sendFinancialNotification)
 import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -629,7 +631,9 @@ initiateWalletPayout ::
     BeamFlow m r,
     ServiceFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   PayoutContext ->
   HighPrecMoney -> -- payoutable balance
@@ -681,7 +685,28 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
         -- Stash redeemable entry IDs in Redis for the webhook handler to settle
         unless (null redeemableEntryIds) $
           Redis.setExp (makePayoutEntryIdsKey pr.id.getId) redeemableEntryIds 86400 -- 24h TTL
-        Notify.sendNotificationToDriver ctx.person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED "Payout Initiated" ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "") ctx.person ctx.person.deviceToken
+        mbFleetOwnerId <- resolveFleetOwner ctx.person.id
+        case mbFleetOwnerId of
+          Nothing ->
+            Notify.sendNotificationToDriver
+              ctx.person.merchantOperatingCityId
+              FCM.SHOW
+              Nothing
+              FCM.PAYOUT_INITIATED
+              "Payout Initiated"
+              ("Your payout of " <> show netAmount <> " has been initiated." <> if fee > 0 then " (Fee: " <> show fee <> ")" else "")
+              ctx.person
+              ctx.person.deviceToken
+          Just _ ->
+            sendFinancialNotification
+              ctx.person.merchantId
+              ctx.person.merchantOperatingCityId
+              ctx.person
+              mbFleetOwnerId
+              FE_PAYOUT_INITIATED
+              "Payout Initiated"
+              ("Your payout of Rs." <> show netAmount <> " has been initiated and is being processed.")
+              Nothing
       PayoutRequest.PayoutFailed _ err ->
         logError $ "Wallet payout failed for driver " <> ctx.driverId.getId <> ": " <> err
 
