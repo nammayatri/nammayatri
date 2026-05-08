@@ -33,7 +33,7 @@ module Lib.Finance.Invoice.Service
 where
 
 import qualified Data.Aeson as Aeson
-import Domain.Types.Invoice (InvoiceType (..))
+import Domain.Types.Invoice (InvoiceType (..), IssuedToType)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
@@ -344,7 +344,7 @@ getInvoiceForEntry entryId = do
 -- | Find invoices by issued-to (e.g., all invoices for a driver)
 findByIssuedTo ::
   (BeamFlow.BeamFlow m r) =>
-  Text -> -- Issued to type
+  IssuedToType -> -- Issued to type
   Text -> -- Issued to ID
   m [Invoice]
 findByIssuedTo = QInvoice.findByIssuedTo
@@ -354,16 +354,16 @@ invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> Subscription
   Ride -> IndirectTax.RideFare
-  BapRide -> IndirectTax.RideFare
   RideCancellation -> Cancellation
+  Commission -> BuyerCommission
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
 invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> DirectTax.Subscription
   Ride -> DirectTax.RideFare
-  BapRide -> DirectTax.RideFare
   RideCancellation -> DirectTax.Cancellation
+  Commission -> DirectTax.BuyerCommission
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -382,8 +382,8 @@ invoiceTypeToPurpose :: InvoiceType -> Text
 invoiceTypeToPurpose = \case
   SubscriptionPurchase -> purposeSubscription
   Ride -> purposeRideFare
-  BapRide -> purposeRideFare
   RideCancellation -> purposeCancellation
+  Commission -> purposeCommission
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text

@@ -66,6 +66,7 @@ import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
+import "beckn-spec" Domain.Types.Invoice (IssuedToType (..))
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
@@ -586,52 +587,78 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
-    let invoiceConfig =
+    let mkRideLineItems clubVatInclusive =
+          let rideInclusiveLine = rawBaseFare + rawTaxAmount
+              tollInclusiveLine = tollAmount + tollVatAmount
+              parkingInclusiveLine = parkingAmount + parkingVatAmount
+              mkLine desc amt isExt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt} else Nothing
+              mkDeductionLine desc amt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False} else Nothing
+              rideAndTollLines =
+                if clubVatInclusive
+                  then
+                    [ mkLine "Ride Fare (Incl. VAT)" rideInclusiveLine False,
+                      mkLine "Toll Fare (Incl. VAT)" tollInclusiveLine True,
+                      mkLine "Parking Charges (Incl. VAT)" parkingInclusiveLine True
+                    ]
+                  else
+                    [ mkLine "Base Fare" rawBaseFare False,
+                      mkLine "Tax" rawTaxAmount False,
+                      mkLine "Toll Charges" tollAmount True,
+                      mkLine "Toll Charges Tax" tollVatAmount True,
+                      mkLine "Parking Charges" parkingAmount True,
+                      mkLine "Parking Charges Tax" parkingVatAmount True
+                    ]
+              showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
+              commonLines =
+                [ mkLine "Tip" tipAmount False,
+                  mkDeductionLine "Platform Commission" commissionAmount,
+                  if showVatInput then mkLine "VAT Input" serviceVatAmount False else Nothing
+                ]
+           in catMaybes (rideAndTollLines <> commonLines)
+        rideGstBreakdown =
+          computeGstBreakdownByPlace
+            transporterConfig.taxConfig.rideGst
+            (Just $ show merchantOperatingCity.state)
+            booking.fromLocation.address.state
+            (Just $ show merchantOperatingCity.city)
+            booking.fromLocation.address.city
+            (taxAmount + absorbedVat)
+        -- CUSTOMER invoice: never club VAT into the ride/toll/parking lines —
+        -- riders get the itemised view regardless of transporter config.
+        customerInvoiceConfig =
           InvoiceConfig
             { invoiceType = BeckInvoice.Ride,
-              issuedToType = "CUSTOMER",
+              issuedToType = CUSTOMER,
               issuedToId = maybe "" (.getId) booking.riderId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              lineItems =
-                let clubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
-                    rideInclusiveLine = rawBaseFare + rawTaxAmount
-                    tollInclusiveLine = tollAmount + tollVatAmount
-                    parkingInclusiveLine = parkingAmount + parkingVatAmount
-                    mkLine desc amt isExt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = amt, lineTotal = amt, isExternalCharge = isExt} else Nothing
-                    mkDeductionLine desc amt = if amt > 0 then Just InvoiceLineItem {description = desc, quantity = 1, unitPrice = negate amt, lineTotal = negate amt, isExternalCharge = False} else Nothing
-                    rideAndTollLines =
-                      if clubVatInclusive
-                        then
-                          [ mkLine "Ride Fare (Incl. VAT)" rideInclusiveLine False,
-                            mkLine "Toll Fare (Incl. VAT)" tollInclusiveLine True,
-                            mkLine "Parking Charges (Incl. VAT)" parkingInclusiveLine True
-                          ]
-                        else
-                          [ mkLine "Base Fare" rawBaseFare False,
-                            mkLine "Tax" rawTaxAmount False,
-                            mkLine "Toll Charges" tollAmount True,
-                            mkLine "Toll Charges Tax" tollVatAmount True,
-                            mkLine "Parking Charges" parkingAmount True,
-                            mkLine "Parking Charges Tax" parkingVatAmount True
-                          ]
-                    commonLines =
-                      [ mkLine "Tip" tipAmount False,
-                        mkDeductionLine "Platform Commission" commissionAmount
-                      ]
-                 in catMaybes (rideAndTollLines <> commonLines),
-              gstBreakdown =
-                computeGstBreakdownByPlace
-                  transporterConfig.taxConfig.rideGst
-                  (Just $ show merchantOperatingCity.state)
-                  booking.fromLocation.address.state
-                  (Just $ show merchantOperatingCity.city)
-                  booking.fromLocation.address.city
-                  (taxAmount + absorbedVat),
+              lineItems = mkRideLineItems False,
+              gstBreakdown = rideGstBreakdown,
               referenceId = Nothing,
               isVat = isVat,
-              issuedToTaxNo = Nothing, -- Ride invoice: Nothing. Commission/Subscription invoice: fleet's VAT/GST number
-              issuedByTaxNo = Nothing -- populated from Merchant.gstin via FinanceCtx.merchantGstin in invoice()
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing
+            }
+        -- DRIVER / FLEET_OWNER copy of the same Ride invoice. Honors
+        -- driverInvoiceLineItemsVatInclusive so the supplier-side invoice
+        -- can club VAT into a single inclusive line per the transporter
+        -- config. Created standalone (no extra ledger entries) so it doesn't
+        -- duplicate the indirect-tax transactions emitted for the customer
+        -- invoice's linked entries.
+        driverClubVatInclusive = maybe False (.driverInvoiceLineItemsVatInclusive) transporterConfig.invoiceConfig
+        driverInvoiceConfig =
+          InvoiceConfig
+            { invoiceType = BeckInvoice.Ride,
+              issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
+              issuedToId = driverOrFleetPersonId.getId,
+              issuedToName = mbDriver <&> (.firstName),
+              issuedToAddress = Nothing,
+              lineItems = mkRideLineItems driverClubVatInclusive,
+              gstBreakdown = rideGstBreakdown,
+              referenceId = Nothing,
+              isVat = isVat,
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing
             }
     let taxRefOnline = if isVat then walletReferenceVATOnline else walletReferenceGSTOnline
         taxRefCash = if isVat then walletReferenceVATCash else walletReferenceGSTCash
@@ -679,35 +706,62 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       -- TDS — driver wallet reduces in both modes (cash driver owes platform).
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
-      -- Commission — same direction in both modes; ref split for reporting.
-      let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
-      when (commissionAmount > 0) $
-        void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
-      -- VATInput — credits driver wallet, gated to online OR cash-with-discount.
-      when (isVat && serviceVatAmount > 0 && (isOnline || customerDiscountAmount > 0)) $
+      when (isVat && serviceVatAmount > 0) $
         void $ transfer GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
-        let discountBase = max 0 (customerDiscountAmount - absorbedVat)
-        when (discountBase > 0) $ do
-          transfer_ BuyerAsset BuyerExternal discountBase discountsRef
-          void $ transfer BuyerExternal OwnerLiability discountBase discountsRef
-        when (absorbedVat > 0) $ do
-          transfer_ BuyerAsset BuyerExternal absorbedVat walletReferenceVATAbsorbedOnDiscount
-          void $ transfer BuyerExternal OwnerLiability absorbedVat walletReferenceVATAbsorbedOnDiscount
+        transfer_ BuyerAsset BuyerExternal customerDiscountAmount discountsRef
+        void $ transfer BuyerExternal OwnerLiability customerDiscountAmount discountsRef
       -- Tip — online: BuyerAsset → OwnerLiability (1 leg). Cash: Control.
       when (tipAmount > 0) $
         if isOnline
           then void $ transfer BuyerAsset OwnerLiability tipAmount walletReferenceTips
           else void $ transfer BuyerControl OwnerControl tipAmount walletReferenceTips
-      -- Invoice is created inside FinanceM using auto-collected entry IDs
-      invoice invoiceConfig
+      invoice customerInvoiceConfig
     case result of
       Left err -> fromEitherM (\e -> InternalError ("Failed to create wallet transaction: " <> show e)) (Left err)
       Right (mbInvoiceId, _entryIds) -> do
         let mbInvoiceIdText = (.getId) <$> mbInvoiceId
         QRB.updateFinanceInvoiceId booking.id mbInvoiceIdText
+
+    -- Standalone driver / fleet-owner Ride invoice mirroring the customer
+    -- invoice. No transfers in this block → no ledger entries are linked,
+    -- so no duplicate IndirectTaxTransaction is emitted.
+    driverInvoiceResult <- runFinance ctx $ invoice driverInvoiceConfig
+    case driverInvoiceResult of
+      Left err -> fromEitherM (\e -> InternalError ("Failed to create driver ride invoice: " <> show e)) (Left err)
+      Right _ -> pure ()
+
+    when (commissionAmount > 0) $ do
+      let commissionRef = if isOnline then walletReferenceCommissionOnline else walletReferenceCommissionCash
+          onlineCommissionPaidOutDirectly =
+            isOnline && fromMaybe False transporterConfig.driverWalletConfig.onlineCommissionPaidOutDirectly
+          commissionInvoiceConfig =
+            InvoiceConfig
+              { invoiceType = BeckInvoice.Commission,
+                issuedToType = if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER,
+                issuedToId = driverOrFleetPersonId.getId,
+                issuedToName = mbDriver <&> (.firstName),
+                issuedToAddress = Nothing,
+                referenceId = Nothing,
+                lineItems =
+                  catMaybes
+                    [ Just InvoiceLineItem {description = "Platform Commission", quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False}
+                    ],
+                gstBreakdown = Nothing,
+                isVat = isVat,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing
+              }
+      commissionResult <- runFinance ctx $ do
+        void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef
+        when onlineCommissionPaidOutDirectly $
+          void $ transfer SellerRevenue OwnerLiability commissionAmount walletReferenceDeductedAtPaymentByPlatform
+        invoice commissionInvoiceConfig
+      case commissionResult of
+        Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
+        Right _ -> pure ()
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId

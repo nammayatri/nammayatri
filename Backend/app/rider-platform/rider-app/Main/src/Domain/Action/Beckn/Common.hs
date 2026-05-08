@@ -20,6 +20,7 @@ module Domain.Action.Beckn.Common
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import Control.Monad.Extra (mapMaybeM)
@@ -129,6 +130,7 @@ import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.ClientPersonInfo as QCP
@@ -210,7 +212,8 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     isSafetyPlus :: Bool,
-    isSynchronousOnUpdateProcessing :: Bool
+    isSynchronousOnUpdateProcessing :: Bool,
+    bppInvoiceProviderFields :: QRBE.BPPInvoiceProviderFields
   }
 
 data RideStartedReq = RideStartedReq
@@ -449,8 +452,21 @@ rideAssignedReqHandler ::
   m ()
 rideAssignedReqHandler req = do
   let BookingDetails {..} = req.bookingDetails
-  void $ QRB.updateBPPBookingIdAndProviderUrl req.booking.id bppBookingId req.bppUri
-  let booking = req.booking {DRB.bppBookingId = Just bppBookingId, DRB.providerUrl = fromMaybe req.booking.providerUrl req.bppUri}
+  void $ QRBE.updateBPPBookingIdAndProviderUrl req.booking.id bppBookingId req.bppUri req.bppInvoiceProviderFields
+  let bppInfo = req.bppInvoiceProviderFields
+      booking =
+        req.booking
+          { DRB.bppBookingId = Just bppBookingId,
+            DRB.providerUrl = fromMaybe req.booking.providerUrl req.bppUri,
+            DRB.issuedById = bppInfo.issuedById <|> req.booking.issuedById,
+            DRB.issuedByName = bppInfo.issuedByName <|> req.booking.issuedByName,
+            DRB.issuedByAddress = bppInfo.issuedByAddress <|> req.booking.issuedByAddress,
+            DRB.supplierName = bppInfo.supplierName <|> req.booking.supplierName,
+            DRB.supplierAddress = bppInfo.supplierAddress <|> req.booking.supplierAddress,
+            DRB.supplierGSTIN = bppInfo.supplierGSTIN <|> req.booking.supplierGSTIN,
+            DRB.supplierTaxNo = bppInfo.supplierTaxNo <|> req.booking.supplierTaxNo,
+            DRB.supplierId = bppInfo.supplierId <|> req.booking.supplierId
+          }
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   let rideStatus = case mbMerchant of
@@ -938,7 +954,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
             DPayment.applyOfferWithoutPaymentService ride.id.getId offerId rideOfferEntity.offerCode offerStatsInput (Just rideDiscountAmount) (Just ridePayoutAmount) totalFare.amount totalFare.currency person.merchantId.getId person.merchantOperatingCityId.getId useDomainOffers applyOfferCall ride.createdAt mbProduct
       let riderName = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
           mbInvCfg = riderConfig.invoiceConfig
-          cashLedgerCtx = (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = riderName, supplierName = mbInvCfg >>= (.supplierName), supplierAddress = mbInvCfg >>= (.supplierAddress), supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)}
+          cashLedgerCtx =
+            RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency False person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                { issuedToName = riderName,
+                  supplierName = mbInvCfg >>= (.supplierName),
+                  supplierAddress = mbInvCfg >>= (.supplierAddress),
+                  supplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+                }
       mbCashLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 cashLedgerCtx
       let cashLedgerInfo =
             fromMaybe
@@ -976,7 +999,14 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
       -- Online Ride End branch → isOnline=True.
       let riderNameOnline = listToMaybe $ catMaybes [person.firstName, person.middleName, person.lastName]
           mbInvCfgOnline = riderConfig.invoiceConfig
-          ledgerCtx = (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])) {issuedToName = riderNameOnline, supplierName = mbInvCfgOnline >>= (.supplierName), supplierAddress = mbInvCfgOnline >>= (.supplierAddress), supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)}
+          ledgerCtx =
+            RidePaymentFinance.applyBookingProviderFieldsToCtx booking $
+              (RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]))
+                { issuedToName = riderNameOnline,
+                  supplierName = mbInvCfgOnline >>= (.supplierName),
+                  supplierAddress = mbInvCfgOnline >>= (.supplierAddress),
+                  supplierVatNumber = mbInvCfgOnline >>= (.supplierVatNumber)
+                }
       mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups breakups rideDiscountAmount ridePayoutAmount applicationFeeAmount' 0 ledgerCtx
       let ledgerInfo =
             fromMaybe
@@ -1545,6 +1575,7 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
+  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])

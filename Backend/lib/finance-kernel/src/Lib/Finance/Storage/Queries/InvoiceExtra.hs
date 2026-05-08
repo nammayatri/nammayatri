@@ -37,10 +37,11 @@ findByMerchantOpCityIdAndDateRange ::
   Kernel.Prelude.Maybe DInvoice.InvoiceStatus ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- issuedToId (driver/fleet owner)
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- supplierId (driver for Ride invoices)
+  Kernel.Prelude.Maybe DInvoiceSpec.IssuedToType -> -- issuedToType (DRIVER / RIDER / CUSTOMER / FLEET_OWNER)
   Kernel.Prelude.Maybe Int ->
   Kernel.Prelude.Maybe Int ->
   m [DInvoice.Invoice]
-findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mbStatus mbIssuedToId mbSupplierId mbLimit mbOffset = do
+findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mbStatus mbIssuedToId mbSupplierId mbIssuedToType mbLimit mbOffset = do
   let conds =
         [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
           <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
@@ -49,6 +50,7 @@ findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mb
           <> [Se.Is Beam.status $ Se.Eq st | Just st <- [mbStatus]]
           <> [Se.Is Beam.issuedToId $ Se.Eq issuedToId | Just issuedToId <- [mbIssuedToId]]
           <> [Se.Is Beam.supplierId $ Se.Eq (Just supplierId) | Just supplierId <- [mbSupplierId]]
+          <> [Se.Is Beam.issuedToType $ Se.Eq issuedToType | Just issuedToType <- [mbIssuedToType]]
   findAllWithOptionsKV
     (if null conds then [Se.Is Beam.id $ Se.Not $ Se.Eq ""] else [Se.And conds])
     (Se.Desc Beam.issuedAt)

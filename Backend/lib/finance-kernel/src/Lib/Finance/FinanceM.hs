@@ -67,7 +67,7 @@ where
 import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
-import Domain.Types.Invoice (InvoiceType)
+import Domain.Types.Invoice (InvoiceType, IssuedToType)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Currency, HighPrecMoney)
@@ -129,7 +129,7 @@ data FinanceCtx = FinanceCtx
 --   Everything else (merchant, supplier, currency, entry IDs) comes from FinanceCtx.
 data InvoiceConfig = InvoiceConfig
   { invoiceType :: InvoiceType,
-    issuedToType :: Text,
+    issuedToType :: IssuedToType,
     issuedToId :: Text,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,

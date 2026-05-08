@@ -480,7 +480,7 @@ incrementTotalEarningDistanceAndCompletedRidesDaily fleetOperatorId ride booking
     setInitEarningDistanceRides
 
 -- Daily: increment total rating count and total rating score
-incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Int -> Bool ->m ()
+incrementTotalRatingCountAndTotalRatingScoreDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Text -> DTTC.TransporterConfig -> Int -> Bool -> m ()
 incrementTotalRatingCountAndTotalRatingScoreDaily fleetOperatorId driverId transporterConfig ratingValue shouldIncrementCount = do
   nowUTCTime <- getCurrentTime
   let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime

@@ -64,6 +64,18 @@ buildOnConfirmReqV2 req isValueAddNP = do
           mbRideOtp =
             fulf >>= (.fulfillmentStops) >>= Utils.getStartLocation >>= (.stopAuthorization)
               >>= \auth -> if auth.authorizationType == Just (show Enums.OTP) then auth.authorizationToken else Nothing
+          orderTagGroups = order.orderTags
+          bppInvoiceProviderInfo =
+            DOnConfirm.BPPInvoiceProviderInfo
+              { issuedById = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ID orderTagGroups,
+                issuedByName = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_NAME orderTagGroups,
+                issuedByAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ADDRESS orderTagGroups,
+                supplierName = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_NAME orderTagGroups,
+                supplierAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ADDRESS orderTagGroups,
+                supplierGSTIN = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_GSTIN orderTagGroups,
+                supplierTaxNo = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_TAX_NO orderTagGroups,
+                supplierId = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ID orderTagGroups
+              }
 
       let isDriverDetailsPresent = fulf >>= (.fulfillmentAgent) >>= (.agentContact) >>= (.contactPhone) & isJust
 

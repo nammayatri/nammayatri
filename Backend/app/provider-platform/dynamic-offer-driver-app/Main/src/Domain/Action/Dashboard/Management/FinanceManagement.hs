@@ -18,7 +18,7 @@ import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -35,7 +35,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
 import Kernel.Utils.Common (secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
-import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
@@ -64,7 +63,6 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
-import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SchedulerJob ()
@@ -346,6 +344,53 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
             rideSubscriptionDebitAmount = rideSubscriptionDebitAmount
           }
 
+-- | Fetch invoices using the shared filter logic for invoice list / pdf endpoints.
+fetchInvoicesByFilters ::
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text -> -- fleetOwnerOrDriverId
+  Maybe UTCTime ->
+  Maybe Text -> -- invoiceId
+  Maybe Text -> -- invoiceNumber
+  Maybe InvoiceType ->
+  Maybe IssuedToType ->
+  Int -> -- limit
+  Int -> -- offset
+  Maybe FinanceInvoice.InvoiceStatus ->
+  Maybe UTCTime ->
+  Flow [FinanceInvoice.Invoice]
+fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo = do
+  let issuedToType = fromMaybe CUSTOMER mbIssuedToType
+  case mbInvoiceId of
+    Just invoiceId ->
+      QFinanceInvoice.findById (Id invoiceId) >>= \case
+        Just inv -> pure [inv]
+        Nothing -> pure []
+    Nothing -> case mbInvoiceNumber of
+      Just invoiceNumber ->
+        QFinanceInvoice.findByNumber invoiceNumber >>= \case
+          Just inv -> pure [inv]
+          Nothing -> pure []
+      Nothing -> do
+        let mbIssuedToId =
+              case mbInvoiceType of
+                Just Ride -> Nothing
+                _ -> mbFleetOwnerOrDriverId
+            mbSupplierId =
+              case mbInvoiceType of
+                Just Ride -> mbFleetOwnerOrDriverId
+                _ -> Nothing
+        QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
+          merchantOpCityId.getId
+          mbFrom
+          mbTo
+          mbInvoiceType
+          mbStatus
+          mbIssuedToId
+          mbSupplierId
+          (Just issuedToType)
+          (Just limit)
+          (Just offset)
+
 -- | Get invoice list with filters
 getFinanceManagementInvoiceList ::
   ShortId DM.Merchant ->
@@ -355,125 +400,33 @@ getFinanceManagementInvoiceList ::
   Maybe Text ->
   Maybe Text ->
   Maybe InvoiceType ->
+  Maybe IssuedToType ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  case mbInvoiceType of
-    Just BapRide -> fetchFromBAP limit offset
-    _ -> fetchFromBPP merchantOpCityId limit offset
+  invoices <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+
+  items <- mapM buildInvoiceItem invoices
+
+  let totalItems = length items
+      summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
+
+  pure $
+    API.InvoiceListRes
+      { totalItems,
+        summary,
+        invoices = items
+      }
   where
-    fetchFromBAP limit offset = do
-      bppBookingId <- mbFleetOwnerOrDriverId & fromMaybeM (InvalidRequest "fleetOwnerOrDriverId (bppBookingId) is required for BapRide invoice type")
-      appBackendBapInternal <- asks (.appBackendBapInternal)
-      resp <-
-        CallBAPInternal.getRiderFinanceInvoiceList
-          appBackendBapInternal.apiKey
-          appBackendBapInternal.url
-          bppBookingId
-          mbFrom
-          mbTo
-          (Just Ride)
-          (Just limit)
-          (Just offset)
-      let items = map toBPPInvoiceListItem resp.invoices
-          totalItems = resp.totalItems
-          summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
-      pure API.InvoiceListRes {totalItems, summary, invoices = items}
-
-    toBPPInvoiceListItem :: CallBAPInternal.FinanceInvoiceListItem -> API.InvoiceListItem
-    toBPPInvoiceListItem i =
-      API.InvoiceListItem
-        { invoiceId = i.invoiceId,
-          invoiceNumber = i.invoiceNumber,
-          invoiceType = i.invoiceType,
-          invoiceDate = i.invoiceDate,
-          invoiceStatus = i.invoiceStatus,
-          counterpartyType = i.counterpartyType,
-          counterpartyId = i.counterpartyId,
-          taxableValue = i.taxableValue,
-          gstRate = i.gstRate,
-          gstAmount = i.gstAmount,
-          cgstAmount = i.cgstAmount,
-          sgstAmount = i.sgstAmount,
-          totalInvoiceValue = i.totalInvoiceValue,
-          taxableValueOfServiceSupplied = i.taxableValueOfServiceSupplied,
-          tdsReference = i.tdsReference,
-          irn = i.irn,
-          qrCode = Nothing,
-          rideId = i.rideId,
-          subscriptionId = i.subscriptionId,
-          supplierName = i.supplierName,
-          supplierAddress = i.supplierAddress,
-          supplierGstin = i.supplierGstin,
-          supplierTaxNo = i.supplierTaxNo,
-          issuedToName = i.issuedToName,
-          issuedToAddress = i.issuedToAddress,
-          issuedByName = i.issuedByName,
-          issuedByAddress = i.issuedByAddress,
-          gstinOfParty = i.gstinOfParty,
-          sacCode = i.sacCode,
-          paymentMethod = i.paymentMethod,
-          lineItems = i.lineItems,
-          generatedAt = i.generatedAt,
-          taxRate = i.taxRate,
-          issuedToTaxNo = i.issuedToTaxNo,
-          issuedByTaxNo = i.issuedByTaxNo
-        }
-
-    fetchFromBPP merchantOpCityId limit offset = do
-      -- Get invoices based on filters (invoiceId takes precedence, then invoiceNumber, then date range)
-      invoices <- case mbInvoiceId of
-        Just invoiceId -> do
-          QFinanceInvoice.findById (Id invoiceId) >>= \case
-            Just inv -> pure [inv]
-            Nothing -> pure []
-        Nothing -> case mbInvoiceNumber of
-          Just invoiceNumber -> do
-            QFinanceInvoice.findByNumber invoiceNumber >>= \case
-              Just inv -> pure [inv]
-              Nothing -> pure []
-          Nothing -> do
-            let mbIssuedToId =
-                  case mbInvoiceType of
-                    Just Ride -> Nothing
-                    _ -> mbFleetOwnerOrDriverId
-                mbSupplierId =
-                  case mbInvoiceType of
-                    Just Ride -> mbFleetOwnerOrDriverId
-                    _ -> Nothing
-             in QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-                  merchantOpCityId.getId
-                  mbFrom
-                  mbTo
-                  mbInvoiceType
-                  mbStatus
-                  mbIssuedToId
-                  mbSupplierId
-                  (Just limit)
-                  (Just offset)
-
-      -- Build response items
-      items <- mapM buildInvoiceItem invoices
-
-      let totalItems = length items
-          summary = Dashboard.Common.Summary {totalCount = totalItems, count = totalItems}
-
-      pure $
-        API.InvoiceListRes
-          { totalItems,
-            summary,
-            invoices = items
-          }
-
     buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.InvoiceListItem
     buildInvoiceItem invoice = do
       -- Get GST details from indirect tax transaction
@@ -521,7 +474,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             invoiceType = invoice.invoiceType,
             invoiceDate = invoice.issuedAt,
             invoiceStatus = invoice.status,
-            counterpartyType = invoice.issuedToType,
+            counterpartyType = show invoice.issuedToType,
             counterpartyId = invoice.issuedToId,
             taxableValue = taxableValue,
             gstRate = gstRate,
@@ -569,6 +522,7 @@ getFinanceManagementFinanceInvoiceList ::
   Maybe Text ->
   Maybe Text ->
   Maybe InvoiceType ->
+  Maybe IssuedToType ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
@@ -1229,13 +1183,13 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
   -- Backward compatibility: when driverId is present and concernedIndividualId is absent,
   -- keep DRIVER context even if fleetOperatorId is also passed.
   let (mbOwnerInfo, mbConcernedIndividualIdFilter) = case (mbDriverId, mbFleetOperatorId, mbConcernedIndividualId) of
-        (Just driverId, _, Nothing) -> (Just (DRIVER, driverId), Nothing)
-        (Nothing, Just fleetOwnerId, Just cid) -> (Just (FLEET_OWNER, fleetOwnerId), Just cid)
+        (Just driverId, _, Nothing) -> (Just (Account.DRIVER, driverId), Nothing)
+        (Nothing, Just fleetOwnerId, Just cid) -> (Just (Account.FLEET_OWNER, fleetOwnerId), Just cid)
         (Just driverId, Just fleetOwnerId, Just cid)
-          | driverId == cid -> (Just (FLEET_OWNER, fleetOwnerId), Just cid)
+          | driverId == cid -> (Just (Account.FLEET_OWNER, fleetOwnerId), Just cid)
           | otherwise -> (Nothing, Nothing)
-        (Nothing, Just fleetOwnerId, Nothing) -> (Just (FLEET_OWNER, fleetOwnerId), Nothing)
-        (Just driverId, Nothing, Just _) -> (Just (DRIVER, driverId), Nothing)
+        (Nothing, Just fleetOwnerId, Nothing) -> (Just (Account.FLEET_OWNER, fleetOwnerId), Nothing)
+        (Just driverId, Nothing, Just _) -> (Just (Account.DRIVER, driverId), Nothing)
         _ -> (Nothing, Nothing)
 
   when
@@ -1322,104 +1276,57 @@ getFinanceManagementFinanceWalletLedgerImpl merchantShortId opCity mbDriverId mb
 getFinanceManagementFinanceInvoicePdf ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe DateOrTime ->
   Maybe Text ->
-  Maybe API.InvoiceSource ->
+  Maybe UTCTime ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe InvoiceType ->
+  Maybe IssuedToType ->
   Maybe Int ->
   Maybe Int ->
-  Maybe Text ->
-  Maybe DateOrTime ->
+  Maybe FinanceInvoice.InvoiceStatus ->
+  Maybe UTCTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceId mbInvoiceSource mbInvoiceType mbLimit mbOffset mbReferenceId mbTo = do
-  case mbInvoiceSource of
-    Just API.Rider -> fetchRiderInvoicePdf
-    _ -> fetchDriverInvoicePdf
-  where
-    fetchRiderInvoicePdf = do
-      appBackendBapInternal <- asks (.appBackendBapInternal)
-      (mbBppBookingId, bapInvoiceId) <- case mbInvoiceId of
-        Just _ -> pure (Nothing, mbInvoiceId)
-        Nothing -> do
-          rideId <- mbReferenceId & fromMaybeM (InvalidRequest "referenceId (driver ride ID) is required for Rider invoice source")
-          ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
-          pure (Just ride.bookingId.getId, Nothing)
-      resp <-
-        CallBAPInternal.getRiderFinanceInvoicePdf
-          appBackendBapInternal.apiKey
-          appBackendBapInternal.url
-          mbBppBookingId
-          bapInvoiceId
-          mbFrom
-          mbTo
-          mbInvoiceType
-      pure $
-        API.FinanceInvoicePdfResp
-          { pdfBase64 = resp.pdfBase64,
-            invoiceNumber = resp.invoiceNumber
-          }
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLimit mbOffset mbStatus mbTo = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> ", city: " <> show opCity)
 
-    fetchDriverInvoicePdf = do
-      merchant <- SMerchant.findMerchantByShortId merchantShortId
-      merchantOpCity <-
-        CQMOC.findByMerchantIdAndCity merchant.id opCity
-          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchant.id.getId <> ", city: " <> show opCity)
+  let limit = mkPageLimit mbLimit
+      offset = mkPageOffset mbOffset
 
-      let fromTime = toUTCTimeFrom <$> mbFrom
-          toTime = toUTCTimeTo <$> mbTo
+  invoices <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
 
-      invoices <- case mbInvoiceId of
-        Just invoiceId ->
-          QFinanceInvoice.findById (Id invoiceId) >>= \case
-            Just inv -> pure [inv]
-            Nothing -> throwError $ InvalidRequest $ "Invoice not found: " <> invoiceId
-        Nothing -> do
-          let mbIssuedToId = case mbInvoiceType of
-                Just Ride -> Nothing
-                _ -> mbReferenceId
-              mbSupplierId = case mbInvoiceType of
-                Just Ride -> mbReferenceId
-                _ -> Nothing
-          QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
-            merchantOpCity.id.getId
-            fromTime
-            toTime
-            mbInvoiceType
-            Nothing
-            mbIssuedToId
-            mbSupplierId
-            (mbLimit <|> Just 10)
-            (mbOffset <|> Just 0)
+  when (null invoices) $
+    throwError $ InvalidRequest "No invoices found for the given criteria"
 
-      when (null invoices) $
-        throwError $ InvalidRequest "No invoices found for the given criteria"
+  transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  let locale = countryToLocale merchantOpCity.country
+      tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
+      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
 
-      transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-      let locale = countryToLocale merchantOpCity.country
-          tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
-          cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
+  pdfDatas <- forM invoices $ \inv -> do
+    let items = parseLineItems inv.lineItems
+    taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
+    let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
+    (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+      Just orderId -> do
+        txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+        let mbTxn = Kernel.Prelude.listToMaybe txns
+        pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+      Nothing -> pure (Nothing, Nothing, Nothing)
+    pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
 
-      pdfDatas <- forM invoices $ \inv -> do
-        let items = parseLineItems inv.lineItems
-        taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
-        let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-        (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
-          Just orderId -> do
-            txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-            let mbTxn = Kernel.Prelude.listToMaybe txns
-            pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
-          Nothing -> pure (Nothing, Nothing, Nothing)
-        pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+  let lastInv = Kernel.Prelude.last invoices
+      html = case pdfDatas of
+        [single] -> renderInvoiceHtml cfg single
+        batch -> renderBatchInvoiceHtml cfg batch
 
-      let lastInv = Kernel.Prelude.last invoices
-          html = case pdfDatas of
-            [single] -> renderInvoiceHtml cfg single
-            batch -> renderBatchInvoiceHtml cfg batch
+  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
 
-      pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
-
-      pure $
-        API.FinanceInvoicePdfResp
-          { pdfBase64 = pdfBase64,
-            invoiceNumber = lastInv.invoiceNumber
-          }
+  pure $
+    API.FinanceInvoicePdfResp
+      { pdfBase64 = pdfBase64,
+        invoiceNumber = lastInv.invoiceNumber
+      }

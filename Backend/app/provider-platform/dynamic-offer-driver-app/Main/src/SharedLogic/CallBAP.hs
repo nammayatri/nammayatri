@@ -72,7 +72,6 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SRBCR
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.ConditionalCharges as DTCC
@@ -88,6 +87,7 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OnUpdate as DOU
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD

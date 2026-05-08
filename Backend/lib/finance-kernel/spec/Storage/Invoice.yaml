@@ -8,6 +8,7 @@ imports:
   Value: Data.Aeson
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
   InvoiceType: Domain.Types.Invoice
+  IssuedToType: Domain.Types.Invoice
 
 Invoice:
   tableName: finance_invoice
@@ -23,7 +24,7 @@ Invoice:
     invoiceNumber: Text
     invoiceType: InvoiceType
     paymentOrderId: Maybe Text
-    issuedToType: Text
+    issuedToType: IssuedToType
     issuedToId: Text
     issuedToName: Maybe Text
     issuedToAddress: Maybe Text

@@ -11,6 +11,7 @@ imports:
   PGPaymentSettlementReport: Dashboard.Common
   InvoiceStatus: Lib.Finance.Domain.Types.Invoice
   InvoiceType: Domain.Types.Invoice
+  IssuedToType: Domain.Types.Invoice
   ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
@@ -45,14 +46,16 @@ apis:
   - GET: # InvoiceDownloadPdfAPI
       endpoint: /finance/invoice/pdf
       query:
-        invoiceId: Text
-        referenceId: Text
-        invoiceType: InvoiceType
-        from: DateOrTime
-        to: DateOrTime
         limit: Int
         offset: Int
-        invoiceSource: InvoiceSource
+        invoiceId: Text
+        invoiceNumber: Text
+        from: UTCTime
+        to: UTCTime
+        invoiceType: InvoiceType
+        status: InvoiceStatus
+        fleetOwnerOrDriverId: Text
+        issuedToType: IssuedToType
       auth: ApiAuthV2
       response:
         type: FinanceInvoicePdfResp
@@ -70,6 +73,7 @@ apis:
         invoiceType: InvoiceType
         status: InvoiceStatus
         fleetOwnerOrDriverId: Text
+        issuedToType: IssuedToType
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
@@ -246,11 +250,6 @@ types:
     - payoutStatus: Maybe Text
     - createdAt: Maybe UTCTime
     - updatedAt: Maybe UTCTime
-
-  # ----- Invoice Source -----
-  InvoiceSource:
-    - enum: "Driver, Rider"
-    - derive: "HttpInstance"
 
   # ----- Invoice PDF -----
   FinanceInvoicePdfResp:

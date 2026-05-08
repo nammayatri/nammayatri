@@ -15,7 +15,7 @@ module Lib.Finance.Invoice.Interface
   )
 where
 
-import Domain.Types.Invoice (InvoiceType)
+import Domain.Types.Invoice (InvoiceType, IssuedToType)
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Lib.Finance.Domain.Types.DirectTaxTransaction (TdsRateReason)
@@ -37,7 +37,7 @@ data InvoiceLineItem = InvoiceLineItem
 data InvoiceInput = InvoiceInput
   { invoiceType :: InvoiceType,
     paymentOrderId :: Maybe Text,
-    issuedToType :: Text,
+    issuedToType :: IssuedToType,
     issuedToId :: Text,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,

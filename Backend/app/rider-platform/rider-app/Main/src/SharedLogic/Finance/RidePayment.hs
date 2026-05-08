@@ -97,6 +97,7 @@ module SharedLogic.Finance.RidePayment
 
     -- * Context builder
     buildRiderFinanceCtx,
+    applyBookingProviderFieldsToCtx,
 
     -- * Ledger operations
     createRidePaymentLedger,
@@ -133,8 +134,11 @@ module SharedLogic.Finance.RidePayment
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.List as List
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Invoice (InvoiceType (..))
+import qualified Domain.Types.Invoice as InvType
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
@@ -258,6 +262,18 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       fromLocationAddress = fromLocationAddress,
       issuedToName = Nothing
     }
+
+applyBookingProviderFieldsToCtx :: DRB.Booking -> FinanceCtx -> FinanceCtx
+applyBookingProviderFieldsToCtx booking ctx =
+  ctx{merchantId = fromMaybe ctx.merchantId booking.issuedById,
+      merchantName = booking.issuedByName <|> ctx.merchantName,
+      issuedByAddress = booking.issuedByAddress <|> ctx.issuedByAddress,
+      supplierName = booking.supplierName <|> ctx.supplierName,
+      supplierAddress = booking.supplierAddress <|> ctx.supplierAddress,
+      supplierGSTIN = booking.supplierGSTIN <|> ctx.supplierGSTIN,
+      supplierVatNumber = booking.supplierTaxNo <|> ctx.supplierVatNumber,
+      supplierId = booking.supplierId <|> ctx.supplierId
+     }
 
 -- ---------------------------------------------------------------------------
 -- 1. Create PENDING ledger entries after payment order creation
@@ -713,7 +729,7 @@ buildRidePaymentInvoiceConfig ::
 buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
   InvoiceConfig
     { invoiceType = Ride,
-      issuedToType = "RIDER",
+      issuedToType = InvType.RIDER,
       issuedToId = ctx.counterpartyId,
       issuedToName = ctx.issuedToName,
       issuedToAddress = ctx.fromLocationAddress,
@@ -866,7 +882,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
     invoice
       InvoiceConfig
         { invoiceType = RideCancellation,
-          issuedToType = "RIDER",
+          issuedToType = InvType.RIDER,
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = ctx.fromLocationAddress,
@@ -918,7 +934,7 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
     invoice
       InvoiceConfig
         { invoiceType = RideCancellation,
-          issuedToType = "RIDER",
+          issuedToType = InvType.RIDER,
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = Nothing,

@@ -91,14 +91,39 @@ updateBPPBookingId rbId bppRbId = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
-updateBPPBookingIdAndProviderUrl :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Id BPPBooking -> Maybe BaseUrl -> m ()
-updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl = do
+data BPPInvoiceProviderFields = BPPInvoiceProviderFields
+  { issuedById :: Maybe Text,
+    issuedByName :: Maybe Text,
+    issuedByAddress :: Maybe Text,
+    supplierName :: Maybe Text,
+    supplierAddress :: Maybe Text,
+    supplierGSTIN :: Maybe Text,
+    supplierTaxNo :: Maybe Text,
+    supplierId :: Maybe Text
+  }
+
+updateBPPBookingIdAndProviderUrl ::
+  (MonadFlow m, EsqDBFlow m r) =>
+  Id Booking ->
+  Id BPPBooking ->
+  Maybe BaseUrl ->
+  BPPInvoiceProviderFields ->
+  m ()
+updateBPPBookingIdAndProviderUrl rbId bppRbId mbProviderUrl BPPInvoiceProviderFields {..} = do
   now <- getCurrentTime
   updateOneWithKV
     ( [ Se.Set BeamB.bppBookingId (Just $ getId bppRbId),
         Se.Set BeamB.updatedAt now
       ]
         <> maybe [] (\url -> [Se.Set BeamB.providerUrl (showBaseUrl url)]) mbProviderUrl
+        <> maybe [] (\v -> [Se.Set BeamB.issuedById (Just v)]) issuedById
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByName (Just v)]) issuedByName
+        <> maybe [] (\v -> [Se.Set BeamB.issuedByAddress (Just v)]) issuedByAddress
+        <> maybe [] (\v -> [Se.Set BeamB.supplierName (Just v)]) supplierName
+        <> maybe [] (\v -> [Se.Set BeamB.supplierAddress (Just v)]) supplierAddress
+        <> maybe [] (\v -> [Se.Set BeamB.supplierGSTIN (Just v)]) supplierGSTIN
+        <> maybe [] (\v -> [Se.Set BeamB.supplierTaxNo (Just v)]) supplierTaxNo
+        <> maybe [] (\v -> [Se.Set BeamB.supplierId (Just v)]) supplierId
     )
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 

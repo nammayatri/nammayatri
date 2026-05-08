@@ -498,7 +498,7 @@ processWalletTopupWebhook driver order transactionStatus = do
         let topupInvoiceConfig =
               InvoiceConfig
                 { invoiceType = BecknInvoice.SubscriptionPurchase,
-                  issuedToType = "DRIVER",
+                  issuedToType = BecknInvoice.DRIVER,
                   issuedToId = order.personId.getId,
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
@@ -633,7 +633,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         let invoiceParams =
               InvoiceCreationParams
                 { paymentOrderId = latestPurchase.paymentOrderId.getId,
-                  issuedToType = if isFleetOwner then "FLEET_OWNER" else "DRIVER",
+                  issuedToType = if isFleetOwner then BecknInvoice.FLEET_OWNER else BecknInvoice.DRIVER,
                   issuedToName = Just person.firstName,
                   issuedToAddress = issuedToAddress,
                   issuedByType = "SELLER",

@@ -29,7 +29,7 @@ data InvoiceT f = InvoiceT
     issuedToAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     issuedToId :: (B.C f Kernel.Prelude.Text),
     issuedToName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    issuedToType :: (B.C f Kernel.Prelude.Text),
+    issuedToType :: (B.C f Domain.Types.Invoice.IssuedToType),
     lineItems :: (B.C f Data.Aeson.Value),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),

@@ -119,7 +119,8 @@ confirm transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandler
       mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback dConfirmRes.booking.quoteId
       vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow dConfirmRes.booking.vehicleServiceTier dConfirmRes.booking.merchantOperatingCityId dConfirmRes.booking.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show dConfirmRes.booking.vehicleServiceTier))
       let pricing = Utils.convertBookingToPricing vehicleServiceTierItem dConfirmRes.booking
-          onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy
+      bppInvoiceInfo <- ACL.resolveBPPInvoiceInfo dConfirmRes
+      let onConfirmMessage = ACL.buildOnConfirmMessageV2 dConfirmRes pricing becknConfig mbFarePolicy bppInvoiceInfo
       void $ BP.callOnConfirmV2 dConfirmRes.transporter context onConfirmMessage becknConfig
 
 confirmProcessingLockKey :: Text -> Text

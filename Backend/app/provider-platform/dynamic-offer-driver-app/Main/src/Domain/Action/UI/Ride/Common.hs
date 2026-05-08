@@ -41,8 +41,8 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Prelude (roundToIntegral)
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
@@ -181,7 +181,9 @@ data DriverRideRes = DriverRideRes
     specialLocationCategory :: Maybe Text,
     isValidRide :: Maybe Bool,
     amountToCollectInCash :: Maybe HighPrecMoney,
-    amountToBeSettledOnline :: Maybe HighPrecMoney
+    amountToBeSettledOnline :: Maybe HighPrecMoney,
+    amountToCollectInCashWithCurrency :: Maybe PriceAPIEntity,
+    amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -221,6 +223,19 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         Nothing -> pure Nothing
       pure (mbGate, mbSL)
     Nothing -> pure (Nothing, Nothing)
+
+  let mbAmountToCollectInCash =
+        case (booking.paymentInstrument, ride.fare) of
+          (Just DMPM.Cash, Just fareAmt) ->
+            Just $ case ride.discountAmount of
+              Just disc | disc > 0 -> max 0 (fareAmt - disc)
+              _ -> fareAmt
+          _ -> Nothing
+      mbAmountToBeSettledOnline =
+        case (booking.paymentInstrument, ride.fare, ride.discountAmount) of
+          (Just DMPM.Cash, _, Just disc) | disc > 0 -> Just disc
+          (_, Just fareAmt, _) -> Just fareAmt
+          _ -> Nothing
 
   return $
     DriverRideRes
@@ -324,18 +339,10 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         specialLocationName = mbSpecialLoc <&> (.locationName),
         specialLocationCategory = mbSpecialLoc <&> (.category),
         isValidRide = Just $ Tools.isValidRide ride,
-        amountToCollectInCash =
-          case (booking.paymentInstrument, ride.fare) of
-            (Just DMPM.Cash, Just fareAmt) ->
-              Just $ case ride.discountAmount of
-                Just disc | disc > 0 -> max 0 (fareAmt - disc)
-                _ -> fareAmt
-            _ -> Nothing,
-        amountToBeSettledOnline =
-          case (booking.paymentInstrument, ride.fare, ride.discountAmount) of
-            (Just DMPM.Cash, _, Just disc) | disc > 0 -> Just disc
-            (_, Just fareAmt, _) -> Just fareAmt
-            _ -> Nothing
+        amountToCollectInCash = mbAmountToCollectInCash,
+        amountToBeSettledOnline = mbAmountToBeSettledOnline,
+        amountToCollectInCashWithCurrency = flip PriceAPIEntity ride.currency <$> mbAmountToCollectInCash,
+        amountToBeSettledOnlineWithCurrency = flip PriceAPIEntity ride.currency <$> mbAmountToBeSettledOnline
       }
 
 -- calculateLocations moved from UI.Ride
