@@ -178,7 +178,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                     issuedToName = Nothing,
                     issuedToAddress = Nothing,
-                    referenceId = Nothing,
+                    referenceId = ride.id.getId,
                     gstBreakdown = Nothing,
                     lineItems =
                       [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}

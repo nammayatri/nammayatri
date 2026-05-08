@@ -56,8 +56,8 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         throwError $ InvalidRequest "Invoice does not belong to this rider"
       pure [inv]
     Nothing -> case (mbInvoiceType, mbReferenceId) of
-      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId
-      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId
+      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Ride)
+      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId (Just RideCancellation)
       (Just Ride, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Ride"
       (Just RideCancellation, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=RideCancellation"
       _ ->
@@ -77,7 +77,16 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
 
   let locale = countryToLocale merchantOpCity.country
       tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+      mbInvCfg = mbRiderConfig >>= (.invoiceConfig)
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = mbInvCfg >>= (.logoUrl) <&> showBaseUrl,
+            cfgSupplierName = mbInvCfg >>= (.supplierName),
+            cfgSupplierAddress = mbInvCfg >>= (.supplierAddress),
+            cfgSupplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+          }
 
   pdfDatas <- forM invoices $ \inv -> do
     let items = parseLineItems inv.lineItems
@@ -104,10 +113,10 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         invoiceNumber = lastInv.invoiceNumber
       }
 
-fetchInvoicesByRideId :: Text -> Id DP.Person -> Flow [FInvoice.Invoice]
-fetchInvoicesByRideId rideId personId = do
+fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]
+fetchInvoicesByRideId rideId personId mbInvoiceType = do
   ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
-  QFinanceInvoice.findByReferenceId (Just rideId)
+  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType (Just 1) (Just 0)

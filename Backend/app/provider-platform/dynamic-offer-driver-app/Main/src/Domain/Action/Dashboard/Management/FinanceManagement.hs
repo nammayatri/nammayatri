@@ -1397,7 +1397,15 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFrom mbInvoiceId 
       transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       let locale = countryToLocale merchantOpCity.country
           tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
-          cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
+          cfg =
+            InvoicePdfConfig
+              { locale,
+                timezone = tz,
+                logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl,
+                cfgSupplierName = Nothing,
+                cfgSupplierAddress = Nothing,
+                cfgSupplierVatNumber = Nothing
+              }
 
       pdfDatas <- forM invoices $ \inv -> do
         let items = parseLineItems inv.lineItems

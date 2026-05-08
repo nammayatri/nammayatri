@@ -43,7 +43,11 @@ data InvoiceLocale = EN | FI | NL
 data InvoicePdfConfig = InvoicePdfConfig
   { locale :: InvoiceLocale,
     timezone :: DT.TimeZone,
-    logoUrl :: Maybe Text
+    logoUrl :: Maybe Text,
+    -- | Override supplier block from platform config (rider_config.invoice_config)
+    cfgSupplierName :: Maybe Text,
+    cfgSupplierAddress :: Maybe Text,
+    cfgSupplierVatNumber :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -132,7 +136,7 @@ renderInvoiceHtml cfg pdfData =
           "</style>",
           "</head><body><div class='wrap'>",
           renderHeader cfg pdfData lbls,
-          renderParties inv lbls,
+          renderParties cfg inv lbls,
           renderFromLocation inv,
           renderLineItemsTable cfg pdfData lbls,
           renderTotals cfg pdfData lbls,
@@ -171,28 +175,31 @@ renderHeader cfg pdfData lbls =
 -- Parties
 -- ---------------------------------------------------------------------------
 
-renderParties :: Invoice -> Labels -> Text
-renderParties inv lbls =
-  T.concat
-    [ "<table class='parties'><tr>",
-      "<td class='party-left'>",
-      "<div class='party-lbl-plain'>",
-      lbls.recipientLabel,
-      ":</div>",
-      "<div class='party-name'>",
-      escHtml (fromMaybe "" inv.issuedToName),
-      "</div>",
-      "</td>",
-      "<td class='party-right'>",
-      "<div class='party-name'>",
-      escHtml (fromMaybe "" inv.supplierName),
-      "</div>",
-      maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.supplierAddress,
-      maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") inv.supplierGSTIN,
-      maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") inv.supplierTaxNo,
-      "</td>",
-      "</tr></table>"
-    ]
+renderParties :: InvoicePdfConfig -> Invoice -> Labels -> Text
+renderParties cfg inv lbls =
+  let effectiveSupplierName = maybe inv.supplierName Just cfg.cfgSupplierName
+      effectiveSupplierAddress = maybe inv.supplierAddress Just cfg.cfgSupplierAddress
+      effectiveSupplierVatNo = maybe inv.supplierTaxNo Just cfg.cfgSupplierVatNumber
+   in T.concat
+        [ "<table class='parties'><tr>",
+          "<td class='party-left'>",
+          "<div class='party-lbl-plain'>",
+          lbls.recipientLabel,
+          ":</div>",
+          "<div class='party-name'>",
+          escHtml (fromMaybe "" inv.issuedToName),
+          "</div>",
+          "</td>",
+          "<td class='party-right'>",
+          "<div class='party-name'>",
+          escHtml (fromMaybe "" effectiveSupplierName),
+          "</div>",
+          maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") effectiveSupplierAddress,
+          maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") inv.supplierGSTIN,
+          maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") effectiveSupplierVatNo,
+          "</td>",
+          "</tr></table>"
+        ]
 
 renderFromLocation :: Invoice -> Text
 renderFromLocation inv =
@@ -274,8 +281,8 @@ buildRows pdfData lbls =
         tr
           [ td mainTitle,
             td' "n" mainAmount,
-            td' "n" (fromMaybe "" mainVatPct),
-            td' "n" (fromMaybe "" mainVatAmt),
+            td' "n" (fromMaybe "0" mainVatPct),
+            td' "n" (fromMaybe (fmtMoneyNum cur 0) mainVatAmt),
             td' "n" mainTotal
           ]
       -- Toll charges rows — only if externalCharges > 0
@@ -361,16 +368,16 @@ renderTotals cfg pdfData lbls =
       -- VAT label: "VAT (14%)" — rate from tax_rate / gst_rate, or derived from line items
       vatPct = case mbTax of
         Just t -> fmtPct (fromMaybe t.gstRate t.taxRate)
-        Nothing -> fromMaybe "" $ do
+        Nothing -> fromMaybe "0" $ do
           fare <- mbRideFare
           tax <- mbRideTax
           guard (fare.lineTotal > 0)
           pure $ fmtPct (realToFrac (tax.lineTotal / fare.lineTotal) * 100.0)
-      vatLabel = lbls.vatLabel <> if T.null vatPct then "" else " (" <> vatPct <> "%)"
-      -- VAT EUR = total_gst_amount, or from Ride Tax line item
+      vatLabel = lbls.vatLabel <> " (" <> vatPct <> "%)"
+      -- VAT EUR = total_gst_amount, or from Ride Tax line item, or 0.00
       vatAmt = case mbTax of
         Just t -> fmtMoneyNum cur t.totalGstAmount
-        Nothing -> maybe "" (fmtMoneyNum cur . (.lineTotal)) mbRideTax
+        Nothing -> maybe (fmtMoneyNum cur 0) (fmtMoneyNum cur . (.lineTotal)) mbRideTax
       -- Platform Commission deduction
       commissionItems = filter isCommissionItem pdfData.parsedLineItems
       commissionTotal = sum $ map (.lineTotal) commissionItems
@@ -386,7 +393,7 @@ renderTotals cfg pdfData lbls =
    in T.concat
         [ "<table class='totals'>",
           totRow lbls.taxablePriceLabel taxableAmt,
-          if T.null vatAmt then "" else totRow vatLabel vatAmt,
+          totRow vatLabel vatAmt,
           if commissionTotal /= 0 then totRow "Platform Commission" (fmtMoneyNum cur commissionTotal) else "",
           T.concat (map (renderTollTotRow cfg cur mbTax lbls) tollItems),
           if tipTotal > 0 then totRow lbls.tipsLabel (fmtMoneyNum cur tipTotal) else "",
@@ -568,7 +575,7 @@ renderBatchInvoiceHtml cfg pdfDatas =
           "</style>",
           "</head><body><div class='wrap'>",
           renderBatchHeader cfg aggregated lbls firstDate lastDate,
-          renderParties inv lbls,
+          renderParties cfg inv lbls,
           renderFromLocation inv,
           renderLineItemsTable cfg aggregated lbls,
           renderTotals cfg aggregated lbls,

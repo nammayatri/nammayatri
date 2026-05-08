@@ -704,7 +704,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               issuedToId = driverId.getId,
               issuedToName = Nothing,
               issuedToAddress = Nothing,
-              referenceId = Nothing,
+              referenceId = referenceId,
               lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
               gstBreakdown = Nothing,
               isVat = False,

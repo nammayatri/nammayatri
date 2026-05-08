@@ -83,7 +83,16 @@ getFinanceInvoicePdfByBppBookingId mbToken mbBppBookingId mbInvoiceId mbFrom mbT
 
       let locale = countryToLocale merchantOpCity.country
           tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-          cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+          mbInvCfg = mbRiderConfig >>= (.invoiceConfig)
+          cfg =
+            InvoicePdfConfig
+              { locale,
+                timezone = tz,
+                logoUrl = mbInvCfg >>= (.logoUrl) <&> showBaseUrl,
+                cfgSupplierName = mbInvCfg >>= (.supplierName),
+                cfgSupplierAddress = mbInvCfg >>= (.supplierAddress),
+                cfgSupplierVatNumber = mbInvCfg >>= (.supplierVatNumber)
+              }
 
       pdfDatas <- forM invoices $ \inv -> do
         let items = parseLineItems inv.lineItems
