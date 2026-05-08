@@ -59,7 +59,6 @@ import qualified Kernel.External.Maps.Utils as Search
 import Kernel.Prelude hiding (drop)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.Beckn.Context as Context
@@ -140,7 +139,7 @@ updateForSpecialLocation merchantId origin mbIsSpecialLocation mbHotSpotConfig =
     Just isSpecialLocation -> do
       when isSpecialLocation $ frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
     Nothing -> do
-      specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLong origin.gps
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLong origin.gps
       case specialLocationBody of
         Just _ -> frequencyUpdator merchantId origin.gps (Just origin.address) SpecialLocation mbHotSpotConfig
         Nothing -> return ()

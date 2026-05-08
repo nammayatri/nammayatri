@@ -56,7 +56,7 @@ entryFeeForGateId gateId = do
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
 --   Returns 0 if no gateId or no fee configured.
 requiredEntryFeeForBooking ::
-  (Esq.EsqDBFlow m r, MonadFlow m) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   SRB.Booking ->
   m HighPrecMoney
 requiredEntryFeeForBooking booking =
@@ -67,7 +67,7 @@ requiredEntryFeeForBooking booking =
 --   Otherwise: driver Liability wallet balance; if balance < required, throw InsufficientAirportBalance.
 --   No wallet account is treated as 0 balance (same as insufficient).
 checkAirportEntryFeeBalanceBeforeStartRide ::
-  (BeamFlow m r, Esq.EsqDBFlow m r, MonadFlow m) =>
+  (BeamFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   Bool -> -- feature flag airportEntryFeeEnabled
   Id DP.Person ->
   SRB.Booking ->
@@ -84,7 +84,7 @@ checkAirportEntryFeeBalanceBeforeStartRide enabled driverId booking =
 -- | At EndRide, for airport inner-zone: two transfers via FinanceM — GST to GovtIndirect, net to ParkingFeeRecipient (one per city).
 --   Allows negative balance; does nothing if feature off or required fee 0.
 deductAirportEntryFeeAtEndRide ::
-  (BeamFlow m r, Esq.EsqDBFlow m r, MonadFlow m) =>
+  (BeamFlow m r, Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   DRide.Ride ->
   SRB.Booking ->
   m ()

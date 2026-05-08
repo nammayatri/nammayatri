@@ -125,6 +125,7 @@ import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
+import qualified Kernel.Storage.Esqueleto as Esq
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 
@@ -250,7 +251,8 @@ type EndRideFlow m r =
     HasKafkaProducer r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    Esq.EsqDBReplicaFlow m r
   )
 
 driverEndRide ::
