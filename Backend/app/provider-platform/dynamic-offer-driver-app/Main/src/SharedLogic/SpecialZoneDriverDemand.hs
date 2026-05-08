@@ -167,7 +167,7 @@ clearAirportPerKmFareCacheForPolicy fpId = do
           | (tier, slId) <- tierSlPairs,
             v <- variantsForTier tier
         ]
-  Redis.withCrossAppRedis $ forM_ cacheKeys Redis.del
+  Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ forM_ cacheKeys Redis.del
 
 computeAirportPerKmFare ::
   ( CacheFlow m r,
