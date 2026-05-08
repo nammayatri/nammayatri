@@ -40,6 +40,7 @@ import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
@@ -73,7 +74,6 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
-import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
@@ -672,7 +672,9 @@ mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId = do
         panOfParty = Nothing,
         panType = Nothing,
         tdsRateReason = Nothing,
-        emitLedgerEntries = True
+        emitLedgerEntries = True,
+        fromLocationAddress = Nothing,
+        issuedToName = Nothing
       }
 
 -- | Record airport booth cash recharge: credit driver wallet (PlatformAsset → OwnerLiability)
@@ -696,11 +698,12 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
     ctx <- mkDriverWalletFinanceCtx driverId merchantId mocId currency referenceId
     let cashRechargeInvoiceConfig =
           InvoiceConfig
-            { invoiceType = FinanceInvoice.SubscriptionPurchase,
+            { invoiceType = SubscriptionPurchase,
               issuedToType = "DRIVER",
               issuedToId = driverId.getId,
               issuedToName = Nothing,
               issuedToAddress = Nothing,
+              referenceId = Nothing,
               lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
               gstBreakdown = Nothing,
               isVat = False,

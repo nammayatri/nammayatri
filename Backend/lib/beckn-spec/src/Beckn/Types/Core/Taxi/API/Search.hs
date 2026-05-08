@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (Capture, Header, JSON, Post, ReqBody, (:>))
 
 type SearchReq = BecknReq SearchMessage
 
@@ -50,3 +50,15 @@ type SearchAPIV2 =
 
 searchAPIV2 :: Proxy SearchAPIV2
 searchAPIV2 = Proxy
+
+type SyncSearchRes = Spec.OnSearchReq
+
+type SyncSearchAPI =
+  "sync_search"
+    :> Capture "merchantId" Text
+    :> Header "token" Text
+    :> ReqBody '[JSON] SearchReqV2
+    :> Post '[JSON] SyncSearchRes
+
+syncSearchAPI :: Proxy SyncSearchAPI
+syncSearchAPI = Proxy

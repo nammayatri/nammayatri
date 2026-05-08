@@ -651,8 +651,47 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_hailing_offers boolean
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN invoice_config json ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN valid_cancellation_reason_codes_for_immediate_charge text [] ;
+
+
+
+
+------- SQL updates -------
+
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN pass_status_update_batch_size integer ;
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_days integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN remind_everyday_until_pass_expiry boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_batch_size integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pass_expiry_reminder_next_run_local_time time without time zone ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb ;

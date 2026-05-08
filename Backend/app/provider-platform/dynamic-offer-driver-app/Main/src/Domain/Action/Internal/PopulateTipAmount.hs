@@ -135,6 +135,7 @@ populateTipAmount rideId tipAmount apiKey = do
           supplierGSTIN = inv.supplierGSTIN,
           supplierTaxNo = inv.supplierTaxNo,
           supplierId = inv.supplierId,
+          referenceId = inv.referenceId,
           -- Tax/compliance fields (not on Invoice domain type — pulled from FinanceCtx)
           gstinOfParty = Nothing,
           panOfParty = Nothing,

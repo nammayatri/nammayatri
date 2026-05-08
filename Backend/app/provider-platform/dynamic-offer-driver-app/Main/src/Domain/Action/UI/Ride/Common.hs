@@ -41,11 +41,13 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.CacheFlow (CacheFlow)
-import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, HighPrecMoney, Meters, Money, Months, PriceAPIEntity (..), Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
+import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
 import Kernel.Types.Id
+import Kernel.Types.Price
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import SharedLogic.FareCalculator (fareSum)
@@ -186,7 +188,8 @@ data DriverRideRes = DriverRideRes
 mkDriverRideRes ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
   ) =>
   RD.RideDetails ->
   Maybe Text ->
@@ -234,11 +237,11 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
         computedFare = roundToIntegral <$> ride.fare,
-        computedFareWithCurrency = (\fare -> PriceAPIEntity (fromIntegral (round fare :: Integer)) ride.currency) <$> ride.fare,
+        computedFareWithCurrency = (\fare -> PriceAPIEntity (roundAmountByCurrency' ride.currency fare) ride.currency) <$> ride.fare,
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
-        estimatedBaseFareWithCurrency = PriceAPIEntity (fromIntegral (round estimatedBaseFare :: Integer)) ride.currency,
+        estimatedBaseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' ride.currency estimatedBaseFare) ride.currency,
         estimatedDistance = booking.estimatedDistance,
         estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
         driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,

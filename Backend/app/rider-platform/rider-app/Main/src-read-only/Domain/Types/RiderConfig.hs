@@ -22,6 +22,7 @@ import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Servant.Client.Core
 import qualified Tools.Beam.UtilsTH
 
 data RiderConfig = RiderConfig
@@ -134,6 +135,9 @@ data RiderConfig = RiderConfig
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     offerListCacheVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    passExpiryReminderBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    passExpiryReminderDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    passExpiryReminderNextRunLocalTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     passStatusUpdateBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,
     payoutBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -153,6 +157,7 @@ data RiderConfig = RiderConfig
     refundBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     refundStatusUpdateInterval :: Kernel.Prelude.NominalDiffTime,
     refundStatusUpdateRetries :: Kernel.Prelude.Int,
+    remindEverydayUntilPassExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
@@ -174,6 +179,7 @@ data RiderConfig = RiderConfig
     subwayRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     subwayRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     subwayTransitTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
+    syncSearchDispatchConfig :: Kernel.Prelude.Maybe Domain.Types.Extra.RiderConfig.SyncSearchDispatchConfig,
     thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     ticketAssetDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketingPermissionConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
@@ -184,6 +190,7 @@ data RiderConfig = RiderConfig
     updateTicketValidityInSecondsPostSetOnboarding :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
     userServiceTierOrderConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
+    validCancellationReasonCodesForImmediateCharge :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     validateSetOnboardingVehicleRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     videoFileSizeUpperLimit :: Kernel.Prelude.Int,
@@ -227,7 +234,14 @@ data ExternalSOSFlow = ERSS | GJ112 | Trinity deriving (Eq, Ord, Show, Read, Gen
 
 data ExternalSOSTriggerSource = FRONTEND | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RiderInvoiceConfig = RiderInvoiceConfig {ledgerEmitEnabled :: Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read)
+data RiderInvoiceConfig = RiderInvoiceConfig
+  { ledgerEmitEnabled :: Kernel.Prelude.Bool,
+    logoUrl :: Kernel.Prelude.Maybe Servant.Client.Core.BaseUrl,
+    supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    supplierVatNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)

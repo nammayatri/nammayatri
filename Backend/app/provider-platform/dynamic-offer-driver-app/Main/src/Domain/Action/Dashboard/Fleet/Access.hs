@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Fleet.Access
   )
 where
 
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Beam.Functions as B
@@ -40,7 +41,7 @@ checkRequestorAccessToFleet ::
   Flow FleetOwnerInfo
 checkRequestorAccessToFleet allowOtherRoles mbRequestorId fleetOwnerId = do
   fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-  unless (fleetOwner.role == DP.FLEET_OWNER) $
+  unless (DCommon.checkFleetOwnerRole fleetOwner.role) $
     throwError (InvalidRequest "Invalid fleet owner")
   case mbRequestorId of
     Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing} -- old flow
@@ -51,7 +52,7 @@ checkRequestorAccessToFleet allowOtherRoles mbRequestorId fleetOwnerId = do
         Nothing -> pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}
         Just requestor -> do
           case requestor.role of
-            DP.FLEET_OWNER -> do
+            role | DCommon.checkFleetOwnerRole role -> do
               unless (fleetOwner.id == requestor.id) $
                 throwError (InvalidRequest "Invalid fleet owner")
               pure $ FleetOwnerInfo {fleetOwner, mbOperator = Nothing}

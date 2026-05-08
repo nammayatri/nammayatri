@@ -28,6 +28,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Beckn.Ack
@@ -50,6 +51,7 @@ callBasedEndRide ::
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EncFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,

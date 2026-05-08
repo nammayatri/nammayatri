@@ -26,45 +26,53 @@ import Lib.Tabular.GateInfo
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as SL
 
-findById :: Transactionable m => Id D.GateInfo -> m (Maybe D.GateInfo)
-findById = Esq.findById
+findById :: (Transactionable m, EsqDBReplicaFlow m r) => Id D.GateInfo -> m (Maybe D.GateInfo)
+findById = Esq.runInReplica . Esq.findById
 
-findAllGatesBySpecialLocationId :: Transactionable m => Id SL.SpecialLocation -> m [(D.GateInfo, Maybe Text)]
-findAllGatesBySpecialLocationId slId = Esq.findAll $ do
-  gateInfo <- from $ table @GateInfoT
-  where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
-  return (gateInfo, F.mbGetGeomGeoJSON)
+findAllGatesBySpecialLocationId :: (Transactionable m, EsqDBReplicaFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, Maybe Text)]
+findAllGatesBySpecialLocationId slId =
+  Esq.runInReplica $
+    Esq.findAll $ do
+      gateInfo <- from $ table @GateInfoT
+      where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+      return (gateInfo, F.mbGetGeomGeoJSON)
 
-findAllGatesBySpecialLocationIdWithoutGeoJson :: Transactionable m => Id SL.SpecialLocation -> m [D.GateInfo]
-findAllGatesBySpecialLocationIdWithoutGeoJson slId = Esq.findAll $ do
-  gateInfo <- from $ table @GateInfoT
-  where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
-  return gateInfo
+findAllGatesBySpecialLocationIdWithoutGeoJson :: (Transactionable m, EsqDBReplicaFlow m r) => Id SL.SpecialLocation -> m [D.GateInfo]
+findAllGatesBySpecialLocationIdWithoutGeoJson slId =
+  Esq.runInReplica $
+    Esq.findAll $ do
+      gateInfo <- from $ table @GateInfoT
+      where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+      return gateInfo
 
-findGateInfoIfDriverInsideGatePickupZone :: Transactionable m => LatLong -> m (Maybe D.GateInfo)
+findGateInfoIfDriverInsideGatePickupZone :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.GateInfo)
 findGateInfoIfDriverInsideGatePickupZone point = do
-  Esq.findOne $ do
-    gateInfo <- from $ table @GateInfoT
-    where_ $ containsPoint (point.lon, point.lat)
-    return gateInfo
+  Esq.runInReplica $
+    Esq.findOne $ do
+      gateInfo <- from $ table @GateInfoT
+      where_ $ containsPoint (point.lon, point.lat)
+      return gateInfo
 
-findGateInfoByLatLongWithoutGeoJson :: Transactionable m => LatLong -> m (Maybe D.GateInfo)
+findGateInfoByLatLongWithoutGeoJson :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.GateInfo)
 findGateInfoByLatLongWithoutGeoJson point = do
-  Esq.findOne $ do
-    gateInfo <- from $ table @GateInfoT
-    where_ $ gateInfo ^. GateInfoPoint ==. val point
-    return gateInfo
+  Esq.runInReplica $
+    Esq.findOne $ do
+      gateInfo <- from $ table @GateInfoT
+      where_ $ gateInfo ^. GateInfoPoint ==. val point
+      return gateInfo
 
 -- | Find the nearest gate info within a given radius (in meters) of the given point,
 -- scoped to a specific special location. Uses Haversine distance since the `point`
 -- column is a serialized LatLong, not PostGIS geometry.
 -- Returns the closest matching gate, or Nothing if none is within the radius.
-findGateInfoByLatLongWithinRadius :: Transactionable m => Id SL.SpecialLocation -> LatLong -> Double -> m (Maybe D.GateInfo)
+findGateInfoByLatLongWithinRadius :: (Transactionable m, EsqDBReplicaFlow m r) => Id SL.SpecialLocation -> LatLong -> Double -> m (Maybe D.GateInfo)
 findGateInfoByLatLongWithinRadius slId point radiusMeters = do
-  gates <- Esq.findAll $ do
-    gateInfo <- from $ table @GateInfoT
-    where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
-    return gateInfo
+  gates <-
+    Esq.runInReplica $
+      Esq.findAll $ do
+        gateInfo <- from $ table @GateInfoT
+        where_ $ gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+        return gateInfo
   -- Precompute distance once per gate and tie-break by gate id so the
   -- selection is deterministic when two gates sit at the same distance.
   let gatesWithDist = map (\g -> (distanceBetweenInMeters point g.point, g)) gates
@@ -75,16 +83,18 @@ findGateInfoByLatLongWithinRadius slId point radiusMeters = do
 deleteById :: Id D.GateInfo -> SqlDB ()
 deleteById = Esq.deleteByKey @GateInfoT
 
-findGatesWithDriverThreshold :: Transactionable m => Id SL.SpecialLocation -> m [D.GateInfo]
-findGatesWithDriverThreshold slId = Esq.findAll $ do
-  gateInfo <- from $ table @GateInfoT
-  where_ $
-    gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
-      &&. gateInfo ^. GateInfoCanQueueUpOnGate ==. val True
-      &&. ( not_ (isNothing (gateInfo ^. GateInfoMinDriverThresholdsJson))
-              ||. not_ (isNothing (gateInfo ^. GateInfoDefaultMinDriverThreshold))
-          )
-  return gateInfo
+findGatesWithDriverThreshold :: (Transactionable m, EsqDBReplicaFlow m r) => Id SL.SpecialLocation -> m [D.GateInfo]
+findGatesWithDriverThreshold slId =
+  Esq.runInReplica $
+    Esq.findAll $ do
+      gateInfo <- from $ table @GateInfoT
+      where_ $
+        gateInfo ^. GateInfoSpecialLocationId ==. val (toKey slId)
+          &&. gateInfo ^. GateInfoCanQueueUpOnGate ==. val True
+          &&. ( not_ (isNothing (gateInfo ^. GateInfoMinDriverThresholdsJson))
+                  ||. not_ (isNothing (gateInfo ^. GateInfoDefaultMinDriverThreshold))
+              )
+      return gateInfo
 
 deleteAll :: Id SL.SpecialLocation -> SqlDB ()
 deleteAll specialLocationId =

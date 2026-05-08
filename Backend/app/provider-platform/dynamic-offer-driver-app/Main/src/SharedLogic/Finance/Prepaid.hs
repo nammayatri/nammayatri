@@ -28,6 +28,7 @@ import Data.Aeson (Value)
 import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
@@ -588,6 +589,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     supplierGSTIN = Nothing,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,
+                    referenceId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
                     panOfParty = panDecrypted,
                     panType = panTypeText,

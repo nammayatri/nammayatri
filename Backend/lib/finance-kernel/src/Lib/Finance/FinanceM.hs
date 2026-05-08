@@ -67,6 +67,7 @@ where
 import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
+import Domain.Types.Invoice (InvoiceType)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common (Currency, HighPrecMoney)
@@ -79,7 +80,7 @@ import Lib.Finance.Domain.Types.DirectTaxTransaction (DirectTaxTransaction, TdsR
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (GstCreditType, IndirectTaxTransaction)
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
-import Lib.Finance.Domain.Types.Invoice (Invoice, InvoiceType)
+import Lib.Finance.Domain.Types.Invoice (Invoice)
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.Error.Types (FinanceError (..))
 import Lib.Finance.Invoice.Interface (DirectTaxInput (..), GstAmountBreakdown, IndirectTaxInput (..), InvoiceInput (..), InvoiceLineItem)
@@ -118,7 +119,9 @@ data FinanceCtx = FinanceCtx
     panOfParty :: Maybe Text,
     panType :: Maybe Text,
     tdsRateReason :: Maybe TdsRateReason,
-    emitLedgerEntries :: Bool
+    emitLedgerEntries :: Bool,
+    fromLocationAddress :: Maybe Text,
+    issuedToName :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -130,6 +133,7 @@ data InvoiceConfig = InvoiceConfig
     issuedToId :: Text,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,
+    referenceId :: Maybe Text,
     lineItems :: [InvoiceLineItem],
     gstBreakdown :: Maybe GstAmountBreakdown,
     -- VAT integration fields
@@ -667,6 +671,7 @@ invoiceInner ctx config = do
             supplierGSTIN = ctx.supplierGSTIN,
             supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
             supplierId = ctx.supplierId,
+            referenceId = config.referenceId,
             gstinOfParty = Nothing,
             panOfParty = ctx.panOfParty,
             panType = ctx.panType,

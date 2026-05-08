@@ -35,6 +35,7 @@ module SharedLogic.FareCalculator
     mkFareParamsBreakups,
     mkFareParamsDisplayBreakups,
     mkProjectFareParamsTagBreakupItems,
+    mkProjectFareParamsTagBreakupItemsForCancellation,
     buildComponentMap,
     componentAmount,
     discountApplicableComponents,
@@ -112,6 +113,19 @@ mkProjectFareParamsTagBreakupItems mkPrice mkBreakupItem fareParams =
         mkBreakupItem (show Enums.PARKING_CHARGE_TAX_EXCLUSIVE) (mkPrice b.parkingChargeTaxExclusive),
         mkBreakupItem (show Enums.PARKING_CHARGE_TAX) (mkPrice b.parkingChargeTax)
       ]
+
+-- | Cancellation-specific breakup items read from the ride table.
+-- Used by on_cancel to emit CANCELLATION_FEE_TAX_EXCLUSIVE and CANCELLATION_TAX.
+mkProjectFareParamsTagBreakupItemsForCancellation ::
+  (HighPrecMoney -> breakupItemPrice) ->
+  (Text -> breakupItemPrice -> breakupItem) ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  [breakupItem]
+mkProjectFareParamsTagBreakupItemsForCancellation mkPrice mkBreakupItem cancellationFee cancellationFeeTax =
+  [ mkBreakupItem (show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE) (mkPrice cancellationFee),
+    mkBreakupItem (show Enums.CANCELLATION_TAX) (mkPrice cancellationFeeTax)
+  ]
 
 -- | Display-tag portion of the quotation.breakup (BASE_FARE,
 --   DISTANCE_FARE, PARKING_CHARGE, TOLL_CHARGES, …). Does NOT include
@@ -1065,7 +1079,7 @@ data ParsedCodeValue
 -- Example: If fare_policy has vat_charge_config = {"value":"14%","appliesOn":["RideFare","DeadKmFareComponent"]},
 -- then VAT will be calculated as 14% of (RideFare + DeadKmFareComponent)
 calculateFareParameters ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
@@ -1156,7 +1170,7 @@ applyConfiguredCharges farePolicy fareParams = do
       tollExcl = fromMaybe 0 fareParams.tollCharges
       tollTax = fromMaybe 0 tollVatValue
       cancellationExcl = fromMaybe 0 fareParams.customerCancellationDues
-      cancellationTaxV = 0
+      cancellationTaxV = fromMaybe 0 fareParams.cancellationTax
       parkingExcl = parkingBase
       parkingTax = parkingTaxValue
 
@@ -1206,7 +1220,7 @@ applyConfiguredCharges farePolicy fareParams = do
 
 -- | Apply airport entry fee into parkingCharge, based on pickupGateId and transporter config.
 applyAirportEntryFee ::
-  (MonadFlow m, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   CalculateFareParametersParams ->
   FareParameters ->
   m FareParameters
@@ -1229,7 +1243,7 @@ applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, p
 -- | Entry fee for a single gate. Use when API sends gateId (e.g. SearchRequest/Booking.pickupGateId).
 --   Returns 0 if gate not found or no fee configured.
 entryFeeForGateId ::
-  (Esq.EsqDBFlow m r, MonadFlow m) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
   Id DGI.GateInfo ->
   m HighPrecMoney
 entryFeeForGateId gateId = do

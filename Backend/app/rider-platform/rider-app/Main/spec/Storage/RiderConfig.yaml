@@ -7,6 +7,7 @@ imports:
   KaptureConfig: IssueManagement.Common
   ExotelMapping: Domain.Types.Extra.RiderConfig
   VehicleServiceTierOrderConfig: Domain.Types.Extra.RiderConfig
+  SyncSearchDispatchConfig: Domain.Types.Extra.RiderConfig
   Value: Data.Aeson
   NominalDiffTime: Kernel.Prelude
   Seconds: Kernel.Types.Common
@@ -20,6 +21,9 @@ imports:
   TimeOfDay: Data.Time
   Day: Data.Time
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
+  BaseUrl: Servant.Client.Core
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
 
 RiderConfig:
   types:
@@ -69,8 +73,12 @@ RiderConfig:
       tracePollingIntervalSeconds: Maybe Seconds
       stateCode: Maybe Text
     RiderInvoiceConfig:
-      derive: "Eq, Read"
+      derive: "Eq"
       ledgerEmitEnabled: Bool
+      logoUrl: Maybe BaseUrl
+      supplierName: Maybe Text
+      supplierAddress: Maybe Text
+      supplierVatNumber: Maybe Text
 
   tableName: rider_config
 
@@ -109,6 +117,10 @@ RiderConfig:
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int
+    passExpiryReminderDays: Maybe Int
+    remindEverydayUntilPassExpiry: Maybe Bool
+    passExpiryReminderBatchSize: Maybe Int
+    passExpiryReminderNextRunLocalTime: Maybe TimeOfDay
     bookingSyncStatusCallSecondsDiffThreshold: Maybe Int
     kaptureQueue: Text # deprecated
     kaptureConfig: IssueManagement.Common.KaptureConfig
@@ -124,6 +136,8 @@ RiderConfig:
     exotelStatusCheckSchedulerDelay: Int
     incidentReportSupport: Bool
     settleCancellationFeeBeforeNextRide: Maybe Bool
+    syncSearchDispatchConfig: Maybe SyncSearchDispatchConfig
+    validCancellationReasonCodesForImmediateCharge: "Maybe [Text]"
     cxAgentDetails: "Maybe [CxAgentDetails]"
     csAlertTriggerDelay: NominalDiffTime
     avgSpeedInKmPerHr: Kilometers
@@ -301,6 +315,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: "Maybe [Text]"
     externalSOSConfig: Maybe Value
     invoiceConfig: Maybe Value
+    syncSearchDispatchConfig: Maybe Value
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -366,6 +381,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: externalSOSConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     invoiceConfig: invoiceConfig >>= Kernel.Utils.JSON.valueToMaybe|E
+    syncSearchDispatchConfig: syncSearchDispatchConfig >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -423,6 +439,7 @@ RiderConfig:
     staticCustomerIdThresholdDay: staticCustomerIdThresholdDay|E
     externalSOSConfig: (externalSOSConfig >>= Just . Data.Aeson.toJSON)|E
     invoiceConfig: (invoiceConfig >>= Just . Data.Aeson.toJSON)|E
+    syncSearchDispatchConfig: (syncSearchDispatchConfig >>= Just . Data.Aeson.toJSON)|E
 
 
   default:
@@ -499,6 +516,7 @@ RiderConfig:
     cxAgentDetails: text []
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
+    validCancellationReasonCodesForImmediateCharge: text []
     permissibleModes: text []
     busTransitTypes: text []
     subwayTransitTypes: text []
@@ -525,6 +543,7 @@ RiderConfig:
     duesExcludedPaymentPurposes: text []
     externalSOSConfig: "json"
     invoiceConfig: "json"
+    syncSearchDispatchConfig: "jsonb"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

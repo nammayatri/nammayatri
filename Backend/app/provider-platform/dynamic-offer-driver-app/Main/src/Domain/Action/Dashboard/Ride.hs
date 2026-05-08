@@ -36,7 +36,7 @@ import qualified Beckn.ACL.Common as BecknACL
 import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
-import qualified Data.Time as T
+import qualified Data.Time as Time
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -1033,7 +1033,7 @@ getNearby merchantShortId opCity driverId = do
           stalenessMinutes = fromMaybe 15 configs.nearbySearchStalenessMinutes
           geohashPrecision = configs.precisionOfGeohash
       -- Get driver's current location from LTS
-      driverLocs <- LF.driversLocation [cast driverId]
+      driverLocs <- LF.driversLocationByCloudType [cast driverId] driver.cloudType
       driverLatLong <- case driverLocs of
         (loc : _) -> pure $ KEMT.LatLong loc.lat loc.lon
         [] -> throwError $ InvalidRequest "Driver location not found"
@@ -1042,7 +1042,7 @@ getNearby merchantShortId opCity driverId = do
       let nearbyDriverCount = Just $ length $ filter (\loc -> loc.driverId /= cast driverId) nearbyLocs
       -- Compute cutoff score once and pass to helper (avoids repeated getCurrentTime)
       now <- getCurrentTime
-      let cutoffScore = utcToMilliseconds (T.addUTCTime (- fromIntegral (stalenessMinutes * 60)) now)
+      let cutoffScore = utcToMilliseconds (Time.addUTCTime (- fromIntegral (stalenessMinutes * 60)) now)
       -- Get active unserved search counts from DemandHotspots Redis (bbox-scoped, read-only)
       nearbySearchLocs <- DH.getActiveSearchLocations merchantOpCity.id driverLatLong radiusMeters cutoffScore geohashPrecision
       let nearbyCustomerCount = Just $ length nearbySearchLocs

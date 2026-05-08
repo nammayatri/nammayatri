@@ -14,7 +14,7 @@
 module Domain.Types.City where
 
 import Data.OpenApi (ToSchema)
-import EulerHS.Prelude hiding (id)
+import EulerHS.Prelude hiding (id, state)
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.External.Types (Language)
 import Kernel.Types.Beckn.Context as Context
@@ -22,6 +22,7 @@ import Kernel.Types.Beckn.Context as Context
 data CityRes = CityRes
   { code :: Context.City,
     name :: Text,
+    state :: Context.IndianState,
     location :: LatLong,
     supportNumber :: Maybe Text,
     language :: Language,

@@ -24,7 +24,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified Domain.Action.UI.Driver
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Plan
-import qualified Domain.Types.Invoice
+import qualified "dynamic-offer-driver-app" Domain.Types.Invoice
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Plan
 import qualified "dynamic-offer-driver-app" Domain.Types.SubscriptionPurchase

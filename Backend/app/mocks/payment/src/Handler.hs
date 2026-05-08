@@ -42,6 +42,9 @@ import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
 import qualified Lib.Payment.Storage.Beam.PersonDailyOfferStats as BeamPersonDailyOfferStats
 import qualified Lib.Payment.Storage.Beam.PersonWallet as BeamPW
 import qualified Lib.Payment.Storage.Beam.Refunds as BeamRF
+import qualified Lib.Payment.Storage.Beam.Wallet as BeamWallet
+import qualified Lib.Payment.Storage.Beam.WalletHistory as BeamWH
+import qualified Lib.Payment.Storage.Beam.WalletPayments as BeamWP
 import qualified Lib.Payment.Storage.Beam.WalletRewardPosting as BeamWRP
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQTxn
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
@@ -85,6 +88,15 @@ instance HasSchemaName BeamWRP.WalletRewardPostingT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamPW.PersonWalletT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamWallet.WalletT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamWP.WalletPaymentsT where
+  schemaName _ = "atlas_app"
+
+instance HasSchemaName BeamWH.WalletHistoryT where
   schemaName _ = "atlas_app"
 
 instance HasSchemaName BeamOffer.OfferT where
@@ -329,7 +341,8 @@ buildJuspayWebhookPayload
                           (realToFrac . getHighPrecMoney)
                           effectAmount,
                       offers = offers,
-                      txn_detail = Nothing
+                      txn_detail = Nothing,
+                      loyalty_info = Nothing
                     },
               mandate = Nothing,
               notification = Nothing,
@@ -418,7 +431,8 @@ buildJuspayOrderData order mTxn refunds offers = do
         effective_amount =
           fmap (realToFrac . getHighPrecMoney) orderEffectAmount,
         offers = Just $ map domainOfferToJuspay offers,
-        txn_detail = Nothing
+        txn_detail = Nothing,
+        loyalty_info = Nothing
       }
   where
     totalRefundedAmount =

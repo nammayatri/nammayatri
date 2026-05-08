@@ -66,6 +66,7 @@ import Domain.Types.DriverPlan
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -105,7 +106,6 @@ import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
-import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -587,7 +587,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     let parkingWithVat = parkingAmount + parkingVatAmount
     let invoiceConfig =
           InvoiceConfig
-            { invoiceType = Invoice.Ride,
+            { invoiceType = BeckInvoice.Ride,
               issuedToType = "CUSTOMER",
               issuedToId = maybe "" (.getId) booking.riderId,
               issuedToName = booking.riderName,
@@ -627,6 +627,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                   (Just $ show merchantOperatingCity.city)
                   booking.fromLocation.address.city
                   (taxAmount + absorbedVat),
+              referenceId = Nothing,
               isVat = isVat,
               issuedToTaxNo = Nothing, -- Ride invoice: Nothing. Commission/Subscription invoice: fleet's VAT/GST number
               issuedByTaxNo = Nothing -- populated from Merchant.gstin via FinanceCtx.merchantGstin in invoice()

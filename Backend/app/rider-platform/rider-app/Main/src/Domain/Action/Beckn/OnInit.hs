@@ -116,10 +116,19 @@ onInit req = do
         SafetyCommon.SHARE_WITH_TIME_CONSTRAINTS -> Person.SHARE_WITH_TIME_CONSTRAINTS
         SafetyCommon.NEVER_SHARE -> Person.NEVER_SHARE
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  let isDashboardRequest = booking.isDashboardRequest == Just True
+      dashboardPlaceholderPhone = "1111111111"
+      dashboardPlaceholderCountryCode = "+91"
+  riderPhoneCountryCode <- case decRider.mobileCountryCode of
+    Just cc -> pure cc
+    Nothing | isDashboardRequest -> pure dashboardPlaceholderCountryCode
+    Nothing -> throwError (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-
     if isValueAddNP
-      then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      then case decRider.mobileNumber of
+        Just n -> pure n
+        Nothing | isDashboardRequest -> pure dashboardPlaceholderPhone
+        Nothing -> throwError (PersonFieldNotPresent "mobileNumber")
       else pure $ prependZero booking.primaryExophone
   let bppBookingId = booking.bppBookingId
   city <-
@@ -193,10 +202,20 @@ buildOnInitResFromBooking bookingId = do
   decRider <- decrypt person
   safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
-  riderPhoneCountryCode <- decRider.mobileCountryCode & fromMaybeM (PersonFieldNotPresent "mobileCountryCode")
+  -- Same dashboard agent placeholder as the other OnInit builder above.
+  let isDashboardRequest = booking.isDashboardRequest == Just True
+      dashboardPlaceholderPhone = "1111111111"
+      dashboardPlaceholderCountryCode = "+91"
+  riderPhoneCountryCode <- case decRider.mobileCountryCode of
+    Just cc -> pure cc
+    Nothing | isDashboardRequest -> pure dashboardPlaceholderCountryCode
+    Nothing -> throwError (PersonFieldNotPresent "mobileCountryCode")
   riderPhoneNumber <-
     if isValueAddNP
-      then decRider.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber")
+      then case decRider.mobileNumber of
+        Just n -> pure n
+        Nothing | isDashboardRequest -> pure dashboardPlaceholderPhone
+        Nothing -> throwError (PersonFieldNotPresent "mobileNumber")
       else pure $ prependZero booking.primaryExophone
   city <-
     CQMOC.findById booking.merchantOperatingCityId

@@ -115,7 +115,7 @@ cancel ::
   DM.Merchant ->
   SRB.Booking ->
   Maybe ST.SearchTry ->
-  Flow (Bool, Maybe PriceAPIEntity)
+  Flow (Bool, Maybe PriceAPIEntity, Maybe SRide.Ride)
 cancel req merchant booking mbActiveSearchTry = do
   CS.whenBookingCancellable booking.id $ do
     mbRide <- QRide.findActiveByRBId req.bookingId
@@ -163,7 +163,7 @@ cancel req merchant booking mbActiveSearchTry = do
 
     if isReallocated
       then do
-        return (isReallocated, Nothing)
+        return (isReallocated, Nothing, Nothing)
       else do
         cancellationCharges <- withTryCatch "cancellationCharges" $ do
           case mbRide of
@@ -179,19 +179,19 @@ cancel req merchant booking mbActiveSearchTry = do
                   if validCustomerCancellation `elem` rideTags
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
-                      charges' <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges -> return (Just cancelCharges)
+                      (charges', mbTax) <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges -> return (Just cancelCharges, ride.cancellationFeeTax)
                         Nothing -> do
-                          (cancellationdues, mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
+                          (cancellationdues, tax, mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
                           case cancellationdues of
                             Just charges -> do
-                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
+                              logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges <> " tax: " <> show tax)
                               QRide.updateCancellationFeeIfCancelledField (Just charges) mbLogicVersion ride.id
-                              logTagInfo ("bookingId-" <> getId req.bookingId) ("after updation riderDetails.cancellationDues: " <> show riderDetails.cancellationDues <> " charges: " <> show charges)
-                              return (Just charges)
-                            Nothing -> return Nothing
-                      QRD.updateCancellationDues (fromMaybe 0 charges' + riderDetails.cancellationDues) riderId
-                      when (fromMaybe 0 charges' > 0) $ do
+                              return (Just charges, tax)
+                            Nothing -> return (Nothing, Nothing)
+                      let totalCharges = fromMaybe 0 charges' + fromMaybe 0 mbTax
+                      QRD.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
+                      when (totalCharges > 0) $ do
                         QRD.updateCancellationDueRidesCount riderId.getId
                         cancellationDuesDetailsId <- generateGUID
                         now <- getCurrentTime
@@ -200,7 +200,7 @@ cancel req merchant booking mbActiveSearchTry = do
                                 { id = cancellationDuesDetailsId,
                                   rideId = ride.id,
                                   riderId = riderId,
-                                  cancellationAmount = fromMaybe 0 charges',
+                                  cancellationAmount = totalCharges,
                                   currency = booking.currency,
                                   paymentStatus = DCDD.PENDING,
                                   createdAt = now,
@@ -209,43 +209,45 @@ cancel req merchant booking mbActiveSearchTry = do
                                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                                 }
                         QCDD.create cancellationDuesDetails
-                      return charges'
-                    else return Nothing
-                Nothing -> return Nothing
-            Nothing -> return Nothing
+                      return (charges', mbTax)
+                    else return (Nothing, Nothing)
+                Nothing -> return (Nothing, Nothing)
+            Nothing -> return (Nothing, Nothing)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
-        cancelCharges <- case cancellationCharges of
+        (cancelCharges, cancelTax) <- case cancellationCharges of
           Left e -> do
             logError $ "Error in getting cancellation charges - " <> show e
-            return Nothing
-          Right (charges :: Maybe HighPrecMoney) -> do
+            return (Nothing, Nothing)
+          Right (charges, tax) -> do
+            let totalAmount = case charges of
+                  Just c -> Just (c + fromMaybe 0 tax)
+                  Nothing -> Nothing
             void $ case mbRide of
               Just ride -> do
-                logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show charges)
-                QRide.updateCancellationChargesOnCancel charges ride.cancellationChargesLogicVersion ride.id
+                logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show totalAmount <> " base: " <> show charges <> " tax: " <> show tax)
+                QRide.updateCancellationChargesOnCancel totalAmount ride.cancellationChargesLogicVersion ride.id
               Nothing -> return ()
-            return ((\chargess -> Just PriceAPIEntity {amount = chargess, currency = booking.currency}) =<< charges)
+            return ((\t -> Just PriceAPIEntity {amount = t, currency = booking.currency}) =<< totalAmount, tax)
 
         logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellationCharges: " <> show cancelCharges)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
-        -- cancellationCharge <- do
-        --   case mbRide of
-        --     Just ride -> do
-        --       case (transporterConfig.canAddCancellationFee, ride.cancellationFeeIfCancelled) of
-        --         (False, _) -> return Nothing
-        --         (True, Just cancellationCharges) -> return $ Just PriceAPIEntity {amount = cancellationCharges, currency = booking.currency}
-        --         (True, Nothing) -> customerCancellationChargesCalculation booking (Just ride) disToPickup
-        --     _ -> return Nothing
-        -- case (cancellationCharge, booking.riderId) of
-        --   (Just fee, Just riderId) -> do
-        --     riderDetails <- QRD.findById riderId
-        --     whenJust riderDetails $ \riderD -> do
-        --       QRD.updateCancellationDues (fee.amount + riderD.cancellationDues) riderId
-        --   _ -> logInfo "RiderId or Cancellation charge not found"
+        -- BPP-side: persist fee+tax on ride and create finance ledger entries
+        whenJust cancelCharges $ \fee -> do
+          whenJust mbRide $ \ride -> do
+            let cancellationTaxAmount = fromMaybe 0 cancelTax
+                baseCancellation = fee.amount - cancellationTaxAmount
+            QRide.updateCancellationFeeAndTax (Just baseCancellation) (Just cancellationTaxAmount) ride.id
+            let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
+            when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && fee.amount > 0) $
+              createCancellationLedgerEntries booking ride fee cancellationTaxAmount transporterConfig
 
         whenJust mbActiveSearchTry $ cancelSearch merchant.id
-        return (isReallocated, cancelCharges)
+        -- Reload ride by primary key to pick up persisted cancellationFee/cancellationFeeTax
+        updatedRide <- case mbRide of
+          Just ride -> QRide.findById ride.id
+          Nothing -> pure Nothing
+        return (isReallocated, cancelCharges, updatedRide)
   where
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $

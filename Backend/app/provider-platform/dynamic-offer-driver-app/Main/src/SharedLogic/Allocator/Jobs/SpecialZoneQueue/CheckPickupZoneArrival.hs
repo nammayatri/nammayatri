@@ -88,7 +88,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
         | request.response == Just DSZQR.NoShow ->
           logInfo $ "Request " <> requestId.getId <> " already marked NoShow, skipping"
         | otherwise -> do
-          mbGate <- Esq.runInReplica $ QGI.findById (Id gateId)
+          mbGate <- QGI.findById (Id gateId)
           case mbGate of
             Nothing -> do
               logWarning $ "Gate " <> gateId <> " not found for arrival check, expiring request"
@@ -97,7 +97,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
               driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 500 merchantId Nothing Nothing
               isInPickupZone <- case find (\d -> d.driverId == driverId) driversNearGate of
                 Just dl -> do
-                  mbGateCheck <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong dl.lat dl.lon)
+                  mbGateCheck <- QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong dl.lat dl.lon)
                   pure $ case mbGateCheck of
                     Just g -> g.id == gate.id
                     Nothing -> False
@@ -123,7 +123,7 @@ runArrivalCheckForRequest requestId driverId gateId specialLocationId vehicleTyp
                   QSZQR.updateResponse (Just DSZQR.NoShow) DSZQR.Expired requestId
                   SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId gateId vehicleType
                   nowTs <- getCurrentTime
-                  let nsNotificationDuration =  fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
+                  let nsNotificationDuration = fromMaybe 15 gate.pickupRequestResponseTimeoutInSec
                       nsNotificationActiveTillInSec = fromMaybe 30 gate.notificationActiveTillInSec
                       nsNotificationValidTill = addUTCTime (fromIntegral nsNotificationActiveTillInSec) nowTs
                   let entityData =

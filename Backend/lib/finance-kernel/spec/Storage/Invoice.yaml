@@ -7,6 +7,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   Value: Data.Aeson
   LedgerEntry: Lib.Finance.Domain.Types.LedgerEntry
+  InvoiceType: Domain.Types.Invoice
 
 Invoice:
   tableName: finance_invoice
@@ -15,9 +16,6 @@ Invoice:
   types:
     InvoiceStatus:
       enum: "Draft,Issued,Paid,PartiallyPaid,Cancelled,Voided"
-      derive: "HttpInstance"
-    InvoiceType:
-      enum: "SubscriptionPurchase,Ride,RideCancellation"
       derive: "HttpInstance"
 
   fields:
@@ -38,6 +36,7 @@ Invoice:
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
     supplierId: Maybe Text
+    referenceId: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney
     taxBreakdown: Maybe Value
@@ -60,6 +59,7 @@ Invoice:
     issuedToId: "!SecondaryKey"
     paymentOrderId: "!SecondaryKey"
     supplierId: "!SecondaryKey"
+    referenceId: "!SecondaryKey"
 
   queries:
     findById:
@@ -84,6 +84,10 @@ Invoice:
       kvFunction: updateWithKV
       params: [irn]
       where: id
+
+    findByReferenceId:
+      kvFunction: findAllWithKV
+      where: referenceId
 
   extraOperations:
     - EXTRA_QUERY_FILE

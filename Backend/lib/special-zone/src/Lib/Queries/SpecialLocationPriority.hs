@@ -20,16 +20,17 @@ import Lib.Tabular.SpecialLocationPriority
 import qualified Lib.Types.SpecialLocationPriority as SpecialLocationPriorityD
 
 findByMerchantOpCityIdAndCategory ::
-  Transactionable m =>
+  (Transactionable m, EsqDBReplicaFlow m r) =>
   Text ->
   Text ->
   m (Maybe SpecialLocationPriorityD.SpecialLocationPriority)
 findByMerchantOpCityIdAndCategory merchantOpCityId category = do
-  Esq.findOne $ do
-    specialLocationPriority <- from $ table @SpecialLocationPriorityT
-    where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantOperatingCityId ==. val merchantOpCityId
-    where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
-    return specialLocationPriority
+  Esq.runInReplica $
+    Esq.findOne $ do
+      specialLocationPriority <- from $ table @SpecialLocationPriorityT
+      where_ $ specialLocationPriority ^. SpecialLocationPriorityMerchantOperatingCityId ==. val merchantOpCityId
+      where_ $ specialLocationPriority ^. SpecialLocationPriorityCategory ==. val category
+      return specialLocationPriority
 
 create :: SpecialLocationPriorityD.SpecialLocationPriority -> SqlDB ()
 create = Esq.create

@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import Data.Maybe (listToMaybe)
 import qualified Domain.Action.Beckn.OnCancel as DOnCancel
+import qualified Domain.SharedLogic.RideDiscount as RD
 import EulerHS.Prelude hiding (state)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -60,9 +61,22 @@ bookingCancelledEvent order = do
   let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
   let cancellationFeeAmount = mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText
   let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
+  let cancellationReasonCode = order.orderCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode)
+  -- Parse cancellation fee + tax from quotation breakup using parseProjectFareParamsBreakup
+  let currency = fromMaybe INR cancellationFeeCurrency
+      mbBreakupPairs = order.orderQuote >>= (.quotationBreakup) <&> \breakups ->
+        mapMaybe (\b -> (,) <$> b.quotationBreakupInnerTitle <*> (b.quotationBreakupInnerPrice >>= (.priceValue) >>= highPrecMoneyFromText)) breakups
+      parsedBreakup = mbBreakupPairs >>= RD.parseProjectFareParamsBreakup
+      mbCancellationTax = parsedBreakup <&> (.cancellationTax) >>= \v -> if v > 0 then Just v else Nothing
+      -- cancellationFee = total (base + tax) from CancellationTerm — used for Stripe charge & ride table
+      -- cancellationFeeTax = tax from breakup — used for ledger split & invoice
+      effectiveFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount currency
+      effectiveTax = mbCancellationTax <&> \taxAmount -> PriceAPIEntity taxAmount currency
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
         cancellationSource = cancellationSource,
-        cancellationFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount (fromMaybe INR cancellationFeeCurrency)
+        cancellationFee = effectiveFee,
+        cancellationFeeTax = effectiveTax,
+        cancellationReasonCode = cancellationReasonCode
       }

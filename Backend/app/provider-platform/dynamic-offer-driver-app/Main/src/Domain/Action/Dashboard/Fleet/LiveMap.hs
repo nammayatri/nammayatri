@@ -49,11 +49,11 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   when (radius.getMeters <= 0) . throwError $ InvalidRequest "Radius must be positive"
   latLong <- getPoint mbDriverIdForRadius mbPoint
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestorId mbReqFleetOwnerId
-  (mbFleetOwnerId, mbOperatorId) <- case entityRole of
-    DP.FLEET_OWNER -> pure (Just entityId, Nothing)
-    DP.OPERATOR -> pure (mbReqFleetOwnerId, Just entityId)
-    _ -> throwError (InvalidRequest "Invalid Data")
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbReqFleetOwnerId
+  (mbFleetOwnerId, mbOperatorId) <- case (mbEntityRole, mbEntityId) of
+    (Just DP.FLEET_OWNER, Just entityId) -> pure (Just entityId, Nothing)
+    (Just DP.OPERATOR, Just entityId) -> pure (mbReqFleetOwnerId, Just entityId)
+    _ -> pure (Nothing, Nothing)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found for merchant: " <> merchant.id.getId <> " and city: " <> show opCity)
   filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius.getMeters merchant.id mbFleetOwnerId mbOperatorId

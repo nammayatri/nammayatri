@@ -398,7 +398,7 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ tran
   processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
-makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Bool -> Payment.OfferListReq
+makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Maybe Bool -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig isMember =
   let offerOrder = Payment.OfferOrder {orderId = Nothing, amount = totalFee, currency = transporterConfig.currency, basket = Nothing} -- add UDFs
       customerReq = Payment.OfferCustomer {customerId = driver.id.getId, email = driver.email, mobile = Nothing}
@@ -413,7 +413,7 @@ makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transport
           offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_APPLICABLE else Nothing,
           staticCustomerId = Nothing,
           deviceImei = Nothing,
-          membershipStatus = if isMember then Just (Payment.MembershipStatus True) else Nothing
+          membershipStatus = Payment.MembershipStatus <$> isMember
         }
 
 getFinalOrderAmount ::
@@ -429,7 +429,7 @@ getFinalOrderAmount ::
   HighPrecMoney ->
   DPlan.WaiveOffMode ->
   Maybe UTCTime ->
-  Bool ->
+  Maybe Bool ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers = do
   now <- getCurrentTime
@@ -778,7 +778,7 @@ calcFinalOrderAmounts ::
   HighPrecMoney ->
   DPlan.WaiveOffMode ->
   Maybe UTCTime ->
-  Bool ->
+  Maybe Bool ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers =
   case (planBaseFrequcency, plan.basedOnEntity) of

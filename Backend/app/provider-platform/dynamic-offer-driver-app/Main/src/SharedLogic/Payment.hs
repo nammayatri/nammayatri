@@ -70,14 +70,14 @@ checkDriverMembership ::
   Id DMOC.MerchantOperatingCity ->
   DPlan.ServiceNames ->
   Maybe SubscriptionConfig ->
-  m Bool
+  m (Maybe Bool)
 checkDriverMembership driverId merchantOpCityId serviceName mbSubscriptionConfig = do
   subscriptionConfig <- case mbSubscriptionConfig of
     Just cfg -> return (Just cfg)
     Nothing -> CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
   if maybe False (.enableOffersForMembers) subscriptionConfig
-    then not . null <$> QStclMembership.findByDriverIdAndStatus driverId StclMembership.SUBMITTED
-    else return False
+    then Just . not . null <$> QStclMembership.findByDriverIdAndStatus driverId StclMembership.SUBMITTED
+    else return Nothing
 
 applyPseudoClientId :: Maybe Text -> CreateOrderResp -> CreateOrderResp
 applyPseudoClientId pseudoClientId createOrderRes =

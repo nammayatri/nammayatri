@@ -16,6 +16,8 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude hiding (error)
+import Kernel.Types.Id (Id)
+import qualified Lib.Types.SpecialLocation as SL
 import qualified Tools.Beam.UtilsTH
 import Prelude
 
@@ -89,3 +91,25 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleServiceTierO
   sqlValueSyntax = autoSqlValueSyntax
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForList ''VehicleServiceTierOrderConfig)
+
+data SyncDispatchScope
+  = AllRides
+  | SpecialLocationOnly (Maybe [Id SL.SpecialLocation])
+  deriving (Show, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+
+data RequestKindRule = RequestKindRule
+  { enabled :: Bool,
+    scope :: Maybe SyncDispatchScope
+  }
+  deriving (Show, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)
+
+data SyncSearchDispatchConfig = SyncSearchDispatchConfig
+  { oneWay :: Maybe RequestKindRule,
+    rental :: Maybe RequestKindRule,
+    interCity :: Maybe RequestKindRule,
+    ambulance :: Maybe RequestKindRule,
+    delivery :: Maybe RequestKindRule,
+    publicTransport :: Maybe RequestKindRule,
+    fixedRoute :: Maybe RequestKindRule
+  }
+  deriving (Show, Eq, Ord, Generic, FromJSON, ToJSON, ToSchema)

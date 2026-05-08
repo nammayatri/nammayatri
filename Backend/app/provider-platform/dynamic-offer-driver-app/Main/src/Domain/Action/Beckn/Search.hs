@@ -68,7 +68,6 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -363,7 +362,10 @@ handler ValidatedDSearchReq {..} sReq = do
   -- (driverPool, selectedFarePolicies) <- maybe (pure (driverPool', selectedFarePolicies')) (filterFPsForDriverId (driverPool', selectedFarePolicies')) searchReq.driverIdForSearch
   let buildEstimateHelper = buildEstimate merchantId' merchantOpCityId cityCurrency cityDistanceUnit (Just searchReq) possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance spcllocationTag specialLocName mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute (length stops) searchReq.estimatedDuration transporterConfig
   let buildQuoteHelper = buildQuote merchantOpCityId searchReq merchantId' possibleTripOption.schedule possibleTripOption.isScheduled sReq.returnTime sReq.roundTrip mbDistance mbDuration spcllocationTag mbTollCharges mbTollNames mbTollIds mbIsCustomerPrefferedSearchRoute mbIsBlockedRoute transporterConfig
+  logInfo $ "DEBUG: allFarePoliciesProduct area=" <> show allFarePoliciesProduct.area <> " farePoliciesCount=" <> show (length farePolicies) <> " selectedFarePoliciesCount=" <> show (length selectedFarePolicies) <> " tripCategories=" <> show possibleTripOption.tripCategories
+  logInfo $ "DEBUG: selectedFarePolicies tripCategories=" <> show (map (\fp -> (fp.tripCategory, fp.vehicleServiceTier)) selectedFarePolicies)
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc mbAreaForVST) ([], []) selectedFarePolicies
+  logInfo $ "DEBUG: estimates count=" <> show (length estimates') <> " quotes count=" <> show (length quotes)
   when (null estimates' && null quotes) $ logError $ "No estimates or quotes generated for searchRequestId: " <> searchReq.id.getId <> ", transactionId: " <> sReq.transactionId <> ", selectedFarePoliciesCount: " <> show (length selectedFarePolicies) <> ", riderPreferredOption: " <> show searchReq.riderPreferredOption <> ", tripCategory: " <> show searchReq.tripCategory <> ", hasToLocation: " <> show (isJust searchReq.toLocation)
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
@@ -393,7 +395,7 @@ handler ValidatedDSearchReq {..} sReq = do
             SL.PickupDrop slId _ -> Just slId
             _ -> Nothing
       mbPickupZone <- case mbSlId of
-        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 2000.0
+        Just slId -> findGateInfoByLatLongWithinRadius slId pickupLatLong 2000.0
         Nothing -> pure Nothing
       logDebug $
         "getSpecialPickupZoneInfo area=" <> show area

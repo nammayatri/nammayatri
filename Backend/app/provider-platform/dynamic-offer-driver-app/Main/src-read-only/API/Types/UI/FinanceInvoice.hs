@@ -5,6 +5,7 @@ module API.Types.UI.FinanceInvoice where
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Time
+import qualified "beckn-spec" Domain.Types.Invoice
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -21,7 +22,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
     igstRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     invoiceDate :: Data.Time.UTCTime,
     invoiceNumber :: Kernel.Prelude.Text,
-    invoiceType :: Lib.Finance.Domain.Types.Invoice.InvoiceType,
+    invoiceType :: Domain.Types.Invoice.InvoiceType,
     issuedByAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -48,5 +49,9 @@ data FinanceInvoiceItem = FinanceInvoiceItem
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FinanceInvoiceListRes = FinanceInvoiceListRes {invoices :: [FinanceInvoiceItem], totalItems :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FinanceInvoicePdfResp = FinanceInvoicePdfResp {invoiceNumber :: Kernel.Prelude.Text, pdfBase64 :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

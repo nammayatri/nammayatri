@@ -114,6 +114,11 @@ module SharedLogic.Finance.RidePayment
     voidRidePaymentLedger,
     createTipLedger,
     createCancellationFeeLedger,
+    createPendingCancellationFeeLedger,
+    markCancellationFeeInvoicePaid,
+    voidRideInvoice,
+    markRideInvoicePaid,
+    markRideInvoiceIssued,
 
     -- * Query helpers (replaces PaymentInvoice reads)
     findRidePaymentEntries,
@@ -129,16 +134,17 @@ module SharedLogic.Finance.RidePayment
 where
 
 import qualified Data.List as List
+import Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Error (GenericError (InvalidRequest))
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (MonadFlow, getCurrentTime, logError, logInfo, throwError)
+import Kernel.Utils.Common (MonadFlow, getCurrentTime, logDebug, logError, logInfo, throwError)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
-import qualified Lib.Finance.Invoice.Service as InvoiceSvc
+import qualified Lib.Finance.Invoice.Service as FInvoiceService
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
@@ -223,8 +229,9 @@ buildRiderFinanceCtx ::
   Text -> -- referenceId (ride ID)
   Maybe Text -> -- merchantName
   Maybe Text -> -- merchantShortId
+  Maybe Text -> -- fromLocationAddress
   FinanceCtx
-buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId =
+buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId referenceId merchantName merchantShortId fromLocationAddress =
   FinanceCtx
     { merchantId = merchantId,
       merchantOpCityId = merchantOpCityId,
@@ -247,7 +254,9 @@ buildRiderFinanceCtx merchantId merchantOpCityId currency isOnline riderId refer
       panOfParty = Nothing,
       panType = Nothing,
       tdsRateReason = Nothing,
-      emitLedgerEntries = True
+      emitLedgerEntries = True,
+      fromLocationAddress = fromLocationAddress,
+      issuedToName = Nothing
     }
 
 -- ---------------------------------------------------------------------------
@@ -413,6 +422,7 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
         then do
           let staleIds = map (.id) pendingCoreEntries
           voidRidePaymentLedger staleIds
+          voidRideInvoice rideId
           logInfo $
             "Voided " <> show (length staleIds) <> " stale PENDING core entries (old="
               <> show oldTotal
@@ -702,11 +712,12 @@ buildRidePaymentInvoiceConfig ::
   InvoiceConfig
 buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
   InvoiceConfig
-    { invoiceType = FInvoice.Ride,
+    { invoiceType = Ride,
       issuedToType = "RIDER",
       issuedToId = ctx.counterpartyId,
-      issuedToName = Nothing,
-      issuedToAddress = Nothing,
+      issuedToName = ctx.issuedToName,
+      issuedToAddress = ctx.fromLocationAddress,
+      referenceId = Just ctx.referenceId,
       lineItems =
         catMaybes
           [ mkRideFareLineItem (rideFare + platformFee) ctx.currency offerDiscountAmount,
@@ -736,7 +747,7 @@ voidRidePaymentLedger ::
 voidRidePaymentLedger entryIds = do
   -- Collect linked invoice IDs BEFORE voiding the entries, in case
   -- voiding cascades or otherwise disrupts the link lookup.
-  mbInvoices <- forM entryIds $ \entryId -> InvoiceSvc.getInvoiceForEntry entryId
+  mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
   let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
   forM_ entryIds $ \entryId ->
     voidEntry entryId "PaymentIntentCancelled"
@@ -746,6 +757,67 @@ voidRidePaymentLedger entryIds = do
     "Voided " <> show (length entryIds) <> " ride payment ledger entries and "
       <> show (length uniqueInvoiceIds)
       <> " linked invoice(s)"
+
+-- | Void cancellation fee ledger entries + mark invoice Voided.
+--   Use only when there is genuinely no debt (e.g. zero effective amount).
+
+-- | Mark cancellation fee invoice as Paid after successful Stripe capture.
+markCancellationFeeInvoicePaid ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Maybe (Id FInvoice.Invoice) ->
+  m ()
+markCancellationFeeInvoicePaid mbInvoiceId =
+  whenJust mbInvoiceId $ \invoiceId -> do
+    FInvoiceService.updateInvoiceStatus invoiceId FInvoice.Paid
+    logInfo $ "Marked cancellation fee invoice as Paid: " <> invoiceId.getId
+
+-- | Find and cancel the Ride invoice linked to a rideId (called when ride intent is cancelled).
+voidRideInvoice ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  m ()
+voidRideInvoice rideId = do
+  rideEntries <- findRidePaymentEntries rideId
+  logDebug $ "[voidRideInvoice] rideId=" <> rideId <> " found " <> show (length rideEntries) <> " entries"
+  let rideFareEntry = find (\e -> e.referenceType == ridePaymentRefRideFare) rideEntries
+  case rideFareEntry of
+    Nothing -> logDebug $ "[voidRideInvoice] No RideFare entry found for rideId=" <> rideId
+    Just entry -> do
+      logDebug $ "[voidRideInvoice] Found RideFare entry id=" <> entry.id.getId <> " status=" <> show entry.status
+      mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+      case mbInvoice of
+        Nothing -> logDebug $ "[voidRideInvoice] No invoice link found for entry id=" <> entry.id.getId
+        Just inv -> do
+          FInvoiceService.updateInvoiceStatus inv.id FInvoice.Cancelled
+          logInfo $ "[voidRideInvoice] Cancelled Ride invoice " <> inv.id.getId <> " for rideId=" <> rideId
+
+-- | Mark the Ride invoice as Paid after successful payment capture.
+markRideInvoicePaid ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  m ()
+markRideInvoicePaid rideId = do
+  rideEntries <- findRidePaymentEntries rideId
+  let settledEntry = find (\e -> e.referenceType == ridePaymentRefRideFare && e.status == LE.SETTLED) rideEntries
+  whenJust settledEntry $ \entry -> do
+    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+    whenJust mbInvoice $ \inv -> do
+      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Paid
+      logInfo $ "Marked Ride invoice as Paid for rideId: " <> rideId
+
+-- | Mark the Ride invoice as Issued when capture fails (entries now DUE for collection).
+markRideInvoiceIssued ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  m ()
+markRideInvoiceIssued rideId = do
+  rideEntries <- findRidePaymentEntries rideId
+  let dueEntry = find (\e -> e.referenceType == ridePaymentRefRideFare && e.status == LE.DUE) rideEntries
+  whenJust dueEntry $ \entry -> do
+    mbInvoice <- FInvoiceService.getInvoiceForEntry entry.id
+    whenJust mbInvoice $ \inv -> do
+      FInvoiceService.updateInvoiceStatus inv.id FInvoice.Issued
+      logInfo $ "Marked Ride invoice as Issued (DUE) for rideId: " <> rideId
 
 -- ---------------------------------------------------------------------------
 -- 4. Tip ledger entries
@@ -793,11 +865,12 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
     -- Invoice for cancellation
     invoice
       InvoiceConfig
-        { invoiceType = FInvoice.RideCancellation,
+        { invoiceType = RideCancellation,
           issuedToType = "RIDER",
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
-          issuedToAddress = Nothing,
+          issuedToAddress = ctx.fromLocationAddress,
+          referenceId = Just ctx.referenceId,
           lineItems =
             filter
               (\li -> li.lineTotal > 0)
@@ -824,6 +897,58 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
   case result of
     Left err -> do
       logError $ "Failed to create cancellation fee ledger: " <> show err
+      pure $ Left err
+    Right (mbInvoiceId, entryIds) -> pure $ Right (mbInvoiceId, entryIds)
+
+-- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
+--   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
+--   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
+createPendingCancellationFeeLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  HighPrecMoney -> -- cancellationFee (without GST)
+  HighPrecMoney -> -- cancellationGST
+  m (Either FinanceError (Maybe (Id FInvoice.Invoice), [Id LE.LedgerEntry]))
+createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
+  result <- runFinance ctx $ do
+    -- Leg 1 only (PENDING): Asset(BUYER) → Liability(OWNER) — matches createRidePaymentLedger direction
+    _ <- transferPending BuyerAsset OwnerLiability cancellationFee ridePaymentRefCancellationFee
+    _ <- transferPending BuyerAsset OwnerLiability cancellationGST ridePaymentRefCancellationGST
+    -- Invoice (same config as createCancellationFeeLedger)
+    invoice
+      InvoiceConfig
+        { invoiceType = RideCancellation,
+          issuedToType = "RIDER",
+          issuedToId = ctx.counterpartyId,
+          issuedToName = Nothing,
+          issuedToAddress = Nothing,
+          lineItems =
+            filter
+              (\li -> li.lineTotal > 0)
+              [ InvoiceLineItem
+                  { description = "Cancellation Fee",
+                    quantity = 1,
+                    unitPrice = cancellationFee,
+                    lineTotal = cancellationFee,
+                    isExternalCharge = False
+                  },
+                InvoiceLineItem
+                  { description = "Cancellation Fee VAT",
+                    quantity = 1,
+                    unitPrice = cancellationGST,
+                    lineTotal = cancellationGST,
+                    isExternalCharge = False
+                  }
+              ],
+          referenceId = Just ctx.referenceId,
+          gstBreakdown = Nothing,
+          isVat = False,
+          issuedToTaxNo = Nothing,
+          issuedByTaxNo = Nothing
+        }
+  case result of
+    Left err -> do
+      logError $ "Failed to create pending cancellation fee ledger: " <> show err
       pure $ Left err
     Right (mbInvoiceId, entryIds) -> pure $ Right (mbInvoiceId, entryIds)
 
@@ -901,8 +1026,13 @@ markEntriesAsDue ::
   (BeamFlow.BeamFlow m r) =>
   [Id LE.LedgerEntry] ->
   m ()
-markEntriesAsDue entryIds =
+markEntriesAsDue entryIds = do
   forM_ entryIds $ \entryId -> updateEntryStatus entryId LE.DUE
+  -- Mark linked invoices as Issued
+  mbInvoices <- forM entryIds $ \entryId -> FInvoiceService.getInvoiceForEntry entryId
+  let uniqueInvoiceIds = List.nub [inv.id | Just inv <- mbInvoices]
+  forM_ uniqueInvoiceIds $ \invId ->
+    FInvoiceService.updateInvoiceStatus invId FInvoice.Issued
 
 -- | Check if ride payment is settled (captured).
 --   Replaces: checking PaymentInvoice.paymentStatus == CAPTURED

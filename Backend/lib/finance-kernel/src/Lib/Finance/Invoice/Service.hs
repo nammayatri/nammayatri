@@ -33,6 +33,7 @@ module Lib.Finance.Invoice.Service
 where
 
 import qualified Data.Aeson as Aeson
+import Domain.Types.Invoice (InvoiceType (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id (Id (..))
@@ -106,6 +107,7 @@ createInvoice input entryIds = do
             supplierGSTIN = input.supplierGSTIN,
             supplierTaxNo = input.supplierTaxNo,
             supplierId = input.supplierId,
+            referenceId = input.referenceId,
             lineItems = lineItemsJson,
             subtotal = subtotal,
             taxBreakdown = Nothing,
@@ -352,6 +354,7 @@ invoiceTypeToTransactionType :: InvoiceType -> TransactionType
 invoiceTypeToTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> Subscription
   Ride -> IndirectTax.RideFare
+  BapRide -> IndirectTax.RideFare
   RideCancellation -> Cancellation
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
@@ -359,6 +362,7 @@ invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
 invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   SubscriptionPurchase -> DirectTax.Subscription
   Ride -> DirectTax.RideFare
+  BapRide -> DirectTax.RideFare
   RideCancellation -> DirectTax.Cancellation
 
 -- | SAC code mapping per transaction type
@@ -378,6 +382,7 @@ invoiceTypeToPurpose :: InvoiceType -> Text
 invoiceTypeToPurpose = \case
   SubscriptionPurchase -> purposeSubscription
   Ride -> purposeRideFare
+  BapRide -> purposeRideFare
   RideCancellation -> purposeCancellation
 
 -- | Map DirectTax TransactionType to TDS section

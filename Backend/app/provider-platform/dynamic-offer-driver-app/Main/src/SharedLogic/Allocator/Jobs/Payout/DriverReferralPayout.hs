@@ -314,7 +314,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                 -- Attempt payout; rollback on failure
                 phoneNo <- mapM decrypt person.mobileNumber
                 let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType False
-                    entityName = DLP.DRIVER_DAILY_STATS
+                    entityName = DLP.REGISTRATION_REFUND
                     createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid
                 result <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast driverFee.merchantOperatingCityId) (cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing

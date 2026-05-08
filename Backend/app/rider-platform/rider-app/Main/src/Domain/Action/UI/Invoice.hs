@@ -5,6 +5,7 @@ module Domain.Action.UI.Invoice
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
+import Domain.Types.Invoice (InvoiceType)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -96,7 +97,7 @@ getInvoice (mbPersonId, merchantId) from to = do
 --   via 'finance_invoice_ledger_link'.
 getInvoiceList ::
   (Maybe (Id DP.Person), Id DM.Merchant) ->
-  Maybe FinanceInvoice.InvoiceType ->
+  Maybe InvoiceType ->
   Maybe Int ->
   Maybe Int ->
   Maybe Text ->

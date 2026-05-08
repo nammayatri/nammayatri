@@ -126,6 +126,7 @@ import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
+import qualified Kernel.Storage.Esqueleto as Esq
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 
@@ -254,7 +255,8 @@ type EndRideFlow m r =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     JobCreator r m,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    Esq.EsqDBReplicaFlow m r
   )
 
 driverEndRide ::

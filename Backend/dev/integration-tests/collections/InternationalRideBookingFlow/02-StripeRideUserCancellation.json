@@ -1,7 +1,7 @@
 {
 	"info": {
-		"name": "No Show Cancellation (Stripe Payment)",
-		"description": "End-to-end no-show cancellation: search → assign → driver arrives at pickup → wait no-show window → rider cancels → verify cancellation invoice with fee",
+		"name": "Rider Cancellation (Stripe Payment)",
+		"description": "End-to-end rider cancellation: search → assign → driver arrives at pickup → wait no-show window → rider cancels → verify cancellation charges",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"event": [
@@ -239,7 +239,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"shouldUpdateRule\":true,\"updatePassword\":\"98979\",\"description\":\"Helsinki flat cancellation charge after no-show window\",\"inputData\":[{\"cancelledBy\":\"CancellationByCustomer\",\"timeOfDriverCancellation\":0,\"timeOfCustomerCancellation\":45,\"isArrivedAtPickup\":false,\"driverWaitingTime\":0,\"callAttemptByDriver\":false,\"actualCoveredDistance\":0,\"expectedCoveredDistance\":0,\"cancellationDues\":0,\"cancelledRides\":0,\"totalBookings\":0,\"estimatedBookingFare\":25,\"completedRides\":0,\"validCancellations\":0,\"cancellationDueRides\":0,\"serviceTier\":\"COMFY\",\"tripCategory\":{\"tag\":\"OneWay\",\"contents\":\"OneWayOnDemandDynamicOffer\"},\"cancellationReasonSelected\":null,\"userSdkVersion\":null}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"cancellationCharges\":5.0}]}]}"
+					"raw": "{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"shouldUpdateRule\":true,\"updatePassword\":\"98979\",\"description\":\"Helsinki flat cancellation charge after no-show window\",\"inputData\":[{\"cancelledBy\":\"CancellationByCustomer\",\"timeOfDriverCancellation\":0,\"timeOfCustomerCancellation\":45,\"isArrivedAtPickup\":false,\"driverWaitingTime\":0,\"callAttemptByDriver\":false,\"actualCoveredDistance\":0,\"expectedCoveredDistance\":0,\"cancellationDues\":0,\"cancelledRides\":0,\"totalBookings\":0,\"estimatedBookingFare\":25,\"completedRides\":0,\"validCancellations\":0,\"cancellationDueRides\":0,\"serviceTier\":\"COMFY\",\"tripCategory\":{\"tag\":\"OneWay\",\"contents\":\"OneWayOnDemandDynamicOffer\"},\"cancellationReasonSelected\":null,\"userSdkVersion\":null}],\"rules\":[{\"cat\":[{\"var\":\"\"},{\"cancellationCharges\":5.0}]},{\"cat\":[{\"var\":\"\"},{\"cancellationChargesTax\":1.2}]}]}"
 				}
 			},
 			"response": []
@@ -1522,7 +1522,7 @@
 					"script": {
 						"exec": [
 							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"console.log('Ride cancelled by rider after no-show window — charges should apply');"
+							"console.log('Rider cancelled after no-show window — cancellation fee should be charged');"
 						],
 						"type": "text/javascript"
 					}
@@ -1553,7 +1553,7 @@
 				},
 				"body": {
 					"mode": "raw",
-					"raw": "{\"reasonCode\": \"OTHER\", \"reasonStage\": \"OnAssign\"}"
+					"raw": "{\"reasonCode\": \"OTHER\", \"reasonStage\": \"OnAssign\", \"additionalInfo\": \"Rider decided to cancel\"}"
 				}
 			},
 			"response": []
@@ -1665,17 +1665,17 @@
 				"header": [
 					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{rider_token}}"
 					}
 				],
 				"url": {
-					"raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22RideCancellation%22&limit=10&offset=0",
+					"raw": "{{baseUrl_app}}/invoice/list?invoiceType=%22RideCancellation%22&limit=10&offset=0",
 					"host": [
-						"{{baseURL_namma_P}}"
+						"{{baseUrl_app}}"
 					],
 					"path": [
-						"subscription",
-						"invoices"
+						"invoice",
+						"list"
 					],
 					"query": [
 						{

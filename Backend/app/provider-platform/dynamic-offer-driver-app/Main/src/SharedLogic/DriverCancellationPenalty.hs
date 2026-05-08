@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverFee as DF
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -37,7 +38,6 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance
-import qualified Lib.Finance.Domain.Types.Invoice as Invoice
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -173,11 +173,12 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
               _ <- transfer OwnerLiability OwnerExpense penaltyAmount walletReferenceDriverCancellationCharges
               invoice
                 InvoiceConfig
-                  { invoiceType = Invoice.RideCancellation,
+                  { invoiceType = RideCancellation,
                     issuedToType = "DRIVER",
                     issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                     issuedToName = Nothing,
                     issuedToAddress = Nothing,
+                    referenceId = Nothing,
                     gstBreakdown = Nothing,
                     lineItems =
                       [ InvoiceLineItem {description = "Driver Cancellation Penalty", quantity = 1, unitPrice = penaltyAmount, lineTotal = penaltyAmount, isExternalCharge = False}

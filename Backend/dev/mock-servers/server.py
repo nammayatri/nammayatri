@@ -137,6 +137,14 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._mock_sql_select(body)
         if path == "/mock/sql/update" and self.command == "POST":
             return self._mock_sql_update(body)
+        if path == "/mock/sql/insert" and self.command == "POST":
+            return self._mock_sql_insert(body)
+
+        # ── Generic Redis SET / DEL (for tests that need to seed or invalidate Redis cache state) ──
+        if path == "/mock/redis/set" and self.command == "POST":
+            return self._mock_redis_set(body)
+        if path == "/mock/redis/del" and self.command == "POST":
+            return self._mock_redis_del(body)
 
         # ── Generic scheduler-job trigger (for scheduler tests) ──
         if path == "/mock/scheduler/trigger" and self.command == "POST":
@@ -430,6 +438,60 @@ class MockHandler(BaseHTTPRequestHandler):
             log.exception("sql-update error")
             return self._json({"error": "internal server error"}, status=500)
 
+    def _mock_sql_insert(self, body):
+        """POST /mock/sql/insert — run an INSERT into a dev DB table.
+        Body: {
+          "db_name": "atlas_dev",
+          "db_schema": "atlas_app",
+          "table_name": "purchased_pass",
+          "values": {"id": "...", "status": "Active", ...},   # column → value
+          "touch_timestamps": true,                            # optional, sets created_at/updated_at = NOW()
+          "on_conflict_do_nothing": true                       # optional, appends ON CONFLICT DO NOTHING
+        }
+        Returns: {"ok": true, "rowcount": N}"""
+        from psycopg2 import sql as psql
+        try:
+            data, db_name, schema, table = self._parse_sql_target(body)
+        except ValueError as ve:
+            return self._json({"error": str(ve)}, status=400)
+
+        values = data.get("values") or {}
+        if not isinstance(values, dict) or not values:
+            return self._json({"error": "values must be a non-empty object"}, status=400)
+
+        cols = list(values.keys())
+        params = list(values.values())
+        col_idents = psql.SQL(", ").join(psql.Identifier(c) for c in cols)
+        placeholders = psql.SQL(", ").join(psql.Placeholder() * len(cols))
+
+        if data.get("touch_timestamps"):
+            col_idents = col_idents + psql.SQL(", created_at, updated_at")
+            placeholders = placeholders + psql.SQL(", NOW(), NOW()")
+
+        on_conflict = psql.SQL(" ON CONFLICT DO NOTHING") if data.get("on_conflict_do_nothing") else psql.SQL("")
+        query = psql.SQL("INSERT INTO {sch}.{tbl} ({cols}) VALUES ({vals}){oc}").format(
+            sch=psql.Identifier(schema),
+            tbl=psql.Identifier(table),
+            cols=col_idents,
+            vals=placeholders,
+            oc=on_conflict,
+        )
+
+        try:
+            conn = self._pg_connect(db_name)
+            try:
+                conn.autocommit = True
+                cur = conn.cursor()
+                cur.execute(query, params)
+                rowcount = cur.rowcount
+                cur.close()
+            finally:
+                conn.close()
+            return self._json({"ok": True, "rowcount": rowcount})
+        except Exception:
+            log.exception("sql-insert error")
+            return self._json({"error": "internal server error"}, status=500)
+
     # ── Generic scheduler job trigger (for scheduler tests) ──
 
     # WARNING: mirrors the Haskell ToJSON (AnyJob t) instance at
@@ -648,6 +710,116 @@ class MockHandler(BaseHTTPRequestHandler):
         jobs.sort(key=lambda j: j.get("scoreMs") or 0)
         return self._json({"jobs": jobs, "count": len(jobs)})
 
+    def _mock_redis_set(self, body):
+        """POST /mock/redis/set — write a key/value into Redis (for cache pre-seeding).
+
+        Body:
+          {"key": "rider-app-scheduler:NAMMA_YATRI:mobility:fcm_token",
+           "value": "{\"access_token\":\"fake\",\"expires_in\":32503680000,\"token_type\":\"Bearer\"}",
+           "target": "cluster",  # "cluster" (port 30001, with -c) or "standalone" (port 6379) — default "cluster"
+           "port": 30001}        # optional — overrides target preset
+
+        Used by integration tests that need to pre-populate cache state the production
+        code reads via Redis.get (e.g. the FCM JWT cache, to bypass Google OAuth in dev).
+
+        Returns: {"ok": true, "key": "...", "stored": "OK"}
+        """
+        import subprocess
+
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+
+        key = data.get("key")
+        value = data.get("value")
+        if not key or value is None:
+            return self._json({"error": "key and value are required"}, status=400)
+
+        target = data.get("target", "cluster")
+        port_default = 30001 if target == "cluster" else 6379
+        try:
+            port = int(data.get("port", port_default))
+        except (TypeError, ValueError):
+            return self._json({"error": "port must be numeric"}, status=400)
+
+        cmd = ["redis-cli"]
+        if target == "cluster":
+            cmd += ["-c"]
+        cmd += ["-p", str(port), "SET", key, str(value)]
+
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        except subprocess.TimeoutExpired:
+            return self._json({"error": "redis-cli timed out"}, status=500)
+
+        out = (result.stdout or "").strip()
+        if result.returncode != 0 or out != "OK":
+            return self._json({"error": "redis SET failed", "stdout": out, "stderr": (result.stderr or "").strip()}, status=500)
+        return self._json({"ok": True, "key": key, "stored": out})
+
+    def _mock_redis_del(self, body):
+        """POST /mock/redis/del — delete a Redis key, or a SCAN pattern, on every cluster node.
+
+        Cluster keys are partitioned by hash slot. To delete a specific key, send {"key": "..."}.
+        To delete every key matching a pattern, send {"pattern": "..."} — this scans all six
+        cluster nodes (30001-30006) and DELs every match. Use a pattern when invalidating a
+        cached-query family (e.g. all MerchantPushNotification entries for one mocId).
+
+        Body:
+          {"key": "..."}                             # single-key delete
+          {"pattern": "*MerchantPushNotification*"}  # SCAN+DEL across all cluster nodes
+          {"target": "cluster"|"standalone", "port": ...}  # both default to cluster/30001
+
+        Returns: {"deleted": N}
+        """
+        import subprocess
+
+        try:
+            data = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return self._json({"error": "invalid JSON"}, status=400)
+
+        key = data.get("key")
+        pattern = data.get("pattern")
+        if not key and not pattern:
+            return self._json({"error": "either key or pattern is required"}, status=400)
+
+        target = data.get("target", "cluster")
+        ports_default = [30001, 30002, 30003, 30004, 30005, 30006] if target == "cluster" else [6379]
+        ports = [int(p) for p in (data.get("ports") or ports_default)]
+
+        deleted = 0
+        if key:
+            cmd = ["redis-cli"]
+            if target == "cluster":
+                cmd += ["-c", "-p", str(ports[0])]
+            else:
+                cmd += ["-p", str(ports[0])]
+            cmd += ["DEL", key]
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                if result.returncode == 0:
+                    deleted += int((result.stdout or "0").strip() or 0)
+            except subprocess.TimeoutExpired:
+                pass
+        if pattern:
+            for p in ports:
+                try:
+                    scan = subprocess.run(["redis-cli", "-p", str(p), "--scan", "--pattern", pattern], capture_output=True, text=True, timeout=10)
+                    if scan.returncode != 0:
+                        continue
+                    for k in (scan.stdout or "").splitlines():
+                        k = k.strip()
+                        if not k:
+                            continue
+                        d = subprocess.run(["redis-cli", "-c", "-p", "30001", "DEL", k], capture_output=True, text=True, timeout=5)
+                        if d.returncode == 0:
+                            deleted += int((d.stdout or "0").strip() or 0)
+                except subprocess.TimeoutExpired:
+                    continue
+        return self._json({"deleted": deleted})
+
     def _mock_scheduler_clear(self, body):
         """POST /mock/scheduler/clear — purge all scheduler state for one jobType so a test starts clean.
 
@@ -784,7 +956,7 @@ def main():
 
     server = HTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/status, POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/status, POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()

@@ -25,7 +25,6 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
@@ -199,7 +198,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
             Just pickupZoneGateId ->
               partitionM
                 ( \dd -> do
-                    mbDriverGate <- Esq.runInReplica $ findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
+                    mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
                     pure $ case mbDriverGate of
                       Just driverGate -> driverGate.id.getId == pickupZoneGateId
                       Nothing -> False
@@ -449,7 +448,7 @@ assignDriverGateTags searchReq pool = do
       (onGateDrivers', outSideDrivers) <-
         partitionM
           ( \dd -> do
-              mbDriverGate <- Esq.runInReplica $ findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
+              mbDriverGate <- findGateInfoIfDriverInsideGatePickupZone (LatLong dd.driverPoolResult.lat dd.driverPoolResult.lon)
               pure $ case mbDriverGate of
                 Just driverGate -> driverGate.id.getId == pickupZoneGateId
                 Nothing -> False

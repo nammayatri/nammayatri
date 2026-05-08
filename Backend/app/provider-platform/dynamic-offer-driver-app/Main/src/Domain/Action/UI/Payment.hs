@@ -40,6 +40,7 @@ import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.Extra.WalletTransaction (mapWalletStatus)
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Invoice as INV
+import qualified "beckn-spec" Domain.Types.Invoice as BecknInvoice
 import qualified Domain.Types.Mandate as DM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -84,7 +85,6 @@ import Lib.Finance
     transfer,
   )
 import Lib.Finance.Domain.Types.Account ()
-import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Ledger.Service ()
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -235,7 +235,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
             offers = Nothing,
             validTill = order.validTill,
             paymentFulfillmentStatus = Nothing,
-            domainEntityId = Nothing
+            domainEntityId = Nothing,
+            orderLoyaltyInfo = Nothing
           }
     else do
       -- Check if this is a STCL membership payment order
@@ -421,7 +422,8 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                           paymentFulfillmentStatus = order.paymentFulfillmentStatus,
                           domainEntityId = order.domainEntityId,
                           amount = order.amount,
-                          validTill = order.validTill
+                          validTill = order.validTill,
+                          orderLoyaltyInfo = Nothing
                         }
                 DStclMembership.stclMemberShipOrderStatusHandler stclPaymentStatusResp order.id
               when (order.status /= Payment.CHARGED || order.status == transactionStatus) $ do
@@ -456,7 +458,6 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     processWalletTopupAndUpdateStatus driver order transactionStatus = do
       processWalletTopupWebhook driver order transactionStatus
       QOrder.updateStatus order.id order.paymentServiceOrderId transactionStatus
-      QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
 
     getInvoicesAndServiceWithServiceConfigByOrderId ::
       (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
@@ -485,6 +486,7 @@ processWalletTopupWebhook ::
   Payment.TransactionStatus ->
   m ()
 processWalletTopupWebhook driver order transactionStatus = do
+  QWalletTransaction.updateStatus (mapWalletStatus transactionStatus) order.id
   when (transactionStatus == Payment.CHARGED) $ do
     let lockKey = "wallet:topup:lock:" <> order.id.getId
     Redis.withLockRedis lockKey 60 $ do
@@ -493,11 +495,12 @@ processWalletTopupWebhook driver order transactionStatus = do
         ctx <- mkDriverWalletFinanceCtx (cast order.personId) (cast order.merchantId) (cast driver.merchantOperatingCityId) order.currency (order.id.getId)
         let topupInvoiceConfig =
               InvoiceConfig
-                { invoiceType = FinanceInvoice.SubscriptionPurchase,
+                { invoiceType = BecknInvoice.SubscriptionPurchase,
                   issuedToType = "DRIVER",
                   issuedToId = order.personId.getId,
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
+                  referenceId = Nothing,
                   lineItems = [InvoiceLineItem {description = "Wallet Top-up", quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False}],
                   gstBreakdown = Nothing,
                   isVat = False,
