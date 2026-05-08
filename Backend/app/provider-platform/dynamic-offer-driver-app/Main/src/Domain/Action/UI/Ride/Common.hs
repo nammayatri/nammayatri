@@ -183,7 +183,8 @@ data DriverRideRes = DriverRideRes
 mkDriverRideRes ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r
   ) =>
   RD.RideDetails ->
   Maybe Text ->
