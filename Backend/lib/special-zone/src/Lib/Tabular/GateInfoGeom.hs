@@ -61,6 +61,7 @@ mkPersist
       pickupRequestResponseTimeoutInSec Int Maybe
       notificationActiveTillInSec Int Maybe
       enableQueueFilter Text Maybe
+      isAutoNotifyEnabled Bool Maybe
       Primary id
       deriving Generic
     |]

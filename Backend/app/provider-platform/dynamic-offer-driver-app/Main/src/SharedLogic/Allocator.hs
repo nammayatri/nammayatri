@@ -91,6 +91,7 @@ data AllocatorJobType
   | ScheduledBatchPayout
   | SettlementReportIngestion
   | CheckPickupZoneArrival
+  | RetryTriggerNotify
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
@@ -143,6 +144,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
+  restoreAnyJobInfo SRetryTriggerNotify jobData = AnyJobInfo <$> restoreJobInfo SRetryTriggerNotify jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
@@ -558,6 +560,20 @@ data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
 instance JobInfoProcessor 'CheckPickupZoneArrival
 
 type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData
+
+data RetryTriggerNotifyJobData = RetryTriggerNotifyJobData
+  { gateId :: Text,
+    vehicleType :: Text,
+    retryIntervalSec :: Int,
+    maxRetryDurationSec :: Int,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'RetryTriggerNotify
+
+type instance JobContent 'RetryTriggerNotify = RetryTriggerNotifyJobData
 
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,

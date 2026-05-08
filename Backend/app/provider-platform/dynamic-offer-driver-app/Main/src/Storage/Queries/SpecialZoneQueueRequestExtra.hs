@@ -101,3 +101,14 @@ findLastAcceptedByDriverId driverId =
     (Just 1)
     Nothing
     <&> listToMaybe
+
+findAllByRequestIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Kernel.Prelude.Text] ->
+  m [Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest]
+findAllByRequestIds requestIds
+  | null requestIds = pure []
+  | otherwise =
+    findAllWithKVAndConditionalDB
+      [Se.Is Beam.requestId $ Se.In (map Just requestIds)]
+      Nothing

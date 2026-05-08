@@ -26,3 +26,14 @@ ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN arrival
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN trigger_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.special_zone_queue_request ADD COLUMN request_id text ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY special_zone_queue_request_idx_driver_id ON atlas_driver_offer_bpp.special_zone_queue_request USING btree (driver_id);
+CREATE INDEX CONCURRENTLY special_zone_queue_request_idx_request_id ON atlas_driver_offer_bpp.special_zone_queue_request USING btree (request_id);

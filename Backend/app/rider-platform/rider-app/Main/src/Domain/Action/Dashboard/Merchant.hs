@@ -463,6 +463,9 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
             enableQuoteSupplyFilter = mbGate >>= (.enableQuoteSupplyFilter),
             quoteSupplyFilterVariants = mbGate >>= (.quoteSupplyFilterVariants),
+            triggerNotifyRetryIntervalSec = mbGate >>= (.triggerNotifyRetryIntervalSec),
+            triggerNotifyMaxRetryDurationSec = mbGate >>= (.triggerNotifyMaxRetryDurationSec),
+            isAutoNotifyEnabled = reqT.isAutoNotifyEnabled <|> (mbGate >>= (.isAutoNotifyEnabled)),
             ..
           }
 
@@ -1509,7 +1512,12 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
     render :: Maybe Text,
-    enableQueueFilter :: Maybe Text
+    enableQueueFilter :: Maybe Text,
+    gateInfoEnableQuoteSupplyFilter :: Maybe Text,
+    gateInfoQuoteSupplyFilterVariants :: Maybe Text,
+    gateInfoTriggerNotifyRetryIntervalSec :: Maybe Text,
+    gateInfoTriggerNotifyMaxRetryDurationSec :: Maybe Text,
+    gateInfoIsAutoNotifyEnabled :: Maybe Text
   }
   deriving (Show)
 
@@ -1555,6 +1563,11 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
       <*> optional (r .: "enable_queue_filter")
+      <*> optional (r .: "gate_info_enable_quote_supply_filter")
+      <*> optional (r .: "gate_info_quote_supply_filter_variants")
+      <*> optional (r .: "gate_info_trigger_notify_retry_interval_sec")
+      <*> optional (r .: "gate_info_trigger_notify_max_retry_duration_sec")
+      <*> optional (r .: "gate_info_is_auto_notify_enabled")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1680,7 +1693,10 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
                 enableQueueFilter = parseBoolMap row.enableQueueFilter,
                 enableQuoteSupplyFilter = readMaybeCSVField idx (fromMaybe "" row.gateInfoEnableQuoteSupplyFilter) "Gate Info (enable_quote_supply_filter)",
-                quoteSupplyFilterVariants = readMaybeCSVField idx (fromMaybe "" row.gateInfoQuoteSupplyFilterVariants) "Gate Info (quote_supply_filter_variants)"
+                quoteSupplyFilterVariants = readMaybeCSVField idx (fromMaybe "" row.gateInfoQuoteSupplyFilterVariants) "Gate Info (quote_supply_filter_variants)",
+                triggerNotifyRetryIntervalSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoTriggerNotifyRetryIntervalSec) "Gate Info (trigger_notify_retry_interval_sec)",
+                triggerNotifyMaxRetryDurationSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoTriggerNotifyMaxRetryDurationSec) "Gate Info (trigger_notify_max_retry_duration_sec)",
+                isAutoNotifyEnabled = readMaybeCSVField idx (fromMaybe "" row.gateInfoIsAutoNotifyEnabled) "Gate Info (is_auto_notify_enabled)"
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 
@@ -1760,7 +1776,12 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec,
           -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
           DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
-          DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter
+          DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter,
+          DGI.enableQuoteSupplyFilter = new.enableQuoteSupplyFilter <|> old.enableQuoteSupplyFilter,
+          DGI.quoteSupplyFilterVariants = new.quoteSupplyFilterVariants <|> old.quoteSupplyFilterVariants,
+          DGI.triggerNotifyRetryIntervalSec = new.triggerNotifyRetryIntervalSec <|> old.triggerNotifyRetryIntervalSec,
+          DGI.triggerNotifyMaxRetryDurationSec = new.triggerNotifyMaxRetryDurationSec <|> old.triggerNotifyMaxRetryDurationSec,
+          DGI.isAutoNotifyEnabled = new.isAutoNotifyEnabled <|> old.isAutoNotifyEnabled
          }
 
 getMerchantConfigSpecialLocationList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe SL.SpecialLocationType -> Maybe [SL.SpecialLocationType] -> Flow [Common.SpecialLocationWithPlatform]

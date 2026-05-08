@@ -7,6 +7,7 @@ module Domain.Action.ProviderPlatform.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
     getSpecialZoneQueueDriverQueueHistory,
+    getSpecialZoneQueueTriggerNotifyStatus,
   )
 where
 
@@ -58,3 +59,8 @@ getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.M
 getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueDriverQueueHistory) driverId
+
+getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerNotifyStatusRes)
+getSpecialZoneQueueTriggerNotifyStatus merchantShortId opCity apiTokenInfo gateId vehicleType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.specialZoneQueueDSL.getSpecialZoneQueueTriggerNotifyStatus) gateId vehicleType

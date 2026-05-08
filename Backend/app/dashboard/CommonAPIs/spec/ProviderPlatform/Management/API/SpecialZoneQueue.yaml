@@ -53,6 +53,15 @@ apis:
       response:
         type: DriverQueueHistoryRes
 
+  - GET:
+      endpoint: /triggerNotifyStatus
+      auth: ApiAuthV2
+      mandatoryQuery:
+        gateId: Text
+        vehicleType: Text
+      response:
+        type: TriggerNotifyStatusRes
+
 types:
   TriggerSpecialZoneQueueNotifyReq:
     - gateId: Text
@@ -129,3 +138,12 @@ types:
     - trackingState: Maybe QueueTrackingState
     - currentRank: Maybe Int
     - events: "[QueueHistoryEvent]"
+
+  TriggerNotifyStatusRes:
+    - totalNotified: Int
+    - totalAccepted: Int
+    - dashboardNotified: Int
+    - dashboardAccepted: Int
+    - appNotified: Int
+    - appAccepted: Int
+    - activeRequestCount: Int

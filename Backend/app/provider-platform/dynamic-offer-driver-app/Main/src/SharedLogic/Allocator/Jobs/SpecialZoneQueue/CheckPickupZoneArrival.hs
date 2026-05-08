@@ -5,7 +5,6 @@ module SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
   )
 where
 
-import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -170,7 +169,8 @@ sweepStaleAcceptedRequestsForGate ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
-    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Redis.HedisLTSFlowEnv r
   ) =>
   Text -> -- gateId
   [Text] -> -- vehicleVariants to sweep

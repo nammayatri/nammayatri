@@ -41,16 +41,17 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
-import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
@@ -133,7 +134,9 @@ handler ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int,
+    JobCreator r m
   ) =>
   Id DM.Merchant ->
   InitReq ->

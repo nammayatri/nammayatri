@@ -65,6 +65,9 @@ mkPersist
       enableQueueFilter Text Maybe
       enableQuoteSupplyFilter Bool Maybe
       quoteSupplyFilterVariantsJson Text Maybe
+      triggerNotifyRetryIntervalSec Int Maybe
+      triggerNotifyMaxRetryDurationSec Int Maybe
+      isAutoNotifyEnabled Bool Maybe
       Primary id
       deriving Generic
     |]
@@ -104,6 +107,7 @@ encodeThresholdMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
 decodeBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
 decodeBoolMap Nothing = Nothing
 decodeBoolMap (Just t) = A.decode (BL.fromStrict (TE.encodeUtf8 t))
+
 -- | Decode a JSON text column into a list of vehicle-variant strings.
 --   Returns Nothing on missing/invalid JSON. Used for the supply-filter
 --   variant whitelist.

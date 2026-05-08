@@ -20,6 +20,7 @@ data SpecialZoneQueueRequestT f = SpecialZoneQueueRequestT
     id :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    requestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     response :: B.C f (Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestResponse),
     specialLocationId :: B.C f Kernel.Prelude.Text,
     specialLocationName :: B.C f Kernel.Prelude.Text,

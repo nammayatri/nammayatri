@@ -43,10 +43,21 @@ module SharedLogic.SpecialZoneDriverDemand
     recordDriverPickupZoneAccept,
     getDemand,
     getSupply,
+    TriggerNotifySession (..),
+    RecordMode (..),
+    defaultTriggerNotifyRetryIntervalSec,
+    defaultTriggerNotifyMaxRetryDurationSec,
+    mkTriggerNotifySessionKey,
+    recordTriggerNotifyEvent,
+    getActiveTriggerSessions,
+    removeTriggerNotifySessionEntry,
+    tryClaimRetryJob,
+    releaseRetryJobClaim,
   )
 where
 
 import Control.Monad.Extra (mapMaybeM, partitionM)
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import Data.List (nub, partition, sortOn)
@@ -57,16 +68,15 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as DFP
-import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import qualified Domain.Types.VehicleVariant as DV
-import Kernel.External.Maps.Types (LatLong (..))
 import Environment (AppEnv (..))
 import GHC.Records.Extra ()
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -74,19 +84,24 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import qualified Kernel.Types.SlidingWindowCounters as SWC
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import Lib.Scheduler.Environment (JobCreator)
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as SL
+import SharedLogic.Allocator (AllocatorJobType (..), RetryTriggerNotifyJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -333,7 +348,7 @@ mkDriverPickupZoneAcceptKey specialLocationId driverId = "DriverPickupZoneAccept
 -- Redis operations
 
 windowLimit :: SWC.SlidingWindowOptions
-windowLimit = SWC.SlidingWindowOptions 60 Minutes
+windowLimit = SWC.SlidingWindowOptions 60 SWC.Minutes
 
 incrementGateSearchDemand ::
   ( Redis.HedisFlow m r,
@@ -442,12 +457,11 @@ runSupplyDecrementForRequest requestId gateId variant = do
 --   call inside the action runs against @ltsHedisEnv@, not the default app
 --   Redis. Used so LTS can read the keys we write here.
 withLtsRedis ::
-  ( Redis.HedisFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ( Redis.HedisFlow m AppEnv
   ) =>
   m a ->
   m a
-withLtsRedis = local (\env -> env {hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv})
+withLtsRedis f = local (\env -> env {hedisEnv = env.ltsHedisEnv, hedisClusterEnv = env.ltsHedisEnv}) f
 
 -- | Stamp the server-time at which a driver accepted a pickup-zone request,
 --   written to LTS Redis under
@@ -455,9 +469,8 @@ withLtsRedis = local (\env -> env {hedisEnv = env.ltsHedisEnv, hedisClusterEnv =
 --   Value is the current 'UTCTime' rendered with 'show', which round-trips
 --   through 'read' / 'parseTimeM' on the LTS side.
 recordDriverPickupZoneAccept ::
-  ( Redis.HedisFlow m r,
-    MonadFlow m,
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+  ( Redis.HedisFlow m AppEnv,
+    MonadFlow m
   ) =>
   Text -> -- specialLocationId
   Id DP.Person -> -- driverId
@@ -552,7 +565,9 @@ runDemandCheckForVariants ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int,
+    JobCreator r m
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DM.Merchant ->
@@ -567,20 +582,36 @@ runDemandCheckForVariants merchantOpCityId merchantId bookingId pickupZoneGateId
     Just gate -> do
       mbSpecialLocation <- QSL.findById gate.specialLocationId
       let isQueueEnabled = fromMaybe False (mbSpecialLocation >>= (.isQueueEnabled))
+          isAutoNotify = fromMaybe True gate.isAutoNotifyEnabled
       unless isQueueEnabled $
         logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
-      when isQueueEnabled $
+      unless isAutoNotify $
+        logDebug $ "runDemandCheckForVariants: auto-notify disabled for gate=" <> gate.id.getId <> ", skipping"
+      when (isQueueEnabled && isAutoNotify) $
         forM_ variants $ \(variant, serviceTier) -> do
-          -- Idempotency key mirrors runDemandDecrementForBooking so retried Init calls
-          -- (Beckn allows them) don't inflate demand vs the single-fire decrement.
+          let demandTtl = 86400 -- 1 day
+              retryIntervalSec = fromMaybe defaultTriggerNotifyRetryIntervalSec gate.triggerNotifyRetryIntervalSec
+              maxRetryDurationSec = fromMaybe defaultTriggerNotifyMaxRetryDurationSec gate.triggerNotifyMaxRetryDurationSec
           let idempotencyKey = "DriverDemand:Incremented:" <> bookingId <> ":" <> variant
           wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
           when wasSet $ do
-            let demandTtl = 86400 -- 1 day
             incrementGateSearchDemand pickupZoneGateId variant demandTtl
-          -- Notification check runs every Init (driver pool / cooldown have their own
-          -- guards) — we just don't want to double-count demand on retries.
-          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just serviceTier) (Just DSZQR.App)
+          requestId <- generateGUID
+          checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just serviceTier) (Just DSZQR.App) (Just requestId) CreateIfMissing
+          claimed <- tryClaimRetryJob pickupZoneGateId variant maxRetryDurationSec
+          when claimed $
+            createJobIn @_ @'RetryTriggerNotify
+              (Just merchantId)
+              (Just merchantOpCityId)
+              (secondsToNominalDiffTime $ Seconds retryIntervalSec)
+              RetryTriggerNotifyJobData
+                { gateId = pickupZoneGateId,
+                  vehicleType = variant,
+                  retryIntervalSec = retryIntervalSec,
+                  maxRetryDurationSec = maxRetryDurationSec,
+                  merchantId = merchantId,
+                  merchantOperatingCityId = merchantOpCityId
+                }
 
 -- | Look up the LTS queue callout variants for a service tier from the
 --   VehicleServiceTier config. Uses 'specialZoneQueueCalloutVariants' when
@@ -605,9 +636,9 @@ getCalloutVariantsForTier merchantOpCityId mbSlId mbServiceTier variantFallback 
 mkGateSearchDemandMultiplierKey :: Text -> Text -> Text
 mkGateSearchDemandMultiplierKey gateId variant = "DriverDemandMultiplier:Gate:" <> gateId <> ":" <> variant
 
-multiplier :: Floating a => a -> a -> a -> a
+multiplier :: (Floating a, Ord a) => a -> a -> a -> a
 multiplier k demandNow demandPast =
-  let d = log (demandNow / safePast)
+  let d = logBase (exp 1) (demandNow / safePast)
    in max 0.7 (min 1.5 (1 + k * tanh d)) -- bounded to 0.7 - 1.5 range, with a smooth transition based on the ratio of current to past demand
   where
     safePast = max demandPast 1e-6
@@ -619,11 +650,14 @@ getDemandMultiplier ::
   Text -> -- gateId
   Text -> -- vehicleVariant
   m Double
-getDemandMultiplier gateId variant = Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ do
-  let key = mkGateSearchDemandKey gateId variant
-  currentDemand <- SWC.getCurrentWindowValues key windowLimit
-  demand15MinutesBack <- SWC.getCurrentWindowValuesUptoLast 15 key windowLimit
-  multiplier 0.05 currentDemand demand15MinutesBack
+getDemandMultiplier gateId variant = Redis.runInMultiCloudRedisWrite $
+  Redis.withCrossAppRedis $ do
+    let key = mkGateSearchDemandKey gateId variant
+        toDouble :: [Maybe Int] -> Double
+        toDouble = fromIntegral . sum . catMaybes
+    currentDemand <- toDouble <$> SWC.getCurrentWindowValues key windowLimit
+    demand15MinutesBack <- toDouble <$> SWC.getCurrentWindowValuesUptoLast 15 key windowLimit
+    pure $ multiplier 0.05 currentDemand demand15MinutesBack
 
 -- | Effective demand at a gate/variant: raw counter from the cross-app Redis,
 --   scaled by 'getDemandMultiplier' (a 0.7-1.5 smoothing based on current vs.
@@ -640,9 +674,12 @@ getDemand gateId variant = do
   mbDemandCount <- Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey gateId variant)
   let demandCount = fromMaybe 0 mbDemandCount
   demandMultiplier <- getDemandMultiplier gateId variant
-  logError $ "getDemand for gateId=" <> gateId <> " variant=" <> variant -- temp log for debugging and verifying logic
-    <> " rawDemand=" <> show demandCount
-    <> " multiplier=" <> show demandMultiplier
+  logError $
+    "getDemand for gateId=" <> gateId <> " variant=" <> variant -- temp log for debugging and verifying logic
+      <> " rawDemand="
+      <> show demandCount
+      <> " multiplier="
+      <> show demandMultiplier
   pure $ round (fromIntegral demandCount * demandMultiplier)
 
 -- | Drivers who accepted a pickup-zone request at this gate/variant and are
@@ -683,8 +720,10 @@ checkAndNotifyDriverDemand ::
   Text -> -- vehicleVariant (queue/Redis key)
   Maybe DVST.ServiceTierType -> -- service tier for airport per-km fare lookup; Nothing skips fare calc
   Maybe DSZQR.TriggerSource -> -- trigger source threaded through to notifyDrivers
+  Maybe Text -> -- trigger session requestId (stamped on created rows)
+  RecordMode ->
   m ()
-checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTier mbTriggerSource = do
+checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTier mbTriggerSource mbRequestId recordMode = do
   let gateId = gate.id.getId
       specialLocationId = gate.specialLocationId.getId
   demand <- getDemand gateId variant
@@ -692,11 +731,6 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
   let minThreshold = fromMaybe 0 (DGI.minDriverThresholdFor gate variant)
       maxThreshold = fromMaybe minThreshold (DGI.maxDriverThresholdFor gate variant)
       needed = min demand maxThreshold - supplyCount + minThreshold
-  logError $ "getDemand for gateId=" <> gateId <> " variant=" <> variant -- temp log for debugging and verifying logic
-    <> " demand=" <> show demand
-    <> " supply=" <> show supplyCount
-    <> " minThreshold=" <> show minThreshold
-    <> " maxThreshold=" <> show maxThreshold
   when (needed > 0) $ do
     let cooldown = fromMaybe 900 gate.notificationCooldownInSec
     calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier variant
@@ -714,14 +748,20 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
         <> show (length queueDriverIds)
         <> " cooldown="
         <> show cooldown
-    eligible <- filterEligibleDrivers gate specialLocationId variant merchantId gateId queueDriverIds
+    eligible <- filterEligibleDrivers variant gateId gate.enableQueueFilter queueDriverIds
+    eligibleNearGate <- filterByGateProximity gate eligible
     logInfo $
       "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
-        <> " eligible="
-        <> show (length eligible)
+        <> " eligibleNearGate="
+        <> show (length eligibleNearGate)
         <> " toNotify="
-        <> show (min needed (length eligible))
-    void $ notifyDrivers merchantOpCityId merchantId gate specialLocationId variant cooldown mbTriggerSource (take needed eligible)
+        <> show (min needed (length eligibleNearGate))
+    notified <- notifyDrivers merchantOpCityId merchantId gate specialLocationId variant mbServiceTier cooldown mbTriggerSource Nothing mbRequestId (take needed eligibleNearGate)
+    let maxRetryDurationSec = fromMaybe defaultTriggerNotifyMaxRetryDurationSec gate.triggerNotifyMaxRetryDurationSec
+    case (mbRequestId, mbTriggerSource) of
+      (Just rid, Just src) ->
+        recordTriggerNotifyEvent gate.id.getId variant rid src notified (Just needed) Nothing [] maxRetryDurationSec recordMode
+      _ -> pure ()
 
 -- Force notify (dashboard trigger) — notifies priority drivers first, then fills
 -- remaining slots from LTS queue order. Skips demand/supply threshold checks.
@@ -746,8 +786,9 @@ forceNotifyDriverDemand ::
   Int -> -- number of drivers to notify
   Maybe [Id DP.Person] -> -- optional priority driver IDs to notify first
   Maybe Bool -> -- isDemandHigh flag (dashboard-supplied, surfaced to driver app)
+  Maybe Text -> -- trigger session requestId (stamped on created rows)
   m Int -- returns count of drivers actually notified
-forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh = do
+forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPriorityDriverIds mbIsDemandHigh mbRequestId = do
   let specialLocationId = gate.specialLocationId.getId
       gateId = gate.id.getId
       cooldown = fromMaybe 900 gate.notificationCooldownInSec
@@ -768,7 +809,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       pure 0
     else do
       eligiblePriorityNearGate <- filterByGateProximity merchantId gate priorityVariantMap eligiblePriority
-      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
+      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbRequestId eligiblePriorityNearGate
       let remaining = max 0 (needed - priorityCount)
       -- Fill remaining from LTS queue
       queueCount <-
@@ -780,7 +821,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
                 pure $ sortOn (.queuePosition) queueResp.drivers
             let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
             eligibleNearGate <- filterInBatches 50 remaining vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
-            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
+            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh mbRequestId (take remaining eligibleNearGate)
           else pure 0
       pure (priorityCount + queueCount)
 
@@ -805,10 +846,11 @@ notifyDrivers ::
   Int -> -- cooldown in seconds
   Maybe DSZQR.TriggerSource -> -- trigger source for audit (App | Dashboard)
   Maybe Bool -> -- isDemandHigh override (Nothing => default True)
+  Maybe Text -> -- trigger session requestId (stamped on created rows)
   [Id DP.Person] -> -- drivers to notify
   m Int
-notifyDrivers _ _ _ _ _ _ _ _ _ [] = pure 0
-notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh driverIds = do
+notifyDrivers _ _ _ _ _ _ _ _ _ _ [] = pure 0
+notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh mbRequestId driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
@@ -853,6 +895,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
               vehicleType = vehicleType,
               arrivalDeadlineTime = Nothing,
               triggerSource = mbTriggerSource,
+              requestId = mbRequestId,
               createdAt = now,
               updatedAt = now
             }
@@ -1279,7 +1322,8 @@ completePickupZoneRequestsForDriver ::
     Redis.HedisFlow m r,
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
-    HasRequestId r
+    HasRequestId r,
+    MonadReader r m
   ) =>
   Id DP.Person ->
   Text -> -- bookingId (for demand-decrement idempotency)
@@ -1296,7 +1340,7 @@ completePickupZoneRequestsForDriver driverId bookingId mbPickupGateId variant = 
   forM_ mbReq $ \req -> do
     QSZQR.updateResponse (Just DSZQR.Accept) DSZQR.Completed req.id
     runSupplyDecrementForRequest req.id.getId req.gateId req.vehicleType
-    void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType req.merchantId driverId
+    void $ LTSFlow.manualQueueRemove req.specialLocationId req.vehicleType req.merchantId driverId (Just "ride_completed")
     logInfo $ "Completed pickup zone request " <> req.id.getId <> " for driver " <> driverId.getId <> " and removed from LTS queue at " <> req.specialLocationId
 
 -- | Driver cancelled the ride that was to fulfill the pickup-zone commitment. Supply
@@ -1394,3 +1438,149 @@ handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId search
           void $ LTSFlow.manualQueueRemove slId vehicleType merchantId driverId (Just "search_skip_threshold")
           resetQueueSkipCount slId driverId
           logInfo $ "Driver " <> driverId.getId <> " removed from queue at " <> slId <> " after " <> show newCount <> " skips"
+
+defaultTriggerNotifyRetryIntervalSec :: Int
+defaultTriggerNotifyRetryIntervalSec = 30
+
+defaultTriggerNotifyMaxRetryDurationSec :: Int
+defaultTriggerNotifyMaxRetryDurationSec = 300
+
+triggerNotifySessionTtlBufferSec :: Int
+triggerNotifySessionTtlBufferSec = 10
+
+data TriggerNotifySession = TriggerNotifySession
+  { requestId :: Text,
+    source :: DSZQR.TriggerSource,
+    totalTriggered :: Int,
+    target :: Maybe Int,
+    isDemandHigh :: Maybe Bool,
+    priorityDriverIds :: [Id DP.Person],
+    startedAt :: UTCTime
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data RecordMode = CreateIfMissing | UpdateOnly
+  deriving (Eq, Show)
+
+mkTriggerNotifySessionKey :: Text -> Text -> Text
+mkTriggerNotifySessionKey gateId variant = "TriggerNotifySession:" <> gateId <> ":" <> variant
+
+mkTriggerNotifySessionLockKey :: Text -> Text -> Text
+mkTriggerNotifySessionLockKey gateId variant = "TriggerNotifySession:Lock:" <> gateId <> ":" <> variant
+
+mkRetryJobClaimKey :: Text -> Text -> Text
+mkRetryJobClaimKey gateId variant = "TriggerNotifySession:RetryJobClaim:" <> gateId <> ":" <> variant
+
+pruneStaleSessions :: UTCTime -> Int -> [TriggerNotifySession] -> [TriggerNotifySession]
+pruneStaleSessions now maxRetryDurationSec =
+  filter (\s -> diffUTCTime now s.startedAt < fromIntegral maxRetryDurationSec)
+
+recordTriggerNotifyEvent ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Text ->
+  Text ->
+  DSZQR.TriggerSource ->
+  Int ->
+  Maybe Int ->
+  Maybe Bool ->
+  [Id DP.Person] ->
+  Int ->
+  RecordMode ->
+  m ()
+recordTriggerNotifyEvent gateId variant requestId source deltaTriggered mbTarget mbIsDemandHigh priorityIds maxRetryDurationSec mode = do
+  let key = mkTriggerNotifySessionKey gateId variant
+      lockKey = mkTriggerNotifySessionLockKey gateId variant
+      ttl = maxRetryDurationSec + triggerNotifySessionTtlBufferSec
+  Redis.withCrossAppRedis $
+    Redis.withLockRedis lockKey 5 $ do
+      now <- getCurrentTime
+      existing <- fromMaybe [] <$> Redis.safeGet @[TriggerNotifySession] key
+      let pruned = pruneStaleSessions now maxRetryDurationSec existing
+          mbUpdated = case break (\s -> s.requestId == requestId) pruned of
+            (before, found : after) ->
+              Just $
+                before
+                  ++ [found {totalTriggered = found.totalTriggered + deltaTriggered, target = mbTarget <|> found.target}]
+                  ++ after
+            _ -> case mode of
+              UpdateOnly -> Nothing
+              CreateIfMissing ->
+                Just $
+                  pruned
+                    ++ [ TriggerNotifySession
+                           { requestId = requestId,
+                             source = source,
+                             totalTriggered = deltaTriggered,
+                             target = mbTarget,
+                             isDemandHigh = mbIsDemandHigh,
+                             priorityDriverIds = priorityIds,
+                             startedAt = now
+                           }
+                       ]
+      case mbUpdated of
+        Just updated -> Redis.setExp key updated ttl
+        Nothing -> pure ()
+
+getActiveTriggerSessions ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Text ->
+  Int ->
+  m [TriggerNotifySession]
+getActiveTriggerSessions gateId variant maxRetryDurationSec = do
+  let key = mkTriggerNotifySessionKey gateId variant
+  Redis.withCrossAppRedis $ do
+    raw <- fromMaybe [] <$> Redis.safeGet @[TriggerNotifySession] key
+    now <- getCurrentTime
+    pure $ pruneStaleSessions now maxRetryDurationSec raw
+
+removeTriggerNotifySessionEntry ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Text ->
+  Text ->
+  Int ->
+  m ()
+removeTriggerNotifySessionEntry gateId variant requestId maxRetryDurationSec = do
+  let key = mkTriggerNotifySessionKey gateId variant
+      lockKey = mkTriggerNotifySessionLockKey gateId variant
+      ttl = maxRetryDurationSec + triggerNotifySessionTtlBufferSec
+  Redis.withCrossAppRedis $
+    Redis.withLockRedis lockKey 5 $ do
+      raw <- fromMaybe [] <$> Redis.safeGet @[TriggerNotifySession] key
+      now <- getCurrentTime
+      let pruned = pruneStaleSessions now maxRetryDurationSec raw
+          remaining = filter (\s -> s.requestId /= requestId) pruned
+      if null remaining
+        then void $ Redis.del key
+        else Redis.setExp key remaining ttl
+
+tryClaimRetryJob ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Text ->
+  Int ->
+  m Bool
+tryClaimRetryJob gateId variant maxRetryDurationSec = do
+  let key = mkRetryJobClaimKey gateId variant
+      ttl = maxRetryDurationSec + triggerNotifySessionTtlBufferSec
+  Redis.withCrossAppRedis $ Redis.setNxExpire key ttl ("1" :: Text)
+
+releaseRetryJobClaim ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  Text ->
+  m ()
+releaseRetryJobClaim gateId variant =
+  Redis.withCrossAppRedis $ void $ Redis.del (mkRetryJobClaimKey gateId variant)

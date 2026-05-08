@@ -20,6 +20,7 @@ data SpecialZoneQueueRequest = SpecialZoneQueueRequest
     id :: Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    requestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     response :: Kernel.Prelude.Maybe Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequestResponse,
     specialLocationId :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
