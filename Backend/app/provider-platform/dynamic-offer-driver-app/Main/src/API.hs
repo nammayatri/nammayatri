@@ -101,8 +101,8 @@ type MainAPI =
 driverOfferAPI :: Proxy DriverOfferAPI
 driverOfferAPI = Proxy
 
-mainServer :: FlowServer MainAPI
-mainServer =
+mainServer :: AppEnv -> FlowServer MainAPI
+mainServer env =
   UI.handler
     -- :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> oldIdfyWebhookHandler
@@ -119,11 +119,11 @@ mainServer =
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
-    :<|> Internal.handler
+    :<|> Internal.handler env
 
-driverOfferServer :: FlowServer DriverOfferAPI
-driverOfferServer =
-  mainServer
+driverOfferServer :: AppEnv -> FlowServer DriverOfferAPI
+driverOfferServer env =
+  mainServer env
     :<|> IGM.handler
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> InternalSyncSearch.handler

@@ -24,6 +24,7 @@ import qualified API.Internal.GeometryList as GeometryList
 import qualified API.Internal.GeometryUpdate as GeometryUpdate
 import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
+import qualified API.Internal.MasterCloudForward as MasterCloudForward
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
@@ -76,10 +77,11 @@ type API =
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
            :<|> InMemManagement.API
+           :<|> MasterCloudForward.API
        )
 
-handler :: FlowServer API
-handler =
+handler :: AppEnv -> FlowServer API
+handler env =
   DriverReferee.handler
     :<|> FeedbackForm.handler
     :<|> ReportACIssue.handler
@@ -113,3 +115,4 @@ handler =
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
     :<|> InMemManagement.handler
+    :<|> MasterCloudForward.handler env
