@@ -9,10 +9,12 @@ where
 
 import qualified API.Types.UI.SpecialZoneQueue
 import Data.List (partition)
+import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -30,7 +32,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..), CheckPickupZoneArrivalJobData (..))
 import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
-import SharedLogic.SpecialZoneDriverDemand (mkQueueSkipCountKey, mkSpecialZoneQueueRequestLockKey)
+import SharedLogic.SpecialZoneDriverDemand (mkGateSearchDemandKey, mkQueueSkipCountKey, mkSpecialZoneQueueRequestLockKey)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -43,7 +45,7 @@ getSpecialZoneQueueRequest ::
     ) ->
     Environment.Flow API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestListRes
   )
-getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
+getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person id")
   now <- getCurrentTime
   -- Fetch both Active and Accepted requests in one query, then split
@@ -70,8 +72,8 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
         req.vehicleType
         req.merchantId
         req.merchantOperatingCityId
-  let acceptedRes = map mkRes freshAccepted
-      responseRequests = validActiveRequests ++ acceptedRes
+  acceptedRes <- mapM enrichRes freshAccepted
+  let responseRequests = validActiveRequests ++ acceptedRes
   -- Get skip count from driver's current location's special location
   mbDriverLoc <- LTSFlow.driversLocation [personId]
   mbSpecialLoc <- case mbDriverLoc of
@@ -113,19 +115,44 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
           collectValidActive now rest
         else do
           rest' <- collectValidActive now rest
-          pure (mkRes req : rest')
+          enriched <- enrichRes req
+          pure (enriched : rest')
 
-    mkRes req =
-      API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestRes
-        { requestId = req.id,
-          gateId = req.gateId,
-          gateName = req.gateName,
-          specialLocationId = req.specialLocationId,
-          specialLocationName = req.specialLocationName,
-          vehicleType = req.vehicleType,
-          validTill = req.validTill,
-          status = req.status
-        }
+    -- | Build the response row for a request, enriching it with the same three
+    --   metrics surfaced over the trigger-notify FCM (perKmFare, isDemandHigh,
+    --   demandCount). Recompute on each poll; 'getAirportPerKmFare' is cached
+    --   for one day per (specialLocation, variant) and 'demandCount' is one
+    --   Redis read. 'isDemandHigh' has no caller-supplied value at poll time
+    --   — defaulting to True mirrors 'fromMaybe True mbIsDemandHigh' in
+    --   'notifyDrivers'.
+    enrichRes req = do
+      mbGate <- QGI.findById (Kernel.Types.Id.Id req.gateId)
+      let mbServiceTier = Kernel.Prelude.readMaybe (T.unpack req.vehicleType) :: Maybe DVST.ServiceTierType
+      mbPerKmFare <- case (mbGate, mbServiceTier) of
+        (Just gate, Just serviceTier) ->
+          SpecialZoneDriverDemand.getAirportPerKmFare
+            merchantId
+            merchantOpCityId
+            (Kernel.Types.Id.Id req.specialLocationId)
+            gate.point
+            req.gateId
+            serviceTier
+        _ -> pure Nothing
+      mbDemandCount <- Redis.withCrossAppRedis $ Redis.get @Int (mkGateSearchDemandKey req.gateId req.vehicleType)
+      pure $
+        API.Types.UI.SpecialZoneQueue.SpecialZoneQueueRequestRes
+          { requestId = req.id,
+            gateId = req.gateId,
+            gateName = req.gateName,
+            specialLocationId = req.specialLocationId,
+            specialLocationName = req.specialLocationName,
+            vehicleType = req.vehicleType,
+            validTill = req.validTill,
+            status = req.status,
+            perKmFare = mbPerKmFare,
+            isDemandHigh = True,
+            demandCount = fromMaybe 0 mbDemandCount
+          }
 
 postSpecialZoneQueueRequestRespond ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
