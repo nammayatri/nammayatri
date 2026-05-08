@@ -66,6 +66,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.lineItems lineItems,
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
+      Se.Set Beam.paymentMode paymentMode,
       Se.Set Beam.paymentOrderId paymentOrderId,
       Se.Set Beam.referenceId referenceId,
       Se.Set Beam.status status,

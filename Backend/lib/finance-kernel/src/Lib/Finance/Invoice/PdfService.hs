@@ -3,6 +3,7 @@ module Lib.Finance.Invoice.PdfService
     InvoicePdfConfig (..),
     InvoiceLocale (..),
     countryToLocale,
+    languageToLocale,
 
     -- * Re-exported from beckn-spec
     DateOrTime (..),
@@ -20,17 +21,19 @@ module Lib.Finance.Invoice.PdfService
   )
 where
 
+import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
 import Data.List (groupBy, sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as DT
-import Domain.Types.Invoice (DateOrTime (..), InvoiceType (..), toUTCTimeFrom, toUTCTimeTo)
+import Domain.Types.Invoice (DateOrTime (..), toUTCTimeFrom, toUTCTimeTo)
+import qualified Kernel.External.Types as ExtTypes
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Currency (..), HighPrecMoney (..))
 import Lib.Finance.Domain.Types.IndirectTaxTransaction (IndirectTaxTransaction (..))
 import Lib.Finance.Domain.Types.Invoice (Invoice (..))
-import Lib.Finance.Invoice.Interface (InvoiceLineItem (..))
+import Lib.Finance.Invoice.Interface (InvoiceLineItem (..), ItemType (..), LineItemDescription (..))
 import Text.Printf (printf)
 
 -- ---------------------------------------------------------------------------
@@ -51,6 +54,121 @@ countryToLocale :: Context.Country -> InvoiceLocale
 countryToLocale Context.Finland = FI
 countryToLocale Context.Netherlands = NL
 countryToLocale _ = EN
+
+-- | Resolve invoice locale from a Person's preferred language; unsupported
+-- languages and Nothing both fall back to English.
+languageToLocale :: Maybe ExtTypes.Language -> InvoiceLocale
+languageToLocale (Just ExtTypes.FINNISH) = FI
+languageToLocale (Just ExtTypes.DUTCH) = NL
+languageToLocale _ = EN
+
+-- | Resolve a typed line-item description to its locale-specific display string.
+renderLineItemDescription :: InvoiceLocale -> LineItemDescription -> Text
+renderLineItemDescription locale = \case
+  RideFarePostDiscount cur amt ->
+    renderLineItemDescription locale RideFare
+      <> " ("
+      <> postDiscountSuffix locale
+      <> " "
+      <> currencyCode cur
+      <> " "
+      <> fmtMoneyNum cur amt
+      <> ")"
+  d -> case locale of
+    EN -> renderEN d
+    FI -> renderFI d
+    NL -> renderNL d
+  where
+    postDiscountSuffix EN = "Post Discount"
+    postDiscountSuffix FI = "Alennuksen jälkeen"
+    postDiscountSuffix NL = "Na korting"
+
+    renderEN = \case
+      BaseFare -> "Base Fare"
+      RideFare -> "Ride Fare"
+      RideFareInclVat -> "Ride Fare (Incl. VAT)"
+      RideFarePostDiscount _ _ -> "" -- handled above
+      RideTax -> "Tax"
+      TollFare -> "Toll Fare"
+      TollCharges -> "Toll Charges"
+      TollFareInclVat -> "Toll Fare (Incl. VAT)"
+      TollTax -> "Toll Tax"
+      TollChargesTax -> "Toll Charges Tax"
+      ParkingCharges -> "Parking Charges"
+      ParkingChargesInclVat -> "Parking Charges (Incl. VAT)"
+      ParkingChargesTax -> "Parking Charges Tax"
+      Tip -> "Tip"
+      PlatformCommission -> "Platform Commission"
+      CancellationFee -> "Cancellation Fee"
+      CancellationFeeVat -> "Cancellation Fee VAT"
+      CancellationFeeInclVat -> "Cancellation Fee (Incl. VAT)"
+      CustomerCancellationFee -> "Customer Cancellation Fee"
+      GstOnCancellationFee -> "GST on Cancellation Fee"
+      DriverCancellationPenalty -> "Driver Cancellation Penalty"
+      SubscriptionPlanFee -> "Subscription Plan Fee"
+      Gst -> "GST"
+      WalletTopup -> "Wallet Top-up"
+      AirportCashRecharge -> "Airport Cash Recharge"
+      CashbackOffer -> "Cashback Offer"
+      VatInput -> "VAT Input"
+
+    renderFI = \case
+      BaseFare -> "Perusmaksu"
+      RideFare -> "Matkan hinta"
+      RideFareInclVat -> "Matkan hinta (sis. ALV)"
+      RideFarePostDiscount _ _ -> ""
+      RideTax -> "ALV"
+      TollFare -> "Tiemaksu"
+      TollCharges -> "Tiemaksut"
+      TollFareInclVat -> "Tiemaksu (sis. ALV)"
+      TollTax -> "Tiemaksun ALV"
+      TollChargesTax -> "Tiemaksujen ALV"
+      ParkingCharges -> "Pysäköintimaksut"
+      ParkingChargesInclVat -> "Pysäköintimaksut (sis. ALV)"
+      ParkingChargesTax -> "Pysäköintimaksujen ALV"
+      Tip -> "Tippi"
+      PlatformCommission -> "Sovelluksen palkkio"
+      CancellationFee -> "Peruutusmaksu"
+      CancellationFeeVat -> "Peruutusmaksun ALV"
+      CancellationFeeInclVat -> "Peruutusmaksu (sis. ALV)"
+      CustomerCancellationFee -> "Asiakkaan peruutusmaksu"
+      GstOnCancellationFee -> "Peruutusmaksun ALV"
+      DriverCancellationPenalty -> "Kuljettajan peruutussakko"
+      SubscriptionPlanFee -> "Sovellustilauksen maksu"
+      Gst -> "ALV"
+      WalletTopup -> "Lompakon lataus"
+      AirportCashRecharge -> "Lentokentän käteislataus"
+      CashbackOffer -> "Käteishyvitys"
+      VatInput -> "ALV-vähennys"
+
+    renderNL = \case
+      BaseFare -> "Basisritprijs"
+      RideFare -> "Ritprijs"
+      RideFareInclVat -> "Ritprijs (incl. BTW)"
+      RideFarePostDiscount _ _ -> ""
+      RideTax -> "BTW"
+      TollFare -> "Tolgeld"
+      TollCharges -> "Tolgelden"
+      TollFareInclVat -> "Tolgeld (incl. BTW)"
+      TollTax -> "BTW op tol"
+      TollChargesTax -> "BTW op tolgelden"
+      ParkingCharges -> "Parkeerkosten"
+      ParkingChargesInclVat -> "Parkeerkosten (incl. BTW)"
+      ParkingChargesTax -> "BTW op parkeerkosten"
+      Tip -> "Fooi"
+      PlatformCommission -> "Platformcommissie"
+      CancellationFee -> "Annuleringskosten"
+      CancellationFeeVat -> "BTW op annuleringskosten"
+      CancellationFeeInclVat -> "Annuleringskosten (incl. BTW)"
+      CustomerCancellationFee -> "Annuleringskosten klant"
+      GstOnCancellationFee -> "BTW op annuleringskosten"
+      DriverCancellationPenalty -> "Annuleringssanctie chauffeur"
+      SubscriptionPlanFee -> "Abonnementskosten"
+      Gst -> "BTW"
+      WalletTopup -> "Wallet bijladen"
+      AirportCashRecharge -> "Luchthaven contant bijladen"
+      CashbackOffer -> "Cashback aanbieding"
+      VatInput -> "BTW Voorbelasting"
 
 -- ---------------------------------------------------------------------------
 -- InvoicePdfData — all data needed to render the invoice PDF
@@ -96,11 +214,12 @@ buildInvoicePdfData inv items mbTax mbPayType mbBrand mbLast4 =
 -- Line item parsing
 -- ---------------------------------------------------------------------------
 
+-- | Fails loud — silent [] on decode error would render a blank PDF instead of surfacing the bug.
 parseLineItems :: Aeson.Value -> [InvoiceLineItem]
 parseLineItems val =
   case Aeson.fromJSON val of
     Aeson.Success items -> items
-    Aeson.Error _ -> []
+    Aeson.Error err -> error $ "parseLineItems: invoice lineItems JSON failed to decode: " <> T.pack err
 
 -- ---------------------------------------------------------------------------
 -- HTML rendering — pure, no IO
@@ -207,10 +326,10 @@ renderFromLocation inv =
 -- ---------------------------------------------------------------------------
 
 renderLineItemsTable :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
-renderLineItemsTable _cfg pdfData lbls =
+renderLineItemsTable cfg pdfData lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
-      rows = buildRows pdfData lbls
+      rows = buildRows cfg.locale pdfData lbls
    in T.concat
         [ "<table>",
           "<thead><tr>",
@@ -226,110 +345,38 @@ renderLineItemsTable _cfg pdfData lbls =
   where
     th cls lbl = "<th" <> (if T.null cls then "" else " class='" <> cls <> "'") <> ">" <> lbl <> "</th>"
 
--- | Build the table rows from line items + tax transaction, following the spec mapping.
-buildRows :: InvoicePdfData -> Labels -> [Text]
-buildRows pdfData lbls =
+-- | Pair each Fare with its (single) Tax by shared groupId. Standalone fares get Nothing.
+pairByGroupId :: [InvoiceLineItem] -> [(InvoiceLineItem, Maybe InvoiceLineItem)]
+pairByGroupId items =
+  let fares = [item | item <- items, item.itemType == Fare]
+      taxes = [item | item <- items, item.itemType == Tax]
+      taxFor Nothing = Nothing
+      taxFor target = find (\taxItem -> taxItem.groupId == target) taxes
+   in [(fareItem, taxFor fareItem.groupId) | fareItem <- fares]
+
+-- | Main table rows. Adjustments and externals render in 'renderTotals' instead.
+buildRows :: InvoiceLocale -> InvoicePdfData -> Labels -> [Text]
+buildRows locale pdfData _lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
-      mbTax = pdfData.mbTaxTxn
-      -- Filter out internal breakdown items (Ride Fare / Ride Tax) and external charges
-      mainItems =
-        filter
-          ( \i ->
-              not i.isExternalCharge
-                && not (isRideFareItem i)
-                && not (isRideTaxItem i)
-                && not (isTipItem i)
-                && not (isCommissionItem i)
-          )
-          pdfData.parsedLineItems
-      tollItems = filter (.isExternalCharge) pdfData.parsedLineItems
-      -- Fallback VAT from line items when no indirect_tax_transaction row exists
-      mbRideFare = find isRideFareItem pdfData.parsedLineItems
-      mbRideTax = find isRideTaxItem pdfData.parsedLineItems
-      mainTitle = case inv.invoiceType of
-        Ride -> lbls.rideLabel
-        RideCancellation -> lbls.cancellationLabel
-        SubscriptionPurchase -> lbls.subscriptionLabel
-        Commission -> lbls.commisionLabel
-      -- ALV% for main item: from indirect_tax_transaction, or derived from Ride Fare/Ride Tax items
-      mainVatPct = case mbTax of
-        Just t -> Just $ fmtPct (fromMaybe t.gstRate t.taxRate)
-        Nothing -> do
-          fare <- mbRideFare
-          tax <- mbRideTax
-          guard (fare.lineTotal > 0)
-          pure $ fmtPct (realToFrac (tax.lineTotal / fare.lineTotal) * 100.0)
-      -- ALV (EUR) for main item: from indirect_tax_transaction, or from Ride Tax item
-      mainVatAmt = case mbTax of
-        Just t -> Just $ fmtMoneyNum cur t.totalGstAmount
-        Nothing -> fmtMoneyNum cur . (.lineTotal) <$> mbRideTax
-      -- Amount (subtotal): from indirect_tax_transaction subtotal, or Ride Fare item, or inv.subtotal
-      mainAmountVal = case mbTax of
-        Just _ -> inv.subtotal
-        Nothing -> maybe inv.subtotal (.lineTotal) mbRideFare
-      mainAmount = fmtMoneyNum cur mainAmountVal
-      mainTotal = fmtMoneyNum cur inv.totalAmount
-      mainRow =
-        tr
-          [ td mainTitle,
-            td' "n" mainAmount,
-            td' "n" (fromMaybe "" mainVatPct),
-            td' "n" (fromMaybe "" mainVatAmt),
-            td' "n" mainTotal
-          ]
-      -- Toll charges rows — only if externalCharges > 0
-      tollRows = map (buildTollRow cur mbTax lbls) tollItems
-      -- Tips row — from line items with description "Tips"
-      tipRows = map (buildTipRow cur) (filter isTipItem pdfData.parsedLineItems)
-   in [mainRow] <> tollRows <> tipRows <> map (buildGenericRow cur) mainItems
+      mainTableItems =
+        [item | item <- pdfData.parsedLineItems, not item.isExternalCharge, item.itemType == Fare || item.itemType == Tax]
+      pairs = pairByGroupId mainTableItems
+   in map (renderFareTaxRow locale cur) pairs
 
-buildTollRow :: Currency -> Maybe IndirectTaxTransaction -> Labels -> InvoiceLineItem -> Text
-buildTollRow cur mbTax lbls item =
-  let tollAmt = fmtMoneyNum cur item.unitPrice
-      -- external_charges_tax_rate from indirect_tax_transaction (not yet implemented per spec, show blank)
-      tollVatPct = mbTax >>= \_ -> Nothing
-      tollVatAmt = mbTax >>= \t -> t.externalCharges >>= \_ -> Just $ fmtMoneyNum cur (t.totalGstAmount - t.totalGstAmount) -- placeholder: external_charges_tax_amount
-      tollTotal = fmtMoneyNum cur item.lineTotal
+renderFareTaxRow :: InvoiceLocale -> Currency -> (InvoiceLineItem, Maybe InvoiceLineItem) -> Text
+renderFareTaxRow locale cur (fare, mbTax) =
+  let taxAmount = maybe 0 (.lineTotal) mbTax
+      hasTax = isJust mbTax && fare.lineTotal > 0
+      vatPctText = if hasTax then fmtPct (realToFrac (taxAmount / fare.lineTotal) * 100.0) else ""
+      vatAmtText = maybe "" (const (fmtMoneyNum cur taxAmount)) mbTax
    in tr
-        [ td lbls.tollChargesLabel,
-          td' "n" tollAmt,
-          td' "n" (fromMaybe "" tollVatPct),
-          td' "n" (fromMaybe "" tollVatAmt),
-          td' "n" tollTotal
+        [ td (renderLineItemDescription locale fare.description),
+          td' "n" (fmtMoneyNum cur fare.lineTotal),
+          td' "n" vatPctText,
+          td' "n" vatAmtText,
+          td' "n" (fmtMoneyNum cur (fare.lineTotal + taxAmount))
         ]
-
-buildTipRow :: Currency -> InvoiceLineItem -> Text
-buildTipRow cur item =
-  tr
-    [ td item.description,
-      td' "n" (fmtMoneyNum cur item.unitPrice),
-      td' "n" "",
-      td' "n" "",
-      td' "n" (fmtMoneyNum cur item.lineTotal)
-    ]
-
-buildGenericRow :: Currency -> InvoiceLineItem -> Text
-buildGenericRow cur item =
-  tr
-    [ td item.description,
-      td' "n" (fmtMoneyNum cur item.unitPrice),
-      td' "n" "",
-      td' "n" "",
-      td' "n" (fmtMoneyNum cur item.lineTotal)
-    ]
-
-isTipItem :: InvoiceLineItem -> Bool
-isTipItem i = T.toLower i.description == "tips" || T.toLower i.description == "tip"
-
-isRideFareItem :: InvoiceLineItem -> Bool
-isRideFareItem i = T.toLower i.description == "ride fare" || T.toLower i.description == "base fare"
-
-isRideTaxItem :: InvoiceLineItem -> Bool
-isRideTaxItem i = T.toLower i.description == "ride tax" || T.toLower i.description == "tax"
-
-isCommissionItem :: InvoiceLineItem -> Bool
-isCommissionItem i = T.toLower i.description == "platform commission"
 
 tr :: [Text] -> Text
 tr cells = "<tr>" <> T.concat cells <> "</tr>"
@@ -345,68 +392,77 @@ td' cls t = "<td class='" <> cls <> "'>" <> escHtml t <> "</td>"
 -- Taxable Trip Price | VAT (rate%) | Toll charges | VAT (toll) | Total incl. VAT | Tips | Invoiced Value
 -- ---------------------------------------------------------------------------
 
+-- | Ladder: Taxable → VAT → externals → Total → adjustments → Net Total → payment mode.
+-- Net Total only renders when adjustments exist.
 renderTotals :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
 renderTotals cfg pdfData lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
+      locale = cfg.locale
       mbTax = pdfData.mbTaxTxn
-      -- Taxable Trip Price = subtotal, or Ride Fare item when no tax transaction
-      taxableAmtVal = case mbTax of
-        Just _ -> inv.subtotal
-        Nothing -> maybe inv.subtotal (.lineTotal) (find isRideFareItem pdfData.parsedLineItems)
-      taxableAmt = fmtMoneyNum cur taxableAmtVal
-      -- Fallback VAT from line items when no indirect_tax_transaction row exists
-      mbRideFare = find isRideFareItem pdfData.parsedLineItems
-      mbRideTax = find isRideTaxItem pdfData.parsedLineItems
-      -- VAT label: "VAT (14%)" — rate from tax_rate / gst_rate, or derived from line items
-      vatPct = case mbTax of
-        Just t -> fmtPct (fromMaybe t.gstRate t.taxRate)
-        Nothing -> fromMaybe "" $ do
-          fare <- mbRideFare
-          tax <- mbRideTax
-          guard (fare.lineTotal > 0)
-          pure $ fmtPct (realToFrac (tax.lineTotal / fare.lineTotal) * 100.0)
-      vatLabel = lbls.vatLabel <> if T.null vatPct then "" else " (" <> vatPct <> "%)"
-      -- VAT EUR = total_gst_amount, or from Ride Tax line item
-      vatAmt = case mbTax of
-        Just t -> fmtMoneyNum cur t.totalGstAmount
-        Nothing -> maybe "" (fmtMoneyNum cur . (.lineTotal)) mbRideTax
-      -- Platform Commission deduction
-      commissionItems = filter isCommissionItem pdfData.parsedLineItems
-      commissionTotal = sum $ map (.lineTotal) commissionItems
-      -- Toll charges (only if externalCharges > 0)
-      tollItems = filter (.isExternalCharge) pdfData.parsedLineItems
-      -- Tips
-      tipItems = filter isTipItem pdfData.parsedLineItems
-      tipTotal = sum $ map (.lineTotal) tipItems
-      -- Total incl. VAT = total_amount from finance_invoice
-      grandTotal = fmtMoneyNum cur inv.totalAmount
-      -- Invoiced Value = Total incl. VAT + Tips
-      invoicedValue = fmtMoneyNum cur (inv.totalAmount + tipTotal)
+      items = pdfData.parsedLineItems
+      tableFares = [item | item <- items, item.itemType == Fare, not item.isExternalCharge]
+      tableTaxes = [item | item <- items, item.itemType == Tax, not item.isExternalCharge]
+      externalItems = filter (.isExternalCharge) items
+      adjustmentItems = [item | item <- items, item.itemType == Adjustment]
+      taxableSum = sum (map (.lineTotal) tableFares)
+      taxSum = sum (map (.lineTotal) tableTaxes)
+      externalsSum = sum (map (.lineTotal) externalItems)
+      adjustmentsSum = sum (map (.lineTotal) adjustmentItems)
+      totalLine = taxableSum + taxSum + externalsSum
+      netTotalLine = totalLine + adjustmentsSum
+      -- Prefer the explicit tax-transaction rate; fall back to computing from sums.
+      vatPctText = case mbTax of
+        Just taxTxn | taxableSum > 0 -> fmtPct (fromMaybe taxTxn.gstRate taxTxn.taxRate)
+        _
+          | taxableSum > 0 && taxSum > 0 ->
+            fmtPct (realToFrac (taxSum / taxableSum) * 100.0)
+        _ -> ""
+      vatLabel =
+        lbls.vatLabel
+          <> if T.null vatPctText then "" else " (" <> vatPctText <> "%)"
+      paymentMethodStr = inv.paymentMode <|> pdfData.mbCardInfo
    in T.concat
         [ "<table class='totals'>",
-          totRow lbls.taxablePriceLabel taxableAmt,
-          if T.null vatAmt then "" else totRow vatLabel vatAmt,
-          if commissionTotal /= 0 then totRow "Platform Commission" (fmtMoneyNum cur commissionTotal) else "",
-          T.concat (map (renderTollTotRow cfg cur mbTax lbls) tollItems),
-          if tipTotal > 0 then totRow lbls.tipsLabel (fmtMoneyNum cur tipTotal) else "",
+          totRow lbls.taxablePriceLabel (fmtMoneyNum cur taxableSum),
+          if taxSum > 0 then totRow vatLabel (fmtMoneyNum cur taxSum) else "",
+          T.concat (map (renderExternalRow locale cur) externalItems),
           "<tr class='tot-row grand'><td>",
           lbls.totalInclVatLabel,
           "</td><td class='tot-val'>",
-          grandTotal,
+          fmtMoneyNum cur totalLine,
           "</td></tr>",
-          totRow lbls.invoicedValueLabel invoicedValue,
-          maybe "" (\pm -> "<tr class='tot-row payment'><td></td><td class='tot-val payment-detail'>" <> escHtml pm <> "</td></tr>") pdfData.mbCardInfo,
+          T.concat (map (renderAdjustmentRow locale cur) adjustmentItems),
+          if not (null adjustmentItems)
+            then
+              "<tr class='tot-row grand'><td>"
+                <> lbls.invoicedValueLabel
+                <> "</td><td class='tot-val'>"
+                <> fmtMoneyNum cur netTotalLine
+                <> "</td></tr>"
+            else "",
+          maybe "" (\pm -> "<tr class='tot-row payment'><td></td><td class='tot-val payment-detail'>" <> escHtml pm <> "</td></tr>") paymentMethodStr,
           "</table>"
         ]
   where
     totRow lbl val =
       "<tr class='tot-row'><td>" <> lbl <> "</td><td class='tot-val'>" <> val <> "</td></tr>"
 
-renderTollTotRow :: InvoicePdfConfig -> Currency -> Maybe IndirectTaxTransaction -> Labels -> InvoiceLineItem -> Text
-renderTollTotRow _cfg cur _mbTax lbls item =
-  let tollAmt = fmtMoneyNum cur item.unitPrice
-   in "<tr class='tot-row'><td>" <> lbls.tollChargesLabel <> "</td><td class='tot-val'>" <> tollAmt <> "</td></tr>"
+renderExternalRow :: InvoiceLocale -> Currency -> InvoiceLineItem -> Text
+renderExternalRow locale cur item =
+  "<tr class='tot-row'><td>"
+    <> escHtml (renderLineItemDescription locale item.description)
+    <> "</td><td class='tot-val'>"
+    <> fmtMoneyNum cur item.lineTotal
+    <> "</td></tr>"
+
+renderAdjustmentRow :: InvoiceLocale -> Currency -> InvoiceLineItem -> Text
+renderAdjustmentRow locale cur item =
+  "<tr class='tot-row'><td>"
+    <> escHtml (renderLineItemDescription locale item.description)
+    <> "</td><td class='tot-val'>"
+    <> fmtMoneyNum cur item.lineTotal
+    <> "</td></tr>"
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -457,14 +513,8 @@ data Labels = Labels
     totalLabel :: Text,
     taxablePriceLabel :: Text,
     vatLabel :: Text,
-    tollChargesLabel :: Text,
     totalInclVatLabel :: Text,
-    tipsLabel :: Text,
-    invoicedValueLabel :: Text,
-    rideLabel :: Text,
-    cancellationLabel :: Text,
-    subscriptionLabel :: Text,
-    commisionLabel :: Text
+    invoicedValueLabel :: Text
   }
 
 localeLabels :: InvoiceLocale -> Labels
@@ -485,14 +535,8 @@ localeLabels EN =
       totalLabel = "Total",
       taxablePriceLabel = "Taxable Trip Price",
       vatLabel = "VAT",
-      tollChargesLabel = "Toll charges",
       totalInclVatLabel = "Total incl. VAT",
-      tipsLabel = "Tips",
-      invoicedValueLabel = "Invoiced Value",
-      rideLabel = "Price of the Trip",
-      cancellationLabel = "Cancellation Fee",
-      subscriptionLabel = "App Subscriptions",
-      commisionLabel = "Commision"
+      invoicedValueLabel = "Invoiced Value"
     }
 localeLabels FI =
   Labels
@@ -511,14 +555,8 @@ localeLabels FI =
       totalLabel = "Kokonaissumma",
       taxablePriceLabel = "Verollinen matkan hinta (EUR)",
       vatLabel = "ALV",
-      tollChargesLabel = "Tiemaksut (EUR)",
       totalInclVatLabel = "Yhteens\228 sis. ALV (EUR)",
-      tipsLabel = "Tippi",
-      invoicedValueLabel = "Laskutettu arvo",
-      rideLabel = "Matkan hinta",
-      cancellationLabel = "Peruutusmaksu",
-      subscriptionLabel = "Sovellustilaus",
-      commisionLabel = "Commision"
+      invoicedValueLabel = "Laskutettu arvo"
     }
 localeLabels NL =
   Labels
@@ -537,14 +575,8 @@ localeLabels NL =
       totalLabel = "Totaal",
       taxablePriceLabel = "Belastbare ritprijs (EUR)",
       vatLabel = "BTW",
-      tollChargesLabel = "Tolgelden (EUR)",
       totalInclVatLabel = "Totaal incl. BTW (EUR)",
-      tipsLabel = "Fooi",
-      invoicedValueLabel = "Gefactureerde waarde",
-      rideLabel = "Ritprijs",
-      cancellationLabel = "Annuleringskosten",
-      subscriptionLabel = "App-abonnement",
-      commisionLabel = "Commision"
+      invoicedValueLabel = "Gefactureerde waarde"
     }
 
 -- ---------------------------------------------------------------------------

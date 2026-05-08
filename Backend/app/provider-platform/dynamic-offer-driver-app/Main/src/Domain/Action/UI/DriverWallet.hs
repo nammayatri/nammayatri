@@ -67,6 +67,8 @@ import Lib.Finance
     FinanceCtx (..),
     InvoiceConfig (..),
     InvoiceLineItem (..),
+    ItemType (..),
+    LineItemDescription (..),
     findByAccountWithFilters,
     getEntriesByReference,
     invoice,
@@ -704,11 +706,12 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               issuedToName = Nothing,
               issuedToAddress = Nothing,
               referenceId = Nothing,
-              lineItems = [InvoiceLineItem {description = "Airport Cash Recharge", quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False}],
+              lineItems = [InvoiceLineItem {description = AirportCashRecharge, quantity = 1, unitPrice = amount, lineTotal = amount, isExternalCharge = False, groupId = Just "g-airport", itemType = Fare}],
               gstBreakdown = Nothing,
               isVat = False,
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              paymentMode = Just "CASH"
             }
     result <- runFinance ctx $ do
       _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge

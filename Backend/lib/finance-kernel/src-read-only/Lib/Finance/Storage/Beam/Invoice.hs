@@ -33,6 +33,7 @@ data InvoiceT f = InvoiceT
     lineItems :: (B.C f Data.Aeson.Value),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    paymentMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceStatus),

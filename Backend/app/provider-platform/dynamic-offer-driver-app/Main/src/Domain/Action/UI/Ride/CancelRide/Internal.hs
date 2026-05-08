@@ -42,6 +42,7 @@ import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
+import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
@@ -65,7 +66,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transfer_)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -89,6 +90,7 @@ import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
@@ -579,6 +581,21 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
       driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
       mbPanCard <- QPanCard.findByDriverId ride.driverId
       mbDriverInfo <- QDI.findById (cast ride.driverId)
+      -- Resolve rider's payment-mode choice from booking.paymentMethodId — same logic as EndRide.
+      -- Cash → "CASH", anything else (Card/UPI/Wallet/NetBanking/BoothOnline) → "ONLINE".
+      isOnline <- do
+        let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
+        if forceOnline
+          then pure True
+          else do
+            mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+              CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+                >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+            case mbPaymentMethod of
+              Nothing -> pure False
+              Just paymentMethod -> case paymentMethod.paymentInstrument of
+                DMPM.Cash -> pure False
+                _ -> pure True
       ctx <- buildFinanceCtx booking ride (Just driver) mbPanCard mbDriverInfo transporterConfig True
       result <- runFinance ctx $ do
         mapM_
@@ -618,22 +635,23 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
                       then
                         catMaybes
                           [ if inclusiveCancellation > 0
-                              then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False}
+                              then Just InvoiceLineItem {description = CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Fare}
                               else Nothing
                           ]
                       else
                         catMaybes
                           [ if baseCancellation > 0
-                              then Just InvoiceLineItem {description = "Customer Cancellation Fee", quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False}
+                              then Just InvoiceLineItem {description = CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Fare}
                               else Nothing,
                             if gstOnCancellation > 0
-                              then Just InvoiceLineItem {description = "GST on Cancellation Fee", quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False}
+                              then Just InvoiceLineItem {description = GstOnCancellationFee, quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Tax}
                               else Nothing
                           ],
               referenceId = Nothing,
               isVat = False,
               issuedToTaxNo = Nothing,
-              issuedByTaxNo = Nothing
+              issuedByTaxNo = Nothing,
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
             }
       case result of
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
