@@ -47,14 +47,16 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Data.Vector as V
 import qualified Domain.Types.Common as DTC
+import qualified Data.Vector as V
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
+import qualified Domain.Types.VehicleVariant as DV
+import Control.Monad.Extra (mapMaybeM)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -77,6 +79,7 @@ import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -105,34 +108,10 @@ representativeAirportRideDurationSec = 30 * 60
 airportPerKmFareCacheTtlSec :: Int
 airportPerKmFareCacheTtlSec = 86400 -- 1 day
 
--- | Cached per-km fare result key. Scoped per (specialLocation, variant) — the
---   pair that uniquely identifies which fare policy we'll resolve to.
-mkAirportPerKmFareCacheKey :: Id SL.SpecialLocation -> Text -> Text
-mkAirportPerKmFareCacheKey slId variantText =
-  "AirportPerKmFare:" <> slId.getId <> ":" <> variantText
+mkAirportPerKmFareCacheKey :: Id SL.SpecialLocation -> DV.VehicleVariant -> Text
+mkAirportPerKmFareCacheKey slId variant =
+  "AirportPerKmFare:" <> slId.getId <> ":" <> T.pack (show variant)
 
--- | Per-km fare a driver can expect for a typical airport ride from this gate
---   with their vehicle variant. Result is cached in Redis for one day, keyed
---   by (specialLocation, variant). Invalidated by
---   'clearAirportPerKmFareCacheForPolicy' when the dashboard fare-policy
---   update handler runs.
---
---   Mirrors the same `FC.calculateFareParameters` / `fareSum` shape that
---   `Beckn.Search.buildQuote` uses for real quotes — threading `pickupGateId`
---   so the V2 calculator's `applyAirportEntryFee` step folds the gate entry
---   fee into `parkingCharge`. We then subtract the flat reimbursements
---   (toll + gate parking, including their VAT slots) and divide by the
---   representative distance.
---
---   Trip-category resolution: the notify path doesn't have a search context,
---   so we fetch every fare product configured for the special location and
---   pick the one that matches the driver's variant, preferring (in order) the
---   OneWay subtypes most likely to be served from a queueable airport gate —
---   StaticOffer, DynamicOffer, then RideOtp. We never hard-code a category
---   that may not be set up for that special location.
---
---   Returns Nothing for: unknown variant, no matching fare product configured,
---   or missing fare policy.
 getAirportPerKmFare ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -143,29 +122,21 @@ getAirportPerKmFare ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id SL.SpecialLocation ->
-  LatLong -> -- gate's pickup point — used by getAllFareProducts to resolve the special location
+  LatLong ->
   Text -> -- pickupGateId of the gate we're notifying for
   DVST.ServiceTierType -> -- driver's vehicle service tier
   m (Maybe HighPrecMoney)
 getAirportPerKmFare merchantId merchantOpCityId specialLocationId gateLatLong pickupGateId serviceTier = do
-  let cacheKey = mkAirportPerKmFareCacheKey specialLocationId (T.pack (show serviceTier))
+  let driverVariant = DV.castServiceTierToVariant serviceTier
+      cacheKey = mkAirportPerKmFareCacheKey specialLocationId driverVariant
   mbCached <- Redis.withCrossAppRedis $ Redis.safeGet @(Maybe HighPrecMoney) cacheKey
   case mbCached of
     Just cached -> pure cached
     Nothing -> do
-      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId serviceTier
+      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant
       Redis.withCrossAppRedis $ Redis.setExp cacheKey mbFare airportPerKmFareCacheTtlSec
       pure mbFare
 
--- | Drop per-(specialLocation, variant) per-km-fare cache entries derived from
---   the given fare policy. Used by the dashboard
---   `postMerchantConfigFarePolicyUpdate` handler after the policy row is
---   updated, so the next pickup-zone notification recomputes against the new
---   policy.
---
---   Implementation: read every FareProduct that references this farePolicyId,
---   filter to Pickup-area products (the only kind 'getAirportPerKmFare' caches
---   under), and delete the corresponding `(specialLocationId, variant)` keys.
 clearAirportPerKmFareCacheForPolicy ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -175,18 +146,29 @@ clearAirportPerKmFareCacheForPolicy ::
   m ()
 clearAirportPerKmFareCacheForPolicy fpId = do
   fareProducts <- QFareProduct.findAllFareProductByFarePolicyId fpId
-  let cacheKeys =
-        [ mkAirportPerKmFareCacheKey slId (T.pack (show fp.vehicleServiceTier))
+  let pickupProducts =
+        [ (fp.merchantOperatingCityId, fp.vehicleServiceTier, slId)
           | fp <- fareProducts,
             SL.Pickup slId <- [fp.area]
         ]
+      byCity =
+        Map.fromListWith (<>) [(cityId, [(tier, slId)]) | (cityId, tier, slId) <- pickupProducts]
+  cacheKeys <-
+    fmap concat . forM (Map.toList byCity) $ \(cityId, tierSlPairs) -> do
+      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
+      let variantsForTier tier =
+            [ v
+              | vst <- cityServiceTiers,
+                vst.serviceTierType == tier,
+                v <- vst.defaultForVehicleVariant
+            ]
+      pure
+        [ mkAirportPerKmFareCacheKey slId v
+          | (tier, slId) <- tierSlPairs,
+            v <- variantsForTier tier
+        ]
   Redis.withCrossAppRedis $ forM_ cacheKeys Redis.del
 
--- | Heavy lift behind 'getAirportPerKmFare'. Resolves the matching FareProduct
---   via the same `SharedLogic.FareProduct.getAllFareProducts` path that
---   `Beckn.Search` uses, iterating over the OneWay subtypes most likely to be
---   served from a queueable airport gate (StaticOffer, DynamicOffer, RideOtp)
---   and stopping at the first one that has a fare product for this variant.
 computeAirportPerKmFare ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -198,33 +180,51 @@ computeAirportPerKmFare ::
   Id DMOC.MerchantOperatingCity ->
   LatLong ->
   Text ->
-  DVST.ServiceTierType ->
+  DV.VehicleVariant ->
   m (Maybe HighPrecMoney)
-computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId serviceTier = do
-  let searchSources = SharedFareProduct.getSearchSources False
-      preferenceOrder =
-        [ DTC.OneWay DTC.OneWayOnDemandStaticOffer,
-          DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
-          DTC.OneWay DTC.OneWayRideOtp
+computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant = do
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  let eligibleServiceTiers =
+        [ vst.serviceTierType
+          | vst <- cityServiceTiers,
+            driverVariant `elem` vst.defaultForVehicleVariant
         ]
-      tryCategory tripCategory = do
-        res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
-        pure $ find (\fp -> fp.vehicleServiceTier == serviceTier) res.fareProducts
-  mbFareProduct <- firstJustM tryCategory preferenceOrder
-  case mbFareProduct of
-    Nothing -> pure Nothing
-    Just fp -> do
-      mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
-      case mbFarePolicy of
-        Nothing -> pure Nothing
-        Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
+  if null eligibleServiceTiers
+    then do
+      logError $ "No eligible service tiers found for driver variant " <> show driverVariant <> " in merchantOpCityId " <> show merchantOpCityId
+      pure Nothing
+    else do
+      let searchSources = SharedFareProduct.getSearchSources False
+          preferenceOrder =
+            [ DTC.OneWay DTC.OneWayRideOtp,
+              DTC.OneWay DTC.OneWayOnDemandStaticOffer,
+              DTC.OneWay DTC.OneWayOnDemandDynamicOffer
+            ]
+          tryCategory eligibleTier tripCategory = do
+            res <- SharedFareProduct.getAllFareProducts merchantId merchantOpCityId searchSources gateLatLong Nothing Nothing Nothing tripCategory
+            pure $ find (\fp -> fp.vehicleServiceTier == eligibleTier) res.fareProducts
+      fareProducts <- mapMaybeM (\eligibleTier -> firstJustM (tryCategory eligibleTier) preferenceOrder) eligibleServiceTiers
+      if null fareProducts
+        then pure Nothing
+        else do
+          possibleFares <-
+            mapMaybeM
+              (\fp -> do
+                mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+                case mbFarePolicy of
+                  Nothing -> pure Nothing
+                  Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
+              )
+              fareProducts
+          if null possibleFares
+            then pure Nothing
+            else pure . Just $ maximum possibleFares
   where
     firstJustM _ [] = pure Nothing
     firstJustM f (x : xs) = do
       r <- f x
       maybe (firstJustM f xs) (pure . Just) r
-    -- Use the static congestion multiplier already on the fare policy; we don't
-    -- have a search context here to call the dynamic-pricing service.
+
     staticCongestionDetails =
       DFP.CongestionChargeDetails
         { dpVersion = Just "Static",
