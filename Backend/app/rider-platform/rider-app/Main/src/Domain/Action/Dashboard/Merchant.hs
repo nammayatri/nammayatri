@@ -391,7 +391,8 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
             merchantId = Just merchantId,
             isQueueEnabled = request.isQueueEnabled <|> (mbExistingSpLoc >>= (.isQueueEnabled)),
             enforceTollRoute = mbExistingSpLoc >>= (.enforceTollRoute),
-            supportNumber = request.supportNumber <|> (mbExistingSpLoc >>= (.supportNumber)),
+            render = request.render,
+            supportNumber = request.supportNumber,
             ..
           }
 
@@ -1459,7 +1460,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     dropPriority :: Text,
     specialLocationId :: Text,
     isQueueEnabled :: Maybe Text,
-    supportNumber :: Maybe Text
+    supportNumber :: Maybe Text,
+    render :: Maybe Text
   }
   deriving (Show)
 
@@ -1489,6 +1491,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> r .: "special_location_id"
       <*> optional (r .: "is_queue_enabled")
       <*> optional (r .: "support_number")
+      <*> optional (r .: "render")
 
 postMerchantConfigSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertSpecialLocationCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
 postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
@@ -1540,6 +1543,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
           mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
           mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
           supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
+          mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
       enabled :: Bool <- readCSVField idx row.enabled "Enabled"
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
@@ -1578,6 +1582,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 updatedAt = now,
                 isQueueEnabled = mbIsQueueEnabled,
                 enforceTollRoute = Nothing,
+                render = mbRender,
                 supportNumber = supportNumber
               }
           gateInfo =

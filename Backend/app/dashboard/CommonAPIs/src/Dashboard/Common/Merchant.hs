@@ -19,6 +19,7 @@ module Dashboard.Common.Merchant
 where
 
 import Control.Applicative ((<|>))
+import qualified Lib.Types.SpecialLocation as SLT
 import Dashboard.Common as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
@@ -705,7 +706,8 @@ data UpsertSpecialLocationReq = UpsertSpecialLocationReq
     category :: Maybe Text,
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
-    supportNumber :: Maybe Text
+    supportNumber :: Maybe Text,
+    render :: Maybe SLT.RenderType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -721,6 +723,7 @@ instance FromMultipart Tmp UpsertSpecialLocationReq where
       <*> parseMaybeInput "city" form
       <*> parseMaybeInput "isQueueEnabled" form
       <*> parseMaybeInput "supportNumber" form
+      <*> parseMaybeInput "render" form
 
 instance HideSecrets UpsertSpecialLocationReq where
   hideSecrets = identity
@@ -740,7 +743,8 @@ data UpsertSpecialLocationReqT = UpsertSpecialLocationReqT
     category :: Maybe Text,
     city :: Maybe Context.City,
     isQueueEnabled :: Maybe Bool,
-    supportNumber :: Maybe Text
+    supportNumber :: Maybe Text,
+    render :: Maybe SLT.RenderType
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
