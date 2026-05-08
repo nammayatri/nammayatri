@@ -85,7 +85,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (runTransaction)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.City as City
@@ -345,7 +344,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
 
 postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess
 postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId request = do
-  existingSLWithGeom <- maybe (return Nothing) (Esq.runInReplica . QSL.findByIdWithGeom) mbSpecialLocationId
+  existingSLWithGeom <- maybe (return Nothing) QSL.findByIdWithGeom mbSpecialLocationId
   let mbExistingSL = fst <$> existingSLWithGeom
       mbGeom = snd =<< existingSLWithGeom
   updatedSL <- mkSpecialLocation mbExistingSL mbGeom

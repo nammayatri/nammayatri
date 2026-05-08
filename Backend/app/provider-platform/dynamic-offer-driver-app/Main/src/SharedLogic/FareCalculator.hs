@@ -1079,7 +1079,7 @@ data ParsedCodeValue
 -- Example: If fare_policy has vat_charge_config = {"value":"14%","appliesOn":["RideFare","DeadKmFareComponent"]},
 -- then VAT will be calculated as 14% of (RideFare + DeadKmFareComponent)
 calculateFareParameters ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   CalculateFareParametersParams ->
   m FareParameters
 calculateFareParameters params = do
@@ -1220,7 +1220,7 @@ applyConfiguredCharges farePolicy fareParams = do
 
 -- | Apply airport entry fee into parkingCharge, based on pickupGateId and transporter config.
 applyAirportEntryFee ::
-  (MonadFlow m, EsqDBFlow m r, BeamFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, BeamFlow m r) =>
   CalculateFareParametersParams ->
   FareParameters ->
   m FareParameters
