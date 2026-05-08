@@ -37,6 +37,7 @@ module SharedLogic.SpecialZoneDriverDemand
     releasePickupZoneCountersOnCancel,
     filterByGateProximity,
     clearAirportPerKmFareCacheForPolicy,
+    getAirportPerKmFare,
   )
 where
 

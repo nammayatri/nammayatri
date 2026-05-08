@@ -1,6 +1,7 @@
 imports:
   Id: Kernel.Types.Id
   APISuccess: Kernel.Types.APISuccess
+  HighPrecMoney: Kernel.Types.Common
   SpecialZoneQueueRequest: Domain.Types.SpecialZoneQueueRequest
   SpecialZoneQueueRequestResponse: Domain.Types.SpecialZoneQueueRequest
   SpecialZoneQueueRequestStatus: Domain.Types.SpecialZoneQueueRequest
@@ -17,6 +18,9 @@ types:
     vehicleType: Text
     validTill: UTCTime
     status: SpecialZoneQueueRequestStatus
+    perKmFare: Maybe HighPrecMoney
+    isDemandHigh: Bool
+    demandCount: Int
 
   SpecialZoneQueueRequestListRes:
     requests: "[SpecialZoneQueueRequestRes]"
