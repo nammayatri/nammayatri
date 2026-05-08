@@ -105,10 +105,8 @@ updateVerificationStatus verificationStatus validTill remark graduationDate numb
     ]
     [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
 
-findByPrimaryKey ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PassDetails.PassDetails))
-findByPrimaryKey id personId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
+findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails))
+findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.PassDetails.PassDetails -> m ())
 updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
@@ -129,6 +127,7 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
       Se.Set Beam.numberOfStages numberOfStages,
       Se.Set Beam.passEnum passEnum,
       Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
+      Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.pincode pincode,
       Se.Set Beam.referenceNumber referenceNumber,
       Se.Set Beam.registerNo registerNo,
@@ -140,4 +139,4 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
       Se.Set Beam.validTill validTill,
       Se.Set Beam.verificationStatus verificationStatus
     ]
-    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]]
+    [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

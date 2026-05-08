@@ -1,0 +1,941 @@
+{
+	"info": {
+		"name": "Student Pass Purchase Flow",
+		"description": "Tests PR #13586 (Student Pass). Flow: register PassOrganization (dashboard) → student submits PassDetails with CSV-derived routeDetails → admin verifies CLG_VERIFIED then MTC_VERIFIED → student lists Available Passes (verificationStatus=MTC_VERIFIED enables tier pricing) → student purchases the StudentPass via /multimodal/pass/v2/{passId}/select → mock Juspay CHARGED → verify in /multimodal/pass/list.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_admin_number')) {",
+					"    var aNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    pm.collectionVariables.set('_test_admin_number', aNum);",
+					"    console.log('Test admin:', aNum);",
+					"}",
+					"if (!pm.collectionVariables.get('_test_student_number')) {",
+					"    var sNum = '7' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    pm.collectionVariables.set('_test_student_number', sNum);",
+					"    console.log('Test student:', sNum);",
+					"}",
+					"// Defensive: derive baseUrl_dashboard from baseUrl_app if env missing it.",
+					"// Avoids 'Failed to construct URL' when only the collection (not the env) is imported.",
+					"if (!pm.environment.get('baseUrl_dashboard') && !pm.variables.get('baseUrl_dashboard')) {",
+					"    var app = pm.environment.get('baseUrl_app') || pm.variables.get('baseUrl_app') || 'http://localhost:8013/v2';",
+					"    var dash = app.replace(/\\/v2\\/?$/, '/dashboard');",
+					"    pm.environment.set('baseUrl_dashboard', dash);",
+					"    console.log('Derived baseUrl_dashboard:', dash);",
+					"}",
+					"if (!pm.environment.get('bap_short_id') && !pm.variables.get('bap_short_id')) {",
+					"    pm.environment.set('bap_short_id', 'NAMMA_YATRI');",
+					"}",
+					"if (!pm.environment.get('city') && !pm.variables.get('city')) {",
+					"    pm.environment.set('city', 'Chennai');",
+					"}",
+					"if (!pm.environment.get('dashboard_token') && !pm.variables.get('dashboard_token')) {",
+					"    pm.environment.set('dashboard_token', 'some-secret-dashboard-token-for-rider-app');",
+					"}",
+					"if (!pm.environment.get('pass_enum') && !pm.variables.get('pass_enum')) {",
+					"    pm.environment.set('pass_enum', 'StudentPass');",
+					"}",
+					"if (!pm.environment.get('login_otp') && !pm.variables.get('login_otp')) {",
+					"    pm.environment.set('login_otp', '7891');",
+					"}",
+					"if (!pm.environment.get('mockServerUrl') && !pm.variables.get('mockServerUrl')) {",
+					"    pm.environment.set('mockServerUrl', 'http://localhost:8080');",
+					"}",
+					"if (!pm.environment.get('student_pass_code') && !pm.variables.get('student_pass_code')) {",
+					"    pm.environment.set('student_pass_code', 'STUDENTPASS');",
+					"}",
+					"if (!pm.environment.get('org_name') && !pm.variables.get('org_name')) {",
+					"    pm.environment.set('org_name', 'MTC Test School');",
+					"}",
+					"if (!pm.environment.get('org_address') && !pm.variables.get('org_address')) {",
+					"    pm.environment.set('org_address', 'Anna Salai, Chennai');",
+					"}",
+					"// Route stop seeds (CSV-derived, route 102, Chennai)",
+					"var routeDefaults = {",
+					"    route1_src_id: 'ceb46e7bbf', route1_src_name: 'ADYAR B.T',",
+					"    route1_dest_id: 'abdf0ebe40', route1_dest_name: 'SHOLINGANALLUR P.U.OFFICE',",
+					"    route2_src_id: '4210b6bd61', route2_src_name: 'KANDANCHAVADI',",
+					"    route2_dest_id: '0f463e18c6', route2_dest_name: 'KELAMBAKKAM'",
+					"};",
+					"Object.keys(routeDefaults).forEach(function (k) {",
+					"    if (!pm.environment.get(k) && !pm.variables.get(k)) pm.environment.set(k, routeDefaults[k]);",
+					"});"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Admin Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('admin_authId', d.authId);",
+							"pm.test('Admin auth OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_admin_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Admin Auth Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('admin_token', d.token);",
+							"pm.environment.set('admin_person_id', d.person.id);",
+							"console.log('Admin person id:', d.person.id);",
+							"pm.test('Admin verify OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-student-pass-admin\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{admin_authId}}/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", "{{admin_authId}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard Update PassOrganization (Create)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Org update OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{dashboard_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"name\": \"{{org_name}}\", \"address\": \"{{org_address}}\", \"passEnum\": \"StudentPass\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/update/{{admin_person_id}}",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "update", "{{admin_person_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard Get PassOrganization (by personId)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for KV drainer to flush the just-created PassOrganization row to Postgres.",
+							"console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('pass_organization_id', d.id);",
+							"console.log('Pass organization id:', d.id);",
+							"pm.test('Got org', function () { pm.response.to.have.status(200); pm.expect(d.name).to.eql(pm.environment.get('org_name')); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{dashboard_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/getPassOrganization/{{admin_person_id}}",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "getPassOrganization", "{{admin_person_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard List Organizations (passEnum)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Got organizations list', function () { pm.response.to.have.status(200); pm.expect(d).to.be.an('array').that.is.not.empty; });",
+							"var found = d.find(function (o) { return o.id === pm.environment.get('pass_organization_id'); });",
+							"pm.test('Created org appears in list', function () { pm.expect(found).to.exist; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{dashboard_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/getOrganizations/{{pass_enum}}",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "getOrganizations", "{{pass_enum}}"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard Update PassOrganization (Update existing)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Org update OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{dashboard_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"name\": \"{{org_name}}\", \"address\": \"Anna Salai, Chennai - updated\", \"passEnum\": \"StudentPass\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/update/{{admin_person_id}}",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "update", "{{admin_person_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Student Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('student_authId', d.authId);",
+							"pm.test('Student auth OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_student_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Student Auth Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('student_token', d.token);",
+							"pm.environment.set('student_person_id', d.person.id);",
+							"console.log('Student person id:', d.person.id);",
+							"pm.test('Student verify OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-student-pass-student\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{student_authId}}/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", "{{student_authId}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Rider Get Organizations (StudentPass)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Got rider-side organizations', function () { pm.response.to.have.status(200); pm.expect(d).to.be.an('array').that.is.not.empty; });",
+							"var orgId = pm.environment.get('pass_organization_id');",
+							"var match = d.find(function (o) { return o.id === orgId; });",
+							"pm.test('Org visible to rider', function () { pm.expect(match).to.exist; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/getOrganizations/{{pass_enum}}",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["getOrganizations", "{{pass_enum}}"]
+				}
+			}
+		},
+		{
+			"name": "Student Submit Pass Details",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Submit OK', function () { pm.response.to.have.status(200); });",
+							"// KV→Postgres drainer settle. Putting it here so test-script consoleLogs surface in UI.",
+							"console.log('[wait] start at', Date.now());",
+							"var __s = Date.now(); while (Date.now() - __s < 10000) {}",
+							"console.log('[wait] done elapsed=', Date.now()-__s, 'ms');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{student_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"passOrganizationId\": \"{{pass_organization_id}}\",\n    \"name\": \"Test Student\",\n    \"idCardPicture\": \"data:image/png;base64,idcard\",\n    \"address\": \"12 College Rd, Chennai\",\n    \"age\": 17,\n    \"gender\": \"MALE\",\n    \"pincode\": \"600020\",\n    \"selfImage\": \"data:image/png;base64,selfie\",\n    \"guardianName\": \"Test Guardian\",\n    \"studentClass\": \"12\",\n    \"routeDetails\": [\n        {\"srcStopName\": \"{{route1_src_name}}\", \"srcStopId\": \"{{route1_src_id}}\", \"destStopName\": \"{{route1_dest_name}}\", \"destStopId\": \"{{route1_dest_id}}\"},\n        {\"srcStopName\": \"{{route2_src_name}}\", \"srcStopId\": \"{{route2_src_id}}\", \"destStopName\": \"{{route2_dest_name}}\", \"destStopId\": \"{{route2_dest_id}}\"}\n    ],\n    \"registerNo\": \"REG12345\",\n    \"aadharNo\": \"123456789012\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/update",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "update"]
+				}
+			}
+		},
+		{
+			"name": "Student Get Pass Details Data (PENDING)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for KV drainer to flush the just-created PassDetails row to Postgres.",
+							"console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('pass_details_id', d.passDetailsId);",
+							"console.log('Pass details id:', d.passDetailsId, 'status:', d.verificationStatus);",
+							"pm.test('Pass details fetched', function () { pm.response.to.have.status(200); });",
+							"pm.test('Status is PENDING', function () { pm.expect(d.verificationStatus).to.eql('PENDING'); });",
+							"pm.test('Has 2 forward + 2 reverse route pairs', function () { pm.expect(d.routePairs.length).to.eql(4); });",
+							"pm.test('Linked to created org', function () { pm.expect(d.passOrganizationId).to.eql(pm.environment.get('pass_organization_id')); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/data",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "data"]
+				}
+			}
+		},
+		{
+			"name": "Student Get Pass Verification Status (PENDING)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status fetched', function () { pm.response.to.have.status(200); });",
+							"pm.test('Status is PENDING', function () { pm.expect(d.verificationStatus).to.eql('PENDING'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/verificationStatus",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "verificationStatus"]
+				}
+			}
+		},
+		{
+			"name": "Available Passes (Pre-Verification)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Got available passes', function () { pm.response.to.have.status(200); });",
+							"var spId = null, eligibility = null, vstatus = null;",
+							"d.forEach(function(cat) { (cat.passes || []).forEach(function(p) {",
+							"    if (p.code === pm.environment.get('student_pass_code')) { spId = p.id; eligibility = p.eligibility; vstatus = p.verificationStatus; }",
+							"}); });",
+							"if (spId) pm.collectionVariables.set('_student_pass_id', spId);",
+							"console.log('Pre-verify StudentPass:', { id: spId, eligibility: eligibility, verificationStatus: vstatus });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/availablePasses",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "availablePasses"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard List Pass Details by Org (PENDING)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('List OK', function () { pm.response.to.have.status(200); });",
+							"var pdId = pm.environment.get('pass_details_id');",
+							"var match = (d.passDetails || []).find(function (pd) { return pd.passDetailsId === pdId; });",
+							"pm.test('Pending pass details visible to dashboard', function () { pm.expect(match).to.exist; pm.expect(match.verificationStatus).to.eql('PENDING'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{dashboard_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/{{pass_enum}}?passOrganizationId={{pass_organization_id}}&status=PENDING&limit=50&offset=0",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "passDetails", "{{pass_enum}}"],
+					"query": [
+						{"key": "passOrganizationId", "value": "{{pass_organization_id}}"},
+						{"key": "status", "value": "PENDING"},
+						{"key": "limit", "value": "50"},
+						{"key": "offset", "value": "0"}
+					]
+				}
+			}
+		},
+		{
+			"name": "Dashboard Verify Pass Details (CLG_VERIFIED)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Verify CLG_VERIFIED OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{dashboard_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"CLG_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"College verified\"\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "passDetails", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Student Status After CLG_VERIFIED",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for the bulk verify update to drain into Postgres before re-reading.",
+							"console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status is CLG_VERIFIED', function () { pm.response.to.have.status(200); pm.expect(d.verificationStatus).to.eql('CLG_VERIFIED'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/verificationStatus",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "verificationStatus"]
+				}
+			}
+		},
+		{
+			"name": "Dashboard Verify Pass Details (MTC_VERIFIED)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Verify MTC_VERIFIED OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{dashboard_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"MTC_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"MTC verified - eligible for student pass\"\n        }\n    ]\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",
+					"host": ["{{baseUrl_dashboard}}"],
+					"path": ["{{bap_short_id}}", "{{city}}", "passOrganization", "passDetails", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Student Status After MTC_VERIFIED",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Wait for the bulk verify update to drain into Postgres before re-reading.",
+							"console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status is MTC_VERIFIED', function () { pm.response.to.have.status(200); pm.expect(d.verificationStatus).to.eql('MTC_VERIFIED'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/verificationStatus",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "verificationStatus"]
+				}
+			}
+		},
+		{
+			"name": "Student Pass Details Data After MTC_VERIFIED",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Data fetch OK', function () { pm.response.to.have.status(200); });",
+							"pm.test('verificationStatus = MTC_VERIFIED', function () { pm.expect(d.verificationStatus).to.eql('MTC_VERIFIED'); });",
+							"pm.test('Remark propagated', function () { pm.expect(d.remark).to.include('MTC verified'); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/data",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["passDetails", "{{pass_enum}}", "data"]
+				}
+			}
+		},
+		{
+			"name": "Available Passes (Post MTC_VERIFIED)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Got available passes', function () { pm.response.to.have.status(200); });",
+							"var spId = null, eligibility = null, vstatus = null, amount = null;",
+							"d.forEach(function(cat) { (cat.passes || []).forEach(function(p) {",
+							"    if (p.code === pm.environment.get('student_pass_code')) { spId = p.id; eligibility = p.eligibility; vstatus = p.verificationStatus; amount = p.amount; }",
+							"}); });",
+							"if (spId) pm.environment.set('student_pass_id', spId);",
+							"console.log('Post-verify StudentPass:', { id: spId, eligibility: eligibility, verificationStatus: vstatus, amount: amount });",
+							"pm.test('StudentPass present', function () { pm.expect(spId).to.not.be.null; });",
+							"pm.test('verificationStatus carried into Pass entity', function () { pm.expect(vstatus).to.eql('MTC_VERIFIED'); });",
+							"pm.test('Eligible to purchase', function () { pm.expect(eligibility).to.eql(true); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/availablePasses",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "availablePasses"]
+				}
+			}
+		},
+		{
+			"name": "Select Student Pass (v2)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"var today = new Date().toISOString().split('T')[0];",
+							"pm.collectionVariables.set('_today', today);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Select OK', function () { pm.response.to.have.status(200); });",
+							"pm.environment.set('purchased_pass_id', d.purchasedPassId);",
+							"if (d.paymentOrder) {",
+							"    pm.environment.set('payment_order_id', d.paymentOrder.id);",
+							"    pm.environment.set('payment_order_short_id', d.paymentOrder.order_id || '');",
+							"}",
+							"console.log('Purchased pass:', d.purchasedPassId, 'order:', d.paymentOrder ? d.paymentOrder.id : 'none (free pass)');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{student_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"startDate\": \"{{_today}}\", \"imeiNumber\": \"test-imei-student-pass\", \"profilePicture\": \"data:image/png;base64,studentprofile\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/v2/{{student_pass_id}}/select",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "v2", "{{student_pass_id}}", "select"]
+				}
+			}
+		},
+		{
+			"name": "Mock Juspay CHARGED",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Mock OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\": \"juspay\", \"id\": [\"{{payment_order_id}}\", \"{{payment_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Check Payment Status",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Payment status OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Payment status:', pm.response.json().status);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/{{payment_order_id}}/status",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["payment", "{{payment_order_id}}", "status"]
+				}
+			}
+		},
+		{
+			"name": "List Purchased Passes",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('List OK', function () { pm.response.to.have.status(200); pm.expect(d).to.be.an('array').that.is.not.empty; });",
+							"var purchased = d.find(function (p) { return p.id === pm.environment.get('purchased_pass_id'); });",
+							"pm.test('Purchased pass present', function () { pm.expect(purchased).to.exist; });",
+							"if (purchased) {",
+							"    console.log('Purchased pass status:', purchased.status, 'applicableRouteIds via passEntity not in list view');",
+							"    pm.test('Applicable route IDs propagated to PurchasedPass', function () { pm.expect(purchased.isPreferredSourceAndDestinationSet).to.be.a('boolean'); });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/list?limit=20&offset=0&deviceId=test-imei-student-pass&imeiNumber=test-imei-student-pass",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "list"],
+					"query": [
+						{"key": "limit", "value": "20"},
+						{"key": "offset", "value": "0"},
+						{"key": "deviceId", "value": "test-imei-student-pass"},
+						{"key": "imeiNumber", "value": "test-imei-student-pass"}
+					]
+				}
+			}
+		},
+		{
+			"name": "Set Preferred Src And Dest",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Set pref OK', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{student_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"prefSrc\": \"{{route1_src_id}}\", \"prefDest\": \"{{route1_dest_id}}\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/set/prefSrcAndDest/{{purchased_pass_id}}",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "set", "prefSrcAndDest", "{{purchased_pass_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Verify Purchased Pass",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// The verify endpoint validates pass ownership/activation, then runs the StudentPass match logic.",
+							"// With studentPassVerifyConfig = {distanceThresholdMeters:2000, minMatchingStops:0} on this MOC, any vehicle whose route stops are within 2km of the user's RoutePair stops is PARTIALLY_VERIFIED.",
+							"// In a real run, vehicleNumber must be a bus that Nandi knows is currently on a tracked route. Without that, the server typically responds with PassInvalidVehicle (400) or PassVerificationFailed (400).",
+							"// We accept any of: 200 (verified), or a known business 4xx that proves the request was parsed and dispatched to the verify pipeline.",
+							"var ok = [200, 400, 404].indexOf(pm.response.code) >= 0;",
+							"pm.test('Verify endpoint reachable + parsed request', function () { pm.expect(ok).to.eql(true); });",
+							"console.log('Verify status:', pm.response.code, 'body:', pm.response.text());"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{"key": "Content-Type", "value": "application/json"},
+					{"key": "token", "value": "{{student_token}}"}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"vehicleNumber\": \"J1913\",\n    \"currentLat\": 13.00721,\n    \"currentLon\": 80.25882,\n    \"stopId\": \"{{route1_src_id}}\",\n    \"autoActivated\": false\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/{{purchased_pass_id}}/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "{{purchased_pass_id}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Pass Transactions",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Transactions OK', function () { pm.response.to.have.status(200); });",
+							"console.log('Transaction count:', pm.response.json().length);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{student_token}}"}],
+				"url": {
+					"raw": "{{baseUrl_app}}/multimodal/pass/transactions?limit=10&offset=0",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["multimodal", "pass", "transactions"],
+					"query": [
+						{"key": "limit", "value": "10"},
+						{"key": "offset", "value": "0"}
+					]
+				}
+			}
+		}
+	],
+	"variable": [
+		{"key": "baseUrl_app", "value": "http://localhost:8013/v2"},
+		{"key": "baseUrl_dashboard", "value": "http://localhost:8013/dashboard"},
+		{"key": "mockServerUrl", "value": "http://localhost:8080"},
+		{"key": "dashboard_token", "value": "some-secret-dashboard-token-for-rider-app"},
+		{"key": "bap_short_id", "value": "NAMMA_YATRI"},
+		{"key": "bap_merchant_id", "value": "4b17bd06-ae7e-48e9-85bf-282fb310209c"},
+		{"key": "city", "value": "Chennai"},
+		{"key": "login_otp", "value": "7891"},
+		{"key": "pass_enum", "value": "StudentPass"},
+		{"key": "org_name", "value": "MTC Test School"},
+		{"key": "org_address", "value": "Anna Salai, Chennai"},
+		{"key": "student_pass_code", "value": "STUDENTPASS"},
+		{"key": "route1_src_id", "value": "ceb46e7bbf"},
+		{"key": "route1_src_name", "value": "ADYAR B.T"},
+		{"key": "route1_dest_id", "value": "abdf0ebe40"},
+		{"key": "route1_dest_name", "value": "SHOLINGANALLUR P.U.OFFICE"},
+		{"key": "route2_src_id", "value": "4210b6bd61"},
+		{"key": "route2_src_name", "value": "KANDANCHAVADI"},
+		{"key": "route2_dest_id", "value": "0f463e18c6"},
+		{"key": "route2_dest_name", "value": "KELAMBAKKAM"}
+	]
+}

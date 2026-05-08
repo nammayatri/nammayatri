@@ -79,8 +79,8 @@ PassDetails:
     aadharNoHash: (aadharNo <&> (.hash))|E
 
   constraints:
-    personId: PrimaryKey
-    id: SecondaryKey
+    id: PrimaryKey
+    personId: SecondaryKey
     passOrganizationId: SecondaryKey
 
   sqlType:

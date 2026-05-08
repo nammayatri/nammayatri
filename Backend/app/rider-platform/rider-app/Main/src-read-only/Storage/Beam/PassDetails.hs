@@ -49,11 +49,11 @@ data PassDetailsT f = PassDetailsT
   deriving (Generic, B.Beamable)
 
 instance B.Table PassDetailsT where
-  data PrimaryKey PassDetailsT f = PassDetailsId (B.C f Kernel.Prelude.Text) (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
-  primaryKey = PassDetailsId <$> id <*> personId
+  data PrimaryKey PassDetailsT f = PassDetailsId (B.C f Kernel.Prelude.Text) deriving (Generic, B.Beamable)
+  primaryKey = PassDetailsId . id
 
 type PassDetails = PassDetailsT Identity
 
-$(enableKVPG ''PassDetailsT ['id, 'personId] [['id], ['passOrganizationId]])
+$(enableKVPG ''PassDetailsT ['id] [['passOrganizationId], ['personId]])
 
 $(mkTableInstances ''PassDetailsT "pass_details")
