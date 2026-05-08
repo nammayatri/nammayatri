@@ -19,7 +19,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import EulerHS.Prelude
 import Kernel.Types.Beckn.Ack (AckResponse)
 import Kernel.Types.Beckn.ReqTypes (BecknReq)
-import Servant (JSON, Post, ReqBody, (:>))
+import Servant (JSON, Post, ReqBody, (:>), Capture, Header)
 
 type SearchReq = BecknReq SearchMessage
 
