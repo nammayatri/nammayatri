@@ -108,7 +108,9 @@ data OfferRespAPIEntity = OfferRespAPIEntity
     autoApply :: Bool,
     isHidden :: Bool,
     amountSaved :: HighPrecMoney,
-    postOfferAmount :: HighPrecMoney
+    postOfferAmount :: HighPrecMoney,
+    estimatedAmountSaved :: HighPrecMoney,
+    estimatedPostOfferAmount :: HighPrecMoney
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -116,7 +118,11 @@ data OfferRespAPIEntity = OfferRespAPIEntity
 data OffersRespAPIEntity = OffersRespAPIEntity
   { offers :: [OfferRespAPIEntity],
     totalAmountSaved :: HighPrecMoney,
-    totalPostOfferAmount :: HighPrecMoney
+    totalPostOfferAmount :: HighPrecMoney,
+    totalAmountSavedV2 :: PriceAPIEntity,
+    totalPostOfferAmountV2 :: PriceAPIEntity,
+    estimatedTotalAmountSaved :: PriceAPIEntity,
+    estimatedPostOfferAmountV2 :: PriceAPIEntity
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -320,7 +326,9 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         autoApply = fromMaybe False (uiConfigs >>= (.autoApply)),
         isHidden = fromMaybe True (uiConfigs >>= (.isHidden)),
         amountSaved = discountAmount + cashbackAmount,
-        postOfferAmount = postOfferAmount
+        postOfferAmount = postOfferAmount,
+        estimatedAmountSaved = discountAmount + cashbackAmount,
+        estimatedPostOfferAmount = postOfferAmount
       }
 
 mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq

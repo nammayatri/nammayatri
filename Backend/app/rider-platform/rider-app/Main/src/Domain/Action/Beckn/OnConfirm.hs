@@ -18,6 +18,7 @@ module Domain.Action.Beckn.OnConfirm
     OnConfirmReq (..),
     RideAssignedInfo (..),
     BookingConfirmedInfo (..),
+    BPPInvoiceProviderInfo (..),
     ValidatedOnConfirmReq (..),
     ValidatedBookingConfirmedReq (..),
     DCommon.RideAssignedReq (..),
@@ -50,6 +51,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 import Tools.Metrics (HasBAPMetrics)
@@ -60,6 +62,33 @@ import qualified UrlShortner.Common as UrlShortner
 data OnConfirmReq
   = RideAssigned RideAssignedInfo
   | BookingConfirmed BookingConfirmedInfo
+
+-- | Provider/supplier metadata that the BPP propagates via on_confirm Order
+--   Tags so that BAP-side invoices can attribute the issuer (BPP merchant)
+--   and supplier (fleet owner or merchant). Stored on the Booking row.
+data BPPInvoiceProviderInfo = BPPInvoiceProviderInfo
+  { issuedById :: Maybe Text,
+    issuedByName :: Maybe Text,
+    issuedByAddress :: Maybe Text,
+    supplierName :: Maybe Text,
+    supplierAddress :: Maybe Text,
+    supplierGSTIN :: Maybe Text,
+    supplierTaxNo :: Maybe Text,
+    supplierId :: Maybe Text
+  }
+
+bppInvoiceProviderInfoToFields :: BPPInvoiceProviderInfo -> QRBE.BPPInvoiceProviderFields
+bppInvoiceProviderInfoToFields info =
+  QRBE.BPPInvoiceProviderFields
+    { issuedById = info.issuedById,
+      issuedByName = info.issuedByName,
+      issuedByAddress = info.issuedByAddress,
+      supplierName = info.supplierName,
+      supplierAddress = info.supplierAddress,
+      supplierGSTIN = info.supplierGSTIN,
+      supplierTaxNo = info.supplierTaxNo,
+      supplierId = info.supplierId
+    }
 
 data BookingConfirmedInfo = BookingConfirmedInfo
   { bppBookingId :: Id DRB.BPPBooking,
@@ -89,7 +118,8 @@ data RideAssignedInfo = RideAssignedInfo
     isAlreadyFav :: Bool,
     favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 
 data ValidatedOnConfirmReq
@@ -176,4 +206,5 @@ validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP 
         email <- mapM decrypt person.email
         return $ Just DCommon.OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
+  let bppInvoiceProviderFields = bppInvoiceProviderInfoToFields bppInvoiceProviderInfo
   return $ ValidatedRideAssigned DCommon.ValidatedRideAssignedReq {onlinePaymentParameters, driverTrackingUrl = Nothing, isSynchronousOnUpdateProcessing = False, bppUri = Nothing, ..}

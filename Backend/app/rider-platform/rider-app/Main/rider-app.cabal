@@ -57,7 +57,6 @@ library
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
       API.Internal.EKDLiveCallFeedback
-      API.Internal.FinanceInvoice
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.GetPickupInstructions
@@ -221,7 +220,6 @@ library
       Domain.Action.Internal.Auth
       Domain.Action.Internal.Cac
       Domain.Action.Internal.DriverArrivalNotf
-      Domain.Action.Internal.FinanceInvoice
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
       Domain.Action.Internal.GetPickupInstructions

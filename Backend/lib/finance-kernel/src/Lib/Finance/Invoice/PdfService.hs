@@ -249,9 +249,9 @@ buildRows pdfData lbls =
       mbRideTax = find isRideTaxItem pdfData.parsedLineItems
       mainTitle = case inv.invoiceType of
         Ride -> lbls.rideLabel
-        BapRide -> lbls.rideLabel
         RideCancellation -> lbls.cancellationLabel
         SubscriptionPurchase -> lbls.subscriptionLabel
+        Commission -> lbls.commisionLabel
       -- ALV% for main item: from indirect_tax_transaction, or derived from Ride Fare/Ride Tax items
       mainVatPct = case mbTax of
         Just t -> Just $ fmtPct (fromMaybe t.gstRate t.taxRate)
@@ -463,7 +463,8 @@ data Labels = Labels
     invoicedValueLabel :: Text,
     rideLabel :: Text,
     cancellationLabel :: Text,
-    subscriptionLabel :: Text
+    subscriptionLabel :: Text,
+    commisionLabel :: Text
   }
 
 localeLabels :: InvoiceLocale -> Labels
@@ -490,7 +491,8 @@ localeLabels EN =
       invoicedValueLabel = "Invoiced Value",
       rideLabel = "Price of the Trip",
       cancellationLabel = "Cancellation Fee",
-      subscriptionLabel = "App Subscriptions"
+      subscriptionLabel = "App Subscriptions",
+      commisionLabel = "Commision"
     }
 localeLabels FI =
   Labels
@@ -515,7 +517,8 @@ localeLabels FI =
       invoicedValueLabel = "Laskutettu arvo",
       rideLabel = "Matkan hinta",
       cancellationLabel = "Peruutusmaksu",
-      subscriptionLabel = "Sovellustilaus"
+      subscriptionLabel = "Sovellustilaus",
+      commisionLabel = "Commision"
     }
 localeLabels NL =
   Labels
@@ -540,7 +543,8 @@ localeLabels NL =
       invoicedValueLabel = "Gefactureerde waarde",
       rideLabel = "Ritprijs",
       cancellationLabel = "Annuleringskosten",
-      subscriptionLabel = "App-abonnement"
+      subscriptionLabel = "App-abonnement",
+      commisionLabel = "Commision"
     }
 
 -- ---------------------------------------------------------------------------

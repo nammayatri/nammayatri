@@ -40,7 +40,7 @@ import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
@@ -255,11 +255,11 @@ referenceTypeToItemName ref
   | ref == walletReferenceTDSDeductionCash = "TDS (Cash)"
   | ref == walletReferencePayout = "Withdrawal"
   | ref == walletReferenceAirportCashRecharge = "Airport cash recharge (booth)"
-  | ref == walletReferenceDiscountsOnline = "Discounts (Online)"
-  | ref == walletReferenceDiscountsCash = "Discounts (Cash)"
+  | ref == walletReferenceDiscountsOnline = "Discounts Incl. Vat (Online)"
+  | ref == walletReferenceDiscountsCash = "Discounts Incl. Vat (Cash)"
   | ref == walletReferenceCommissionOnline = "Commission (Online)"
   | ref == walletReferenceCommissionCash = "Commission (Cash)"
-  | ref == walletReferenceVATAbsorbedOnDiscount = "VAT Absorbed on Discount"
+  | ref == walletReferenceDeductedAtPaymentByPlatform = "Commission Deducted at Payment"
   | otherwise = ref
 
 --------------------------------------------------------------------------------
@@ -699,7 +699,7 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
     let cashRechargeInvoiceConfig =
           InvoiceConfig
             { invoiceType = SubscriptionPurchase,
-              issuedToType = "DRIVER",
+              issuedToType = DRIVER,
               issuedToId = driverId.getId,
               issuedToName = Nothing,
               issuedToAddress = Nothing,

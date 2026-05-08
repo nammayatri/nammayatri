@@ -40,7 +40,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as SP
 import qualified Domain.Types.Ride as DRide
@@ -599,7 +599,7 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
         invoice
           InvoiceConfig
             { invoiceType = RideCancellation,
-              issuedToType = "CUSTOMER",
+              issuedToType = CUSTOMER,
               issuedToId = rid.getId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,

@@ -12,7 +12,6 @@ import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.EKDLiveCallFeedback as EKDLiveCallFeedback
 import qualified API.Internal.FRFS as FRFS
-import qualified API.Internal.FinanceInvoice as FinanceInvoice
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.InMemManagement as InMemManagement
@@ -47,7 +46,6 @@ type API =
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
            :<|> InMemManagement.API
-           :<|> FinanceInvoice.API
        )
 
 handler :: FlowServer API
@@ -70,4 +68,3 @@ handler =
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
     :<|> InMemManagement.handler
-    :<|> FinanceInvoice.handler

@@ -67,6 +67,7 @@ import qualified Kernel.External.Maps.Types as Maps
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
@@ -126,7 +127,6 @@ import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
-import qualified Kernel.Storage.Esqueleto as Esq
 
 data EndRideReq = DriverReq DriverEndRideReq | DashboardReq DashboardEndRideReq | CallBasedReq CallBasedEndRideReq | CronJobReq CronJobEndRideReq
 

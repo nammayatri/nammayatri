@@ -115,7 +115,7 @@ module SharedLogic.Finance.Wallet
     walletReferenceTips,
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
-    walletReferenceVATAbsorbedOnDiscount,
+    walletReferenceDeductedAtPaymentByPlatform,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -198,6 +198,9 @@ walletReferenceCommissionOnline = "CommissionOnline"
 walletReferenceCommissionCash :: Text
 walletReferenceCommissionCash = "CommissionCash"
 
+walletReferenceDeductedAtPaymentByPlatform :: Text
+walletReferenceDeductedAtPaymentByPlatform = "DeductedAtPaymentByPlatform"
+
 walletReferenceVATOnline :: Text
 walletReferenceVATOnline = "VATOnline"
 
@@ -220,13 +223,6 @@ walletReferenceDiscountsOnline = "DiscountsOnline"
 
 walletReferenceDiscountsCash :: Text
 walletReferenceDiscountsCash = "DiscountsCash"
-
--- | VAT share inside a customer-visible discount that BAP absorbs on the
---   driver's behalf. Together with the matching 'walletReferenceDiscounts*'
---   ref (Online or Cash) the sum equals
---   the total discount shown to the rider.
-walletReferenceVATAbsorbedOnDiscount :: Text
-walletReferenceVATAbsorbedOnDiscount = "VATAbsorbedOnDiscount"
 
 walletReferenceD2DReferral :: Text
 walletReferenceD2DReferral = "D2DReferral"
@@ -276,7 +272,7 @@ walletCreditRefs =
     walletReferenceTips,
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
-    walletReferenceVATAbsorbedOnDiscount
+    walletReferenceDeductedAtPaymentByPlatform
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)

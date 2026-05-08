@@ -88,7 +88,6 @@ updateCancellationDueRidesCount riderId = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
-
 updateTotalBookingsCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
 updateTotalBookingsCount riderId = do
   now <- getCurrentTime

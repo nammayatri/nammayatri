@@ -23,6 +23,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.DriverFee as DF
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import qualified "beckn-spec" Domain.Types.Invoice as InvType
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -174,7 +175,7 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
               invoice
                 InvoiceConfig
                   { invoiceType = RideCancellation,
-                    issuedToType = "DRIVER",
+                    issuedToType = InvType.DRIVER,
                     issuedToId = maybe ride.driverId.getId (.getId) ride.fleetOwnerId,
                     issuedToName = Nothing,
                     issuedToAddress = Nothing,

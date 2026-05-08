@@ -80,7 +80,6 @@ fareProductSchemaOptions =
       OpenApi.constructorTagModifier = fareProductConstructorModifier
     }
 
-
 fareProductConstructorModifier :: String -> String
 fareProductConstructorModifier = \case
   "OneWaySearch" -> "ONE_WAY"

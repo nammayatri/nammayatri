@@ -258,6 +258,14 @@ Booking:
     selectedOfferId: Maybe Text
     offersFraudCheckFailureReason: Maybe Text
     requiresPaymentBeforeConfirm: Bool
+    issuedById: Maybe Text
+    issuedByName: Maybe Text
+    issuedByAddress: Maybe Text
+    supplierName: Maybe Text
+    supplierAddress: Maybe Text
+    supplierGSTIN: Maybe Text
+    supplierTaxNo: Maybe Text
+    supplierId: Maybe Text
 
   beamFields:
     estimatedDistance:

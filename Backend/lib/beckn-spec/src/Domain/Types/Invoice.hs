@@ -9,11 +9,17 @@ import Kernel.Prelude
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
-data InvoiceType = SubscriptionPurchase | Ride | RideCancellation | BapRide
+data InvoiceType = SubscriptionPurchase | Ride | RideCancellation | Commission
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnumAndList ''InvoiceType)
 $(mkHttpInstancesForEnum ''InvoiceType)
+
+data IssuedToType = DRIVER | RIDER | CUSTOMER | FLEET_OWNER
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(mkBeamInstancesForEnumAndList ''IssuedToType)
+$(mkHttpInstancesForEnum ''IssuedToType)
 
 data DateOrTime
   = DateOnly DT.Day

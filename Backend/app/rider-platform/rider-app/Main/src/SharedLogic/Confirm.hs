@@ -470,6 +470,14 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           commission = Nothing,
           selectedOfferId = quote.selectedOfferId,
           offersFraudCheckFailureReason = Nothing,
+          issuedById = Nothing,
+          issuedByName = Nothing,
+          issuedByAddress = Nothing,
+          supplierName = Nothing,
+          supplierAddress = Nothing,
+          supplierGSTIN = Nothing,
+          supplierTaxNo = Nothing,
+          supplierId = Nothing,
           ..
         },
       bookingParties

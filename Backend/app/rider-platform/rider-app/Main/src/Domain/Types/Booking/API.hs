@@ -568,32 +568,42 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
     Nothing -> pure Nothing
     Just _ -> do
       -- Future this can be a findAll query too, if supporting more than one offer per booking/ride
+      mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       mbOfferEntity <-
         if status `notElem` [DRide.COMPLETED, DRide.CANCELLED]
-          then QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
-          else QOfferEntity.findByEntityIdAndEntityType id.getId DOfferEntity.RIDE |<|>| QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
+          then pure mbBookingOfferEntity
+          else QOfferEntity.findByEntityIdAndEntityType id.getId DOfferEntity.RIDE |<|>| pure mbBookingOfferEntity
+      let currency = booking.estimatedFare.currency
+          mkPriceEntity = mkPriceAPIEntity . mkPrice (Just currency)
       case mbOfferEntity of
         Just offerEntity ->
-          return $
-            Just $
-              SOffer.OffersRespAPIEntity
-                { offers =
-                    [ SOffer.OfferRespAPIEntity
-                        { offerId = offerEntity.offerId,
-                          offerTitle = offerEntity.offerTitle,
-                          offerDescription = offerEntity.offerDescription,
-                          offerTnc = offerEntity.offerTnc,
-                          offerSponsoredBy = offerEntity.offerSponsoredBy,
-                          offerCode = offerEntity.offerCode,
-                          autoApply = offerEntity.autoApply,
-                          isHidden = offerEntity.isHidden,
-                          amountSaved = offerEntity.amountSaved,
-                          postOfferAmount = offerEntity.postOfferAmount
-                        }
-                    ],
-                  totalAmountSaved = offerEntity.amountSaved,
-                  totalPostOfferAmount = offerEntity.postOfferAmount
-                }
+          let estimatedOfferEntity = fromMaybe offerEntity mbBookingOfferEntity
+           in return $
+                Just $
+                  SOffer.OffersRespAPIEntity
+                    { offers =
+                        [ SOffer.OfferRespAPIEntity
+                            { offerId = offerEntity.offerId,
+                              offerTitle = offerEntity.offerTitle,
+                              offerDescription = offerEntity.offerDescription,
+                              offerTnc = offerEntity.offerTnc,
+                              offerSponsoredBy = offerEntity.offerSponsoredBy,
+                              offerCode = offerEntity.offerCode,
+                              autoApply = offerEntity.autoApply,
+                              isHidden = offerEntity.isHidden,
+                              amountSaved = offerEntity.amountSaved,
+                              postOfferAmount = offerEntity.postOfferAmount,
+                              estimatedAmountSaved = estimatedOfferEntity.amountSaved,
+                              estimatedPostOfferAmount = estimatedOfferEntity.postOfferAmount
+                            }
+                        ],
+                      totalAmountSaved = offerEntity.amountSaved,
+                      totalPostOfferAmount = offerEntity.postOfferAmount,
+                      totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
+                      totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
+                      estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
+                      estimatedPostOfferAmountV2 = mkPriceEntity estimatedOfferEntity.postOfferAmount
+                    }
         Nothing -> return Nothing
   return $
     RideAPIEntity

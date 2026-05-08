@@ -69,6 +69,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
           Nothing
           (Just personId.getId)
           Nothing
+          Nothing
           (if isJust mbFrom || isJust mbTo then Nothing else mbLimit <|> Just 1)
           (mbOffset <|> Just 0)
 

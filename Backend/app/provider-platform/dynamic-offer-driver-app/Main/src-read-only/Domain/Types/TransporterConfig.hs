@@ -414,6 +414,7 @@ data DriverWalletConfig = DriverWalletConfig
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
+    onlineCommissionPaidOutDirectly :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     payoutCutOffDays :: Kernel.Prelude.Int,
     payoutFee :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.PayoutFeeConfig
   }
@@ -429,7 +430,12 @@ data GstBreakup = GstBreakup
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data InvoiceConfig = InvoiceConfig {driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool, emitLedgerEntries :: Kernel.Prelude.Bool, logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl}
+data InvoiceConfig = InvoiceConfig
+  { driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
+    emitLedgerEntries :: Kernel.Prelude.Bool,
+    logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
+    showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Eq)
 
 data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfig.PayoutFeeType, feeValue :: Kernel.Types.Common.HighPrecMoney}

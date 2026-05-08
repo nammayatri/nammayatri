@@ -17,6 +17,7 @@ module Lib.Finance.Invoice.InvoiceNumber
     purposeCancellation,
     purposeSubscription,
     purposeDebtSettlement,
+    purposeCommission,
   )
 where
 
@@ -29,13 +30,14 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, nominalDiffTim
 import Prelude (length, replicate)
 
 -- | Purpose abbreviations
-purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement :: Text
+purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement, purposeCommission :: Text
 purposeRideFare = "RF"
 purposeTip = "T"
 purposeRideTip = "TRF"
 purposeCancellation = "C"
 purposeSubscription = "S"
 purposeDebtSettlement = "DS"
+purposeCommission = "CM"
 
 -- | Generate invoice number
 -- Format: DDMMYY-PURPOSE-XXXXXX

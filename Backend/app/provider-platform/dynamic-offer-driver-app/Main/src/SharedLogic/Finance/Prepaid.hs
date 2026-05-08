@@ -28,7 +28,7 @@ import Data.Aeson (Value)
 import qualified Data.List as DL
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
@@ -53,7 +53,7 @@ import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 -- | Optional parameters for creating a finance invoice during prepaid balance credit
 data InvoiceCreationParams = InvoiceCreationParams
   { paymentOrderId :: Text,
-    issuedToType :: Text,
+    issuedToType :: IssuedToType,
     issuedToName :: Maybe Text,
     issuedToAddress :: Maybe Text,
     issuedByType :: Text,

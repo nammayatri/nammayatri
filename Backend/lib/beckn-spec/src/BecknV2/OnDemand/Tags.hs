@@ -103,6 +103,7 @@ data BecknTagGroup
   | OFFER_INFO
   | BOOKING_INFO
   | EMAIL_DOMAIN_INFO
+  | BPP_INVOICE_INFO
   | -- v2.1.0 tag groups
     FEATURE_LIST -- item features (AC, etc.)
   | DISABILITY_VIS -- visual disability
@@ -567,6 +568,14 @@ data BecknTag
   | SETTLEMENT_BANK_CODE -- BAP_TERMS/BPP_TERMS: bank IFSC code
   | SETTLEMENT_BANK_ACCOUNT_NUMBER -- BAP_TERMS/BPP_TERMS: bank account number
   | SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS -- BAP_TERMS/BPP_TERMS: UPI VPA
+  | ISSUED_BY_ID -- BPP_INVOICE_INFO: BPP merchant ID
+  | ISSUED_BY_NAME -- BPP_INVOICE_INFO: BPP / fleet display name
+  | ISSUED_BY_ADDRESS -- BPP_INVOICE_INFO: BPP / fleet formatted address
+  | SUPPLIER_NAME -- BPP_INVOICE_INFO: supplier (fleet/merchant) display name
+  | SUPPLIER_ADDRESS -- BPP_INVOICE_INFO: supplier formatted address
+  | SUPPLIER_GSTIN -- BPP_INVOICE_INFO: supplier GSTIN
+  | SUPPLIER_TAX_NO -- BPP_INVOICE_INFO: supplier VAT/tax registration number
+  | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -865,6 +874,15 @@ instance CompleteTag BecknTag where
     SETTLEMENT_BANK_CODE -> BPP_TERMS
     SETTLEMENT_BANK_ACCOUNT_NUMBER -> BPP_TERMS
     SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS -> BPP_TERMS
+    -- BPP invoice info: provider/supplier metadata propagated to BAP at on_confirm
+    ISSUED_BY_ID -> BPP_INVOICE_INFO
+    ISSUED_BY_NAME -> BPP_INVOICE_INFO
+    ISSUED_BY_ADDRESS -> BPP_INVOICE_INFO
+    SUPPLIER_NAME -> BPP_INVOICE_INFO
+    SUPPLIER_ADDRESS -> BPP_INVOICE_INFO
+    SUPPLIER_GSTIN -> BPP_INVOICE_INFO
+    SUPPLIER_TAX_NO -> BPP_INVOICE_INFO
+    SUPPLIER_ID -> BPP_INVOICE_INFO
 
 convertToSentence :: Show a => a -> Text
 convertToSentence = T.pack . toSentence . show

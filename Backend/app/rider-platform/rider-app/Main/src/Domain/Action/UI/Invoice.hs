@@ -5,7 +5,7 @@ module Domain.Action.UI.Invoice
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
-import Domain.Types.Invoice (InvoiceType)
+import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -107,7 +107,7 @@ getInvoiceList (mbPersonId, _) mbInvoiceType mbLimit mbOffset mbReferenceId = do
   let riderIdText = personId.getId
       limit = min 20 . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  allInvoices <- InvoiceSvc.findByIssuedTo "RIDER" riderIdText
+  allInvoices <- InvoiceSvc.findByIssuedTo RIDER riderIdText
   filteredByRef <- case mbReferenceId of
     Nothing -> pure allInvoices
     Just refId -> do
