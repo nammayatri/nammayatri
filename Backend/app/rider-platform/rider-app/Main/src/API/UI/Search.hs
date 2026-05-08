@@ -214,10 +214,10 @@ getDoMultimodalSearch = \case
   DSearch.PTSearch DSearch.PublicTransportSearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.FixedRouteSearch DSearch.FixedRouteSearchReq {doMultimodalSearch} -> doMultimodalSearch
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> FlowHandler DSearch.SearchResp
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> FlowHandler SearchResp
 search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType mbNewServiceTiers = withFlowHandlerAPIPersonId personId . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType mbNewServiceTiers
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Flow DSearch.SearchResp
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Flow SearchResp
 search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers = withPersonIdLogTag personId $ do
   let isDashboardRequest = fromMaybe False mbIsDashboardRequest
   unless isDashboardRequest $ checkSearchRateLimit personId
@@ -271,7 +271,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
       return $ isNonScheduled && isValid
 
 syncSearchTimeoutMicros :: ET.Microseconds
-syncSearchTimeoutMicros = ET.Microseconds 10000000 -- 10 seconds
+syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
 dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
 dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2 = do
