@@ -203,13 +203,15 @@ getQuotes searchRequestId mbAllowMultiple = do
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
         defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
-        estimates = estimatesSorting estimates' (mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig) defaultServiceTierOrderConfig
+        mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
+        estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
+        sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
     return $
       GetQuotesRes
         { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
           toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
           stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
-          quotes = offers,
+          quotes = sortedQuotes,
           estimates,
           paymentMethods = [],
           allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
@@ -470,6 +472,18 @@ estimatesSorting :: [UEstimate.EstimateAPIEntity] -> Maybe VehicleServiceTierOrd
 estimatesSorting list Nothing order = sortBy (comparing (\estimate -> vehicleOrderIndex order estimate.serviceTierType)) list
 estimatesSorting list (Just config) _ =
   sortBy (comparing (\estimate -> vehicleOrderIndex config.orderArray estimate.serviceTierType)) list
+
+quotesSorting :: [OfferRes] -> Maybe VehicleServiceTierOrderConfig -> [DVST.ServiceTierType] -> [OfferRes]
+quotesSorting list mbConfig defaultOrder =
+  let order = maybe defaultOrder (.orderArray) mbConfig
+   in sortBy (comparing (offerVehicleOrderIndex order)) list
+  where
+    offerVehicleOrderIndex order = \case
+      OnDemandCab q -> vehicleOrderIndex order q.vehicleVariant
+      OnRentalCab q -> vehicleOrderIndex order q.vehicleVariant
+      OnMeterRide q -> vehicleOrderIndex order q.vehicleVariant
+      Metro _ -> maxBound
+      PublicTransport _ -> maxBound
 
 vehicleOrderIndex :: [DVST.ServiceTierType] -> DVST.ServiceTierType -> Int
 vehicleOrderIndex order v =
