@@ -52,7 +52,8 @@ data BankAccountLinkResp = BankAccountLinkResp
     accountUrlExpiry :: Kernel.Prelude.UTCTime,
     chargesEnabled :: Kernel.Prelude.Bool,
     detailsSubmitted :: Kernel.Prelude.Bool,
-    paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode
+    paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
+    payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -62,6 +63,7 @@ data BankAccountResp = BankAccountResp
     detailsSubmitted :: Kernel.Prelude.Bool,
     futureRequirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo,
     paymentMode :: Domain.Types.Extra.MerchantPaymentMethod.PaymentMode,
+    payoutsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     requirements :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.RequirementsInfo
   }
   deriving stock (Generic)
