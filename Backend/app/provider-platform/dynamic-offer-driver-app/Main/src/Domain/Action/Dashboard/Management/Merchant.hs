@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyUpsert,
     getMerchantConfigFarePolicyExport,
     getMerchantConfigFarePolicyDetails,
+    getMerchantConfigFareProductList,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
     postMerchantConfigSpecialLocationUpsert,
@@ -1971,6 +1972,34 @@ getMerchantConfigFarePolicyDetails _ _ reqFarePolicyId = do
     toApiNightShiftCharge curr = \case
       FarePolicy.ProgressiveNightShiftCharge v -> Common.ProgressiveNightShiftCharge v
       FarePolicy.ConstantNightShiftCharge v -> Common.ConstantNightShiftChargeWithCurrency (PriceAPIEntity {amount = v, currency = curr})
+
+getMerchantConfigFareProductList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  SL.Area ->
+  Bool ->
+  TripCategory ->
+  Flow Common.FareProductListRes
+getMerchantConfigFareProductList merchantShortId opCity area enabled tripCategory = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <-
+    CQMOC.findByMerchantIdAndCity merchant.id opCity
+      >>= fromMaybeM
+        (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  fareProducts <-
+    SQF.findAllByMerchantOpCityIdAreaTripCategoryEnabled
+      merchantOpCity.id
+      area
+      tripCategory
+      enabled
+  pure $ Common.FareProductListRes {fareProducts = mkItem <$> fareProducts}
+  where
+    mkItem fp =
+      Common.FareProductListItem
+        { farePolicyId = fp.farePolicyId.getId,
+          timeBounds = fp.timeBounds,
+          vehicleVariant = fp.vehicleServiceTier
+        }
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity = do

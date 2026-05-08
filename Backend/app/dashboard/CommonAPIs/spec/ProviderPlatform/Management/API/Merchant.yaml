@@ -44,6 +44,8 @@ imports:
   SpecialLocationType: Lib.Types.SpecialLocation
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
   Area: Lib.Types.SpecialLocation
+  TimeBound: Kernel.Types.TimeBound
+  TripCategory: Dashboard.Common
 
 module: Merchant
 
@@ -352,6 +354,15 @@ apis:
         farePolicyId: Id FarePolicy
       response:
         type: FarePolicyDetailsResp
+  - GET: # FareProductListAPI
+      endpoint: /config/fareProduct/list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        tripCategory: TripCategory
+        area: Area
+        enabled: Bool
+      response:
+        type: FareProductListRes
   - POST: # CreateMerchantOperatingCityAPI
       endpoint: /config/operatingCity/create
       auth: ApiAuthV2
@@ -975,6 +986,12 @@ types:
     - deadKmFare: Maybe HighPrecMoney
     - waitingChargeInfo: Maybe WaitingChargeInfoAPIEntity
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
+  FareProductListItem:
+    - farePolicyId: Text
+    - timeBounds: TimeBound
+    - vehicleVariant: ServiceTierType
+  FareProductListRes:
+    - fareProducts: "[FareProductListItem]"
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes
     - waitingCharge: WaitingChargeAPIEntity
