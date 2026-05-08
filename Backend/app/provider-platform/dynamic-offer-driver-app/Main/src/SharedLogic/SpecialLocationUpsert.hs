@@ -93,7 +93,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoMaxDriverThresholdsJson :: Maybe Text,
     gateInfoDemandThresholdsJson :: Maybe Text,
     gateInfoId :: Maybe Text,
-    gateInfoNotificationActiveTillInSec :: Maybe Text
+    gateInfoNotificationActiveTillInSec :: Maybe Text,
+    render :: Maybe Text
   }
   deriving (Show)
 
@@ -136,6 +137,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_demand_thresholds")
       <*> optional (r .: "gate_info_id")
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
+      <*> optional (r .: "render")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -240,6 +242,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   let priority :: Maybe Int = readMaybeCSVField idx row.priority "Priority"
       mbIsQueueEnabled :: Maybe Bool = readMaybeCSVField idx (fromMaybe "" row.isQueueEnabled) "Is Queue Enabled"
       supportNumber :: Maybe Text = cleanMaybeCSVField idx (fromMaybe "" row.supportNumber) "Support Number"
+      mbRender :: Maybe DSL.RenderType = readMaybeCSVField idx (fromMaybe "" row.render) "Render"
   pickupPriority :: Int <- readCSVField idx row.pickupPriority "Pickup Priority"
   dropPriority :: Int <- readCSVField idx row.dropPriority "Drop Priority"
   gateInfoId <- maybe generateGUID (pure . Id) (cleanField =<< row.gateInfoId)
@@ -280,6 +283,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
             enforceTollRoute = Nothing,
+            render = mbRender,
             supportNumber = supportNumber
           }
       gateInfo =
@@ -414,8 +418,7 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
 mergeSpecialLocationWithExisting :: DSL.SpecialLocation -> Maybe DSL.SpecialLocation -> DSL.SpecialLocation
 mergeSpecialLocationWithExisting new Nothing = new
 mergeSpecialLocationWithExisting new (Just old) =
-  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled,
-      DSL.supportNumber = new.supportNumber <|> old.supportNumber
+  new{DSL.isQueueEnabled = new.isQueueEnabled <|> old.isQueueEnabled
      }
 
 mergeGateInfoWithExisting :: DGI.GateInfo -> Maybe DGI.GateInfo -> DGI.GateInfo

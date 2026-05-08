@@ -26,6 +26,7 @@ deriving instance Read Domain.GatesInfo
 
 derivePersistField "Domain.GatesInfo"
 derivePersistField "Domain.SpecialLocationType"
+derivePersistField "Domain.RenderType"
 
 mkPersist
   defaultSqlSettings
@@ -40,6 +41,7 @@ mkPersist
       linkedLocationsIds (PostgresList Text),
       locationType Domain.SpecialLocationType
       geom Text Maybe
+      render Domain.RenderType Maybe
       priority Int
       enabled Bool
       isOpenMarketEnabled Bool Maybe
