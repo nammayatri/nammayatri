@@ -36,23 +36,22 @@ fetchSettlementCsv ::
   Text ->
   m (Either Text (LBS.ByteString, Maybe SftpFetchMeta, Maybe SplitSettlementCustomerType))
 fetchSettlementCsv SettlementServiceConfig {..} merchantId merchantOperatingCityId =
-  let mbParserMap = Just parserTypeMap
-   in case sourceConfig of
-        EmailSourceConfig emailCfg -> do
-          eCsv <- EmailSource.fetchSettlementFile emailCfg
-          pure $ case eCsv of
-            Left err -> Left err
-            Right bs ->
-              let ty = resolveSplitCustomerType mbParserMap (fromMaybe "" emailCfg.subjectFilter)
-               in Right (bs, Nothing, Just ty)
-        SFTPSourceConfig sftpCfg _unusedFragmentFromKernel -> do
-          eCsv <-
-            SFTPSource.fetchSettlementFile
-              merchantId
-              merchantOperatingCityId
-              (settlementServiceToPaymentGatewayName settlementService)
-              mbParserMap
-              sftpCfg
-          pure $ case eCsv of
-            Left err -> Left err
-            Right (bs, meta, splitTy) -> Right (bs, Just meta, Just splitTy)
+  case sourceConfig of
+    EmailSourceConfig emailCfg -> do
+      eCsv <- EmailSource.fetchSettlementFile emailCfg
+      pure $ case eCsv of
+        Left err -> Left err
+        Right bs ->
+          let ty = resolveSplitCustomerType parserTypeMap (fromMaybe "" emailCfg.subjectFilter)
+           in Right (bs, Nothing, Just ty)
+    SFTPSourceConfig sftpCfg _unusedFragmentFromKernel -> do
+      eCsv <-
+        SFTPSource.fetchSettlementFile
+          merchantId
+          merchantOperatingCityId
+          (settlementServiceToPaymentGatewayName settlementService)
+          parserTypeMap
+          sftpCfg
+      pure $ case eCsv of
+        Left err -> Left err
+        Right (bs, meta, splitTy) -> Right (bs, Just meta, Just splitTy)

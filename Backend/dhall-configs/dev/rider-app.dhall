@@ -286,6 +286,7 @@ let RiderJobType =
       | FRFSSeatHoldReaper
       | DailyPassStatusUpdate
       | PassExpiryReminderMaster
+      | SettlementReportIngestion
       >
 
 let jobInfoMapx =
@@ -331,6 +332,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.FRFSSeatHoldReaper, mapValue = True }
       , { mapKey = RiderJobType.DailyPassStatusUpdate, mapValue = True }
       , { mapKey = RiderJobType.PassExpiryReminderMaster, mapValue = True }
+      , { mapKey = RiderJobType.SettlementReportIngestion, mapValue = True }
       ]
 
 let cacConfig =
@@ -468,7 +470,7 @@ in  { esqDBCfg
     , enablePrometheusMetricLogging = True
     , eventStreamMap = eventStreamMappings
     , kvConfigUpdateFrequency
-    , incomingAPIResponseTimeout = +600
+    , incomingAPIResponseTimeout = +15
     , maxShards = +5
     , jobInfoMapx
     , internalEndPointMap = common.internalEndPointMap

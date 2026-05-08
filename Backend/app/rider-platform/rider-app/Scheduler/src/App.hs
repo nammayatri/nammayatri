@@ -68,6 +68,7 @@ import "rider-app" SharedLogic.Scheduler.Jobs.SafetyCSAlert
 import "rider-app" SharedLogic.Scheduler.Jobs.SafetyIVR
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
+import "rider-app" SharedLogic.Scheduler.Jobs.SettlementReportIngestion
 import "rider-app" SharedLogic.Scheduler.Jobs.UnblockCustomer
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCRISRDSBalance
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
@@ -129,6 +130,7 @@ schedulerHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . frfsSeatHoldReaper)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . partnerInvoiceDataExportJob)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . dailyPassStatusUpdate)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . runSettlementReportIngestionJob)
     }
 
 runRiderAppScheduler ::

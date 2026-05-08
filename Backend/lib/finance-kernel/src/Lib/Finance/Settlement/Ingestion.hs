@@ -10,7 +10,7 @@ import qualified EulerHS.Language as L
 import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Settlement.Interface (parseAndEnrichPaymentSettlementCsv)
 import Kernel.External.Settlement.Interface.Types (ParsePaymentSettlementResult, ParseResult (..))
-import Kernel.External.Settlement.Types (SettlementServiceConfig (..))
+import Kernel.External.Settlement.Types (JuspayOrderStatusConfig, SettlementServiceConfig (..))
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Utils.Common (logInfo, logWarning)
@@ -43,10 +43,11 @@ ingestPaymentSettlementReport ::
     MonadReader r m
   ) =>
   SettlementServiceConfig ->
+  Maybe JuspayOrderStatusConfig ->
   Text ->
   Text ->
   m IngestionResult
-ingestPaymentSettlementReport cfg merchantId merchantOperatingCityId = do
+ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId = do
   logInfo $ "Starting settlement report ingestion for merchant: " <> merchantId
   fetchResult <- fetchSettlementCsv cfg merchantId merchantOperatingCityId
   case fetchResult of
@@ -65,27 +66,50 @@ ingestPaymentSettlementReport cfg merchantId merchantOperatingCityId = do
       logDebug $ "ingestPaymentSettlementReport: csvBytes=" <> show csvBytes
       logDebug $ "ingestPaymentSettlementReport: mbSftpMeta=" <> show mbSftpMeta
       logDebug $ "ingestPaymentSettlementReport: mbSplitCustomerTy=" <> show mbSplitCustomerTy
-      parseResult <- parseAndEnrichPaymentSettlementCsv cfg mbSplitCustomerTy csvBytes
+      let sftpDeliveredZeroRows = case mbSftpMeta of
+            Just meta -> meta.dataRowsDelivered == 0
+            Nothing -> False
+      parseResult <-
+        if sftpDeliveredZeroRows
+          then do
+            logInfo "SFTP delivered 0 data rows past cursor; skipping parse and treating file as complete"
+            pure $ ParseResult {reports = [], totalRows = 0, failedRows = 0, errors = []}
+          else parseAndEnrichPaymentSettlementCsv cfg mbJuspayCfg mbSplitCustomerTy csvBytes
       let parseHadNoReports = null (reports parseResult)
+          parseHadErrors = not (null (errors parseResult)) || failedRows parseResult > 0
       result <-
         if parseHadNoReports
-          then do
-            logWarning $
-              "Failed to parse settlement CSV (no rows to ingest). parseErrors="
-                <> show (errors parseResult)
-                <> ", totalRows="
-                <> show (totalRows parseResult)
-                <> ", failedRows="
-                <> show (failedRows parseResult)
-            pure
-              IngestionResult
-                { totalParsed = totalRows parseResult,
-                  totalStored = 0,
-                  totalDuplicates = 0,
-                  totalFailed = max 1 (failedRows parseResult + length (errors parseResult)),
-                  parseErrors = errors parseResult,
-                  storeErrors = []
-                }
+          then
+            if parseHadErrors
+              then do
+                logWarning $
+                  "Failed to parse settlement CSV (no rows to ingest). parseErrors="
+                    <> show (errors parseResult)
+                    <> ", totalRows="
+                    <> show (totalRows parseResult)
+                    <> ", failedRows="
+                    <> show (failedRows parseResult)
+                pure
+                  IngestionResult
+                    { totalParsed = totalRows parseResult,
+                      totalStored = 0,
+                      totalDuplicates = 0,
+                      totalFailed = max 1 (failedRows parseResult + length (errors parseResult)),
+                      parseErrors = errors parseResult,
+                      storeErrors = []
+                    }
+              else do
+                -- Empty payload from fetch (or CSV with header only). Treat as success: nothing to ingest.
+                logInfo "Settlement CSV had no rows to ingest; marking file as complete"
+                pure
+                  IngestionResult
+                    { totalParsed = 0,
+                      totalStored = 0,
+                      totalDuplicates = 0,
+                      totalFailed = 0,
+                      parseErrors = [],
+                      storeErrors = []
+                    }
           else storeParseResult merchantId merchantOperatingCityId parseResult
       finalizeSftpFileCursor mbSftpMeta parseHadNoReports
       pure result

@@ -34,6 +34,8 @@ SettlementFileInfo:
 
   constraints:
     id: PrimaryKey
+    paymentGatewayName: "!SecondaryKey"
+    fileName: "!SecondaryKey"
 
   queries:
     findById:

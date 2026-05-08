@@ -29,6 +29,6 @@ instance B.Table SettlementFileInfoT where
 
 type SettlementFileInfo = SettlementFileInfoT Identity
 
-$(enableKVPG (''SettlementFileInfoT) [('id)] [])
+$(enableKVPG (''SettlementFileInfoT) [('id)] [[('fileName)], [('paymentGatewayName)]])
 
 $(mkTableInstancesGenericSchema (''SettlementFileInfoT) "settlement_file_info")

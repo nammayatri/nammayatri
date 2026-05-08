@@ -24,6 +24,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantServiceConfig (ServiceName)
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
@@ -73,6 +74,7 @@ data RiderJobType
   | FRFSSeatHoldReaper
   | DailyPassStatusUpdate
   | PassExpiryReminderMaster
+  | SettlementReportIngestion
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -118,6 +120,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SFRFSSeatHoldReaper jobData = AnyJobInfo <$> restoreJobInfo SFRFSSeatHoldReaper jobData
   restoreAnyJobInfo SDailyPassStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SDailyPassStatusUpdate jobData
   restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
+  restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -453,3 +456,14 @@ data DailyPassStatusUpdateJobData = DailyPassStatusUpdateJobData
 instance JobInfoProcessor 'DailyPassStatusUpdate
 
 type instance JobContent 'DailyPassStatusUpdate = DailyPassStatusUpdateJobData
+
+data SettlementReportIngestionJobData = SettlementReportIngestionJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    juspayServiceName :: Maybe ServiceName
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SettlementReportIngestion
+
+type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
