@@ -6,6 +6,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.SpecialZoneQueueRequest
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
@@ -15,8 +16,11 @@ data SpecialZoneQueueRequestListRes = SpecialZoneQueueRequestListRes {currentSki
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SpecialZoneQueueRequestRes = SpecialZoneQueueRequestRes
-  { gateId :: Kernel.Prelude.Text,
+  { demandCount :: Kernel.Prelude.Int,
+    gateId :: Kernel.Prelude.Text,
     gateName :: Kernel.Prelude.Text,
+    isDemandHigh :: Kernel.Prelude.Bool,
+    perKmFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest,
     specialLocationId :: Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Text,
