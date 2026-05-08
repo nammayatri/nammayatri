@@ -211,6 +211,14 @@ apis:
       response:
         type: NearbyResp
 
+  - GET: # RideCallCountAPI
+      endpoint: /{rideId}/callCount
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: RideCallCountRes
+
 types:
 
   RideListRes:
@@ -254,6 +262,9 @@ types:
   NearbyResp:
     - nearbyDriverCount: Maybe Int
     - nearbyCustomerCount: Maybe Int
+  RideCallCountRes:
+    - rideId: Id Ride
+    - callCount: Int
   WalletTransactionItem:
     - ledgerEntryId: Text
     - referenceType: Text
