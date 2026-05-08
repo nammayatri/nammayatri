@@ -75,7 +75,7 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
   -- Get skip count from driver's current location's special location
   mbDriverLoc <- LTSFlow.driversLocation [personId]
   mbSpecialLoc <- case mbDriverLoc of
-    (loc : _) -> Esq.runInReplica $ LQSL.findSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
+    (loc : _) -> LQSL.findSpecialLocationByLatLongFull (LatLong loc.lat loc.lon)
     [] -> pure Nothing
   (skipCount, maxSkips) <- case mbSpecialLoc of
     Just specialLoc -> do
@@ -103,7 +103,7 @@ getSpecialZoneQueueRequest (mbPersonId, _merchantId, _merchantOpCityId) = do
                 -- Driver let the request expire without responding — count this
                 -- as a true queue skip and remove them from the LTS queue if
                 -- they've hit the gate's skip threshold.
-                mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id req.gateId)
+                mbGate <- QGI.findById (Kernel.Types.Id.Id req.gateId)
                 SpecialZoneDriverDemand.incrementSkipAndCheckThreshold
                   req.specialLocationId
                   req.vehicleType
@@ -146,7 +146,7 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
     when (request.validTill < now) $ throwError (InvalidRequest "Request has expired")
     -- Fetched once and reused so both Accept (arrival timeout) and Reject
     -- (skip threshold) branches read the same gate snapshot.
-    mbGate <- Esq.runInReplica $ QGI.findById (Kernel.Types.Id.Id request.gateId)
+    mbGate <- QGI.findById (Kernel.Types.Id.Id request.gateId)
     case req.response of
       Domain.Types.SpecialZoneQueueRequest.Accept -> do
         let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate

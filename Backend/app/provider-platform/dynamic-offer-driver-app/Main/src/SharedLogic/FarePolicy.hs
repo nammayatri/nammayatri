@@ -39,7 +39,6 @@ import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CH
-import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -117,7 +116,7 @@ getFarePolicyOnEndRide mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeoha
   return selectedFarePolicy
   where
     handleFarePolicy = do
-      dropSpecialLocation <- Esq.runInReplica (QSpecialLocation.findSpecialLocationByLatLong' toLocationLatLong) >>= mapM (FareProduct.getDropSpecialLocation merchantOpCityId)
+      dropSpecialLocation <- QSpecialLocation.findSpecialLocationByLatLong' toLocationLatLong >>= mapM (FareProduct.getDropSpecialLocation merchantOpCityId)
       let isDropSpecialLocation = (Just . SL.Drop . DSpecialLocation.id . fst) =<< dropSpecialLocation
           dropSpecialLocName = (.locationName) . fst <$> dropSpecialLocation
       selectedFarePolicy' <-

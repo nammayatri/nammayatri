@@ -534,6 +534,7 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   ( EncFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
     CoreMetrics m,
     MonadIO m,
     HasCoordinates a,

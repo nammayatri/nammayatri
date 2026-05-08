@@ -34,7 +34,6 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types hiding (geometry)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
@@ -97,7 +96,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
-      specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
+      specialLocationBody <- QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
       let mbEnforceFlag = filteredSpecialLocationBody >>= (.enforceTollRoute)
       when isOrigin $ case mbEnforceFlag of
