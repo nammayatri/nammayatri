@@ -5,6 +5,7 @@ module Lib.Payment.Domain.Types.PayoutOrder where
 
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -21,6 +22,7 @@ data PayoutOrderE e = PayoutOrder
     customerId :: Kernel.Prelude.Text,
     entityIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     entityName :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName,
+    externalPayoutStatus :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.ExternalPayoutStatus,
     id :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder,
     idAssignedByServiceProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lastStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -34,7 +36,8 @@ data PayoutOrderE e = PayoutOrder
     responseMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     retriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder),
-    status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
+    status :: Kernel.External.Payout.Interface.Types.PayoutOrderStatus,
+    transferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
@@ -59,6 +62,7 @@ instance EncryptedItem PayoutOrder where
           customerId = customerId entity,
           entityIds = entityIds entity,
           entityName = entityName entity,
+          externalPayoutStatus = externalPayoutStatus entity,
           id = id entity,
           idAssignedByServiceProvider = idAssignedByServiceProvider entity,
           lastStatusCheckedAt = lastStatusCheckedAt entity,
@@ -73,6 +77,7 @@ instance EncryptedItem PayoutOrder where
           retriedOrderId = retriedOrderId entity,
           shortId = shortId entity,
           status = status entity,
+          transferId = transferId entity,
           updatedAt = updatedAt entity,
           vpa = vpa entity
         }
@@ -89,6 +94,7 @@ instance EncryptedItem PayoutOrder where
             customerId = customerId entity,
             entityIds = entityIds entity,
             entityName = entityName entity,
+            externalPayoutStatus = externalPayoutStatus entity,
             id = id entity,
             idAssignedByServiceProvider = idAssignedByServiceProvider entity,
             lastStatusCheckedAt = lastStatusCheckedAt entity,
@@ -103,6 +109,7 @@ instance EncryptedItem PayoutOrder where
             retriedOrderId = retriedOrderId entity,
             shortId = shortId entity,
             status = status entity,
+            transferId = transferId entity,
             updatedAt = updatedAt entity,
             vpa = vpa entity
           },

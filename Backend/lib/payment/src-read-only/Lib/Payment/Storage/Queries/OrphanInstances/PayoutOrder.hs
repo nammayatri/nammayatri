@@ -27,6 +27,7 @@ instance FromTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.Payout
             customerId = customerId,
             entityIds = entityIds,
             entityName = entityName,
+            externalPayoutStatus = externalPayoutStatus,
             id = Kernel.Types.Id.Id id,
             idAssignedByServiceProvider = idAssignedByServiceProvider,
             lastStatusCheckedAt = lastStatusCheckedAt,
@@ -41,6 +42,7 @@ instance FromTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.Payout
             retriedOrderId = retriedOrderId,
             shortId = Kernel.Types.Id.ShortId <$> shortId,
             status = status,
+            transferId = transferId,
             updatedAt = updatedAt,
             vpa = vpa
           }
@@ -58,6 +60,7 @@ instance ToTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.PayoutOr
         Beam.customerId = customerId,
         Beam.entityIds = entityIds,
         Beam.entityName = entityName,
+        Beam.externalPayoutStatus = externalPayoutStatus,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.idAssignedByServiceProvider = idAssignedByServiceProvider,
         Beam.lastStatusCheckedAt = lastStatusCheckedAt,
@@ -73,6 +76,7 @@ instance ToTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.PayoutOr
         Beam.retriedOrderId = retriedOrderId,
         Beam.shortId = Kernel.Types.Id.getShortId <$> shortId,
         Beam.status = status,
+        Beam.transferId = transferId,
         Beam.updatedAt = updatedAt,
         Beam.vpa = vpa
       }

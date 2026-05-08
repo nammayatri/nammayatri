@@ -16,6 +16,7 @@ import Kernel.Utils.Common (fromMaybeM)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Action as PayoutUpdates
 import Lib.Payment.Domain.Types.Common (Merchant, Person)
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Lib.Payment.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPO
 
@@ -26,7 +27,7 @@ refreshPayoutStatus ::
   Id Merchant ->
   Id Person ->
   DPayment.PayoutStatusServiceReq ->
-  (Maybe Text -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
+  (DPayoutOrder.PayoutOrder -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
   (JPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
@@ -47,7 +48,7 @@ refreshPayoutStatusWithResponse ::
   ) =>
   Text ->
   DPayment.PayoutStatusServiceReq ->
-  (Maybe Text -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
+  (DPayoutOrder.PayoutOrder -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
   (JPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
@@ -55,8 +56,8 @@ refreshPayoutStatusWithResponse ::
   m IPayout.PayoutOrderStatusResp
 refreshPayoutStatusWithResponse orderId statusReq statusCall currentStatus mapStatus shouldUpdate onUpdate = do
   payoutOrder <- QPO.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
-  statusResp <- statusCall payoutOrder.idAssignedByServiceProvider statusReq
-  PayoutUpdates.payoutStatusUpdates statusResp.status orderId (Just statusResp)
+  statusResp <- statusCall payoutOrder statusReq
+  PayoutUpdates.payoutStatusUpdates orderId statusResp
   let newStatus = mapStatus statusResp.status
   when (shouldUpdate currentStatus newStatus) $
     onUpdate newStatus statusResp
