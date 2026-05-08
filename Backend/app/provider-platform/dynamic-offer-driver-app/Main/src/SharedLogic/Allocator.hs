@@ -26,6 +26,7 @@ import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MerchantServiceConfig (ServiceName)
 import qualified Domain.Types.Message as DMessage
 import Domain.Types.Overlay
 import qualified Domain.Types.Person as DP
@@ -531,7 +532,8 @@ type instance JobContent 'ScheduledBatchPayout = ScheduledBatchPayoutJobData
 
 data SettlementReportIngestionJobData = SettlementReportIngestionJobData
   { merchantId :: Id DM.Merchant,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    juspayServiceName :: Maybe ServiceName
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

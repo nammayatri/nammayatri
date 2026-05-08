@@ -10,9 +10,9 @@
  or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of the
 
  GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
- -}
+-}
 
-module SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
+module SharedLogic.Scheduler.Jobs.SettlementReportIngestion
   ( runSettlementReportIngestionJob,
   )
 where
@@ -27,7 +27,7 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService (..), SettlementServiceConfig)
+import Kernel.External.Settlement.Types (JuspayOrderStatusConfig (..), SettlementService, SettlementServiceConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -38,9 +38,10 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
-import SharedLogic.Allocator (AllocatorJobType (..), SettlementReportIngestionJobData (..))
+import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int
@@ -86,7 +87,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
         pure True -- success, nothing to do
       else do
         mbJuspayCfg <- case jobData.juspayServiceName of
-          Just svcName -> getJuspayOrderStatusConfig merchantOperatingCityId svcName
+          Just svcName -> getJuspayOrderStatusConfig merchantId merchantOperatingCityId svcName
           Nothing -> pure Nothing
         -- Process each service independently, catch errors per-service to avoid one failure blocking others
         results <- forM settlementConfigs $ \settlementSvcCfg -> do
@@ -127,14 +128,21 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
           pure Complete
   where
     getSettlementConfigs ::
-      (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+      (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
       Id DM.Merchant ->
       Id DMOC.MerchantOperatingCity ->
       m [SettlementServiceConfig]
-    getSettlementConfigs _mId mOpCityId = do
+    getSettlementConfigs mId mOpCityId = do
       let allSettlementServices = [minBound .. maxBound] :: [SettlementService]
       configs <- forM allSettlementServices $ \service -> do
-        mbConfig <- CQMSC.findByServiceAndCity (DMSC.SettlementService service) mOpCityId
+        mbConfig <-
+          getOneConfig
+            ( MerchantServiceConfigDimensions
+                { merchantId = mId.getId,
+                  merchantOperatingCityId = mOpCityId.getId,
+                  serviceName = Just (DMSC.SettlementService service)
+                }
+            )
         pure $ case mbConfig of
           Just cfg -> case cfg.serviceConfig of
             DMSC.SettlementServiceConfig settlementCfg -> Just settlementCfg
@@ -143,12 +151,20 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
       pure $ catMaybes configs
 
     getJuspayOrderStatusConfig ::
-      (BeamFlow m r, CacheFlow m r, EsqDBFlow m r) =>
+      (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Log m) =>
+      Id DM.Merchant ->
       Id DMOC.MerchantOperatingCity ->
       DMSC.ServiceName ->
       m (Maybe JuspayOrderStatusConfig)
-    getJuspayOrderStatusConfig mOpCityId svcName = do
-      mbCfg <- CQMSC.findByServiceAndCity svcName mOpCityId
+    getJuspayOrderStatusConfig mId mOpCityId svcName = do
+      mbCfg <-
+        getOneConfig
+          ( MerchantServiceConfigDimensions
+              { merchantId = mId.getId,
+                merchantOperatingCityId = mOpCityId.getId,
+                serviceName = Just svcName
+              }
+          )
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $
@@ -163,15 +179,18 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
     extractPaymentServiceConfig :: DMSC.ServiceConfig -> Maybe Payment.PaymentServiceConfig
     extractPaymentServiceConfig = \case
       DMSC.PaymentServiceConfig cfg -> Just cfg
-      DMSC.RentalPaymentServiceConfig cfg -> Just cfg
-      DMSC.CautioPaymentServiceConfig cfg -> Just cfg
+      DMSC.MetroPaymentServiceConfig cfg -> Just cfg
+      DMSC.BusPaymentServiceConfig cfg -> Just cfg
+      DMSC.BbpsPaymentServiceConfig cfg -> Just cfg
+      DMSC.MultiModalPaymentServiceConfig cfg -> Just cfg
+      DMSC.PassPaymentServiceConfig cfg -> Just cfg
+      DMSC.ParkingPaymentServiceConfig cfg -> Just cfg
       DMSC.MembershipPaymentServiceConfig cfg -> Just cfg
       DMSC.JuspayWalletServiceConfig cfg -> Just cfg
       _ -> Nothing
 
     scheduleNextIngestionJob ::
-      ( BeamFlow m r,
-        CacheFlow m r,
+      ( CacheFlow m r,
         EsqDBFlow m r,
         JobCreatorEnv r,
         HasSchemaName SchedulerJobT,
