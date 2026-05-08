@@ -2280,7 +2280,9 @@ getDriverRegistrationPayoutOrderStatus merchantShortId opCity driverId orderId =
         payments = Nothing,
         fulfillments = Nothing,
         customerId = Nothing,
-        idAssignedByServiceProvider = Nothing
+        idAssignedByServiceProvider = Nothing,
+        externalPayoutStatus = Nothing,
+        transferId = Nothing
       }
 
 mapTxnStatusToPayoutStatus :: Payment.TransactionStatus -> PayoutTypes.PayoutOrderStatus

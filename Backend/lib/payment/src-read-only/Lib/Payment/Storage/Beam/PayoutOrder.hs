@@ -7,6 +7,7 @@ import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -24,6 +25,7 @@ data PayoutOrderT f = PayoutOrderT
     customerId :: B.C f Kernel.Prelude.Text,
     entityIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     entityName :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName),
+    externalPayoutStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.ExternalPayoutStatus),
     id :: B.C f Kernel.Prelude.Text,
     idAssignedByServiceProvider :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -38,7 +40,8 @@ data PayoutOrderT f = PayoutOrderT
     responseMessage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     retriedOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    status :: B.C f Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
+    status :: B.C f Kernel.External.Payout.Interface.Types.PayoutOrderStatus,
+    transferId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }

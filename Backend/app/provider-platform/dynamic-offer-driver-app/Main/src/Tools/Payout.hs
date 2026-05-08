@@ -39,6 +39,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -64,11 +65,11 @@ payoutOrderStatus ::
   Id DMOC.MerchantOperatingCity ->
   Id DP.Person ->
   Maybe DDBA.DriverBankAccount ->
-  Maybe Text ->
+  DPayoutOrder.PayoutOrder ->
   DPayment.PayoutStatusServiceReq ->
   m Payout.PayoutOrderStatusResp
-payoutOrderStatus payoutServiceName merchantOperatingCityId personId mbPersonBankAccount idAssignedByServiceProvider serviceReq =
-  runWithServiceConfigAndName Payout.payoutOrderStatus (DPayment.mkPayoutOrderStatusReq idAssignedByServiceProvider) payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq
+payoutOrderStatus payoutServiceName merchantOperatingCityId personId mbPersonBankAccount payoutOrder serviceReq =
+  runWithServiceConfigAndName Payout.payoutOrderStatus (DPayment.mkPayoutOrderStatusReq payoutOrder) payoutServiceName merchantOperatingCityId personId mbPersonBankAccount serviceReq
 
 runWithServiceConfigAndName ::
   ServiceFlow m r =>
