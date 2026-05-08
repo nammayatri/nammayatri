@@ -68,12 +68,12 @@ processOnSearchPayload reqV2 mode = do
       let bppSubId = request.providerInfo.providerId
       Redis.whenWithLockRedis (onSearchLockKey messageId bppSubId) 60 $ do
         validatedRequest <- DOnSearch.validateRequest request searchRequest
-        fork "on search received pushing ondc logs" do
-          void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"
-        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId) (60 :: Int) (True :: Bool)
+        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId bppSubId) (30 :: Int) (True :: Bool)
         if not isFirst
-          then logInfo $ "OnSearch already persisted for txn " <> transactionId <> "; skipping duplicate"
+          then logInfo $ "OnSearch already persisted for txn " <> transactionId <>  " subId:" <> bppSubId <> "; skipping duplicate"
           else do
+            fork "on search received pushing ondc logs" do
+              void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"
             let runProcessing =
                   Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
                     DOnSearch.onSearch transactionId validatedRequest
@@ -87,5 +87,5 @@ onSearchLockKey msgId bppSubscriberId = "Customer:OnSearch:MessageId-" <> msgId 
 onSearchProcessingLockKey :: Text -> Text -> Text
 onSearchProcessingLockKey msgId bppSubscriberId = "Customer:OnSearch:Processing:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId
 
-onSearchHandledKey :: Text -> Text
-onSearchHandledKey txnId = "Customer:OnSearch:Handled:Txn-" <> txnId
+onSearchHandledKey :: Text -> Text -> Text
+onSearchHandledKey txnId bppSubId = "Customer:OnSearch:Handled:Txn-" <> txnId <> ":bpp-" <> bppSubId

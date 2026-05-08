@@ -278,7 +278,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
       return $ isNonScheduled && isValid
 
 syncSearchTimeoutMicros :: ET.Microseconds
-syncSearchTimeoutMicros = ET.Microseconds 10000000 -- 10 seconds
+syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
 dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
 dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2 = do
