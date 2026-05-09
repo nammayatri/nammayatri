@@ -207,7 +207,7 @@ getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier ar
     Just fp -> return (Just fp)
     Nothing
       | SL.hasGateId area -> do
-          let baseArea = SL.stripGateId area
-          baseFareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier baseArea
-          return $ listToMaybe (DTB.findBoundedDomain baseFareProducts currentIstTime)
+        let baseArea = SL.stripGateId area
+        baseFareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier baseArea
+        return $ listToMaybe (DTB.findBoundedDomain baseFareProducts currentIstTime)
     Nothing -> return Nothing

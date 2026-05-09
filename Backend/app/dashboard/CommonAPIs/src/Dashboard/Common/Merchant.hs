@@ -19,7 +19,6 @@ module Dashboard.Common.Merchant
 where
 
 import Control.Applicative ((<|>))
-import qualified Lib.Types.SpecialLocation as SLT
 import Dashboard.Common as Reexport
 import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
@@ -48,6 +47,7 @@ import Kernel.Types.Predicate
 import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified Lib.Types.SpecialLocation as SLT
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 ---------------------------------------------------------

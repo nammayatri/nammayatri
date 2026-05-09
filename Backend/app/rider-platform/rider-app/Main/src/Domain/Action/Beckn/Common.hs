@@ -20,9 +20,9 @@ module Domain.Action.Beckn.Common
   )
 where
 
-import Control.Applicative ((<|>))
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
@@ -146,9 +146,9 @@ import qualified Storage.Queries.RideExtra as QERIDE
 import Tools.Constants
 import Tools.Error
 import Tools.Event
+import qualified Tools.EventTracking as ET
 import Tools.Maps (LatLong (..))
 import Tools.Metrics (HasBAPMetrics, incrementRideCreatedRequestCount)
-import qualified Tools.EventTracking as ET
 import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as TPayment
 import qualified Tools.Payout as TP

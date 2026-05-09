@@ -148,9 +148,9 @@ instance Read Area where
         where
           sepLen = length sep
           go _ [] = Nothing
-          go acc rest@(c:cs)
+          go acc rest@(c : cs)
             | List.isPrefixOf sep rest = Just (reverse acc, List.drop sepLen rest)
-            | otherwise = go (c:acc) cs
+            | otherwise = go (c : acc) cs
 
 instance Show Area where
   show Default = "Default"

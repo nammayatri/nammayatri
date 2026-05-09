@@ -95,8 +95,8 @@ import qualified Toll.SharedLogic.TollsDetector as TollsDetector
 import Tools.DynamicLogic (getConfigVersionMapForStickiness)
 import Tools.Error
 import Tools.Event
-import qualified Tools.Maps as Maps
 import qualified Tools.EventTracking as ET
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Metrics.BAPMetrics.Types
 

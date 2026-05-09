@@ -104,8 +104,8 @@ import qualified Storage.Queries.SearchRequest as QSearchReq
 import qualified Tools.DynamicLogic as DynamicLogic
 import Tools.Error
 import Tools.Event
-import qualified Tools.Metrics as Metrics
 import qualified Tools.EventTracking as ET
+import qualified Tools.Metrics as Metrics
 
 data DOnSearchReq = DOnSearchReq
   { requestId :: Id DSearchReq.SearchRequest,

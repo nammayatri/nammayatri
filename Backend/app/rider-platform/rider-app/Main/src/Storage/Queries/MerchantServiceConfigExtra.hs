@@ -8,6 +8,8 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -23,8 +25,6 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
-import qualified Kernel.External.EventTracking as EventTracking
-import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp

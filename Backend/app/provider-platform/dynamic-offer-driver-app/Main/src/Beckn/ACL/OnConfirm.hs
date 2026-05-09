@@ -15,7 +15,6 @@
 module Beckn.ACL.OnConfirm (buildOnConfirmMessageV2, BPPInvoiceInfo (..), emptyBPPInvoiceInfo, resolveBPPInvoiceInfo) where
 
 import qualified Beckn.OnDemand.Utils.Common as Utils
-import Control.Applicative ((<|>))
 import BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Enums as Enum
 import qualified BecknV2.OnDemand.Tags as Tags
@@ -23,6 +22,7 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as UtilsV2
 import BecknV2.OnDemand.Utils.Constructors
 import BecknV2.OnDemand.Utils.Payment
+import Control.Applicative ((<|>))
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Confirm as DConfirm

@@ -1433,9 +1433,10 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
             let vendorSplitDetails = case booking.area of
                   Just area ->
                     let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
-                        baseAreaDetails = if null areaDetails && hasGateId area
-                                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetails
-                                            else areaDetails
+                        baseAreaDetails =
+                          if null areaDetails && hasGateId area
+                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetails
+                            else areaDetails
                      in if null baseAreaDetails
                           then DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
                           else baseAreaDetails

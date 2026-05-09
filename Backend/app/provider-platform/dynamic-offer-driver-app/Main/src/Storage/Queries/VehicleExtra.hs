@@ -25,7 +25,7 @@ import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import Storage.Queries.OrphanInstances.Vehicle ()
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r,Redis.HedisLTSFlowEnv r) => (Vehicle -> m ())
+create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => (Vehicle -> m ())
 create vehicle = do
   createWithKV vehicle
   whenJust vehicle.category $ \category -> QDriverInfoInternal.updateOnboardingVehicleCategory (Just category) vehicle.driverId
@@ -44,7 +44,7 @@ createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, R
 createMany = traverse_ create
 
 -- Extra code goes here --
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r,  Redis.HedisLTSFlowEnv r) => Vehicle -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Vehicle -> m ()
 upsert a@Vehicle {..} = do
   res <- findOneWithKV [Se.Is BeamV.registrationNo $ Se.Eq a.registrationNo]
   if isJust res

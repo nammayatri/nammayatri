@@ -4,13 +4,13 @@ import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
-import qualified Kernel.External.EventTracking as EventTracking
-import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Kernel.External.MultiModal.Interface.Types as MultiModal
 import Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification

@@ -410,8 +410,7 @@ handler ValidatedDSearchReq {..} sReq = do
           <> " canQueueUp="
           <> show ((.canQueueUpOnGate) <$> mbPickupZone)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then
-          pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone)
+        then pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone)
         else pure (False, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct

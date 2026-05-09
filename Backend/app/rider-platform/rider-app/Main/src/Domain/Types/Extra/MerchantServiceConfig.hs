@@ -6,6 +6,8 @@ import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.EventTracking as EventTracking
+import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -27,8 +29,6 @@ import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
-import qualified Kernel.External.EventTracking as EventTracking
-import qualified Kernel.External.EventTracking.Interface.Types as EventTrackingInterface
 import Utils.Common.JWT.Config as GW
 
 -- Extra code goes here --

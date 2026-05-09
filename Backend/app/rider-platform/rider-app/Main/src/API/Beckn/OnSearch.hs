@@ -70,7 +70,7 @@ processOnSearchPayload reqV2 mode = do
         validatedRequest <- DOnSearch.validateRequest request searchRequest
         isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId bppSubId) (30 :: Int) (True :: Bool)
         if not isFirst
-          then logInfo $ "OnSearch already persisted for txn " <> transactionId <>  " subId:" <> bppSubId <> "; skipping duplicate"
+          then logInfo $ "OnSearch already persisted for txn " <> transactionId <> " subId:" <> bppSubId <> "; skipping duplicate"
           else do
             fork "on search received pushing ondc logs" do
               void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"

@@ -39,6 +39,7 @@ module SharedLogic.SpecialZoneDriverDemand
   )
 where
 
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import Data.List (partition, sortOn)
@@ -46,8 +47,8 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Domain.Types.Common as DTC
 import qualified Data.Vector as V
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -55,7 +56,6 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
 import qualified Domain.Types.VehicleVariant as DV
-import Control.Monad.Extra (mapMaybeM)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -208,11 +208,11 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId dri
         else do
           possibleFares <-
             mapMaybeM
-              (\fp -> do
-                mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
-                case mbFarePolicy of
-                  Nothing -> pure Nothing
-                  Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
+              ( \fp -> do
+                  mbFarePolicy <- CQFP.findById Nothing fp.farePolicyId
+                  case mbFarePolicy of
+                    Nothing -> pure Nothing
+                    Just farePolicy -> Just <$> computePerKmFromPolicy fp farePolicy
               )
               fareProducts
           if null possibleFares

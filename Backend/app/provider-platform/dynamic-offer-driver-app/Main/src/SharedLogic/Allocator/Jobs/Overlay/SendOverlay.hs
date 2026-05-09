@@ -17,7 +17,6 @@ import Kernel.External.Types
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as HedisFlow
 import qualified Kernel.Storage.Hedis.Queries as Hedis
-
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
