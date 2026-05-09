@@ -120,11 +120,16 @@ getDriverPoolConfigCond ::
   m (Maybe DriverPoolConfig)
 getDriverPoolConfigCond merchantOpCityId serviceTier tripCategory dist' area searchRepeatType searchRepeatCounter stickeyKey currTimeOfDay currentDayOfWeek sreq = do
   let dist = fromMaybe 0 dist'
-  getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist area stickeyKey currTimeOfDay currentDayOfWeek
+      baseArea = SL.stripGateId area
+      gateFallback f =
+        if SL.hasGateId area
+          then f area |<|>| f baseArea
+          else f area
+  gateFallback (\a -> getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist a stickeyKey currTimeOfDay currentDayOfWeek)
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier tripCategory dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist area stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| gateFallback (\a -> getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist a stickeyKey currTimeOfDay currentDayOfWeek)
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId serviceTier "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
-    |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist area stickeyKey currTimeOfDay currentDayOfWeek
+    |<|>| gateFallback (\a -> getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist a stickeyKey currTimeOfDay currentDayOfWeek)
     |<|>| getDriverPoolConfigFromCAC merchantOpCityId Nothing "All" dist SL.Default stickeyKey currTimeOfDay currentDayOfWeek
     |<|>| ( do
               logDebug $ "DriverPoolConfig not found in memory, fetching from DB for context: " <> show (merchantOpCityId, serviceTier, tripCategory, dist, area)
