@@ -207,7 +207,11 @@ mkDriverRideRes ::
   m DriverRideRes
 mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
   let fareParams = booking.fareParams
-      estimatedBaseFare = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
+      estimatedBaseFareGross = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
+      estimatedCommission = fromMaybe 0 booking.commission
+      estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission)
+      rideCommission = fromMaybe 0 ride.commission
+      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission)) <$> ride.fare
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -224,18 +228,23 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       pure (mbGate, mbSL)
     Nothing -> pure (Nothing, Nothing)
 
-  let mbAmountToCollectInCash =
+  -- See `amount*` semantics matrix (Cash / Online):
+  --   amountToCollectInCash   : Cash   -> FinalFare - Offer (commission included)
+  --                             Online -> Nothing
+  --   amountToBeSettledOnline : Cash   -> Offer
+  --                             Online -> FinalFare - Commission (offer already applied)
+  let offer = fromMaybe 0 ride.discountAmount
+      commission = fromMaybe 0 ride.commission
+      mbAmountToCollectInCash =
         case (booking.paymentInstrument, ride.fare) of
-          (Just DMPM.Cash, Just fareAmt) ->
-            Just $ case ride.discountAmount of
-              Just disc | disc > 0 -> max 0 (fareAmt - disc)
-              _ -> fareAmt
+          (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer)
           _ -> Nothing
       mbAmountToBeSettledOnline =
-        case (booking.paymentInstrument, ride.fare, ride.discountAmount) of
-          (Just DMPM.Cash, _, Just disc) | disc > 0 -> Just disc
-          (_, Just fareAmt, _) -> Just fareAmt
-          _ -> Nothing
+        case booking.paymentInstrument of
+          Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
+          _ -> case ride.fare of
+            Just fareAmt -> Just $ max 0 (fareAmt - commission)
+            Nothing -> Nothing
 
   return $
     DriverRideRes
@@ -251,8 +260,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         vehicleColor = fromMaybe initial rideDetails.vehicleColor,
         vehicleVariant = fromMaybe DVeh.SEDAN rideDetails.vehicleVariant,
         vehicleModel = fromMaybe initial rideDetails.vehicleModel,
-        computedFare = roundToIntegral <$> ride.fare,
-        computedFareWithCurrency = (\fare -> PriceAPIEntity (roundAmountByCurrency' ride.currency fare) ride.currency) <$> ride.fare,
+        computedFare = roundToIntegral <$> computedFareNet,
+        computedFareWithCurrency = (\fare -> PriceAPIEntity (roundAmountByCurrency' ride.currency fare) ride.currency) <$> computedFareNet,
         estimatedDuration = booking.estimatedDuration,
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
@@ -341,8 +350,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         isValidRide = Just $ Tools.isValidRide ride,
         amountToCollectInCash = mbAmountToCollectInCash,
         amountToBeSettledOnline = mbAmountToBeSettledOnline,
-        amountToCollectInCashWithCurrency = flip PriceAPIEntity ride.currency <$> mbAmountToCollectInCash,
-        amountToBeSettledOnlineWithCurrency = flip PriceAPIEntity ride.currency <$> mbAmountToBeSettledOnline
+        amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
+        amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline
       }
 
 -- calculateLocations moved from UI.Ride

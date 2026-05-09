@@ -122,7 +122,7 @@ data OffersRespAPIEntity = OffersRespAPIEntity
     totalAmountSavedV2 :: PriceAPIEntity,
     totalPostOfferAmountV2 :: PriceAPIEntity,
     estimatedTotalAmountSaved :: PriceAPIEntity,
-    estimatedPostOfferAmountV2 :: PriceAPIEntity
+    estimatedPostOfferAmount :: PriceAPIEntity
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
