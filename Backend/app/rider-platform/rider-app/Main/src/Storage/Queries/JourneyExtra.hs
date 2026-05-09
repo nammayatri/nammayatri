@@ -107,20 +107,32 @@ findJourneysWithPendingFRFSBooking ::
   , MonadFlow m
   , CacheFlow m r
   ) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person -> m [DJ.Journey]
-findJourneysWithPendingFRFSBooking (Kernel.Types.Id.Id personId) = do
+  Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Maybe Integer ->
+  Maybe Integer ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  m [DJ.Journey]
+findJourneysWithPendingFRFSBooking (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToDate = do
+  let limit' = maybe 10 fromIntegral mbLimit
+  let offset' = maybe 0 fromIntegral mbOffset
   candidateJourneys <-
     findAllWithOptionsKV
       [ Se.And
-          [ Se.Is Beam.riderId $ Se.Eq personId
-          , Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.NEW, Just DJ.INITIATED]
-          , Se.Is Beam.isPaymentSuccess $ Se.Not $ Se.Eq (Just True)
-          , Se.Is Beam.isPublicTransportIncluded $ Se.Not $ Se.Eq (Just False)
-          ]
+          ( [Se.Is Beam.riderId $ Se.Eq personId]
+              <> ([Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
+              <> ([Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
+              <> [Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.INITIATED, Just DJ.COMPLETED, Just DJ.INPROGRESS]]
+              <> [ Se.And
+                     [ Se.Is Beam.isPublicTransportIncluded $ Se.Not $ Se.Eq (Just False),
+                       Se.Is Beam.isPaymentSuccess $ Se.Not $ Se.Eq (Just True)
+                     ]
+                 ]
+          )
       ]
       (Se.Desc Beam.createdAt)
-      (Just 10)
-      Nothing
+      (Just limit')
+      (Just offset')
   filterM hasPendingBooking candidateJourneys
   where
     hasPendingBooking journey = do

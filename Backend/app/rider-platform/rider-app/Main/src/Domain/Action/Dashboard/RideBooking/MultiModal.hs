@@ -47,11 +47,13 @@ getMultiModalList merchantShortId _opCity limit offset bookingOffset journeyOffs
   m <- findMerchantByShortId merchantShortId
   -- Resolve person once; feed directly into bookingListV2 to avoid a second phone-hash lookup in bookingListV2ByCustomerLookup
   personId <- resolvePersonId customerId customerPhoneNo countryCode email m.id
-  bookingResult <- DBooking.bookingListV2 (personId, m.id) limit offset bookingOffset journeyOffset Nothing fromDate toDate [] [] (fromMaybe [] rideStatus) (fromMaybe [] journeyStatus) isPaymentSuccess bookingRequestType Nothing Nothing  -- mbSendEligiblePassIfAvailable, mbPassTypes
+  bookingResult <- DBooking.bookingListV2 (personId, m.id) limit offset bookingOffset journeyOffset Nothing fromDate toDate [] [] (fromMaybe [] rideStatus) (fromMaybe [] journeyStatus) isPaymentSuccess bookingRequestType Nothing Nothing
   additionalEntities <-
     if isPaymentSuccess == Just True
       then do
-        pendingJourneys <- SQJ.findJourneysWithPendingFRFSBooking personId
+        let mbFromDate' = millisecondsToUTC <$> fromDate
+            mbToDate' = millisecondsToUTC <$> toDate
+        pendingJourneys <- SQJ.findJourneysWithPendingFRFSBooking personId Nothing Nothing mbFromDate' mbToDate'
         fmap catMaybes . forM pendingJourneys $ \j ->
           ( do
               legsInfo <- getAllLegsInfo j.riderId j.id
