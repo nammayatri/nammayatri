@@ -634,7 +634,9 @@ convertToVehicleAPIEntityTFromAssociation sendDriverMobileNumber fleetNameMap (a
             driverMobileNumber = driverDetails.mobileNumber,
             driverMobileCountryCode = driverDetails.mobileCountryCode,
             driverAccountNumber = driverDetails.accountNumber,
-            driverIfscCode = driverDetails.ifscCode
+            driverIfscCode = driverDetails.ifscCode,
+            vehicleBalance = driverDetails.vehicleBalance,
+            vehicleBalanceAdjustmentPercentage = driverDetails.vehicleBalanceAdjustmentPercentage
           }
 
 convertToVehicleAPIEntityT :: Bool -> Map.Map Text Text -> DVRC.VehicleRegistrationCertificate -> Flow (Maybe Common.VehicleAPIEntityT)
@@ -658,7 +660,9 @@ convertToVehicleAPIEntityT sendDriverMobileNumber fleetNameMap DVRC.VehicleRegis
             driverMobileNumber = driverDetails.mobileNumber,
             driverMobileCountryCode = driverDetails.mobileCountryCode,
             driverAccountNumber = driverDetails.accountNumber,
-            driverIfscCode = driverDetails.ifscCode
+            driverIfscCode = driverDetails.ifscCode,
+            vehicleBalance = driverDetails.vehicleBalance,
+            vehicleBalanceAdjustmentPercentage = driverDetails.vehicleBalanceAdjustmentPercentage
           }
 
 data DriverAccountDetails = DriverAccountDetails
@@ -666,7 +670,9 @@ data DriverAccountDetails = DriverAccountDetails
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text,
     accountNumber :: Maybe Text,
-    ifscCode :: Maybe Text
+    ifscCode :: Maybe Text,
+    vehicleBalance :: Maybe Double,
+    vehicleBalanceAdjustmentPercentage :: Maybe Centesimal
   }
 
 getDriverDetailsFromRC :: Bool -> Id DVRC.VehicleRegistrationCertificate -> Flow DriverAccountDetails
@@ -686,7 +692,9 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
                 mobileNumber = driverMobileNumber,
                 mobileCountryCode = person.mobileCountryCode,
                 accountNumber = accountNumber,
-                ifscCode = ifscCode
+                ifscCode = ifscCode,
+                vehicleBalance = realToFrac <$> rcAccountNumber.vehicleBalance,
+                vehicleBalanceAdjustmentPercentage = rcAccountNumber.vehicleBalanceAdjustmentPercentage
               }
         Nothing ->
           pure
@@ -695,7 +703,9 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
                 mobileNumber = Nothing,
                 mobileCountryCode = Nothing,
                 accountNumber = Nothing,
-                ifscCode = Nothing
+                ifscCode = Nothing,
+                vehicleBalance = Nothing,
+                vehicleBalanceAdjustmentPercentage = Nothing
               }
     else
       pure
@@ -704,7 +714,9 @@ getDriverDetailsFromRC sendDriverMobileNumber rcId = do
             mobileNumber = Nothing,
             mobileCountryCode = Nothing,
             accountNumber = Nothing,
-            ifscCode = Nothing
+            ifscCode = Nothing,
+            vehicleBalance = Nothing,
+            vehicleBalanceAdjustmentPercentage = Nothing
           }
 
 ---------------------------------------------------------------------
