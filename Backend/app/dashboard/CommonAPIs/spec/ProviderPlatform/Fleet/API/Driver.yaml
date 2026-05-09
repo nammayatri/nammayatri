@@ -6,6 +6,8 @@ imports:
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
   Currency: Kernel.Types.Common
+  Centesimal: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
   TripTransaction: Dashboard.Common
   ServiceNames: Dashboard.Common.Driver
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
@@ -1758,6 +1760,8 @@ types:
     - driverAccountNumber: Maybe Text
     - driverIfscCode: Maybe Text
     - driverName: Maybe Text
+    - vehicleBalance: Maybe Double
+    - vehicleBalanceAdjustmentPercentage: Maybe Centesimal
   FleetBadgeRes:
     - recordType: NewType
     - fleetBadgeInfos: [FleetBadgesAPIEntity]
