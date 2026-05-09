@@ -602,7 +602,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
                       totalAmountSavedV2 = mkPriceEntity offerEntity.amountSaved,
                       totalPostOfferAmountV2 = mkPriceEntity offerEntity.postOfferAmount,
                       estimatedTotalAmountSaved = mkPriceEntity estimatedOfferEntity.amountSaved,
-                      estimatedPostOfferAmountV2 = mkPriceEntity estimatedOfferEntity.postOfferAmount
+                      estimatedPostOfferAmount = mkPriceEntity estimatedOfferEntity.postOfferAmount
                     }
         Nothing -> return Nothing
   return $
