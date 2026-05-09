@@ -85,7 +85,7 @@ createInvoice input entryIds = do
   let lineItemsJson = Aeson.toJSON input.lineItems
       totalAmount = sum $ map (.lineTotal) input.lineItems
       externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-      taxTotal = sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Tax) input.lineItems
+      taxTotal = sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) input.lineItems
       subtotal = totalAmount - externalTotal - taxTotal
   logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) input.lineItems)
   let invoice =

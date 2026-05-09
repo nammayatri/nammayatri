@@ -76,17 +76,28 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
       tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
       cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
 
-  pdfDatas <- forM invoices $ \inv -> do
-    let items = parseLineItems inv.lineItems
-    taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
-    let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-    (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
-      Just orderId -> do
-        txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-        let mbTxn = Kernel.Prelude.listToMaybe txns
-        pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
-      Nothing -> pure (Nothing, Nothing, Nothing)
-    pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+  -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
+  -- skip those individually so one bad row doesn't kill the whole list response.
+  results <- forM invoices $ \inv -> do
+    res <- withTryCatch ("renderInvoice:" <> inv.invoiceNumber) $ do
+      let items = parseLineItems inv.lineItems
+      taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
+      let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
+      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+        Just orderId -> do
+          txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+          let mbTxn = Kernel.Prelude.listToMaybe txns
+          pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+        Nothing -> pure (Nothing, Nothing, Nothing)
+      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+    case res of
+      Right pdfData -> pure (Just pdfData)
+      Left err -> do
+        logError $ "Skipping invoice " <> inv.invoiceNumber <> " (render failed): " <> show err
+        pure Nothing
+  let pdfDatas = catMaybes results
+  when (null pdfDatas) $
+    throwError $ InvalidRequest "No invoices could be rendered (all failed)"
 
   let lastInv = last invoices
       html = case pdfDatas of

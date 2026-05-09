@@ -145,10 +145,13 @@ buildEInvoicePayload inv dg decryptedGstin mbIndirectTax CITypes.CharteredInfoCo
       lineItems = case Aeson.fromJSON inv.lineItems of
         Aeson.Success xs -> xs :: [InvoiceLineItem]
         Aeson.Error err -> error $ "EInvoice.buildEInvoicePayload: invoice lineItems JSON failed to decode: " <> T.pack err
-      -- Assessable value is the pre-tax principal only — include only the
-      -- "Subscription Plan Fee" line; tax lines are reported separately on the
-      -- e-invoice via cgst/sgst/igst.
-      principalLineItems = filter (\li -> li.description == SubscriptionPlanFee) lineItems
+      -- Assessable value is the pre-tax principal only. Match by typed
+      -- 'descriptionType' for new rows; fall back to legacy Text match so old
+      -- rows (without descriptionType) still aggregate correctly.
+      principalLineItems =
+        filter
+          (\li -> li.descriptionType == Just SubscriptionPlanFee || (isNothing li.descriptionType && li.description == "Subscription Plan Fee"))
+          lineItems
       assessableValue = money2 $ realToFrac (sum $ map (.lineTotal) principalLineItems)
       totalInvoiceValue = money2 $ realToFrac inv.totalAmount
       zeroMoney = 0 :: Double

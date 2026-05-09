@@ -66,13 +66,14 @@ data LineItemDescription
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.
 data InvoiceLineItem = InvoiceLineItem
-  { description :: LineItemDescription,
+  { description :: Text,
+    descriptionType :: Maybe LineItemDescription,
     quantity :: Int,
     unitPrice :: HighPrecMoney,
     lineTotal :: HighPrecMoney,
     isExternalCharge :: Bool,
     groupId :: Maybe Text,
-    itemType :: ItemType
+    itemType :: Maybe ItemType
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 

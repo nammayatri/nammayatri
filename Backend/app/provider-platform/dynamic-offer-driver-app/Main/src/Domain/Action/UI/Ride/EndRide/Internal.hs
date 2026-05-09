@@ -592,71 +592,74 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               parkingInclusiveLine = parkingAmount + parkingVatAmount
               -- Tagged Fare/Tax pair: groupId pairs the two lines so the renderer
               -- collapses them into one main-table row.
-              mkPair gId ty isExt desc amt =
+              mkPair gId ty isExt desc descType amt =
                 if amt > 0
                   then
                     Just
                       InvoiceLineItem
                         { description = desc,
+                          descriptionType = Just descType,
                           quantity = 1,
                           unitPrice = amt,
                           lineTotal = amt,
                           isExternalCharge = isExt,
                           groupId = Just gId,
-                          itemType = ty
+                          itemType = Just ty
                         }
                   else Nothing
               -- Standalone Fare line, no Tax pair (groupId = Nothing).
-              mkStandaloneFare desc amt =
+              mkStandaloneFare desc descType amt =
                 if amt > 0
                   then
                     Just
                       InvoiceLineItem
                         { description = desc,
+                          descriptionType = Just descType,
                           quantity = 1,
                           unitPrice = amt,
                           lineTotal = amt,
                           isExternalCharge = False,
                           groupId = Nothing,
-                          itemType = Fare
+                          itemType = Just Fare
                         }
                   else Nothing
               -- Adjustment line (Tip positive / Platform Commission negative).
               -- Renders below "Total" in the right-block ladder; contributes to Net Total.
-              mkAdjustment desc signedAmt =
+              mkAdjustment desc descType signedAmt =
                 if signedAmt /= 0
                   then
                     Just
                       InvoiceLineItem
                         { description = desc,
+                          descriptionType = Just descType,
                           quantity = 1,
                           unitPrice = signedAmt,
                           lineTotal = signedAmt,
                           isExternalCharge = False,
                           groupId = Nothing,
-                          itemType = Adjustment
+                          itemType = Just Adjustment
                         }
                   else Nothing
               rideAndTollLines =
                 if clubVatInclusive
                   then
-                    [ mkPair "g-ride" Fare False RideFareInclVat rideInclusiveLine,
-                      mkPair "g-toll" Fare True TollFareInclVat tollInclusiveLine,
-                      mkPair "g-parking" Fare True ParkingChargesInclVat parkingInclusiveLine
+                    [ mkPair "g-ride" Fare False "Ride Fare (Incl. VAT)" RideFareInclVat rideInclusiveLine,
+                      mkPair "g-toll" Fare True "Toll Fare (Incl. VAT)" TollFareInclVat tollInclusiveLine,
+                      mkPair "g-parking" Fare True "Parking Charges (Incl. VAT)" ParkingChargesInclVat parkingInclusiveLine
                     ]
                   else
-                    [ mkPair "g-ride" Fare False BaseFare rawBaseFare,
-                      mkPair "g-ride" Tax False RideTax rawTaxAmount,
-                      mkPair "g-toll" Fare True TollCharges tollAmount,
-                      mkPair "g-toll" Tax True TollChargesTax tollVatAmount,
-                      mkPair "g-parking" Fare True ParkingCharges parkingAmount,
-                      mkPair "g-parking" Tax True ParkingChargesTax parkingVatAmount
+                    [ mkPair "g-ride" Fare False "Base Fare" BaseFare rawBaseFare,
+                      mkPair "g-ride" Tax False "Tax" RideTax rawTaxAmount,
+                      mkPair "g-toll" Fare True "Toll Charges" TollCharges tollAmount,
+                      mkPair "g-toll" Tax True "Toll Charges Tax" TollChargesTax tollVatAmount,
+                      mkPair "g-parking" Fare True "Parking Charges" ParkingCharges parkingAmount,
+                      mkPair "g-parking" Tax True "Parking Charges Tax" ParkingChargesTax parkingVatAmount
                     ]
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
-                [ mkAdjustment Tip tipAmount,
-                  mkAdjustment PlatformCommission (negate commissionAmount),
-                  if showVatInput then mkStandaloneFare VatInput serviceVatAmount else Nothing
+                [ mkAdjustment "Tip" Tip tipAmount,
+                  mkAdjustment "Platform Commission" PlatformCommission (negate commissionAmount),
+                  if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
         rideGstBreakdown =
@@ -793,7 +796,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 referenceId = Nothing,
                 lineItems =
                   catMaybes
-                    [ Just InvoiceLineItem {description = PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Fare}
+                    [ Just InvoiceLineItem {description = "Platform Commission", descriptionType = Just PlatformCommission, quantity = 1, unitPrice = commissionAmount, lineTotal = commissionAmount, isExternalCharge = False, groupId = Just "g-commission", itemType = Just Fare}
                     ],
                 gstBreakdown = Nothing,
                 isVat = isVat,

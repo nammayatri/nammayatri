@@ -604,26 +604,28 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                                 then
                                   Just
                                     InvoiceLineItem
-                                      { description = SubscriptionPlanFee,
+                                      { description = "Subscription Plan Fee",
+                                        descriptionType = Just SubscriptionPlanFee,
                                         quantity = 1,
                                         unitPrice = lineItemNetAmount,
                                         lineTotal = lineItemNetAmount,
                                         isExternalCharge = False,
                                         groupId = Just "g-subscription",
-                                        itemType = Fare
+                                        itemType = Just Fare
                                       }
                                 else Nothing,
                               if lineItemGstAmount > 0
                                 then
                                   Just
                                     InvoiceLineItem
-                                      { description = Gst,
+                                      { description = "GST",
+                                        descriptionType = Just Gst,
                                         quantity = 1,
                                         unitPrice = lineItemGstAmount,
                                         lineTotal = lineItemGstAmount,
                                         isExternalCharge = False,
                                         groupId = Just "g-subscription",
-                                        itemType = Tax
+                                        itemType = Just Tax
                                       }
                                 else Nothing
                             ],

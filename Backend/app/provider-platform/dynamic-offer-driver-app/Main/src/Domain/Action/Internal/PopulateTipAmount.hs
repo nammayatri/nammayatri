@@ -92,16 +92,17 @@ populateTipAmount rideId tipAmount apiKey = do
                     priorLineItems = parseLineItems priorInv.lineItems
                     tipLineItem =
                       InvoiceI.InvoiceLineItem
-                        { description = InvoiceI.Tip,
+                        { description = "Tip",
+                          descriptionType = Just InvoiceI.Tip,
                           quantity = 1,
                           unitPrice = tipAmount,
                           lineTotal = tipAmount,
                           isExternalCharge = False,
                           groupId = Nothing,
-                          itemType = InvoiceI.Adjustment
+                          itemType = Just InvoiceI.Adjustment
                         }
                     -- Avoid duplicate Tip rows if this is run multiple times
-                    nonTipLineItems = List.filter (\li -> li.description /= InvoiceI.Tip) priorLineItems
+                    nonTipLineItems = List.filter (\li -> li.descriptionType /= Just InvoiceI.Tip) priorLineItems
                     newLineItems = nonTipLineItems <> [tipLineItem]
                     newInvoiceInput = invoiceToInput priorInv ctx newLineItems
                     -- Exclude any prior Tips entries — the new Tips entry supersedes them.
@@ -117,7 +118,9 @@ populateTipAmount rideId tipAmount apiKey = do
   where
     parseLineItems :: Aeson.Value -> [InvoiceI.InvoiceLineItem]
     parseLineItems v = case Aeson.fromJSON v of
-      Aeson.Success xs -> xs
+      Aeson.Success xs
+        | all (isJust . (.itemType)) xs -> xs
+        | otherwise -> error "PopulateTipAmount.parseLineItems: prior invoice has line item without typed itemType"
       Aeson.Error err -> error $ "PopulateTipAmount.parseLineItems: prior invoice lineItems failed to decode: " <> T.pack err
 
     invoiceToInput :: FInvoice.Invoice -> FinanceCtx -> [InvoiceI.InvoiceLineItem] -> InvoiceI.InvoiceInput
