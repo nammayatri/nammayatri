@@ -88,6 +88,7 @@ data ServiceName
   | PartnerSdkService PartnerSdkProvider
   | SettlementService Settlement.SettlementService
   | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
+  | AirportReachargeService Payment.PaymentService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -121,6 +122,7 @@ instance Show ServiceName where
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
+  show (AirportReachargeService s) = "AirportReacharge_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -235,6 +237,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "GSTEInvoice_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (AirportReachargeService v1, r2)
+                 | r1 <- stripPrefix "AirportReacharge_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -268,6 +274,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
+  | AirportReachargeServiceConfig !PaymentServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

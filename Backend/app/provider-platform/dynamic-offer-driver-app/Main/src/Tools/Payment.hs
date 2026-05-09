@@ -80,6 +80,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
     DMSC.RentalPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
     DMSC.CautioPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
     DMSC.MembershipPaymentServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
+    DMSC.AirportReachargeServiceConfig vsc -> return (func vsc getRoutingId, getPclient vsc)
     _ -> throwError $ InternalError "Unknown Service Config"
   where
     getPclient vsc = do

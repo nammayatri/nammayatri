@@ -255,13 +255,18 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
     else do
       -- Check if this is a STCL membership payment order
       let isStclOrder = order.paymentServiceType == Just DOrder.STCL || order.entityName == Just DPayment.DRIVER_STCL
+      let isWalletTopupOrder = order.entityName == Just DPayment.DRIVER_WALLET_TOPUP
       serviceConfig <-
         CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
           >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
       driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
-      -- Use MembershipPaymentService for STCL orders, otherwise use the service config's payment service name
-      let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
-      paymentServiceName <- Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
+      -- Wallet topup uses AirportReachargeService (separate Juspay account); STCL uses MembershipPaymentService; otherwise use the service config's payment service name
+      paymentServiceName <-
+        if isWalletTopupOrder
+          then pure $ DMSC.AirportReachargeService Payment.Juspay
+          else do
+            let defaultPaymentServiceName = if isStclOrder then DMSC.MembershipPaymentService Payment.Juspay else serviceConfig.paymentServiceName
+            Payment.decidePaymentService defaultPaymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
       paymentStatus <- DPayment.orderStatusService commonMerchantOperatingCityId commonPersonId paymentOrderId (orderStatusCall paymentServiceName (Just order.personId.getId))
       case paymentStatus of
         DPayment.MandatePaymentStatus {..} -> do

@@ -459,11 +459,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId mocId
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
-  paymentServiceName <-
-    TPayment.decidePaymentService
-      (DMSC.PaymentService merchantServiceUsageConfig.createBankAccount)
-      driver.clientSdkVersion
-      mocId
+  let paymentServiceName = DMSC.AirportReachargeService merchantServiceUsageConfig.createBankAccount
   (orderId, orderShortId) <- handleExistingOrder mbExistingOrderId
   let createOrderReq =
         Payment.CreateOrderReq
