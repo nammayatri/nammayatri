@@ -3,17 +3,20 @@
 
 module Storage.Queries.JourneyExtra where
 
+import Control.Monad (filterM)
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (maximumBy, sortBy)
+import Data.Maybe (maybeToList)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
-import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -22,6 +25,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
 import qualified Storage.Queries.FRFSTicket as QTicket
 import qualified Storage.Queries.FRFSTicketBooking as QTicketBooking
+import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra (getJourneyLegs)
 import Storage.Queries.OrphanInstances.Journey
 
 -- Extra code goes here --
@@ -97,3 +101,39 @@ updateStatusAndEndTime status journeyId = do
   updateOneWithKV
     ([Se.Set Beam.status $ Just status, Se.Set Beam.updatedAt _now] <> endTimeUpdate)
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
+findJourneysWithPendingFRFSBooking ::
+  ( EsqDBFlow m r
+  , MonadFlow m
+  , CacheFlow m r
+  ) =>
+  Kernel.Types.Id.Id Domain.Types.Person.Person -> m [DJ.Journey]
+findJourneysWithPendingFRFSBooking (Kernel.Types.Id.Id personId) = do
+  candidateJourneys <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.riderId $ Se.Eq personId
+          , Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.NEW, Just DJ.INITIATED]
+          , Se.Is Beam.isPaymentSuccess $ Se.Not $ Se.Eq (Just True)
+          , Se.Is Beam.isPublicTransportIncluded $ Se.Not $ Se.Eq (Just False)
+          ]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 10)
+      Nothing
+  filterM hasPendingBooking candidateJourneys
+  where
+    hasPendingBooking journey = do
+      legs <- QJourneyLegExtra.getJourneyLegs journey.id
+      bookings <- fmap concat $ mapM getLegBookings legs
+      return $ any isBookingPending bookings
+
+    getLegBookings :: (EsqDBFlow m r, CacheFlow m r) => JL.JourneyLeg -> m [DFRFSTicketBooking.FRFSTicketBooking]
+    getLegBookings leg = case leg.legSearchId of
+      Just searchId -> do
+        mbBooking <- QTicketBooking.findBySearchId $ Kernel.Types.Id.Id searchId
+        return $ maybeToList mbBooking
+      Nothing -> return []
+
+    isBookingPending :: DFRFSTicketBooking.FRFSTicketBooking -> Bool
+    isBookingPending booking = booking.status == DFRFSTicketBookingStatus.PAYMENT_PENDING

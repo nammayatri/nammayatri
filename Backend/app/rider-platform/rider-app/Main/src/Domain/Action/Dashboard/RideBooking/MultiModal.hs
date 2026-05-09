@@ -13,12 +13,14 @@ import qualified Domain.Action.UI.Booking as DBooking
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking.API
 import qualified Domain.Types.BookingStatus
+import qualified Domain.Types.Journey as DJ
 import Domain.Types.EmptyDynamicParam
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt)
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -27,10 +29,14 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
-import Servant
+import Kernel.Utils.Common
+import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
+import Lib.JourneyModule.Types (GetStateFlow)
+import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (buildSendSmsReq)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Person as QPerson
 import qualified Tools.Notifications as TNotifications
 import Tools.SMS as Sms hiding (Success)
@@ -39,7 +45,42 @@ import qualified Tools.Whatsapp as Whatsapp
 getMultiModalList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe [Domain.Types.BookingStatus.BookingStatus] -> Kernel.Prelude.Maybe [Domain.Types.Journey.JourneyStatus] -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.API.BookingRequestType -> Maybe Text -> Environment.Flow Domain.Action.UI.Booking.BookingListResV2)
 getMultiModalList merchantShortId _opCity limit offset bookingOffset journeyOffset customerPhoneNo countryCode email fromDate toDate rideStatus journeyStatus isPaymentSuccess bookingRequestType customerId = do
   m <- findMerchantByShortId merchantShortId
-  DBooking.bookingListV2ByCustomerLookup m.id limit offset bookingOffset journeyOffset fromDate toDate [] [] rideStatus journeyStatus isPaymentSuccess bookingRequestType customerPhoneNo countryCode email customerId
+  -- Resolve person once; feed directly into bookingListV2 to avoid a second phone-hash lookup in bookingListV2ByCustomerLookup
+  personId <- resolvePersonId customerId customerPhoneNo countryCode email m.id
+  bookingResult <- DBooking.bookingListV2 (personId, m.id) limit offset bookingOffset journeyOffset Nothing fromDate toDate [] [] (fromMaybe [] rideStatus) (fromMaybe [] journeyStatus) isPaymentSuccess bookingRequestType Nothing Nothing  -- mbSendEligiblePassIfAvailable, mbPassTypes
+  additionalEntities <-
+    if isPaymentSuccess == Just True
+      then do
+        pendingJourneys <- SQJ.findJourneysWithPendingFRFSBooking personId
+        fmap catMaybes . forM pendingJourneys $ \j ->
+          ( do
+              legsInfo <- getAllLegsInfo j.riderId j.id
+              if null legsInfo
+                then logDebug ("getMultiModalList: No legs for " <> show j.id) >> return Nothing
+                else Just . DBooking.MultiModalRide <$> generateJourneyInfoResponse j legsInfo
+          )
+            `catch` (\(e :: SomeException) -> logDebug ("getMultiModalList: build failed for " <> show j.id <> ": " <> show e) >> return Nothing)
+      else return []
+  pure (bookingResult :: DBooking.BookingListResV2) {DBooking.list = bookingResult.list ++ additionalEntities}
+  where
+    resolvePersonId mbCustomerId mbMobileNo mbCountryCode mbEmail merchantId =
+      case mbCustomerId of
+        Just cid -> pure $ Kernel.Types.Id.Id cid
+        Nothing -> case mbMobileNo of
+          Just mobileNo -> do
+            mobileNoHash <- getDbHash mobileNo
+            mbPerson <- QPerson.findByMobileNumberAndMerchantId (fromMaybe "+91" mbCountryCode) mobileNoHash merchantId
+            case mbPerson of
+              Just person -> pure person.id
+              Nothing -> lookupByEmail mbEmail merchantId
+          Nothing -> lookupByEmail mbEmail merchantId
+
+    lookupByEmail mbEmail merchantId =
+      case mbEmail of
+        Just em -> do
+          person <- QPerson.findByEmailAndMerchantId merchantId em >>= fromMaybeM (InternalError "Person with given email does not exist")
+          pure person.id
+        Nothing -> throwError $ InternalError "No Person Found"
 
 postMultiModalSendMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMultiModalSendMessage _merchantShortId _opCity customerId req = do
