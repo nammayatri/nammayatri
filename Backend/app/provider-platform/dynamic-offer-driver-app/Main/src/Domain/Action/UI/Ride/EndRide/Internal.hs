@@ -1433,9 +1433,12 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
             let vendorSplitDetails = case booking.area of
                   Just area ->
                     let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
-                     in if null areaDetails
+                        baseAreaDetails = if null areaDetails && hasGateId area
+                                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetails
+                                            else areaDetails
+                     in if null baseAreaDetails
                           then DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
-                          else areaDetails
+                          else baseAreaDetails
                   Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
             unless (null vendorSplitDetails) $ do
               let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails

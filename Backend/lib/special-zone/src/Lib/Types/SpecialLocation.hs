@@ -94,10 +94,10 @@ instance ToHttpApiData [SpecialLocationType] where
   toHeader = LBS.toStrict . encode
 
 data Area
-  = Pickup (Id SpecialLocation)
+  = Default
+  | Pickup (Id SpecialLocation) (Maybe Text)
   | Drop (Id SpecialLocation)
-  | PickupDrop (Id SpecialLocation) (Id SpecialLocation)
-  | Default
+  | PickupDrop (Id SpecialLocation) (Id SpecialLocation) (Maybe Text)
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (ToSchema, ToJSON)
   deriving (PrettyShow) via Showable Area
@@ -116,15 +116,13 @@ instance Read Area where
           [ (Default, r1)
             | r1 <- stripPrefix "Default" r
           ]
-            ++ [ (Pickup (Id $ T.pack r1), "")
+            ++ [ parsePickupWithGate r1
                  | r1 <- stripPrefix "Pickup_" r
                ]
             ++ [ (Drop (Id $ T.pack r1), "")
                  | r1 <- stripPrefix "Drop_" r
                ]
-            ++ [ ( let (pickupId, dropId) = splitOnUnderscore r1
-                    in (PickupDrop (Id $ T.pack pickupId) (Id $ T.pack dropId), "")
-                 )
+            ++ [ parsePickupDropWithGate r1
                  | r1 <- stripPrefix "PickupDrop_" r
                ]
       )
@@ -136,12 +134,29 @@ instance Read Area where
          in case rest of
               ('_' : y) -> (x, y)
               _ -> (x, "")
+      parsePickupWithGate s =
+        case splitOnSubstring "_Gate_" s of
+          Just (slId, gateId) -> (Pickup (Id $ T.pack slId) (Just $ T.pack gateId), "")
+          Nothing -> (Pickup (Id $ T.pack s) Nothing, "")
+      parsePickupDropWithGate s =
+        let (pickupId, rest1) = splitOnUnderscore s
+         in case splitOnSubstring "_PGate_" rest1 of
+              Just (dropId, pgate) -> (PickupDrop (Id $ T.pack pickupId) (Id $ T.pack dropId) (Just $ T.pack pgate), "")
+              Nothing -> (PickupDrop (Id $ T.pack pickupId) (Id $ T.pack rest1) Nothing, "")
+      splitOnSubstring :: String -> String -> Maybe (String, String)
+      splitOnSubstring sep s = go [] s
+        where
+          sepLen = length sep
+          go _ [] = Nothing
+          go acc rest@(c:cs)
+            | List.isPrefixOf sep rest = Just (reverse acc, List.drop sepLen rest)
+            | otherwise = go (c:acc) cs
 
 instance Show Area where
-  show (Pickup specialLocationId) = "Pickup_" <> T.unpack specialLocationId.getId
-  show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
-  show (PickupDrop pickupId dropId) = "PickupDrop_" <> T.unpack pickupId.getId <> "_" <> T.unpack dropId.getId
   show Default = "Default"
+  show (Pickup specialLocationId mbGateId) = "Pickup_" <> T.unpack specialLocationId.getId <> maybe "" (\g -> "_Gate_" <> T.unpack g) mbGateId
+  show (Drop specialLocationId) = "Drop_" <> T.unpack specialLocationId.getId
+  show (PickupDrop pickupId dropId mbPGate) = "PickupDrop_" <> T.unpack pickupId.getId <> "_" <> T.unpack dropId.getId <> maybe "" (\pg -> "_PGate_" <> T.unpack pg) mbPGate
 
 $(mkBeamInstancesForEnum ''Area)
 
@@ -150,7 +165,7 @@ instance ToParamSchema Area where
     mempty
       & title ?~ "Area"
       & type_ ?~ OpenApiString
-      & format ?~ "Default,Pickup_<SpecialLocationId>,Drop_<SpecialLocationId>,PickupDrop_<PickupSpecialLocationId>_<DropSpecialLocationId>"
+      & format ?~ "Default,Pickup_<SpecialLocationId>[_Gate_<GateId>],Drop_<SpecialLocationId>,PickupDrop_<PickupSpecialLocationId>_<DropSpecialLocationId>[_PGate_<GateId>]"
 
 instance FromHttpApiData Area where
   parseUrlPiece = parse . T.unpack
@@ -170,5 +185,25 @@ areaToText = T.pack . show
 parsePickupDropFromText :: Text -> Maybe Area
 parsePickupDropFromText t =
   case readMaybe (unpack t) of
-    Just a@(PickupDrop _ _) -> Just a
+    Just a@(PickupDrop {}) -> Just a
     _ -> Nothing
+
+-- | Strip gate IDs from an Area, returning the base area without gate info.
+-- Used for fallback: try gate-specific fare product first, then fall back to this.
+stripGateId :: Area -> Area
+stripGateId (Pickup slId _) = Pickup slId Nothing
+stripGateId (Drop slId) = Drop slId
+stripGateId (PickupDrop pId dId _) = PickupDrop pId dId Nothing
+stripGateId Default = Default
+
+-- | Check if an Area has any gate ID set.
+hasGateId :: Area -> Bool
+hasGateId (Pickup _ (Just _)) = True
+hasGateId (PickupDrop _ _ (Just _)) = True
+hasGateId _ = False
+
+-- | Extract the pickup gate ID from an Area, if present.
+pickupGateIdFromArea :: Area -> Maybe Text
+pickupGateIdFromArea (Pickup _ mbGateId) = mbGateId
+pickupGateIdFromArea (PickupDrop _ _ mbGateId) = mbGateId
+pickupGateIdFromArea _ = Nothing

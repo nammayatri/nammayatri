@@ -148,7 +148,7 @@ clearAirportPerKmFareCacheForPolicy fpId = do
   let pickupProducts =
         [ (fp.merchantOperatingCityId, fp.vehicleServiceTier, slId)
           | fp <- fareProducts,
-            SL.Pickup slId <- [fp.area]
+            SL.Pickup slId _ <- [fp.area]
         ]
       byCity =
         Map.fromListWith (<>) [(cityId, [(tier, slId)]) | (cityId, tier, slId) <- pickupProducts]

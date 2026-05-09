@@ -313,10 +313,10 @@ handler ValidatedDSearchReq {..} sReq = do
   mbVehicleServiceTier <- getVehicleServiceTierForMeterRideSearch isMeterRideSearch driverIdForSearch configVersionMap
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
-  (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra) <-
-    getSpecialPickupZoneInfo
-      (fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea)
-      fromLocation
+  let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
+      mbPickupGateId = SL.pickupGateIdFromArea resolvedArea
+  (canQueueUp, mbDefaultDriverExtra) <- getSpecialZoneQueueInfo resolvedArea fromLocation
+  let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
       specialLocName = allFarePoliciesProduct.specialLocationName
@@ -386,19 +386,21 @@ handler ValidatedDSearchReq {..} sReq = do
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
-    getSpecialPickupZoneInfo :: SL.Area -> DLoc.Location -> Flow (Maybe Text, Maybe Text, Maybe HighPrecMoney)
-    getSpecialPickupZoneInfo SL.Default _ = pure (Nothing, Nothing, Nothing)
-    getSpecialPickupZoneInfo area fromLocation = do
+    -- | Check if the pickup gate supports queueing and get default driver extra.
+    -- The pickupGateId is now extracted directly from the Area tag.
+    getSpecialZoneQueueInfo :: SL.Area -> DLoc.Location -> Flow (Bool, Maybe HighPrecMoney)
+    getSpecialZoneQueueInfo SL.Default _ = pure (False, Nothing)
+    getSpecialZoneQueueInfo area fromLocation = do
       let pickupLatLong = LatLong fromLocation.lat fromLocation.lon
           mbSlId = case area of
-            SL.Pickup slId -> Just slId
-            SL.PickupDrop slId _ -> Just slId
+            SL.Pickup slId _ -> Just slId
+            SL.PickupDrop slId _ _ -> Just slId
             _ -> Nothing
       mbPickupZone <- case mbSlId of
         Just slId -> findGateInfoByLatLongWithinRadius slId pickupLatLong 2000.0
         Nothing -> pure Nothing
       logDebug $
-        "getSpecialPickupZoneInfo area=" <> show area
+        "getSpecialZoneQueueInfo area=" <> show area
           <> " pickupLatLong="
           <> show pickupLatLong
           <> " slId="
@@ -408,10 +410,9 @@ handler ValidatedDSearchReq {..} sReq = do
           <> " canQueueUp="
           <> show ((.canQueueUpOnGate) <$> mbPickupZone)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
-        then -- Demand counter is bumped at Init time (per chosen variant) for both
-        -- estimate-based and quote-based (special zone OTP) flows.
-          pure $ ((.id.getId) <$> mbPickupZone, (.id.getId) <$> mbPickupZone, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone) -- FIXME
-        else pure ((.id.getId) <$> mbPickupZone, Nothing, Nothing)
+        then
+          pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone)
+        else pure (False, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
     combineFarePoliciesProducts products =

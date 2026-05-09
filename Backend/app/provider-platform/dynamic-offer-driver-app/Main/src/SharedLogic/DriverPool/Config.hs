@@ -69,9 +69,13 @@ getDriverPoolConfigFromDB' ::
   Maybe DriverPoolConfig
 getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist configs = do
   let distance = fromMaybe 0 mbDist
-  let mbApplicableConfig =
-        find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance area) configs
-          <|> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance SL.Default) configs
+  let baseArea = SL.stripGateId area
+      findWithFallback f =
+        f area
+          <|> (if SL.hasGateId area then f baseArea else Nothing)
+          <|> f SL.Default
+      mbApplicableConfig =
+        findWithFallback (\a -> find (filterByDistAndDvehAndArea serviceTier (Text.pack tripCategory) distance a) configs)
   case configs of
     [] -> Nothing
     _ ->
@@ -79,8 +83,7 @@ getDriverPoolConfigFromDB' serviceTier tripCategory area mbDist configs = do
         Just applicableConfig -> Just applicableConfig
         Nothing -> do
           let alternativeConfigs =
-                find (filterByDistAndDvehAndArea serviceTier "All" distance area) configs
-                  <|> find (filterByDistAndDvehAndArea serviceTier "All" distance SL.Default) configs
+                findWithFallback (\a -> find (filterByDistAndDvehAndArea serviceTier "All" distance a) configs)
           case alternativeConfigs of
             Just cfg -> Just cfg
             Nothing -> findDriverPoolConfig configs Nothing "All" distance area
@@ -91,7 +94,9 @@ filterByDistAndDvehAndArea serviceTier tripCategory dist area cfg =
 
 findDriverPoolConfig :: [DriverPoolConfig] -> Maybe DVST.ServiceTierType -> Text -> Meters -> SL.Area -> Maybe DriverPoolConfig
 findDriverPoolConfig configs serviceTier tripCategory dist area = do
+  let baseArea = SL.stripGateId area
   find (filterByDistAndDvehAndArea serviceTier tripCategory dist area) configs
+    <|> (if SL.hasGateId area then find (filterByDistAndDvehAndArea serviceTier tripCategory dist baseArea) configs else Nothing)
     <|> find (filterByDistAndDvehAndArea serviceTier tripCategory dist SL.Default) configs
 
 data Config = Config

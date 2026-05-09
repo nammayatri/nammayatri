@@ -30,7 +30,7 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow, logDebug, logInfo)
 import qualified Lib.Types.SpecialLocation as SL
 
 areaToText :: SL.Area -> Maybe Text
-areaToText a@(SL.PickupDrop _ _) = Just (SL.areaToText a)
+areaToText a@(SL.PickupDrop {}) = Just (SL.areaToText a)
 areaToText _ = Nothing
 
 vstAreasCacheKey :: Id VehicleServiceTier -> Id MerchantOperatingCity -> Text

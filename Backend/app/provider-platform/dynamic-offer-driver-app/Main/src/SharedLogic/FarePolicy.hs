@@ -142,11 +142,19 @@ getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDista
           logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFarePolicyWithArea : " <> show fp
           return fp
         Nothing -> do
-          fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
-          logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFareProduct' : " <> show fareProduct
-          fp <- getFarePolicyWithArea SL.Default fareProduct
-          logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFarePolicyWithArea Nothing' : " <> show fp
-          return fp
+          -- Gate ID fallback: try without gate ID before falling to Default
+          let baseArea = SL.stripGateId area
+          mbBaseProduct <- if SL.hasGateId area then getFareProduct' baseArea serviceTier else pure Nothing
+          case mbBaseProduct of
+            Just fareProduct -> do
+              logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and gate fallback to baseArea : " <> show baseArea
+              getFarePolicyWithArea baseArea fareProduct
+            Nothing -> do
+              fareProduct <- getFareProduct' SL.Default serviceTier >>= fromMaybeM NoFareProduct
+              logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFareProduct' : " <> show fareProduct
+              fp <- getFarePolicyWithArea SL.Default fareProduct
+              logInfo $ "Dynamic Pricing debugging getFarePolicy txnId: " <> show txnId <> " and getFarePolicyWithArea Nothing' : " <> show fp
+              return fp
   where
     getFareProduct' areaName serviceTierName = do
       FareProduct.getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTierName areaName

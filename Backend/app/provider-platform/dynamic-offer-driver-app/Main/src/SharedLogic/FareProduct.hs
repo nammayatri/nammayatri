@@ -20,6 +20,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import qualified Lib.Queries.GateInfo as QGateInfo
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
@@ -79,7 +80,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           case mbPickupDropFareProducts of
             Just pickupDropFareProducts -> return pickupDropFareProducts
             Nothing -> do
-              let pickupDropArea = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id
+              let pickupDropArea = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id Nothing
                   setPickupDropArea fp = fp {mbPickupDropArea = Just pickupDropArea}
               if pickupPriority > dropPriority
                 then setPickupDropArea <$> getDropFareProductsAndSpecialLocationTag dropSpecialLocation (mkSpecialLocationTag pickupSpecialLocation.category dropSpecialLocation.category "Drop")
@@ -89,9 +90,11 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
         (Nothing, Nothing) -> getDefaultFareProducts
   where
     getPickupDropFareProducts pickupSpecialLocation dropSpecialLocation specialLocationTag = do
-      let area = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id
-      areaProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
-      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+      mbPickupGate <- QGateInfo.findGateInfoByLatLongWithinRadius pickupSpecialLocation.id fromLocationLatLong 2000.0
+      let mbPickupGateId = (.id.getId) <$> mbPickupGate
+          areaWithGate = SL.PickupDrop pickupSpecialLocation.id dropSpecialLocation.id mbPickupGateId
+          areaWithoutGate = SL.stripGateId areaWithGate
+      (areaProducts, otherFareProducts, resolvedArea) <- findFareProductsWithGateFallback areaWithGate areaWithoutGate
       if null areaProducts && null otherFareProducts
         then return Nothing
         else do
@@ -100,7 +103,7 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
             Just $
               FareProducts
                 { fareProducts,
-                  area,
+                  area = resolvedArea,
                   specialLocationName = Just pickupSpecialLocation.locationName,
                   specialLocationTag = Just specialLocationTag,
                   specialLocationSupportNumber = pickupSpecialLocation.supportNumber,
@@ -108,7 +111,9 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
                 }
 
     getPickupFareProductsAndSpecialLocationTag pickupSpecialLocation specialLocationTag = do
-      let area = SL.Pickup pickupSpecialLocation.id
+      mbPickupGate <- QGateInfo.findGateInfoByLatLongWithinRadius pickupSpecialLocation.id fromLocationLatLong 2000.0
+      let mbPickupGateId = (.id.getId) <$> mbPickupGate
+          area = SL.Pickup pickupSpecialLocation.id mbPickupGateId
           specialLocationName = pickupSpecialLocation.locationName
       fareProducts <- getFareProducts area
       return $
@@ -149,11 +154,40 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
 
+    -- | If a fare product for the given trip category is not configured at the gate level,
+    -- fall back to the parent special location (without gate ID). A gate is just a refinement
+    -- of its special location, so this fallback is safe.
+    -- We intentionally do NOT fall back from special location to Default area here. If a trip
+    -- category (e.g. OneWayOnDemandDynamicOffer) has no fare product in a special location,
+    -- that is by design — we don't want that category offered there. Falling back to Default
+    -- would incorrectly enable trip categories that were deliberately excluded from the zone.
+    findFareProductsWithGateFallback areaWithGate areaWithoutGate = do
+      if SL.hasGateId areaWithGate
+        then do
+          gateProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory areaWithGate
+          if null gateProducts
+            then do
+              logInfo $ "DEBUG findFareProductsWithGateFallback: no gate-specific fare products for area=" <> show areaWithGate <> ", falling back to area without gate"
+              products <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory areaWithoutGate
+              otherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources areaWithoutGate
+              return (products, otherProducts, areaWithoutGate)
+            else return (gateProducts, [], areaWithGate)
+        else do
+          products <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory areaWithoutGate
+          otherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources areaWithoutGate
+          return (products, otherProducts, areaWithoutGate)
+
     getFareProducts area = do
-      fareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
-      otherFareProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+      let baseArea = SL.stripGateId area
+      (fareProducts, otherFareProducts, _resolvedArea) <-
+        if SL.hasGateId area
+          then findFareProductsWithGateFallback area baseArea
+          else do
+            products <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory area
+            otherProducts <- QFareProduct.findAllUnboundedFareProductForArea merchantOpCityId searchSources area
+            return (products, otherProducts, area)
       logInfo $ "DEBUG getFareProducts: tripCategory=" <> show tripCategory <> " area=" <> show area <> " merchantOpCityId=" <> show merchantOpCityId <> " fareProductsCount=" <> show (length fareProducts) <> " otherFareProductsCount=" <> show (length otherFareProducts) <> " fareProductVariants=" <> show (map (.vehicleServiceTier) fareProducts)
-      if null fareProducts && area /= SL.Default && null otherFareProducts
+      if null fareProducts && baseArea /= SL.Default && null otherFareProducts
         then do
           logInfo $ "DEBUG getFareProducts: falling back to Default for tripCategory=" <> show tripCategory
           defFareProducts <- QFareProduct.findAllUnboundedFareProductForVariants merchantOpCityId searchSources tripCategory SL.Default
@@ -169,4 +203,11 @@ getBoundedFareProduct :: (CacheFlow m r, EsqDBFlow m r, Esq.EsqDBReplicaFlow m r
 getBoundedFareProduct merchantOpCityId searchSources tripCategory serviceTier area = do
   fareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier area
   currentIstTime <- getLocalCurrentTime 19800
-  return $ listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime)
+  case listToMaybe (DTB.findBoundedDomain fareProducts currentIstTime) of
+    Just fp -> return (Just fp)
+    Nothing
+      | SL.hasGateId area -> do
+          let baseArea = SL.stripGateId area
+          baseFareProducts <- QFareProduct.findAllBoundedByMerchantVariantArea merchantOpCityId searchSources tripCategory serviceTier baseArea
+          return $ listToMaybe (DTB.findBoundedDomain baseFareProducts currentIstTime)
+    Nothing -> return Nothing
