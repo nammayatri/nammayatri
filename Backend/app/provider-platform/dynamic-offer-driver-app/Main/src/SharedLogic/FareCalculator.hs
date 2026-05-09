@@ -1432,7 +1432,6 @@ discountApplicableComponents =
     WaitingCharge,
     ServiceChargeComponent,
     CongestionChargeComponent,
-    PetChargeComponent,
     PriorityChargeComponent,
     NightShiftChargeComponent,
     StopChargeComponent,
