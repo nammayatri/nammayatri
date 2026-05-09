@@ -25,6 +25,7 @@ import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
 import Control.Applicative ((<|>))
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -103,6 +104,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
       logTagError "on_select req" $ "on_select error: " <> show err
       throwError $ InvalidRequest "Invalid or missing price data"
     Right (estimatedFare, currency) -> do
+      let quoteBreakupList = maybe [] (parseQuotationBreakup currency) quote.quotationBreakup
       return $
         DOnSelect.QuoteInfo
           { vehicleVariant = vehicleVariant,
@@ -113,6 +115,7 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
             isCustomerPrefferedSearchRoute = Nothing,
             isBlockedRoute = Nothing,
             billingCategory = billingCategory,
+            quoteBreakupList = quoteBreakupList,
             ..
           }
   where
@@ -136,6 +139,20 @@ buildQuoteInfoV2 fulfillment quote contextTime order validTill item = do
 
     parseDecimalValue :: Text -> Maybe DecimalValue.DecimalValue
     parseDecimalValue = DecimalValue.valueFromString
+
+    parseQuotationBreakup :: Currency -> [Spec.QuotationBreakupInner] -> [DOnSearch.QuoteBreakupInfo]
+    parseQuotationBreakup curr = mapMaybe buildOne
+      where
+        buildOne inner = do
+          title <- inner.quotationBreakupInnerTitle
+          priceVal <- inner.quotationBreakupInnerPrice >>= (.priceValue)
+          decVal <- DecimalValue.valueFromString priceVal
+          let price = Utils.decimalValueToPrice curr decVal
+          pure
+            DOnSearch.QuoteBreakupInfo
+              { title = title,
+                price = DOnSearch.BreakupPriceInfo {value = price}
+              }
 
 buildDriverOfferQuoteDetailsV2 ::
   (MonadFlow m, MonadThrow m, Log m, MonadTime m) =>

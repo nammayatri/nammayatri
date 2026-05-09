@@ -32,6 +32,7 @@ module Domain.Action.Beckn.OnSearch
     WaitingChargesInfo (..),
     onSearch,
     validateRequest,
+    buildQuoteBreakUp,
     BusinessDiscountInfo (..),
     PersonalDiscountInfo (..),
   )

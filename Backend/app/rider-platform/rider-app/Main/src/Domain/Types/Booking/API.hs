@@ -23,6 +23,7 @@ import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
+import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
@@ -326,8 +327,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         rideList = rides,
         hasNightIssue = hasNightIssue,
         tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
-        estimatedFareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups,
-        fareBreakup = DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups,
+        estimatedFareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups),
+        fareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups),
         rideScheduledTime = booking.startTime,
         returnTime = booking.returnTime,
         bookingDetails,

@@ -32,12 +32,32 @@ module Domain.SharedLogic.RideDiscount
     clampDiscount,
     applyRideDiscount,
     parseProjectFareParamsBreakup,
+    projectedFareParamTags,
+    isProjectedFareParamTag,
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Map.Strict as Map
 import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMoney)
+
+projectedFareParamTags :: [Text]
+projectedFareParamTags =
+  [ show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE,
+    show Enums.RIDE_FARE_DISCOUNT_APPLICABLE_TAX,
+    show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX_EXCLUSIVE,
+    show Enums.RIDE_FARE_NON_DISCOUNT_APPLICABLE_TAX,
+    show Enums.TOLL_FARE_TAX_EXCLUSIVE,
+    show Enums.TOLL_FARE_TAX,
+    show Enums.CANCELLATION_FEE_TAX_EXCLUSIVE,
+    show Enums.CANCELLATION_TAX,
+    show Enums.PARKING_CHARGE_TAX_EXCLUSIVE,
+    show Enums.PARKING_CHARGE_TAX
+  ]
+
+isProjectedFareParamTag :: Text -> Bool
+isProjectedFareParamTag t = t `elem` projectedFareParamTags
 
 data ProjectFareParamsBreakup = ProjectFareParamsBreakup
   { discountApplicableRideFareTaxExclusive :: HighPrecMoney,

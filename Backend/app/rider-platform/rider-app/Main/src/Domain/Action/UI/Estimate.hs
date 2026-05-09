@@ -16,6 +16,7 @@ module Domain.Action.UI.Estimate where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
+import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
 import Domain.Types.EstimateStatus
@@ -112,7 +113,7 @@ mkEstimateAPIEntity isReferredRide offer (Estimate {..}) = do
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
         tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
-        estimateFareBreakup = mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB),
+        estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
         providerId = providerId,

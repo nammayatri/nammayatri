@@ -18,6 +18,7 @@ module Domain.Action.Beckn.OnSelect
 where
 
 import qualified Beckn.ACL.Init as ACL
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.UI.Confirm as DConfirm
 import Domain.Types
 import qualified Domain.Types.DriverOffer as DDriverOffer
@@ -80,7 +81,8 @@ data QuoteInfo = QuoteInfo
     isBlockedRoute :: Maybe Bool,
     quoteValidTill :: UTCTime,
     billingCategory :: BillingCategory,
-    tripCategory :: TripCategory
+    tripCategory :: TripCategory,
+    quoteBreakupList :: [DOnSearch.QuoteBreakupInfo]
   }
 
 data DriverOfferQuoteDetails = DriverOfferQuoteDetails
@@ -173,10 +175,11 @@ buildSelectedQuote ::
   DSearchRequest.SearchRequest ->
   QuoteInfo ->
   m DQuote.Quote
-buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {..} = do
+buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {quoteBreakupList = quoteBreakupInfos, ..} = do
   uid <- generateGUID
   let tripTerms = Nothing
   quoteDetails_ <- buildDriverQuoteDetails tripCategory
+  quoteBreakups <- DOnSearch.buildQuoteBreakUp quoteBreakupInfos uid req.merchantId req.merchantOperatingCityId
   let quote =
         DQuote.Quote
           { id = uid,
@@ -203,7 +206,7 @@ buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {.
             vehicleServiceTierSeatingCapacity = estimate.vehicleServiceTierSeatingCapacity,
             specialLocationName = estimate.specialLocationName,
             specialLocationSupportNumber = Nothing,
-            quoteBreakupList = [], -- Not Handling as Rate Card details not required after Select stage
+            quoteBreakupList = quoteBreakups,
             tripCategory = Just tripCategory,
             vehicleIconUrl = estimate.vehicleIconUrl,
             isSafetyPlus = quoteDetails.isSafetyPlus,
