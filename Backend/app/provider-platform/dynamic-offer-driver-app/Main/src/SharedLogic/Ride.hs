@@ -60,6 +60,7 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -403,7 +404,14 @@ buildRide ::
 buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo now vehicle onlinePayment enableOtpLessRide mFleetOwnerId commission = do
   guid <- Id <$> generateGUID
   shortId <- generateShortId
-  cloudType <- asks (.cloudType)
+  envCloudType <- asks (.cloudType)
+  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+  let cloudType =
+        if isValueAddNP
+          then envCloudType
+          else case driver.cloudType of
+            Just ct -> Just ct
+            Nothing -> envCloudType
   deploymentVersion <- asks (.version)
   trackingUrl <- buildTrackingUrl guid
   let previousRideToLocation = dinfo >>= (.driverTripEndLocation)
