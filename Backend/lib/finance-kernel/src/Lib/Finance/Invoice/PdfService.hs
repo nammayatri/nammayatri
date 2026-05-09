@@ -214,11 +214,15 @@ buildInvoicePdfData inv items mbTax mbPayType mbBrand mbLast4 =
 -- Line item parsing
 -- ---------------------------------------------------------------------------
 
--- | Fails loud — silent [] on decode error would render a blank PDF instead of surfacing the bug.
+-- | Throws on decode failure or when any item lacks the typed 'itemType'.
+-- List endpoints wrap this in 'withTryCatch' to skip bad rows; single-invoice
+-- endpoints propagate the 500.
 parseLineItems :: Aeson.Value -> [InvoiceLineItem]
 parseLineItems val =
   case Aeson.fromJSON val of
-    Aeson.Success items -> items
+    Aeson.Success items
+      | all (isJust . (.itemType)) items -> items
+      | otherwise -> error "parseLineItems: encountered line item without typed itemType"
     Aeson.Error err -> error $ "parseLineItems: invoice lineItems JSON failed to decode: " <> T.pack err
 
 -- ---------------------------------------------------------------------------
@@ -345,11 +349,17 @@ renderLineItemsTable cfg pdfData lbls =
   where
     th cls lbl = "<th" <> (if T.null cls then "" else " class='" <> cls <> "'") <> ">" <> lbl <> "</th>"
 
+-- | Display the typed 'descriptionType' if set; otherwise fall back to the
+-- raw 'description' Text (for old DB rows that pre-date the typed field).
+displayItemDescription :: InvoiceLocale -> InvoiceLineItem -> Text
+displayItemDescription locale item =
+  maybe item.description (renderLineItemDescription locale) item.descriptionType
+
 -- | Pair each Fare with its (single) Tax by shared groupId. Standalone fares get Nothing.
 pairByGroupId :: [InvoiceLineItem] -> [(InvoiceLineItem, Maybe InvoiceLineItem)]
 pairByGroupId items =
-  let fares = [item | item <- items, item.itemType == Fare]
-      taxes = [item | item <- items, item.itemType == Tax]
+  let fares = [item | item <- items, item.itemType == Just Fare]
+      taxes = [item | item <- items, item.itemType == Just Tax]
       taxFor Nothing = Nothing
       taxFor target = find (\taxItem -> taxItem.groupId == target) taxes
    in [(fareItem, taxFor fareItem.groupId) | fareItem <- fares]
@@ -360,7 +370,7 @@ buildRows locale pdfData _lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
       mainTableItems =
-        [item | item <- pdfData.parsedLineItems, not item.isExternalCharge, item.itemType == Fare || item.itemType == Tax]
+        [item | item <- pdfData.parsedLineItems, not item.isExternalCharge, item.itemType == Just Fare || item.itemType == Just Tax]
       pairs = pairByGroupId mainTableItems
    in map (renderFareTaxRow locale cur) pairs
 
@@ -371,7 +381,7 @@ renderFareTaxRow locale cur (fare, mbTax) =
       vatPctText = if hasTax then fmtPct (realToFrac (taxAmount / fare.lineTotal) * 100.0) else ""
       vatAmtText = maybe "" (const (fmtMoneyNum cur taxAmount)) mbTax
    in tr
-        [ td (renderLineItemDescription locale fare.description),
+        [ td (displayItemDescription locale fare),
           td' "n" (fmtMoneyNum cur fare.lineTotal),
           td' "n" vatPctText,
           td' "n" vatAmtText,
@@ -401,10 +411,10 @@ renderTotals cfg pdfData lbls =
       locale = cfg.locale
       mbTax = pdfData.mbTaxTxn
       items = pdfData.parsedLineItems
-      tableFares = [item | item <- items, item.itemType == Fare, not item.isExternalCharge]
-      tableTaxes = [item | item <- items, item.itemType == Tax, not item.isExternalCharge]
+      tableFares = [item | item <- items, item.itemType == Just Fare, not item.isExternalCharge]
+      tableTaxes = [item | item <- items, item.itemType == Just Tax, not item.isExternalCharge]
       externalItems = filter (.isExternalCharge) items
-      adjustmentItems = [item | item <- items, item.itemType == Adjustment]
+      adjustmentItems = [item | item <- items, item.itemType == Just Adjustment]
       taxableSum = sum (map (.lineTotal) tableFares)
       taxSum = sum (map (.lineTotal) tableTaxes)
       externalsSum = sum (map (.lineTotal) externalItems)
@@ -451,7 +461,7 @@ renderTotals cfg pdfData lbls =
 renderExternalRow :: InvoiceLocale -> Currency -> InvoiceLineItem -> Text
 renderExternalRow locale cur item =
   "<tr class='tot-row'><td>"
-    <> escHtml (renderLineItemDescription locale item.description)
+    <> escHtml (displayItemDescription locale item)
     <> "</td><td class='tot-val'>"
     <> fmtMoneyNum cur item.lineTotal
     <> "</td></tr>"
@@ -459,7 +469,7 @@ renderExternalRow locale cur item =
 renderAdjustmentRow :: InvoiceLocale -> Currency -> InvoiceLineItem -> Text
 renderAdjustmentRow locale cur item =
   "<tr class='tot-row'><td>"
-    <> escHtml (renderLineItemDescription locale item.description)
+    <> escHtml (displayItemDescription locale item)
     <> "</td><td class='tot-val'>"
     <> fmtMoneyNum cur item.lineTotal
     <> "</td></tr>"

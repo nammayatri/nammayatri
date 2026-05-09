@@ -635,16 +635,16 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
                       then
                         catMaybes
                           [ if inclusiveCancellation > 0
-                              then Just InvoiceLineItem {description = CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Fare}
+                              then Just InvoiceLineItem {description = "Cancellation Fee (Incl. VAT)", descriptionType = Just CancellationFeeInclVat, quantity = 1, unitPrice = inclusiveCancellation, lineTotal = inclusiveCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing
                           ]
                       else
                         catMaybes
                           [ if baseCancellation > 0
-                              then Just InvoiceLineItem {description = CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Fare}
+                              then Just InvoiceLineItem {description = "Customer Cancellation Fee", descriptionType = Just CustomerCancellationFee, quantity = 1, unitPrice = baseCancellation, lineTotal = baseCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Fare}
                               else Nothing,
                             if gstOnCancellation > 0
-                              then Just InvoiceLineItem {description = GstOnCancellationFee, quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Tax}
+                              then Just InvoiceLineItem {description = "GST on Cancellation Fee", descriptionType = Just GstOnCancellationFee, quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Tax}
                               else Nothing
                           ],
               referenceId = Nothing,

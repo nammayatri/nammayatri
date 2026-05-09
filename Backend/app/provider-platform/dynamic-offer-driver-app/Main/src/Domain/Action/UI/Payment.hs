@@ -503,7 +503,7 @@ processWalletTopupWebhook driver order transactionStatus = do
                   issuedToName = Nothing,
                   issuedToAddress = Nothing,
                   referenceId = Nothing,
-                  lineItems = [InvoiceLineItem {description = WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Fare}],
+                  lineItems = [InvoiceLineItem {description = "Wallet Top-up", descriptionType = Just WalletTopup, quantity = 1, unitPrice = order.amount, lineTotal = order.amount, isExternalCharge = False, groupId = Just "g-topup", itemType = Just Fare}],
                   gstBreakdown = Nothing,
                   isVat = False,
                   issuedToTaxNo = Nothing,

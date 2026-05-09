@@ -33,7 +33,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
-import Kernel.Utils.Common (secondsToNominalDiffTime)
+import Kernel.Utils.Common (logError, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
@@ -1308,17 +1308,28 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
       cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
 
-  pdfDatas <- forM invoices $ \inv -> do
-    let items = parseLineItems inv.lineItems
-    taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
-    let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
-    (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
-      Just orderId -> do
-        txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
-        let mbTxn = Kernel.Prelude.listToMaybe txns
-        pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
-      Nothing -> pure (Nothing, Nothing, Nothing)
-    pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+  -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
+  -- skip those individually so one bad row doesn't kill the whole list response.
+  results <- forM invoices $ \inv -> do
+    res <- withTryCatch ("renderInvoice:" <> inv.invoiceNumber) $ do
+      let items = parseLineItems inv.lineItems
+      taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
+      let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
+      (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
+        Just orderId -> do
+          txns <- HQPaymentTransaction.findAllByOrderId (Id orderId)
+          let mbTxn = Kernel.Prelude.listToMaybe txns
+          pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
+        Nothing -> pure (Nothing, Nothing, Nothing)
+      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+    case res of
+      Right pdfData -> pure (Just pdfData)
+      Left err -> do
+        logError $ "Skipping invoice " <> inv.invoiceNumber <> " (render failed): " <> show err
+        pure Nothing
+  let pdfDatas = catMaybes results
+  when (Kernel.Prelude.null pdfDatas) $
+    throwError $ InvalidRequest "No invoices could be rendered (all failed)"
 
   let lastInv = Kernel.Prelude.last invoices
       html = case pdfDatas of
