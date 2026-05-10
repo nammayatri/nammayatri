@@ -28,7 +28,8 @@ data SubscriptionTransactionEntity = SubscriptionTransactionEntity
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SubscriptionTransactionResponse = SubscriptionTransactionResponse
-  { entities :: [SubscriptionTransactionEntity],
+  { currentBalance :: Kernel.Types.Common.HighPrecMoney,
+    entities :: [SubscriptionTransactionEntity],
     expiryDeduction :: Kernel.Types.Common.HighPrecMoney,
     finalBalance :: Kernel.Types.Common.HighPrecMoney,
     planPurchased :: Kernel.Types.Common.HighPrecMoney,
