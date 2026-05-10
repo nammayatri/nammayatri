@@ -360,6 +360,8 @@ fetchInvoicesByFilters ::
   Flow [FinanceInvoice.Invoice]
 fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo = do
   let issuedToType = fromMaybe CUSTOMER mbIssuedToType
+      isBapIssuedToType = issuedToType == RIDER || issuedToType == CUSTOMER
+      statusIn = if isBapIssuedToType then [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid] else []
   case mbInvoiceId of
     Just invoiceId ->
       QFinanceInvoice.findById (Id invoiceId) >>= \case
@@ -388,6 +390,7 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
           mbIssuedToId
           mbSupplierId
           (Just issuedToType)
+          statusIn
           (Just limit)
           (Just offset)
 

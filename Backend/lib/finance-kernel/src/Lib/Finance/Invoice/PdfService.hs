@@ -275,11 +275,11 @@ renderHeader cfg pdfData lbls =
           maybe "" (\u -> "<img src='" <> escHtml u <> "' alt='' class='logo'>") cfg.logoUrl,
           "</td>",
           "<td class='header-right-cell'>",
-          "<div class='inv-number'><b>",
+          "<div class='inv-number' style='font-weight:700;color:#000000'>",
           lbls.invoiceNumberLabel,
           " ",
           escHtml inv.invoiceNumber,
-          "</b></div>",
+          "</div>",
           "<div class='inv-date'>",
           lbls.dateLabel,
           ": ",
@@ -302,7 +302,7 @@ renderParties inv lbls =
       "<div class='party-lbl-plain'>",
       lbls.recipientLabel,
       ":</div>",
-      "<div class='party-name'>",
+      "<div class='party-name' style='font-weight:700;color:#000000'>",
       escHtml (fromMaybe "" inv.issuedToName),
       "</div>",
       "</td>",
@@ -347,7 +347,7 @@ renderLineItemsTable cfg pdfData lbls =
           "</tbody></table>"
         ]
   where
-    th cls lbl = "<th" <> (if T.null cls then "" else " class='" <> cls <> "'") <> ">" <> lbl <> "</th>"
+    th cls lbl = "<th style='font-weight:700;color:#000000'" <> (if T.null cls then "" else " class='" <> cls <> "'") <> ">" <> lbl <> "</th>"
 
 -- | Display the typed 'descriptionType' if set; otherwise fall back to the
 -- raw 'description' Text (for old DB rows that pre-date the typed field).
@@ -437,21 +437,21 @@ renderTotals cfg pdfData lbls =
           totRow lbls.taxablePriceLabel (fmtMoneyNum cur taxableSum),
           if taxSum > 0 then totRow vatLabel (fmtMoneyNum cur taxSum) else "",
           T.concat (map (renderExternalRow locale cur) externalItems),
-          "<tr class='tot-row grand'><td>",
+          "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>",
           lbls.totalInclVatLabel,
-          "</td><td class='tot-val'>",
+          "</td><td class='tot-val' style='font-weight:700;color:#000000'>",
           fmtMoneyNum cur totalLine,
           "</td></tr>",
           T.concat (map (renderAdjustmentRow locale cur) adjustmentItems),
           if not (null adjustmentItems)
             then
-              "<tr class='tot-row grand'><td>"
-                <> lbls.invoicedValueLabel
-                <> "</td><td class='tot-val'>"
-                <> fmtMoneyNum cur netTotalLine
-                <> "</td></tr>"
-            else "",
-          maybe "" (\pm -> "<tr class='tot-row payment'><td></td><td class='tot-val payment-detail'>" <> escHtml pm <> "</td></tr>") paymentMethodStr,
+              let invoicedLabel = lbls.invoicedValueLabel <> maybe "" (\pm -> " " <> pm) paymentMethodStr <> ":"
+               in "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>"
+                    <> escHtml invoicedLabel
+                    <> "</td><td class='tot-val' style='font-weight:700;color:#000000'>"
+                    <> fmtMoneyNum cur netTotalLine
+                    <> "</td></tr>"
+            else maybe "" (\pm -> "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>" <> escHtml (lbls.invoicedValueLabel <> " " <> pm <> ":") <> "</td><td class='tot-val' style='font-weight:700;color:#000000'>" <> fmtMoneyNum cur totalLine <> "</td></tr>") paymentMethodStr,
           "</table>"
         ]
   where
@@ -630,11 +630,11 @@ renderBatchHeader cfg pdfData lbls firstDate lastDate =
           maybe "" (\u -> "<img src='" <> escHtml u <> "' alt='' class='logo'>") cfg.logoUrl,
           "</td>",
           "<td class='header-right-cell'>",
-          "<div class='inv-number'><b>",
+          "<div class='inv-number' style='font-weight:700;color:#000000'>",
           lbls.invoiceNumberLabel,
           " ",
           escHtml inv.invoiceNumber,
-          "</b></div>",
+          "</div>",
           "<div class='inv-date'>",
           lbls.dateLabel,
           ": ",

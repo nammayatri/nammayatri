@@ -324,6 +324,7 @@ def _mk_account(params):
         "object": "account",
         "charges_enabled": False,
         "details_submitted": False,
+        "payouts_enabled": False,
     }
     accounts[acc_id] = acc
     return acc, 200
@@ -474,7 +475,7 @@ def handle(handler, path, body):
             return handler._json(resp, st)
         if method == "GET" and len(parts) == 2:
             acc = accounts.get(parts[1],
-                               {"id": parts[1], "object": "account", "charges_enabled": True, "details_submitted": True})
+                               {"id": parts[1], "object": "account", "charges_enabled": True, "details_submitted": True, "payouts_enabled": True})
             return handler._json(acc)
 
     # ── Account Links ──
