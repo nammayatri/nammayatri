@@ -296,26 +296,29 @@ renderHeader cfg pdfData lbls =
 
 renderParties :: Invoice -> Labels -> Text
 renderParties inv lbls =
-  T.concat
-    [ "<table class='parties'><tr>",
-      "<td class='party-left'>",
-      "<div class='party-lbl-plain'>",
-      lbls.recipientLabel,
-      ":</div>",
-      "<div class='party-name' style='font-weight:700;color:#000000'>",
-      escHtml (fromMaybe "" inv.issuedToName),
-      "</div>",
-      "</td>",
-      "<td class='party-right'>",
-      "<div class='party-name'>",
-      escHtml (fromMaybe "" inv.supplierName),
-      "</div>",
-      maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.supplierAddress,
-      maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") inv.supplierGSTIN,
-      maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") inv.supplierTaxNo,
-      "</td>",
-      "</tr></table>"
-    ]
+  let rightName = inv.supplierName <|> inv.issuedByName
+      rightAddress = inv.supplierAddress <|> inv.issuedByAddress
+      rightGstin = inv.supplierGSTIN <|> inv.merchantGstin
+   in T.concat
+        [ "<table class='parties'><tr>",
+          "<td class='party-left'>",
+          "<div class='party-lbl-plain'>",
+          lbls.recipientLabel,
+          ":</div>",
+          "<div class='party-name' style='font-weight:700;color:#000000'>",
+          escHtml (fromMaybe "" inv.issuedToName),
+          "</div>",
+          "</td>",
+          "<td class='party-right'>",
+          "<div class='party-name'>",
+          escHtml (fromMaybe "" rightName),
+          "</div>",
+          maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") rightAddress,
+          maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") rightGstin,
+          maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") inv.supplierTaxNo,
+          "</td>",
+          "</tr></table>"
+        ]
 
 renderFromLocation :: Invoice -> Text
 renderFromLocation inv =

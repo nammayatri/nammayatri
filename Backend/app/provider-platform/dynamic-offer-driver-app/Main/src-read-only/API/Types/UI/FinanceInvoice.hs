@@ -9,7 +9,6 @@ import qualified "beckn-spec" Domain.Types.Invoice
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.Finance.Domain.Types.Invoice
 import Servant
 import Tools.Auth
 
@@ -30,6 +29,7 @@ data FinanceInvoiceItem = FinanceInvoiceItem
     issuedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     lineItems :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    merchantGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sacCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,

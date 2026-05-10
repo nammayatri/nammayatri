@@ -672,6 +672,7 @@ invoiceInner ctx config = do
             supplierGSTIN = ctx.supplierGSTIN,
             supplierTaxNo = if config.isVat then ctx.supplierVatNumber else ctx.supplierGSTIN,
             supplierId = ctx.supplierId,
+            merchantGstin = ctx.merchantGstin,
             referenceId = config.referenceId,
             gstinOfParty = Nothing,
             panOfParty = ctx.panOfParty,

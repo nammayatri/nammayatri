@@ -37,6 +37,7 @@ Invoice:
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
     supplierId: Maybe Text
+    merchantGstin: Maybe Text
     referenceId: Maybe Text
     lineItems: Value
     subtotal: HighPrecMoney

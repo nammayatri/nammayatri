@@ -61,6 +61,7 @@ data InvoiceCreationParams = InvoiceCreationParams
     issuedByName :: Maybe Text,
     issuedByAddress :: Maybe Text,
     gstinOfParty :: Maybe Text,
+    merchantGstin :: Maybe Text,
     merchantShortId :: Text
   }
   deriving (Show)
@@ -589,6 +590,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     supplierGSTIN = Nothing,
                     supplierTaxNo = Nothing,
                     supplierId = Nothing,
+                    merchantGstin = invoiceParams.merchantGstin,
                     referenceId = Nothing,
                     gstinOfParty = invoiceParams.gstinOfParty,
                     panOfParty = panDecrypted,
@@ -638,7 +640,7 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     -- Subscription purchases are always GST (not VAT)
                     isVat = False,
                     issuedToTaxNo = invoiceParams.gstinOfParty,
-                    issuedByTaxNo = Nothing,
+                    issuedByTaxNo = invoiceParams.merchantGstin,
                     paymentMode = Just "ONLINE" -- subscription paid via Juspay autopay/manual
                   }
           invoiceResult <- createInvoice invoiceInput entryIds

@@ -31,6 +31,7 @@ data InvoiceT f = InvoiceT
     issuedToName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     issuedToType :: (B.C f Domain.Types.Invoice.IssuedToType),
     lineItems :: (B.C f Data.Aeson.Value),
+    merchantGstin :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     paymentMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
