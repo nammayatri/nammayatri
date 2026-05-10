@@ -1059,7 +1059,8 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)

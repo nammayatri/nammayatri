@@ -155,7 +155,8 @@ createOrder (personId, merchantId) rideId = do
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -214,7 +215,8 @@ createRideBookingPaymentOrder booking = do
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -868,7 +870,8 @@ postWalletRecharge (personId, merchantId) req = do
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = mbPaymentRules
+            paymentRules = mbPaymentRules,
+            autoRefundPostSuccess = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

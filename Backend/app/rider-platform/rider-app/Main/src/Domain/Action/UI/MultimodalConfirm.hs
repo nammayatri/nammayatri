@@ -394,7 +394,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)

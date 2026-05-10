@@ -395,7 +395,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 splitSettlementDetails = splitSettlementDetails,
                 basket = Nothing,
-                paymentRules = Nothing
+                paymentRules = Nothing,
+                autoRefundPostSuccess = Nothing
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)

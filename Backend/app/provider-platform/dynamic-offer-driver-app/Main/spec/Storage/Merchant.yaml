@@ -2023,20 +2023,24 @@ PayoutConfig:
     d2dPayoutType: D2DPayoutTypeEnum
     referralRewardAmountPerRideForD2DPayout: Maybe HighPrecMoney
     vpaVerificationMode: VpaVerificationMode
+    isAutoRefundEnabled: Bool
 
   beamType:
     timeDiff: Seconds
     d2dPayoutType: Maybe D2DPayoutTypeEnum
     vpaVerificationMode: Maybe VpaVerificationMode
+    isAutoRefundEnabled: Maybe Bool
 
   toTType:
     timeDiff: Kernel.Utils.Common.nominalDiffTimeToSeconds|I
     d2dPayoutType: Just d2dPayoutType|E
     vpaVerificationMode: Just vpaVerificationMode|E
+    isAutoRefundEnabled: Just isAutoRefundEnabled|E
   fromTType:
     timeDiff: Kernel.Utils.Common.secondsToNominalDiffTime|I
     d2dPayoutType: fromMaybe Domain.Types.PayoutConfig.NO_PAYOUT d2dPayoutType|E
     vpaVerificationMode: fromMaybe Domain.Types.PayoutConfig.PAYMENT_BASED vpaVerificationMode|E
+    isAutoRefundEnabled: fromMaybe False isAutoRefundEnabled|E
   default:
     referralRewardAmountPerRide: "100.0"
     timeDiff: "86400"

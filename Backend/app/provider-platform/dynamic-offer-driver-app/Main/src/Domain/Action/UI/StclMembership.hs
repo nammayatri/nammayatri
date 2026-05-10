@@ -110,7 +110,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)

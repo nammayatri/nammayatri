@@ -92,6 +92,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Payout.Registration as Registration
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType
@@ -171,6 +172,17 @@ updatePayoutVpaAndStatusByRole role personId vpa = do
   if DCommon.checkFleetOwnerRole role
     then QFOI.updatePayoutVpaAndStatus (Just vpa) (Just DFOI.VIA_WEBHOOK) (cast personId)
     else QDI.updatePayoutVpaAndStatus (Just vpa) (Just DI.VIA_WEBHOOK) (cast personId)
+
+updatePayoutRegAmountRefundedByRole ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  DP.Role ->
+  Id DPayment.Person ->
+  HighPrecMoney ->
+  m ()
+updatePayoutRegAmountRefundedByRole role personId amount =
+  if DCommon.checkFleetOwnerRole role
+    then QFOI.updatePayoutRegAmountRefunded (Just amount) (cast personId)
+    else QDI.updatePayoutRegAmountRefunded (Just amount) (cast personId)
 
 mkOrderAPIEntity :: (EncFlow m r, HasKafkaProducer r) => DOrder.PaymentOrder -> m DOrder.PaymentOrderAPIEntity
 mkOrderAPIEntity DOrder.PaymentOrder {..} = do
@@ -263,14 +275,33 @@ getStatus (personId, merchantId, merchantOperatingCityId) paymentOrderId = do
           logDebug $ "Invoices: " <> show invoices
           let isOneTimeSecurityInvoice = any (\inv -> inv.paymentMode == INV.ONE_TIME_SECURITY_INVOICE && inv.invoiceStatus == INV.ACTIVE_INVOICE) invoices
           let isPayoutRegistration = order.entityName == Just DPayment.PAYOUT_REGISTRATION
+          -- Legacy path: merchants without auto-refund enabled at Juspay still receive CHARGED for the ₹2 registration.
           when ((isOneTimeSecurityInvoice || isPayoutRegistration) && status == Payment.CHARGED) do
             whenJust payerVpa $ \vpa -> do
               updatePayoutVpaAndStatusByRole driver.role order.personId vpa
-            logDebug $ "Updating Payout (Via getStatus) And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
+            logDebug $ "Updating Payout (Via getStatus / CHARGED) For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
             when isPayoutRegistration $ do
               -- Store VPA on PaymentOrder
               QOrder.updateVpa order.id payerVpa
               when (isJust payerVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+          -- Auto-refund path: merchants with auto-refund enabled skip CHARGED and surface AUTO_REFUNDED instead.
+          when (isPayoutRegistration && status == Payment.AUTO_REFUNDED) do
+            whenJust payerVpa $ \vpa -> updatePayoutVpaAndStatusByRole driver.role order.personId vpa
+            logDebug $ "Updating Payout (Via getStatus / AUTO_REFUNDED) For Person: " <> show order.personId <> " with Vpa: " <> show payerVpa
+            QOrder.updateVpa order.id payerVpa
+            when (isJust payerVpa) $
+              fork ("processing backlog payout for driver " <> order.personId.getId) $
+                PayoutA.processPreviousPayoutAmount (cast order.personId) payerVpa merchantOperatingCityId
+            updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
+            -- Polling carries no event_name, so derive driver-fee status from the refund object
+            let mbRefundStatus = listToMaybe refunds <&> (.status)
+            case mbRefundStatus of
+              Just Payment.REFUND_SUCCESS -> do
+                mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [PAYMENT_PENDING, REFUND_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
+                whenJust mbDriverFee $ \df -> QDF.updateStatus REFUNDED df.id now
+              _ -> do
+                mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [PAYMENT_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
+                whenJust mbDriverFee $ \df -> QDF.updateStatus REFUND_PENDING df.id now
           case mbSubscriptionPurchase of
             Just subscriptionPurchase -> do
               unless (status /= Payment.CHARGED) $ processSubscriptionPurchasePayment merchantId driver subscriptionPurchase
@@ -387,15 +418,31 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           -- throws when no SubscriptionConfig row exists for the merchant operating city).
           if order.entityName == Just DPayment.PAYOUT_REGISTRATION
             then do
-              when (transactionStatus == Payment.CHARGED) do
-                driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
-                let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
-                whenJust mbVpa $ \vpa -> do
-                  updatePayoutVpaAndStatusByRole driver.role order.personId vpa
-                logDebug $ "Updating Payout And Process Previous Payout For Person: " <> show order.personId <> " with Vpa: " <> show mbVpa
+              driver <- B.runInReplica $ QP.findById (cast order.personId) >>= fromMaybeM (PersonDoesNotExist order.personId.getId)
+              let mbVpa = payerVpa <|> ((.payerVpa) =<< upi)
+              -- Legacy path: pre-auto-refund Juspay merchants emit CHARGED on the registration ₹2.
+              when (transactionStatus == Payment.CHARGED) $ do
+                whenJust mbVpa $ \vpa -> updatePayoutVpaAndStatusByRole driver.role order.personId vpa
+                logDebug $ "PAYOUT_REGISTRATION CHARGED for order " <> show order.id <> " | Vpa: " <> show mbVpa
                 -- Store VPA on PaymentOrder
                 QOrder.updateVpa order.id mbVpa
                 when (isJust mbVpa) $ fork ("processing backlog payout for driver " <> order.personId.getId) $ PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
+              -- Auto-refund path: post-toggle merchants emit AUTO_REFUND_INITIATED / AUTO_REFUND_SUCCEEDED instead of CHARGED.
+              case eventName of
+                Just Juspay.AUTO_REFUND_INITIATED -> do
+                  whenJust mbVpa $ \vpa -> updatePayoutVpaAndStatusByRole driver.role order.personId vpa
+                  logDebug $ "AUTO_REFUND_INITIATED for registration order " <> show order.id <> " | Vpa: " <> show mbVpa
+                  QOrder.updateVpa order.id mbVpa
+                  when (isJust mbVpa) $
+                    fork ("processing backlog payout for driver " <> order.personId.getId) $
+                      PayoutA.processPreviousPayoutAmount (cast order.personId) mbVpa merchantOperatingCityId
+                  mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [PAYMENT_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
+                  whenJust mbDriverFee $ \df -> QDF.updateStatus REFUND_PENDING df.id now
+                  updatePayoutRegAmountRefundedByRole driver.role order.personId Registration.registrationAmount
+                Just Juspay.AUTO_REFUND_SUCCEEDED -> do
+                  mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName PAYOUT_REGISTRATION [REFUND_PENDING] (cast order.personId) DP.YATRI_SUBSCRIPTION
+                  whenJust mbDriverFee $ \df -> QDF.updateStatus REFUNDED df.id now
+                _ -> pure ()
             else do
               (invoices, serviceName, serviceConfig, driver) <- getInvoicesAndServiceWithServiceConfigByOrderId order
               logDebug $ "Invoices: " <> show invoices
