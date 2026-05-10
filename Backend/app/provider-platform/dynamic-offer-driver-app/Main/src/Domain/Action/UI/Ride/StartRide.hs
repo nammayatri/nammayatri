@@ -79,6 +79,7 @@ import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.ScheduledPayout as QSP
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -188,7 +189,12 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       (point, odometer) <- case req of
         DriverReq driverReq -> do
           when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
-          when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
+          unless (fromMaybe False ride.enableOtpLessRide) $ do
+            otpAccepted <-
+              if driverReq.rideOtp == ride.otp
+                then pure True
+                else tryRiderPhoneOtpFallback transporterConfig booking driverReq.rideOtp
+            unless otpAccepted $ throwError IncorrectOTP
           logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           validatedPoint <- validateStartRideCoordinates driverReq.point booking
           pure (validatedPoint, driverReq.odometer)
@@ -316,3 +322,36 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId
+
+-- | Fallback start-OTP check: matches the submitted code against the last 4
+-- digits of the rider's phone number when enabled per merchant. Applied only
+-- to the explicit allow-list of trip categories below (standard OnDemand
+-- on-market rides). Pre-arranged-OTP trips, rentals, deliveries, ambulances,
+-- and meter rides are excluded.
+tryRiderPhoneOtpFallback ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  DTConf.TransporterConfig ->
+  SRB.Booking ->
+  Text ->
+  m Bool
+tryRiderPhoneOtpFallback transporterConfig booking submittedOtp =
+  fmap isJust . runMaybeT $ do
+    guard (fromMaybe False transporterConfig.enableRiderPhoneOtpFallback)
+    guard (isFallbackEligible booking.tripCategory)
+    riderId <- hoistMaybe booking.riderId
+    rider <- MaybeT (QRD.findById riderId)
+    last4 <- Text.takeEnd 4 <$> lift (decrypt rider.mobileNumber)
+    guard (Text.length last4 == 4 && submittedOtp == last4)
+  where
+    isFallbackEligible = \case
+      OneWay OneWayOnDemandDynamicOffer -> True
+      OneWay OneWayOnDemandStaticOffer -> True
+      RideShare OnDemandStaticOffer -> True
+      InterCity OneWayOnDemandDynamicOffer _ -> True
+      InterCity OneWayOnDemandStaticOffer _ -> True
+      CrossCity OneWayOnDemandDynamicOffer _ -> True
+      CrossCity OneWayOnDemandStaticOffer _ -> True
+      _ -> False
