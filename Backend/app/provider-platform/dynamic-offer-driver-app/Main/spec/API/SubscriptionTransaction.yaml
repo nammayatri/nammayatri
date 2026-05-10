@@ -21,6 +21,7 @@ types:
   SubscriptionTransactionResponse:
     startingBalance: HighPrecMoney
     finalBalance: HighPrecMoney
+    currentBalance: HighPrecMoney
     rideEarning: HighPrecMoney
     planPurchased: HighPrecMoney
     expiryDeduction: HighPrecMoney

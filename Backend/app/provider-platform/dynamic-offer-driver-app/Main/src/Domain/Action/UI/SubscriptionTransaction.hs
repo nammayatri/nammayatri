@@ -60,8 +60,9 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       offset = fromMaybe 0 mbOffset
       counterpartyType = if DCommon.checkFleetOwnerRole driver.role then counterpartyFleetOwner else counterpartyDriver
   mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
+  currentBalance <- fromMaybe 0 <$> getPrepaidBalanceByOwner counterpartyType driverId'.getId
   case mbAccount of
-    Nothing -> pure emptyResponse
+    Nothing -> pure (emptyResponse currentBalance)
     Just acc -> do
       let referenceTypes = [prepaidRideDebitReferenceType, subscriptionCreditReferenceType, expiryCreditTransferReferenceType]
       entries <-
@@ -117,6 +118,7 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
         SubscriptionTransactionResponse
           { startingBalance,
             finalBalance,
+            currentBalance,
             rideEarning,
             planPurchased,
             expiryDeduction,
@@ -124,10 +126,11 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
           }
   where
     maxLimit = 10
-    emptyResponse =
+    emptyResponse currentBalance =
       SubscriptionTransactionResponse
         { startingBalance = 0,
           finalBalance = 0,
+          currentBalance,
           rideEarning = 0,
           planPurchased = 0,
           expiryDeduction = 0,
