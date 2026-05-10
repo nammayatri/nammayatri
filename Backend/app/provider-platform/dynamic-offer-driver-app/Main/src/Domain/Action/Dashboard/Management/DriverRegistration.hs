@@ -234,6 +234,9 @@ extractInvoiceIds docData =
     Right tdsData -> map (.invoiceId) (tdsData :: API.Types.UI.DriverOnboardingV2.TDSCertificateData).tdsCertificates
     Left _ -> []
 
+mkTDSCertificateLockKey :: Id DP.Person -> Text
+mkTDSCertificateLockKey driverPersonId = "lock:tdsCertificate:" <> driverPersonId.getId
+
 getDriverRegistrationDocumentsList :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Maybe Text -> Flow Common.DocumentsListResponse
 getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   merchant <- findMerchantByShortId merchantShortId
@@ -592,44 +595,57 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
   whenJust imageId $ \imgId -> do
     void $ QImage.findById (cast imgId) >>= fromMaybeM (InvalidRequest "Image not found")
 
-  -- Validate TDSCertificate document data (same as UI /driver/register/commonDocument)
-  when (documentType == Common.TDSCertificate) $ do
-    tdsData <- parseTDSCertificateData documentData
-    validationErrors <- validateTDSCertificate tdsData
-    unless (Kernel.Prelude.null validationErrors) $ do
-      let errorJson = TE.decodeUtf8 $ BSL.toStrict $ A.encode validationErrors
-      throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
+  documentId <-
+    if documentType == Common.TDSCertificate
+      then -- Acquire a per-driver Redis lock to prevent concurrent duplicate TDS submissions
+        Redis.withLockRedisAndReturnValue (mkTDSCertificateLockKey driverPersonId) 60 $ do
+          -- Validate TDSCertificate document data (same as UI /driver/register/commonDocument)
+          tdsData <- parseTDSCertificateData documentData
+          validationErrors <- validateTDSCertificate tdsData
+          unless (Kernel.Prelude.null validationErrors) $ do
+            let errorJson = TE.decodeUtf8 $ BSL.toStrict $ A.encode validationErrors
+            throwError $ InvalidRequest $ "TDS Certificate validation failed: " <> errorJson
 
-    -- Check for duplicate invoiceIds across existing TDS documents for this driver
-    let newInvoiceIds = map (.invoiceId) tdsData.tdsCertificates
-    existingDocs <- QCommonDriverOnboardingDocuments.findByDriverIdAndDocumentType (Just driverPersonId) DVC.TDSCertificate
-    let existingInvoiceIds = Kernel.Prelude.concatMap (extractInvoiceIds . (.documentData)) existingDocs
-        duplicateIds = filter (`elem` existingInvoiceIds) newInvoiceIds
-    unless (Kernel.Prelude.null duplicateIds) $
-      throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
+          -- Check for duplicate invoiceIds within the submitted list itself
+          let newInvoiceIds = map (.invoiceId) tdsData.tdsCertificates
+              selfDuplicates = Kernel.Prelude.nub $ filter (\x -> length (filter (== x) newInvoiceIds) > 1) newInvoiceIds
+          unless (Kernel.Prelude.null selfDuplicates) $
+            throwError $ InvalidRequest $ "Duplicate TDS invoiceIds in submitted data: " <> T.intercalate ", " selfDuplicates
 
-  documentId <- generateGUID
-  now <- getCurrentTime
-  let documentEntry =
-        DCommonDoc.CommonDriverOnboardingDocuments
-          { id = documentId,
-            documentImageId = cast <$> imageId,
-            documentType = mapDocumentType documentType,
-            driverId = Just driverPersonId,
-            documentData = documentData,
-            rejectReason = Nothing,
-            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
-            merchantOperatingCityId = merchantOpCityId,
-            merchantId = merchant.id,
-            createdAt = now,
-            updatedAt = now
-          }
-  QCommonDriverOnboardingDocuments.create documentEntry
+          -- Check for duplicate invoiceIds across existing TDS documents for this driver
+          existingDocs <- QCommonDriverOnboardingDocuments.findByDriverIdAndDocumentType (Just driverPersonId) DVC.TDSCertificate
+          let existingInvoiceIds = Kernel.Prelude.concatMap (extractInvoiceIds . (.documentData)) existingDocs
+              duplicateIds = filter (`elem` existingInvoiceIds) newInvoiceIds
+          unless (Kernel.Prelude.null duplicateIds) $
+            throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
+
+          createDocumentEntry merchantOpCityId driverPersonId merchant
+      else createDocumentEntry merchantOpCityId driverPersonId merchant
   pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
+  where
+    createDocumentEntry merchantOpCityId driverPersonId merchant = do
+      documentId <- generateGUID
+      now <- getCurrentTime
+      let documentEntry =
+            DCommonDoc.CommonDriverOnboardingDocuments
+              { id = documentId,
+                documentImageId = cast <$> imageId,
+                documentType = mapDocumentType documentType,
+                driverId = Just driverPersonId,
+                documentData = documentData,
+                rejectReason = Nothing,
+                verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+                merchantOperatingCityId = merchantOpCityId,
+                merchantId = merchant.id,
+                createdAt = now,
+                updatedAt = now
+              }
+      QCommonDriverOnboardingDocuments.create documentEntry
+      pure documentId
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
-  merchant <- findMerchantByShortId merchantShortId
+
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   person <- case mbRequestorId of
     Just requestorId -> do
