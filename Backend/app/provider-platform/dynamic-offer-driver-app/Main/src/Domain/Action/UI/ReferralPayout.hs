@@ -241,6 +241,7 @@ getPayoutRegistration (mbPersonId, merchantId, merchantOpCityId) = do
       (Just person.firstName)
       person.lastName
       isSplitEnabled
+      payoutConfig.isAutoRefundEnabled
 
   -- Store orderId for recovery/replay if webhook fails
   if isFleetOwner

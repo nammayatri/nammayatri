@@ -18,6 +18,7 @@ data PayoutConfig = PayoutConfig
     coinRedemptionMinimumLimit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     d2dPayoutType :: Domain.Types.PayoutConfig.D2DPayoutTypeEnum,
     expand :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand,
+    isAutoRefundEnabled :: Kernel.Prelude.Bool,
     isPayoutEnabled :: Kernel.Prelude.Bool,
     maxPayoutReferralForADay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxRetryCount :: Kernel.Prelude.Int,

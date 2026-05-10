@@ -161,7 +161,8 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
@@ -484,7 +485,8 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

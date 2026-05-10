@@ -19,6 +19,7 @@ data PayoutConfigT f = PayoutConfigT
     coinRedemptionMinimumLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     d2dPayoutType :: B.C f (Kernel.Prelude.Maybe Domain.Types.PayoutConfig.D2DPayoutTypeEnum),
     expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
+    isAutoRefundEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
     maxPayoutReferralForADay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxRetryCount :: B.C f Kernel.Prelude.Int,

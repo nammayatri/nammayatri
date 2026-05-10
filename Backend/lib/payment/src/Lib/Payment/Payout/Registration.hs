@@ -66,8 +66,9 @@ initiateRegistration ::
   Maybe Text -> -- customerFirstName
   Maybe Text -> -- customerLastName
   Bool -> -- Should be True if SplitEnabled in Juspay Merchant
+  Bool -> -- isAutoRefundEnabled (PayoutConfig flag — when True, Juspay auto-refunds the ₹2 after success)
   m RegistrationResult
-initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled = do
+initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall customerPhone customerEmail customerFirstName customerLastName isSplitEnabled isAutoRefundEnabled = do
   orderId <- generateGUID
   orderShortId <- generateShortId
 
@@ -105,7 +106,8 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount
@@ -137,6 +139,13 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
 -- ---------------------------------------------------------------------------
 -- 2. Process Registration Payment (status check / webhook)
 -- ---------------------------------------------------------------------------
+
+-- NOTE: Once the Juspay merchant config has auto-refund enabled on the
+-- create-order session, this function is no longer required for the
+-- registration flow. The registration ₹2 is reversed by Juspay itself, and
+-- the AUTO_REFUND_INITIATED / AUTO_REFUND_SUCCEEDED webhooks (handled in
+-- Domain.Action.UI.Payment) drive VPA capture + DriverFee status transitions
+-- directly. Kept for callers that have not yet migrated.
 
 -- | Process registration payment status. On CHARGED:
 --   1. Captures VPA from payer
@@ -198,6 +207,10 @@ processRegistrationPayment orderId transactionStatus mbPayerVpa autoRefund creat
 -- ---------------------------------------------------------------------------
 -- 3. Refund Registration Amount
 -- ---------------------------------------------------------------------------
+
+-- NOTE: Manual payout-based refund. Not required when the create-order session
+-- carries the auto-refund flag — Juspay reverses the charge automatically and
+-- emits AUTO_REFUND_* webhooks. Kept for legacy / non-migrated merchants.
 
 -- | Refund the registration amount to the driver.
 --   Only needs the orderId — all data comes from PaymentOrder.

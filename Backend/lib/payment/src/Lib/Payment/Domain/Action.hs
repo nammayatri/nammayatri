@@ -523,7 +523,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 optionsGetUpiDeepLinks = req.optionsGetUpiDeepLinks,
                 metadataExpiryInMins = req.metadataExpiryInMins,
                 basket = req.basket,
-                paymentRules = req.paymentRules
+                paymentRules = req.paymentRules,
+                autoRefundPostSuccess = Nothing
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime

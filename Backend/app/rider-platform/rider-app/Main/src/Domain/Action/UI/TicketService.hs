@@ -348,7 +348,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

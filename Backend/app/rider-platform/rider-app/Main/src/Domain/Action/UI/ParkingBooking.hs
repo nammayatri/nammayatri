@@ -92,7 +92,8 @@ postMultimodalParkingBook mbApiKey req = do
             metadataGatewayReferenceId = Nothing,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            autoRefundPostSuccess = Nothing
           }
 
   let commonMerchantId = Kernel.Types.Id.cast @Domain.Types.Merchant.Merchant @DPayment.Merchant person.merchantId
