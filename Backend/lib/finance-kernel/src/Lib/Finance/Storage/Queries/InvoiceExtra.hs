@@ -38,10 +38,11 @@ findByMerchantOpCityIdAndDateRange ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- issuedToId (driver/fleet owner)
   Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- supplierId (driver for Ride invoices)
   Kernel.Prelude.Maybe DInvoiceSpec.IssuedToType -> -- issuedToType (DRIVER / RIDER / CUSTOMER / FLEET_OWNER)
+  [DInvoice.InvoiceStatus] -> -- statusIn: empty list means no filter; non-empty filters via IN
   Kernel.Prelude.Maybe Int ->
   Kernel.Prelude.Maybe Int ->
   m [DInvoice.Invoice]
-findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mbStatus mbIssuedToId mbSupplierId mbIssuedToType mbLimit mbOffset = do
+findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mbStatus mbIssuedToId mbSupplierId mbIssuedToType statusIn mbLimit mbOffset = do
   let conds =
         [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
           <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
@@ -51,6 +52,7 @@ findByMerchantOpCityIdAndDateRange merchantOpCityId mbFrom mbTo mbInvoiceType mb
           <> [Se.Is Beam.issuedToId $ Se.Eq issuedToId | Just issuedToId <- [mbIssuedToId]]
           <> [Se.Is Beam.supplierId $ Se.Eq (Just supplierId) | Just supplierId <- [mbSupplierId]]
           <> [Se.Is Beam.issuedToType $ Se.Eq issuedToType | Just issuedToType <- [mbIssuedToType]]
+          <> [Se.Is Beam.status $ Se.In statusIn | not (null statusIn)]
   findAllWithOptionsKV
     (if null conds then [Se.Is Beam.id $ Se.Not $ Se.Eq ""] else [Se.And conds])
     (Se.Desc Beam.issuedAt)
@@ -97,6 +99,27 @@ findBySupplierAndType supplierId mbInvoiceType mbFrom mbTo mbLimit mbOffset = do
           <> [Se.Is Beam.invoiceType $ Se.Eq ty | Just ty <- [mbInvoiceType]]
           <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from | Just from <- [mbFrom]]
           <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to | Just to <- [mbTo]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Desc Beam.issuedAt)
+    mbLimit
+    mbOffset
+
+-- | Find invoices by referenceId with optional invoiceType and status filters.
+-- statusIn: empty list means no filter; non-empty filters via IN clause.
+findByReferenceIdWithOptions ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DInvoiceSpec.InvoiceType ->
+  [DInvoice.InvoiceStatus] ->
+  Kernel.Prelude.Maybe Int ->
+  Kernel.Prelude.Maybe Int ->
+  m [DInvoice.Invoice]
+findByReferenceIdWithOptions referenceId mbInvoiceType statusIn mbLimit mbOffset = do
+  let conds =
+        [Se.Is Beam.referenceId $ Se.Eq (Just referenceId)]
+          <> [Se.Is Beam.invoiceType $ Se.Eq ty | Just ty <- [mbInvoiceType]]
+          <> [Se.Is Beam.status $ Se.In statusIn | not (null statusIn)]
   findAllWithOptionsKV
     [Se.And conds]
     (Se.Desc Beam.issuedAt)

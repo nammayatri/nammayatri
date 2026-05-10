@@ -11,6 +11,7 @@ import Kernel.Prelude (last, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
+import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
@@ -52,22 +53,26 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         throwError $ InvalidRequest "Invoice does not belong to this rider"
       pure [inv]
     Nothing -> case (mbInvoiceType, mbReferenceId) of
-      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId
-      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId
+      (Just Ride, Just rideId) -> fetchInvoicesByRideId rideId personId (Just Ride)
+      (Just RideCancellation, Just rideId) -> fetchInvoicesByRideId rideId personId (Just RideCancellation)
       (Just Ride, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=Ride"
       (Just RideCancellation, Nothing) -> throwError $ InvalidRequest "referenceId (rideId) is required for invoiceType=RideCancellation"
       _ ->
-        QInvoiceExtra.findByMerchantOpCityIdAndDateRange
-          person.merchantOperatingCityId.getId
-          fromTime
-          toTime
-          mbInvoiceType
-          Nothing
-          (Just personId.getId)
-          Nothing
-          Nothing
-          (if isJust mbFrom || isJust mbTo then Nothing else mbLimit <|> Just 1)
-          (mbOffset <|> Just 0)
+        let hasDateRange = isJust mbFrom || isJust mbTo
+            statusFilter = if hasDateRange then [] else [Draft, Issued, Paid]
+            limitArg = if hasDateRange then mbLimit else Just 1
+        in QInvoiceExtra.findByMerchantOpCityIdAndDateRange
+              person.merchantOperatingCityId.getId
+              fromTime
+              toTime
+              mbInvoiceType
+              Nothing
+              (Just personId.getId)
+              Nothing
+              Nothing
+              statusFilter
+              limitArg
+              (mbOffset <|> Just 0)
 
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
@@ -112,10 +117,10 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         invoiceNumber = lastInv.invoiceNumber
       }
 
-fetchInvoicesByRideId :: Text -> Id DP.Person -> Flow [FInvoice.Invoice]
-fetchInvoicesByRideId rideId personId = do
+fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]
+fetchInvoicesByRideId rideId personId mbInvoiceType = do
   ride <- QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   unless (booking.riderId == personId) $
     throwError $ InvalidRequest "Ride does not belong to this rider"
-  QFinanceInvoice.findByReferenceId (Just rideId)
+  QInvoiceExtra.findByReferenceIdWithOptions rideId mbInvoiceType [Draft, Issued, Paid] (Just 1) (Just 0)
