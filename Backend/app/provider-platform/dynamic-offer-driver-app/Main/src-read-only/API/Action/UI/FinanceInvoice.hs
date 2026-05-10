@@ -31,9 +31,7 @@ type API =
            "limit"
            Kernel.Prelude.Int
       :> QueryParam "offset" Kernel.Prelude.Int
-      :> QueryParam
-           "toDate"
-           Data.Time.UTCTime
+      :> QueryParam "toDate" Data.Time.UTCTime
       :> Get
            '[JSON]
            API.Types.UI.FinanceInvoice.FinanceInvoiceListRes

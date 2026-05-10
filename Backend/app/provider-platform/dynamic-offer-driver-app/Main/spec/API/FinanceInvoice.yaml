@@ -2,9 +2,12 @@ imports:
   Id: Kernel.Types.Id
   UTCTime: Data.Time
   HighPrecMoney: Kernel.Types.Common
-  InvoiceType: Lib.Finance.Domain.Types.Invoice
+  InvoiceType: Domain.Types.Invoice
   Value: Data.Aeson
   DateOrTime: Lib.Finance.Invoice.PdfService
+
+importPackageOverrides:
+  Domain.Types.Invoice: "beckn-spec"
 
 module: FinanceInvoice
 types:
@@ -32,6 +35,7 @@ types:
     supplierName: Maybe Text
     supplierGSTIN: Maybe Text
     supplierTaxNo: Maybe Text
+    merchantGstin: Maybe Text
     gstinOfParty: Maybe Text
     sacCode: Maybe Text
     lineItems: Maybe Value

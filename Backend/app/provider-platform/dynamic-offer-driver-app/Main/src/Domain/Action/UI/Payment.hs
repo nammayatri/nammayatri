@@ -689,6 +689,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   issuedByName = Just merchant.name,
                   issuedByAddress = issuedByAddress,
                   gstinOfParty = gstinOfParty,
+                  merchantGstin = merchant.gstin,
                   merchantShortId = getShortId merchant.shortId
                 }
         let subscriptionGstBreakdown =

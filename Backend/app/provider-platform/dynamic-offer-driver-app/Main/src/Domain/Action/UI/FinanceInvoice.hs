@@ -122,6 +122,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
             supplierName = invoice.supplierName,
             supplierGSTIN = invoice.supplierGSTIN,
             supplierTaxNo = invoice.supplierTaxNo,
+            merchantGstin = invoice.merchantGstin,
             gstinOfParty = mbTaxTxn >>= (.gstinOfParty),
             sacCode = mbTaxTxn >>= (.sacCode),
             lineItems = Just invoice.lineItems,
