@@ -22,6 +22,7 @@ import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
+import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
@@ -38,7 +39,6 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
-import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -585,9 +585,10 @@ type instance JobContent 'IffcoTokioInsurance = IffcoTokioInsuranceJobData
 data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCreationJobData
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    issuedToId :: Text,
+    issuedToType :: BeckInvoice.IssuedToType,
     periodStart :: UTCTime,
-    periodEnd :: UTCTime,
-    frequency :: DTC.CommissionAggregationFrequency
+    periodEnd :: UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

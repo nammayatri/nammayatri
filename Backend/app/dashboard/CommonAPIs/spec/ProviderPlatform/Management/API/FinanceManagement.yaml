@@ -160,16 +160,6 @@ apis:
         type: ReconciliationTriggerRes
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE RECONCILIATION_TRIGGER
 
-  # ----- AggregatedCommission scheduler bootstrap (idempotent) -----
-  - POST: # AggregatedCommissionTriggerAPI
-      endpoint: /aggregatedCommission/trigger
-      auth: ApiAuthV2
-      request:
-        type: AggregatedCommissionTriggerReq
-      response:
-        type: AggregatedCommissionTriggerRes
-      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FINANCE AGGREGATED_COMMISSION_TRIGGER
-
 types:
   SubscriptionPurchaseStatus:
     - enum: "SubscriptionPending, SubscriptionActive, SubscriptionExpired, SubscriptionFailed, SubscriptionExhausted"
@@ -322,13 +312,6 @@ types:
     - success: Bool
     - message: Text
 
-  # 'frequency' optional override (DAILY/WEEKLY/MONTHLY); falls back to
-  # invoiceConfig.commissionAggregationFrequency.
-  AggregatedCommissionTriggerReq:
-    - frequency: Maybe Text
-  AggregatedCommissionTriggerRes:
-    - success: Bool
-    - message: Text
   ReconciliationSummary:
     - totalDiscrepancies: Int
     - matchedRecords: Int
