@@ -167,8 +167,8 @@ def _offer(handler, path_lower, body):
 
 def _create_order(handler, order_id, short_id):
     handler._json({
-        "id": order_id,
-        "order_id": short_id,
+        "id": short_id,
+        "order_id": order_id,
         "status": "NEW",
         "status_id": 10,
         "amount": 0.0,

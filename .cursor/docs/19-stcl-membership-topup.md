@@ -71,8 +71,15 @@ The webhook code is **completely unchanged** — it doesn't know or care whether
 
 Inside `postBuyAdditionalShares` (the top-up endpoint):
 
-1. **No PENDING in flight.** If the driver already has a row in `PENDING` status (a previous purchase that hasn't completed payment yet), the new request is rejected. This stops double-spend / racing payments.
-2. **Total stays ≤ 5.** Sum of `numberOfShares` across all the driver's `SUBMITTED` rows + the new requested shares must be ≤ 5. Otherwise the request is rejected before any payment order is created.
+1. **At most one fresh PENDING in flight.** If the driver already has a `PENDING` row younger than `pendingStaleMinutes` (15 min), we look at whether the new request *matches* the in-flight order:
+   - **Same `numberOfShares` AND same resolved `amount`** → re-issue the existing payment order (same Juspay `orderId`). The frontend gets back a `CreateOrderResp` with the same payment links the driver got the first time, so they resume the in-flight payment instead of starting a second one.
+   - **Different `numberOfShares` or `amount`** → the driver's intent has changed (e.g., they originally requested 1 share by mistake and now want 2). We retire the in-flight `PENDING` as `REJECTED` and create a fresh order with the new quantity / amount. Silently replaying the old payment link would have charged them for the wrong number of shares.
+   - If the existing `PENDING` is older than the stale window, we treat it as abandoned (driver closed the payment app and never came back) and retire it as `REJECTED` so the new request can proceed.
+
+   Either way a stuck payment never permanently blocks future top-ups, and the cap check still ignores PENDING shares so over-allocation is impossible.
+2. **Total stays ≤ 5.** Sum of `numberOfShares` across all the driver's `SUBMITTED` rows + the new requested shares must be ≤ 5. Otherwise the request is rejected before any payment order is created. (PENDING shares don't count — they only become real when the webhook flips the row to SUBMITTED.)
+
+The resume path is provided "for free" by `Lib.Payment.Domain.Action.createOrderService`: when called with an `orderId` that already exists in `payment_order`, it returns the stored `CreateOrderResp` (`paymentLinks`, `sdkPayload`, etc.) instead of hitting Juspay again.
 
 `postSubmitApplication` keeps its original guard: it rejects any driver who already has a SUBMITTED application (so a driver wanting to top up gets steered to the new endpoint).
 
@@ -120,6 +127,34 @@ Tradeoff: we lose the per-allotment KYC snapshot ("what was the driver's address
 | Why not edit the existing row's `numberOfShares` and `shareEndCount`? | The new range (e.g., 12–14) isn't contiguous with the old range (1–2). A single `(shareStartCount, shareEndCount)` pair on one row can't represent two disjoint ranges. |
 | Why not introduce a separate `share_allotment` table? | We could, but it requires a schema migration and refactors of every caller. Using one row per purchase keeps the existing table intact and gets us the same correctness. |
 | Why not reuse `/submitApplication` for top-ups? | That endpoint requires the full KYC/address/bank payload. A frontend cache could silently overwrite the driver's details on a top-up. A dedicated endpoint that only takes `numberOfShares` keeps the request body tight and eliminates the accidental-overwrite class of bug entirely. |
+
+## Tunables — TransporterConfig.stclConfig
+
+The three knobs that govern the top-up flow live on `TransporterConfig.stclConfig` (per-MOC, stored as one JSON column). Any field left as `null` falls back to a module-level default in `Domain.Action.UI.StclMembership`:
+
+```jsonc
+{
+  "maxSharesPerDriver":   5,    // cap on total shares per driver across all SUBMITTED rows
+  "pricePerShare":        100,  // rupees per share, used when client omits `amount` on /buyAdditionalShares
+  "pendingStaleMinutes":  15    // PENDING top-up older than this is retired as REJECTED
+}
+```
+
+Update via SQL — the whole object is JSON, so set the whole document or merge:
+
+```sql
+-- Replace the full object:
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET stcl_config = '{"pricePerShare":150,"maxSharesPerDriver":5,"pendingStaleMinutes":15}'::json
+WHERE merchant_operating_city_id = '<MOC-id>';
+
+-- Or merge a single field:
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET stcl_config = COALESCE(stcl_config::jsonb, '{}'::jsonb) || '{"pricePerShare":150}'::jsonb
+WHERE merchant_operating_city_id = '<MOC-id>';
+```
+
+No redeploy needed. The TransporterConfig cache picks up the new value on its next refresh (or call `Storage.CachedQueries.Merchant.TransporterConfig.clearCache` to force it).
 
 ## One subtle invariant — Redis counter bootstrap
 

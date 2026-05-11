@@ -1,0 +1,419 @@
+{
+	"info": {
+		"name": "STCL Membership - Partial Purchase + Top-Up (2 shares then +3)",
+		"description": "Driver buys 2 shares via submitApplication, completes Juspay payment via mock CHARGED, verifies membership shows 2 shares in 1 allotment. Then edits KYC via updateApplication (asserted via GET /membership). Then tops up 3 more shares via buyAdditionalShares, completes its payment, verifies membership now reports 5 total shares across 2 allotments with the updated KYC. Exercises submitApplication, buyAdditionalShares, updateApplication, GET /membership, and the payment-status webhook path.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_driver_number')) {",
+					"  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+					"  pm.collectionVariables.set('_test_driver_number', dNum);",
+					"  console.log('Test driver:', dNum);",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Driver Auth (sendOTP)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('driver_authId', d.authId);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Driver Auth Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.environment.set('driver_token', d.token);",
+							"pm.environment.set('driver_id', d.person.id);",
+							"console.log('Driver ID:', d.person.id);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('token present', function () { pm.expect(d.token).to.be.a('string'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"stcl-test-device\"\n}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth", "{{driver_authId}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "Submit Application (2 shares)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Submit order:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"var orderId = d.id || d.orderId || d.order_id;",
+							"var orderShortId = d.order_id || d.orderShortId || orderId;",
+							"pm.test('Order IDs present', function () {",
+							"    pm.expect(orderId).to.be.a('string');",
+							"    pm.expect(orderShortId).to.be.a('string');",
+							"});",
+							"pm.environment.set('stcl_order_id', orderId);",
+							"pm.environment.set('stcl_order_short_id', orderShortId);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{driver_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"Driver\",\n  \"memberCategory\": \"Driver\",\n  \"numberOfShares\": 2,\n  \"dateOfBirth\": \"1990-01-15\",\n  \"aadharNumber\": \"999999999901\",\n  \"panNumber\": \"ABCDE1234F\",\n  \"mobileNumber\": \"{{_test_driver_number}}\",\n  \"emailId\": \"stcl-test@example.com\",\n  \"fatherMotherName\": \"Test Father\",\n  \"address\": {\n    \"streetAddress1\": \"10 Main Road\",\n    \"streetAddress2\": \"Block A\",\n    \"city\": \"Bangalore\",\n    \"stateName\": \"Karnataka\",\n    \"postalCode\": \"560001\"\n  },\n  \"addressProofType\": \"AADHAAR\",\n  \"bankDetails\": {\n    \"bankName\": \"State Bank\",\n    \"branch\": \"Bangalore Main\",\n    \"accountNumber\": \"12345678901234\",\n    \"ifscCode\": \"SBIN0001234\"\n  },\n  \"vehicleInfo\": {\n    \"vehicleType\": \"ThreeWheeler\",\n    \"fuelTypes\": [\"CNG\"]\n  },\n  \"nomineeInfo\": {\n    \"nomineeName\": \"Test Nominee\"\n  },\n  \"declaration\": {\n    \"place\": \"Bangalore\",\n    \"date\": \"2026-01-01\",\n    \"signature\": \"Test Driver\",\n    \"termsAccepted\": true\n  },\n  \"amount\": 200\n}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/submitApplication",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["submitApplication"]
+				}
+			}
+		},
+		{
+			"name": "Override Juspay Status (CHARGED, first purchase)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Mock override accepted', function () {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(d.ok).to.be.true;",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 200.0,\n    \"effective_amount\": 200.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Get Payment Status v2 (flips PENDING -> SUBMITTED for first row)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const start = Date.now();",
+							"while (Date.now() - start < 1500) { /* settle override */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Payment status:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Payment is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{driver_token}}" }],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/payment/status/v2/{{stcl_order_short_id}}",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["payment", "status", "v2", "{{stcl_order_short_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Get Membership (after first purchase)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Membership:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Status is SUBMITTED', function () { pm.expect(d.status).to.eql('SUBMITTED'); });",
+							"pm.test('Total numberOfShares is 2', function () { pm.expect(d.numberOfShares).to.eql(2); });",
+							"pm.test('One shareAllotment row', function () { pm.expect(d.shareAllotments.length).to.eql(1); });",
+							"pm.test('First allotment carries 2 shares', function () { pm.expect(d.shareAllotments[0].numberOfShares).to.eql(2); });",
+							"pm.test('Nominee is Test Nominee', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Test Nominee'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{driver_token}}" }],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/membership",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["membership"]
+				}
+			}
+		},
+		{
+			"name": "Update Application (change nominee + bank branch)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{driver_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"nomineeName\": \"Updated Nominee\",\n  \"bankDetails\": {\n    \"branch\": \"Bangalore New Branch\",\n    \"accountNumber\": \"55555555555555\",\n    \"confirmAccountNumber\": \"55555555555555\",\n    \"ifscCode\": \"SBIN0005678\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/updateApplication",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["updateApplication"]
+				}
+			}
+		},
+		{
+			"name": "Get Membership (after update)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Nominee updated', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Updated Nominee'); });",
+							"pm.test('Bank branch updated', function () { pm.expect(d.bankDetails.branch).to.eql('Bangalore New Branch'); });",
+							"pm.test('Still 2 shares (update does not change quantity)', function () { pm.expect(d.numberOfShares).to.eql(2); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{driver_token}}" }],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/membership",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["membership"]
+				}
+			}
+		},
+		{
+			"name": "Buy Additional Shares (+3, top-up)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Top-up order:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"var orderId = d.id || d.orderId || d.order_id;",
+							"var orderShortId = d.order_id || d.orderShortId || orderId;",
+							"pm.test('Top-up order IDs present', function () {",
+							"    pm.expect(orderId).to.be.a('string');",
+							"    pm.expect(orderShortId).to.be.a('string');",
+							"});",
+							"pm.environment.set('stcl_order_id', orderId);",
+							"pm.environment.set('stcl_order_short_id', orderShortId);"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{driver_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"numberOfShares\": 3,\n  \"amount\": 300\n}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/buyAdditionalShares",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["buyAdditionalShares"]
+				}
+			}
+		},
+		{
+			"name": "Override Juspay Status (CHARGED, top-up)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Mock override accepted', function () {",
+							"    pm.response.to.have.status(200);",
+							"    pm.expect(d.ok).to.be.true;",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 300.0,\n    \"effective_amount\": 300.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Get Payment Status v2 (flips PENDING -> SUBMITTED for top-up row)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const start = Date.now();",
+							"while (Date.now() - start < 1500) { /* settle override */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Top-up payment is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{driver_token}}" }],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/payment/status/v2/{{stcl_order_short_id}}",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["payment", "status", "v2", "{{stcl_order_short_id}}"]
+				}
+			}
+		},
+		{
+			"name": "Get Membership (after top-up)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Final membership:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Total numberOfShares is 5', function () { pm.expect(d.numberOfShares).to.eql(5); });",
+							"pm.test('Two shareAllotment rows', function () { pm.expect(d.shareAllotments.length).to.eql(2); });",
+							"pm.test('Sum of allotment shares is 5', function () {",
+							"    var sum = d.shareAllotments.reduce(function (a, x) { return a + x.numberOfShares; }, 0);",
+							"    pm.expect(sum).to.eql(5);",
+							"});",
+							"pm.test('Updated nominee survives top-up', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Updated Nominee'); });",
+							"pm.test('Updated bank branch survives top-up', function () { pm.expect(d.bankDetails.branch).to.eql('Bangalore New Branch'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{driver_token}}" }],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/membership",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["membership"]
+				}
+			}
+		}
+	]
+}

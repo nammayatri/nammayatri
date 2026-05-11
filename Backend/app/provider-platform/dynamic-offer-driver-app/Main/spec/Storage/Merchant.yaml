@@ -929,6 +929,14 @@ TransporterConfig:
       allowNotificationOnEmptyBadge: Bool
       feedbackNotificationDelayInSec: Int
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
+    StclConfig:
+      # Cap on total shares a single driver may hold across all SUBMITTED rows.
+      maxSharesPerDriver: Maybe Int
+      # Per-share price in rupees, used to compute amount when the client omits it in /buyAdditionalShares.
+      pricePerShare: Maybe Int
+      # PENDING top-up older than this is treated as abandoned and retired as REJECTED.
+      pendingStaleMinutes: Maybe Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1210,6 +1218,7 @@ TransporterConfig:
     sameRiderDriverRideCountLookbackDays: Int
     sameRiderDriverRideCountThreshold: Int
     sendMembershipIdInProfile: Maybe Bool
+    stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
 
   beamType:
     currency: Maybe Currency
@@ -1277,6 +1286,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "Maybe [Text]"
     sameRiderDriverRideCountLookbackDays: Maybe Int
     sameRiderDriverRideCountThreshold: Maybe Int
+    stclConfig: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1368,6 +1378,8 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: (Data.Text.pack . Kernel.Prelude.show <$>) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
+    stclConfig: Data.Aeson.toJSON <$> stclConfig|E
+
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1454,6 +1466,9 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: (mapMaybe (readMaybe . Data.Text.unpack)) <$> vehicleCategoryExcludedFromVerification|E
     sameRiderDriverRideCountLookbackDays: fromMaybe 7 sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: fromMaybe 2 sameRiderDriverRideCountThreshold|E
+    stclConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
+
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1524,6 +1539,7 @@ TransporterConfig:
     vehicleCategoryExcludedFromVerification: "text[]"
     minBaseFare: double precision
     allowFarePolicyUpdateBelowMinBaseFare: boolean
+    stclConfig: json
 
   default:
     mediaFileUrlPattern: |-
