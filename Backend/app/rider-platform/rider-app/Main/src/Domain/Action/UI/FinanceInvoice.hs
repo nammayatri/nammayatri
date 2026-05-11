@@ -10,8 +10,8 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (last, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
+import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
@@ -61,7 +61,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
         let hasDateRange = isJust mbFrom || isJust mbTo
             statusFilter = if hasDateRange then [] else [Draft, Issued, Paid]
             limitArg = if hasDateRange then mbLimit else Just 1
-        in QInvoiceExtra.findByMerchantOpCityIdAndDateRange
+         in QInvoiceExtra.findByMerchantOpCityIdAndDateRange
               person.merchantOperatingCityId.getId
               fromTime
               toTime

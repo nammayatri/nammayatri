@@ -83,6 +83,7 @@ data InvoiceListItem = InvoiceListItem
     supplierAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     supplierTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    merchantGstin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedToAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     issuedByName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

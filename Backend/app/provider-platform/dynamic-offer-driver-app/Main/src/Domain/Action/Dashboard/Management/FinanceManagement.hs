@@ -494,6 +494,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             supplierAddress = invoice.supplierAddress,
             supplierGstin = invoice.supplierGSTIN,
             supplierTaxNo = invoice.supplierTaxNo,
+            merchantGstin = invoice.merchantGstin,
             issuedToName = invoice.issuedToName,
             issuedToAddress = invoice.issuedToAddress,
             issuedByName = invoice.issuedByName,
