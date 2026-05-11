@@ -586,7 +586,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
     ctx <- buildFinanceCtx booking ride mbDriver mbPanCard (Just driverInfo) transporterConfig isOnline
     let tollWithVat = tollAmount + tollVatAmount
     let parkingWithVat = parkingAmount + parkingVatAmount
-    let mkRideLineItems clubVatInclusive =
+    let mkRideLineItems clubVatInclusive issuedToType =
           let rideInclusiveLine = rawBaseFare + rawTaxAmount
               tollInclusiveLine = tollAmount + tollVatAmount
               parkingInclusiveLine = parkingAmount + parkingVatAmount
@@ -658,7 +658,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               showVatInput = isVat && maybe False (fromMaybe False . (.showVatInputLineItem)) transporterConfig.invoiceConfig
               commonLines =
                 [ mkAdjustment "Tip" Tip tipAmount,
-                  mkAdjustment "Platform Commission" PlatformCommission (negate commissionAmount),
+                  if issuedToType == CUSTOMER then Nothing else mkAdjustment "Platform Commission" PlatformCommission (negate commissionAmount),
                   if showVatInput then mkStandaloneFare "VAT Input" VatInput serviceVatAmount else Nothing
                 ]
            in catMaybes (rideAndTollLines <> commonLines)
@@ -679,7 +679,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToId = maybe "" (.getId) booking.riderId,
               issuedToName = booking.riderName,
               issuedToAddress = booking.fromLocation.address.fullAddress,
-              lineItems = mkRideLineItems False,
+              lineItems = mkRideLineItems False CUSTOMER,
               gstBreakdown = rideGstBreakdown,
               referenceId = Nothing,
               isVat = isVat,
@@ -701,7 +701,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               issuedToId = driverOrFleetPersonId.getId,
               issuedToName = mbDriver <&> (.firstName),
               issuedToAddress = Nothing,
-              lineItems = mkRideLineItems driverClubVatInclusive,
+              lineItems = mkRideLineItems driverClubVatInclusive (if isJust ride.fleetOwnerId then FLEET_OWNER else DRIVER),
               gstBreakdown = rideGstBreakdown,
               referenceId = Nothing,
               isVat = isVat,

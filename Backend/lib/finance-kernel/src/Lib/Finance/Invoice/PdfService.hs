@@ -26,7 +26,7 @@ import qualified Data.Aeson as Aeson
 import Data.List (groupBy, sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as DT
-import Domain.Types.Invoice (DateOrTime (..), toUTCTimeFrom, toUTCTimeTo)
+import Domain.Types.Invoice (DateOrTime (..), InvoiceType (..), toUTCTimeFrom, toUTCTimeTo)
 import qualified Kernel.External.Types as ExtTypes
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -435,9 +435,14 @@ renderTotals cfg pdfData lbls =
         lbls.vatLabel
           <> if T.null vatPctText then "" else " (" <> vatPctText <> "%)"
       paymentMethodStr = inv.paymentMode <|> pdfData.mbCardInfo
+      taxableLabel = case inv.invoiceType of
+        RideCancellation -> lbls.taxableCancellationLabel
+        SubscriptionPurchase -> lbls.taxableSubscriptionLabel
+        Commission -> lbls.taxableCommissionLabel
+        _ -> lbls.taxablePriceLabel
    in T.concat
         [ "<table class='totals'>",
-          totRow lbls.taxablePriceLabel (fmtMoneyNum cur taxableSum),
+          totRow taxableLabel (fmtMoneyNum cur taxableSum),
           if taxSum > 0 then totRow vatLabel (fmtMoneyNum cur taxSum) else "",
           T.concat (map (renderExternalRow locale cur) externalItems),
           "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>",
@@ -525,6 +530,9 @@ data Labels = Labels
     vatAmtLabel :: Text,
     totalLabel :: Text,
     taxablePriceLabel :: Text,
+    taxableCancellationLabel :: Text,
+    taxableSubscriptionLabel :: Text,
+    taxableCommissionLabel :: Text,
     vatLabel :: Text,
     totalInclVatLabel :: Text,
     invoicedValueLabel :: Text
@@ -547,6 +555,9 @@ localeLabels EN =
       vatAmtLabel = "VAT",
       totalLabel = "Total",
       taxablePriceLabel = "Taxable Trip Price",
+      taxableCancellationLabel = "Taxable Cancellation Fee",
+      taxableSubscriptionLabel = "Taxable Subscription Amount",
+      taxableCommissionLabel = "Taxable Commission",
       vatLabel = "VAT",
       totalInclVatLabel = "Total incl. VAT",
       invoicedValueLabel = "Invoiced Value"
@@ -567,6 +578,9 @@ localeLabels FI =
       vatAmtLabel = "ALV",
       totalLabel = "Kokonaissumma",
       taxablePriceLabel = "Verollinen matkan hinta (EUR)",
+      taxableCancellationLabel = "Verollinen peruutusmaksu (EUR)",
+      taxableSubscriptionLabel = "Verollinen tilausmaksu (EUR)",
+      taxableCommissionLabel = "Verollinen provisio (EUR)",
       vatLabel = "ALV",
       totalInclVatLabel = "Yhteens\228 sis. ALV (EUR)",
       invoicedValueLabel = "Laskutettu arvo"
@@ -587,6 +601,9 @@ localeLabels NL =
       vatAmtLabel = "BTW",
       totalLabel = "Totaal",
       taxablePriceLabel = "Belastbare ritprijs (EUR)",
+      taxableCancellationLabel = "Belastbare annuleringskosten (EUR)",
+      taxableSubscriptionLabel = "Belastbaar abonnementsbedrag (EUR)",
+      taxableCommissionLabel = "Belastbare commissie (EUR)",
       vatLabel = "BTW",
       totalInclVatLabel = "Totaal incl. BTW (EUR)",
       invoicedValueLabel = "Gefactureerde waarde"
