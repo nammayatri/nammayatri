@@ -51,7 +51,6 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
 import qualified Domain.Types.RiderPreferredOption as DRPO
@@ -289,18 +288,8 @@ getOffers searchRequest = do
       [Bool] ->
       Flow [QuoteAPIEntity]
     mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
-      let quoteEntitiesWithCtx =
-            zip
-              (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
-              ( quoteList <&> \q ->
-                  let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
-                      offerBaseAmount = case mbBreakup of
-                        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                        Nothing -> q.estimatedFare.amount
-                      offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
-                   in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
-              )
-          products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
+      let quoteEntities = mkQAPIEntityList quoteList bppDetailList isValueAddNPList
+          products = map (\q -> (show q.vehicleServiceTierType, mkPrice (Just q.estimatedFare.currency) q.estimatedFare.amount)) quoteList
       productOffers <-
         if enableRideHailingOffers
           then
@@ -312,14 +301,12 @@ getOffers searchRequest = do
                 Right r -> pure r
           else pure []
       let offerMap = Map.fromList productOffers
-      forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
+      forM (zip quoteEntities quoteList) $ \(quoteEntity, quote) -> do
+        let productId = show quote.vehicleServiceTierType
         mbOffer <- case Map.lookup productId offerMap of
           Nothing -> pure Nothing
-          Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
+          Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp []
         pure quoteEntity {customerOffers = mbOffer}
-
-    quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
-    quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
 
     sortByNearestDriverDistance quoteList = do
       let sortFunc = compare `on` getMbDistanceToNearestDriver
