@@ -1266,6 +1266,7 @@ TransporterConfig:
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
+    enableRiderPhoneOtpFallback: Maybe Bool
 
   beamType:
     currency: Maybe Currency
