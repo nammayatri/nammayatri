@@ -314,7 +314,12 @@ handler ValidatedDSearchReq {..} sReq = do
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
-      mbPickupGateId = SL.pickupGateIdFromArea resolvedArea
+      -- Read gate id from `area` first; `mbPickupDropArea` (used by `resolvedArea` via
+      -- `fromMaybe`) is built with `Nothing` for the gate in `getAllFareProducts`'
+      -- (Just pickup, Just drop) -> Nothing branch.
+      mbPickupGateId =
+        SL.pickupGateIdFromArea allFarePoliciesProduct.area
+          <|> SL.pickupGateIdFromArea resolvedArea
   (canQueueUp, mbDefaultDriverExtra) <- getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
