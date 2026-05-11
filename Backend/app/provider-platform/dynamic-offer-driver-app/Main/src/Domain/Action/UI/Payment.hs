@@ -560,7 +560,9 @@ processWalletTopupWebhook driver order transactionStatus = do
                   isVat = False,
                   issuedToTaxNo = Nothing,
                   issuedByTaxNo = Nothing,
-                  paymentMode = Just "ONLINE" -- wallet topup goes through Juspay; always online
+                  paymentMode = Just "ONLINE", -- wallet topup goes through Juspay; always online
+                  periodStart = Nothing,
+                  periodEnd = Nothing
                 }
         result <- runFinance ctx $ do
           _ <- transfer PlatformAsset OwnerLiability order.amount walletReferenceTopup

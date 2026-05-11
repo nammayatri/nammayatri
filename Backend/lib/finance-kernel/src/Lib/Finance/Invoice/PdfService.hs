@@ -16,14 +16,12 @@ module Lib.Finance.Invoice.PdfService
 
     -- * HTML rendering
     renderInvoiceHtml,
-    renderBatchInvoiceHtml,
     parseLineItems,
   )
 where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as Aeson
-import Data.List (groupBy, sortOn)
 import qualified Data.Text as T
 import qualified Data.Time as DT
 import Domain.Types.Invoice (DateOrTime (..), InvoiceType (..), toUTCTimeFrom, toUTCTimeTo)
@@ -181,11 +179,21 @@ data InvoicePdfData = InvoicePdfData
     mbTaxTxn :: Maybe IndirectTaxTransaction,
     -- | paymentMethodType from payment_transaction table
     mbPaymentMethodType :: Maybe Text,
-    -- | cardBrand + cardLastFourDigits from payment_transaction
-    mbCardInfo :: Maybe Text
+    -- | cardBrand and last 4 digits from payment_transaction; rendered into a
+    -- locale-aware "Received via VISA ****8821" string in renderTotals.
+    mbCardBrand :: Maybe Text,
+    mbCardLastFour :: Maybe Text,
+    -- | AggregatedCommission party metadata: recipient Y-tunnus, merchant
+    -- Y-tunnus + VAT. Live-fetched (not persisted on the Invoice row);
+    -- recipient VAT comes from inv.supplierTaxNo (handler maps it there).
+    mbRecipientBusinessId :: Maybe Text,
+    mbSellerBusinessId :: Maybe Text,
+    mbSellerVatNumber :: Maybe Text
   }
 
--- | Smart constructor — derive all the computed fields callers need
+-- | Smart constructor — derive all the computed fields callers need.
+-- Positional (rather than record-update) for the trailing args so external
+-- packages aren't blocked by 'DuplicateRecordFields'.
 buildInvoicePdfData ::
   Invoice ->
   [InvoiceLineItem] ->
@@ -196,19 +204,25 @@ buildInvoicePdfData ::
   Maybe Text ->
   -- | cardLastFourDigits
   Maybe Text ->
+  -- | mbRecipientBusinessId
+  Maybe Text ->
+  -- | mbSellerBusinessId
+  Maybe Text ->
+  -- | mbSellerVatNumber
+  Maybe Text ->
   InvoicePdfData
-buildInvoicePdfData inv items mbTax mbPayType mbBrand mbLast4 =
+buildInvoicePdfData inv items mbTax mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat =
   InvoicePdfData
     { financeInvoice = inv,
       parsedLineItems = items,
       mbTaxTxn = mbTax,
       mbPaymentMethodType = mbPayType,
-      mbCardInfo = buildCardInfo mbPayType mbBrand mbLast4
+      mbCardBrand = mbBrand,
+      mbCardLastFour = mbLast4,
+      mbRecipientBusinessId = mbRecipientBid,
+      mbSellerBusinessId = mbSellerBid,
+      mbSellerVatNumber = mbSellerVat
     }
-  where
-    buildCardInfo Nothing _ _ = Nothing
-    buildCardInfo (Just pt) brand last4 =
-      Just $ pt <> maybe "" (\b -> " " <> b) brand <> maybe "" (\l -> " \x2022\x2022\x2022\x2022 " <> l) last4
 
 -- ---------------------------------------------------------------------------
 -- Line item parsing
@@ -248,19 +262,28 @@ renderInvoiceHtml cfg pdfData =
         [ "<!DOCTYPE html><html><head>",
           "<meta charset='UTF-8'>",
           "<title>",
-          escHtml (lbls.invoiceTitle <> " " <> inv.invoiceNumber),
+          escHtml (docTitle lbls inv <> " " <> inv.invoiceNumber),
           "</title>",
           "<style>",
           invoiceCss,
           "</style>",
           "</head><body><div class='wrap'>",
           renderHeader cfg pdfData lbls,
-          renderParties inv lbls,
+          renderParties pdfData lbls,
           renderFromLocation inv,
+          renderInvoicingPeriod cfg pdfData lbls,
           renderLineItemsTable cfg pdfData lbls,
           renderTotals cfg pdfData lbls,
+          renderAggregationFooter cfg inv lbls,
           "</div></body></html>"
         ]
+
+-- | AggregatedCommission gets "App bookings" / "Sovellustilaukset" / "App-boekingen";
+-- other types keep the generic "Invoice" / "Lasku" / "Factuur".
+docTitle :: Labels -> Invoice -> Text
+docTitle lbls inv = case inv.invoiceType of
+  AggregatedCommission -> lbls.aggregatedCommissionTitle
+  _ -> lbls.invoiceTitle
 
 -- ---------------------------------------------------------------------------
 -- Header
@@ -294,61 +317,177 @@ renderHeader cfg pdfData lbls =
 -- Parties
 -- ---------------------------------------------------------------------------
 
-renderParties :: Invoice -> Labels -> Text
-renderParties inv lbls =
-  let rightName = inv.supplierName <|> inv.issuedByName
-      rightAddress = inv.supplierAddress <|> inv.issuedByAddress
-      rightGstin = inv.supplierGSTIN <|> inv.merchantGstin
-   in T.concat
-        [ "<table class='parties'><tr>",
-          "<td class='party-left'>",
-          "<div class='party-lbl-plain'>",
-          lbls.recipientLabel,
-          ":</div>",
-          "<div class='party-name' style='font-weight:700;color:#000000'>",
-          escHtml (fromMaybe "" inv.issuedToName),
-          "</div>",
-          "</td>",
-          "<td class='party-right'>",
-          "<div class='party-name'>",
-          escHtml (fromMaybe "" rightName),
-          "</div>",
-          maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") rightAddress,
-          maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") rightGstin,
-          maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") inv.supplierTaxNo,
-          "</td>",
-          "</tr></table>"
-        ]
+-- | AggregatedCommission shows recipient + seller with full info; other types
+-- show recipient name + supplier full info. Each side's <td> is suppressed
+-- entirely when none of its data fields are populated, so a missing party
+-- doesn't leave a labeled-but-empty block in the rendered PDF.
+renderParties :: InvoicePdfData -> Labels -> Text
+renderParties pdfData lbls =
+  let inv = pdfData.financeInvoice
+   in case inv.invoiceType of
+        AggregatedCommission ->
+          let leftHas =
+                isJust inv.issuedToName || isJust inv.issuedToAddress
+                  || isJust pdfData.mbRecipientBusinessId
+                  || isJust inv.supplierTaxNo
+              rightHas =
+                isJust inv.issuedByName || isJust inv.issuedByAddress
+                  || isJust pdfData.mbSellerBusinessId
+                  || isJust pdfData.mbSellerVatNumber
+              leftBlock =
+                T.concat
+                  [ "<td class='party-left'>",
+                    "<div class='party-lbl-plain'>",
+                    lbls.recipientLabel,
+                    ":</div>",
+                    maybe "" (\n -> "<div class='party-name'>" <> escHtml n <> "</div>") inv.issuedToName,
+                    maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.issuedToAddress,
+                    maybe "" (\b -> "<div class='party-tax'>" <> lbls.businessIdLabel <> ": " <> escHtml b <> "</div>") pdfData.mbRecipientBusinessId,
+                    -- Recipient VAT: handler maps recipient VAT into supplierTaxNo.
+                    maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> ": " <> escHtml t <> "</div>") inv.supplierTaxNo,
+                    "</td>"
+                  ]
+              rightBlock =
+                T.concat
+                  [ "<td class='party-right'>",
+                    "<div class='party-lbl-plain'>",
+                    lbls.sellerLabel,
+                    ":</div>",
+                    maybe "" (\n -> "<div class='party-name'>" <> escHtml n <> "</div>") inv.issuedByName,
+                    maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.issuedByAddress,
+                    maybe "" (\b -> "<div class='party-tax'>" <> lbls.businessIdLabel <> ": " <> escHtml b <> "</div>") pdfData.mbSellerBusinessId,
+                    maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> ": " <> escHtml t <> "</div>") pdfData.mbSellerVatNumber,
+                    "</td>"
+                  ]
+           in if not leftHas && not rightHas
+                then ""
+                else
+                  T.concat
+                    [ "<table class='parties'><tr>",
+                      if leftHas then leftBlock else "<td class='party-left'></td>",
+                      if rightHas then rightBlock else "<td class='party-right'></td>",
+                      "</tr></table>"
+                    ]
+        _ ->
+          -- Right side merges supplier* with issuedBy* / merchantGstin so
+          -- callers that only populate one side still get a sensible render.
+          let rightName = inv.supplierName <|> inv.issuedByName
+              rightAddress = inv.supplierAddress <|> inv.issuedByAddress
+              rightGstin = inv.supplierGSTIN <|> inv.merchantGstin
+              leftHas = isJust inv.issuedToName
+              rightHas =
+                isJust rightName || isJust rightAddress
+                  || isJust rightGstin
+                  || isJust inv.supplierTaxNo
+              leftBlock =
+                T.concat
+                  [ "<td class='party-left'>",
+                    "<div class='party-lbl-plain'>",
+                    lbls.recipientLabel,
+                    ":</div>",
+                    maybe "" (\n -> "<div class='party-name' style='font-weight:700;color:#000000'>" <> escHtml n <> "</div>") inv.issuedToName,
+                    "</td>"
+                  ]
+              rightBlock =
+                T.concat
+                  [ "<td class='party-right'>",
+                    maybe "" (\n -> "<div class='party-name'>" <> escHtml n <> "</div>") rightName,
+                    maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") rightAddress,
+                    maybe "" (\g -> "<div class='party-tax'>" <> lbls.gstinLabel <> " " <> escHtml g <> "</div>") rightGstin,
+                    maybe "" (\t -> "<div class='party-tax'>" <> lbls.vatNumberLabel <> " " <> escHtml t <> "</div>") inv.supplierTaxNo,
+                    "</td>"
+                  ]
+           in if not leftHas && not rightHas
+                then ""
+                else
+                  T.concat
+                    [ "<table class='parties'><tr>",
+                      if leftHas then leftBlock else "<td class='party-left'></td>",
+                      if rightHas then rightBlock else "<td class='party-right'></td>",
+                      "</tr></table>"
+                    ]
 
+-- | Suppressed for AggregatedCommission (recipient address already in parties block);
+-- other invoice types keep the existing behavior.
 renderFromLocation :: Invoice -> Text
-renderFromLocation inv =
-  case inv.issuedToAddress of
+renderFromLocation inv = case inv.invoiceType of
+  AggregatedCommission -> ""
+  _ -> case inv.issuedToAddress of
     Nothing -> ""
     Just addr ->
       "<div class='from-location'>" <> escHtml addr <> "</div>"
+
+-- | "Laskutusjakso: <start> - <end>" band between parties and line items.
+-- AggregatedCommission only.
+renderInvoicingPeriod :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
+renderInvoicingPeriod cfg pdfData lbls =
+  let inv = pdfData.financeInvoice
+   in case inv.invoiceType of
+        AggregatedCommission -> case (inv.periodStart, inv.periodEnd) of
+          (Just s, Just e) ->
+            "<div class='invoicing-period'>"
+              <> escHtml lbls.invoicingPeriodLabel
+              <> ": <strong>"
+              <> formatDate cfg.timezone s
+              <> " - "
+              <> formatDate cfg.timezone e
+              <> "</strong></div>"
+          _ -> ""
+        _ -> ""
 
 -- ---------------------------------------------------------------------------
 -- Line items table
 -- Title | Amount (EUR) | ALV% | ALV (EUR) | Total (EUR)
 -- ---------------------------------------------------------------------------
 
+-- | AggregatedCommission: one consolidated row, 6 cols. Other types: per-item
+-- rows, 5 cols.
 renderLineItemsTable :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
 renderLineItemsTable cfg pdfData lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
-      rows = buildRows cfg.locale pdfData lbls
-   in T.concat
-        [ "<table>",
-          "<thead><tr>",
-          th "" lbls.titleLabel,
-          th "n" (lbls.amountLabel <> " (" <> currencyCode cur <> ")"),
-          th "n" (lbls.vatPctLabel <> " (%)"),
-          th "n" (lbls.vatAmtLabel <> " (" <> currencyCode cur <> ")"),
-          th "n" (lbls.totalLabel <> " (" <> currencyCode cur <> ")"),
-          "</tr></thead><tbody>",
-          T.concat rows,
-          "</tbody></table>"
-        ]
+   in case inv.invoiceType of
+        AggregatedCommission ->
+          let total = sum (map (.lineTotal) pdfData.parsedLineItems)
+              periodSuffix = case (inv.periodStart, inv.periodEnd) of
+                (Just s, Just e) -> " (" <> formatDate cfg.timezone s <> " - " <> formatDate cfg.timezone e <> ")"
+                _ -> ""
+              description = lbls.aggregatedCommissionTitle <> periodSuffix
+              vatZeroHeader = lbls.vatLabel <> " 0%"
+           in T.concat
+                [ "<table>",
+                  "<thead><tr>",
+                  th "" lbls.titleLabel,
+                  th "n" lbls.quantityLabel,
+                  th "n" lbls.unitPriceLabel,
+                  th "n" lbls.aggLineSumLabel,
+                  th "n" vatZeroHeader,
+                  th "n" lbls.totalLabel,
+                  "</tr></thead><tbody>",
+                  "<tr>",
+                  td description,
+                  td' "n" "1",
+                  td' "n" (fmtMoneyNum cur total),
+                  td' "n" (fmtMoneyNum cur total),
+                  td' "n" (fmtMoneyNum cur 0),
+                  td' "n" (fmtMoneyNum cur total),
+                  "</tr>",
+                  "</tbody></table>"
+                ]
+        _ ->
+          let rows = buildRows cfg.locale pdfData lbls
+           in T.concat
+                [ "<table>",
+                  "<thead><tr>",
+                  th "" lbls.titleLabel,
+                  th "n" (lbls.amountLabel <> " (" <> currencyCode cur <> ")"),
+                  th "n" (lbls.vatPctLabel <> " (%)"),
+                  th "n" (lbls.vatAmtLabel <> " (" <> currencyCode cur <> ")"),
+                  th "n" (lbls.totalLabel <> " (" <> currencyCode cur <> ")"),
+                  "</tr></thead><tbody>",
+                  T.concat rows,
+                  "</tbody></table>"
+                ]
   where
     th cls lbl = "<th style='font-weight:700;color:#000000'" <> (if T.null cls then "" else " class='" <> cls <> "'") <> ">" <> lbl <> "</th>"
 
@@ -367,28 +506,37 @@ pairByGroupId items =
       taxFor target = find (\taxItem -> taxItem.groupId == target) taxes
    in [(fareItem, taxFor fareItem.groupId) | fareItem <- fares]
 
--- | Main table rows. Adjustments and externals render in 'renderTotals' instead.
+-- | Main table rows. Includes external items (toll/parking) so VAT-bearing
+-- pass-through charges show alongside ride fare; their breakdown still appears
+-- below in 'renderTotals'. Adjustments render in 'renderTotals' only.
 buildRows :: InvoiceLocale -> InvoicePdfData -> Labels -> [Text]
 buildRows locale pdfData _lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
       mainTableItems =
-        [item | item <- pdfData.parsedLineItems, not item.isExternalCharge, item.itemType == Just Fare || item.itemType == Just Tax]
+        [item | item <- pdfData.parsedLineItems, item.itemType == Just Fare || item.itemType == Just Tax]
       pairs = pairByGroupId mainTableItems
    in map (renderFareTaxRow locale cur) pairs
 
+-- | Fare/tax row. VAT% displayed as tax/(net+tax) (share of gross), per Lynx
+-- invoice convention. Empty VAT cells look broken in the table; always render
+-- an explicit "0.0"/"0.00" when no tax is paired so tax-exempt items still
+-- look intentional rather than missing.
 renderFareTaxRow :: InvoiceLocale -> Currency -> (InvoiceLineItem, Maybe InvoiceLineItem) -> Text
 renderFareTaxRow locale cur (fare, mbTax) =
   let taxAmount = maybe 0 (.lineTotal) mbTax
-      hasTax = isJust mbTax && fare.lineTotal > 0
-      vatPctText = if hasTax then fmtPct (realToFrac (taxAmount / fare.lineTotal) * 100.0) else ""
-      vatAmtText = maybe "" (const (fmtMoneyNum cur taxAmount)) mbTax
+      gross = fare.lineTotal + taxAmount
+      vatPctText =
+        if isJust mbTax && gross > 0
+          then fmtPct (realToFrac (taxAmount / gross) * 100.0)
+          else "0.0"
+      vatAmtText = fmtMoneyNum cur taxAmount
    in tr
         [ td (displayItemDescription locale fare),
           td' "n" (fmtMoneyNum cur fare.lineTotal),
           td' "n" vatPctText,
           td' "n" vatAmtText,
-          td' "n" (fmtMoneyNum cur (fare.lineTotal + taxAmount))
+          td' "n" (fmtMoneyNum cur gross)
         ]
 
 tr :: [Text] -> Text
@@ -406,65 +554,100 @@ td' cls t = "<td class='" <> cls <> "'>" <> escHtml t <> "</td>"
 -- ---------------------------------------------------------------------------
 
 -- | Ladder: Taxable → VAT → externals → Total → adjustments → Net Total → payment mode.
--- Net Total only renders when adjustments exist.
+-- Net Total only renders when adjustments exist. AggregatedCommission takes a
+-- simpler 3-row branch (Yhteensä / ALV 0% / Yhteensä sis. ALV).
 renderTotals :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
 renderTotals cfg pdfData lbls =
   let inv = pdfData.financeInvoice
       cur = inv.currency
-      locale = cfg.locale
-      mbTax = pdfData.mbTaxTxn
-      items = pdfData.parsedLineItems
-      tableFares = [item | item <- items, item.itemType == Just Fare, not item.isExternalCharge]
-      tableTaxes = [item | item <- items, item.itemType == Just Tax, not item.isExternalCharge]
-      externalItems = filter (.isExternalCharge) items
-      adjustmentItems = [item | item <- items, item.itemType == Just Adjustment]
-      taxableSum = sum (map (.lineTotal) tableFares)
-      taxSum = sum (map (.lineTotal) tableTaxes)
-      externalsSum = sum (map (.lineTotal) externalItems)
-      adjustmentsSum = sum (map (.lineTotal) adjustmentItems)
-      totalLine = taxableSum + taxSum + externalsSum
-      netTotalLine = totalLine + adjustmentsSum
-      -- Prefer the explicit tax-transaction rate; fall back to computing from sums.
-      vatPctText = case mbTax of
-        Just taxTxn | taxableSum > 0 -> fmtPct (fromMaybe taxTxn.gstRate taxTxn.taxRate)
-        _
-          | taxableSum > 0 && taxSum > 0 ->
-            fmtPct (realToFrac (taxSum / taxableSum) * 100.0)
-        _ -> ""
-      vatLabel =
-        lbls.vatLabel
-          <> if T.null vatPctText then "" else " (" <> vatPctText <> "%)"
-      paymentMethodStr = inv.paymentMode <|> pdfData.mbCardInfo
-      taxableLabel = case inv.invoiceType of
-        RideCancellation -> lbls.taxableCancellationLabel
-        SubscriptionPurchase -> lbls.taxableSubscriptionLabel
-        Commission -> lbls.taxableCommissionLabel
-        _ -> lbls.taxablePriceLabel
-   in T.concat
-        [ "<table class='totals'>",
-          totRow taxableLabel (fmtMoneyNum cur taxableSum),
-          if taxSum > 0 then totRow vatLabel (fmtMoneyNum cur taxSum) else "",
-          T.concat (map (renderExternalRow locale cur) externalItems),
-          "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>",
-          lbls.totalInclVatLabel,
-          "</td><td class='tot-val' style='font-weight:700;color:#000000'>",
-          fmtMoneyNum cur totalLine,
-          "</td></tr>",
-          T.concat (map (renderAdjustmentRow locale cur) adjustmentItems),
-          if not (null adjustmentItems)
-            then
-              let invoicedLabel = lbls.invoicedValueLabel <> maybe "" (\pm -> " " <> pm) paymentMethodStr <> ":"
-               in "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>"
-                    <> escHtml invoicedLabel
-                    <> "</td><td class='tot-val' style='font-weight:700;color:#000000'>"
-                    <> fmtMoneyNum cur netTotalLine
-                    <> "</td></tr>"
-            else maybe "" (\pm -> "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>" <> escHtml (lbls.invoicedValueLabel <> " " <> pm <> ":") <> "</td><td class='tot-val' style='font-weight:700;color:#000000'>" <> fmtMoneyNum cur totalLine <> "</td></tr>") paymentMethodStr,
-          "</table>"
-        ]
+   in case inv.invoiceType of
+        AggregatedCommission ->
+          let total = sum (map (.lineTotal) pdfData.parsedLineItems)
+              vatZeroRowLabel = lbls.vatLabel <> " 0%"
+           in T.concat
+                [ "<table class='totals'>",
+                  totRow lbls.aggSubtotalLabel (fmtMoneyNum cur total),
+                  totRow vatZeroRowLabel (fmtMoneyNum cur 0),
+                  "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>",
+                  lbls.totalInclVatLabel,
+                  "</td><td class='tot-val' style='font-weight:700;color:#000000'>",
+                  fmtMoneyNum cur total,
+                  "</td></tr>",
+                  "</table>"
+                ]
+        _ ->
+          let locale = cfg.locale
+              mbTax = pdfData.mbTaxTxn
+              items = pdfData.parsedLineItems
+              tableFares = [item | item <- items, item.itemType == Just Fare, not item.isExternalCharge]
+              tableTaxes = [item | item <- items, item.itemType == Just Tax, not item.isExternalCharge]
+              externalItems = filter (.isExternalCharge) items
+              adjustmentItems = [item | item <- items, item.itemType == Just Adjustment]
+              taxableSum = sum (map (.lineTotal) tableFares)
+              taxSum = sum (map (.lineTotal) tableTaxes)
+              externalsSum = sum (map (.lineTotal) externalItems)
+              adjustmentsSum = sum (map (.lineTotal) adjustmentItems)
+              totalLine = taxableSum + taxSum + externalsSum
+              netTotalLine = totalLine + adjustmentsSum
+              -- Prefer the explicit tax-transaction rate when present; otherwise compute
+              -- as share of gross (tax / (net+tax)) so it agrees with per-row VAT% in
+              -- the line items table.
+              vatPctText = case mbTax of
+                Just taxTxn | taxableSum > 0 -> fmtPct (fromMaybe taxTxn.gstRate taxTxn.taxRate)
+                _
+                  | taxableSum + taxSum > 0 && taxSum > 0 ->
+                    fmtPct (realToFrac (taxSum / (taxableSum + taxSum)) * 100.0)
+                _ -> ""
+              vatLabelText =
+                lbls.vatLabel
+                  <> if T.null vatPctText then "" else " (" <> vatPctText <> "%)"
+              paymentMethodStr = formatPaymentMethod lbls inv.paymentMode pdfData.mbCardBrand pdfData.mbCardLastFour
+              taxableLabel = case inv.invoiceType of
+                RideCancellation -> lbls.taxableCancellationLabel
+                SubscriptionPurchase -> lbls.taxableSubscriptionLabel
+                Commission -> lbls.taxableCommissionLabel
+                _ -> lbls.taxablePriceLabel
+           in T.concat
+                [ "<table class='totals'>",
+                  totRow taxableLabel (fmtMoneyNum cur taxableSum),
+                  if taxSum > 0 then totRow vatLabelText (fmtMoneyNum cur taxSum) else "",
+                  T.concat (map (renderExternalRow locale cur) externalItems),
+                  "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>",
+                  lbls.totalInclVatLabel,
+                  "</td><td class='tot-val' style='font-weight:700;color:#000000'>",
+                  fmtMoneyNum cur totalLine,
+                  "</td></tr>",
+                  T.concat (map (renderAdjustmentRow locale cur) adjustmentItems),
+                  if not (null adjustmentItems)
+                    then
+                      "<tr class='tot-row grand'><td style='font-weight:700;color:#000000'>"
+                        <> lbls.invoicedValueLabel
+                        <> "</td><td class='tot-val' style='font-weight:700;color:#000000'>"
+                        <> fmtMoneyNum cur netTotalLine
+                        <> "</td></tr>"
+                    else "",
+                  maybe "" (\pm -> "<tr class='tot-row payment'><td></td><td class='tot-val payment-detail'>" <> escHtml pm <> "</td></tr>") paymentMethodStr,
+                  "</table>"
+                ]
   where
     totRow lbl val =
       "<tr class='tot-row'><td>" <> lbl <> "</td><td class='tot-val'>" <> val <> "</td></tr>"
+
+-- | Build the payment-method string shown beneath the totals. Card details
+-- (when present) take precedence and produce "Received via VISA ****8821".
+-- Otherwise, "ONLINE"/"CASH" map to localized words; anything else passes
+-- through verbatim so unknown modes still display.
+formatPaymentMethod :: Labels -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text
+formatPaymentMethod lbls mbMode mbBrand mbLast4 =
+  case (mbBrand, mbLast4) of
+    (Just brand, Just last4) ->
+      Just (lbls.receivedViaLabel <> " " <> brand <> " ****" <> last4)
+    _ -> case mbMode of
+      Just mode -> case T.toUpper mode of
+        "ONLINE" -> Just lbls.onlineLabel
+        "CASH" -> Just lbls.cashLabel
+        _ -> Just mode
+      Nothing -> Nothing
 
 renderExternalRow :: InvoiceLocale -> Currency -> InvoiceLineItem -> Text
 renderExternalRow locale cur item =
@@ -517,15 +700,26 @@ escHtml = T.concatMap $ \case
 
 data Labels = Labels
   { invoiceTitle :: Text,
+    aggregatedCommissionTitle :: Text,
     invoiceNumberLabel :: Text,
     dateLabel :: Text,
     dueDateLabel :: Text,
+    invoicingPeriodLabel :: Text,
     recipientLabel :: Text,
     supplierLabel :: Text,
+    -- | Distinct from supplierLabel: the entity selling the platform service
+    -- (the merchant), not the entity supplying the rides (fleet owner / driver).
+    sellerLabel :: Text,
+    businessIdLabel :: Text,
     vatNumberLabel :: Text,
     gstinLabel :: Text,
     titleLabel :: Text,
     amountLabel :: Text,
+    quantityLabel :: Text,
+    unitPriceLabel :: Text,
+    -- | Distinct from amountLabel: in FI, amountLabel = "Määrä" (quantity);
+    -- this label is the explicit "Summa" word for the line sum.
+    aggLineSumLabel :: Text,
     vatPctLabel :: Text,
     vatAmtLabel :: Text,
     totalLabel :: Text,
@@ -535,22 +729,36 @@ data Labels = Labels
     taxableCommissionLabel :: Text,
     vatLabel :: Text,
     totalInclVatLabel :: Text,
-    invoicedValueLabel :: Text
+    invoicedValueLabel :: Text,
+    -- | Distinct from totalLabel: totalLabel is a table column header,
+    -- aggSubtotalLabel is the "Yhteensä" row label in the totals block.
+    aggSubtotalLabel :: Text,
+    -- | Payment method line: "Received via VISA ****8821" / "Online" / "Cash".
+    receivedViaLabel :: Text,
+    onlineLabel :: Text,
+    cashLabel :: Text
   }
 
 localeLabels :: InvoiceLocale -> Labels
 localeLabels EN =
   Labels
     { invoiceTitle = "Invoice",
+      aggregatedCommissionTitle = "App bookings",
       invoiceNumberLabel = "Invoice No.",
       dateLabel = "Date",
       dueDateLabel = "Due Date",
+      invoicingPeriodLabel = "Invoicing Period",
       recipientLabel = "Recipient",
       supplierLabel = "Supplier",
+      sellerLabel = "Seller",
+      businessIdLabel = "Business ID",
       vatNumberLabel = "VAT No.",
       gstinLabel = "GSTIN",
       titleLabel = "Title",
       amountLabel = "Amount",
+      quantityLabel = "Quantity",
+      unitPriceLabel = "Unit Price",
+      aggLineSumLabel = "Amount",
       vatPctLabel = "VAT",
       vatAmtLabel = "VAT",
       totalLabel = "Total",
@@ -560,20 +768,31 @@ localeLabels EN =
       taxableCommissionLabel = "Taxable Commission",
       vatLabel = "VAT",
       totalInclVatLabel = "Total incl. VAT",
-      invoicedValueLabel = "Invoiced Value"
+      invoicedValueLabel = "Invoiced Value",
+      aggSubtotalLabel = "Subtotal",
+      receivedViaLabel = "Received via",
+      onlineLabel = "Received online",
+      cashLabel = "Received in cash"
     }
 localeLabels FI =
   Labels
     { invoiceTitle = "Lasku",
+      aggregatedCommissionTitle = "Sovellustilaukset",
       invoiceNumberLabel = "Laskun nro.",
       dateLabel = "P\228iv\228m\228\228r\228",
       dueDateLabel = "Er\228p\228iv\228",
+      invoicingPeriodLabel = "Laskutusjakso",
       recipientLabel = "Vastaanottaja",
       supplierLabel = "Toimittaja",
+      sellerLabel = "Myyj\228",
+      businessIdLabel = "Y-tunnus",
       vatNumberLabel = "ALV-nro.",
       gstinLabel = "GSTIN",
       titleLabel = "Nimike",
       amountLabel = "M\228\228r\228",
+      quantityLabel = "M\228\228r\228",
+      unitPriceLabel = "Yksikk\246hinta",
+      aggLineSumLabel = "Summa",
       vatPctLabel = "ALV%",
       vatAmtLabel = "ALV",
       totalLabel = "Kokonaissumma",
@@ -583,20 +802,31 @@ localeLabels FI =
       taxableCommissionLabel = "Verollinen provisio (EUR)",
       vatLabel = "ALV",
       totalInclVatLabel = "Yhteens\228 sis. ALV (EUR)",
-      invoicedValueLabel = "Laskutettu arvo"
+      invoicedValueLabel = "Laskutettu arvo",
+      aggSubtotalLabel = "Yhteens\228",
+      receivedViaLabel = "Vastaanotettu",
+      onlineLabel = "Vastaanotettu verkossa",
+      cashLabel = "Vastaanotettu k\228teisell\228"
     }
 localeLabels NL =
   Labels
     { invoiceTitle = "Factuur",
+      aggregatedCommissionTitle = "App-boekingen",
       invoiceNumberLabel = "Factuurnr.",
       dateLabel = "Datum",
       dueDateLabel = "Vervaldatum",
+      invoicingPeriodLabel = "Factureringsperiode",
       recipientLabel = "Ontvanger",
       supplierLabel = "Leverancier",
+      sellerLabel = "Verkoper",
+      businessIdLabel = "Bedrijfs-ID",
       vatNumberLabel = "BTW-nr.",
       gstinLabel = "GSTIN",
       titleLabel = "Omschrijving",
       amountLabel = "Bedrag",
+      quantityLabel = "Aantal",
+      unitPriceLabel = "Eenheidsprijs",
+      aggLineSumLabel = "Bedrag",
       vatPctLabel = "BTW%",
       vatAmtLabel = "BTW",
       totalLabel = "Totaal",
@@ -606,107 +836,43 @@ localeLabels NL =
       taxableCommissionLabel = "Belastbare commissie (EUR)",
       vatLabel = "BTW",
       totalInclVatLabel = "Totaal incl. BTW (EUR)",
-      invoicedValueLabel = "Gefactureerde waarde"
+      invoicedValueLabel = "Gefactureerde waarde",
+      aggSubtotalLabel = "Subtotaal",
+      receivedViaLabel = "Ontvangen via",
+      onlineLabel = "Ontvangen online",
+      cashLabel = "Ontvangen contant"
     }
 
--- ---------------------------------------------------------------------------
--- Batch rendering — aggregate N invoices into one page
--- ---------------------------------------------------------------------------
+-- | Closing paragraph for AggregatedCommission, with merchant name interpolated.
+aggregationFooterText :: InvoiceLocale -> Text -> Text
+aggregationFooterText EN merchantName =
+  "This invoice represents services provided during the period. Amounts payable to "
+    <> merchantName
+    <> " have already been deducted from your balance. Check the "
+    <> merchantName
+    <> " app for up-to-date balance information."
+aggregationFooterText FI merchantName =
+  "T\228m\228 lasku kuvaa ajanjakson aikana tarjottuja palveluja, ja "
+    <> merchantName
+    <> "ille maksettavat summat on jo v\228hennetty saldostasi. Tarkista "
+    <> merchantName
+    <> "-sovelluksesta ajantasaiset tiedot saldostasi."
+aggregationFooterText NL merchantName =
+  "Deze factuur vertegenwoordigt de tijdens de periode geleverde diensten. Bedragen verschuldigd aan "
+    <> merchantName
+    <> " zijn reeds afgetrokken van uw saldo. Raadpleeg de "
+    <> merchantName
+    <> "-app voor actuele saldo-informatie."
 
--- | For N > 1 invoices: aggregate all amounts into a single InvoicePdfData
---   (summing subtotals, totalAmounts, VAT amounts, merging line items by description),
---   use the last invoice's number/supplier/recipient, and show the date range.
-renderBatchInvoiceHtml :: InvoicePdfConfig -> [InvoicePdfData] -> Text
-renderBatchInvoiceHtml cfg pdfDatas =
-  let aggregated = aggregatePdfDatas pdfDatas
-      firstDate = minimum $ map (\d -> d.financeInvoice.issuedAt) pdfDatas
-      lastDate = maximum $ map (\d -> d.financeInvoice.issuedAt) pdfDatas
-      lbls = localeLabels cfg.locale
-      inv = aggregated.financeInvoice
-   in T.concat
-        [ "<!DOCTYPE html><html><head>",
-          "<meta charset='UTF-8'>",
-          "<title>",
-          escHtml (lbls.invoiceTitle <> " " <> inv.invoiceNumber),
-          "</title>",
-          "<style>",
-          invoiceCss,
-          "</style>",
-          "</head><body><div class='wrap'>",
-          renderBatchHeader cfg aggregated lbls firstDate lastDate,
-          renderParties inv lbls,
-          renderFromLocation inv,
-          renderLineItemsTable cfg aggregated lbls,
-          renderTotals cfg aggregated lbls,
-          "</div></body></html>"
-        ]
-
-renderBatchHeader :: InvoicePdfConfig -> InvoicePdfData -> Labels -> UTCTime -> UTCTime -> Text
-renderBatchHeader cfg pdfData lbls firstDate lastDate =
-  let inv = pdfData.financeInvoice
-   in T.concat
-        [ "<table class='header'><tr>",
-          "<td>",
-          maybe "" (\u -> "<img src='" <> escHtml u <> "' alt='' class='logo'>") cfg.logoUrl,
-          "</td>",
-          "<td class='header-right-cell'>",
-          "<div class='inv-number' style='font-weight:700;color:#000000'>",
-          lbls.invoiceNumberLabel,
-          " ",
-          escHtml inv.invoiceNumber,
-          "</div>",
-          "<div class='inv-date'>",
-          lbls.dateLabel,
-          ": ",
-          formatDate cfg.timezone firstDate,
-          " \x2013 ",
-          formatDate cfg.timezone lastDate,
-          "</div>",
-          "</td>",
-          "</tr></table>"
-        ]
-
-aggregatePdfDatas :: [InvoicePdfData] -> InvoicePdfData
-aggregatePdfDatas [] = error "aggregatePdfDatas: empty list"
-aggregatePdfDatas pdfDatas =
-  let lastData = last pdfDatas
-      lastInv = lastData.financeInvoice
-      totalSubtotal = sum $ map (.financeInvoice.subtotal) pdfDatas
-      totalAmount = sum $ map (.financeInvoice.totalAmount) pdfDatas
-      mergedInv =
-        lastInv
-          { subtotal = totalSubtotal,
-            totalAmount = totalAmount
-          }
-      mergedTaxTxn = case mapMaybe (.mbTaxTxn) pdfDatas of
-        [] -> Nothing
-        txns ->
-          let headTxn = head txns
-              summedGst = sum $ map (.totalGstAmount) txns
-              summedCgst = sum $ map (.cgstAmount) txns
-              summedSgst = sum $ map (.sgstAmount) txns
-              summedTaxable = sum $ map (.taxableValue) txns
-           in Just $ headTxn {totalGstAmount = summedGst, cgstAmount = summedCgst, sgstAmount = summedSgst, taxableValue = summedTaxable}
-      mergedItems = mergeLineItems $ concatMap (.parsedLineItems) pdfDatas
-   in InvoicePdfData
-        { financeInvoice = mergedInv,
-          parsedLineItems = mergedItems,
-          mbTaxTxn = mergedTaxTxn,
-          mbPaymentMethodType = lastData.mbPaymentMethodType,
-          mbCardInfo = Nothing
-        }
-
-mergeLineItems :: [InvoiceLineItem] -> [InvoiceLineItem]
-mergeLineItems items =
-  map mergeGroup grouped
-  where
-    grouped = groupBy (\a b -> a.description == b.description) $ sortOn (.description) items
-    mergeGroup [] = error "mergeLineItems: empty group"
-    mergeGroup grp@(headItem : _) =
-      headItem
-        { unitPrice = sum $ map (.unitPrice) grp,
-          lineTotal = sum $ map (.lineTotal) grp
-        }
+-- | Footer paragraph below the totals block, only on AggregatedCommission.
+renderAggregationFooter :: InvoicePdfConfig -> Invoice -> Labels -> Text
+renderAggregationFooter cfg inv _lbls = case inv.invoiceType of
+  AggregatedCommission ->
+    let merchantName = fromMaybe "" inv.issuedByName
+     in "<div class='agg-footer'>"
+          <> escHtml (aggregationFooterText cfg.locale merchantName)
+          <> "</div>"
+  _ -> ""
 
 -- ---------------------------------------------------------------------------
 -- CSS
@@ -727,6 +893,9 @@ invoiceCss =
       ".inv-type { font-size:13px; font-weight:600; color:#555; margin-top:4px; }",
       ".header-right { text-align:right; }",
       ".logo { height:44px; width:auto; margin-bottom:10px; display:block; }",
+      ".invoicing-period { font-size:13px; color:#2d2d2d; margin-bottom:12px; }",
+      ".agg-footer { font-size:13px; color:#2d2d2d; line-height:1.6; margin-top:24px;",
+      "              padding-top:12px; border-top:1px solid #e0e0e0; }",
       ".inv-number { font-size:15px; font-weight:700; color:#2d2d2d; margin-bottom:10px; }",
       ".inv-date { font-size:13px; color:#2d2d2d; margin-top:2px; }",
       -- Parties

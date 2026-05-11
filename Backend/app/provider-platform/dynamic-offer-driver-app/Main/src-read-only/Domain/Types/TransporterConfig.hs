@@ -379,6 +379,8 @@ data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshol
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data CommissionAggregationFrequency = DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data CommunicationChannelCharLimits = CommunicationChannelCharLimits
   { pushBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pushTitleLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -431,7 +433,9 @@ data GstBreakup = GstBreakup
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
-  { driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
+  { commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
+    driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
     emitLedgerEntries :: Kernel.Prelude.Bool,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
@@ -474,5 +478,7 @@ instance FromJSON (TransporterConfigD 'Safe)
 instance ToJSON (TransporterConfigD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommissionAggregationFrequency)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)

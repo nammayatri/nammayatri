@@ -17,7 +17,8 @@ import qualified Kernel.Types.Geofencing
 import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
-  { cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
+  { businessId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     city :: B.C f Kernel.Types.Beckn.Context.City,
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,

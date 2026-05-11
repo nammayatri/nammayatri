@@ -45,7 +45,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.cipherText cipherText,
+    [ Se.Set Beam.businessId businessId,
+      Se.Set Beam.cipherText cipherText,
       Se.Set Beam.city city,
       Se.Set Beam.country country,
       Se.Set Beam.description description,

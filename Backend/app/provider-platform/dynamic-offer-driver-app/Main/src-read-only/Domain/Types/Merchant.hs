@@ -16,7 +16,8 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data MerchantD (s :: UsageSafety) = Merchant
-  { cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
+  { businessId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     city :: Kernel.Types.Beckn.Context.City,
     country :: Kernel.Types.Beckn.Context.Country,
     createdAt :: Kernel.Prelude.UTCTime,

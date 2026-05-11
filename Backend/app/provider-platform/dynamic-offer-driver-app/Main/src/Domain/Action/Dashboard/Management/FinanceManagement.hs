@@ -4,6 +4,7 @@ module Domain.Action.Dashboard.Management.FinanceManagement
     getFinanceManagementFinanceInvoiceList,
     getFinanceManagementFinanceReconciliation,
     postFinanceManagementReconciliationTrigger,
+    postFinanceManagementAggregatedCommissionTrigger,
     getFinanceManagementFinancePaymentSettlementList,
     getFinanceManagementFinancePaymentGatewayTransactionList,
     getFinanceManagementFinanceWalletLedger,
@@ -15,7 +16,7 @@ import qualified API.Types.ProviderPlatform.Management.Endpoints.FinanceManageme
 import qualified Dashboard.Common
 import Data.List (nub, partition)
 import qualified Data.Text as T
-import Data.Time (addUTCTime)
+import Data.Time (addUTCTime, diffUTCTime)
 import qualified Data.Time as DT
 import Domain.Action.UI.Plan (getPlanAmount)
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
@@ -25,6 +26,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (UTCTime, listToMaybe, showBaseUrl)
@@ -62,12 +64,15 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
-import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData (..), AllocatorJobType (..), ReconciliationJobData (..))
+import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.Person as QPerson
@@ -416,7 +421,13 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoices <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+
+  -- Default (no status filter): hide Voided/Cancelled. Caller can request
+  -- explicitly via ?status=Voided / ?status=Cancelled.
+  let invoices = case mbStatus of
+        Just _ -> invoicesAll
+        Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   items <- mapM buildInvoiceItem invoices
 
@@ -647,6 +658,71 @@ postFinanceManagementReconciliationTrigger merchantShortId opCity req = do
       { success = True,
         message = "Reconciliation job scheduled successfully for " <> reconciliationType <> " from " <> show req.fromDate <> " to " <> show req.toDate
       }
+
+-- | Bootstrap the AggregatedCommission scheduler. Idempotent via lastAggThrough.
+-- Queues the first job; subsequent runs self-reschedule.
+postFinanceManagementAggregatedCommissionTrigger ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  API.AggregatedCommissionTriggerReq ->
+  Flow API.AggregatedCommissionTriggerRes
+postFinanceManagementAggregatedCommissionTrigger merchantShortId opCity req = do
+  merchant <- SMerchant.findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <-
+    QTC.findByMerchantOpCityId merchantOpCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let mbInvoiceConfig = transporterConfig.invoiceConfig
+      enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))
+  unless enabled $
+    throwError $
+      InvalidRequest
+        "AggregatedCommission scheduler bootstrap requires invoiceConfig.commissionAggregationEnabled=true; configure the merchant first."
+  frequency <- resolveFrequency req.frequency mbInvoiceConfig
+  now <- getCurrentTime
+  let tzOffset = transporterConfig.timeDiffFromUtc
+      periodEnd = AggCommSched.endOfNextPeriodAfter now frequency tzOffset
+      periodStart = AggCommSched.startOfPeriodContaining periodEnd frequency tzOffset
+      fireAt = addUTCTime AggCommSched.schedulerSafetyOffsetSeconds periodEnd
+      scheduleAfter = diffUTCTime fireAt now
+      jobData =
+        AggregatedCommissionInvoiceCreationJobData
+          { merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCityId,
+            periodStart = periodStart,
+            periodEnd = periodEnd,
+            frequency = frequency
+          }
+  QSchedulerJob.createJobIn @_ @'AggregatedCommissionInvoiceCreation
+    (Just merchant.id)
+    (Just merchantOpCityId)
+    (max 0 scheduleAfter)
+    jobData
+  pure $
+    API.AggregatedCommissionTriggerRes
+      { success = True,
+        message =
+          "AggregatedCommission scheduler bootstrapped (frequency=" <> show frequency
+            <> ", first period=["
+            <> show periodStart
+            <> ", "
+            <> show periodEnd
+            <> "], fireAt="
+            <> show fireAt
+            <> ")"
+      }
+  where
+    resolveFrequency :: Maybe Text -> Maybe DTC.InvoiceConfig -> Flow DTC.CommissionAggregationFrequency
+    resolveFrequency mbOverride mbInvCfg = case mbOverride of
+      Just t -> case t of
+        "DAILY" -> pure DTC.DAILY
+        "WEEKLY" -> pure DTC.WEEKLY
+        "MONTHLY" -> pure DTC.MONTHLY
+        other -> throwError $ InvalidRequest ("Invalid frequency override '" <> other <> "'; expected DAILY | WEEKLY | MONTHLY")
+      Nothing ->
+        case mbInvCfg >>= (.commissionAggregationFrequency) of
+          Just f -> pure f
+          Nothing -> throwError $ InvalidRequest "No frequency override and invoiceConfig.commissionAggregationFrequency is unset; provide one of DAILY | WEEKLY | MONTHLY."
 
 getFinanceManagementFinancePaymentSettlementList ::
   ShortId DM.Merchant ->
@@ -1300,7 +1376,14 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoices <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+
+  -- When no explicit status filter is sent, exclude Voided/Cancelled rows so
+  -- the PDF endpoint never renders a dead invoice. Caller can request these
+  -- explicitly via ?status=Voided / ?status=Cancelled.
+  let invoices = case mbStatus of
+        Just _ -> invoicesAll
+        Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
@@ -1325,7 +1408,18 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
           let mbTxn = Kernel.Prelude.listToMaybe txns
           pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
         Nothing -> pure (Nothing, Nothing, Nothing)
-      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+      -- Live-fetch AggregatedCommission party metadata (Y-tunnus + merchant VAT).
+      (mbRecipientBid, mbSellerBid, mbSellerVat) <- case inv.invoiceType of
+        AggregatedCommission -> do
+          mbRecipientBid' <- case inv.issuedToType of
+            FLEET_OWNER -> do
+              mbFleet <- QFOI.findByPrimaryKey (Id inv.issuedToId)
+              pure $ mbFleet >>= (.businessLicenseNumberDec)
+            _ -> pure Nothing
+          mbMerchant <- CQM.findById (Id inv.merchantId)
+          pure (mbRecipientBid', mbMerchant >>= (.businessId), mbMerchant >>= (.vatNumber))
+        _ -> pure (Nothing, Nothing, Nothing)
+      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat
     case res of
       Right pdfData -> pure (Just pdfData)
       Left err -> do
@@ -1335,15 +1429,16 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   when (Kernel.Prelude.null pdfDatas) $
     throwError $ InvalidRequest "No invoices could be rendered (all failed)"
 
-  let lastInv = Kernel.Prelude.last invoices
-      html = case pdfDatas of
-        [single] -> renderInvoiceHtml cfg single
-        batch -> renderBatchInvoiceHtml cfg batch
+  -- Always render a single invoice PDF; never aggregate (have seperate handling for commission aggregation).
+  -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
+  let chosenPdfData = Kernel.Prelude.head pdfDatas
+      chosenInv = chosenPdfData.financeInvoice
+      html = renderInvoiceHtml cfg chosenPdfData
 
-  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
+  pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $
     API.FinanceInvoicePdfResp
       { pdfBase64 = pdfBase64,
-        invoiceNumber = lastInv.invoiceNumber
+        invoiceNumber = chosenInv.invoiceNumber
       }

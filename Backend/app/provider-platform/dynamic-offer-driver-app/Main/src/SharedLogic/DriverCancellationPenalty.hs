@@ -187,7 +187,9 @@ accumulateCancellationPenalty isWalletEnabled booking ride rideTags transporterC
                     isVat = False,
                     issuedToTaxNo = Nothing,
                     issuedByTaxNo = Nothing,
-                    paymentMode = Nothing
+                    paymentMode = Nothing,
+                    periodStart = Nothing,
+                    periodEnd = Nothing
                   }
             case result of
               Left err -> fromEitherM (\e -> InternalError ("Failed to create DriverCancellationCharges: " <> show e)) (Left err)

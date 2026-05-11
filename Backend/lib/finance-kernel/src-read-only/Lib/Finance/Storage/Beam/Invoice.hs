@@ -36,6 +36,8 @@ data InvoiceT f = InvoiceT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     paymentMode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     paymentOrderId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    periodEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    periodStart :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceStatus),
     subtotal :: (B.C f Kernel.Types.Common.HighPrecMoney),

@@ -38,6 +38,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
@@ -92,6 +93,7 @@ data AllocatorJobType
   | CheckPickupZoneArrival
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
+  | AggregatedCommissionInvoiceCreation
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -143,6 +145,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
+  restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -578,3 +581,16 @@ data IffcoTokioInsuranceJobData = IffcoTokioInsuranceJobData
 instance JobInfoProcessor 'IffcoTokioInsurance
 
 type instance JobContent 'IffcoTokioInsurance = IffcoTokioInsuranceJobData
+
+data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCreationJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    periodStart :: UTCTime,
+    periodEnd :: UTCTime,
+    frequency :: DTC.CommissionAggregationFrequency
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
+
+type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData

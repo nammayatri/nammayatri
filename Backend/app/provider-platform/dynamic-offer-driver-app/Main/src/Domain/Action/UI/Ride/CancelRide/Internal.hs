@@ -652,7 +652,9 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
               isVat = False,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
-              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
+              periodStart = Nothing,
+              periodEnd = Nothing
             }
       case result of
         Left err -> logInfo $ "Failed to create cancellation ledger entries: " <> show err
