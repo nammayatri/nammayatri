@@ -75,7 +75,11 @@ upsert a@Vehicle {..} = do
     LTSSync.emptyUpdate
       { LTSSync.variant = LTSSync.Set variant,
         LTSSync.selectedServiceTiers = LTSSync.Set selectedServiceTiers,
-        LTSSync.mYManufacturing = LTSSync.Set mYManufacturing
+        LTSSync.mYManufacturing = LTSSync.Set mYManufacturing,
+        LTSSync.vehicleTags = LTSSync.Set vehicleTags,
+        LTSSync.airConditioned = LTSSync.Set airConditioned,
+        LTSSync.luggageCapacity = LTSSync.Set luggageCapacity,
+        LTSSync.vehicleRating = LTSSync.Set vehicleRating
       }
 
 updateVehicleVariant ::
