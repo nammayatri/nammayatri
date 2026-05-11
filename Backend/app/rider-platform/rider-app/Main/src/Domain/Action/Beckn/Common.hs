@@ -1317,6 +1317,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
     whenJust cancellationFee $ \_ ->
       QRide.updateCancellationFeeStatus (Just DRide.PENDING) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
+    fork "mark pending sos as not resolved on ride cancel" $
+      SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
