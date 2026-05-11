@@ -7,7 +7,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude (last, listToMaybe, showBaseUrl)
+import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
@@ -94,7 +94,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
           let mbTxn = Kernel.Prelude.listToMaybe txns
           pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
         Nothing -> pure (Nothing, Nothing, Nothing)
-      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 Nothing Nothing Nothing
     case res of
       Right pdfData -> pure (Just pdfData)
       Left err -> do
@@ -104,17 +104,18 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
   when (null pdfDatas) $
     throwError $ InvalidRequest "No invoices could be rendered (all failed)"
 
-  let lastInv = last invoices
-      html = case pdfDatas of
-        [single] -> renderInvoiceHtml cfg single
-        batch -> renderBatchInvoiceHtml cfg batch
+  -- Always render a single invoice PDF; never aggregate. If multiple invoices
+  -- match the filters, the first (newest by issuedAt DESC) is rendered.
+  let chosenPdfData = head pdfDatas
+      chosenInv = chosenPdfData.financeInvoice
+      html = renderInvoiceHtml cfg chosenPdfData
 
-  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
+  pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $
     API.FinanceInvoicePdfResp
       { pdfBase64 = pdfBase64,
-        invoiceNumber = lastInv.invoiceNumber
+        invoiceNumber = chosenInv.invoiceNumber
       }
 
 fetchInvoicesByRideId :: Text -> Id DP.Person -> Maybe InvoiceType -> Flow [FInvoice.Invoice]

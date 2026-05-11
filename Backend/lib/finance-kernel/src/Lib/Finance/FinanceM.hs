@@ -140,7 +140,10 @@ data InvoiceConfig = InvoiceConfig
     isVat :: Bool,
     issuedToTaxNo :: Maybe Text,
     issuedByTaxNo :: Maybe Text,
-    paymentMode :: Maybe Text
+    paymentMode :: Maybe Text,
+    -- Period bounds for aggregated invoices; Nothing for per-event invoices.
+    periodStart :: Maybe UTCTime,
+    periodEnd :: Maybe UTCTime
   }
   deriving (Eq, Show, Generic)
 
@@ -684,6 +687,8 @@ invoiceInner ctx config = do
             gstBreakdown = config.gstBreakdown,
             currency = ctx.currency,
             dueAt = Nothing,
+            periodStart = config.periodStart,
+            periodEnd = config.periodEnd,
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId,
             merchantShortId = fromMaybe ctx.merchantId ctx.merchantShortId,

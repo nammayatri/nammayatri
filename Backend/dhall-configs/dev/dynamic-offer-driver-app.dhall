@@ -297,6 +297,7 @@ let AllocatorJobType =
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
       | IffcoTokioInsurance
+      | AggregatedCommissionInvoiceCreation
       >
 
 let jobInfoMapx =
@@ -360,6 +361,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
       , { mapKey = AllocatorJobType.IffcoTokioInsurance, mapValue = True }
+      , { mapKey = AllocatorJobType.AggregatedCommissionInvoiceCreation
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =

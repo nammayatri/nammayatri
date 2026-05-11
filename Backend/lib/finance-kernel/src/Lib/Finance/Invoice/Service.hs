@@ -75,9 +75,15 @@ createInvoice ::
 createInvoice input entryIds = do
   now <- getCurrentTime
   invoiceId <- generateGUID
-  let dbFallback = fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now
-      purposeAbbr = invoiceTypeToPurpose input.invoiceType
-  invoiceNum <- generateInvoiceNumber purposeAbbr now dbFallback
+  -- AggregatedCommission uses an isolated CMB counter (gap-less customer-facing
+  -- series); others share the global counter. dbFallback must match the isolation.
+  let purposeAbbr = invoiceTypeToPurpose input.invoiceType
+      (mbKeySuffix, dbFallback) = case input.invoiceType of
+        AggregatedCommission ->
+          (Just purposeAggregatedCommission, fmap (.invoiceNumber) <$> QInvoice.findLatestAggregatedCommissionByCreatedAt now)
+        _ ->
+          (Nothing, fmap (.invoiceNumber) <$> QInvoice.findLatestByCreatedAt now)
+  invoiceNum <- generateInvoiceNumber purposeAbbr mbKeySuffix now dbFallback
 
   -- Calculate totals from line items
   -- subtotal: excludes external charges (toll, parking) and tax line items
@@ -117,6 +123,8 @@ createInvoice input entryIds = do
             status = Draft,
             issuedAt = now,
             dueAt = input.dueAt,
+            periodStart = input.periodStart,
+            periodEnd = input.periodEnd,
             merchantId = input.merchantId,
             merchantOperatingCityId = input.merchantOperatingCityId,
             createdAt = now,
@@ -358,6 +366,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
   Ride -> IndirectTax.RideFare
   RideCancellation -> Cancellation
   Commission -> BuyerCommission
+  AggregatedCommission -> BuyerCommission
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
@@ -366,6 +375,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   Ride -> DirectTax.RideFare
   RideCancellation -> DirectTax.Cancellation
   Commission -> DirectTax.BuyerCommission
+  AggregatedCommission -> DirectTax.BuyerCommission
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -386,6 +396,7 @@ invoiceTypeToPurpose = \case
   Ride -> purposeRideFare
   RideCancellation -> purposeCancellation
   Commission -> purposeCommission
+  AggregatedCommission -> purposeAggregatedCommission
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text

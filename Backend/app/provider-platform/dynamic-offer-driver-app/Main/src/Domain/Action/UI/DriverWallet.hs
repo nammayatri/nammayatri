@@ -711,7 +711,9 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               isVat = False,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
-              paymentMode = Just "CASH"
+              paymentMode = Just "CASH",
+              periodStart = Nothing,
+              periodEnd = Nothing
             }
     result <- runFinance ctx $ do
       _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge

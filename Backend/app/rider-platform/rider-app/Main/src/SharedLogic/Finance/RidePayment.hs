@@ -748,7 +748,9 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
       isVat = gstAmount > 0 || tollVatAmount > 0,
       issuedToTaxNo = Nothing,
       issuedByTaxNo = Nothing,
-      paymentMode = Just "ONLINE"
+      paymentMode = Just "ONLINE",
+      periodStart = Nothing,
+      periodEnd = Nothing
     }
 
 -- ---------------------------------------------------------------------------
@@ -918,7 +920,9 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
           isVat = False,
           issuedToTaxNo = Nothing,
           issuedByTaxNo = Nothing,
-          paymentMode = Just "ONLINE" -- BAP cancellation fee is settled via Stripe at this point
+          paymentMode = Just "ONLINE", -- BAP cancellation fee is settled via Stripe at this point
+          periodStart = Nothing,
+          periodEnd = Nothing
         }
   case result of
     Left err -> do
@@ -977,7 +981,9 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
           isVat = False,
           issuedToTaxNo = Nothing,
           issuedByTaxNo = Nothing,
-          paymentMode = Nothing
+          paymentMode = Nothing,
+          periodStart = Nothing,
+          periodEnd = Nothing
         }
   case result of
     Left err -> do

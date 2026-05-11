@@ -18,6 +18,7 @@ module Lib.Finance.Invoice.InvoiceNumber
     purposeSubscription,
     purposeDebtSettlement,
     purposeCommission,
+    purposeAggregatedCommission,
   )
 where
 
@@ -30,7 +31,7 @@ import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, nominalDiffTim
 import Prelude (length, replicate)
 
 -- | Purpose abbreviations
-purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement, purposeCommission :: Text
+purposeRideFare, purposeTip, purposeRideTip, purposeCancellation, purposeSubscription, purposeDebtSettlement, purposeCommission, purposeAggregatedCommission :: Text
 purposeRideFare = "RF"
 purposeTip = "T"
 purposeRideTip = "TRF"
@@ -38,6 +39,7 @@ purposeCancellation = "C"
 purposeSubscription = "S"
 purposeDebtSettlement = "DS"
 purposeCommission = "CM"
+purposeAggregatedCommission = "CMB"
 
 -- | Generate invoice number
 -- Format: DDMMYY-PURPOSE-XXXXXX
@@ -45,36 +47,40 @@ purposeCommission = "CM"
 --   - 270426-S-000008 (subscription)
 --   - 120126-RF-000001 (ride fare)
 --   - 120126-TRF-000003 (ride+tip)
--- Uses Redis INCR for atomic sequence (global per date)
--- Falls back to database query if Redis key doesn't exist
+-- Uses Redis INCR for atomic sequence (global per date, unless key suffix is used for isolation).
+-- Falls back to database query if Redis key doesn't exist.
 generateInvoiceNumber ::
   (MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) =>
   Text -> -- Purpose abbreviation (e.g., "S", "RF")
+  Maybe Text -> -- Optional isolation key (e.g., Just "CMB" to give AggregatedCommission its own counter)
   UTCTime ->
-  m (Maybe Text) -> -- DB fallback: get latest invoice number for sequence recovery
+  m (Maybe Text) -> -- DB fallback: get latest invoice number for sequence recovery (must match isolation)
   m Text
-generateInvoiceNumber purposeAbbr createdAt dbFallback = do
+generateInvoiceNumber purposeAbbr mbKeySuffix createdAt dbFallback = do
   let (year, month, day) = toGregorian $ utctDay createdAt
       yy = year `mod` 100
       dateStr = T.pack $ padLeft 2 '0' (show day) <> padLeft 2 '0' (show month) <> padLeft 2 '0' (show yy)
 
   -- Get next sequence number (Redis with database fallback, resets daily)
-  seqNum <- getNextSequenceForDate dateStr createdAt dbFallback
+  seqNum <- getNextSequenceForDate dateStr mbKeySuffix createdAt dbFallback
 
   -- Format: DDMMYY-PURPOSE-XXXXXX
   return $ dateStr <> "-" <> purposeAbbr <> "-" <> T.pack (padLeft 6 '0' (show seqNum))
 
--- | Global per-date sequence generator (resets daily, shared across all invoices)
--- Uses Redis lock to prevent race conditions in DB fallback case
+-- | Per-date sequence generator (resets daily). When 'mbKeySuffix' is 'Just s',
+-- the Redis key includes that suffix so the counter is isolated from the global
+-- sequence. Uses a Redis lock to prevent race conditions in the DB fallback path.
 getNextSequenceForDate ::
   (MonadFlow m, CacheFlow m r, Redis.HedisFlow m r) =>
   Text -> -- dateStr in DDMMYY format
+  Maybe Text -> -- isolation key suffix (Nothing = global counter)
   UTCTime ->
-  m (Maybe Text) -> -- DB fallback: get latest invoice number
+  m (Maybe Text) -> -- DB fallback: get latest invoice number (scoped to the same isolation)
   m Int
-getNextSequenceForDate dateStr createdAt dbFallback = do
-  let redisKey = "FinanceInvoiceSequence:" <> dateStr
-      lockKey = "FinanceInvoiceSequenceLock:" <> dateStr
+getNextSequenceForDate dateStr mbKeySuffix createdAt dbFallback = do
+  let suffix = maybe "" (\s -> ":" <> s) mbKeySuffix
+      redisKey = "FinanceInvoiceSequence" <> suffix <> ":" <> dateStr
+      lockKey = "FinanceInvoiceSequenceLock" <> suffix <> ":" <> dateStr
 
   -- First check if key exists
   mbCounter <- Hedis.safeGet redisKey

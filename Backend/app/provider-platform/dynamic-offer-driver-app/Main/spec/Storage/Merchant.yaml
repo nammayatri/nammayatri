@@ -82,6 +82,7 @@ Merchant:
     mobileCountryCode: Maybe Text
     gstin: Maybe Text
     vatNumber: Maybe Text
+    businessId: Maybe Text
     fromTime: Maybe UTCTime
     toTime: Maybe UTCTime
     headCount: Maybe Int
@@ -958,11 +959,15 @@ TransporterConfig:
       invalidPanTdsRate: Double
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    CommissionAggregationFrequency:
+      enum: "DAILY, WEEKLY, MONTHLY"
     InvoiceConfig:
       driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
       showVatInputLineItem: Maybe Bool
       logoUrl: Maybe BaseUrl
+      commissionAggregationEnabled: Maybe Bool
+      commissionAggregationFrequency: Maybe CommissionAggregationFrequency
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

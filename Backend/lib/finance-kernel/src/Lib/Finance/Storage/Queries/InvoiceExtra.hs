@@ -125,3 +125,94 @@ findByReferenceIdWithOptions referenceId mbInvoiceType statusIn mbLimit mbOffset
     (Se.Desc Beam.issuedAt)
     mbLimit
     mbOffset
+
+-- | Commission invoices in date range (Issued/Draft only). ASC by issuedAt.
+-- Type filtering (FLEET_OWNER vs DRIVER) done in Haskell, not SQL — when
+-- issuedToId is provided it already pins the recipient.
+findCommissionInvoicesInRange ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- merchantOpCityId
+  UTCTime -> -- from
+  UTCTime -> -- to
+  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- optional fleetOwnerId / driverId
+  m [DInvoice.Invoice]
+findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId = do
+  let conds =
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
+          <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.Commission]
+          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from]
+          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to]
+          <> [Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft]]
+          <> [Se.Is Beam.issuedToId $ Se.Eq fid | Just fid <- [mbFleetOwnerOrDriverId]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Asc Beam.issuedAt)
+    Nothing
+    Nothing
+
+-- | AggregatedCommission invoices in date range. DESC by issuedAt (newest
+-- first for dashboard display). Includes Voided so marker invoices remain
+-- discoverable; user-facing callers post-filter Voided.
+findAggregatedCommissionInvoicesInRange ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- merchantOpCityId
+  UTCTime -> -- from (filters issuedAt)
+  UTCTime -> -- to
+  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- optional fleetOwnerId
+  m [DInvoice.Invoice]
+findAggregatedCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerId = do
+  let conds =
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
+          <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission]
+          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from]
+          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to]
+          <> [Se.Is Beam.issuedToId $ Se.Eq fid | Just fid <- [mbFleetOwnerId]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Desc Beam.issuedAt)
+    Nothing
+    Nothing
+
+-- | Idempotency anchor for the scheduler: the highest periodEnd of prior
+-- AggregatedCommission rows for this (merchantOpCity, recipient). Includes
+-- Voided so marker invoices advance the cursor (otherwise no commission entry periods would
+-- be re-processed forever).
+findLatestAggregatedCommissionPeriodEnd ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- merchantOpCityId
+  Kernel.Prelude.Text -> -- issuedToId
+  m (Kernel.Prelude.Maybe UTCTime)
+findLatestAggregatedCommissionPeriodEnd merchantOpCityId fleetOwnerId = do
+  invoices <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+            Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission,
+            Se.Is Beam.issuedToId $ Se.Eq fleetOwnerId,
+            Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft, DInvoice.Voided]
+          ]
+      ]
+      (Se.Desc Beam.periodEnd)
+      (Just 1)
+      Nothing
+  pure $ listToMaybe invoices >>= (.periodEnd)
+
+-- | DB fallback for the AggregatedCommission Redis sequence ("CMB" counter).
+-- Scoped to AggregatedCommission rows so the isolated series is recovered
+-- correctly on Redis miss.
+findLatestAggregatedCommissionByCreatedAt ::
+  (BeamFlow.BeamFlow m r) =>
+  UTCTime ->
+  m (Kernel.Prelude.Maybe DInvoice.Invoice)
+findLatestAggregatedCommissionByCreatedAt now = do
+  let todayStart = UTCTime (utctDay now) 0
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq todayStart
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe

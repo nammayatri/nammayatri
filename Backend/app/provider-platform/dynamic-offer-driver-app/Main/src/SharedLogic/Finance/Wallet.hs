@@ -122,6 +122,7 @@ module SharedLogic.Finance.Wallet
     computeTdsRateReason,
     computeEffectiveTdsRate,
     estimateWalletDeductions,
+    formatStripeAddress,
   )
 where
 
