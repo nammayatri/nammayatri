@@ -33,7 +33,6 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Payout.Interface as IPayout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -436,17 +435,17 @@ refundCoins driverId merchantId merchantOperatingCityId payoutOrderId = do
   Coins.updateDriverCoins driverId numCoins transporterConfig.timeDiffFromUtc
   QDS.updateCoinsFieldsForDirectPayout driverId (negate payoutOrder.amount.amount)
 
-castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
+castPayoutOrderStatus :: IPayout.PayoutOrderStatus -> DS.PayoutStatus
 castPayoutOrderStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DS.Success
-    Payout.FULFILLMENTS_SUCCESSFUL -> DS.Success
-    Payout.ERROR -> DS.Failed
-    Payout.FAILURE -> DS.Failed
-    Payout.FULFILLMENTS_FAILURE -> DS.Failed
-    Payout.CANCELLED -> DS.ManualReview
-    Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
+    IPayout.SUCCESS -> DS.Success
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DS.Success
+    IPayout.ERROR -> DS.Failed
+    IPayout.FAILURE -> DS.Failed
+    IPayout.FULFILLMENTS_FAILURE -> DS.Failed
+    IPayout.CANCELLED -> DS.ManualReview
+    IPayout.FULFILLMENTS_CANCELLED -> DS.ManualReview
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
     _ -> DS.Processing
 
 getRideStatusPastDays :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Flow RideStatusPastDaysRes

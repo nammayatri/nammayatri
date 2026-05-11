@@ -6,7 +6,7 @@ imports:
   UTCTime: Kernel.Prelude
   Text: Data.Text
   Money: Kernel.Types.Common
-  PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
+  PayoutOrderStatus: Kernel.External.Payout.Interface.Types
 
 DailyStats:
   tableName: daily_stats

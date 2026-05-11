@@ -3435,9 +3435,11 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         (([], []), refundAmount)
         driverFeeSorted
     mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency = do
+      let amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout
       DPayment.CreatePayoutServiceReq
         { orderId = uid,
-          amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout,
+          amount,
+          externalPayoutAmount = amount, -- for now keep it the same
           currency,
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail

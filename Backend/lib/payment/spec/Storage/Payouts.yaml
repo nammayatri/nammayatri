@@ -23,6 +23,7 @@ PayoutOrder:
     merchantOperatingCityId : Maybe Text
     city : Text
     amount : Price
+    externalPayoutAmount : Maybe HighPrecMoney
     idAssignedByServiceProvider : Maybe Text
     status : PayoutOrderStatus
     externalPayoutStatus : Maybe ExternalPayoutStatus

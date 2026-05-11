@@ -195,13 +195,13 @@ mkQuotationBreakup booking mbRide' =
     -- (Map.fromList keeps last duplicate key, so ride items must come LAST)
     mkFareParamsBreakups mkPrice mkQuotationBreakupInner booking.fareParams
       <> case mbRide' of
-           Just ride ->
-             mkProjectFareParamsTagBreakupItemsForCancellation
-               mkPrice
-               mkQuotationBreakupInner
-               (fromMaybe 0 ride.cancellationFee)
-               (fromMaybe 0 ride.cancellationFeeTax)
-           Nothing -> []
+        Just ride ->
+          mkProjectFareParamsTagBreakupItemsForCancellation
+            mkPrice
+            mkQuotationBreakupInner
+            (fromMaybe 0 ride.cancellationFee)
+            (fromMaybe 0 ride.cancellationFeeTax)
+        Nothing -> []
   where
     mkPrice money =
       Just

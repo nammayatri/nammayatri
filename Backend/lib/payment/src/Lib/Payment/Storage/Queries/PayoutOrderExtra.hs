@@ -6,7 +6,7 @@ import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payout.Interface.Types as Payout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as Juspay
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (City)
 import Kernel.Utils.Common
@@ -87,7 +87,7 @@ updatePostCreateFieldsSafely ::
   Payout.PayoutOrderStatus ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Payout.AccountDetailsType ->
+  Maybe Juspay.AccountDetailsType ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Text ->

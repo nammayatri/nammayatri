@@ -92,7 +92,7 @@ import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
 import qualified Kernel.External.Wallet as Wallet
 -- import qualified Tools.Wallet as TWallet
 
@@ -2234,6 +2234,7 @@ txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
 data CreatePayoutServiceReq = CreatePayoutServiceReq
   { orderId :: Text,
     amount :: HighPrecMoney,
+    externalPayoutAmount :: HighPrecMoney,
     currency :: Currency,
     customerPhone :: Text,
     customerEmail :: Text,
@@ -2310,6 +2311,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             mobileNo = mobileNo,
             city = city,
             amount = mkPrice Nothing req.amount,
+            externalPayoutAmount = Just req.externalPayoutAmount,
             idAssignedByServiceProvider = Nothing,
             entityIds = mbEntityIds,
             entityName = mbEntityName,
@@ -2341,6 +2343,7 @@ mkPayoutOrderStatusReq payoutOrder mRoutingId mConnectedAccountId PayoutStatusSe
     { idAssignedByServiceProvider = payoutOrder.idAssignedByServiceProvider,
       currentStatus = payoutOrder.status,
       transferId = Payout.TransferId <$> payoutOrder.transferId,
+      amount = payoutOrder.amount.amount,
       ..
     }
 
@@ -2371,7 +2374,7 @@ payoutStatusUpdates orderId statusResp = do
       txns = (.transactions) =<< mbFulfillment
       mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
   QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
-  whenJust mbTxn $ \Payout.Transaction {amount = amount_txn, ..} -> do
+  whenJust mbTxn $ \JuspayPayout.Transaction {amount = amount_txn, ..} -> do
     findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
     let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
         mbDetails = (.details) =<< mbBeneficiaryDetails
@@ -2418,6 +2421,7 @@ mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId re
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
       isDynamicWebhookRequired = isDynamicWebhookRequired,
+      externalPayoutAmount = amount, -- for now keep it the same
       ..
     }
 

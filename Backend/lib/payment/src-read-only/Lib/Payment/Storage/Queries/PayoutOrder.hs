@@ -74,6 +74,7 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.customerId customerId,
       Se.Set Beam.entityIds entityIds,
       Se.Set Beam.entityName entityName,
+      Se.Set Beam.externalPayoutAmount externalPayoutAmount,
       Se.Set Beam.externalPayoutStatus externalPayoutStatus,
       Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
       Se.Set Beam.lastStatusCheckedAt lastStatusCheckedAt,

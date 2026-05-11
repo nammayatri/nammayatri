@@ -64,8 +64,9 @@ bookingCancelledEvent order = do
   let cancellationReasonCode = order.orderCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode)
   -- Parse cancellation fee + tax from quotation breakup using parseProjectFareParamsBreakup
   let currency = fromMaybe INR cancellationFeeCurrency
-      mbBreakupPairs = order.orderQuote >>= (.quotationBreakup) <&> \breakups ->
-        mapMaybe (\b -> (,) <$> b.quotationBreakupInnerTitle <*> (b.quotationBreakupInnerPrice >>= (.priceValue) >>= highPrecMoneyFromText)) breakups
+      mbBreakupPairs =
+        order.orderQuote >>= (.quotationBreakup) <&> \breakups ->
+          mapMaybe (\b -> (,) <$> b.quotationBreakupInnerTitle <*> (b.quotationBreakupInnerPrice >>= (.priceValue) >>= highPrecMoneyFromText)) breakups
       parsedBreakup = mbBreakupPairs >>= RD.parseProjectFareParamsBreakup
       mbCancellationTax = parsedBreakup <&> (.cancellationTax) >>= \v -> if v > 0 then Just v else Nothing
       -- cancellationFee = total (base + tax) from CancellationTerm — used for Stripe charge & ride table

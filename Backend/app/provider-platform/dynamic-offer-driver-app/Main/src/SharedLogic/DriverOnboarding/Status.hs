@@ -802,7 +802,8 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
       when (isFleetRole role && null exactRoleConfigs && not (null anyFleetRoleConfigs)) $
         logInfo $
           "getDriverDocTypes: no fleet configs for role=" <> show role
-            <> " in merchantOpCityId=" <> merchantOpCityId.getId
+            <> " in merchantOpCityId="
+            <> merchantOpCityId.getId
             <> "; falling back to any-fleet-role configs to mitigate fleet_type/role drift"
       pure $
         if onlyMandatoryDocs == Just True

@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Payout
   ( juspayPayoutWebhookHandler,
-    castPayoutOrderStatus,
     payoutProcessingLockKey,
     processPreviousPayoutAmount,
   )
@@ -42,7 +41,6 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface.Types as IPayout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -169,7 +167,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
                   dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
                   Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
-                    let dPayoutStatus = castPayoutOrderStatus payoutStatus
+                    let dPayoutStatus = DriverCoin.castPayoutOrderStatus payoutStatus
                     when (dailyStats.payoutStatus /= DS.Success) $ do
                       QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
                   fork "Update Payout Status and Transactions for DailyStats" $ do
@@ -198,7 +196,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 forM_ (listToMaybe =<< payoutOrder.entityIds) $ \dailyStatsId -> do
                   dailyStats <- QDailyStats.findByPrimaryKey dailyStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
                   Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
-                    let dPayoutStatus = castPayoutOrderStatus payoutStatus
+                    let dPayoutStatus = DriverCoin.castPayoutOrderStatus payoutStatus
                     when (dailyStats.payoutStatus /= DS.Success) $ QDailyStats.updatePayoutStatusById dPayoutStatus dailyStatsId
                   fork "Update Payout Status For DailyStats Via Dashboard" $ do
                     callPayoutService dailyStats.driverId payoutConfig payoutOrderId
@@ -287,7 +285,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
-    isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+    isSuccessStatus payoutStatus = payoutStatus `elem` [IPayout.SUCCESS, IPayout.FULFILLMENTS_SUCCESSFUL]
 
     updateDFeeStatusForPayoutRegistrationRefund driverId = do
       mbDriverFee <- QDF.findLatestByFeeTypeAndStatusWithServiceName DDF.PAYOUT_REGISTRATION [DDF.REFUND_PENDING] (Id driverId) DP.YATRI_SUBSCRIPTION
@@ -309,12 +307,12 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
           createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName driver.merchantOperatingCityId driverId mbPersonBankAccount
       payoutStatusResp <- DPayment.payoutStatusService (cast driver.merchantId) (cast driver.id) createPayoutOrderStatusReq createPayoutOrderStatusCall
       case payoutStatusResp.status of
-        Payout.FULFILLMENTS_FAILURE ->
+        IPayout.FULFILLMENTS_FAILURE ->
           DriverCoin.refundCoins driverId merchantId merchantOperatingCityId payoutStatusResp.orderId
         _ -> pure ()
 
     updateStatsWithLock merchantId merchantOperatingCityId payoutStatus payoutOrderId payoutConfig dStatsId = do
-      let dPayoutStatus = castPayoutOrderStatus payoutStatus
+      let dPayoutStatus = DriverCoin.castPayoutOrderStatus payoutStatus
       dailyStats <- QDailyStats.findByPrimaryKey dStatsId >>= fromMaybeM (InternalError "DailyStats Not Found")
       driver <- B.runInReplica $ QP.findById (cast dailyStats.driverId) >>= fromMaybeM (PersonDoesNotExist $ getId dailyStats.driverId)
       Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey dailyStats.driverId.getId) 3 3 $ do
@@ -324,56 +322,43 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
           createPayoutOrderStatusCall = Payout.payoutOrderStatus payoutServiceName merchantOperatingCityId dailyStats.driverId mbPersonBankAccount
       void $ DPayment.payoutStatusService (cast merchantId) (cast dailyStats.driverId) createPayoutOrderStatusReq createPayoutOrderStatusCall
 
-castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DS.PayoutStatus
-castPayoutOrderStatus payoutOrderStatus =
-  case payoutOrderStatus of
-    Payout.SUCCESS -> DS.Success
-    Payout.FULFILLMENTS_SUCCESSFUL -> DS.Success
-    Payout.ERROR -> DS.Failed
-    Payout.FAILURE -> DS.Failed
-    Payout.FULFILLMENTS_FAILURE -> DS.Failed
-    Payout.CANCELLED -> DS.ManualReview
-    Payout.FULFILLMENTS_CANCELLED -> DS.ManualReview
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DS.ManualReview
-    _ -> DS.Processing
-
-castPayoutOrderStatusToPayoutRequestStatus :: Payout.PayoutOrderStatus -> DPR.PayoutRequestStatus
+castPayoutOrderStatusToPayoutRequestStatus :: IPayout.PayoutOrderStatus -> DPR.PayoutRequestStatus
 castPayoutOrderStatusToPayoutRequestStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DPR.CREDITED
-    Payout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
-    Payout.ERROR -> DPR.AUTO_PAY_FAILED
-    Payout.FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
-    Payout.CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
+    IPayout.SUCCESS -> DPR.CREDITED
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DPR.CREDITED
+    IPayout.ERROR -> DPR.AUTO_PAY_FAILED
+    IPayout.FAILURE -> DPR.AUTO_PAY_FAILED
+    IPayout.FULFILLMENTS_FAILURE -> DPR.AUTO_PAY_FAILED
+    IPayout.CANCELLED -> DPR.CANCELLED
+    IPayout.FULFILLMENTS_CANCELLED -> DPR.CANCELLED
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DPR.PROCESSING
     _ -> DPR.PROCESSING
 
-casPayoutOrderStatusToDFeeStatus :: Payout.PayoutOrderStatus -> DDF.DriverFeeStatus
+casPayoutOrderStatusToDFeeStatus :: IPayout.PayoutOrderStatus -> DDF.DriverFeeStatus
 casPayoutOrderStatusToDFeeStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DDF.REFUNDED
-    Payout.FULFILLMENTS_SUCCESSFUL -> DDF.REFUNDED
-    Payout.ERROR -> DDF.REFUND_FAILED
-    Payout.FAILURE -> DDF.REFUND_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DDF.REFUND_FAILED
-    Payout.CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
-    Payout.FULFILLMENTS_CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
+    IPayout.SUCCESS -> DDF.REFUNDED
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DDF.REFUNDED
+    IPayout.ERROR -> DDF.REFUND_FAILED
+    IPayout.FAILURE -> DDF.REFUND_FAILED
+    IPayout.FULFILLMENTS_FAILURE -> DDF.REFUND_FAILED
+    IPayout.CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
+    IPayout.FULFILLMENTS_CANCELLED -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DDF.REFUND_MANUAL_REVIEW_REQUIRED
     _ -> DDF.REFUND_PENDING
 
-castPayoutOrderStatusToScheduledPayoutStatus :: Payout.PayoutOrderStatus -> DSP.ScheduledPayoutStatus
+castPayoutOrderStatusToScheduledPayoutStatus :: IPayout.PayoutOrderStatus -> DSP.ScheduledPayoutStatus
 castPayoutOrderStatusToScheduledPayoutStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DSP.CREDITED
-    Payout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
-    Payout.ERROR -> DSP.AUTO_PAY_FAILED
-    Payout.FAILURE -> DSP.AUTO_PAY_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DSP.AUTO_PAY_FAILED
-    Payout.CANCELLED -> DSP.CANCELLED
-    Payout.FULFILLMENTS_CANCELLED -> DSP.CANCELLED
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING
+    IPayout.SUCCESS -> DSP.CREDITED
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DSP.CREDITED
+    IPayout.ERROR -> DSP.AUTO_PAY_FAILED
+    IPayout.FAILURE -> DSP.AUTO_PAY_FAILED
+    IPayout.FULFILLMENTS_FAILURE -> DSP.AUTO_PAY_FAILED
+    IPayout.CANCELLED -> DSP.CANCELLED
+    IPayout.FULFILLMENTS_CANCELLED -> DSP.CANCELLED
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DSP.PROCESSING
     _ -> DSP.PROCESSING
 
 payoutProcessingLockKey :: Text -> Text

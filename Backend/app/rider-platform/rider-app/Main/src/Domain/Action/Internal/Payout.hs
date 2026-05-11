@@ -18,7 +18,6 @@ import Kernel.Beam.Functions as B (runInReplica)
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface.Types as IPayout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import qualified Kernel.External.Payout.Types as TPayout
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -154,9 +153,9 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
-    isPayoutStatusSuccess status = status `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
+    isPayoutStatusSuccess status = status `elem` [IPayout.SUCCESS, IPayout.FULFILLMENTS_SUCCESSFUL]
 
-    isPayoutStatusFailed status = status `elem` [Payout.FAILURE, Payout.FULFILLMENTS_FAILURE, Payout.FULFILLMENTS_CANCELLED]
+    isPayoutStatusFailed status = status `elem` [IPayout.FAILURE, IPayout.FULFILLMENTS_FAILURE, IPayout.FULFILLMENTS_CANCELLED]
 
     callPayoutService payoutOrder payoutConfig person = do
       let personId = person.id
@@ -171,28 +170,28 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
         let entityData = Notify.NotifReq {title = merchantPN.title, message = merchantPN.body}
         Notify.notifyPersonOnEvents person entityData merchantPN.fcmNotificationType
 
-castPayoutOrderStatus :: Payout.PayoutOrderStatus -> DFTB.CashbackStatus
+castPayoutOrderStatus :: IPayout.PayoutOrderStatus -> DFTB.CashbackStatus
 castPayoutOrderStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DFTB.SUCCESSFUL
-    Payout.FULFILLMENTS_SUCCESSFUL -> DFTB.SUCCESSFUL
-    Payout.ERROR -> DFTB.CASHBACK_FAILED
-    Payout.FAILURE -> DFTB.CASHBACK_FAILED
-    Payout.FULFILLMENTS_FAILURE -> DFTB.CASHBACK_FAILED
-    Payout.CANCELLED -> DFTB.MANUAL_VERIFICATION
-    Payout.FULFILLMENTS_CANCELLED -> DFTB.MANUAL_VERIFICATION
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DFTB.MANUAL_VERIFICATION
+    IPayout.SUCCESS -> DFTB.SUCCESSFUL
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DFTB.SUCCESSFUL
+    IPayout.ERROR -> DFTB.CASHBACK_FAILED
+    IPayout.FAILURE -> DFTB.CASHBACK_FAILED
+    IPayout.FULFILLMENTS_FAILURE -> DFTB.CASHBACK_FAILED
+    IPayout.CANCELLED -> DFTB.MANUAL_VERIFICATION
+    IPayout.FULFILLMENTS_CANCELLED -> DFTB.MANUAL_VERIFICATION
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DFTB.MANUAL_VERIFICATION
     _ -> DFTB.PROCESSING
 
-castOrderStatus :: Payout.PayoutOrderStatus -> DPS.PayoutStatus
+castOrderStatus :: IPayout.PayoutOrderStatus -> DPS.PayoutStatus
 castOrderStatus payoutOrderStatus =
   case payoutOrderStatus of
-    Payout.SUCCESS -> DPS.Success
-    Payout.FULFILLMENTS_SUCCESSFUL -> DPS.Success
-    Payout.ERROR -> DPS.Failed
-    Payout.FAILURE -> DPS.Failed
-    Payout.FULFILLMENTS_FAILURE -> DPS.Failed
-    Payout.CANCELLED -> DPS.Failed
-    Payout.FULFILLMENTS_CANCELLED -> DPS.Failed
-    Payout.FULFILLMENTS_MANUAL_REVIEW -> DPS.ManualReview
+    IPayout.SUCCESS -> DPS.Success
+    IPayout.FULFILLMENTS_SUCCESSFUL -> DPS.Success
+    IPayout.ERROR -> DPS.Failed
+    IPayout.FAILURE -> DPS.Failed
+    IPayout.FULFILLMENTS_FAILURE -> DPS.Failed
+    IPayout.CANCELLED -> DPS.Failed
+    IPayout.FULFILLMENTS_CANCELLED -> DPS.Failed
+    IPayout.FULFILLMENTS_MANUAL_REVIEW -> DPS.ManualReview
     _ -> DPS.Processing

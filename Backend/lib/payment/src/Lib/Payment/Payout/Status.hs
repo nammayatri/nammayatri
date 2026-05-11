@@ -8,7 +8,6 @@ where
 
 import Kernel.External.Encryption (EncFlow)
 import qualified Kernel.External.Payout.Interface.Types as IPayout
-import qualified Kernel.External.Payout.Juspay.Types.Payout as JPayout
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -29,9 +28,9 @@ refreshPayoutStatus ::
   DPayment.PayoutStatusServiceReq ->
   (DPayoutOrder.PayoutOrder -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
-  (JPayout.PayoutOrderStatus -> status) ->
+  (IPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
-  (status -> JPayout.PayoutOrderStatus -> m ()) ->
+  (status -> IPayout.PayoutOrderStatus -> m ()) ->
   m status
 refreshPayoutStatus merchantId personId statusReq statusCall currentStatus mapStatus shouldUpdate onUpdate = do
   resp <- DPayment.payoutStatusService merchantId personId statusReq statusCall
@@ -50,7 +49,7 @@ refreshPayoutStatusWithResponse ::
   DPayment.PayoutStatusServiceReq ->
   (DPayoutOrder.PayoutOrder -> DPayment.PayoutStatusServiceReq -> m IPayout.PayoutOrderStatusResp) ->
   status ->
-  (JPayout.PayoutOrderStatus -> status) ->
+  (IPayout.PayoutOrderStatus -> status) ->
   (status -> status -> Bool) ->
   (status -> IPayout.PayoutOrderStatusResp -> m ()) ->
   m IPayout.PayoutOrderStatusResp

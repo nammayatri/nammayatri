@@ -6,6 +6,7 @@ import Data.Time.Calendar
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.UI.Driver as DD
 import qualified Domain.Action.UI.Payout as DAP
+import qualified Domain.Action.UI.DriverCoin as DDC
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -276,7 +277,11 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   pure Kernel.Types.APISuccess.Success
 
 mkCreatePayoutServiceReq :: Currency -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq
-mkCreatePayoutServiceReq currency API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} = Payout.CreatePayoutServiceReq {..}
+mkCreatePayoutServiceReq currency API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} =
+  Payout.CreatePayoutServiceReq
+    { externalPayoutAmount = amount, -- for now keep it the same
+      ..
+    }
 
 getPayoutOrderStatus ::
   (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>
@@ -307,7 +312,7 @@ getPayoutOrderStatus (mbPersonId, _merchantId, merchantOpCityId) orderId = do
     orderId
     payoutOrderStatusReq
     (TP.payoutOrderStatus payoutServiceName merchantOpCityId personId mbPersonBankAccount)
-    (DAP.castPayoutOrderStatus payoutOrder.status)
-    DAP.castPayoutOrderStatus
+    (DDC.castPayoutOrderStatus payoutOrder.status)
+    DDC.castPayoutOrderStatus
     shouldUpdate
     onUpdate

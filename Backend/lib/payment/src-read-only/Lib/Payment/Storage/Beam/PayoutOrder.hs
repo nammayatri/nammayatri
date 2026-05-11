@@ -25,6 +25,7 @@ data PayoutOrderT f = PayoutOrderT
     customerId :: B.C f Kernel.Prelude.Text,
     entityIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     entityName :: B.C f (Kernel.Prelude.Maybe Lib.Payment.Domain.Types.Common.EntityName),
+    externalPayoutAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     externalPayoutStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.ExternalPayoutStatus),
     id :: B.C f Kernel.Prelude.Text,
     idAssignedByServiceProvider :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
