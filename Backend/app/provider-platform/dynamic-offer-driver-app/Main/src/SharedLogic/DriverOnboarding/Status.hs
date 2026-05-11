@@ -1287,7 +1287,7 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
     DVC.TAXDetails -> commonDocStatus DVC.TAXDetails
     DVC.FinnishIDResidencePermit -> commonDocStatus DVC.FinnishIDResidencePermit
     DVC.TaxiDriverPermit -> commonDocStatus DVC.TaxiDriverPermit
-    _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
+    _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
 callGetDLGetStatus driverId merchantOpCityId = do
@@ -1351,7 +1351,12 @@ getProcessedVehicleDocuments entityImagesInfo docType vehicleRC mbRcImagesInfo =
         mbPlan <- snd <$> DAPlan.getSubcriptionStatusWithPlan Plan.YATRI_SUBSCRIPTION person.id -- fix later on basis of vehicle category
         return (Just $ boolToStatus (isJust mbPlan), Nothing, Nothing, Nothing, Nothing, Nothing)
       IQuery.VehicleRCEntity _rc -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
-    _ -> return (Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
+    _ -> do
+      let mbLatestImage = case mbRcImagesInfo of
+            Just rcImagesInfo -> listToMaybe (IQuery.filterRecentByPersonRCAndImageType rcImagesInfo docType)
+            Nothing -> Nothing
+          mbStatus = mbLatestImage >>= (.verificationStatus) <&> mapStatus
+      return (mbStatus, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
   where
     boolToStatus :: Bool -> ResponseStatus
     boolToStatus = \case
