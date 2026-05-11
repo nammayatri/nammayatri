@@ -141,7 +141,8 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.active = LTSSync.Set active,
-        LTSSync.mode = LTSSync.Set mode
+        LTSSync.mode = LTSSync.Set mode,
+        LTSSync.hasRideStarted = LTSSync.Set mbHasRideStarted
       }
 
 updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
@@ -375,7 +376,10 @@ updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLoca
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.onRideTripCategory = LTSSync.Set (show <$> tripCategory)}
+    LTSSync.emptyUpdate
+      { LTSSync.onRideTripCategory = LTSSync.Set (show <$> tripCategory),
+        LTSSync.driverTripEndLocation = LTSSync.Set tripEndLocation
+      }
 
 updateOnRideAndTripEndLocationByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Bool -> Maybe Maps.LatLong -> m ()
 updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
@@ -389,7 +393,10 @@ updateOnRideAndTripEndLocationByDriverId driverId onRide tripEndLocation = do
     )
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
+    LTSSync.emptyUpdate
+      { LTSSync.onRide = LTSSync.Set onRide,
+        LTSSync.driverTripEndLocation = LTSSync.Set tripEndLocation
+      }
 
 updateHasRideStarted :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Bool -> m ()
 updateHasRideStarted driverId hasRideStarted = do
@@ -747,7 +754,8 @@ removeAcUsageRestriction airConditionScore acUsageRestrictionType acRestrictionL
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType),
-        LTSSync.acRestrictionLiftCount = LTSSync.Set acRestrictionLiftCount
+        LTSSync.acRestrictionLiftCount = LTSSync.Set acRestrictionLiftCount,
+        LTSSync.airConditionScore = LTSSync.Set airConditionScore
       }
 
 updateAcUsageRestrictionAndScore :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => DriverInfo.AirConditionedRestrictionType -> Maybe Double -> Id Person.Person -> m ()
@@ -760,7 +768,10 @@ updateAcUsageRestrictionAndScore acUsageRestrictionType airConditionScore driver
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-    LTSSync.emptyUpdate {LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType)}
+    LTSSync.emptyUpdate
+      { LTSSync.acUsageRestrictionType = LTSSync.Set (Just $ show acUsageRestrictionType),
+        LTSSync.airConditionScore = LTSSync.Set airConditionScore
+      }
 
 updateRentalInterCityAndIntraCitySwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Bool -> Bool -> Id Person.Person -> m ()
 updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity canSwitchToIntraCity driverId = do
