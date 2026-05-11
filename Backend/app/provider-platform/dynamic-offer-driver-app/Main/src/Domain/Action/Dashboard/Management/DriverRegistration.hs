@@ -1608,6 +1608,8 @@ rejectAndUpdateCommonDocument req _mOpCityId = do
   let updatedDocument = document {DCommonDoc.verificationStatus = INVALID, DCommonDoc.rejectReason = Just req.reason}
 
   QCommonDriverOnboardingDocuments.updateByPrimaryKey updatedDocument
+  whenJust document.documentImageId $ \imageId ->
+    QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid req.reason) imageId
 
 approveAndUpdateUdyamDocument :: Common.UDYAMApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateUdyamDocument req _mId _mOpCityId = do
