@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.Ride
     getRideFareBreakUp,
     postRideWaiverRideCancellationPenalty,
     getRideNearby,
+    getRideCallCount,
   )
 where
 
@@ -50,6 +51,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.CallStatusExtra as QCallStatus
 import qualified Storage.Queries.DriverFee as QDriverFee
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -169,6 +171,11 @@ castRideStatus s = case s of
 
 getRideNearby :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.NearbyResp
 getRideNearby = DRide.getNearby
+
+getRideCallCount :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Flow Common.RideCallCountRes
+getRideCallCount _merchantShortId _opCity rideId = do
+  callCount <- QCallStatus.countCallsByEntityId (cast rideId)
+  pure $ Common.RideCallCountRes {rideId, callCount}
 
 postRideWaiverRideCancellationPenalty :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.WaiverRideCancellationPenaltyReq -> Flow APISuccess
 postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
