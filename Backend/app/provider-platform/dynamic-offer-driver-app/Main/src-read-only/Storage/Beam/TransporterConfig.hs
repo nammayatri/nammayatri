@@ -278,6 +278,7 @@ data TransporterConfigT f = TransporterConfigT
     specialDrivers :: B.C f [Kernel.Prelude.Text],
     specialLocationTags :: B.C f [Kernel.Prelude.Text],
     specialZoneBookingOtpExpiry :: B.C f Kernel.Prelude.Int,
+    stclConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     stepFunctionToConvertCoins :: B.C f Kernel.Prelude.Int,
     subscription :: B.C f Kernel.Prelude.Bool,
     subscriptionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

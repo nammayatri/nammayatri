@@ -76,6 +76,8 @@ types:
   UpdateMembershipApplicationReq:
     bankDetails: Maybe UpdateBankDetails
     address: Maybe Address
+    addressProofType: Maybe Text
+    addressProofImageId: Maybe Text
     vehicleType: Maybe VehicleType
     nomineeName: Maybe Text
   MembershipApplicationResp:

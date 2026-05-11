@@ -900,3 +900,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN dont_auto_enabl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_membership_id_in_profile boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stcl_config json ;
