@@ -118,8 +118,9 @@ getOrCreatePaymentCustomer person = do
   logInfo $ "getOrCreatePaymentCustomer: " <> person.id.getId <> " " <> show person.paymentMode
   let paymentMode = fromMaybe DMPM.LIVE person.paymentMode
       lockKey = "PaymentCustomer:Create:" <> person.id.getId <> ":" <> show paymentMode
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  Redis.withWaitAndLockMasterCloudCrossAppRedis lockKey 60 100 $ do
     -- Re-check inside the lock: another concurrent request may have already created it
+    logDebug $ "getOrCreatePaymentCustomer Lock Aquired On" <> lockKey
     mbCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just person.id) (Just paymentMode)
     case mbCustomer of
       Just customer -> return customer
