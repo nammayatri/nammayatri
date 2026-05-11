@@ -852,13 +852,17 @@ filterEligibleDrivers gateId driverIds = do
             busyRows
   -- Bulk DB: drivers currently on a ride.
   driverInfos <- QDI.findAllByDriverIds (map (.getId) driverIds)
-  let onRideDrivers = Set.fromList [info.driverId | info <- driverInfos, info.onRide]
+  let onRideDriversOrOfflineDrivers = Set.fromList
+          [ info.driverId
+            | info <- driverInfos
+            , info.onRide || info.mode == Just DTC.OFFLINE
+          ]
   pure $
     filter
       ( \d ->
           not (Set.member (cooldownKeyFor d) inCooldownKeys)
             && not (Set.member d busyDrivers)
-            && not (Set.member d onRideDrivers)
+            && not (Set.member d onRideDriversOrOfflineDrivers)
       )
       driverIds
 
