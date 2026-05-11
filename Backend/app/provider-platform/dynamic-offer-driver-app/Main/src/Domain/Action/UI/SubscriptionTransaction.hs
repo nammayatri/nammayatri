@@ -25,6 +25,8 @@ import Domain.Types.DriverWallet
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
+import qualified Domain.Types.Plan as DP
+import qualified Domain.Types.SubscriptionPurchase as DSP
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -35,6 +37,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.Prepaid
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
 
 getSubscriptionTransactions ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -58,9 +61,12 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       toDate = fromMaybe now mbTo
       limit = min maxLimit . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-      counterpartyType = if DCommon.checkFleetOwnerRole driver.role then counterpartyFleetOwner else counterpartyDriver
+      isFleetOwner = DCommon.checkFleetOwnerRole driver.role
+      counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
+      ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
   mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
-  currentBalance <- fromMaybe 0 <$> getPrepaidBalanceByOwner counterpartyType driverId'.getId
+  activeSubscriptions <- QSPE.findAllActiveByOwnerAndServiceName driverId'.getId ownerType DP.PREPAID_SUBSCRIPTION
+  let currentBalance = sum $ map (.planRideCredit) activeSubscriptions
   case mbAccount of
     Nothing -> pure (emptyResponse currentBalance)
     Just acc -> do
