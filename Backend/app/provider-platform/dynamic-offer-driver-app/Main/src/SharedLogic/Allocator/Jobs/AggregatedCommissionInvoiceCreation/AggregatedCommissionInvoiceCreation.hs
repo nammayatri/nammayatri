@@ -1,36 +1,21 @@
 {-
-  AggregatedCommission scheduler.
+  AggregatedCommission scheduler. Per-(recipient, period) job chain emitting one
+  consolidated invoice per calendar period (DAILY/WEEKLY/MONTHLY). Bootstrap
+  happens at fleet/driver onboarding.
 
-  Per-merchant job that rolls per-ride Commission invoices into one
-  AggregatedCommission invoice per fleet owner per calendar period (DAILY /
-  WEEKLY / MONTHLY).
-
-  Key design points:
-    * Calendar-aligned periods (computed in merchant timezone, persisted as UTC).
-    * jobData carries the frequency in effect when scheduled — protects the
-      in-flight period from mid-cycle config changes; current config drives the
-      NEXT schedule.
-    * lastAggThrough is derived from finance_invoice (max periodEnd of prior
-      AggregatedCommission rows (fleetowner wise) including Voided markers) — no extra state.
-    * Per-merchant job, inner fleet-owner/driver loop. Discovery uses recent
-      Commission ∪ AggregatedCommission rows so marker-only fleets stay covered.
-    * Empty period → 0-amount marker invoice (status=Voided) so lastAggThrough
-      keeps advancing; markers are hidden from list/PDF APIs by default.
+  TZ caveat: period bounds use static 'transporterConfig.timeDiffFromUtc' (not
+  DST-aware, codebase-wide pattern). For DST zones (e.g. Helsinki +2/+3), admin
+  must flip the offset on the last Sun of March (+2 -> +3) and last Sun of
+  October (+3 -> +2); otherwise bounds drift 1h for half the year.
 -}
 {-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
   ( runAggregatedCommissionInvoiceCreationJob,
-    -- Re-exported for the bootstrap dashboard endpoint so it computes the
-    -- first period boundaries with the same calendar logic as the scheduler.
-    endOfNextPeriodAfter,
-    startOfPeriodContaining,
-    schedulerSafetyOffsetSeconds,
+    bootstrapAggregatedCommissionChain,
   )
 where
 
-import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.List (nub)
 import qualified Data.Map.Strict as M
 import Data.Time.Calendar (Day, addDays, fromGregorian, gregorianMonthLength, toGregorian)
 import Data.Time.Calendar.WeekDate (toWeekDate)
@@ -42,7 +27,6 @@ import qualified Domain.Types.TransporterConfig as DTC
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
@@ -61,21 +45,12 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
+import Tools.Error
 
--- | Bound on how far back to look when discovering active recipients. Wide
--- enough that a recipient idle for ~3 months is still picked up, narrow
--- enough that long-dead recipients fall off naturally and stop generating
--- markers.
-discoveryLookbackDays :: Integer
-discoveryLookbackDays = 90
-
--- | Buffer added to the calendar boundary before firing — gives in-flight
--- ride-end commission inserts time to settle so they aren't missed by an
--- aggregation that fires exactly at midnight.
+-- | Buffer past the calendar boundary so in-flight ride-end commission inserts settle.
 schedulerSafetyOffsetSeconds :: NominalDiffTime
-schedulerSafetyOffsetSeconds = 300 -- 5 minutes
+schedulerSafetyOffsetSeconds = 300
 
--- | Used when invoiceConfig.commissionAggregationFrequency is unset.
 defaultFrequency :: DTC.CommissionAggregationFrequency
 defaultFrequency = DTC.MONTHLY
 
@@ -96,97 +71,72 @@ runAggregatedCommissionInvoiceCreationJob ::
   ) =>
   Job 'AggregatedCommissionInvoiceCreation ->
   m ExecutionResult
-runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+runAggregatedCommissionInvoiceCreationJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       mId = jobData.merchantId
       mocId = jobData.merchantOperatingCityId
-      embeddedFreq = jobData.frequency
-      scheduledStart = jobData.periodStart
-      scheduledEnd = jobData.periodEnd
-      lockKey =
-        "AggCommJob:" <> mocId.getId <> ":" <> show scheduledEnd
+      issuedToId = jobData.issuedToId
+      issuedToType = jobData.issuedToType
+      periodStart = jobData.periodStart
+      periodEnd = jobData.periodEnd
+      lockKey = "AggCommJob:" <> mocId.getId <> ":" <> issuedToId <> ":" <> show periodEnd
+      recipient = show issuedToType <> " " <> issuedToId
 
-  resultRef <- liftIO $ newIORef Complete
-  mbResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 1800 $ do
-    now <- getCurrentTime
-    merchant <- CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
-    transporterConfig <-
-      SCTC.findByMerchantOpCityId mocId Nothing
-        >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  -- Lock per (mocId, issuedToId, periodEnd) — defends against duplicate-chain firings
+  -- that the Allocator's per-row lock can't catch.
+  result <-
+    Hedis.whenWithLockRedisAndReturnValue lockKey 1800 $ do
+      transporterConfig <-
+        SCTC.findByMerchantOpCityId mocId Nothing
+          >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+      let mbInvoiceConfig = transporterConfig.invoiceConfig
+          enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))
 
-    let mbInvoiceConfig = transporterConfig.invoiceConfig
-        enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))
+      if not enabled
+        then pure $ Terminate $ "AggCom: commissionAggregationEnabled=false for mocId " <> mocId.getId <> " for " <> recipient <> "; chain ends"
+        else do
+          lastPeriodEnd <- QFinanceInvoiceExtra.findLatestAggregatedCommissionPeriodEnd mocId.getId issuedToId
+          case lastPeriodEnd of
+            Just lastEnd
+              | periodEnd <= lastEnd ->
+                pure $ Terminate $ "AggCom: jobData.periodEnd " <> show periodEnd <> " <= lastAggThrough " <> show lastEnd <> " for " <> recipient <> "; period already covered"
+            Just lastEnd
+              | periodStart <= lastEnd ->
+                pure $ Terminate $ "AggCom: jobData.periodStart " <> show periodStart <> " <= lastAggThrough " <> show lastEnd <> " for " <> recipient <> "; periodStart overlaps already-covered range"
+            _ -> do
+              tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
+              scheduleNextRun mId mocId issuedToId issuedToType periodEnd transporterConfig
+              pure Complete
 
-    if not enabled
-      then do
-        logInfo $ "Commission aggregation disabled for merchantOpCity " <> mocId.getId <> "; skipping run and not rescheduling"
-        liftIO $ writeIORef resultRef Complete
-      else do
-        let newFreq = fromMaybe defaultFrequency (mbInvoiceConfig >>= (.commissionAggregationFrequency))
-            tzOffset = transporterConfig.timeDiffFromUtc
-        mocCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-        let merchantAddress = Just (show mocCity.city <> ", " <> show mocCity.state <> ", " <> show mocCity.country)
-            currency = mocCity.currency
+  case result of
+    Right r -> pure r
+    Left _ -> pure Complete -- another firing holds the lock and is processing this period; nothing to do
 
-        recipients <- discoverRecipients mocId now
-        logInfo $
-          "AggregatedCommission run for merchantOpCity " <> mocId.getId <> " (embedded=" <> show embeddedFreq <> ", current=" <> show newFreq <> "): "
-            <> show (length recipients)
-            <> " recipients discovered"
-
-        forM_ recipients $ \recipient ->
-          processRecipient
-            merchant
-            merchantAddress
-            currency
-            mocId
-            scheduledStart
-            scheduledEnd
-            embeddedFreq
-            newFreq
-            tzOffset
-            recipient
-            now
-
-        scheduleNextRun mId mocId newFreq tzOffset now
-        liftIO $ writeIORef resultRef Complete
-
-  case mbResult of
-    Left () -> pure Complete -- another worker holds the lock; treat as done
-    Right () -> liftIO $ readIORef resultRef
-
--- | Union of recipients with recent Commission OR AggregatedCommission rows.
--- Both DRIVER and FLEET_OWNER supported. The (id, type) pair drives entity
--- lookup downstream (Person vs FleetOwnerInformation). Marker-only recipients
--- included so their cursors keep advancing.
-discoverRecipients ::
-  (BeamFlow m r, MonadFlow m) =>
+tryEmitInvoice ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Text ->
+  BeckInvoice.IssuedToType ->
   UTCTime ->
-  m [(Text, BeckInvoice.IssuedToType)]
-discoverRecipients mocId now = do
-  let lookbackStart = addUTCTime (negate (fromIntegral discoveryLookbackDays * 86400)) now
-  commissions <-
-    QFinanceInvoiceExtra.findCommissionInvoicesInRange
-      mocId.getId
-      lookbackStart
-      now
-      Nothing
-  aggInvoices <-
-    QFinanceInvoiceExtra.findAggregatedCommissionInvoicesInRange
-      mocId.getId
-      lookbackStart
-      now
-      Nothing
-  let pairsCommissions = map (\inv -> (inv.issuedToId, inv.issuedToType)) commissions
-      pairsAgg = map (\inv -> (inv.issuedToId, inv.issuedToType)) aggInvoices
-  pure $ nub (pairsCommissions <> pairsAgg)
+  UTCTime ->
+  Maybe DTC.InvoiceConfig ->
+  m ()
+tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoiceConfig = do
+  rinfo <- resolveRecipientInfo issuedToType issuedToId
+  merchant <- CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
+  mocCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+  let merchantAddress = Just (show mocCity.city <> ", " <> show mocCity.state <> ", " <> show mocCity.country)
+      sellerName = Just (fromMaybe merchant.name (mbInvoiceConfig >>= (.invoiceSellerName)))
+      sellerAddress = maybe merchantAddress Just (mbInvoiceConfig >>= (.invoiceSellerAddress))
+  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd
 
--- | Supplier-side fields resolved per recipient, mirroring the recipient-type
--- branch in 'SharedLogic.Finance.Wallet.buildFinanceCtx'. For FLEET_OWNER,
--- pulled from FleetOwnerInformation. For DRIVER, only the display name is
--- populated (drivers don't carry GST/VAT/address as suppliers in this codebase
--- — same as the per-ride Commission flow).
+-- | Supplier-side fields per recipient. FLEET_OWNER pulls from FleetOwnerInformation;
+-- DRIVER only carries the display name (no address/tax IDs at supplier level).
 data RecipientInfo = RecipientInfo
   { riName :: Maybe Text,
     riAddress :: Maybe Text,
@@ -199,86 +149,33 @@ resolveRecipientInfo ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
   BeckInvoice.IssuedToType ->
   Text ->
-  m (Maybe RecipientInfo)
+  m RecipientInfo
 resolveRecipientInfo BeckInvoice.FLEET_OWNER recipientId = do
-  mbFleetInfo <- QFOI.findByPrimaryKey (Id recipientId)
-  pure $
-    mbFleetInfo <&> \f ->
-      RecipientInfo
-        { riName = f.fleetName,
-          riAddress = f.stripeAddress <&> Wallet.formatStripeAddress,
-          riGstin = f.gstNumberDec,
-          riVatNumber = f.vatNumber,
-          riPanNumberDec = f.panNumberDec
-        }
+  f <- QFOI.findByPrimaryKey (Id recipientId) >>= fromMaybeM (FleetOwnerNotFound recipientId)
+  pure
+    RecipientInfo
+      { riName = f.fleetName,
+        riAddress = f.stripeAddress <&> Wallet.formatStripeAddress,
+        riGstin = f.gstNumberDec,
+        riVatNumber = f.vatNumber,
+        riPanNumberDec = f.panNumberDec
+      }
 resolveRecipientInfo BeckInvoice.DRIVER recipientId = do
-  mbPerson <- QPerson.findById (Id recipientId)
-  pure $
-    mbPerson <&> \p ->
-      RecipientInfo
-        { riName = Just (p.firstName <> maybe "" (" " <>) p.lastName),
-          riAddress = Nothing,
-          riGstin = Nothing,
-          riVatNumber = Nothing,
-          riPanNumberDec = Nothing
-        }
-resolveRecipientInfo _ _ = pure Nothing -- RIDER / CUSTOMER never receive Commission invoices
+  p <- QPerson.findById (Id recipientId) >>= fromMaybeM (PersonNotFound recipientId)
+  pure
+    RecipientInfo
+      { riName = Just (p.firstName <> maybe "" (" " <>) p.lastName),
+        riAddress = Nothing,
+        riGstin = Nothing,
+        riVatNumber = Nothing,
+        riPanNumberDec = Nothing
+      }
+resolveRecipientInfo other _ =
+  -- Bootstrap only enqueues DRIVER/FLEET_OWNER chains; reaching RIDER/CUSTOMER is an invariant violation.
+  throwError $ InternalError $ "AggCom: unexpected issuedToType " <> show other
 
-processRecipient ::
-  ( BeamFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    MonadFlow m
-  ) =>
-  DM.Merchant ->
-  Maybe Text -> -- merchant address (issuedByAddress)
-  Currency ->
-  Id DMOC.MerchantOperatingCity ->
-  UTCTime -> -- jobData.periodStart
-  UTCTime -> -- jobData.periodEnd
-  DTC.CommissionAggregationFrequency -> -- embedded freq
-  DTC.CommissionAggregationFrequency -> -- new freq (current config)
-  Seconds -> -- tz offset
-  (Text, BeckInvoice.IssuedToType) -> -- (recipientId, recipientType)
-  UTCTime -> -- now
-  m ()
-processRecipient merchant merchantAddress currency mocId scheduledStart scheduledEnd embeddedFreq newFreq tzOffset (recipientId, recipientType) now = do
-  mbInfo <- resolveRecipientInfo recipientType recipientId
-  case mbInfo of
-    Nothing ->
-      logError $
-        "AggregatedCommission: recipient lookup failed, skipping ("
-          <> show recipientType
-          <> ", "
-          <> recipientId
-          <> ")"
-    Just info -> do
-      lastAggThrough <- QFinanceInvoiceExtra.findLatestAggregatedCommissionPeriodEnd mocId.getId recipientId
-      let cursor0 = case lastAggThrough of
-            Nothing -> scheduledStart
-            Just t -> addUTCTime 1 t
-      -- Phase 1: cover the scheduled window using EMBEDDED freq, splitting any
-      -- gap into one invoice per embedded-freq period.
-      cursor1 <-
-        if cursor0 <= scheduledEnd
-          then do
-            let phase1Periods = enumeratePeriods cursor0 scheduledEnd embeddedFreq tzOffset
-            forM_ phase1Periods $ \(pStart, pEnd) ->
-              emitInvoice merchant merchantAddress currency mocId info recipientId recipientType pStart pEnd
-            pure $ case lastNonEmpty phase1Periods of
-              Just (_, pEnd) -> addUTCTime 1 pEnd
-              Nothing -> cursor0
-          else pure cursor0 -- idempotency: scheduled period already covered
-          -- Phase 2: backfill any newer COMPLETED periods using NEW freq
-      let phase2Periods = enumerateCompletedPeriods cursor1 now newFreq tzOffset
-      forM_ phase2Periods $ \(pStart, pEnd) ->
-        emitInvoice merchant merchantAddress currency mocId info recipientId recipientType pStart pEnd
-
--- | Emit either a real AggregatedCommission invoice (when commissions exist)
--- or a 0-amount Voided marker (when the period is empty for this recipient) —
--- the marker keeps lastAggThrough advancing. issuedToType is preserved from
--- the recipient (DRIVER or FLEET_OWNER) so downstream PDF / list APIs render
--- the right party.
+-- | Build + persist an AggregatedCommission row when the period has any underlying
+-- per-ride Commissions. Empty period → silent no-op (no marker invoices).
 emitInvoice ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -286,102 +183,68 @@ emitInvoice ::
     MonadFlow m
   ) =>
   DM.Merchant ->
-  Maybe Text ->
+  Maybe Text -> -- sellerName (config override or merchant.name fallback)
+  Maybe Text -> -- sellerAddress (config override or mocCity-derived fallback)
   Currency ->
   Id DMOC.MerchantOperatingCity ->
   RecipientInfo ->
-  Text -> -- recipientId (issuedToId)
-  BeckInvoice.IssuedToType -> -- recipientType (issuedToType)
-  UTCTime -> -- pStart
-  UTCTime -> -- pEnd
+  Text -> -- recipientId
+  BeckInvoice.IssuedToType ->
+  UTCTime ->
+  UTCTime ->
   m ()
-emitInvoice merchant merchantAddress currency mocId info recipientId recipientType pStart pEnd = do
-  commissions <-
-    QFinanceInvoiceExtra.findCommissionInvoicesInRange
-      mocId.getId
-      pStart
-      pEnd
-      (Just recipientId)
-  let isMarker = null commissions
-      isVat = isJust info.riVatNumber || isJust merchant.vatNumber
-      lineItems = if isMarker then [] else map mkLineItem commissions
-      input =
-        InvoiceI.InvoiceInput
-          { invoiceType = BeckInvoice.AggregatedCommission,
-            paymentOrderId = Nothing,
-            issuedToType = recipientType,
-            issuedToId = recipientId,
-            issuedToName = info.riName,
-            issuedToAddress = info.riAddress,
-            issuedByType = "MERCHANT",
-            issuedById = merchant.id.getId,
-            issuedByName = Just merchant.name,
-            issuedByAddress = merchantAddress,
-            supplierName = info.riName,
-            supplierAddress = info.riAddress,
-            supplierGSTIN = info.riGstin,
-            supplierTaxNo = info.riVatNumber,
-            supplierId = Just recipientId,
-            merchantGstin = merchant.gstin,
-            referenceId = Nothing,
-            gstinOfParty = info.riGstin,
-            panOfParty = info.riPanNumberDec,
-            panType = Nothing,
-            counterpartyId = recipientId,
-            tdsRateReason = Nothing,
-            tanOfDeductee = Nothing,
-            lineItems = lineItems,
-            gstBreakdown = Nothing, -- per-line VAT already booked on underlying Commission rows; nothing new to record
-            currency = currency,
-            dueAt = Nothing,
-            periodStart = Just pStart,
-            periodEnd = Just pEnd,
-            merchantId = merchant.id.getId,
-            merchantOperatingCityId = mocId.getId,
-            merchantShortId = merchant.shortId.getShortId,
-            isVat = isVat,
-            issuedToTaxNo = info.riVatNumber,
-            issuedByTaxNo = merchant.vatNumber,
-            paymentMode = Nothing
-          }
-  result <- InvoiceSvc.createInvoice input []
-  case result of
-    Left err ->
-      logError $
-        "AggregatedCommission: failed to create invoice for "
-          <> show recipientType
-          <> " "
-          <> recipientId
-          <> " period "
-          <> show pStart
-          <> "->"
-          <> show pEnd
-          <> ": "
-          <> show err
-    Right inv -> do
-      when isMarker $
-        InvoiceSvc.updateInvoiceStatus inv.id FInvoice.Voided
-      logInfo $
-        "AggregatedCommission: "
-          <> (if isMarker then "marker " else "")
-          <> inv.invoiceNumber
-          <> " for "
-          <> show recipientType
-          <> " "
-          <> recipientId
-          <> " ["
-          <> show pStart
-          <> ", "
-          <> show pEnd
-          <> "]"
+emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd = do
+  commissions <- QFinanceInvoiceExtra.findCommissionInvoicesInRange mocId.getId pStart pEnd (Just recipientId)
+  if null commissions
+    then logInfo $ "AggCom: empty period for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]; skipping emit"
+    else do
+      let isVat = isJust info.riVatNumber || isJust merchant.vatNumber
+          input =
+            InvoiceI.InvoiceInput
+              { invoiceType = BeckInvoice.AggregatedCommission,
+                paymentOrderId = Nothing,
+                issuedToType = recipientType,
+                issuedToId = recipientId,
+                issuedToName = info.riName,
+                issuedToAddress = info.riAddress,
+                issuedByType = "MERCHANT",
+                issuedById = merchant.id.getId,
+                issuedByName = sellerName,
+                issuedByAddress = sellerAddress,
+                supplierName = info.riName,
+                supplierAddress = info.riAddress,
+                supplierGSTIN = info.riGstin,
+                supplierTaxNo = info.riVatNumber,
+                supplierId = Just recipientId,
+                merchantGstin = merchant.gstin,
+                referenceId = Nothing,
+                gstinOfParty = info.riGstin,
+                panOfParty = info.riPanNumberDec,
+                panType = Nothing,
+                counterpartyId = recipientId,
+                tdsRateReason = Nothing,
+                tanOfDeductee = Nothing,
+                lineItems = map mkLineItem commissions,
+                gstBreakdown = Nothing, -- per-line VAT already booked on underlying Commission rows
+                currency = currency,
+                dueAt = Nothing,
+                periodStart = Just pStart,
+                periodEnd = Just pEnd,
+                merchantId = merchant.id.getId,
+                merchantOperatingCityId = mocId.getId,
+                merchantShortId = merchant.shortId.getShortId,
+                isVat = isVat,
+                issuedToTaxNo = info.riVatNumber,
+                issuedByTaxNo = merchant.vatNumber,
+                paymentMode = Nothing
+              }
+      result <- InvoiceSvc.createInvoice input []
+      case result of
+        Left err -> throwError $ InternalError $ "AggCom: createInvoice failed for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]: " <> show err
+        Right inv -> logInfo $ "AggCom: " <> inv.invoiceNumber <> " for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]"
 
--- | One line item per underlying per-ride Commission invoice. Description
--- includes the ride/booking reference where available so the rolled-up
--- consolidated PDF preserves per-ride traceability. We deliberately leave
--- 'descriptionType' as Nothing — otherwise the renderer would replace our
--- per-ride description with a single repeated localized "Platform Commission"
--- string for every row, losing the ride distinction the consolidated PDF
--- needs.
+-- | Per-ride line item persisted to the DB for audit. The PDF for
+-- AggregatedCommission renders one consolidated row (see PdfService), summing these all.
 mkLineItem :: FInvoice.Invoice -> InvoiceI.InvoiceLineItem
 mkLineItem inv =
   InvoiceI.InvoiceLineItem
@@ -395,9 +258,9 @@ mkLineItem inv =
       itemType = Just InvoiceI.Fare
     }
 
--- | Schedule the next merchant-level run at the next calendar period boundary
--- under CURRENT freq. Embeds CURRENT freq in the next jobData so it acts as
--- the embedded freq when that run fires.
+-- | Queue the next-period job under the CURRENT config frequency (mode-switches
+-- take effect here). Past-due 'scheduleAfter' clamped to 0 so the Allocator
+-- picks it up on its next poll for cascade catch-up.
 scheduleNextRun ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -409,68 +272,91 @@ scheduleNextRun ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  DTC.CommissionAggregationFrequency ->
-  Seconds ->
-  UTCTime ->
+  Text ->
+  BeckInvoice.IssuedToType ->
+  UTCTime -> -- previous job's periodEnd
+  DTC.TransporterConfig ->
   m ()
-scheduleNextRun mId mocId newFreq tzOffset now = do
-  let nextEnd = endOfNextPeriodAfter now newFreq tzOffset
-      nextStart = startOfPeriodContaining nextEnd newFreq tzOffset
+scheduleNextRun mId mocId issuedToId issuedToType prevPeriodEnd transporterConfig = do
+  let mbInvoiceConfig = transporterConfig.invoiceConfig
+      currentFreq = fromMaybe defaultFrequency (mbInvoiceConfig >>= (.commissionAggregationFrequency))
+      tzOffset = transporterConfig.timeDiffFromUtc
+      nextStart = addUTCTime 1 prevPeriodEnd
+      nextEnd = endOfNextPeriodAfter (addUTCTime (-1) nextStart) currentFreq tzOffset
       fireAt = addUTCTime schedulerSafetyOffsetSeconds nextEnd
-      scheduleAfter = diffUTCTime fireAt now
+  enqueueJob mId mocId issuedToId issuedToType nextStart nextEnd fireAt currentFreq "scheduled next"
+
+-- | Bootstrap the chain at fleet/driver onboarding (also reachable via the admin
+-- '/scheduler/trigger' endpoint). Anchors the first job to the calendar period
+-- containing 'now'. No bootstrap-time idempotency check — runtime checks in
+-- 'runAggregatedCommissionInvoiceCreationJob' handle accidental duplicate chains.
+bootstrapAggregatedCommissionChain ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m,
+    JobCreatorEnv r,
+    HasSchemaName SchedulerJobT,
+    HasField "schedulerType" r SchedulerType
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  BeckInvoice.IssuedToType ->
+  m ()
+bootstrapAggregatedCommissionChain mId mocId issuedToId issuedToType = do
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId mocId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  let mbInvoiceConfig = transporterConfig.invoiceConfig
+      enabled = fromMaybe False (mbInvoiceConfig >>= (.commissionAggregationEnabled))
+  if not enabled
+    then logInfo $ "AggCom disabled for mocId " <> mocId.getId <> "; bootstrap skipped for " <> show issuedToType <> " " <> issuedToId
+    else do
+      let freq = fromMaybe defaultFrequency (mbInvoiceConfig >>= (.commissionAggregationFrequency))
+          tzOffset = transporterConfig.timeDiffFromUtc
+      now <- getCurrentTime
+      let periodEnd = endOfNextPeriodAfter now freq tzOffset
+          periodStart = startOfPeriodContaining periodEnd freq tzOffset
+          fireAt = addUTCTime schedulerSafetyOffsetSeconds periodEnd
+      enqueueJob mId mocId issuedToId issuedToType periodStart periodEnd fireAt freq "bootstrapped"
+
+enqueueJob ::
+  ( BeamFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    JobCreatorEnv r,
+    HasSchemaName SchedulerJobT,
+    HasField "schedulerType" r SchedulerType,
+    MonadFlow m
+  ) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Text ->
+  BeckInvoice.IssuedToType ->
+  UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  DTC.CommissionAggregationFrequency ->
+  Text -> -- log verb (e.g. "scheduled next" / "bootstrapped")
+  m ()
+enqueueJob mId mocId issuedToId issuedToType periodStart periodEnd fireAt freq verb = do
+  now <- getCurrentTime
+  let scheduleAfter = max 0 (diffUTCTime fireAt now)
       jobData =
         AggregatedCommissionInvoiceCreationJobData
           { merchantId = mId,
             merchantOperatingCityId = mocId,
-            periodStart = nextStart,
-            periodEnd = nextEnd,
-            frequency = newFreq
+            issuedToId = issuedToId,
+            issuedToType = issuedToType,
+            periodStart = periodStart,
+            periodEnd = periodEnd
           }
-  when (scheduleAfter > 0) $ do
-    JC.createJobIn @_ @'AggregatedCommissionInvoiceCreation (Just mId) (Just mocId) scheduleAfter jobData
-    logInfo $ "Scheduled next AggregatedCommission run: fireAt=" <> show fireAt <> " period=[" <> show nextStart <> ", " <> show nextEnd <> "] freq=" <> show newFreq
+  JC.createJobIn @_ @'AggregatedCommissionInvoiceCreation (Just mId) (Just mocId) scheduleAfter jobData
+  logInfo $ "AggCom " <> verb <> " for " <> show issuedToType <> " " <> issuedToId <> ": fireAt=" <> show fireAt <> " period=[" <> show periodStart <> ", " <> show periodEnd <> "] freq=" <> show freq
 
--- | Enumerate all calendar-aligned periods of @freq@ that lie in @[cursor, cap]@.
--- Final period is capped to @cap@ (so a partial period bridging into a mode
--- switch lands as one invoice rather than overshooting the scheduled window).
-enumeratePeriods ::
-  UTCTime -> -- inclusive start (cursor)
-  UTCTime -> -- inclusive cap
-  DTC.CommissionAggregationFrequency ->
-  Seconds ->
-  [(UTCTime, UTCTime)]
-enumeratePeriods cursor cap freq tzOffset
-  | cursor > cap = []
-  | otherwise =
-    let pEnd = endOfNextPeriodAfter (addUTCTime (-1) cursor) freq tzOffset
-        cappedEnd = min pEnd cap
-     in (cursor, cappedEnd) : enumeratePeriods (addUTCTime 1 cappedEnd) cap freq tzOffset
-
--- | Enumerate calendar-aligned periods of @freq@ starting at @cursor@ that have
--- already COMPLETED by @now@. Stops at the first period whose end is in the future.
-enumerateCompletedPeriods ::
-  UTCTime ->
-  UTCTime -> -- now
-  DTC.CommissionAggregationFrequency ->
-  Seconds ->
-  [(UTCTime, UTCTime)]
-enumerateCompletedPeriods cursor now freq tzOffset =
-  let pEnd = endOfNextPeriodAfter (addUTCTime (-1) cursor) freq tzOffset
-   in if pEnd > now
-        then []
-        else (cursor, pEnd) : enumerateCompletedPeriods (addUTCTime 1 pEnd) now freq tzOffset
-
--- | Last element of a list, or Nothing for empty. Pure pattern-match version
--- avoids any Prelude/Kernel.Prelude qualifier games.
-lastNonEmpty :: [a] -> Maybe a
-lastNonEmpty [] = Nothing
-lastNonEmpty [x] = Just x
-lastNonEmpty (_ : xs) = lastNonEmpty xs
-
--- | End-of-period semantics: the smallest "period end" timestamp that is
--- STRICTLY GREATER than @t@. All math is done in merchant-local time then
--- converted back to UTC, so DAILY/WEEKLY/MONTHLY boundaries align to local
--- midnights / Sundays / month-ends regardless of UTC offset.
+-- | Smallest period-end timestamp strictly greater than @t@. Computed in merchant-local
+-- time then converted back to UTC so DAILY/WEEKLY/MONTHLY align to local midnights / Sundays / month-ends.
 endOfNextPeriodAfter ::
   UTCTime ->
   DTC.CommissionAggregationFrequency ->
@@ -499,7 +385,7 @@ endOfNextPeriodAfter tUtc freq tzOffset =
       finalLocalUtc = UTCTime finalDay eod
    in addUTCTime (negate tzDiff) finalLocalUtc
 
--- | Start of the calendar period that contains @t@.
+-- | Start of the calendar period containing @t@.
 startOfPeriodContaining ::
   UTCTime ->
   DTC.CommissionAggregationFrequency ->
@@ -520,7 +406,6 @@ startOfPeriodContaining tUtc freq tzOffset =
       startLocalUtc = UTCTime startDay 0
    in addUTCTime (negate tzDiff) startLocalUtc
 
--- | Move a period-end day forward by exactly one period.
 nextPeriodDay :: Day -> DTC.CommissionAggregationFrequency -> Day
 nextPeriodDay d = \case
   DTC.DAILY -> addDays 1 d

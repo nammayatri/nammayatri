@@ -150,46 +150,21 @@ findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId = 
     Nothing
     Nothing
 
--- | AggregatedCommission invoices in date range. DESC by issuedAt (newest
--- first for dashboard display). Includes Voided so marker invoices remain
--- discoverable; user-facing callers post-filter Voided.
-findAggregatedCommissionInvoicesInRange ::
-  (BeamFlow.BeamFlow m r) =>
-  Kernel.Prelude.Text -> -- merchantOpCityId
-  UTCTime -> -- from (filters issuedAt)
-  UTCTime -> -- to
-  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- optional fleetOwnerId
-  m [DInvoice.Invoice]
-findAggregatedCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerId = do
-  let conds =
-        [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
-          <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission]
-          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from]
-          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to]
-          <> [Se.Is Beam.issuedToId $ Se.Eq fid | Just fid <- [mbFleetOwnerId]]
-  findAllWithOptionsKV
-    [Se.And conds]
-    (Se.Desc Beam.issuedAt)
-    Nothing
-    Nothing
-
--- | Idempotency anchor for the scheduler: the highest periodEnd of prior
--- AggregatedCommission rows for this (merchantOpCity, recipient). Includes
--- Voided so marker invoices advance the cursor (otherwise no commission entry periods would
--- be re-processed forever).
+-- | Highest periodEnd of prior AggregatedCommission rows for this
+-- (merchantOpCity, recipient). Drives the runtime idempotency check.
 findLatestAggregatedCommissionPeriodEnd ::
   (BeamFlow.BeamFlow m r) =>
   Kernel.Prelude.Text -> -- merchantOpCityId
   Kernel.Prelude.Text -> -- issuedToId
   m (Kernel.Prelude.Maybe UTCTime)
-findLatestAggregatedCommissionPeriodEnd merchantOpCityId fleetOwnerId = do
+findLatestAggregatedCommissionPeriodEnd merchantOpCityId issuedToId = do
   invoices <-
     findAllWithOptionsKV
       [ Se.And
           [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
             Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission,
-            Se.Is Beam.issuedToId $ Se.Eq fleetOwnerId,
-            Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft, DInvoice.Voided]
+            Se.Is Beam.issuedToId $ Se.Eq issuedToId,
+            Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft]
           ]
       ]
       (Se.Desc Beam.periodEnd)

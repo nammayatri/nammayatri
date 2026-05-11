@@ -968,6 +968,8 @@ TransporterConfig:
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency
+      invoiceSellerName: Maybe Text
+      invoiceSellerAddress: Maybe Text
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

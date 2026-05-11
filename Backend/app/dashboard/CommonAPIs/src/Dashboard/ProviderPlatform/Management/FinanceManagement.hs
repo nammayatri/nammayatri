@@ -8,6 +8,3 @@ import qualified Kernel.Prelude
 
 instance HideSecrets ReconciliationTriggerReq where
   hideSecrets = Kernel.Prelude.identity
-
-instance HideSecrets AggregatedCommissionTriggerReq where
-  hideSecrets = Kernel.Prelude.identity
