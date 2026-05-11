@@ -314,13 +314,7 @@ handler ValidatedDSearchReq {..} sReq = do
   let farePolicies = selectFarePolicy (fromMaybe 0 mbDistance) (fromMaybe 0 mbDuration) mbIsAutoRickshawAllowed mbIsTwoWheelerAllowed mbVehicleServiceTier allFarePoliciesProduct.farePolicies
   now <- getCurrentTime
   let resolvedArea = fromMaybe allFarePoliciesProduct.area allFarePoliciesProduct.mbPickupDropArea
-      -- Read gate id from `area` first; `mbPickupDropArea` (used by `resolvedArea` via
-      -- `fromMaybe`) is built with `Nothing` for the gate in `getAllFareProducts`'
-      -- (Just pickup, Just drop) -> Nothing branch.
-      mbPickupGateId =
-        SL.pickupGateIdFromArea allFarePoliciesProduct.area
-          <|> SL.pickupGateIdFromArea resolvedArea
-  (canQueueUp, mbDefaultDriverExtra) <- getSpecialZoneQueueInfo resolvedArea fromLocation
+  (canQueueUp, mbDefaultDriverExtra, mbPickupGateId) <- getSpecialZoneQueueInfo resolvedArea fromLocation
   let mbSpecialZoneGateId = if canQueueUp then mbPickupGateId else Nothing
   logDebug $ "Pickingup Gate info result : " <> show (mbPickupGateId, mbSpecialZoneGateId, mbDefaultDriverExtra)
   let spcllocationTag = maybe allFarePoliciesProduct.specialLocationTag (\_ -> allFarePoliciesProduct.specialLocationTag <&> (<> "_PickupZone")) mbSpecialZoneGateId
@@ -390,8 +384,8 @@ handler ValidatedDSearchReq {..} sReq = do
     stopsLatLong = map (.gps)
     -- | Check if the pickup gate supports queueing and get default driver extra.
     -- The pickupGateId is now extracted directly from the Area tag.
-    getSpecialZoneQueueInfo :: SL.Area -> DLoc.Location -> Flow (Bool, Maybe HighPrecMoney)
-    getSpecialZoneQueueInfo SL.Default _ = pure (False, Nothing)
+    getSpecialZoneQueueInfo :: SL.Area -> DLoc.Location -> Flow (Bool, Maybe HighPrecMoney, Maybe Text)
+    getSpecialZoneQueueInfo SL.Default _ = pure (False, Nothing, Nothing)
     getSpecialZoneQueueInfo area fromLocation = do
       let pickupLatLong = LatLong fromLocation.lat fromLocation.lon
           mbSlId = case area of
@@ -413,8 +407,8 @@ handler ValidatedDSearchReq {..} sReq = do
           <> show ((.canQueueUpOnGate) <$> mbPickupZone)
       if ((.canQueueUpOnGate) <$> mbPickupZone) == Just True
         then
-          pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone)
-        else pure (False, Nothing)
+          pure (True, fmap (toHighPrecMoney . Money) . (.defaultDriverExtra) =<< mbPickupZone, (.id.getId) <$> mbPickupZone)
+        else pure (False, Nothing, Nothing)
 
     combineFarePoliciesProducts :: [FarePoliciesProduct] -> FarePoliciesProduct
     combineFarePoliciesProducts products =
