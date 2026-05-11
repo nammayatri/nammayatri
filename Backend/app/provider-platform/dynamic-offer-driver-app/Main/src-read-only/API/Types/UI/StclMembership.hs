@@ -128,6 +128,8 @@ data UpdateBankDetails = UpdateBankDetails {accountNumber :: Kernel.Prelude.Text
 
 data UpdateMembershipApplicationReq = UpdateMembershipApplicationReq
   { address :: Kernel.Prelude.Maybe Address,
+    addressProofImageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    addressProofType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bankDetails :: Kernel.Prelude.Maybe UpdateBankDetails,
     nomineeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleType :: Kernel.Prelude.Maybe VehicleType
