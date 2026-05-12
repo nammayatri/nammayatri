@@ -54,6 +54,11 @@ schedulerSafetyOffsetSeconds = 300
 defaultFrequency :: DTC.CommissionAggregationFrequency
 defaultFrequency = DTC.MONTHLY
 
+-- | Default batch size for paginated Commission fetches. Override via
+-- 'invoiceConfig.commissionAggregationBatchSize'.
+defaultCommissionAggregationBatchSize :: Int
+defaultCommissionAggregationBatchSize = 500
+
 runAggregatedCommissionInvoiceCreationJob ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -130,10 +135,11 @@ tryEmitInvoice mId mocId issuedToId issuedToType periodStart periodEnd mbInvoice
   rinfo <- resolveRecipientInfo issuedToType issuedToId
   merchant <- CQM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
   mocCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
-  let merchantAddress = Just (show mocCity.city <> ", " <> show mocCity.state <> ", " <> show mocCity.country)
-      sellerName = Just (fromMaybe merchant.name (mbInvoiceConfig >>= (.invoiceSellerName)))
-      sellerAddress = maybe merchantAddress Just (mbInvoiceConfig >>= (.invoiceSellerAddress))
-  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd
+  -- Seller name/address are config-only — no merchant fallback. If unset, the
+  -- PDF seller block just shows live-fetched business ID + VAT.
+  let sellerName = mbInvoiceConfig >>= (.invoiceSellerName)
+      sellerAddress = mbInvoiceConfig >>= (.invoiceSellerAddress)
+  emitInvoice merchant sellerName sellerAddress mocCity.currency mocId rinfo issuedToId issuedToType periodStart periodEnd mbInvoiceConfig
 
 -- | Supplier-side fields per recipient. FLEET_OWNER pulls from FleetOwnerInformation;
 -- DRIVER only carries the display name (no address/tax IDs at supplier level).
@@ -176,6 +182,7 @@ resolveRecipientInfo other _ =
 
 -- | Build + persist an AggregatedCommission row when the period has any underlying
 -- per-ride Commissions. Empty period → silent no-op (no marker invoices).
+-- Commissions streamed in batches (config or default) to bound per-query DB load.
 emitInvoice ::
   ( BeamFlow m r,
     CacheFlow m r,
@@ -183,8 +190,8 @@ emitInvoice ::
     MonadFlow m
   ) =>
   DM.Merchant ->
-  Maybe Text -> -- sellerName (config override or merchant.name fallback)
-  Maybe Text -> -- sellerAddress (config override or mocCity-derived fallback)
+  Maybe Text -> -- sellerName
+  Maybe Text -> -- sellerAddress
   Currency ->
   Id DMOC.MerchantOperatingCity ->
   RecipientInfo ->
@@ -192,9 +199,11 @@ emitInvoice ::
   BeckInvoice.IssuedToType ->
   UTCTime ->
   UTCTime ->
+  Maybe DTC.InvoiceConfig ->
   m ()
-emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd = do
-  commissions <- QFinanceInvoiceExtra.findCommissionInvoicesInRange mocId.getId pStart pEnd (Just recipientId)
+emitInvoice merchant sellerName sellerAddress currency mocId info recipientId recipientType pStart pEnd mbInvoiceConfig = do
+  let batchSize = fromMaybe defaultCommissionAggregationBatchSize (mbInvoiceConfig >>= (.commissionAggregationBatchSize))
+  commissions <- fetchAllCommissionsInRange mocId.getId pStart pEnd (Just recipientId) batchSize
   if null commissions
     then logInfo $ "AggCom: empty period for " <> show recipientType <> " " <> recipientId <> " [" <> show pStart <> ", " <> show pEnd <> "]; skipping emit"
     else do
@@ -257,6 +266,24 @@ mkLineItem inv =
       groupId = Just "g-commission",
       itemType = Just InvoiceI.Fare
     }
+
+-- | Page through Commission rows for [from, to] in chunks of @batchSize@.
+-- Terminates on empty page (codebase null-termination convention).
+fetchAllCommissionsInRange ::
+  (BeamFlow m r) =>
+  Text -> -- mocId
+  UTCTime -> -- from
+  UTCTime -> -- to
+  Maybe Text -> -- recipientId
+  Int -> -- batchSize
+  m [FInvoice.Invoice]
+fetchAllCommissionsInRange mocId from to mbRecipientId batchSize = go 0 []
+  where
+    go offset acc = do
+      batch <- QFinanceInvoiceExtra.findCommissionInvoicesInRange mocId from to mbRecipientId (Just batchSize) (Just offset)
+      if null batch
+        then pure acc
+        else go (offset + batchSize) (acc <> batch)
 
 -- | Queue the next-period job under the CURRENT config frequency (mode-switches
 -- take effect here). Past-due 'scheduleAfter' clamped to 0 so the Allocator

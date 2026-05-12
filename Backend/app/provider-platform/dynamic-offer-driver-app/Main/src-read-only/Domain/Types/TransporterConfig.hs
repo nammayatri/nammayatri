@@ -433,7 +433,8 @@ data GstBreakup = GstBreakup
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
-  { commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+  { commissionAggregationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
     driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
     emitLedgerEntries :: Kernel.Prelude.Bool,

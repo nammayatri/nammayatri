@@ -968,6 +968,7 @@ TransporterConfig:
       logoUrl: Maybe BaseUrl
       commissionAggregationEnabled: Maybe Bool
       commissionAggregationFrequency: Maybe CommissionAggregationFrequency
+      commissionAggregationBatchSize: Maybe Int
       invoiceSellerName: Maybe Text
       invoiceSellerAddress: Maybe Text
       derive': Generic, Show, ToJSON, FromJSON, Eq
