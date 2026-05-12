@@ -87,7 +87,6 @@ passettoVersion = "0.1.0"
 
 taggedPlaintext :: Aeson.Value -> Text
 taggedPlaintext = \case
-  Aeson.String s   -> "S" <> s
   Aeson.Bool True  -> "T"
   Aeson.Bool False -> "F"
   Aeson.Number n   -> "N" <> T.pack (show n)
@@ -140,8 +139,9 @@ bulkDecryptWithKeys keys encs = mapM decryptOne encs
       case T.uncons txt of
         Just ('S', rest) ->
           case Aeson.eitherDecodeStrict (TE.encodeUtf8 rest) of
-            Right v -> return v
-            Left _  -> return (Aeson.String rest)
+            Right v@(Aeson.String _) -> return v
+            Right _                  -> return (Aeson.String rest)
+            Left _                   -> return (Aeson.String rest)
         Just ('N', rest) ->
           case Aeson.eitherDecodeStrict (TE.encodeUtf8 rest) of
             Right v -> return v
