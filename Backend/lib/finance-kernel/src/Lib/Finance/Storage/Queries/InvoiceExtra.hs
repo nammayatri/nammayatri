@@ -128,15 +128,18 @@ findByReferenceIdWithOptions referenceId mbInvoiceType statusIn mbLimit mbOffset
 
 -- | Commission invoices in date range (Issued/Draft only). ASC by issuedAt.
 -- Type filtering (FLEET_OWNER vs DRIVER) done in Haskell, not SQL — when
--- issuedToId is provided it already pins the recipient.
+-- issuedToId is provided it already pins the recipient. Paginated via
+-- (limit, offset) to bound per-query load under concurrent fleet chains.
 findCommissionInvoicesInRange ::
   (BeamFlow.BeamFlow m r) =>
   Kernel.Prelude.Text -> -- merchantOpCityId
   UTCTime -> -- from
   UTCTime -> -- to
-  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- optional fleetOwnerId / driverId
+  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- fleetOwnerId / driverId
+  Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- limit
+  Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- offset
   m [DInvoice.Invoice]
-findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId = do
+findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId mbLimit mbOffset = do
   let conds =
         [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
           <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.Commission]
@@ -147,8 +150,8 @@ findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId = 
   findAllWithOptionsKV
     [Se.And conds]
     (Se.Asc Beam.issuedAt)
-    Nothing
-    Nothing
+    mbLimit
+    mbOffset
 
 -- | Highest periodEnd of prior AggregatedCommission rows for this
 -- (merchantOpCity, recipient). Drives the runtime idempotency check.

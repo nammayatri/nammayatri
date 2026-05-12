@@ -45,7 +45,6 @@ import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Extra.Plan as DEP
-import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -57,7 +56,6 @@ import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
-import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
 import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
@@ -79,13 +77,9 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
-import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import Lib.Scheduler (JobCreatorEnv, SchedulerType)
-import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -523,11 +517,7 @@ createDriverWithDetails ::
   ( EncFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    BeamFlow m r,
-    MonadFlow m,
-    JobCreatorEnv r,
-    HasSchemaName SchedulerJobT,
-    HasField "schedulerType" r SchedulerType
+    MonadFlow m
   ) =>
   AuthReq ->
   Maybe Version ->
@@ -546,9 +536,6 @@ createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersio
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp mbCloudType merchantId merchantOpCityId isDashboard Nothing
   void $ QP.create person
   createDriverDetails (person.id) merchantId merchantOpCityId transporterConfig
-  -- Bootstrap the AggregatedCommission scheduler chain for this driver.
-  fork ("BootstrapAggCommChain:" <> person.id.getId) $
-    AggCommSched.bootstrapAggregatedCommissionChain merchantId merchantOpCityId person.id.getId BeckInvoice.DRIVER
   pure person
 
 verify ::
