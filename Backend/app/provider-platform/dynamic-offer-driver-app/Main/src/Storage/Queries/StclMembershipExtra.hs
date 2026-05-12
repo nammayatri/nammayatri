@@ -25,14 +25,20 @@ stclShareEndCountKey = "stcl_share_end_count"
 stclMembershipLockKey :: Text
 stclMembershipLockKey = "stcl_membership_lock"
 
--- | Find the latest submitted membership ordered by updated_at descending
+-- Per-driver lock for serializing read-check-create on the cap/PENDING guards.
+stclMembershipDriverLockKey :: Text -> Text
+stclMembershipDriverLockKey driverId = "stcl_membership_driver_lock:" <> driverId
+
+-- | Find the SUBMITTED membership with the largest shareEndCount, used to bootstrap the
+-- Redis share counter. Ordering by shareEndCount (rather than updatedAt) keeps the bootstrap
+-- correct even when older allotments get edited via putUpdateApplication.
 findLatestSubmittedMembership ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   m (Maybe Domain.StclMembership)
 findLatestSubmittedMembership =
   findAllWithOptionsKV
     [Se.And [Se.Is Beam.status $ Se.Eq Domain.SUBMITTED]]
-    (Se.Desc Beam.updatedAt)
+    (Se.Desc Beam.shareEndCount)
     (Just 1)
     Nothing
     <&> listToMaybe

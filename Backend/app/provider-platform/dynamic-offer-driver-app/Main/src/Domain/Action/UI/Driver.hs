@@ -1605,7 +1605,14 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  membershipId <- if fromMaybe False merchantConfig.sendMembershipIdInProfile then ((.id) <$>) . listToMaybe <$> QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED else return Nothing
+  membershipId <-
+    if fromMaybe False merchantConfig.sendMembershipIdInProfile
+      then do
+        -- A driver may have multiple SUBMITTED rows after a share top-up. Pin the displayed
+        -- membership ID to the oldest allotment so it stays stable across top-ups.
+        memberships <- QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED
+        pure $ (.id) <$> listToMaybe (DL.sortOn (.createdAt) memberships)
+      else return Nothing
   bankDetails <-
     if merchant.onlinePayment
       then do
