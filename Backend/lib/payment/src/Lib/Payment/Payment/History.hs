@@ -65,6 +65,7 @@ toPaymentState Payment.COD_INITIATED = ST.CASH_PENDING
 toPaymentState Payment.STARTED = ST.INITIATED
 toPaymentState Payment.AUTO_REFUNDED = ST.REFUNDED
 toPaymentState Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.FAILED
+toPaymentState Payment.PARTIAL_CHARGED = ST.PENDING
 
 getStatusMessage :: Payment.TransactionStatus -> Text
 getStatusMessage Payment.NEW = "Payment initiated"
@@ -79,6 +80,7 @@ getStatusMessage Payment.COD_INITIATED = "Cash on delivery initiated"
 getStatusMessage Payment.STARTED = "Payment started"
 getStatusMessage Payment.AUTO_REFUNDED = "Payment auto-refunded"
 getStatusMessage Payment.CLIENT_AUTH_TOKEN_EXPIRED = "Authentication token expired"
+getStatusMessage Payment.PARTIAL_CHARGED = "Payment pending"
 
 toPaymentEvent :: Payment.TransactionStatus -> ST.PaymentEvent
 toPaymentEvent Payment.NEW = ST.INITIATE
@@ -93,3 +95,4 @@ toPaymentEvent Payment.COD_INITIATED = ST.INITIATE
 toPaymentEvent Payment.STARTED = ST.INITIATE
 toPaymentEvent Payment.AUTO_REFUNDED = ST.REFUND
 toPaymentEvent Payment.CLIENT_AUTH_TOKEN_EXPIRED = ST.FAIL
+toPaymentEvent Payment.PARTIAL_CHARGED = ST.INITIATE

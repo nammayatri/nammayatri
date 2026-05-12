@@ -522,9 +522,6 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , masterCloudProxyConfig =
-      { masterUrl = Some "http://localhost:8116"
-      , masterSecret = Some "123"
-      }
-    , bapHostRedirectMap =
-      [] : List { mapKey : Text, mapValue : Optional Text }
+      { masterUrl = Some "http://localhost:8116", masterSecret = Some "123" }
+    , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     }

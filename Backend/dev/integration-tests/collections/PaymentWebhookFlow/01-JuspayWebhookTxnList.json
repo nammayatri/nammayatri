@@ -1,0 +1,319 @@
+{
+	"info": {
+		"name": "Juspay OrderStatus txnList Iteration",
+		"description": "Exercises the txnList iteration in Lib.Payment.Domain.Action.orderStatusService. Creates a wallet recharge payment order, overrides the mock juspay response so /orders/<id> returns CHARGED with a txn_list containing two transactions, then triggers /payment/<orderId>/status. Verifies that BOTH txn_list entries are upserted into payment_transaction with the right per-txn fields (payment_method = JP_HDFC for one, LOYALTYOS7 for the other) — proving the iteration uses per-txn fields, not the top-level order fields.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Random rider number per run so the collection can be re-run concurrently (per Rules.md).",
+					"if (!pm.collectionVariables.get('_test_rider_number')) {",
+					"  var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"  pm.collectionVariables.set('_test_rider_number', rNum);",
+					"  pm.collectionVariables.set('_test_txn_uuid_1', 'txnA-' + Math.random().toString(36).slice(2, 12));",
+					"  pm.collectionVariables.set('_test_txn_uuid_2', 'txnB-' + Math.random().toString(36).slice(2, 12));",
+					"  console.log('Test rider:', rNum);",
+					"}"
+				]
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"if (d.authId) pm.environment.set('authId', d.authId);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\":\"{{_test_rider_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"NAMMA_YATRI\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "Auth Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"if (d.token) pm.environment.set('customer_token', d.token);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"juspay-txnlist-test\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/:authId/verify",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["auth", ":authId", "verify"],
+					"variable": [{ "key": "authId", "value": "{{authId}}" }]
+				}
+			}
+		},
+		{
+			"name": "Wallet Recharge (Create Payment Order)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Recharge order:', JSON.stringify(d));",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"// Local-mock path: rider-app short_id is in d.id (e.g. '7EVFcfSEWJ'). Real-Juspay path: d.id is the gateway id ('ordeh_…') and the short_id is in d.order_id. Pick d.id unless it looks like a Juspay gateway id.",
+							"var looksLikeJuspayId = function (s) { return typeof s === 'string' && /^ord(eh|er)?_/.test(s); };",
+							"var orderShortId = (d.id && !looksLikeJuspayId(d.id)) ? d.id : (d.order_id || d.orderShortId || d.orderId || d.id);",
+							"pm.environment.set('test_order_id', orderShortId);",
+							"pm.environment.set('test_order_short_id', orderShortId);",
+							"pm.test('Order short id present', function () { pm.expect(orderShortId).to.not.be.undefined; });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{customer_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"pointsAmount\":501,\"programId\":\"{{loyalty_program_id}}\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/wallet/recharge",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["payment", "wallet", "recharge"]
+				}
+			}
+		},
+		{
+			"name": "Override Juspay Status (CHARGED + 2 txn_list entries)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var body = {",
+							"  service: 'juspay',",
+							"  id: [pm.environment.get('test_order_id'), pm.environment.get('test_order_short_id')],",
+							"  status: 'CHARGED',",
+							"  data: {",
+							"    amount: 501.0,",
+							"    effective_amount: 501.0,",
+							"    currency: 'INR',",
+							"    payment_method_type: 'NB',",
+							"    payment_method: 'JP_HDFC',",
+							"    txn_list: [",
+							"      {",
+							"        txn_id: 'TXN-NB-1',",
+							"        txn_uuid: pm.collectionVariables.get('_test_txn_uuid_1'),",
+							"        payment_method_type: 'NB',",
+							"        payment_method: 'JP_HDFC',",
+							"        effective_amount: 500,",
+							"        resp_code: null, resp_message: null,",
+							"        bank_error_code: '', bank_error_message: '',",
+							"        gateway_reference_id: null,",
+							"        txn_detail: { gateway: 'DUMMY', net_amount: 501, surcharge_amount: null, tax_amount: null }",
+							"      },",
+							"      {",
+							"        txn_id: 'TXN-LOYALTY-1',",
+							"        txn_uuid: pm.collectionVariables.get('_test_txn_uuid_2'),",
+							"        payment_method_type: 'REWARD',",
+							"        payment_method: 'LOYALTYOS7',",
+							"        effective_amount: 1,",
+							"        resp_code: null, resp_message: null,",
+							"        bank_error_code: '', bank_error_message: '',",
+							"        gateway_reference_id: null,",
+							"        txn_detail: { gateway: 'LOYALTY_OS', net_amount: 501, surcharge_amount: null, tax_amount: null },",
+							"        payment_gateway_response: { resp_code: 'SUCCESS', resp_message: 'Reward redemption successful', created: new Date().toISOString(), epg_txn_id: null, auth_id_code: null, rrn: null, txn_id: 'TXN-LOYALTY-1' }",
+							"      }",
+							"    ]",
+							"  }",
+							"};",
+							"pm.environment.set('_mock_status_body', JSON.stringify(body));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Mock override accepted', function () {",
+							"  pm.response.to.have.status(200);",
+							"  pm.expect(d.ok).to.be.true;",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": { "mode": "raw", "raw": "{{_mock_status_body}}" },
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Stage Juspay Loyalty Programs Response",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Loyalty programs override accepted', function () { pm.response.to.have.status(200); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"service\":\"juspay\",\"id\":[\"loyalty\"],\"status\":\"OK\",\"data\":{\"programs\":[{\"id\":\"{{loyalty_program_id}}\",\"code\":\"LOYALTYOS7\",\"burn\":{\"options\":[]},\"earn\":{\"status\":\"ELIGIBLE\",\"applicable\":{\"label\":\"Earn\",\"points\":\"0.00\"}},\"campaigns\":[],\"membership\":{\"enroll_on\":\"AUTO\",\"enrolled_date\":\"2026-04-16T11:42:19Z\",\"status\":\"ACTIVE\"},\"topup\":{\"status\":\"ELIGIBLE\"},\"ui_label\":{\"asset\":{\"code\":\"POINTS\",\"name\":\"Points\"},\"description\":\"Earn and redeem points at 1:1\",\"title\":\"Loyalty\",\"tnc\":\"\",\"tnc_url\":\"\"},\"wallet\":{\"available_points\":\"0.00\",\"lifetime_earned\":\"0.00\",\"lifetime_redeemed\":\"0.00\",\"pockets\":[]}}]}}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/status",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "status"]
+				}
+			}
+		},
+		{
+			"name": "Get Payment Order Status (triggers orderStatusService)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var start = Date.now();",
+							"while (Date.now() - start < 1500) { /* settle mock overrides */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"console.log('Order status:', d.status, 'orderId:', d.orderId);",
+							"// payment_transaction.order_id is the payment_order UUID, not the short_id we used in the URL path.",
+							"if (d.orderId) pm.environment.set('test_payment_order_uuid', d.orderId);",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Order status is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });",
+							"pm.test('Payment order UUID present', function () { pm.expect(d.orderId).to.be.a('string'); });"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{ "key": "token", "value": "{{customer_token}}" }],
+				"url": {
+					"raw": "{{baseUrl_app}}/payment/:orderId/status",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["payment", ":orderId", "status"],
+					"variable": [{ "key": "orderId", "value": "{{test_order_id}}" }]
+				}
+			}
+		},
+		{
+			"name": "Verify payment_transaction Rows (txnList Iteration)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var start = Date.now();",
+							"while (Date.now() - start < 2000) { /* settle KV drainer */ }"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"var d = pm.response.json();",
+							"var rows = d.rows || [];",
+							"var uuids = rows.map(function (r) { return r.txn_uuid; });",
+							"console.log('Found txn_uuids:', JSON.stringify(uuids));",
+							"var txn1 = pm.collectionVariables.get('_test_txn_uuid_1');",
+							"var txn2 = pm.collectionVariables.get('_test_txn_uuid_2');",
+							"pm.test('Two rows inserted (one per txn_list entry)', function () {",
+							"  pm.expect(d.count, 'row count').to.eql(2);",
+							"});",
+							"pm.test('First txn_uuid present', function () { pm.expect(uuids).to.include(txn1); });",
+							"pm.test('Second txn_uuid present', function () { pm.expect(uuids).to.include(txn2); });",
+							"pm.test('Per-txn payment_method preserved (not top-level)', function () {",
+							"  var byUuid = {};",
+							"  rows.forEach(function (r) { byUuid[r.txn_uuid] = r; });",
+							"  pm.expect(byUuid[txn1].payment_method).to.eql('JP_HDFC');",
+							"  pm.expect(byUuid[txn2].payment_method).to.eql('LOYALTYOS7');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{ "key": "Content-Type", "value": "application/json" }],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"db_name\": \"atlas_dev\",\n  \"db_schema\": \"atlas_app\",\n  \"table_name\": \"payment_transaction\",\n  \"select\": [\"txn_uuid\", \"txn_id\", \"status\", \"payment_method\", \"payment_method_type\", \"amount\"],\n  \"where_clause\": [\n    {\"column_name\": \"order_id\", \"val\": \"{{test_payment_order_uuid}}\", \"op\": \"=\"}\n  ]\n}"
+				},
+				"url": {
+					"raw": "{{mockServerUrl}}/mock/sql/select",
+					"host": ["{{mockServerUrl}}"],
+					"path": ["mock", "sql", "select"]
+				}
+			}
+		}
+	]
+}

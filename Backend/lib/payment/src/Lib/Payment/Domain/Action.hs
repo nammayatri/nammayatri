@@ -1566,41 +1566,55 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
             ..
           }
     Payment.OrderStatusResp {..} -> do
-      let orderTxn =
+      let mkOrderTxn txnObj =
             OrderTxn
-              { mandateStartDate = Nothing,
+              { transactionUUID = txnObj.txnUuid,
+                txnId = txnObj.txnId,
+                paymentMethodType = txnObj.paymentMethodType,
+                paymentMethod = txnObj.paymentMethod,
+                respMessage = txnObj.respMessage,
+                respCode = txnObj.respCode,
+                gatewayReferenceId = txnObj.gatewayReferenceId,
+                amount = fromMaybe amount txnObj.effectiveAmount,
+                applicationFeeAmount = Nothing,
+                bankErrorMessage = txnObj.bankErrorMessage,
+                bankErrorCode = txnObj.bankErrorCode,
+                mandateStartDate = Nothing,
                 mandateEndDate = Nothing,
                 mandateId = Nothing,
+                mandateStatus = Nothing,
                 mandateFrequency = Nothing,
                 mandateMaxAmount = Nothing,
-                mandateStatus = Nothing,
                 isRetried = isRetriedOrder,
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
-                applicationFeeAmount = Nothing,
                 customerName = (.nameOnCard) =<< card,
-                gatewayName = (.gateway) =<< txnDetail,
+                gatewayName = (.gateway) =<< txnObj.txnDetail,
                 cardType = (.cardType) =<< card,
-                surchargeAmount = (.surchargeAmount) =<< txnDetail,
-                taxAmount = (.taxAmount) =<< txnDetail,
-                netAmount = (.netAmount) =<< txnDetail,
-                epgTxnId = (.epgTxnId) =<< paymentGatewayResponse,
+                surchargeAmount = (.surchargeAmount) =<< txnObj.txnDetail,
+                taxAmount = (.taxAmount) =<< txnObj.txnDetail,
+                netAmount = (.netAmount) =<< txnObj.txnDetail,
+                epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
                 cardIssuer = (.cardIssuer) =<< card,
-                authorizationDateTime = (.created) =<< paymentGatewayResponse,
+                authorizationDateTime = (.created) =<< txnObj.paymentGatewayResponse,
                 captureDateTime = dateCreated,
                 vpa = payerVpa,
                 ..
               }
-      maybe
-        (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
-        ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
-              updateOrderTransaction merchantOpCityId order orderTxn Nothing
-        )
-        transactionUUID
+      -- transactionStatusId, transactionStatus, currency, dateCreated, splitSettlementResponse from top-level
+
+      forM_ txnList $ \txnObj -> do
+        let orderTxn = mkOrderTxn txnObj
+        maybe
+          (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
+          ( \transactionUUID' ->
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $
+                updateOrderTransaction merchantOpCityId order orderTxn Nothing
+          )
+          txnObj.txnUuid
       mapM_ (upsertRefundStatus merchantOpCityId order) refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
       res <- withTryCatch "buildOrderOffer:processPaymentStatus" $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
@@ -1612,8 +1626,8 @@ orderStatusService merchantOpCityId personId orderId orderStatusCall = do
           { orderId = orderId,
             orderShortId = order.shortId,
             status = transactionStatus,
-            bankErrorCode = orderTxn.bankErrorCode,
-            bankErrorMessage = orderTxn.bankErrorMessage,
+            bankErrorCode = bankErrorCode,
+            bankErrorMessage = bankErrorMessage,
             isRetried = isRetriedOrder,
             isRetargeted = isRetargetedOrder,
             retargetLink = retargetPaymentLink,
@@ -1816,9 +1830,20 @@ juspayWebhookService merchantOpCityId resp respDump = do
         transactionUUID
     Payment.OrderStatusResp {..} -> do
       order <- QOrder.findByShortId (ShortId orderShortId) >>= fromMaybeM (PaymentOrderNotFound orderShortId)
-      let orderTxn =
+      let mkOrderTxn txnObj =
             OrderTxn
-              { mandateStartDate = Nothing,
+              { transactionUUID = txnObj.txnUuid,
+                txnId = txnObj.txnId,
+                paymentMethodType = txnObj.paymentMethodType,
+                paymentMethod = txnObj.paymentMethod,
+                respMessage = txnObj.respMessage,
+                respCode = txnObj.respCode,
+                gatewayReferenceId = txnObj.gatewayReferenceId,
+                amount = fromMaybe amount txnObj.effectiveAmount,
+                applicationFeeAmount = Nothing,
+                bankErrorMessage = txnObj.bankErrorMessage,
+                bankErrorCode = txnObj.bankErrorCode,
+                mandateStartDate = Nothing,
                 mandateEndDate = Nothing,
                 mandateId = Nothing,
                 mandateStatus = Nothing,
@@ -1827,29 +1852,32 @@ juspayWebhookService merchantOpCityId resp respDump = do
                 isRetried = isRetriedOrder,
                 isRetargeted = isRetargetedOrder,
                 retargetLink = retargetPaymentLink,
-                applicationFeeAmount = Nothing,
                 customerName = (.nameOnCard) =<< card,
-                gatewayName = (.gateway) =<< txnDetail,
+                gatewayName = (.gateway) =<< txnObj.txnDetail,
                 cardType = (.cardType) =<< card,
-                surchargeAmount = (.surchargeAmount) =<< txnDetail,
-                taxAmount = (.taxAmount) =<< txnDetail,
-                netAmount = (.netAmount) =<< txnDetail,
-                epgTxnId = (.epgTxnId) =<< paymentGatewayResponse,
+                surchargeAmount = (.surchargeAmount) =<< txnObj.txnDetail,
+                taxAmount = (.taxAmount) =<< txnObj.txnDetail,
+                netAmount = (.netAmount) =<< txnObj.txnDetail,
+                epgTxnId = (.epgTxnId) =<< txnObj.paymentGatewayResponse,
                 cardBrand = (.cardBrand) =<< card,
                 cardIsin = (.cardIsin) =<< card,
                 cardLastFourDigits = (.lastFourDigits) =<< card,
                 cardIssuer = (.cardIssuer) =<< card,
-                authorizationDateTime = (.created) =<< paymentGatewayResponse,
+                authorizationDateTime = (.created) =<< txnObj.paymentGatewayResponse,
                 captureDateTime = dateCreated,
                 vpa = payerVpa,
                 ..
               }
-      maybe
-        (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
-        ( \transactionUUID' ->
-            Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction merchantOpCityId order orderTxn $ Just respDump
-        )
-        transactionUUID
+      -- transactionStatusId, transactionStatus, currency, dateCreated, splitSettlementResponse from top-level
+
+      forM_ txnList $ \txnObj -> do
+        let orderTxn = mkOrderTxn txnObj
+        maybe
+          (updateOrderTransaction merchantOpCityId order orderTxn Nothing)
+          ( \transactionUUID' ->
+              Redis.whenWithLockRedis (txnProccessingKey transactionUUID') 60 $ updateOrderTransaction merchantOpCityId order orderTxn $ Just respDump
+          )
+          txnObj.txnUuid
       mapM_ (upsertRefundStatus merchantOpCityId order) refunds
     _ -> return ()
   return Ack
