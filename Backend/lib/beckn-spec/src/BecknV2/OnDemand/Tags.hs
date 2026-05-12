@@ -104,6 +104,7 @@ data BecknTagGroup
   | BOOKING_INFO
   | EMAIL_DOMAIN_INFO
   | BPP_INVOICE_INFO
+  | CHANGE_SERVICE_TIER_DETAILS
   | -- v2.1.0 tag groups
     FEATURE_LIST -- item features (AC, etc.)
   | DISABILITY_VIS -- visual disability
@@ -576,6 +577,8 @@ data BecknTag
   | SUPPLIER_GSTIN -- BPP_INVOICE_INFO: supplier GSTIN
   | SUPPLIER_TAX_NO -- BPP_INVOICE_INFO: supplier VAT/tax registration number
   | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
+  | -- Change service tier tags
+    NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -778,6 +781,8 @@ instance CompleteTag BecknTag where
     ENABLE_FREQUENT_LOCATION_UPDATES -> CUSTOMER_INFO
     ENABLE_OTP_LESS_RIDE -> CUSTOMER_INFO
     INITIATED_AS -> DELIVERY
+    -- Change service tier tags
+    NEW_VEHICLE_SERVICE_TIER -> CHANGE_SERVICE_TIER_DETAILS
     -- Fare policy tags
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY

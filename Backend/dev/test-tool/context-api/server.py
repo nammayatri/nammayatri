@@ -98,7 +98,7 @@ DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
 CONFIG_SYNC_BUNDLE_URLS = {
     "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1",
-    "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v1",
+    "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
     "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v1",
 }
 CONFIG_SYNC_DEFAULT_FROM = os.environ.get("CONFIG_SYNC_DEFAULT_FROM", "prod")

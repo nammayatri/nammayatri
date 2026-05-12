@@ -1,0 +1,40 @@
+imports:
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+  GetQuotesRes: Domain.Action.UI.Quote
+  Quote: Domain.Types.Quote
+
+importPackageOverrides:
+  Domain.Types.Booking: "rider-app"
+  Domain.Types.Person: "rider-app"
+  Domain.Action.UI.Quote: "rider-app"
+  Domain.Types.Quote: "rider-app"
+
+module: ChangeServiceTier
+apiPrefix: "rideBooking"
+
+apis:
+  - GET:
+      endpoint: /changeServiceTier/{bookingId}/{customerId}/quotes
+      name: GetChangeServiceTierQuotes
+      auth: ApiAuthV2
+      params:
+        bookingId: Id Booking
+        customerId: Id Person
+      response:
+        type: GetQuotesRes
+  - POST:
+      endpoint: /changeServiceTier/{bookingId}/{customerId}/confirm
+      name: PostChangeServiceTierConfirm
+      auth: ApiAuthV2
+      params:
+        bookingId: Id Booking
+        customerId: Id Person
+      request:
+        type: ChangeServiceTierConfirmReq
+      response:
+        type: APISuccess
+
+types:
+  ChangeServiceTierConfirmReq:
+    quoteId: Id Quote

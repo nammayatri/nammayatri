@@ -82,6 +82,7 @@ library
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.CancelSearch
+      API.UI.ChangeServiceTier
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
@@ -203,6 +204,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Booking
       Domain.Action.Dashboard.RideBooking.Cancel
+      Domain.Action.Dashboard.RideBooking.ChangeServiceTier
       Domain.Action.Dashboard.RideBooking.Confirm
       Domain.Action.Dashboard.RideBooking.Frontend
       Domain.Action.Dashboard.RideBooking.Maps
@@ -246,6 +248,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.CancellationReasons
       Domain.Action.UI.CancelLogic
+      Domain.Action.UI.ChangeServiceTier
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
@@ -800,6 +803,7 @@ library
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Booking
       API.Action.Dashboard.RideBooking.Cancel
+      API.Action.Dashboard.RideBooking.ChangeServiceTier
       API.Action.Dashboard.RideBooking.Confirm
       API.Action.Dashboard.RideBooking.Frontend
       API.Action.Dashboard.RideBooking.Maps
@@ -884,9 +888,11 @@ library
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel
+      API.Types.Dashboard.RideBooking.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Booking
       API.Types.Dashboard.RideBooking.Endpoints.Cancel
+      API.Types.Dashboard.RideBooking.Endpoints.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Endpoints.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Frontend
       API.Types.Dashboard.RideBooking.Endpoints.Maps

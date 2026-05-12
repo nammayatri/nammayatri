@@ -21,6 +21,7 @@ module Beckn.ACL.Update
     EditLocationBuildReqDetails (..),
     AddStopBuildReqDetails (..),
     EditStopBuildReqDetails (..),
+    ChangeServiceTierBuildReqDetails (..),
     UpdateStatus (..),
   )
 where
@@ -28,6 +29,7 @@ where
 import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -38,6 +40,7 @@ import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DVST
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 -- import Kernel.Types.Beckn.ReqTypes
@@ -61,6 +64,7 @@ data UpdateBuildReqDetails
   | UEditLocationBuildReqDetails EditLocationBuildReqDetails
   | UAddStopBuildReqDetails AddStopBuildReqDetails
   | UEditStopBuildReqDetails EditStopBuildReqDetails
+  | UChangeServiceTierBuildReqDetails ChangeServiceTierBuildReqDetails
 
 data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
   { bppRideId :: Id DRide.BPPRide,
@@ -84,6 +88,11 @@ newtype AddStopBuildReqDetails = AddStopBuildReqDetails
 
 newtype EditStopBuildReqDetails = EditStopBuildReqDetails
   { stops :: [DLoc.Location]
+  }
+
+data ChangeServiceTierBuildReqDetails = ChangeServiceTierBuildReqDetails
+  { newVehicleServiceTier :: DVST.ServiceTierType,
+    bppQuoteId :: Text
   }
 
 buildUpdateReq ::
@@ -296,4 +305,67 @@ mkUpdateMessage req (UEditStopBuildReqDetails details) = do
                 ]
           },
       updateReqMessageUpdateTarget = "order.fullfillments"
+    }
+mkUpdateMessage req (UChangeServiceTierBuildReqDetails details) = do
+  let changeServiceTierTags =
+        [ Tag.getFullTagGroup
+            Tag.CHANGE_SERVICE_TIER_DETAILS
+            [ Tag.getFullTag Tag.NEW_VEHICLE_SERVICE_TIER (Just . T.pack $ show details.newVehicleServiceTier)
+            ]
+        ]
+  Spec.UpdateReqMessage
+    { updateReqMessageOrder =
+        Spec.Order
+          { orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Nothing,
+            orderId = Just $ req.bppBookingId.getId,
+            orderProvider = Nothing,
+            orderQuote = Nothing,
+            orderCreatedAt = Nothing,
+            orderUpdatedAt = Nothing,
+            orderStatus = Nothing,
+            orderPayments = Nothing,
+            orderTags = Just changeServiceTierTags,
+            orderItems =
+              Just
+                [ Spec.Item
+                    { itemAddOns = Nothing,
+                      itemCategoryIds = Nothing,
+                      itemCancellationTerms = Nothing,
+                      itemDescriptor = Nothing,
+                      itemFulfillmentIds = Nothing,
+                      itemId = Just details.bppQuoteId,
+                      itemLocationIds = Nothing,
+                      itemPaymentIds = Nothing,
+                      itemPrice = Nothing,
+                      itemTags = Nothing
+                    }
+                ],
+            orderFulfillments =
+              Just
+                [ Spec.Fulfillment
+                    { fulfillmentId = Nothing,
+                      fulfillmentStops = Nothing,
+                      fulfillmentAgent = Nothing,
+                      fulfillmentCustomer = Nothing,
+                      fulfillmentState =
+                        Just $
+                          Spec.FulfillmentState
+                            { fulfillmentStateDescriptor =
+                                Just $
+                                  Spec.Descriptor
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.CHANGE_SERVICE_TIER,
+                                      descriptorName = Nothing,
+                                      descriptorShortDesc = Nothing
+                                    }
+                            },
+                      fulfillmentTags = Nothing,
+                      fulfillmentType = Nothing,
+                      fulfillmentVehicle = Nothing
+                    }
+                ]
+          },
+      updateReqMessageUpdateTarget = "order.items, order.fullfillments"
     }
