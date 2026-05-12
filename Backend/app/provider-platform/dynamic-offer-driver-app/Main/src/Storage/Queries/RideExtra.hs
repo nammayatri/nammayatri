@@ -67,6 +67,12 @@ import Storage.Queries.OrphanInstances.Person ()
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
+import qualified Storage.Beam.FleetOwnerInformation as BeamFOI
+import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
+import qualified Domain.Types.FleetOwnerInformation as DFOI
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
+import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
+import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 import Tools.Error
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
@@ -511,6 +517,12 @@ data RideItem = RideItem
     rideCreatedAt :: UTCTime,
     rideDetails :: RideDetails,
     riderDetails :: RiderDetails,
+    vehicleServiceTierName :: Maybe Text,
+    driverArrivalTime :: Maybe UTCTime,
+    tripStartTime :: Maybe UTCTime,
+    tripEndTime :: Maybe UTCTime,
+    fleetOwnerId :: Maybe (Id Person),
+    currency :: Currency,
     displayBookingId :: Maybe Text,
     customerName :: Maybe Text,
     fareDiff :: Maybe Price,
@@ -525,7 +537,11 @@ data RideItem = RideItem
     tripCategory :: DTC.TripCategory,
     customerPickupLocation :: Maybe DLoc.Location,
     customerDropLocation :: Maybe DLoc.Location,
-    payoutRequestId :: Maybe (Id DPR.PayoutRequest)
+    payoutRequestId :: Maybe (Id DPR.PayoutRequest),
+    fleetName :: Maybe Text,
+    fleetNumber :: Maybe (EncryptedHashed Text),
+    vehicleManufacturer :: Maybe Text,
+    vehicleModel :: Maybe Text
   }
 
 data RideItemV2 = RideItemV2
@@ -610,8 +626,17 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
           fare = mkPrice (Just ride.currency) <$> ride.fare
           estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
+      fleetOwners <- findAllWithKV [Se.Is BeamFOI.fleetOwnerPersonId $ Se.In $ maybeToList (fmap (.getId) ride.fleetOwnerId)]
+      fleetOwnerPersons <- findAllWithKV [Se.Is BeamP.id $ Se.In $ maybeToList (fmap (.getId) ride.fleetOwnerId)]
+      vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In [Just rideDetails.vehicleNumber]]
+
+      let fleetOwnerMap = HMS.fromList [(fo.fleetOwnerPersonId, fo) | fo <- fleetOwners]
+          fleetOwnerPersonMap = HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
+          vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+
       payoutRequest <- QPR.findByEntity (getId ride.id) Nothing
-      pure $ [(mkRideItem (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}]
+      let item = (mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride)) {payoutRequestId = (.id) <$> payoutRequest}
+      pure [item]
     Nothing -> do
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
@@ -726,9 +751,30 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
 
       let rideIds = HS.fromList $ map getRideId zippedRides
 
-      let results = mkRideItem <$> res'
+      let results = mkRideItem HMS.empty HMS.empty HMS.empty <$> res'
           uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
-          allRides = zippedRides <> uniqueResults
+          allRidesBeforeExtra = zippedRides <> uniqueResults
+
+      let fleetOwnerIds = mapMaybe (.fleetOwnerId) allRidesBeforeExtra
+          vehicleNos = map (.rideDetails.vehicleNumber) allRidesBeforeExtra
+
+      fleetOwners <- findAllWithKV [Se.Is BeamFOI.fleetOwnerPersonId $ Se.In $ map (.getId) fleetOwnerIds]
+      fleetOwnerPersons <- findAllWithKV [Se.Is BeamP.id $ Se.In $ map (.getId) fleetOwnerIds]
+      vrcs <- findAllWithKV [Se.Is BeamVRC.unencryptedCertificateNumber $ Se.In (map Just vehicleNos)]
+
+      let fleetOwnerMap = HMS.fromList [(fo.fleetOwnerPersonId, fo) | fo <- fleetOwners]
+          fleetOwnerPersonMap = HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
+          vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
+
+      let allRides = map (\item ->
+            let mbFo = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
+                mbPerson = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
+                mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
+            in item { fleetName = mbFo >>= (.fleetName)
+                    , fleetNumber = mbPerson >>= (.mobileNumber)
+                    , vehicleManufacturer = mbVrc >>= (.vehicleManufacturer)
+                    , vehicleModel = mbVrc >>= (.vehicleModel)
+                    }) allRidesBeforeExtra
 
       payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
       let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
@@ -769,15 +815,26 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                 let fareDiff = mkPrice (Just ride.currency) <$> ride.fare - Just booking.estimatedFare
                     fare = mkPrice (Just ride.currency) <$> ride.fare
                     estimatedFare = Just $ mkPrice (Just booking.currency) booking.estimatedFare
-                Just (mkRideItem (ride, rideDetail, riderDetail, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride))
+                Just (mkRideItem HMS.empty HMS.empty HMS.empty (ride, rideDetail, riderDetail, booking, fareDiff, fare, estimatedFare, booking.paymentInstrument, mkBookingStatus now ride))
             )
             rides
 
-    mkRideItem :: (Ride.Ride, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Maybe Price, Maybe DMPM.PaymentInstrument, Common.BookingStatus) -> RideItem
-    mkRideItem (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus) =
-      RideItem
+    mkRideItem :: HMS.HashMap (Id Person) DFOI.FleetOwnerInformation -> HMS.HashMap (Id Person) Person -> HMS.HashMap Text DVRC.VehicleRegistrationCertificate -> (Ride.Ride, RideDetails.RideDetails, RiderDetails.RiderDetails, Booking.Booking, Maybe Price, Maybe Price, Maybe Price, Maybe DMPM.PaymentInstrument, Common.BookingStatus) -> RideItem
+    mkRideItem fleetOwnerMap fleetOwnerPersonMap vrcMap (ride, rideDetails, riderDetails, booking, fareDiff, fare, estimatedFare, paymentInstrument, bookingStatus) =
+      let mbFo = ride.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
+          mbPerson = ride.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
+          mbVrc = HMS.lookup rideDetails.vehicleNumber vrcMap
+      in RideItem
         { rideShortId = ride.shortId,
           rideCreatedAt = ride.createdAt,
+          rideDetails = rideDetails,
+          riderDetails = riderDetails,
+          vehicleServiceTierName = ride.vehicleServiceTierName,
+          driverArrivalTime = ride.driverArrivalTime,
+          tripStartTime = ride.tripStartTime,
+          tripEndTime = ride.tripEndTime,
+          fleetOwnerId = ride.fleetOwnerId,
+          currency = ride.currency,
           customerName = booking.riderName,
           estimatedDistance = booking.estimatedDistance,
           traveledDistance = Just ride.traveledDistance,
@@ -788,6 +845,10 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           customerPickupLocation = Just booking.fromLocation,
           customerDropLocation = booking.toLocation,
           payoutRequestId = Nothing,
+          fleetName = mbFo >>= (.fleetName),
+          fleetNumber = mbPerson >>= (.mobileNumber),
+          vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
+          vehicleModel = mbVrc >>= (.vehicleModel),
           ..
         }
 
