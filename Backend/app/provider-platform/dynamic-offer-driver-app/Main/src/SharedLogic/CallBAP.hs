@@ -38,6 +38,7 @@ module SharedLogic.CallBAP
     mkTxnIdKey,
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
+    sendChangeServiceTierUpdateToBAP,
   )
 where
 
@@ -90,6 +91,7 @@ import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchRequestForDriver as DSRFD
 import qualified Domain.Types.SearchTry as DST
+import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Types as Euler
@@ -1255,3 +1257,37 @@ callBecknAPIWithSignature' merchantId a b c d e req' = do
   fork ("sending " <> show b <> ", pushing ondc logs") do
     void $ pushLogs b (toJSON req') merchantId.getId "MOBILITY"
   Beckn.callBecknAPI (Just $ Euler.ManagerSelector $ getHttpManagerKey a) Nothing b c d e req'
+
+sendChangeServiceTierUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  DST.ServiceTierType ->
+  HighPrecMoney ->
+  Text ->
+  m ()
+sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let changeServiceTierReq =
+          ACL.ChangeServiceTierBuildReq
+            ACL.DChangeServiceTierReq
+              { bookingId = booking.id,
+                newVehicleServiceTier,
+                newEstimatedFare,
+                bppQuoteId
+              }
+    retryConfig <- asks (.shortDurationRetryCfg)
+    onUpdateMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing changeServiceTierReq
+    void $ callOnUpdateV2 onUpdateMsg retryConfig merchant.id

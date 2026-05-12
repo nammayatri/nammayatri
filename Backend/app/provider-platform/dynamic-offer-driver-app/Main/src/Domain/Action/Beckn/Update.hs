@@ -41,6 +41,7 @@ import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
+import Domain.Types.Trip (isRideOtpTrip)
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
@@ -63,6 +64,7 @@ import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.Queries.Booking as QRB
@@ -72,6 +74,7 @@ import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as SQSR
 import Toll.SharedLogic.TollsDetector
@@ -85,6 +88,7 @@ data DUpdateReq
   | UEditLocationReq EditLocationReq
   | UAddStopReq AddStopReq
   | UEditStopReq EditStopReq
+  | UChangeServiceTierReq ChangeServiceTierReq
 
 data PaymentCompletedReq = PaymentCompletedReq
   { bookingId :: Id DBooking.Booking,
@@ -113,6 +117,12 @@ data EditStopReq = EditStopReq
     stops' :: [DL.Location']
   }
 
+data ChangeServiceTierReq = ChangeServiceTierReq
+  { bookingId :: Id DBooking.Booking,
+    newVehicleServiceTier :: DVST.ServiceTierType,
+    bppQuoteId :: Text
+  }
+
 mkLocation :: Id DMOC.MerchantOperatingCity -> DL.Location' -> DL.Location
 mkLocation merchantOperatingCityId DL.Location' {..} = DL.Location {merchantOperatingCityId = Just merchantOperatingCityId, ..}
 
@@ -121,6 +131,7 @@ getBookingId (UPaymentCompletedReq req) = req.bookingId
 getBookingId (UEditLocationReq req) = req.bookingId
 getBookingId (UAddStopReq req) = req.bookingId
 getBookingId (UEditStopReq req) = req.bookingId
+getBookingId (UChangeServiceTierReq req) = req.bookingId
 
 data PaymentStatus = PAID | NOT_PAID
 
@@ -158,6 +169,42 @@ handler (UEditStopReq EditStopReq {..}) = do
   case listToMaybe stops of
     Nothing -> throwError (InvalidRequest $ "No stop information received from rider side for booking " <> bookingId.getId)
     Just loc -> processStop booking loc True
+handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  unless (booking.status == DBooking.NEW) $
+    throwError $ ChangeServiceTierInvalidBookingStatus (show booking.status)
+  unless (isRideOtpTrip booking.tripCategory) $
+    throwError ChangeServiceTierNotSupported
+  when (newVehicleServiceTier == booking.vehicleServiceTier) $
+    throwError ChangeServiceTierSameTier
+
+  -- Load the quote from the original search to get pre-calculated fare
+  quote <- QQuote.findById (Id bppQuoteId) >>= fromMaybeM (ChangeServiceTierQuoteNotFound bppQuoteId)
+  unless (quote.vehicleServiceTier == newVehicleServiceTier) $
+    throwError ChangeServiceTierQuoteTierMismatch
+
+  -- NOTE: Ignoring quote expiry for now. The booking is already confirmed,
+  -- and the quote's fare was valid at search time. If we need expiry checks
+  -- later, add: unless (quote.validTill > now) $ throwError QuoteExpired
+
+  -- Use the quote's pre-calculated fare params directly
+  let newEstimatedFare = quote.estimatedFare
+  let newFareParams = quote.fareParams
+
+  -- Look up VehicleServiceTier config for AC/seating info
+  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions
+
+  -- Persist new fare params and update booking
+  QFP.create newFareParams
+  QRB.updateVehicleServiceTierAndFare booking.id newVehicleServiceTier newFareParams.id newEstimatedFare quote.vehicleServiceTierName (getId quote.id) (mbVehicleServiceTierItem >>= (.airConditionedThreshold)) ((.seatingCapacity) =<< mbVehicleServiceTierItem) (mbVehicleServiceTierItem >>= (.isAirConditioned))
+
+  -- NOTE: We skip BookingUpdateRequest for now. The confirm is a single atomic
+  -- operation with no driver in the loop (RideOTP: status=NEW, no driver assigned).
+  -- Introduce BookingUpdateRequest when extending to Static flow where a driver IS
+  -- assigned and may need to accept/reject the tier change.
+
+  -- Send on_update to BAP to confirm the change
+  sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId
 handler (UEditLocationReq EditLocationReq {..}) = do
   when (isNothing origin' && isNothing destination') $
     throwError PickupOrDropLocationNotFound

@@ -122,6 +122,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "DRIVER_REACHED_DESTINATION" -> parseDriverReachedDestinationEvent order
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
+        "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent transactionId order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -272,3 +273,23 @@ parseParcelImageUploaded order = do
   return $
     DOnUpdate.OUParcelImageFileUploadReq $
       DOnUpdate.ParcelImageFileUploadReq {bppRideId = Id bppRideId, ..}
+
+parseChangeServiceTierEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseChangeServiceTierEvent transactionId order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in ChangeServiceTier Event.")
+  newServiceTierText <-
+    Utils.getTagV2 Tag.CHANGE_SERVICE_TIER_DETAILS Tag.NEW_VEHICLE_SERVICE_TIER order.orderTags
+      & fromMaybeM (InvalidRequest "new_vehicle_service_tier tag is not present in ChangeServiceTier Event.")
+  newServiceTier <- readMaybe (T.unpack newServiceTierText) & fromMaybeM (InvalidRequest $ "Invalid service tier: " <> newServiceTierText)
+  let newEstimatedFare = order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack
+  -- The BPP quote ID can be used by BAP to look up the corresponding BAP-side quote
+  let newQuoteId = order.orderItems >>= listToMaybe >>= (.itemId)
+  return $
+    DOnUpdate.OUChangeServiceTierReq
+      DOnUpdate.ChangeServiceTierReq
+        { bppBookingId = Id bppBookingId,
+          newVehicleServiceTier = newServiceTier,
+          newEstimatedFare,
+          newQuoteId,
+          transactionId
+        }
