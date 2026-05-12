@@ -27,5 +27,5 @@ import Servant
 type API = MCF.ForwardAPI
 
 handler :: AppEnv -> FlowServer API
-handler env _mbSecret _mbDest =
+handler env =
   Tagged (MCF.forwardEgressApp env.loggerEnv env.masterCloudProxyConfig env.masterCloudForwarderManager)
