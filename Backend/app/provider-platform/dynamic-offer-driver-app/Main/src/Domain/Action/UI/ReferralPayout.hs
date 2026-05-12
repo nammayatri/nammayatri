@@ -273,11 +273,15 @@ postPayoutCreateOrder (mbPersonId, merchantId, merchantOpCityId) req = do
   let entityName = DLP.MANUAL
       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCityId person.id mbPersonBankAccount
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency req) createPayoutOrderCall Nothing
+  void $ Payout.createPayoutService (Kernel.Types.Id.cast merchantId) (Just $ Kernel.Types.Id.cast merchantOpCityId) (Kernel.Types.Id.cast personId) (Just [personId.getId]) (Just entityName) (show merchantOperatingCity.city) (mkCreatePayoutServiceReq merchantOperatingCity.currency payoutServiceFlow req) createPayoutOrderCall Nothing
   pure Kernel.Types.APISuccess.Success
 
-mkCreatePayoutServiceReq :: Currency -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq
-mkCreatePayoutServiceReq currency API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} = Payout.CreatePayoutServiceReq {..}
+mkCreatePayoutServiceReq :: Currency -> IPayout.PayoutServiceFlow -> API.Types.UI.ReferralPayout.CreatePayoutOrderReq -> Payout.CreatePayoutServiceReq
+mkCreatePayoutServiceReq currency payoutServiceFlow API.Types.UI.ReferralPayout.CreatePayoutOrderReq {..} =
+  Payout.CreatePayoutServiceReq
+    { transferAmount = amount, -- for now keep it the same
+      ..
+    }
 
 getPayoutOrderStatus ::
   (EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, EncFlow m r, CacheFlow m r, MonadFlow m, HasShortDurationRetryCfg r c, ServiceFlow m r) =>

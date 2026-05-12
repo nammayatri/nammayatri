@@ -7,6 +7,7 @@ import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -39,6 +40,9 @@ data PayoutOrderT f = PayoutOrderT
     retriedOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
+    transferAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    transferId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    transferStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }

@@ -6,6 +6,7 @@ module Lib.Payment.Storage.Queries.PayoutOrder (module Lib.Payment.Storage.Queri
 
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -38,6 +39,13 @@ findByOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updatePayoutOrderStatus :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Text -> m ())
 updatePayoutOrderStatus status orderId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
+
+updatePayoutOrderStatusAndTransferStatus ::
+  (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus -> Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus -> Kernel.Prelude.Text -> m ())
+updatePayoutOrderStatusAndTransferStatus status transferStatus orderId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.transferStatus transferStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.orderId $ Se.Eq orderId]
 
 updatePayoutOrderTxnRespInfo ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -80,6 +88,9 @@ updateByPrimaryKey (Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder {..}) = do
       Se.Set Beam.retriedOrderId retriedOrderId,
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId <$> shortId),
       Se.Set Beam.status status,
+      Se.Set Beam.transferAmount transferAmount,
+      Se.Set Beam.transferId transferId,
+      Se.Set Beam.transferStatus transferStatus,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vpa vpa
     ]
