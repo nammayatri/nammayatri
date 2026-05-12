@@ -1,4 +1,4 @@
-
+#!/usr/bin/env bash
 # lts-sync-lint.sh
 #
 # Linter that ensures every DB update touching a DriverPoolData-relevant
@@ -157,7 +157,7 @@ for filepath in "${FILES[@]}"; do
   ' "$filepath")
 
   # Extract violation count and details
-  count_line=$(echo "$result" | grep "^VIOLATION_COUNT=")
+  count_line=$(echo "$result" | grep "^VIOLATION_COUNT=" || true)
   file_violations="${count_line#VIOLATION_COUNT=}"
   details=$(echo "$result" | grep -v "^VIOLATION_COUNT=" || true)
 
