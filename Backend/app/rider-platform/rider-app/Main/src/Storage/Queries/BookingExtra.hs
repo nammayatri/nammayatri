@@ -452,3 +452,32 @@ findBookingsForPartnerStatement personId startDate endDate pageSize page = do
     (Se.Desc BeamB.createdAt)
     (Just limit')
     (Just offset')
+
+-- | Single consolidated update for service tier change — called from on_update handler.
+-- Updates all tier-related fields in one DB write.
+updateServiceTierOnChange ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DRB.Booking ->
+  ServiceTierType ->
+  Maybe HighPrecMoney ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Bool ->
+  Maybe Double ->
+  Maybe Int ->
+  m ()
+updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAC mbAirConditioned mbSeatingCapacity = do
+  now <- getCurrentTime
+  let baseSets =
+        [ Se.Set BeamB.vehicleVariant newServiceTier,
+          Se.Set BeamB.updatedAt now
+        ]
+      fareSets = maybe [] (\fare -> [Se.Set BeamB.estimatedFare fare, Se.Set BeamB.estimatedTotalFare fare]) mbNewFare
+      quoteSets = maybe [] (\qId -> [Se.Set BeamB.quoteId (Just qId)]) mbNewQuoteId
+      nameSets = maybe [] (\n -> [Se.Set BeamB.serviceTierName (Just n)]) mbServiceTierName
+      descSets = maybe [] (\d -> [Se.Set BeamB.serviceTierShortDesc (Just d)]) mbServiceTierShortDesc
+      acSets = maybe [] (\ac -> [Se.Set BeamB.isAirConditioned (Just ac)]) mbIsAC
+      acThresholdSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
+      seatSets = maybe [] (\s -> [Se.Set BeamB.vehicleServiceTierSeatingCapacity (Just s)]) mbSeatingCapacity
+  updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

@@ -1975,3 +1975,40 @@ instance IsHTTPError TripAlertRequestError where
     TripAlertRequestNotFound _ -> E404
 
 instance IsAPIError TripAlertRequestError
+
+data ChangeServiceTierError
+  = ChangeServiceTierNotSupported
+  | ChangeServiceTierInvalidBookingStatus Text
+  | ChangeServiceTierSameTier
+  | ChangeServiceTierQuoteNotFound Text
+  | ChangeServiceTierQuoteTierMismatch
+  | ChangeServiceTierQuoteNoFarePolicy
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ChangeServiceTierError
+
+instance IsBaseError ChangeServiceTierError where
+  toMessage ChangeServiceTierNotSupported = Just "Change service tier is currently supported only for RideOTP bookings."
+  toMessage (ChangeServiceTierInvalidBookingStatus status) = Just $ "Cannot change service tier in booking status: " <> status
+  toMessage ChangeServiceTierSameTier = Just "New service tier is the same as the current one."
+  toMessage (ChangeServiceTierQuoteNotFound quoteId) = Just $ "Quote not found: " <> quoteId
+  toMessage ChangeServiceTierQuoteTierMismatch = Just "Quote service tier does not match requested tier."
+  toMessage ChangeServiceTierQuoteNoFarePolicy = Just "Quote does not have a fare policy."
+
+instance IsHTTPError ChangeServiceTierError where
+  toErrorCode = \case
+    ChangeServiceTierNotSupported -> "CHANGE_SERVICE_TIER_NOT_SUPPORTED"
+    ChangeServiceTierInvalidBookingStatus _ -> "CHANGE_SERVICE_TIER_INVALID_BOOKING_STATUS"
+    ChangeServiceTierSameTier -> "CHANGE_SERVICE_TIER_SAME_TIER"
+    ChangeServiceTierQuoteNotFound _ -> "CHANGE_SERVICE_TIER_QUOTE_NOT_FOUND"
+    ChangeServiceTierQuoteTierMismatch -> "CHANGE_SERVICE_TIER_QUOTE_TIER_MISMATCH"
+    ChangeServiceTierQuoteNoFarePolicy -> "CHANGE_SERVICE_TIER_QUOTE_NO_FARE_POLICY"
+  toHttpCode = \case
+    ChangeServiceTierNotSupported -> E400
+    ChangeServiceTierInvalidBookingStatus _ -> E400
+    ChangeServiceTierSameTier -> E400
+    ChangeServiceTierQuoteNotFound _ -> E400
+    ChangeServiceTierQuoteTierMismatch -> E400
+    ChangeServiceTierQuoteNoFarePolicy -> E500
+
+instance IsAPIError ChangeServiceTierError

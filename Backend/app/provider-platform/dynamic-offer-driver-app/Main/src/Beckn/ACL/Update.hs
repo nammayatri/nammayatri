@@ -72,6 +72,7 @@ parseEvent merchantId reqMsg context = do
       parseEditLocationEvent bookingId fulfillment rideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
+    "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent bookingId fulfillment
     _ -> throwError (InvalidRequest "Invalid event type")
   where
     parseAddStopEvent bookingId fulfillment = do
@@ -114,6 +115,20 @@ parseEvent merchantId reqMsg context = do
               status,
               bapBookingUpdateRequestId = messageId,
               transactionId
+            }
+
+    parseChangeServiceTierEvent bookingId _fulfillment = do
+      let mbNewServiceTier = Utils.getTagV2 Tag.CHANGE_SERVICE_TIER_DETAILS Tag.NEW_VEHICLE_SERVICE_TIER reqMsg.updateReqMessageOrder.orderTags
+      newServiceTierText <- mbNewServiceTier & fromMaybeM (InvalidRequest "new_vehicle_service_tier tag not found in CHANGE_SERVICE_TIER event")
+      newServiceTier <- (Kernel.Prelude.readMaybe . toString $ newServiceTierText) & fromMaybeM (InvalidRequest $ "Invalid service tier: " <> newServiceTierText)
+      item <- reqMsg.updateReqMessageOrder.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found in CHANGE_SERVICE_TIER event")
+      bppQuoteId <- item.itemId & fromMaybeM (InvalidRequest "Item id (bppQuoteId) not found in CHANGE_SERVICE_TIER event")
+      pure $
+        DUpdate.UChangeServiceTierReq $
+          DUpdate.ChangeServiceTierReq
+            { bookingId,
+              newVehicleServiceTier = newServiceTier,
+              bppQuoteId
             }
 
 castOrderStatus :: (MonadFlow m) => Text -> m Enums.OrderStatus

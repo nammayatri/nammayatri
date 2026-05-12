@@ -58,6 +58,7 @@ library
       Domain.Action.RiderPlatform.Management.System
       Domain.Action.RiderPlatform.RideBooking.Booking
       Domain.Action.RiderPlatform.RideBooking.Cancel
+      Domain.Action.RiderPlatform.RideBooking.ChangeServiceTier
       Domain.Action.RiderPlatform.RideBooking.Confirm
       Domain.Action.RiderPlatform.RideBooking.Frontend
       Domain.Action.RiderPlatform.RideBooking.Maps
@@ -101,6 +102,7 @@ library
       API.Action.RiderPlatform.RideBooking
       API.Action.RiderPlatform.RideBooking.Booking
       API.Action.RiderPlatform.RideBooking.Cancel
+      API.Action.RiderPlatform.RideBooking.ChangeServiceTier
       API.Action.RiderPlatform.RideBooking.Confirm
       API.Action.RiderPlatform.RideBooking.Frontend
       API.Action.RiderPlatform.RideBooking.Maps

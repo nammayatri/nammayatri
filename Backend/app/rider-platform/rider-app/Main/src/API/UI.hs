@@ -62,6 +62,7 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.ChangeServiceTier as ChangeServiceTier
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
 import qualified API.UI.FeedbackForm as FeedbackForm
@@ -169,6 +170,7 @@ type API =
            :<|> Dispatcher.API
            :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
+           :<|> ChangeServiceTier.API
        )
 
 handler :: FlowServer API
@@ -246,3 +248,4 @@ handler =
     :<|> Dispatcher.handler
     :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler
+    :<|> ChangeServiceTier.handler

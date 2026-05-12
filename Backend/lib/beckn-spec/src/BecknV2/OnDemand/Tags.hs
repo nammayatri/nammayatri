@@ -103,6 +103,7 @@ data BecknTagGroup
   | OFFER_INFO
   | BOOKING_INFO
   | EMAIL_DOMAIN_INFO
+  | CHANGE_SERVICE_TIER_DETAILS
   | -- v2.1.0 tag groups
     FEATURE_LIST -- item features (AC, etc.)
   | DISABILITY_VIS -- visual disability
@@ -565,6 +566,8 @@ data BecknTag
   | SETTLEMENT_BANK_CODE -- BAP_TERMS/BPP_TERMS: bank IFSC code
   | SETTLEMENT_BANK_ACCOUNT_NUMBER -- BAP_TERMS/BPP_TERMS: bank account number
   | SETTLEMENT_VIRTUAL_PAYMENT_ADDRESS -- BAP_TERMS/BPP_TERMS: UPI VPA
+  | -- Change service tier tags
+    NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -767,6 +770,8 @@ instance CompleteTag BecknTag where
     ENABLE_FREQUENT_LOCATION_UPDATES -> CUSTOMER_INFO
     ENABLE_OTP_LESS_RIDE -> CUSTOMER_INFO
     INITIATED_AS -> DELIVERY
+    -- Change service tier tags
+    NEW_VEHICLE_SERVICE_TIER -> CHANGE_SERVICE_TIER_DETAILS
     -- Fare policy tags
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY

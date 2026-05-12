@@ -23,6 +23,7 @@ import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
 import qualified Beckn.Types.Core.Taxi.OnUpdate.OnUpdateEvent.OnUpdateEventType as Event
 import qualified BecknV2.OnDemand.Enums as EventEnum
+import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
 import qualified BecknV2.OnDemand.Utils.Context as CU
@@ -356,4 +357,79 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderStatus = Nothing,
           orderCreatedAt = Just booking.createdAt,
           orderUpdatedAt = Just booking.updatedAt
+        }
+  OU.ChangeServiceTierBuildReq OU.DChangeServiceTierReq {..} -> do
+    let changeServiceTierTags =
+          [ Tag.getFullTagGroup
+              Tag.CHANGE_SERVICE_TIER_DETAILS
+              [ Tag.getFullTag Tag.NEW_VEHICLE_SERVICE_TIER (Just . T.pack $ show newVehicleServiceTier)
+              ]
+          ]
+    pure $
+      Spec.Order
+        { orderId = Just bookingId.getId,
+          orderItems =
+            Just
+              [ Spec.Item
+                  { itemAddOns = Nothing,
+                    itemCategoryIds = Nothing,
+                    itemCancellationTerms = Nothing,
+                    itemDescriptor = Nothing,
+                    itemFulfillmentIds = Nothing,
+                    itemId = Just bppQuoteId,
+                    itemLocationIds = Nothing,
+                    itemPaymentIds = Nothing,
+                    itemPrice = Nothing,
+                    itemTags = Nothing
+                  }
+              ],
+          orderFulfillments =
+            Just
+              [ Spec.Fulfillment
+                  { fulfillmentId = Nothing,
+                    fulfillmentAgent = Nothing,
+                    fulfillmentCustomer = Nothing,
+                    fulfillmentState =
+                      Just $
+                        Spec.FulfillmentState
+                          { fulfillmentStateDescriptor =
+                              Just $
+                                Spec.Descriptor
+                                  { descriptorLongDesc = Nothing,
+                                    descriptorCode = Just $ show EventEnum.CHANGE_SERVICE_TIER,
+                                    descriptorName = Nothing,
+                                    descriptorShortDesc = Nothing
+                                  }
+                          },
+                    fulfillmentStops = Nothing,
+                    fulfillmentTags = Nothing,
+                    fulfillmentType = Nothing,
+                    fulfillmentVehicle = Nothing
+                  }
+              ],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote =
+            Just $
+              Spec.Quotation
+                { quotationBreakup = Nothing,
+                  quotationPrice =
+                    Just $
+                      Spec.Price
+                        { priceComputedValue = Just $ show newEstimatedFare,
+                          priceCurrency = Just "INR",
+                          priceMaximumValue = Nothing,
+                          priceMinimumValue = Nothing,
+                          priceOfferedValue = Nothing,
+                          priceValue = Just $ show newEstimatedFare
+                        },
+                  quotationTtl = Nothing
+                },
+          orderTags = Just changeServiceTierTags,
+          orderStatus = Nothing,
+          orderCreatedAt = Nothing,
+          orderUpdatedAt = Nothing
         }
