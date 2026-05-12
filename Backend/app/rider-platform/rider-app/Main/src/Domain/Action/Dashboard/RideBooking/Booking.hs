@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.RideBooking.Booking
   )
 where
 
+import qualified API.Types.Dashboard.RideBooking.Booking as DBT
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking
 import qualified "this" Domain.Types.Booking.API
@@ -42,18 +43,35 @@ getBookingBooking ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe DBT.BookingSearchType ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Environment.Flow Domain.Types.Booking.API.BookingAPIEntity
-getBookingBooking merchantShortId _opCity bookingCode = do
+getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountryCode = do
   apiRateLimitOptions <- asks (.apiRateLimitOptions)
-  checkSlidingWindowLimitWithOptions bookingOtpKey apiRateLimitOptions
+  checkSlidingWindowLimitWithOptions ("booking-search-" <> searchValue) apiRateLimitOptions
   m <- findMerchantByShortId merchantShortId
-  -- Try displayBookingId Redis lookup first, then fallback to using bookingCode as bookingId
-  mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId bookingCode
-  let bookingId = fromMaybe (Kernel.Types.Id.Id bookingCode) mbBookingIdFromDisplay
-  booking <- SQB.findById bookingId >>= fromMaybeM (BookingNotFound bookingCode)
+  booking <- case fromMaybe DBT.BOOKING_ID mbSearchType of
+    DBT.BOOKING_ID -> findByDisplayOrRawId searchValue
+    DBT.PHONE -> findByPhone m (fromMaybe "+91" mbMobileCountryCode) searchValue
+    DBT.OTP -> findByRideOtp m searchValue
   Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id)
   where
-    bookingOtpKey = "booking-code-" <> bookingCode
+    findByDisplayOrRawId code = do
+      mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId code
+      let bookingId = fromMaybe (Kernel.Types.Id.Id code) mbBookingIdFromDisplay
+      SQB.findById bookingId >>= fromMaybeM (BookingNotFound code)
+
+    findByPhone m countryCode phone = do
+      phoneHash <- getDbHash phone
+      person <- QPerson.findByMobileNumberAndMerchantId countryCode phoneHash m.id >>= fromMaybeM (PersonNotFound phone)
+      SQB.findLatestSelfAndPartyBookingByRiderId person.id >>= fromMaybeM (BookingNotFound phone)
+
+    findByRideOtp m otpVal = do
+      merchantOpCity <-
+        CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      SQB.findByOtpAndMerchantAndCity otpVal m.id merchantOpCity.id
+        >>= fromMaybeM (BookingNotFound otpVal)
 
 getBookingList ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

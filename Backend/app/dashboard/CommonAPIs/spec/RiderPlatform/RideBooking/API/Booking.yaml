@@ -27,11 +27,14 @@ apis:
       migrate:
         endpoint: RBooking RideStatusEndPoint
         userActionType: ApiAuth APP_BACKEND CUSTOMERS BOOKING_STATUS
-  - GET: # BookingInfoAPIUsingOTP
-      endpoint: /{bookingCode}/booking
+  - GET: # BookingInfoAPI (search by display-id, phone, or pickup OTP)
+      endpoint: /{searchValue}/booking
       auth: NoAuth
       params:
-        bookingCode: Text
+        searchValue: Text
+      query:
+        - searchType: BookingSearchType
+        - mobileCountryCode: Text
       response:
         type: BookingAPIEntity
   - GET: # CustomerBookingListAPI
@@ -86,4 +89,7 @@ apis:
         - toDate: UTCTime
       response:
         type: BookingListRes
-types: {}
+types:
+  BookingSearchType:
+    - enum: "BOOKING_ID, PHONE, OTP"
+    - derive: "HttpInstance"
