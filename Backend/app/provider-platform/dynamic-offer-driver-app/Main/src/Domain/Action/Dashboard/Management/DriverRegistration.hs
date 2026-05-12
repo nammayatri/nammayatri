@@ -1671,7 +1671,7 @@ approveAndUpdateUdyamDocument req _mId _mOpCityId = do
   let udyamId = Id req.udyamId.getId :: Id DUdyam.DriverUdyam
   driverUdyam <- QUdyam.findById udyamId >>= fromMaybeM (DocumentNotFound udyamId.getId)
   person <- QPerson.findById driverUdyam.driverId >>= fromMaybeM (PersonNotFound driverUdyam.driverId.getId)
-  uamNumber <- decrypt driverUdyam.udyamNumber
+  uamNumber <- maybe (decrypt driverUdyam.udyamNumber) pure req.udyamNumber
   latestImage <-
     listToMaybe <$> QImage.findRecentByPersonIdAndImageType driverUdyam.driverId DVC.UDYAMCertificate
       >>= fromMaybeM (InternalError $ "No UDYAM image found for driver " <> driverUdyam.driverId.getId)
