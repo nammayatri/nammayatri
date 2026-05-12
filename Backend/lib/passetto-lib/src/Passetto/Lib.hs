@@ -173,8 +173,11 @@ mkPassettoContextAuto host port = do
   useLib <- liftIO $ lookupEnv "USE_PASSETTO_LIB"
   case useLib of
     Just "true" -> do
-      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> "true" <> " → using in-process crypto lib."
+      liftIO $ putStrLn "[passetto-lib] USE_PASSETTO_LIB=true → using in-process crypto lib."
       mkPassettoContextFromKeys
+    Just val -> do
+      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> val <> " (not 'true') → using passetto HTTP service at " <> host <> ":" <> show port
+      mkDefPassettoContext host port
     Nothing -> do
       liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB not set → using passetto HTTP service at " <> host <> ":" <> show port
       mkDefPassettoContext host port
