@@ -28,4 +28,4 @@ type API = MCF.ForwardAPI
 
 handler :: AppEnv -> FlowServer API
 handler env _mbSecret _mbDest =
-  Tagged (MCF.forwardEgressApp env.masterCloudProxyConfig env.masterCloudForwarderManager)
+  Tagged (MCF.forwardEgressApp env.loggerEnv env.masterCloudProxyConfig env.masterCloudForwarderManager)

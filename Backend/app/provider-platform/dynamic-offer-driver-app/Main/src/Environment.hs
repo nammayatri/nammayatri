@@ -390,7 +390,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       serviceClickhouseCfg = driverClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
-  masterCloudForwarderManager <- Http.newManager HttpTLS.tlsManagerSettings
+  masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
