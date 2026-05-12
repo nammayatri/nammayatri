@@ -85,8 +85,14 @@ loadKeypairs = do
 passettoVersion :: Text
 passettoVersion = "0.1.0"
 
-encodeJsonValue :: Aeson.Value -> Text
-encodeJsonValue = TE.decodeUtf8 . LBS.toStrict . Aeson.encode
+taggedPlaintext :: Aeson.Value -> Text
+taggedPlaintext = \case
+  Aeson.String s   -> "S" <> s
+  Aeson.Bool True  -> "T"
+  Aeson.Bool False -> "F"
+  Aeson.Number n   -> "N" <> T.pack (show n)
+  Aeson.Null       -> "0"
+  other            -> "S" <> TE.decodeUtf8 (LBS.toStrict (Aeson.encode other))
 
 bulkEncryptWithKeys :: Vector KeyPair -> BulkEncryptCall
 bulkEncryptWithKeys _ [] = return []
@@ -95,7 +101,7 @@ bulkEncryptWithKeys keys vals = liftIO $ mapM encryptOne vals
     encryptOne val = do
       idx <- randomRIO (0, V.length keys - 1)
       let (_, pk) = keys V.! idx
-      cipherBs <- Box.boxSeal pk (TE.encodeUtf8 $ encodeJsonValue val)
+      cipherBs <- Box.boxSeal pk (TE.encodeUtf8 $ taggedPlaintext val)
       let cipher64 = TE.decodeUtf8 $ Base64.encode cipherBs
       return . EncryptedRaw $
         passettoVersion <> "|" <> T.pack (show idx) <> "|" <> cipher64
@@ -128,10 +134,29 @@ bulkDecryptWithKeys keys encs = mapM decryptOne encs
         Right t -> return t
         Left _  -> throwError $ UnexpectedResponse
                      "Decrypted bytes are not valid UTF-8"
-      case Aeson.eitherDecodeStrict (TE.encodeUtf8 jsonText) of
+      parseJsonText jsonText
+
+    parseJsonText txt =
+      case T.uncons txt of
+        Just ('S', rest) ->
+          case Aeson.eitherDecodeStrict (TE.encodeUtf8 rest) of
+            Right v -> return v
+            Left _  -> return (Aeson.String rest)
+        Just ('N', rest) ->
+          case Aeson.eitherDecodeStrict (TE.encodeUtf8 rest) of
+            Right v -> return v
+            Left err -> throwError $ UnexpectedResponse $
+                          "Invalid number after N prefix: " <> T.pack err
+        Just ('T', rest) | T.null rest -> return (Aeson.Bool True)
+        Just ('F', rest) | T.null rest -> return (Aeson.Bool False)
+        Just ('0', rest) | T.null rest -> return Aeson.Null
+        _ -> parseWithoutPrefix txt
+
+    parseWithoutPrefix txt =
+      case Aeson.eitherDecodeStrict (TE.encodeUtf8 txt) of
         Right v  -> return v
         Left err -> throwError $ UnexpectedResponse $
-                     "Failed to decode JSON: " <> T.pack err
+                     "Failed to decode decrypted JSON: " <> T.pack err
 
 mkPassettoContextFromKeys :: MonadIO m => m PassettoContext
 mkPassettoContextFromKeys = liftIO $ do

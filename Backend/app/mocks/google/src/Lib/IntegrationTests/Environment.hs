@@ -20,7 +20,6 @@ import Kernel.Prelude
 import Kernel.Types.Common (HighPrecMeters)
 import Kernel.Utils.Dhall (FromDhall, readDhallConfig)
 import Lib.GoogleConfig (GoogleCfgUnencrypted (..))
-import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
 
 buildGoogleConfig :: MonadIO m => EncTools -> GoogleCfgUnencrypted -> m MapsServiceConfig
