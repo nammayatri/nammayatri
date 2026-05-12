@@ -82,7 +82,7 @@ renderLineItemDescription locale = \case
     postDiscountSuffix NL = "Na korting"
 
     renderEN = \case
-      BaseFare -> "Base Fare"
+      BaseFare -> "Price Of The Trip"
       RideFare -> "Ride Fare"
       RideFareInclVat -> "Ride Fare (Incl. VAT)"
       RideFarePostDiscount _ _ -> "" -- handled above
@@ -528,7 +528,7 @@ renderFareTaxRow locale cur (fare, mbTax) =
       gross = fare.lineTotal + taxAmount
       vatPctText =
         if isJust mbTax && gross > 0
-          then fmtPct (realToFrac (taxAmount / gross) * 100.0)
+          then fmtPct (realToFrac (taxAmount / fare.lineTotal) * 100.0)
           else "0.0"
       vatAmtText = fmtMoneyNum cur taxAmount
    in tr
