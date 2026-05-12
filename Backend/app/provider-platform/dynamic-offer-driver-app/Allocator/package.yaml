@@ -65,6 +65,7 @@ dependencies:
   - containers
   - euler-hs
   - passetto-client
+  - passetto-lib
   - exceptions
   - hspec
   - servant

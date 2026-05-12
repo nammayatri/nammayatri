@@ -58,6 +58,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
@@ -327,7 +328,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

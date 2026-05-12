@@ -1,0 +1,59 @@
+name: passetto-lib
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2024 Juspay Technologies Private Limited"
+
+description: Internal passetto encryption library — in-process crypto using k8s secret keys, with fallback to passetto HTTP service via USE_PASSETTO_LIB env var.
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveGeneric
+  - DuplicateRecordFields
+  - FlexibleContexts
+  - FlexibleInstances
+  - LambdaCase
+  - MultiParamTypeClasses
+  - NamedFieldPuns
+  - OverloadedStrings
+  - RecordWildCards
+  - ScopedTypeVariables
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+
+library:
+  source-dirs:
+    - src
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+  dependencies:
+    - aeson
+    - base64-bytestring
+    - base >= 4.7 && < 5
+    - bytestring
+    - mtl
+    - passetto-client
+    - random
+    - saltine
+    - text
+    - vector

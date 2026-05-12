@@ -1817,6 +1817,7 @@ library
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , payment
     , persistent
     , postgresql-simple
@@ -1963,6 +1964,7 @@ executable dynamic-offer-driver-app-exe
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , prometheus-client

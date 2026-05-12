@@ -104,6 +104,7 @@ library
     , monad-control
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , persistent-postgresql
     , postgresql-simple
@@ -191,6 +192,7 @@ executable kafka-consumers-exe
     , monad-control
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , persistent-postgresql
     , postgresql-simple

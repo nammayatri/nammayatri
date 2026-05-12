@@ -78,6 +78,7 @@ dependencies:
   - resource-pool
   - uuid
   - passetto-client
+  - passetto-lib
   - prometheus-client
   - record-hasfield
   - record-dot-preprocessor

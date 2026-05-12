@@ -141,6 +141,7 @@ library
     , mobility-core
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , persistent-postgresql
     , postgresql-simple

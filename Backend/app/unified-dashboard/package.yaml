@@ -90,6 +90,7 @@ dependencies:
   - wai
   - shared-services
   - passetto-client
+  - passetto-lib
   - cryptonite
   - base32
   - random
