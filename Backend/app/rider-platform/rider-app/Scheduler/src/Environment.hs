@@ -52,6 +52,7 @@ import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -152,7 +153,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   eventRequestCounter <- registerEventRequestCounterMetric
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- (uncurry mkPassettoContextAuto) encTools.service
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing

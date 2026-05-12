@@ -73,6 +73,7 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
@@ -341,7 +342,7 @@ buildAppEnv cfg@AppCfg {..} = do
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   isShuttingDown <- newEmptyTMVarIO
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname

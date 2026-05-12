@@ -53,6 +53,7 @@ import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -157,7 +158,7 @@ buildHandlerEnv HandlerCfg {..} = do
   eventRequestCounter <- registerEventRequestCounterMetric
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
   ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg identity
   secondaryLTSHedisEnv <- case appCfg.secondaryLTSRedisCfg of

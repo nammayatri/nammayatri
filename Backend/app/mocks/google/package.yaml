@@ -66,6 +66,7 @@ dependencies:
   - bytestring
   - euler-hs
   - passetto-client
+  - passetto-lib
   - record-dot-preprocessor
   - record-hasfield
   - text
@@ -77,6 +78,7 @@ dependencies:
   - esqueleto
   - template-haskell
   - passetto-client
+  - passetto-lib
   - containers
   - unordered-containers
   - http-client

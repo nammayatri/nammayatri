@@ -17,7 +17,8 @@ module Environment where
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.ServerName
-import Kernel.External.Encryption (EncTools, mkDefPassettoContext)
+import Kernel.External.Encryption (EncTools)
+import Passetto.Lib (mkPassettoContextAuto)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
@@ -144,7 +145,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer

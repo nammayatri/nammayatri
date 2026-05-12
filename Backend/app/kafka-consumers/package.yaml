@@ -95,6 +95,7 @@ dependencies:
   - uuid
   - beckn-spec
   - passetto-client
+  - passetto-lib
 
 ghc-options:
   - -Wall

@@ -34,6 +34,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import System.Environment
 import Tools.Metrics
 import Tools.Streaming.Kafka
@@ -144,7 +145,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   podName <- getPodName
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig podName
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- (uncurry mkPassettoContextAuto) encTools.service
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
