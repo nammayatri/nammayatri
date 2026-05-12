@@ -842,21 +842,17 @@ postWalletRecharge (personId, merchantId) req = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   nwAddress <- asks (.nwAddress)
-  let mbPaymentRules =
-        fmap
-          ( \pId ->
-              Payment.PaymentRules
-                { paymentFlows =
-                    Payment.PaymentFlows
-                      { loyaltyOsTopup =
-                          Payment.PaymentFlowStatus
-                            { status = "REQUIRED",
-                              info = Just $ Payment.PaymentFlowInfo {programId = pId}
-                            }
+  let paymentRules =
+        Payment.PaymentRules
+          { paymentFlows =
+              Payment.PaymentFlows
+                { loyaltyOsTopup =
+                    Payment.PaymentFlowStatus
+                      { status = "REQUIRED",
+                        info = Payment.PaymentFlowInfo {programId = req.programId}
                       }
                 }
-          )
-          req.programId
+          }
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -878,7 +874,7 @@ postWalletRecharge (personId, merchantId) req = do
             webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = mbPaymentRules,
+            paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing
           }

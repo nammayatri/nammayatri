@@ -420,8 +420,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
       case successTransactions of
         [] -> throwError $ InvalidRequest "No successful transaction found"
-        [transaction] -> return transaction.id
-        _ -> throwError $ InvalidRequest "Multiple successful transactions found"
+        (transaction : _) -> return transaction.id
 
 getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
 getMerchantOperatingCityFromBooking tBooking = do
@@ -503,6 +502,7 @@ makeTicketBookingPaymentAPIStatus STARTED = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus AUTO_REFUNDED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus CLIENT_AUTH_TOKEN_EXPIRED = FRFSTicketService.FAILURE
 makeTicketBookingPaymentAPIStatus Payment.CANCELLED = FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus PARTIAL_CHARGED = FRFSTicketService.PENDING
 
 addPaymentoffersTags ::
   ( MonadFlow m,

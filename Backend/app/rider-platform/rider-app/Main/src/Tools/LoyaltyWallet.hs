@@ -40,7 +40,7 @@ loyaltyInfo customerId merchantId merchantOperatingCityId = do
     DMSC.MultiModalPaymentServiceConfig paymentCfg ->
       case paymentCfg of
         Payment.JuspayConfig juspayCfg -> do
-          let loyaltyCfg = JuspayWallet.LoyaltyCfg {baseUrl = juspayCfg.url, apiKey = juspayCfg.apiKey}
+          let loyaltyCfg = JuspayWallet.LoyaltyCfg {baseUrl = juspayCfg.url, apiKey = juspayCfg.apiKey, merchantId = juspayCfg.merchantId}
           let req =
                 WalletTypes.LoyaltyInfoRequest
                   { customer = WalletTypes.CustomerRequest {customerId = customerId},

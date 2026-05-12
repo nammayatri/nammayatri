@@ -492,6 +492,7 @@ statusToId = \case
   Payment.AUTO_REFUNDED -> 28
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> 29
   Payment.CANCELLED -> 30
+  Payment.PARTIAL_CHARGED -> 31
 
 toJuspayRefundStatus :: Payment.RefundStatus -> Juspay.RefundStatus
 toJuspayRefundStatus = \case
