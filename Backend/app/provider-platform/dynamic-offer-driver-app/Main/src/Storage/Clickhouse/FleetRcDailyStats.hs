@@ -13,6 +13,7 @@ import qualified Storage.Queries.FleetRcDailyStatsExtra as QFRDSExtra
 data FleetRcDailyStatsT f = FleetRcDailyStatsT
   { fleetOwnerId :: C f Text,
     rcId :: C f Text,
+    merchantId :: C f (Maybe Text),
     merchantLocalDate :: C f Day,
     totalCompletedRides :: C f Int,
     totalEarnings :: C f HighPrecMoney,
@@ -32,6 +33,7 @@ fleetRcDailyStatsTTable =
   FleetRcDailyStatsT
     { fleetOwnerId = "fleet_owner_id",
       rcId = "rc_id",
+      merchantId = "merchant_id",
       merchantLocalDate = "merchant_local_date",
       totalCompletedRides = "total_completed_rides",
       totalEarnings = "total_earnings",
@@ -43,14 +45,15 @@ $(TH.mkClickhouseInstances ''FleetRcDailyStatsT 'SELECT_FINAL_MODIFIER)
 
 aggerateVehicleStatsByFleetOwnerIdAndDateRange ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Text ->
+  Maybe Text ->
   Maybe Text ->
   Int ->
   Int ->
   Day ->
   Day ->
+  Maybe Text ->
   m [QFRDSExtra.FleetRcDailyStatsAggregated]
-aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset fromDay toDay = do
+aggerateVehicleStatsByFleetOwnerIdAndDateRange mbFleetOwnerId mbRcId limit offset fromDay toDay mbMerchantId = do
   rows <-
     CH.findAll $
       CH.select_
@@ -76,8 +79,9 @@ aggerateVehicleStatsByFleetOwnerIdAndDateRange fleetOwnerId mbRcId limit offset 
           CH.offset_ offset $
             CH.filter_
               ( \fleetRcDailyStats ->
-                  fleetRcDailyStats.fleetOwnerId CH.==. fleetOwnerId
+                  CH.whenJust_ mbFleetOwnerId (\fo -> fleetRcDailyStats.fleetOwnerId CH.==. fo)
                     CH.&&. CH.whenJust_ mbRcId (\rcId -> fleetRcDailyStats.rcId CH.==. rcId)
+                    CH.&&. CH.whenJust_ mbMerchantId (\mId -> fleetRcDailyStats.merchantId CH.==. Just mId)
                     CH.&&. fleetRcDailyStats.merchantLocalDate CH.>=. fromDay
                     CH.&&. fleetRcDailyStats.merchantLocalDate CH.<=. toDay
               )

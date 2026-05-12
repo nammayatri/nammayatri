@@ -600,6 +600,7 @@ apis:
         - to: Day
         - fleetOwnerId: Text
         - search: Text
+        - driverNumber: Text
         - limit: Int
         - offset: Int
         - sortDesc: Bool
@@ -618,6 +619,7 @@ apis:
               - to: Day
               - fleetOwnerId: Text
               - search: Text
+              - driverNumber: Text
               - limit: Int
               - offset: Int
               - sortDesc: Bool

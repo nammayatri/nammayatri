@@ -456,11 +456,11 @@ getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo mbFleetOwne
   (fleetOwnerId, requestorId) <- getFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId (Just requestorId) mbResponseType from to
 
-getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
-getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to mbFleetOwnerId search limit offset sortDesc sortOn responseType = do
+getDriverFleetDriverListStats :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Day -> Maybe Day -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Maybe Bool -> Maybe Common.FleetDriverListStatsSortOn -> Maybe Common.FleetDriverStatsResponseType -> Flow Common.FleetDriverStatsListRes
+getDriverFleetDriverListStats merchantShortId opCity apiTokenInfo from to mbFleetOwnerId search driverNumber limit offset sortDesc sortOn responseType = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) requestorId from to mbFleetOwnerId' search limit offset sortDesc sortOn responseType
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDriverListStats) requestorId from to mbFleetOwnerId' search driverNumber limit offset sortDesc sortOn responseType
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
