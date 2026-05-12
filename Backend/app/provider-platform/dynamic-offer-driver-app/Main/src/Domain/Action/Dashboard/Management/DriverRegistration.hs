@@ -46,7 +46,6 @@ import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.HashMap.Strict as HM
-import Data.List (nub, (\\))
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (utctDay)
