@@ -41,6 +41,13 @@ types:
     date: Day
     signature: Text
     termsAccepted: Bool
+  ShareAllotment:
+    applicationId: Text
+    numberOfShares: Int
+    applicationCount: Maybe Int
+    shareStartCount: Maybe Int
+    shareEndCount: Maybe Int
+    submittedAt: UTCTime
   MembershipApplicationReq:
     driverId: Text
     firstName: Text
@@ -61,6 +68,10 @@ types:
     nomineeInfo: NomineeInfo
     declaration: Declaration
     amount: Money
+    paymentServiceType: Maybe PaymentServiceType
+  TopUpSharesReq:
+    numberOfShares: Int
+    amount: Maybe Money
     paymentServiceType: Maybe PaymentServiceType
   UpdateMembershipApplicationReq:
     bankDetails: Maybe UpdateBankDetails
@@ -93,9 +104,11 @@ types:
     nomineeInfo: NomineeInfo
     declaration: Declaration
     status: ApplicationStatus
+    # Deprecated — reflects only the latest allotment for the driver. Use shareAllotments instead.
     applicationCount: Maybe Int
     shareStartCount: Maybe Int
     shareEndCount: Maybe Int
+    shareAllotments: "[ShareAllotment]"
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -105,6 +118,13 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: MembershipApplicationReq
+      response:
+        type: CreateOrderResp
+  - POST:
+      endpoint: /buyAdditionalShares
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: TopUpSharesReq
       response:
         type: CreateOrderResp
   - PUT:
