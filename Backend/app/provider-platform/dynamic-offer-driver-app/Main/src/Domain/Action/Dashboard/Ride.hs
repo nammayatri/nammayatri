@@ -325,6 +325,7 @@ buildRideListItem :: EncFlow m r => QRide.RideItem -> m Common.RideListItem
 buildRideListItem QRide.RideItem {..} = do
   customerPhoneNo <- decrypt riderDetails.mobileNumber
   driverPhoneNo <- mapM decrypt rideDetails.driverNumber
+  fleetNumber' <- mapM decrypt fleetNumber
   pure
     Common.RideListItem
       { rideId = cast @DRide.Ride @Common.Ride rideDetails.id,
@@ -348,7 +349,15 @@ buildRideListItem QRide.RideItem {..} = do
         rideCreatedAt = rideCreatedAt,
         customerPickupLocation = mkLocationAPIEntity <$> customerPickupLocation,
         customerDropLocation = mkLocationAPIEntity <$> customerDropLocation,
-        payoutRequestId = cast <$> payoutRequestId
+        payoutRequestId = cast <$> payoutRequestId,
+        vehicleServiceTierName = vehicleServiceTierName,
+        driverArrivalTime = driverArrivalTime,
+        tripStartTime = tripStartTime,
+        tripEndTime = tripEndTime,
+        fleetName = fleetName,
+        fleetNumber = fleetNumber',
+        vehicleManufacturer = vehicleManufacturer,
+        vehicleModel = vehicleModel
       }
 
 buildRideListItemV2 :: EncFlow m r => QRide.RideItemV2 -> m Common.RideListItemV2

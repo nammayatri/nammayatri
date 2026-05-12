@@ -252,6 +252,14 @@ types:
     - customerPickupLocation: Maybe LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - payoutRequestId: Maybe (Id PayoutRequest)
+    - vehicleManufacturer: Maybe Text
+    - vehicleModel: Maybe Text
+    - fleetName: Maybe Text
+    - fleetNumber: Maybe Text
+    - vehicleServiceTierName: Maybe Text
+    - driverArrivalTime: Maybe UTCTime
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
