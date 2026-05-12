@@ -14,6 +14,7 @@ where
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Driver, Gender)
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.VehicleVariant (VehicleVariant)
@@ -71,6 +72,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     maxPickupRadius :: SetField (Maybe Meters),
     isPetModeEnabled :: SetField Bool,
     chargesEnabled :: SetField Bool,
+    bankAccountPaymentMode :: SetField (Maybe DMPM.PaymentMode),
     language :: SetField (Maybe Maps.Language),
     gender :: SetField Gender,
     driverTag :: SetField (Maybe [LYT.TagNameValueExpiry]),
@@ -124,6 +126,7 @@ emptyUpdate =
       maxPickupRadius = Unchanged,
       isPetModeEnabled = Unchanged,
       chargesEnabled = Unchanged,
+      bankAccountPaymentMode = Unchanged,
       language = Unchanged,
       gender = Unchanged,
       driverTag = Unchanged,
@@ -210,6 +213,7 @@ applyUpdate u d =
       DPD.maxPickupRadius = applyField u.maxPickupRadius d.maxPickupRadius,
       DPD.isPetModeEnabled = applyField u.isPetModeEnabled d.isPetModeEnabled,
       DPD.chargesEnabled = applyField u.chargesEnabled d.chargesEnabled,
+      DPD.bankAccountPaymentMode = applyField u.bankAccountPaymentMode d.bankAccountPaymentMode,
       DPD.language = applyField u.language d.language,
       DPD.gender = applyField u.gender d.gender,
       DPD.driverTag = applyField u.driverTag d.driverTag,

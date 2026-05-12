@@ -490,6 +490,7 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
+      SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DynamicPricing
