@@ -64,6 +64,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -1833,7 +1834,8 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
             uid <- generateGUID
             let entityName = entity
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True
+                payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True payoutServiceFlow
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 

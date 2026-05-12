@@ -12,6 +12,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as KT
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -134,7 +135,8 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           phoneNo <- mapM decrypt person.mobileNumber
           emailId <- mapM decrypt person.email
           uid <- generateGUID
-          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True
+          let payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
+          let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount payoutConfig.currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True payoutServiceFlow
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
           let createPayoutOrderCall = TPayout.createPayoutOrder person.clientSdkVersion person.merchantId merchantOpCityId (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)

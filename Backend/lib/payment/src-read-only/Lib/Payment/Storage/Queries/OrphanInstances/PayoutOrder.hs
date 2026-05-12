@@ -41,6 +41,9 @@ instance FromTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.Payout
             retriedOrderId = retriedOrderId,
             shortId = Kernel.Types.Id.ShortId <$> shortId,
             status = status,
+            transferAmount = transferAmount,
+            transferId = transferId,
+            transferStatus = transferStatus,
             updatedAt = updatedAt,
             vpa = vpa
           }
@@ -73,6 +76,9 @@ instance ToTType' Beam.PayoutOrder Lib.Payment.Domain.Types.PayoutOrder.PayoutOr
         Beam.retriedOrderId = retriedOrderId,
         Beam.shortId = Kernel.Types.Id.getShortId <$> shortId,
         Beam.status = status,
+        Beam.transferAmount = transferAmount,
+        Beam.transferId = transferId,
+        Beam.transferStatus = transferStatus,
         Beam.updatedAt = updatedAt,
         Beam.vpa = vpa
       }

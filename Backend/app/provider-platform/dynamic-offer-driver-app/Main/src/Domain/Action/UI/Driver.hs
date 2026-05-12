@@ -3384,7 +3384,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       phoneNo <- mapM decrypt person.mobileNumber
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       let payoutCurrency = maybe merchantOperatingCity.currency (.currency) (listToMaybe driverFeeToPayout)
-          createPayoutOrderReq = mkPayoutReq driverFeeToPayout person mbVpa uid phoneNo payoutCurrency
+          createPayoutOrderReq = mkPayoutReq driverFeeToPayout person mbVpa uid phoneNo payoutCurrency payoutServiceFlow
           entityName = DPayment.DRIVER_FEE
           createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
@@ -3437,10 +3437,11 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         )
         (([], []), refundAmount)
         driverFeeSorted
-    mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency = do
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency payoutServiceFlow = do
+      let amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout
       DPayment.CreatePayoutServiceReq
         { orderId = uid,
-          amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout,
+          amount,
           currency,
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
@@ -3449,7 +3450,9 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           remark = "Refund for security deposit",
           customerName = person.firstName,
           customerVpa = vpa,
-          isDynamicWebhookRequired = False
+          isDynamicWebhookRequired = False,
+          transferAmount = amount, -- for now keep it the same
+          payoutServiceFlow
         }
 
 isPlanVehCategoryOrCityChanged :: Id DMOC.MerchantOperatingCity -> Maybe DPlan.DriverPlan -> Maybe Vehicle -> (Bool, Bool)

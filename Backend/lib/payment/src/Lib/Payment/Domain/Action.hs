@@ -92,7 +92,8 @@ import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
-import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
+import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
+import qualified Kernel.External.Payout.Types as Payout
 import qualified Kernel.External.Wallet as Wallet
 -- import qualified Tools.Wallet as TWallet
 
@@ -189,6 +190,7 @@ data PaymentStatusResp
 
 data PayoutPaymentStatus = PayoutPaymentStatus
   { status :: Payout.PayoutOrderStatus,
+    transferStatus :: Maybe Payout.TransferStatus,
     orderId :: Text,
     accountDetailsType :: Maybe Text
   }
@@ -2234,6 +2236,7 @@ txnProccessingKey txnUUid = "Txn:Processing:TxnUuid" <> txnUUid
 data CreatePayoutServiceReq = CreatePayoutServiceReq
   { orderId :: Text,
     amount :: HighPrecMoney,
+    transferAmount :: HighPrecMoney,
     currency :: Currency,
     customerPhone :: Text,
     customerEmail :: Text,
@@ -2242,7 +2245,8 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
     remark :: Text,
     customerName :: Text,
     customerVpa :: Maybe Text,
-    isDynamicWebhookRequired :: Bool
+    isDynamicWebhookRequired :: Bool,
+    payoutServiceFlow :: PT.PayoutServiceFlow
   }
 
 mkCreatePayoutOrderReq :: Maybe Text -> Maybe Text -> CreatePayoutServiceReq -> PT.CreatePayoutOrderReq
@@ -2288,6 +2292,8 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
         ((.pgBaseFee) <$> mbFeeResult)
         ((.pgGst) <$> mbFeeResult)
         createPayoutOrderResp.idAssignedByServiceProvider
+        createPayoutOrderResp.transferStatus
+        createPayoutOrderResp.transferId
       latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
       return (Just createPayoutOrderResp, latestPayoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
@@ -2298,6 +2304,9 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
       shortId <- generateShortId
       customerEmail <- encrypt req.customerEmail
       mobileNo <- encrypt req.customerPhone
+      let transferStatus = case createPayoutServiceReq.payoutServiceFlow of
+            PT.JuspayFlow -> Nothing
+            PT.StripeFlow -> Just Payout.TRANSFER_INITIATED
       pure $
         Payment.PayoutOrder
           { id = uuid,
@@ -2308,10 +2317,13 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             mobileNo = mobileNo,
             city = city,
             amount = mkPrice Nothing req.amount,
+            transferAmount = Just req.transferAmount,
             idAssignedByServiceProvider = Nothing,
             entityIds = mbEntityIds,
             entityName = mbEntityName,
             status = Payout.INITIATED,
+            transferStatus,
+            transferId = Nothing,
             responseMessage = Nothing,
             responseCode = Nothing,
             retriedOrderId = Nothing,
@@ -2331,8 +2343,14 @@ data PayoutStatusServiceReq = PayoutStatusServiceReq
     mbExpand :: Maybe PT.Expand
   }
 
-mkPayoutOrderStatusReq :: Maybe Text -> Maybe Text -> Maybe Text -> PayoutStatusServiceReq -> PT.PayoutOrderStatusReq
-mkPayoutOrderStatusReq idAssignedByServiceProvider mRoutingId mConnectedAccountId PayoutStatusServiceReq {..} = PT.PayoutOrderStatusReq {..}
+mkPayoutOrderStatusReq :: Payment.PayoutOrder -> Maybe Text -> Maybe Text -> PayoutStatusServiceReq -> PT.PayoutOrderStatusReq
+mkPayoutOrderStatusReq payoutOrder mRoutingId mConnectedAccountId PayoutStatusServiceReq {..} =
+  PT.PayoutOrderStatusReq
+    { idAssignedByServiceProvider = payoutOrder.idAssignedByServiceProvider,
+      transferStatus = payoutOrder.transferStatus,
+      transferId = Payout.TransferId <$> payoutOrder.transferId,
+      ..
+    }
 
 payoutStatusService ::
   ( EncFlow m r,
@@ -2341,55 +2359,53 @@ payoutStatusService ::
   Id Merchant ->
   Id Person ->
   PayoutStatusServiceReq ->
-  (Maybe Text -> PayoutStatusServiceReq -> m PT.PayoutOrderStatusResp) ->
+  (Payment.PayoutOrder -> PayoutStatusServiceReq -> m PT.PayoutOrderStatusResp) ->
   m PayoutPaymentStatus
 payoutStatusService _merchantId _personId payoutStatusServiceReq createPayoutOrderStatusCall = do
   payoutOrder <- QPayoutOrder.findByOrderId payoutStatusServiceReq.orderId >>= fromMaybeM (PayoutOrderNotFound (payoutStatusServiceReq.orderId)) -- validation
-  statusResp <- createPayoutOrderStatusCall payoutOrder.idAssignedByServiceProvider payoutStatusServiceReq -- api call
-  payoutStatusUpdates statusResp.status payoutStatusServiceReq.orderId (Just statusResp)
-  pure $ PayoutPaymentStatus {status = statusResp.status, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
+  statusResp <- createPayoutOrderStatusCall payoutOrder payoutStatusServiceReq -- api call
+  payoutStatusUpdates payoutStatusServiceReq.orderId statusResp
+  pure $ PayoutPaymentStatus {status = statusResp.status, transferStatus = statusResp.transferStatus, orderId = statusResp.orderId, accountDetailsType = show <$> ((.detailsType) =<< (.beneficiaryDetails) =<< listToMaybe =<< statusResp.fulfillments)}
 
-payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => Payout.PayoutOrderStatus -> Text -> Maybe PT.PayoutOrderStatusResp -> m ()
-payoutStatusUpdates status_ orderId statusResp = do
+payoutStatusUpdates :: (EncFlow m r, PaymentBeamFlow.BeamFlow m r) => Text -> PT.PayoutOrderStatusResp -> m ()
+payoutStatusUpdates orderId statusResp = do
   order <- QPayoutOrder.findByOrderId orderId >>= fromMaybeM (PayoutOrderNotFound orderId)
-  QPayoutOrder.updatePayoutOrderStatus status_ orderId
+  case statusResp.transferStatus of
+    Just transferStatus -> QPayoutOrder.updatePayoutOrderStatusAndTransferStatus statusResp.status (Just transferStatus) orderId -- Stripe specific
+    Nothing -> QPayoutOrder.updatePayoutOrderStatus statusResp.status orderId
   logDebug $ "Payout order Status: " <> show statusResp
-  case statusResp of
-    Just Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} -> do
-      let mbFulfillment = listToMaybe =<< fulfillments
-          txns = (.transactions) =<< mbFulfillment
-          mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
-      QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
-      case mbTxn of
-        Just Payout.Transaction {amount = amount_txn, ..} -> do
-          findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
-          let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
-              mbDetails = (.details) =<< mbBeneficiaryDetails
-          case findTransaction of
-            Just _ -> QPayoutTransaction.updatePayoutTransactionStatus status transactionRef
-            Nothing -> do
-              uuid <- generateGUID
-              now <- getCurrentTime
-              let payoutTransaction =
-                    PT.PayoutTransaction
-                      { id = uuid,
-                        merchantId = order.merchantId,
-                        merchantOperatingCityId = order.merchantOperatingCityId,
-                        payoutOrderId = Id orderId,
-                        transactionRef = transactionRef,
-                        gateWayRefId = gatewayRefId,
-                        fulfillmentMethod = fulfillmentMethod,
-                        amount = mkPrice Nothing (realToFrac amount_txn),
-                        status = status,
-                        beneficiaryName = (.name) <$> mbDetails,
-                        beneficiaryAccount = (.account) =<< mbDetails,
-                        beneficiaryIfsc = (.ifsc) =<< mbDetails,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              QPayoutTransaction.create payoutTransaction
-        Nothing -> pure ()
-    Nothing -> pure ()
+  let Payout.CreatePayoutOrderResp {orderId = _orderPayoutId, status = _status, ..} = statusResp
+  let mbFulfillment = listToMaybe =<< fulfillments
+      txns = (.transactions) =<< mbFulfillment
+      mbTxn = listToMaybe <$> sortBy (comparing (.updatedAt)) =<< txns
+  QPayoutOrder.updatePayoutOrderTxnRespInfo ((.responseCode) =<< mbTxn) ((.responseMessage) =<< mbTxn) orderId
+  whenJust mbTxn $ \JuspayPayout.Transaction {amount = amount_txn, ..} -> do
+    findTransaction <- QPayoutTransaction.findByTransactionRef transactionRef
+    let mbBeneficiaryDetails = (.beneficiaryDetails) =<< mbFulfillment
+        mbDetails = (.details) =<< mbBeneficiaryDetails
+    case findTransaction of
+      Just _ -> QPayoutTransaction.updatePayoutTransactionStatus status transactionRef
+      Nothing -> do
+        uuid <- generateGUID
+        now <- getCurrentTime
+        let payoutTransaction =
+              PT.PayoutTransaction
+                { id = uuid,
+                  merchantId = order.merchantId,
+                  merchantOperatingCityId = order.merchantOperatingCityId,
+                  payoutOrderId = Id orderId,
+                  transactionRef = transactionRef,
+                  gateWayRefId = gatewayRefId,
+                  fulfillmentMethod = fulfillmentMethod,
+                  amount = mkPrice Nothing (realToFrac amount_txn),
+                  status = status,
+                  beneficiaryName = (.name) <$> mbDetails,
+                  beneficiaryAccount = (.account) =<< mbDetails,
+                  beneficiaryIfsc = (.ifsc) =<< mbDetails,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QPayoutTransaction.create payoutTransaction
 
 mkCreatePayoutServiceReq ::
   Text ->
@@ -2403,13 +2419,15 @@ mkCreatePayoutServiceReq ::
   Maybe Text ->
   Text ->
   Bool ->
+  Payout.PayoutServiceFlow ->
   CreatePayoutServiceReq
-mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired =
+mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired payoutServiceFlow =
   CreatePayoutServiceReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
       isDynamicWebhookRequired = isDynamicWebhookRequired,
+      transferAmount = amount, -- for now keep it the same
       ..
     }
 

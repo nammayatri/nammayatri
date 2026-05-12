@@ -5,6 +5,7 @@ module Lib.Payment.Domain.Types.PayoutOrder where
 
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Payout.Interface.Types
 import qualified Kernel.External.Payout.Juspay.Types.Payout
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -35,6 +36,9 @@ data PayoutOrderE e = PayoutOrder
     retriedOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     shortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PayoutOrder.PayoutOrder),
     status :: Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus,
+    transferAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    transferId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    transferStatus :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.TransferStatus,
     updatedAt :: Kernel.Prelude.UTCTime,
     vpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
@@ -73,6 +77,9 @@ instance EncryptedItem PayoutOrder where
           retriedOrderId = retriedOrderId entity,
           shortId = shortId entity,
           status = status entity,
+          transferAmount = transferAmount entity,
+          transferId = transferId entity,
+          transferStatus = transferStatus entity,
           updatedAt = updatedAt entity,
           vpa = vpa entity
         }
@@ -103,6 +110,9 @@ instance EncryptedItem PayoutOrder where
             retriedOrderId = retriedOrderId entity,
             shortId = shortId entity,
             status = status entity,
+            transferAmount = transferAmount entity,
+            transferId = transferId entity,
+            transferStatus = transferStatus entity,
             updatedAt = updatedAt entity,
             vpa = vpa entity
           },
