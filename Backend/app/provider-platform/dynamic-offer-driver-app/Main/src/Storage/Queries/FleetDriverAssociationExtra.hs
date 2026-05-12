@@ -20,8 +20,11 @@ import Kernel.Types.Common
 import Kernel.Types.Id as KTI
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified Domain.Types.DriverBankAccount as DDBA
 import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.DriverBankAccount as BeamDBA
+import Storage.Queries.OrphanInstances.DriverBankAccount ()
 import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
 import qualified Storage.Beam.Person as BeamP
@@ -68,8 +71,13 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
               responseReason = Nothing,
               ..
             }
+        (mbFleetBa :: Maybe DDBA.DriverBankAccount) <- findOneWithKV [Se.Is BeamDBA.driverId $ Se.Eq fleetOwnerId.getId]
         LTSSync.syncDriverPoolDataToLTS (cast driverId) $
-          LTSSync.emptyUpdate {LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId)}
+          LTSSync.emptyUpdate
+            { LTSSync.fleetOwnerId = LTSSync.Set (Just fleetOwnerId.getId),
+              LTSSync.chargesEnabled = LTSSync.Set (maybe False (.chargesEnabled) mbFleetBa),
+              LTSSync.bankAccountPaymentMode = LTSSync.Set ((.paymentMode) =<< mbFleetBa)
+            }
   where
     driverFleetLockKey :: Text -> Text -> Text
     driverFleetLockKey dId fId = "fleet_driver_association:driver:" <> dId <> ":fleet_owner:" <> fId

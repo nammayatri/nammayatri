@@ -153,6 +153,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
                 nameAtBank = Nothing
               }
       QDBA.create driverBankAccount
+      QDBA.syncBankAccountToPool person.id resp.chargesEnabled (Just paymentMode)
       return $
         API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
           { chargesEnabled = resp.chargesEnabled,

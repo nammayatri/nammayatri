@@ -1,6 +1,5 @@
 module Storage.Queries.DriverBankAccountExtra where
 
-import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub)
 import Domain.Types.DriverBankAccount
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -21,45 +20,38 @@ import Storage.Queries.OrphanInstances.DriverBankAccount ()
 getDriverBankAccounts :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> m [Domain.Types.DriverBankAccount.DriverBankAccount])
 getDriverBankAccounts driverIds = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.In (Kernel.Types.Id.getId <$> driverIds)]]
 
-findDriverBankAccountByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m (Maybe DriverBankAccount)
-findDriverBankAccountByDriverId driverId = do
-  findOneWithKV [Se.Is Beam.driverId $ Se.Eq driverId.getId]
-
-getDriverOrFleetBankAccounts ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Maybe DMPM.PaymentMode ->
-  [Kernel.Types.Id.Id Domain.Types.Person.Person] ->
-  m [(Id DP.Person, Domain.Types.DriverBankAccount.DriverBankAccount)]
-getDriverOrFleetBankAccounts mbPaymentMode driverIds = do
-  fleetDriverAssociations <- QFOA.findAllByDriverIds driverIds
-  let fleetOwnerIds = nub $ fleetDriverAssociations <&> (Id @DP.Person . (.fleetOwnerId))
-      driverIdsWithFleet = nub $ fleetDriverAssociations <&> (.driverId)
-      driversIdsWithoutFleet = filter (`notElem` driverIdsWithFleet) driverIds
-      personIds = fleetOwnerIds <> driversIdsWithoutFleet
-      paymentMode = fromMaybe DMPM.LIVE mbPaymentMode
-  personBankAccounts <- getDriverBankAccounts personIds
-
-  let personBankAccountHashMap = HashMap.fromList $ (\pba -> (pba.driverId, pba)) <$> personBankAccounts
-      fleetDriverAssociationHashMap = HashMap.fromList $ (\fda -> (fda.driverId, fda)) <$> fleetDriverAssociations
-  let personBankAccountsMbList =
-        driverIds <&> \driverId -> do
-          personBankAccount <-
-            if driverId `elem` driverIdsWithFleet
-              then do
-                fleetDriverAssociation <- HashMap.lookup driverId fleetDriverAssociationHashMap
-                HashMap.lookup (Id @DP.Person fleetDriverAssociation.fleetOwnerId) personBankAccountHashMap -- fleet bank account
-              else do
-                HashMap.lookup driverId personBankAccountHashMap -- driver bank account
-          let paymentMode' = fromMaybe DMPM.LIVE personBankAccount.paymentMode
-          guard (paymentMode == paymentMode')
-          pure (driverId, personBankAccount)
-  pure $ catMaybes personBankAccountsMbList
-
 -- Wrapper for src-read-only function with LTS sync
 
 updateAccountStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Bool -> Bool -> Id DP.Person -> m ()
 updateAccountStatus chargesEnabled payoutsEnabled detailsSubmitted driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.chargesEnabled chargesEnabled, Se.Set Beam.payoutsEnabled (Just payoutsEnabled), Se.Set Beam.detailsSubmitted detailsSubmitted, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (getId driverId)]
-  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+  fanoutBankAccountSync driverId $
     LTSSync.emptyUpdate {LTSSync.chargesEnabled = LTSSync.Set chargesEnabled}
+
+-- | Sync a BA-derived LTS update to the BA owner's own pool data and to every
+-- active fleet-member driver under them. paymentMode is only set at BA creation
+-- (and on fleet membership change), so subsequent chargesEnabled-only updates
+-- leave it as Unchanged.
+syncBankAccountToPool ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id DP.Person ->
+  Bool ->
+  Maybe DMPM.PaymentMode ->
+  m ()
+syncBankAccountToPool ownerId chargesEnabled mbPaymentMode =
+  fanoutBankAccountSync ownerId $
+    LTSSync.emptyUpdate
+      { LTSSync.chargesEnabled = LTSSync.Set chargesEnabled,
+        LTSSync.bankAccountPaymentMode = LTSSync.Set mbPaymentMode
+      }
+
+fanoutBankAccountSync ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Id DP.Person ->
+  LTSSync.DriverPoolDataUpdate ->
+  m ()
+fanoutBankAccountSync ownerId update = do
+  fleetMemberIds <- QFOA.getActiveDriverIdsByFleetOwnerId ownerId.getId
+  let targetDriverIds = nub (cast ownerId : map cast fleetMemberIds)
+  mapM_ (`LTSSync.syncDriverPoolDataToLTS` update) targetDriverIds

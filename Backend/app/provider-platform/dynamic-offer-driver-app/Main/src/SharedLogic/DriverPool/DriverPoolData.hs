@@ -11,6 +11,7 @@ import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Driver, Gender (..))
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.VehicleVariant (VehicleVariant (..))
@@ -58,6 +59,7 @@ data DriverPoolData = DriverPoolData
     maxPickupRadius :: Maybe Meters,
     isPetModeEnabled :: Bool,
     chargesEnabled :: Bool,
+    bankAccountPaymentMode :: Maybe DMPM.PaymentMode,
     language :: Maybe Maps.Language,
     gender :: Gender,
     driverTag :: Maybe [LYT.TagNameValueExpiry],
@@ -77,7 +79,12 @@ data DriverPoolData = DriverPoolData
     airConditioned :: Maybe Bool,
     luggageCapacity :: Maybe Int,
     vehicleRating :: Maybe Double,
-    registrationNo :: Text
+    registrationNo :: Text,
+    -- | Monotonic schema version stamped by the cold-start builder and by
+    -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
+    -- means the entry was written before this field existed (treated as 0,
+    -- so every migrator runs on first cold read).
+    schemaVersion :: Maybe Int
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -133,6 +140,7 @@ defaultDriverPoolData dId =
       maxPickupRadius = Nothing,
       isPetModeEnabled = False,
       chargesEnabled = False,
+      bankAccountPaymentMode = Nothing,
       language = Nothing,
       gender = UNKNOWN,
       driverTag = Nothing,
@@ -150,7 +158,8 @@ defaultDriverPoolData dId =
       airConditioned = Nothing,
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
-      registrationNo = ""
+      registrationNo = "",
+      schemaVersion = Nothing
     }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
