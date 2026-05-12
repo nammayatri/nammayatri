@@ -1276,7 +1276,11 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
       return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.UDYAMCertificate -> do
       mbUdyam <- QUDYAM.findByDriverId driverId
-      return (mapStatus . (.verificationStatus) <$> mbUdyam, mbUdyam >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId)
+      case mbUdyam of
+        Just udyam -> return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId)
+        Nothing -> do
+          let hasImage = not . null $ IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo DVC.UDYAMCertificate [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+          return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
     DVC.TANCertificate -> commonDocStatus DVC.TANCertificate
     DVC.LDCCertificate -> commonDocStatus DVC.LDCCertificate
     DVC.BusinessLicense -> commonDocStatus DVC.BusinessLicense
