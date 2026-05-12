@@ -172,8 +172,8 @@ mkPassettoContextAuto :: MonadIO m => String -> Word16 -> m PassettoContext
 mkPassettoContextAuto host port = do
   useLib <- liftIO $ lookupEnv "USE_PASSETTO_LIB"
   case useLib of
-    Just val -> do
-      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> val <> " → using in-process crypto lib."
+    Just "true" -> do
+      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> "true" <> " → using in-process crypto lib."
       mkPassettoContextFromKeys
     Nothing -> do
       liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB not set → using passetto HTTP service at " <> host <> ":" <> show port
