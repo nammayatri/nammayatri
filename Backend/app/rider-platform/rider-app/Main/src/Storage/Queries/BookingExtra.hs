@@ -111,6 +111,25 @@ updateOtpCodeBookingId rbId otp = do
     ]
     [Se.Is BeamB.id (Se.Eq $ getId rbId)]
 
+findByOtpAndMerchantAndCity ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m (Maybe Booking)
+findByOtpAndMerchantAndCity otpVal (Id merchantId) (Id merchantOpCityId) = do
+  now <- getCurrentTime
+  let oneHourAgo = addUTCTime (- (60 * 60) :: NominalDiffTime) now
+  findOneWithKVRedis
+    [ Se.And
+        [ Se.Is BeamB.otpCode $ Se.Eq (Just otpVal),
+          Se.Is BeamB.merchantId $ Se.Eq merchantId,
+          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId),
+          Se.Is BeamB.status $ Se.In [NEW, CONFIRMED],
+          Se.Is BeamB.createdAt $ Se.GreaterThanOrEq oneHourAgo
+        ]
+    ]
+
 updateOffersFraudCheckFailureReason :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Text -> m ()
 updateOffersFraudCheckFailureReason rbId failureReason = do
   now <- getCurrentTime
