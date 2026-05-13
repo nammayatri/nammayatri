@@ -51,6 +51,7 @@ import qualified Kernel.External.Payout.Stripe.Config as StripePayout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.SVP.Types as SVP
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -214,6 +215,7 @@ getServiceName msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+  SVPServiceConfig _ -> SVPService SVP.Juspay
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

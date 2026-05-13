@@ -22,6 +22,7 @@ import Kernel.External.Payout.Interface as Payout
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.SVP.Types as SVP
 import qualified Kernel.External.Settlement.Types as Settlement
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -59,6 +60,7 @@ data ServiceName
   | SOSService SOS.SOSService
   | SettlementService Settlement.SettlementService
   | EventTrackingService EventTracking.EventTrackingService
+  | SVPService SVP.SVPService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -91,6 +93,7 @@ instance Show ServiceName where
   show (SOSService s) = "SOS_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
   show (EventTrackingService s) = "EventTracking_" <> show s
+  show (SVPService s) = "SVP_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -201,6 +204,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "EventTracking_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SVPService v1, r2)
+                 | r1 <- stripPrefix "SVP_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -233,6 +240,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SOSServiceConfig !SOSInterface.SOSServiceConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
+  | SVPServiceConfig !SVP.SVPConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -272,6 +280,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
+  show (SVPServiceConfig cfg) = "SVPServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
@@ -300,3 +309,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (SOSServiceConfig cfg) = "SOSServiceConfig " <> show cfg
   show (SettlementServiceConfig cfg) = "SettlementServiceConfig " <> show cfg
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
+  show (SVPServiceConfig cfg) = "SVPServiceConfig " <> show cfg

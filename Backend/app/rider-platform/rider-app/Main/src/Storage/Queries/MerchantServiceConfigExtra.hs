@@ -25,6 +25,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.SVP.Types as SVP
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import qualified Kernel.External.Whatsapp.Interface as Whatsapp
@@ -200,3 +201,4 @@ getServiceNameConfigJSON = \case
   Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
+  Domain.SVPServiceConfig cfg -> (Domain.SVPService SVP.Juspay, toJSON cfg)

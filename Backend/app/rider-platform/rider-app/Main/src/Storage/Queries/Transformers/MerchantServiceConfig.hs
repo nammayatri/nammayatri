@@ -22,6 +22,7 @@ import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.SMS.Interface as Sms
 import qualified Kernel.External.SOS.Interface.Types as SOSInterface
 import qualified Kernel.External.SOS.Types as SOS
+import qualified Kernel.External.SVP.Types as SVP
 import qualified Kernel.External.Settlement.Types as Settlement
 import Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
@@ -91,6 +92,7 @@ getServiceConfigFromDomain serviceName configJSON = do
       Just cfg | cfg.settlementService == svc -> Just $ Domain.SettlementServiceConfig cfg
       _ -> Nothing
     Domain.EventTrackingService EventTracking.Moengage -> Domain.EventTrackingServiceConfig . EventTrackingInterface.MoengageConfig <$> valueToMaybe configJSON
+    Domain.SVPService SVP.Juspay -> Domain.SVPServiceConfig <$> valueToMaybe configJSON
 
 mkPaymentServiceConfig :: A.Value -> Payment.PaymentService -> Maybe Payment.PaymentServiceConfig
 mkPaymentServiceConfig configJSON = \case
@@ -182,6 +184,7 @@ getServiceNameConfigJson = \case
   Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
+  Domain.SVPServiceConfig cfg -> (Domain.SVPService SVP.Juspay, toJSON cfg)
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> (Payment.PaymentService, A.Value)
 getPaymentServiceConfigJson = \case
