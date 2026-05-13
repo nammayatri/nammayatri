@@ -62,8 +62,9 @@ imports:
   DetailedTranslationRes: IssueManagement.Common.Dashboard.Issue
   CopyIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
   CopyIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
-  CopyAllDefaultIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
+  CopyAllIssueCategoryRes: IssueManagement.Common.Dashboard.Issue
   FailedCategoryCopy: IssueManagement.Common.Dashboard.Issue
+  CopyAllIssueCategoryReq: IssueManagement.Common.Dashboard.Issue
   # Live chat types
   SendChatMessageReq: IssueManagement.Common.Dashboard.Issue
   SendChatMessageByUserReq: IssueManagement.Common.Dashboard.Issue
@@ -424,7 +425,16 @@ apis:
       name: PostIssueCategoryDefaultCopy
       auth: ApiAuthV2
       response:
-        type: CopyAllDefaultIssueCategoryRes
+        type: CopyAllIssueCategoryRes
+
+  - POST: # CopyAllIssueCategoryAPI
+      endpoint: /category/copyAll
+      name: PostIssueCategoryAllCopy
+      auth: ApiAuthV2
+      request:
+        type: CopyAllIssueCategoryReq
+      response:
+        type: CopyAllIssueCategoryRes
 
   # Live chat endpoints
   - POST:  # PostIssueChatMessageAPI

@@ -56,6 +56,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Vector as V
+import qualified Domain.Action.Dashboard.IssueManagement.Issue as DIssueHandler
 import qualified Domain.Types
 import qualified Domain.Types.BecknConfig as DBC
 import Domain.Types.BusinessHour
@@ -77,6 +78,8 @@ import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
+import qualified "shared-services" IssueManagement.Common.Dashboard.Issue as IssueCommon
+import qualified "shared-services" IssueManagement.Domain.Action.Dashboard.Issue as DIssue
 import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
 import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
 import Kernel.External.Call (CallService (Exotel))
@@ -746,6 +749,21 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
         CQExophone.clearCache newMerchantOperatingCityId exoPhone
         whenJust mbAddCityReq $ \_ -> Redis.del $ cacheRegistryKey <> lookupRequestToRedisKey lookupReq
     )
+  let (sourceMerchantShortId, sourceCity) = case (req.issueCategorySourceMerchant, req.issueCategorySourceCity) of
+        (Just m, Just c) -> (ShortId m, c)
+        _                -> (ShortId baseRequestedCityMerchant.shortId.getShortId, baseOperatingCity.city)
+      targetMerchantShortId = ShortId newMerchantShortId.getShortId
+  void $
+    withTryCatch "copyIssueCategoriesOnCityCreate" $
+      DIssue.copyAllIssueCategories
+        targetMerchantShortId
+        req.city
+        IssueCommon.CopyAllIssueCategoryReq
+          { sourceMerchantShortId = sourceMerchantShortId,
+            sourceCity = sourceCity
+          }
+        DIssueHandler.dashboardIssueHandle
+        ICommon.CUSTOMER
   pure $ Common.CreateMerchantOperatingCityRes newMerchantOperatingCityId.getId
   where
     getCityStdCode newCity mbCityStdCode = do

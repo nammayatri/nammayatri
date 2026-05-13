@@ -688,7 +688,17 @@ data CopyIssueCategoryRes = CopyIssueCategoryRes
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CopyAllDefaultIssueCategoryRes = CopyAllDefaultIssueCategoryRes
+data CopyAllIssueCategoryReq = CopyAllIssueCategoryReq
+  { sourceMerchantShortId :: ShortId Merchant,
+    sourceCity :: Context.City
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets CopyAllIssueCategoryReq where
+  hideSecrets = identity
+
+data CopyAllIssueCategoryRes = CopyAllIssueCategoryRes
   { succeeded :: [CopyIssueCategoryRes],
     failed :: [FailedCategoryCopy]
   }
