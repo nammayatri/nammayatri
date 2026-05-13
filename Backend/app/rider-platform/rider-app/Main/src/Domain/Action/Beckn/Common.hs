@@ -521,6 +521,16 @@ rideAssignedReqHandler req = do
       mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
+      when (bookingDiscountAmount > 0) $ do
+        guid <- generateGUID
+        QFareBreakup.create
+          DFareBreakup.FareBreakup
+            { id = guid,
+              entityId = booking.id.getId,
+              entityType = DFareBreakup.BOOKING,
+              amount = mkPrice (Just booking.estimatedFare.currency) bookingDiscountAmount,
+              description = "OFFER_DISCOUNT"
+            }
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {..} -> do
@@ -1092,7 +1102,21 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
-  QFareBreakup.createMany breakups
+  offerDiscountBreakup <-
+    if rideDiscountAmount > 0
+      then do
+        guid <- generateGUID
+        pure
+          [ DFareBreakup.FareBreakup
+              { id = guid,
+                entityId = ride.id.getId,
+                entityType = DFareBreakup.RIDE,
+                amount = mkPrice (Just totalFare.currency) rideDiscountAmount,
+                description = "OFFER_DISCOUNT"
+              }
+          ]
+      else pure []
+  QFareBreakup.createMany (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
