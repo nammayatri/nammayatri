@@ -15,6 +15,8 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     checkRequestorAccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
+    putRegistrationV2ProfileLanguage,
+    getRegistrationV2ProfileLanguage,
   )
 where
 
@@ -70,6 +72,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -557,3 +560,22 @@ checkRequestorAccessToFleet mbFleetOwnerId requestorId = do
         unless (fleetOwnerId == requestorId) $ throwError AccessDenied
       pure requestor
     _ -> throwError AccessDenied
+
+putRegistrationV2ProfileLanguage ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Text ->
+  Common.FleetOwnerUpdateLanguageReq ->
+  Flow APISuccess
+putRegistrationV2ProfileLanguage _merchantShortId _opCity requestorId req = do
+  QPExtra.updateLanguage (Id requestorId) req.language
+  pure Success
+
+getRegistrationV2ProfileLanguage ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Text ->
+  Flow Common.FleetOwnerLanguageRes
+getRegistrationV2ProfileLanguage _merchantShortId _opCity requestorId = do
+  mbPerson <- QP.findById (Id requestorId)
+  pure $ Common.FleetOwnerLanguageRes {language = mbPerson >>= (.language)}

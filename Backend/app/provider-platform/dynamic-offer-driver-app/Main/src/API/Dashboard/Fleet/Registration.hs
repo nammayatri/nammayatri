@@ -19,6 +19,7 @@ module API.Dashboard.Fleet.Registration
     FleetOwnerRegisterAPI,
     handler,
     API,
+    FleetOwnerUpdateLanguageAPI,
   )
 where
 
@@ -38,6 +39,7 @@ type API =
     :> ( FleetOwnerLoginAPI
            :<|> FleetOwnerVerifyAPI
            :<|> FleetOwnerRegisterHelperAPI
+           :<|> FleetOwnerUpdateLanguageAPI
        )
 
 type FleetOwnerVerifyAPI =
@@ -64,11 +66,18 @@ type FleetOwnerRegisterHelperAPI =
       :> Post '[JSON] DFleet.FleetOwnerRegisterRes
   )
 
+type FleetOwnerUpdateLanguageAPI =
+  "profile"
+    :> "language"
+    :> ReqBody '[JSON] DFleet.FleetOwnerUpdateLanguageReq
+    :> Put '[JSON] APISuccess
+
 handler :: ShortId DM.Merchant -> Context.City -> FlowServer API
 handler _ _ =
   fleetOwnerLogin
     :<|> fleetOwnerVerify
     :<|> fleetOwnerRegister
+    :<|> fleetOwnerUpdateLanguage
 
 fleetOwnerLogin :: DFleet.FleetOwnerLoginReq -> FlowHandler APISuccess
 fleetOwnerLogin = withDashboardFlowHandlerAPI . DFleet.fleetOwnerLogin
@@ -78,3 +87,6 @@ fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 
 fleetOwnerRegister :: Maybe Bool -> DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes
 fleetOwnerRegister enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerRegister req enabled
+
+fleetOwnerUpdateLanguage :: DFleet.FleetOwnerUpdateLanguageReq -> FlowHandler APISuccess
+fleetOwnerUpdateLanguage = withDashboardFlowHandlerAPI . DFleet.fleetOwnerUpdateLanguage

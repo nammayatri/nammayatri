@@ -19,6 +19,7 @@ import Data.Aeson
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.TH
@@ -42,7 +43,8 @@ data PersonE e = Person
     rejectedAt :: Maybe UTCTime,
     passwordUpdatedAt :: Maybe UTCTime,
     approvedBy :: Maybe (Id Person),
-    rejectedBy :: Maybe (Id Person)
+    rejectedBy :: Maybe (Id Person),
+    language :: Maybe KET.Language
   }
   deriving (Generic)
 

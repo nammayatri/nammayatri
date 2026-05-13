@@ -27,6 +27,7 @@ import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -461,6 +462,15 @@ updatePersonRec (Id personId) person = do
         LTSSync.clientConfigVersion = LTSSync.Set person.clientConfigVersion,
         LTSSync.clientDevice = LTSSync.Set person.clientDevice
       }
+
+updateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> KET.Language -> m ()
+updateLanguage personId lang = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.language $ Just lang,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
 updatePersonVersionsAndMerchantOperatingCity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>

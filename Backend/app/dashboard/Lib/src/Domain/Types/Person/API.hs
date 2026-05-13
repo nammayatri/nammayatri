@@ -17,6 +17,7 @@ module Domain.Types.Person.API where
 import qualified Domain.Types.Merchant as DMerchant
 import Domain.Types.Person.Type
 import qualified Domain.Types.Role as DRole
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
@@ -33,7 +34,8 @@ data PersonAPIEntity = PersonAPIEntity
     availableCitiesForMerchant :: Maybe [AvailableCitiesForMerchant],
     registeredAt :: UTCTime,
     verified :: Maybe Bool,
-    receiveNotification :: Maybe Bool
+    receiveNotification :: Maybe Bool,
+    language :: Maybe KET.Language
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -48,5 +50,6 @@ makePersonAPIEntity Person {..} personRole availableMerchants availableCitiesFor
   PersonAPIEntity
     { registeredAt = createdAt,
       role = DRole.mkRoleAPIEntity personRole,
+      language = language,
       ..
     }

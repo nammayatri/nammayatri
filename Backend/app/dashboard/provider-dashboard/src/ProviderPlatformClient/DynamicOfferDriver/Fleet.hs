@@ -52,7 +52,8 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify
-      :<|> fleetOwnerRegister = fleetRegisterationClient
+      :<|> fleetOwnerRegister
+      :<|> _fleetOwnerUpdateLanguage = fleetRegisterationClient
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.
