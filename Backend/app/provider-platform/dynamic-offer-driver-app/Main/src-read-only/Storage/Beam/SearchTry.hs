@@ -19,6 +19,7 @@ data SearchTryT f = SearchTryT
   { baseFare :: B.C f Kernel.Types.Common.Money,
     baseFareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
+    businessEmailDomain :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     customerExtraFee :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),

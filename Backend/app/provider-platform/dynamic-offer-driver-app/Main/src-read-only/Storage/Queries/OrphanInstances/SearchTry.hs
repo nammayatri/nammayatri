@@ -25,6 +25,7 @@ instance FromTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
         Domain.Types.SearchTry.SearchTry
           { baseFare = Kernel.Types.Common.mkAmountWithDefault baseFareAmount baseFare,
             billingCategory = fromMaybe SharedLogic.Type.PERSONAL billingCategory,
+            businessEmailDomain = businessEmailDomain,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             customerExtraFee = Kernel.Types.Common.mkAmountWithDefault customerExtraFeeAmount <$> customerExtraFee,
@@ -60,6 +61,7 @@ instance ToTType' Beam.SearchTry Domain.Types.SearchTry.SearchTry where
       { Beam.baseFare = Kernel.Prelude.roundToIntegral baseFare,
         Beam.baseFareAmount = Kernel.Prelude.Just baseFare,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
+        Beam.businessEmailDomain = businessEmailDomain,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.customerExtraFee = Kernel.Prelude.roundToIntegral <$> customerExtraFee,

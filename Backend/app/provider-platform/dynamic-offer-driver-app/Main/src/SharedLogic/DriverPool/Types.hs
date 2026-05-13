@@ -345,5 +345,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
     billingCategory :: SLT.BillingCategory,
     emailDomain :: Maybe Text,
+    businessEmailDomain :: Maybe Text,
     driverPreference :: Maybe [Text]
   }

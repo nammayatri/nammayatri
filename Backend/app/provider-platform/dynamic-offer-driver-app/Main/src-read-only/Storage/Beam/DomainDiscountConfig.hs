@@ -13,15 +13,16 @@ import qualified SharedLogic.Type
 import Tools.Beam.UtilsTH
 
 data DomainDiscountConfigT f = DomainDiscountConfigT
-  { billingCategory :: (B.C f SharedLogic.Type.BillingCategory),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    discountPercentage :: (B.C f Kernel.Prelude.Double),
-    domain :: (B.C f Kernel.Prelude.Text),
-    enabled :: (B.C f Kernel.Prelude.Bool),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleServiceTier :: (B.C f Domain.Types.Common.ServiceTierType),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { billingCategory :: B.C f SharedLogic.Type.BillingCategory,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    discountPercentage :: B.C f Kernel.Prelude.Double,
+    domain :: B.C f Kernel.Prelude.Text,
+    enabled :: B.C f Kernel.Prelude.Bool,
+    extendToPersonal :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleServiceTier :: B.C f Domain.Types.Common.ServiceTierType,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +34,6 @@ instance B.Table DomainDiscountConfigT where
 
 type DomainDiscountConfig = DomainDiscountConfigT Identity
 
-$(enableKVPG (''DomainDiscountConfigT) [('billingCategory), ('domain), ('merchantOperatingCityId), ('vehicleServiceTier)] [])
+$(enableKVPG ''DomainDiscountConfigT ['billingCategory, 'domain, 'merchantOperatingCityId, 'vehicleServiceTier] [])
 
-$(mkTableInstances (''DomainDiscountConfigT) "domain_discount_config")
+$(mkTableInstances ''DomainDiscountConfigT "domain_discount_config")

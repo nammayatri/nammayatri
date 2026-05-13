@@ -18,6 +18,7 @@ data DomainDiscountConfig = DomainDiscountConfig
     discountPercentage :: Kernel.Prelude.Double,
     domain :: Kernel.Prelude.Text,
     enabled :: Kernel.Prelude.Bool,
+    extendToPersonal :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleServiceTier :: Domain.Types.Common.ServiceTierType,

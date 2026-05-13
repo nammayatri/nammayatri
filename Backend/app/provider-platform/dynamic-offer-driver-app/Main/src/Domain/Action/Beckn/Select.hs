@@ -70,7 +70,8 @@ data DSelectReq = DSelectReq
     driverPreference :: Maybe [Text],
     billingCategory :: SLT.BillingCategory,
     paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo,
-    emailDomain :: Maybe Text
+    emailDomain :: Maybe Text,
+    businessEmailDomain :: Maybe Text
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -134,6 +135,7 @@ handler merchant sReq searchReq estimates = do
             isAllocatorBatch = False,
             paymentMethodInfo = sReq.paymentMethodInfo,
             emailDomain = sReq.emailDomain,
+            businessEmailDomain = sReq.businessEmailDomain,
             driverPreference = sReq.driverPreference
           }
   void $ initiateDriverSearchBatch driverSearchBatchInput

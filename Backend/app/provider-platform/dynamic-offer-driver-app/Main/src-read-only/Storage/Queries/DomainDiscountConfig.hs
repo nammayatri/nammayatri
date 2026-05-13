@@ -23,7 +23,7 @@ create = createWithKV
 
 findAllByMerchantOpCityIdAndBillingCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> SharedLogic.Type.BillingCategory -> m ([Domain.Types.DomainDiscountConfig.DomainDiscountConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> SharedLogic.Type.BillingCategory -> m [Domain.Types.DomainDiscountConfig.DomainDiscountConfig])
 findAllByMerchantOpCityIdAndBillingCategory merchantOperatingCityId billingCategory = do
   findAllWithKV
     [ Se.And
@@ -55,6 +55,7 @@ instance FromTType' Beam.DomainDiscountConfig Domain.Types.DomainDiscountConfig.
             discountPercentage = discountPercentage,
             domain = domain,
             enabled = enabled,
+            extendToPersonal = Kernel.Prelude.fromMaybe False extendToPersonal,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             updatedAt = updatedAt,
             vehicleServiceTier = vehicleServiceTier,
@@ -69,6 +70,7 @@ instance ToTType' Beam.DomainDiscountConfig Domain.Types.DomainDiscountConfig.Do
         Beam.discountPercentage = discountPercentage,
         Beam.domain = domain,
         Beam.enabled = enabled,
+        Beam.extendToPersonal = Kernel.Prelude.Just extendToPersonal,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.updatedAt = updatedAt,
         Beam.vehicleServiceTier = vehicleServiceTier,
