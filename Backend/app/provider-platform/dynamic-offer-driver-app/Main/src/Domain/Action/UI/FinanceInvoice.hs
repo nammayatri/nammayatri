@@ -211,7 +211,14 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
 
   let locale = languageToLocale (mbDriver >>= (.language))
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
+            sellerTradeName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceSellerTradeName),
+            appName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceAppName)
+          }
       pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat
       html = renderInvoiceHtml cfg pdfData
 

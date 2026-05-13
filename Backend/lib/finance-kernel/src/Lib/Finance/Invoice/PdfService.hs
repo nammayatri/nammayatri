@@ -44,7 +44,11 @@ data InvoiceLocale = EN | FI | NL
 data InvoicePdfConfig = InvoicePdfConfig
   { locale :: InvoiceLocale,
     timezone :: DT.TimeZone,
-    logoUrl :: Maybe Text
+    logoUrl :: Maybe Text,
+    -- Optional trade name rendered above `inv.issuedByName` in the seller block (e.g. "LynxTaksi Finland").
+    sellerTradeName :: Maybe Text,
+    -- Optional platform brand (e.g. "Lynx") interpolated into the AggregatedCommission footer.
+    appName :: Maybe Text
   }
   deriving (Eq, Show, Generic)
 
@@ -269,7 +273,7 @@ renderInvoiceHtml cfg pdfData =
           "</style>",
           "</head><body><div class='wrap'>",
           renderHeader cfg pdfData lbls,
-          renderParties pdfData lbls,
+          renderParties cfg pdfData lbls,
           renderFromLocation inv,
           renderInvoicingPeriod cfg pdfData lbls,
           renderLineItemsTable cfg pdfData lbls,
@@ -321,8 +325,8 @@ renderHeader cfg pdfData lbls =
 -- show recipient name + supplier full info. Each side's <td> is suppressed
 -- entirely when none of its data fields are populated, so a missing party
 -- doesn't leave a labeled-but-empty block in the rendered PDF.
-renderParties :: InvoicePdfData -> Labels -> Text
-renderParties pdfData lbls =
+renderParties :: InvoicePdfConfig -> InvoicePdfData -> Labels -> Text
+renderParties cfg pdfData lbls =
   let inv = pdfData.financeInvoice
    in case inv.invoiceType of
         AggregatedCommission ->
@@ -331,7 +335,9 @@ renderParties pdfData lbls =
                   || isJust pdfData.mbRecipientBusinessId
                   || isJust inv.supplierTaxNo
               rightHas =
-                isJust inv.issuedByName || isJust inv.issuedByAddress
+                isJust cfg.sellerTradeName
+                  || isJust inv.issuedByName
+                  || isJust inv.issuedByAddress
                   || isJust pdfData.mbSellerBusinessId
                   || isJust pdfData.mbSellerVatNumber
               leftBlock =
@@ -340,7 +346,7 @@ renderParties pdfData lbls =
                     "<div class='party-lbl-plain'>",
                     lbls.recipientLabel,
                     ":</div>",
-                    maybe "" (\n -> "<div class='party-name'>" <> escHtml n <> "</div>") inv.issuedToName,
+                    maybe "" (\n -> "<div class='party-trade'>" <> escHtml n <> "</div>") inv.issuedToName,
                     maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.issuedToAddress,
                     maybe "" (\b -> "<div class='party-tax'>" <> lbls.businessIdLabel <> ": " <> escHtml b <> "</div>") pdfData.mbRecipientBusinessId,
                     -- Recipient VAT: handler maps recipient VAT into supplierTaxNo.
@@ -353,6 +359,7 @@ renderParties pdfData lbls =
                     "<div class='party-lbl-plain'>",
                     lbls.sellerLabel,
                     ":</div>",
+                    maybe "" (\n -> "<div class='party-trade'>" <> escHtml n <> "</div>") cfg.sellerTradeName,
                     maybe "" (\n -> "<div class='party-name'>" <> escHtml n <> "</div>") inv.issuedByName,
                     maybe "" (\a -> "<div class='party-addr'>" <> escHtml a <> "</div>") inv.issuedByAddress,
                     maybe "" (\b -> "<div class='party-tax'>" <> lbls.businessIdLabel <> ": " <> escHtml b <> "</div>") pdfData.mbSellerBusinessId,
@@ -743,7 +750,7 @@ localeLabels :: InvoiceLocale -> Labels
 localeLabels EN =
   Labels
     { invoiceTitle = "Invoice",
-      aggregatedCommissionTitle = "App bookings",
+      aggregatedCommissionTitle = "Commission on App Bookings",
       invoiceNumberLabel = "Invoice No.",
       dateLabel = "Date",
       dueDateLabel = "Due Date",
@@ -777,7 +784,7 @@ localeLabels EN =
 localeLabels FI =
   Labels
     { invoiceTitle = "Lasku",
-      aggregatedCommissionTitle = "Sovellustilaukset",
+      aggregatedCommissionTitle = "Komissio sovellustilauksista",
       invoiceNumberLabel = "Laskun nro.",
       dateLabel = "P\228iv\228m\228\228r\228",
       dueDateLabel = "Er\228p\228iv\228",
@@ -811,7 +818,7 @@ localeLabels FI =
 localeLabels NL =
   Labels
     { invoiceTitle = "Factuur",
-      aggregatedCommissionTitle = "App-boekingen",
+      aggregatedCommissionTitle = "Commissie op app-boekingen",
       invoiceNumberLabel = "Factuurnr.",
       dateLabel = "Datum",
       dueDateLabel = "Vervaldatum",
@@ -843,35 +850,31 @@ localeLabels NL =
       cashLabel = "Ontvangen contant"
     }
 
--- | Closing paragraph for AggregatedCommission, with merchant name interpolated.
-aggregationFooterText :: InvoiceLocale -> Text -> Text
-aggregationFooterText EN merchantName =
-  "This invoice represents services provided during the period. Amounts payable to "
-    <> merchantName
-    <> " have already been deducted from your balance. Check the "
-    <> merchantName
-    <> " app for up-to-date balance information."
-aggregationFooterText FI merchantName =
-  "T\228m\228 lasku kuvaa ajanjakson aikana tarjottuja palveluja, ja "
-    <> merchantName
-    <> "ille maksettavat summat on jo v\228hennetty saldostasi. Tarkista "
-    <> merchantName
-    <> "-sovelluksesta ajantasaiset tiedot saldostasi."
-aggregationFooterText NL merchantName =
-  "Deze factuur vertegenwoordigt de tijdens de periode geleverde diensten. Bedragen verschuldigd aan "
-    <> merchantName
-    <> " zijn reeds afgetrokken van uw saldo. Raadpleeg de "
-    <> merchantName
-    <> "-app voor actuele saldo-informatie."
+-- | Closing paragraph for AggregatedCommission. Uses the brand from `mAppName` when set; generic phrasing otherwise.
+aggregationFooterText :: InvoiceLocale -> Maybe Text -> Text
+aggregationFooterText EN mAppName =
+  let dashboardRef = maybe "your fleet dashboard" (\n -> "your " <> n <> " fleet dashboard") mAppName
+   in "This invoice represents commission charges for services provided during the period. Check "
+        <> dashboardRef
+        <> " for the most up-to-date balance information."
+aggregationFooterText FI mAppName =
+  let dashboardRef = maybe "kalustopaneelistasi" (\n -> n <> "-kalustopaneelistasi") mAppName
+   in "T\228m\228 lasku kuvaa ajanjakson aikana perittyj\228 komissiomaksuja. Tarkista "
+        <> dashboardRef
+        <> " ajantasaiset tiedot saldostasi."
+aggregationFooterText NL mAppName =
+  let dashboardRef = maybe "uw vlootdashboard" (\n -> "uw " <> n <> "-vlootdashboard") mAppName
+   in "Deze factuur vertegenwoordigt commissiekosten voor tijdens de periode geleverde diensten. Raadpleeg "
+        <> dashboardRef
+        <> " voor actuele saldo-informatie."
 
 -- | Footer paragraph below the totals block, only on AggregatedCommission.
 renderAggregationFooter :: InvoicePdfConfig -> Invoice -> Labels -> Text
 renderAggregationFooter cfg inv _lbls = case inv.invoiceType of
   AggregatedCommission ->
-    let merchantName = fromMaybe "" inv.issuedByName
-     in "<div class='agg-footer'>"
-          <> escHtml (aggregationFooterText cfg.locale merchantName)
-          <> "</div>"
+    "<div class='agg-footer'>"
+      <> escHtml (aggregationFooterText cfg.locale cfg.appName)
+      <> "</div>"
   _ -> ""
 
 -- ---------------------------------------------------------------------------
@@ -904,6 +907,7 @@ invoiceCss =
       ".party-left { vertical-align:top; width:50%; border:none; }",
       ".party-lbl { font-size:11px; text-transform:uppercase; letter-spacing:0.8px; color:#2d2d2d; margin-bottom:5px; }",
       ".party-lbl-plain { font-size:13px; color:#2d2d2d; margin-bottom:4px; }",
+      ".party-trade { font-size:16px; font-weight:700; color:#1a1a1a; margin-bottom:2px; }",
       ".party-name { font-size:15px; font-weight:600; color:#2d2d2d; margin-bottom:3px; }",
       ".party-addr { font-size:13px; color:#2d2d2d; line-height:1.6; }",
       ".party-tax { font-size:12px; color:#2d2d2d; margin-top:3px; }",
