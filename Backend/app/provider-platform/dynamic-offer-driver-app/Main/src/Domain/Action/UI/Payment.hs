@@ -136,6 +136,7 @@ import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
 import Utils.Common.Cac.KeyNameConstants
+import qualified Storage.Queries.DriverGstin as QDG
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -699,14 +700,32 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   merchantGstin = merchant.gstin,
                   merchantShortId = getShortId merchant.shortId
                 }
+        -- Resolve seller (merchant) and buyer (driver/fleet owner) GSTINs for B2B
+        -- jurisdiction detection. Seller GSTIN is plain text on Merchant; buyer
+        -- GSTIN is encrypted on DriverGstin and must be decrypted.
+        let sellerGstin = merchant.gstin
+        mbBuyerGstinRow <- QDG.findByDriverId person.id
+        buyerGstin <- traverse (decrypt . (.gstin)) mbBuyerGstinRow
+        -- For FLEET_BUSINESS with both GSTINs present, use GSTIN state-code
+        -- comparison (proper B2B path). Otherwise fall back to merchant-vs-opCity
+        -- place-based jurisdiction.
         let subscriptionGstBreakdown =
-              computeGstBreakdownByPlace
-                transporterConfig.taxConfig.rideGst
-                (Just $ show merchant.state)
-                (Just $ show merchantOperatingCity.state)
-                (Just $ show merchant.city)
-                (Just $ show merchantOperatingCity.city)
-                (cgst + sgst)
+              if person.role == DP.FLEET_BUSINESS && isJust sellerGstin && isJust buyerGstin
+                then
+                  let igst = SLDriverFee.calculatePlatformIgst latestPurchase.planFee transporterConfig.taxConfig.subscriptionGst
+                   in computeGstBreakdownGSTIN
+                        transporterConfig.taxConfig.subscriptionGst
+                        sellerGstin
+                        buyerGstin
+                        igst
+                else
+                  computeGstBreakdownByPlace
+                    transporterConfig.taxConfig.rideGst
+                    (Just $ show merchant.state)
+                    (Just $ show merchantOperatingCity.state)
+                    (Just $ show merchant.city)
+                    (Just $ show merchantOperatingCity.city)
+                    (cgst + sgst)
         mbPanCard <- QPanCard.findByDriverId person.id
         (_newBalance, mbInvoiceId) <-
           creditPrepaidBalance

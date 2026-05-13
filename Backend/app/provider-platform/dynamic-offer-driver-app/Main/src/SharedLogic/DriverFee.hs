@@ -185,6 +185,15 @@ calculatePlatformFeeAttr totalFee plan = do
       sgst = HighPrecMoney (toRational plan.sgstPercentage) * platformFee
   (platformFee, cgst, sgst)
 
+-- | Compute the IGST portion of a GST-inclusive fee, using the IGST percentage
+--   from the supplied 'GstBreakup'. Mirrors 'calculatePlatformFeeAttr' for the
+--   inter-state single-tax case. Returns 0 when 'igstPercentage' is unset.
+calculatePlatformIgst :: HighPrecMoney -> TC.GstBreakup -> HighPrecMoney
+calculatePlatformIgst totalFee gstBreakup =
+  let igstPct = fromMaybe 0 gstBreakup.igstPercentage
+      platformFee = totalFee / HighPrecMoney (toRational $ 1 + igstPct)
+   in HighPrecMoney (toRational igstPct) * platformFee
+
 setCoinToCashUsedAmount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DDF.DriverFee -> HighPrecMoney -> m ()
 setCoinToCashUsedAmount driverFee totalFee = do
   coinAdjustedInSubscriptionKeyExists <- getCoinAdjustedInSubscriptionByDriverIdKey (cast driverFee.driverId)
