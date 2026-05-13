@@ -71,6 +71,7 @@ buildSelectReqV2 subscriber req = do
       isAdvancedBoookingEnabled = getAdvancedBookingEnabled item.itemTags
       disabilityDisable = buildDisableDisabilityTag item.itemTags
       isPetRide = fromMaybe False $ buildPetRideTag item.itemTags
+      businessEmailDomain = buildBusinessEmailDomainTag item.itemTags
       emailDomain = buildEmailDomainTag item.itemTags
       billingCategory = buildBillingCategoryTag item.itemTags
       bookAnyEstimates = getBookAnyEstimates item.itemTags
@@ -154,6 +155,10 @@ buildBillingCategoryTag tagGroups = do
 buildEmailDomainTag :: Maybe [Spec.TagGroup] -> Maybe Text
 buildEmailDomainTag tagGroups =
   Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.EMAIL_DOMAIN tagGroups
+
+buildBusinessEmailDomainTag :: Maybe [Spec.TagGroup] -> Maybe Text
+buildBusinessEmailDomainTag tagGroups =
+  Utils.getTagV2 Tag.EMAIL_DOMAIN_INFO Tag.BUSINESS_EMAIL_DOMAIN tagGroups
 
 getAdvancedBookingEnabled :: Maybe [Spec.TagGroup] -> Bool
 getAdvancedBookingEnabled tagGroups =

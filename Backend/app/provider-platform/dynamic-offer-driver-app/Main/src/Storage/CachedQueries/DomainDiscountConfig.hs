@@ -30,26 +30,42 @@ findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId domain billin
       return cfg
 
 -- | Resolve the domain discount percentage for a given email domain.
--- Looks up DomainDiscountConfig; if found and enabled, returns the percentage.
--- Falls back to wildcard domain "*" if no exact match is found.
+-- Lookup order:
+--   1. Exact (emailDomain, billingCategory) row, enabled
+--   2. Wildcard "*" with same billingCategory, enabled
+--   3. PERSONAL ride only: exact (businessEmailDomain, BUSINESS) row, enabled AND extendToPersonal
+--   4. Otherwise Nothing
 resolveDomainDiscountPercentage ::
   (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
   Id MerchantOperatingCity ->
   Maybe Text ->
+  Maybe Text ->
   SLT.BillingCategory ->
   ServiceTierType ->
   m (Maybe Double)
-resolveDomainDiscountPercentage _ Nothing _ _ = return Nothing
-resolveDomainDiscountPercentage merchantOpCityId (Just domain) billingCategory vehicleServiceTier = do
-  mbConfig <- findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId domain billingCategory vehicleServiceTier
-  case mbConfig of
-    Just config | config.enabled -> return $ Just config.discountPercentage
-    _ -> do
-      -- Fallback to wildcard domain "*"
-      mbWildcard <- findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId "*" billingCategory vehicleServiceTier
-      case mbWildcard of
-        Just wc | wc.enabled -> return $ Just wc.discountPercentage
-        _ -> return Nothing
+resolveDomainDiscountPercentage merchantOpCityId mbEmailDomain mbBusinessEmailDomain billingCategory vehicleServiceTier = do
+  primary <- lookupPrimary mbEmailDomain
+  case primary of
+    Just pct -> return $ Just pct
+    Nothing -> case (billingCategory, mbBusinessEmailDomain) of
+      (SLT.PERSONAL, Just businessDomain) -> do
+        mbBusinessCfg <- findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId businessDomain SLT.BUSINESS vehicleServiceTier
+        case mbBusinessCfg of
+          Just cfg | cfg.enabled && cfg.extendToPersonal -> return $ Just cfg.discountPercentage
+          _ -> return Nothing
+      _ -> return Nothing
+  where
+    lookupPrimary Nothing = return Nothing
+    lookupPrimary (Just domain) = do
+      mbConfig <- findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId domain billingCategory vehicleServiceTier
+      case mbConfig of
+        Just config | config.enabled -> return $ Just config.discountPercentage
+        _ -> do
+          -- Fallback to wildcard domain "*"
+          mbWildcard <- findByMerchantOpCityIdAndDomainAndBillingCategory merchantOpCityId "*" billingCategory vehicleServiceTier
+          case mbWildcard of
+            Just wc | wc.enabled -> return $ Just wc.discountPercentage
+            _ -> return Nothing
 
 clearCache ::
   (CacheFlow m r, MonadFlow m) =>

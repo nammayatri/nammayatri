@@ -1948,7 +1948,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlessM (validateSearchTryActive searchTry.id) $ do
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
-      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.businessEmailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
       let farePolicy' =
             farePolicy
               { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,

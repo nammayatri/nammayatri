@@ -31,7 +31,8 @@ data CreateDomainDiscountConfigReq = CreateDomainDiscountConfigReq
     billingCategory :: BillingCategory,
     vehicleServiceTier :: Dashboard.Common.ServiceTierType,
     discountPercentage :: Kernel.Prelude.Double,
-    enabled :: Kernel.Prelude.Bool
+    enabled :: Kernel.Prelude.Bool,
+    extendToPersonal :: Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -60,16 +61,16 @@ data DomainDiscountConfigRes = DomainDiscountConfigRes
 
 type API = ("domainDiscountConfig" :> (PostDomainDiscountConfigCreate :<|> GetDomainDiscountConfigList :<|> DeleteDomainDiscountConfigDelete))
 
-type PostDomainDiscountConfigCreate = ("create" :> ReqBody ('[JSON]) CreateDomainDiscountConfigReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostDomainDiscountConfigCreate = ("create" :> ReqBody '[JSON] CreateDomainDiscountConfigReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
-type GetDomainDiscountConfigList = ("list" :> MandatoryQueryParam "billingCategory" BillingCategory :> Get ('[JSON]) [DomainDiscountConfigRes])
+type GetDomainDiscountConfigList = ("list" :> MandatoryQueryParam "billingCategory" BillingCategory :> Get '[JSON] [DomainDiscountConfigRes])
 
-type DeleteDomainDiscountConfigDelete = ("delete" :> ReqBody ('[JSON]) DeleteDomainDiscountConfigReq :> Delete ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type DeleteDomainDiscountConfigDelete = ("delete" :> ReqBody '[JSON] DeleteDomainDiscountConfigReq :> Delete '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data DomainDiscountConfigAPIs = DomainDiscountConfigAPIs
-  { postDomainDiscountConfigCreate :: (CreateDomainDiscountConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getDomainDiscountConfigList :: (BillingCategory -> EulerHS.Types.EulerClient [DomainDiscountConfigRes]),
-    deleteDomainDiscountConfigDelete :: (DeleteDomainDiscountConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess)
+  { postDomainDiscountConfigCreate :: CreateDomainDiscountConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDomainDiscountConfigList :: BillingCategory -> EulerHS.Types.EulerClient [DomainDiscountConfigRes],
+    deleteDomainDiscountConfigDelete :: DeleteDomainDiscountConfigReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkDomainDiscountConfigAPIs :: (Client EulerHS.Types.EulerClient API -> DomainDiscountConfigAPIs)
@@ -84,6 +85,6 @@ data DomainDiscountConfigUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''BillingCategory))
+$(mkHttpInstancesForEnum ''BillingCategory)
 
-$(Data.Singletons.TH.genSingletons [(''DomainDiscountConfigUserActionType)])
+$(Data.Singletons.TH.genSingletons [''DomainDiscountConfigUserActionType])

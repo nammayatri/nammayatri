@@ -35,6 +35,7 @@ data Booking = Booking
     bapId :: Kernel.Prelude.Text,
     bapUri :: Kernel.Prelude.Text,
     billingCategory :: SharedLogic.Type.BillingCategory,
+    businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     coinsRewardedOnGoldTierRide :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     commission :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     configInExperimentVersions :: [Lib.Yudhishthira.Types.ConfigVersionMap],
@@ -118,8 +119,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
-$(mkHttpInstancesForEnum (''BookingStatus))
+$(mkHttpInstancesForEnum ''BookingStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)

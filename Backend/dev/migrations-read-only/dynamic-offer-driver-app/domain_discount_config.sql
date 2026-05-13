@@ -10,3 +10,9 @@ ALTER TABLE atlas_driver_offer_bpp.domain_discount_config ADD COLUMN updated_at 
 ALTER TABLE atlas_driver_offer_bpp.domain_discount_config ADD COLUMN vehicle_service_tier text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.domain_discount_config ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.domain_discount_config ADD PRIMARY KEY ( billing_category, domain, merchant_operating_city_id, vehicle_service_tier);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.domain_discount_config ADD COLUMN extend_to_personal boolean ;

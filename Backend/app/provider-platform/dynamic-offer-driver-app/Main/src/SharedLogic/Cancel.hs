@@ -166,6 +166,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = paymentMethodInfo,
                 emailDomain = searchTry.emailDomain,
+                businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference
               }
       handleDriverSearchBatch driverSearchBatchInput booking searchTry.estimateId False
@@ -197,6 +198,7 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
                 billingCategory = searchTry.billingCategory,
                 paymentMethodInfo = paymentMethodInfo,
                 emailDomain = searchTry.emailDomain,
+                businessEmailDomain = searchTry.businessEmailDomain,
                 driverPreference = searchTry.driverPreference
               }
       handleDriverSearchBatch driverSearchBatchInput newBooking searchTry.estimateId True

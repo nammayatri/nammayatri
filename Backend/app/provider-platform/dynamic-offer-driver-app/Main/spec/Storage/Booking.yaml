@@ -116,6 +116,7 @@ Booking:
     ledgerWriteMode: Maybe Bool
     financeInvoiceId: Maybe Text
     emailDomain: Maybe Text
+    businessEmailDomain: Maybe Text
 
   excludedFields:
     - merchantId

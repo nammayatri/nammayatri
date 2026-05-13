@@ -15,6 +15,7 @@ DomainDiscountConfig:
     vehicleServiceTier: ServiceTierType
     discountPercentage: Double
     enabled: Bool
+    extendToPersonal: Bool
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -34,6 +35,13 @@ DomainDiscountConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, billingCategory]
+
+  fromTType:
+    extendToPersonal: Kernel.Prelude.fromMaybe False | I
+  toTType:
+    extendToPersonal: Kernel.Prelude.Just|I
+  beamType:
+    extendToPersonal: Maybe Bool
 
   excludedDefaultQueries:
     - createMany

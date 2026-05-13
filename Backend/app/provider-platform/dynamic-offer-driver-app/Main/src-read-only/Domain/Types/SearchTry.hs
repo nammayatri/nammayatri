@@ -20,6 +20,7 @@ import qualified Tools.Beam.UtilsTH
 data SearchTry = SearchTry
   { baseFare :: Kernel.Types.Common.HighPrecMoney,
     billingCategory :: SharedLogic.Type.BillingCategory,
+    businessEmailDomain :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     customerExtraFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
