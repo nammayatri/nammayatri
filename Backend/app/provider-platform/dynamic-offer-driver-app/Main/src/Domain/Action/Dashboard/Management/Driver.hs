@@ -353,6 +353,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
+  QDriverInfo.updateDisabledReasonFlag (Just DrInfo.DriverDisabled) driverId
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 

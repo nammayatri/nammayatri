@@ -173,7 +173,7 @@ instance IsBaseError ShardMappingError where
 
 instanceExceptionWithParent 'BaseException ''ShardMappingError
 
-data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BlockReasonFlag = CancellationRateWeekly | CancellationRateDaily | CancellationRate | ByDashboard | ExtraFareDaily | ExtraFareWeekly | DrunkAndDriveViolation | DocumentExpiry  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(mkBeamInstancesForEnum ''BlockReasonFlag)
 

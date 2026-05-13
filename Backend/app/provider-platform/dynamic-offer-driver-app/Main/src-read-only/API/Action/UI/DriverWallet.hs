@@ -32,6 +32,9 @@ type API =
            "fromDate"
            Data.Time.UTCTime
       :> QueryParam "toDate" Data.Time.UTCTime
+      :> QueryParam
+           "aggBy"
+           API.Types.UI.DriverWallet.AggregationLevel
       :> Get
            '[JSON]
            API.Types.UI.DriverWallet.WalletSummaryResponse
@@ -110,9 +113,10 @@ getWalletTransactions ::
     ) ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel ->
     Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse
   )
-getWalletTransactions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getWalletTransactions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.getWalletTransactions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
 postWalletPayout ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

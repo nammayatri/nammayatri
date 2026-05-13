@@ -160,6 +160,7 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId True (Just verified)
+  DIQuery.updateDisabledReasonFlag Nothing (cast personId)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

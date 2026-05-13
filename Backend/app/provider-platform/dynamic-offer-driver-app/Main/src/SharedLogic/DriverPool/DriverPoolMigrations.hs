@@ -19,6 +19,7 @@ import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverPool.DriverPoolData
 import qualified Storage.Queries.DriverBankAccount as QDBA
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 
 -- | A migrator takes a batch of LTS-loaded entries and returns the same entries
@@ -61,7 +62,8 @@ data MigrationEntry = MigrationEntry
 -- No constant to bump anywhere: 'currentSchemaVersion' moves with the list.
 migrations :: [MigrationEntry]
 migrations =
-  [ MigrationEntry 1 backfillEffectiveBankAccount
+  [ MigrationEntry 1 backfillEffectiveBankAccount,
+    MigrationEntry 2 backfillEnabled
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -97,6 +99,21 @@ backfillEffectiveBankAccount entries = do
                   -- schemaVersion intentionally not set here — applyMigrations stamps it.
                 }
       )
+      entries
+
+-- | v2: backfill the new 'enabled' flag on pool entries written before the
+-- nearby-driver eligibility check started gating on it. Without this every
+-- legacy entry would default to 'enabled = False' and be filtered out.
+backfillEnabled ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillEnabled entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let enabledMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, di.enabled)) dis
+  pure $
+    map
+      (\e -> e {enabled = HashMap.lookupDefault e.enabled (cast e.driverId :: Id Person.Person) enabledMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

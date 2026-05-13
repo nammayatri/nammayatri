@@ -56,6 +56,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     variant :: SetField VehicleVariant,
     selectedServiceTiers :: SetField [ServiceTierType],
     -- Class 1 fields (sync, driver DB authoritative)
+    enabled :: SetField Bool,
     blocked :: SetField Bool,
     subscribed :: SetField Bool,
     canSwitchToRental :: SetField Bool,
@@ -110,6 +111,7 @@ emptyUpdate =
       totalRides = Unchanged,
       variant = Unchanged,
       selectedServiceTiers = Unchanged,
+      enabled = Unchanged,
       blocked = Unchanged,
       subscribed = Unchanged,
       canSwitchToRental = Unchanged,
@@ -197,6 +199,7 @@ applyUpdate u d =
       DPD.totalRides = applyField u.totalRides d.totalRides,
       DPD.variant = applyField u.variant d.variant,
       DPD.selectedServiceTiers = applyField u.selectedServiceTiers d.selectedServiceTiers,
+      DPD.enabled = applyField u.enabled d.enabled,
       DPD.blocked = applyField u.blocked d.blocked,
       DPD.subscribed = applyField u.subscribed d.subscribed,
       DPD.canSwitchToRental = applyField u.canSwitchToRental d.canSwitchToRental,
