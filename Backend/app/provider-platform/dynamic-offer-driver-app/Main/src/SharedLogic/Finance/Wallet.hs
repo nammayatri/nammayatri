@@ -99,6 +99,7 @@ module SharedLogic.Finance.Wallet
     getNonRedeemableBalance,
     computeGstBreakdown,
     computeGstBreakdownByPlace,
+    computeGstBreakdownGSTIN,
     financeCtxFromRide,
     buildFinanceCtx,
     resolveIsOnlineFromBooking,
@@ -739,6 +740,56 @@ computeGstBreakdownByPlace gstBreakup supplierState receiverState supplierCity r
                   then IntraState
                   else InterState
             _ -> Nothing
+
+    intraStateGstBreakup =
+      DTC.GstBreakup
+        { cgstPercentage = gstBreakup.cgstPercentage,
+          sgstPercentage = gstBreakup.sgstPercentage,
+          igstPercentage = Nothing
+        }
+
+    interStateGstBreakup =
+      DTC.GstBreakup
+        { cgstPercentage = Nothing,
+          sgstPercentage = Nothing,
+          igstPercentage =
+            gstBreakup.igstPercentage
+              <|> ((+) <$> gstBreakup.cgstPercentage <*> gstBreakup.sgstPercentage)
+        }
+
+-- | Determine GST jurisdiction by comparing the first 2 characters (state code)
+--   of the seller and buyer GSTINs, then split the total GST accordingly.
+--   GSTIN format: <2-digit state code><10-char PAN><entity><Z><checksum>.
+--   Falls back to the supplied 'gstBreakup' as-is when either GSTIN is missing
+--   or too short to extract a state code.
+computeGstBreakdownGSTIN ::
+  DTC.GstBreakup ->
+  Maybe Text -> -- seller (supplier) GSTIN
+  Maybe Text -> -- buyer (receiver) GSTIN
+  HighPrecMoney ->
+  Maybe GstAmountBreakdown
+computeGstBreakdownGSTIN gstBreakup sellerGstin buyerGstin totalGst
+  | totalGst <= 0 = Nothing
+  | otherwise =
+    case compareStateCode sellerGstin buyerGstin of
+      Just IntraState -> computeGstBreakdown intraStateGstBreakup totalGst
+      Just InterState -> computeGstBreakdown interStateGstBreakup totalGst
+      Nothing -> computeGstBreakdown gstBreakup totalGst
+  where
+    -- Normalise a GSTIN: trim, upper-case, drop if shorter than 2 chars.
+    normaliseGstin mbGstin = do
+      gstin <- T.toUpper . T.strip <$> mbGstin
+      if T.length gstin >= 2 then Just gstin else Nothing
+
+    -- Compare ONLY the first 2 characters (state code) of seller and buyer GSTIN.
+    compareStateCode mbSeller mbBuyer =
+      case (normaliseGstin mbSeller, normaliseGstin mbBuyer) of
+        (Just seller, Just buyer) ->
+          Just $
+            if T.take 2 seller == T.take 2 buyer
+              then IntraState
+              else InterState
+        _ -> Nothing
 
     intraStateGstBreakup =
       DTC.GstBreakup

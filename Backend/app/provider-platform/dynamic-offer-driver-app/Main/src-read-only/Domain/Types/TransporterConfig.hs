@@ -466,6 +466,7 @@ data TaxConfig = TaxConfig
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)

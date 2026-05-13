@@ -952,6 +952,7 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TaxConfig:
       rideGst: GstBreakup
+      subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
       defaultTdsRate: Maybe Double
