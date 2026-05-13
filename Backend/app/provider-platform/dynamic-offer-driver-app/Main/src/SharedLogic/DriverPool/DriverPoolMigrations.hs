@@ -10,8 +10,8 @@ module SharedLogic.DriverPool.DriverPoolMigrations
 where
 
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as DL
 import Data.List (partition, sortOn)
+import qualified Data.List as DL
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
 import Kernel.Types.Id

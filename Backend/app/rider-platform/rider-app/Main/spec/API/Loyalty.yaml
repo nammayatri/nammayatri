@@ -1,10 +1,14 @@
 imports:
   LoyaltyInfoRequest: Kernel.External.Wallet.Interface.Types
   LoyaltyInfoResponse: Kernel.External.Wallet.Interface.Types
+  APISuccess: Kernel.Types.APISuccess
 
 module: Loyalty
 
-types: {}
+types:
+  SvpDeductReq:
+    customerId: Text
+    amount: HighPrecMoney
 
 apis:
   - POST:
@@ -13,3 +17,10 @@ apis:
       response:
         type: LoyaltyInfoResponse
 
+  - POST:
+      endpoint: /wallet/svp/deduct
+      auth: TokenAuth
+      request:
+        type: SvpDeductReq
+      response:
+        type: APISuccess

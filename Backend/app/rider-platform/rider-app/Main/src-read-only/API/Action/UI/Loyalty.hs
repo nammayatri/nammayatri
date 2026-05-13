@@ -7,6 +7,7 @@ module API.Action.UI.Loyalty
   )
 where
 
+import qualified API.Types.UI.Loyalty
 import qualified Control.Lens
 import qualified Domain.Action.UI.Loyalty
 import qualified Domain.Types.Merchant
@@ -15,16 +16,23 @@ import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Wallet.Interface.Types
 import qualified Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "wallet" :> "loyaltyInfo" :> Post ('[JSON]) Kernel.External.Wallet.Interface.Types.LoyaltyInfoResponse)
+type API =
+  ( TokenAuth :> "wallet" :> "loyaltyInfo" :> Post '[JSON] Kernel.External.Wallet.Interface.Types.LoyaltyInfoResponse :<|> TokenAuth :> "wallet" :> "svp" :> "deduct"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.Loyalty.SvpDeductReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
 
 handler :: Environment.FlowServer API
-handler = postWalletLoyaltyInfo
+handler = postWalletLoyaltyInfo :<|> postWalletSvpDeduct
 
 postWalletLoyaltyInfo ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -33,3 +41,12 @@ postWalletLoyaltyInfo ::
     Environment.FlowHandler Kernel.External.Wallet.Interface.Types.LoyaltyInfoResponse
   )
 postWalletLoyaltyInfo a1 = withFlowHandlerAPI $ Domain.Action.UI.Loyalty.postWalletLoyaltyInfo (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postWalletSvpDeduct ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.Loyalty.SvpDeductReq ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postWalletSvpDeduct a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Loyalty.postWalletSvpDeduct (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

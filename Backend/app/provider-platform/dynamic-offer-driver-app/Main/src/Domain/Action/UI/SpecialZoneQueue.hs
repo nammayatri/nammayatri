@@ -117,14 +117,6 @@ getSpecialZoneQueueRequest (mbPersonId, merchantId, merchantOpCityId) = do
           rest' <- collectValidActive now rest
           enriched <- enrichRes req
           pure (enriched : rest')
-
-    -- | Build the response row for a request, enriching it with the same three
-    --   metrics surfaced over the trigger-notify FCM (perKmFare, isDemandHigh,
-    --   demandCount). Recompute on each poll; 'getAirportPerKmFare' is cached
-    --   for one day per (specialLocation, variant) and 'demandCount' is one
-    --   Redis read. 'isDemandHigh' has no caller-supplied value at poll time
-    --   — defaulting to True mirrors 'fromMaybe True mbIsDemandHigh' in
-    --   'notifyDrivers'.
     enrichRes req = do
       mbGate <- QGI.findById (Kernel.Types.Id.Id req.gateId)
       let mbServiceTier = Kernel.Prelude.readMaybe (T.unpack req.vehicleType) :: Maybe DVST.ServiceTierType
