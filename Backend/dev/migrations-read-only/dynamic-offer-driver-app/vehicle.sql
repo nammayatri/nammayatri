@@ -62,3 +62,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN rule_based_upgrade_tiers j
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_image_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_rating_remark text ;
