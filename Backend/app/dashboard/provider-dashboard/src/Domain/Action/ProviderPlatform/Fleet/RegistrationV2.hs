@@ -7,6 +7,8 @@ module Domain.Action.ProviderPlatform.Fleet.RegistrationV2
     buildFleetOwnerRegisterReqV2,
     postRegistrationV2RegisterBankAccountLink,
     getRegistrationV2RegisterBankAccountStatus,
+    putRegistrationV2ProfileLanguage,
+    getRegistrationV2ProfileLanguage,
   )
 where
 
@@ -176,3 +178,27 @@ getRegistrationV2RegisterBankAccountStatus ::
 getRegistrationV2RegisterBankAccountStatus merchantShortId opCity apiTokenInfo fleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2RegisterBankAccountStatus) fleetOwnerId apiTokenInfo.personId.getId
+
+putRegistrationV2ProfileLanguage ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Common.FleetOwnerUpdateLanguageReq ->
+  Flow APISuccess
+putRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  _ <-
+    T.withTransactionStoring transaction $
+      Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.putRegistrationV2ProfileLanguage) apiTokenInfo.personId.getId req
+  QP.updateLanguage apiTokenInfo.personId req.language
+  pure Success
+
+getRegistrationV2ProfileLanguage ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Flow Common.FleetOwnerLanguageRes
+getRegistrationV2ProfileLanguage merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.getRegistrationV2ProfileLanguage) apiTokenInfo.personId.getId

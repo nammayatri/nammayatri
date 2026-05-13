@@ -27,6 +27,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude (UTCTime, listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
@@ -1294,12 +1295,13 @@ getFinanceManagementFinanceInvoicePdf ::
   Maybe Text ->
   Maybe InvoiceType ->
   Maybe IssuedToType ->
+  Maybe KET.Language ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLanguage mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1321,9 +1323,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  -- Use the first invoice's driver preferred language; falls back to EN if driver not found / language unset.
-  mbDriver <- QPerson.findById (Id (Kernel.Prelude.head invoices).issuedToId)
-  let locale = languageToLocale (mbDriver >>= (.language))
+  let locale = languageToLocale mbLanguage
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
       cfg =
         InvoicePdfConfig

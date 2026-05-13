@@ -29,6 +29,7 @@ import qualified Domain.Types.Role as DRole
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt, getDbHash)
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
@@ -436,6 +437,16 @@ profile tokenInfo = do
       let merchantAccesslistWithCity = map (\group -> DP.AvailableCitiesForMerchant ((.merchantShortId) (head group)) (map (.operatingCity) group)) groupedByMerchant
       pure $ DP.makePersonAPIEntity decPerson role (merchantAccesslistWithCity <&> (.merchantShortId)) (Just merchantAccesslistWithCity)
 
+updateProfile ::
+  BeamFlow m r =>
+  TokenInfo ->
+  UpdateProfileReq ->
+  m APISuccess
+updateProfile tokenInfo req = do
+  whenJust req.language $ \lang ->
+    QP.updateLanguage tokenInfo.personId lang
+  pure Success
+
 getCurrentMerchant ::
   BeamFlow m r =>
   TokenInfo ->
@@ -560,7 +571,8 @@ buildPerson req dashboardAccessType = do
         rejectedAt = Nothing,
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
-        rejectedBy = Nothing
+        rejectedBy = Nothing,
+        language = Nothing
       }
 
 data UpdatePersonReq = UpdatePersonReq
@@ -569,6 +581,11 @@ data UpdatePersonReq = UpdatePersonReq
     email :: Maybe Text,
     mobileNumber :: Maybe Text,
     mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data UpdateProfileReq = UpdateProfileReq
+  { language :: Maybe KET.Language
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

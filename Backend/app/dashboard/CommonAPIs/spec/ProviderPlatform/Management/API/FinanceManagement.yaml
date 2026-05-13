@@ -15,6 +15,7 @@ imports:
   ReconciliationType: Lib.Finance.Domain.Types.ReconciliationSummary
   DateOrTime: Lib.Finance.Invoice.PdfService
   Value: Data.Aeson
+  Language: Kernel.External.Types
 
 importPackageOverrides:
   Domain.Types.Invoice: "beckn-spec"
@@ -56,6 +57,7 @@ apis:
         status: InvoiceStatus
         fleetOwnerOrDriverId: Text
         issuedToType: IssuedToType
+        language: Language
       auth: ApiAuthV2
       response:
         type: FinanceInvoicePdfResp

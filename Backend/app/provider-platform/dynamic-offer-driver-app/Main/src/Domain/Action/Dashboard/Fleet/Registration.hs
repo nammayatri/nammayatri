@@ -22,6 +22,8 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerVerifyHandle (..),
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
+    FleetOwnerUpdateLanguageReq (..),
+    fleetOwnerUpdateLanguage,
   )
 where
 
@@ -45,6 +47,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
+import qualified Kernel.External.Types as KET
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -67,6 +70,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -352,3 +356,15 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+---------------------------------------------------------------------
+data FleetOwnerUpdateLanguageReq = FleetOwnerUpdateLanguageReq
+  { personId :: Id DP.Person,
+    language :: KET.Language
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+fleetOwnerUpdateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetOwnerUpdateLanguageReq -> m APISuccess
+fleetOwnerUpdateLanguage req = do
+  QPExtra.updateLanguage req.personId req.language
+  pure Success

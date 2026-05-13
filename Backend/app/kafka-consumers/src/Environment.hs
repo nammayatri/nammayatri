@@ -18,7 +18,6 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
-import Passetto.Lib (mkPassettoContextAuto)
 import qualified Kernel.Prelude
 import qualified Kernel.Prelude as Kernel
 import Kernel.Sms.Config (SmsConfig)
@@ -40,6 +39,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
 import Passetto.Client (PassettoContext)
+import Passetto.Lib (mkPassettoContextAuto)
 import System.Environment (lookupEnv)
 import Prelude (show)
 

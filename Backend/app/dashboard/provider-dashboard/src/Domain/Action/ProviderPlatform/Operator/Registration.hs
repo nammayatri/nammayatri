@@ -92,7 +92,8 @@ buildOperator emailUnencrypted mobileNumberUnencrypted mobileCountryCode firstNa
         dashboardType = PT.DEFAULT_DASHBOARD,
         passwordUpdatedAt = Nothing,
         approvedBy = Nothing,
-        rejectedBy = Nothing
+        rejectedBy = Nothing,
+        language = Nothing
       }
 
 postRegistrationDashboardRegister :: (ShortId DM.Merchant -> Context.City -> ApiTokenInfo -> Common.CreateDashboardOperatorReq -> Flow APISuccess)
