@@ -63,6 +63,8 @@ getRideList ::
   Maybe Common.BookingStatus ->
   Maybe Currency ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe (Id Common.Driver) ->
   Maybe Text ->
   Maybe Text ->
@@ -76,9 +78,9 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbCustomerCountryCode mbDriverPhone mbDriverId mbDriverCountryCode mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) mbCustomerCountryCode mbDriverCountryCode requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->

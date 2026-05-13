@@ -64,6 +64,8 @@ getRideList ::
   Maybe Common.BookingStatus ->
   Maybe Currency ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe (Id Common.Driver) ->
   Maybe Text ->
   Maybe Text ->
@@ -77,10 +79,10 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount = do
+getRideList merchantShortId opCity apiTokenInfo bookingStatus currency customerPhoneNo customerCountryCode driverPhoneNo driverId driverCountryCode fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus currency customerPhoneNo driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount
+  Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) requestorId bookingStatus currency customerCountryCode customerPhoneNo driverCountryCode driverId driverPhoneNo fleetOwnerId from fromAmount limit offset paymentMode rideId rideShortId to toAmount
 
 postRideEndMultiple :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.MultipleRideEndReq -> Flow Common.MultipleRideEndResp
 postRideEndMultiple merchantShortId opCity apiTokenInfo req = do
