@@ -158,7 +158,7 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
 
 driverCoinsEvent :: EventFlow m r => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> m ()
 driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap = do
-  let vehCategory = DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient
+  let vehCategory = maybe (DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient) DTVeh.castServiceTierToVehicleCategory mbServiceTierType
       tripCatType = case eventType of
         DCT.EndRide {tripCategoryType} -> tripCategoryType
         _ -> DCT.DynamicOfferTrip
