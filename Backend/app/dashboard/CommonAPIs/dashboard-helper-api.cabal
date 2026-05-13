@@ -78,6 +78,7 @@ library
       API.Types.ProviderPlatform.Management.DriverGoHome
       API.Types.ProviderPlatform.Management.DriverReferral
       API.Types.ProviderPlatform.Management.DriverRegistration
+      API.Types.ProviderPlatform.Management.DriverVehicleQuality
       API.Types.ProviderPlatform.Management.Endpoints.Account
       API.Types.ProviderPlatform.Management.Endpoints.Booking
       API.Types.ProviderPlatform.Management.Endpoints.CoinsConfig
@@ -88,6 +89,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverGoHome
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+      API.Types.ProviderPlatform.Management.Endpoints.DriverVehicleQuality
       API.Types.ProviderPlatform.Management.Endpoints.EntityInfo
       API.Types.ProviderPlatform.Management.Endpoints.FeedbackForm
       API.Types.ProviderPlatform.Management.Endpoints.FinanceManagement

@@ -99,6 +99,13 @@ updateVehicleImageId vehicleImageId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.vehicleImageId (Kernel.Types.Id.getId <$> vehicleImageId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateVehicleRatingAndRemark ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updateVehicleRatingAndRemark vehicleRating vehicleRatingRemark id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.vehicleRating vehicleRating, Se.Set Beam.vehicleRatingRemark vehicleRatingRemark, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateVentilator ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -149,6 +156,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleModel vehicleModel,
       Se.Set Beam.vehicleModelYear vehicleModelYear,
       Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.vehicleRatingRemark vehicleRatingRemark,
       Se.Set Beam.vehicleSeatBelts vehicleSeatBelts,
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.ventilator ventilator,

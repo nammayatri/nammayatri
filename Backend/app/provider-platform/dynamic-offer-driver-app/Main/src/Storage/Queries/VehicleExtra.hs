@@ -6,6 +6,7 @@ import qualified Data.Text as T
 import qualified Data.Time.Calendar as Days
 import qualified Database.Beam as B
 import Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.ServiceTierType
 import Domain.Types.Vehicle
@@ -19,6 +20,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
+import qualified Storage.Beam.DriverInformation as BeamDI
 import qualified Storage.Beam.Vehicle as BeamV
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import Storage.Queries.OrphanInstances.Vehicle ()
@@ -116,6 +118,39 @@ findAllByVariantRegNumMerchantId variantM mbRegNum limitVal offsetVal (Id mercha
                   )
                   $ B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] vehicles)
+
+findEnabledByVariantCityAndManufacturingDateAfter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleVariant -> Days.Day -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Int -> Int -> m [Vehicle]
+findEnabledByVariantCityAndManufacturingDateAfter variantVal cutoffDate (Id merchantId') opCityId mbMaxVehicleRating limitVal offsetVal = do
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limitVal) $
+            B.offset_ (fromIntegral offsetVal) $
+              B.orderBy_ (\(vehicle, _driverInfo) -> B.desc_ vehicle.createdAt) $
+                B.filter_'
+                  ( \(vehicle, driverInfo) ->
+                      vehicle.merchantId B.==?. B.val_ merchantId'
+                        B.&&?. B.sqlBool_ (vehicle.variant B.==. B.val_ variantVal)
+                        B.&&?. B.maybe_ (B.sqlBool_ $ B.val_ True) (\mfgDate -> B.sqlBool_ (mfgDate B.>=. B.val_ cutoffDate)) vehicle.mYManufacturing
+                        B.&&?. B.sqlBool_ (driverInfo.enabled B.==. B.val_ True)
+                        B.&&?. B.sqlBool_ (driverInfo.blocked B.==. B.val_ False)
+                        B.&&?. (driverInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCityId))
+                        B.&&?. vehicleRatingFilter vehicle.vehicleRating
+                  )
+                  do
+                    vehicle <- B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
+                    driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\di -> BeamV.driverId vehicle B.==?. BeamDI.driverId di)
+                    pure (vehicle, driverInfo)
+  case result of
+    Right rows -> catMaybes <$> mapM (fromTType' . fst) rows
+    Left _ -> pure []
+  where
+    vehicleRatingFilter vr = case mbMaxVehicleRating of
+      Nothing -> B.sqlBool_ (B.isNothing_ vr)
+      Just maxRating ->
+        B.sqlBool_ (B.isNothing_ vr) B.||?. B.maybe_ (B.sqlBool_ $ B.val_ False) (\r -> B.sqlBool_ (r B.<. B.val_ maxRating)) vr
 
 findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id Person] -> m [Vehicle]
 findAllByDriverIds driverIds =

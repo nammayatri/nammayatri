@@ -952,6 +952,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.ventilator = Nothing,
                     DRC.luggageCapacity = Nothing,
                     DRC.vehicleRating = Nothing,
+                    DRC.vehicleRatingRemark = Nothing,
                     DRC.failedRules = [],
                     DRC.dateOfRegistration = Nothing,
                     DRC.vehicleModelYear = req.vehicleModelYear,

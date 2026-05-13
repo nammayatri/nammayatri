@@ -649,6 +649,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             ventilator = input.ventilator,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
+            vehicleRatingRemark = Nothing,
             failedRules = failedRules,
             dateOfRegistration = input.dateOfRegistration,
             vehicleModelYear = input.vehicleModelYear,

@@ -186,6 +186,7 @@ library
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
+      Domain.Action.Dashboard.Management.DriverVehicleQuality
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
@@ -904,6 +905,7 @@ library
       API.Action.Dashboard.Management.DriverGoHome
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
+      API.Action.Dashboard.Management.DriverVehicleQuality
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement

@@ -33,6 +33,12 @@ findFeedbackBadgeByKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id.Id P
 findFeedbackBadgeByKey driverId badgeKey =
   findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Id.getId driverId), Se.Is Beam.badgeKey $ Se.Eq (Just badgeKey)]]
 
+findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id.Id Person.Person] -> m [Domain.FeedbackBadge]
+findAllByDriverIds driverIds =
+  if null driverIds
+    then pure []
+    else findAllWithKV [Se.Is Beam.driverId $ Se.In (Id.getId <$> driverIds)]
+
 updateFeedbackBadge :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Domain.FeedbackBadge -> Int -> m ()
 updateFeedbackBadge feedbackBadge newBadgeCount = do
   now <- getCurrentTime

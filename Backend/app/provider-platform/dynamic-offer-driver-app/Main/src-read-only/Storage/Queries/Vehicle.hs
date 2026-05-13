@@ -70,6 +70,18 @@ updateVehicleName vehicleName driverId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.vehicleName vehicleName, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateVehicleRatingAndRemark ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateVehicleRatingAndRemark vehicleRating vehicleRatingRemark driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.vehicleRatingRemark vehicleRatingRemark,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateVentilator :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVentilator ventilator driverId = do
   _now <- getCurrentTime

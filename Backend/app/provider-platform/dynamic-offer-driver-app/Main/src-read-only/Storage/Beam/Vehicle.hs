@@ -40,6 +40,7 @@ data VehicleT f = VehicleT
     vehicleImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleRatingRemark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

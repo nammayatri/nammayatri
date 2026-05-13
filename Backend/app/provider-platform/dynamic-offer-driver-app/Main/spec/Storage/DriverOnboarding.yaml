@@ -300,6 +300,7 @@ VehicleRegistrationCertificate:
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
+    vehicleRatingRemark: Maybe Text
     userPassedVehicleCategory: Maybe VehicleCategory
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
@@ -365,6 +366,10 @@ VehicleRegistrationCertificate:
     updateVehicleImageId:
       kvFunction: updateOneWithKV
       params: [vehicleImageId]
+      where: id
+    updateVehicleRatingAndRemark:
+      kvFunction: updateOneWithKV
+      params: [vehicleRating, vehicleRatingRemark]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
