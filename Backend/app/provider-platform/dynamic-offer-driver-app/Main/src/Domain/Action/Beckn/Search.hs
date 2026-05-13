@@ -385,8 +385,7 @@ handler ValidatedDSearchReq {..} sReq = do
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
-    -- | Check if the pickup gate supports queueing and get default driver extra.
-    -- The pickupGateId is now extracted directly from the Area tag.
+
     getSpecialZoneQueueInfo :: SL.Area -> DLoc.Location -> Flow (Bool, Maybe HighPrecMoney, Maybe Text)
     getSpecialZoneQueueInfo SL.Default _ = pure (False, Nothing, Nothing)
     getSpecialZoneQueueInfo area fromLocation = do

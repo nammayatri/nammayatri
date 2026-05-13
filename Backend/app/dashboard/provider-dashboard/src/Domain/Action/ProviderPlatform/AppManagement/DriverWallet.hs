@@ -36,10 +36,10 @@ getDriverWalletWalletBalance merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletBalance) driverId
 
-getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Environment.Flow API.Types.UI.DriverWallet.WalletSummaryResponse)
-getDriverWalletWalletTransactions merchantShortId opCity apiTokenInfo driverId fromDate toDate = do
+getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel -> Environment.Flow API.Types.UI.DriverWallet.WalletSummaryResponse)
+getDriverWalletWalletTransactions merchantShortId opCity apiTokenInfo driverId fromDate toDate aggBy = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletTransactions) driverId fromDate toDate
+  API.Client.ProviderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.driverWalletDSL.getDriverWalletWalletTransactions) driverId fromDate toDate aggBy
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postDriverWalletWalletPayout merchantShortId opCity apiTokenInfo driverId = do

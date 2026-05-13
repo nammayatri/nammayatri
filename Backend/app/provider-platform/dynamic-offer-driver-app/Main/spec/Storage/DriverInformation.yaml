@@ -59,6 +59,9 @@ DriverInformation:
       accountNumber: Maybe Text
       ifscCode: Maybe Text
       nameAtBank: Maybe Text
+    DisabledReasonFlag:
+      enum: "FleetDisabled,AdminDisabled,DriverDisabled"
+      derive: "HttpInstance"
   fields:
     driverId: Id Person
     adminId: Maybe (Id Person)
@@ -119,6 +122,7 @@ DriverInformation:
     dailyCancellationRateBlockingCooldown: Maybe UTCTime
     weeklyCancellationRateBlockingCooldown: Maybe UTCTime
     blockReasonFlag: Maybe BlockReasonFlag
+    disabledReasonFlag: Maybe DisabledReasonFlag
     payoutRegAmountRefunded: Maybe HighPrecMoney
     driverTripEndLocation: Maybe LatLong
     onRideTripCategory: Maybe TripCategory

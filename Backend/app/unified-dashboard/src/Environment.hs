@@ -18,7 +18,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map.Strict as M
 import Domain.Types.ServerName
 import Kernel.External.Encryption (EncTools)
-import Passetto.Lib (mkPassettoContextAuto)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
@@ -37,6 +36,7 @@ import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
 import Passetto.Client (PassettoContext)
+import Passetto.Lib (mkPassettoContextAuto)
 import System.Environment
 
 data AppEnv = AppEnv

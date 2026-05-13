@@ -65,7 +65,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,
-            onlineCommissionPaidOutDirectly = Nothing
+            onlineCommissionPaidOutDirectly = Nothing,
+            fetchWalletTransactionsFromClickhouse = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 

@@ -40,11 +40,12 @@ getDriverWalletWalletTransactions ::
   Kernel.Types.Id.Id DP.Person ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
   Environment.Flow DriverWallet.WalletSummaryResponse
-getDriverWalletWalletTransactions merchantShortId opCity driverId mbFromDate mbToDate = do
+getDriverWalletWalletTransactions merchantShortId opCity driverId mbFromDate mbToDate mbAggBy = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Kernel.Prelude.Nothing merchant (Kernel.Prelude.Just opCity)
-  DDriverWallet.getWalletTransactions (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) mbFromDate mbToDate
+  DDriverWallet.getWalletTransactions (Kernel.Prelude.Just driverId, merchant.id, merchantOpCityId) mbFromDate mbToDate mbAggBy
 
 postDriverWalletWalletPayout ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

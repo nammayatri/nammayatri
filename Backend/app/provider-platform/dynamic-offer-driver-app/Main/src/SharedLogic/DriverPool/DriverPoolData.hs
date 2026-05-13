@@ -43,6 +43,7 @@ data DriverPoolData = DriverPoolData
     variant :: VehicleVariant,
     selectedServiceTiers :: [ServiceTierType],
     -- Class 1 (preferences)
+    enabled :: Bool,
     blocked :: Bool,
     subscribed :: Bool,
     canSwitchToRental :: Bool,
@@ -124,6 +125,7 @@ defaultDriverPoolData dId =
       totalRides = 0,
       variant = AUTO_RICKSHAW,
       selectedServiceTiers = [],
+      enabled = False,
       blocked = False,
       subscribed = False,
       canSwitchToRental = False,

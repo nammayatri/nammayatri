@@ -337,3 +337,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN nominee_name te
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN docs_verification_status text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN disabled_reason_flag text ;
