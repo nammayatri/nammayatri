@@ -521,4 +521,8 @@ in  { esqDBCfg
       }
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , masterCloudProxyConfig =
+      { masterUrl = Some "http://localhost:8116"
+      , masterSecret = Some "123"
+      }
     }

@@ -554,4 +554,8 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
+    , masterCloudProxyConfig =
+      { masterUrl = None Text
+      , masterSecret = Some "123"
+      }
     }
