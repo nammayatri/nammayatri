@@ -243,15 +243,15 @@ data NearbyResp = NearbyResp {nearbyDriverCount :: Kernel.Prelude.Maybe Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RideCallCountRes = RideCallCountRes {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, callCount :: Kernel.Prelude.Int}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data PaymentMode
   = CASH
   | ONLINE
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data RideCallCountRes = RideCallCountRes {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, callCount :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RideInfo = RideInfo
   { rideShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride,
@@ -292,6 +292,7 @@ data RideInfoRes = RideInfoRes
   { rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Text,
+    customerCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rideOtp :: Kernel.Prelude.Text,
     customerPickupLocation :: LocationAPIEntity,
     customerDropLocation :: Kernel.Prelude.Maybe LocationAPIEntity,
@@ -300,6 +301,7 @@ data RideInfoRes = RideInfoRes
     driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleNo :: Kernel.Prelude.Text,
     driverStartLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
@@ -386,8 +388,10 @@ data RideListItem = RideListItem
     displayBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customerPhoneNo :: Kernel.Prelude.Text,
+    customerCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverName :: Kernel.Prelude.Text,
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tripCategory :: DeprecatedTripCategory,
     tripCategoryV2 :: Domain.Types.TripCategory,
     vehicleNo :: Kernel.Prelude.Text,
@@ -520,9 +524,13 @@ type GetRideAgentList =
 type GetRideList =
   ( "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
       :> QueryParam
-           "customerPhoneNo"
+           "customerCountryCode"
            Kernel.Prelude.Text
-      :> QueryParam "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
+      :> QueryParam "driverCountryCode" Kernel.Prelude.Text
+      :> QueryParam
+           "driverId"
+           (Kernel.Types.Id.Id Dashboard.Common.Driver)
       :> QueryParam
            "driverPhoneNo"
            Kernel.Prelude.Text
@@ -566,7 +574,13 @@ type GetRideListHelper =
       :> QueryParam
            "currency"
            Kernel.Types.Common.Currency
-      :> QueryParam "customerPhoneNo" Kernel.Prelude.Text
+      :> QueryParam "customerCountryCode" Kernel.Prelude.Text
+      :> QueryParam
+           "customerPhoneNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "driverCountryCode"
+           Kernel.Prelude.Text
       :> QueryParam
            "driverId"
            (Kernel.Types.Id.Id Dashboard.Common.Driver)
@@ -685,23 +699,23 @@ type PostRideWaiverRideCancellationPenalty =
 
 type GetRideNearby = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "nearby" :> Get '[JSON] NearbyResp)
 
-type GetRideCallCount = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "callCount" :> Get ('[JSON]) RideCallCountRes)
+type GetRideCallCount = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "callCount" :> Get '[JSON] RideCallCountRes)
 
 data RideAPIs = RideAPIs
-  { getRideAgentList :: (Kernel.Prelude.Maybe (BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient RideListRes),
-    getRideList :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (BookingStatus) -> Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (PaymentMode) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> EulerHS.Types.EulerClient RideListRes),
-    getRideListV2 :: (Kernel.Prelude.Maybe (Kernel.Types.Common.Currency) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (PaymentMode) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (RideStatus) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Types.Common.HighPrecMoney) -> EulerHS.Types.EulerClient RideListResV2),
-    postRideEndMultiple :: (MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp),
-    postRideCancelMultiple :: (MultipleRideCancelReq -> EulerHS.Types.EulerClient MultipleRideCancelResp),
-    getRideInfo :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> EulerHS.Types.EulerClient RideInfoRes),
-    postRideSync :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideSyncRes),
-    postRideSyncMultiple :: (MultipleRideSyncReq -> EulerHS.Types.EulerClient MultipleRideSyncRes),
-    postRideRoute :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideRouteRes),
-    getRideKaptureList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> EulerHS.Types.EulerClient TicketRideListRes),
-    getRideFareBreakUp :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient FareBreakUpRes),
-    postRideWaiverRideCancellationPenalty :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getRideNearby :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient NearbyResp),
-    getRideCallCount :: (Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideCallCountRes)
+  { getRideAgentList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideListRes,
+    getRideList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe PaymentMode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient RideListRes,
+    getRideListV2 :: Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe PaymentMode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe RideStatus -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient RideListResV2,
+    postRideEndMultiple :: MultipleRideEndReq -> EulerHS.Types.EulerClient MultipleRideEndResp,
+    postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient MultipleRideCancelResp,
+    getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient RideInfoRes,
+    postRideSync :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideSyncRes,
+    postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient MultipleRideSyncRes,
+    postRideRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideRouteRes,
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
+    getRideFareBreakUp :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient FareBreakUpRes,
+    postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getRideNearby :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient NearbyResp,
+    getRideCallCount :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideCallCountRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)

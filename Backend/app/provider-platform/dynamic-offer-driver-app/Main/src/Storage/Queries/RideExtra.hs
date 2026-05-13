@@ -23,6 +23,7 @@ import Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
@@ -35,6 +36,7 @@ import qualified Domain.Types.Ride as DRide
 import Domain.Types.RideDetails as RideDetails
 import Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, elem, forM_, id, length, null, sum, traverse_, whenJust)
 import IssueManagement.Domain.Types.MediaFile as DMF
@@ -54,25 +56,23 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.FleetOwnerInformation as BeamFOI
 import qualified Storage.Beam.Payment ()
 import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
+import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.DriverInformation ()
+import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
 import Storage.Queries.OrphanInstances.Person ()
 import Storage.Queries.OrphanInstances.Ride ()
+import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
-import qualified Storage.Beam.FleetOwnerInformation as BeamFOI
-import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
-import qualified Domain.Types.FleetOwnerInformation as DFOI
-import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
-import Storage.Queries.OrphanInstances.FleetOwnerInformation ()
-import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 import Tools.Error
 
 data DatabaseWith2 table1 table2 f = DatabaseWith2
@@ -605,6 +605,8 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
@@ -613,7 +615,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [RideItem]
-findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbFrom mbTo mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -712,6 +714,8 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> riderDetails.mobileNumberHash B.==?. B.val_ hash) mbCustomerPhoneDBHash
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\hash -> rideDetails.driverNumberHash B.==?. B.val_ (Just hash)) mbDriverPhoneDBHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> riderDetails.mobileCountryCode B.==?. B.val_ cc) mbCustomerMobileCountryCode
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\cc -> rideDetails.driverCountryCode B.==?. B.val_ (Just cc)) mbDriverMobileCountryCode
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\vehicleNo -> rideDetails.vehicleNumber B.==?. B.val_ vehicleNo) mbVehicleNo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\fleetOwnerId -> ride.fleetOwnerId B.==?. B.val_ (Just fleetOwnerId)) mbFleetOwnerId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
@@ -749,11 +753,19 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
           pure []
 
-      let rideIds = HS.fromList $ map getRideId zippedRides
+      let zippedRidesFiltered =
+            filter
+              ( \item ->
+                  maybe True (\cc -> item.riderDetails.mobileCountryCode == cc) mbCustomerMobileCountryCode
+                    && maybe True (\cc -> item.rideDetails.driverCountryCode == Just cc) mbDriverMobileCountryCode
+              )
+              zippedRides
+
+      let rideIds = HS.fromList $ map getRideId zippedRidesFiltered
 
       let results = mkRideItem HMS.empty HMS.empty HMS.empty <$> res'
           uniqueResults = filter (\item -> not $ HS.member (getRideId item) rideIds) results
-          allRidesBeforeExtra = zippedRides <> uniqueResults
+          allRidesBeforeExtra = zippedRidesFiltered <> uniqueResults
 
       let fleetOwnerIds = mapMaybe (.fleetOwnerId) allRidesBeforeExtra
           vehicleNos = map (.rideDetails.vehicleNumber) allRidesBeforeExtra
@@ -766,15 +778,20 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
           fleetOwnerPersonMap = HMS.fromList [(p.id, p) | p <- fleetOwnerPersons]
           vrcMap = HMS.fromList [(fromMaybe "" vrc.unencryptedCertificateNumber, vrc) | vrc <- vrcs, isJust vrc.unencryptedCertificateNumber]
 
-      let allRides = map (\item ->
-            let mbFo = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
-                mbPerson = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
-                mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
-            in item { fleetName = mbFo >>= (.fleetName)
-                    , fleetNumber = mbPerson >>= (.mobileNumber)
-                    , vehicleManufacturer = mbVrc >>= (.vehicleManufacturer)
-                    , vehicleModel = mbVrc >>= (.vehicleModel)
-                    }) allRidesBeforeExtra
+      let allRides =
+            map
+              ( \item ->
+                  let mbFo = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
+                      mbPerson = item.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
+                      mbVrc = HMS.lookup item.rideDetails.vehicleNumber vrcMap
+                   in item
+                        { fleetName = mbFo >>= (.fleetName),
+                          fleetNumber = mbPerson >>= (.mobileNumber),
+                          vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
+                          vehicleModel = mbVrc >>= (.vehicleModel)
+                        }
+              )
+              allRidesBeforeExtra
 
       payoutRequests <- QPR.findManyByEntityIds (map (getId . getRideId) allRides)
       let payoutRequestMap = HMS.fromList [(pr.entityId, pr.id) | pr <- payoutRequests]
@@ -824,33 +841,33 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
       let mbFo = ride.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerMap)
           mbPerson = ride.fleetOwnerId >>= (\foid -> HMS.lookup foid fleetOwnerPersonMap)
           mbVrc = HMS.lookup rideDetails.vehicleNumber vrcMap
-      in RideItem
-        { rideShortId = ride.shortId,
-          rideCreatedAt = ride.createdAt,
-          rideDetails = rideDetails,
-          riderDetails = riderDetails,
-          vehicleServiceTierName = ride.vehicleServiceTierName,
-          driverArrivalTime = ride.driverArrivalTime,
-          tripStartTime = ride.tripStartTime,
-          tripEndTime = ride.tripEndTime,
-          fleetOwnerId = ride.fleetOwnerId,
-          currency = ride.currency,
-          customerName = booking.riderName,
-          estimatedDistance = booking.estimatedDistance,
-          traveledDistance = Just ride.traveledDistance,
-          rideDistanceUnit = Just ride.distanceUnit,
-          bookingDistanceUnit = Just booking.distanceUnit,
-          tripCategory = booking.tripCategory,
-          displayBookingId = booking.displayBookingId,
-          customerPickupLocation = Just booking.fromLocation,
-          customerDropLocation = booking.toLocation,
-          payoutRequestId = Nothing,
-          fleetName = mbFo >>= (.fleetName),
-          fleetNumber = mbPerson >>= (.mobileNumber),
-          vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
-          vehicleModel = mbVrc >>= (.vehicleModel),
-          ..
-        }
+       in RideItem
+            { rideShortId = ride.shortId,
+              rideCreatedAt = ride.createdAt,
+              rideDetails = rideDetails,
+              riderDetails = riderDetails,
+              vehicleServiceTierName = ride.vehicleServiceTierName,
+              driverArrivalTime = ride.driverArrivalTime,
+              tripStartTime = ride.tripStartTime,
+              tripEndTime = ride.tripEndTime,
+              fleetOwnerId = ride.fleetOwnerId,
+              currency = ride.currency,
+              customerName = booking.riderName,
+              estimatedDistance = booking.estimatedDistance,
+              traveledDistance = Just ride.traveledDistance,
+              rideDistanceUnit = Just ride.distanceUnit,
+              bookingDistanceUnit = Just booking.distanceUnit,
+              tripCategory = booking.tripCategory,
+              displayBookingId = booking.displayBookingId,
+              customerPickupLocation = Just booking.fromLocation,
+              customerDropLocation = booking.toLocation,
+              payoutRequestId = Nothing,
+              fleetName = mbFo >>= (.fleetName),
+              fleetNumber = mbPerson >>= (.mobileNumber),
+              vehicleManufacturer = mbVrc >>= (.vehicleManufacturer),
+              vehicleModel = mbVrc >>= (.vehicleModel),
+              ..
+            }
 
     mkBookingStatusFilter :: [Ride.Ride] -> [Ride.Ride]
     mkBookingStatusFilter rides = case mbBookingStatus of

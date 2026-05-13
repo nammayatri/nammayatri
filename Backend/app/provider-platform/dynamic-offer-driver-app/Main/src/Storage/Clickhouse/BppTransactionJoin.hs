@@ -225,6 +225,8 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   UTCTime ->
   UTCTime ->
   UTCTime ->
@@ -233,7 +235,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -250,6 +252,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
+                    CH.&&. CH.whenJust_ mbCustomerMobileCountryCode (\ccc -> bppTransaction.riderDetailsMobileCountryCode CH.==. ccc)
+                    CH.&&. CH.whenJust_ mbDriverMobileCountryCode (\dcc -> bppTransaction.rideDetailsDriverCountryCode CH.==. Just dcc)
                     CH.&&. CH.whenJust_ mbVehicleNo (\vehicleNo -> bppTransaction.rideDetailsVehicleNumber CH.==. vehicleNo)
                     CH.&&. CH.whenJust_ mbFleetOwnerId (\foid -> bppTransaction.rideFleetOwnerId CH.==. Just foid)
                     CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)

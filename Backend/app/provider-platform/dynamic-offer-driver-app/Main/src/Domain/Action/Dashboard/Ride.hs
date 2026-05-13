@@ -124,10 +124,12 @@ getRideList ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Text ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId requestorId = do
-  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
+getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount mbDriverId mbCustomerCountryCode mbDriverCountryCode requestorId = do
+  getRideListUtil Nothing merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbPaymentMode mbReqRideId mbReqShortRideId mbto Nothing mbFleetOwnerId mbDriverId mbFromAmount mbToAmount (Just requestorId)
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -144,7 +146,7 @@ getRideAgentList ::
   Maybe Text ->
   Flow Common.RideListRes
 getRideAgentList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbto mbVehicleNo =
-  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset Nothing Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
+  getRideListUtil (Just True) merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset Nothing Nothing mbReqShortRideId mbto mbVehicleNo Nothing Nothing Nothing Nothing Nothing
 
 -- | Common parameters resolved during ride-list setup (shared by V1 and V2).
 data RideListCommonParams = RideListCommonParams
@@ -155,7 +157,9 @@ data RideListCommonParams = RideListCommonParams
     mbShortRideId :: Maybe (ShortId DRide.Ride),
     mbResolvedRideId :: Maybe (Id DRide.Ride),
     mbCustomerPhoneDBHash :: Maybe DbHash,
+    mbCustomerMobileCountryCode :: Maybe Text,
     mbDriverPhoneDBHash :: Maybe DbHash,
+    mbDriverMobileCountryCode :: Maybe Text,
     mbDriverId :: Maybe Text,
     mbFromAmount :: Maybe HighPrecMoney,
     mbToAmount :: Maybe HighPrecMoney,
@@ -177,6 +181,8 @@ withRideListCommonParams ::
   Maybe Currency ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe UTCTime ->
   Maybe Int ->
   Maybe Int ->
@@ -192,7 +198,7 @@ withRideListCommonParams ::
   Maybe Common.PaymentMode ->
   (RideListCommonParams -> Flow a) ->
   Flow a
-withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId mbBookingStatus mbPaymentMode cont = do
+withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto mbDriverId mbFromAmount mbToAmount mbVehicleNo mbFleetOwnerId mbBookingStatus mbPaymentMode cont = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   whenJust mbCurrency $ \currency -> do
@@ -225,6 +231,8 @@ withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDri
     _ -> pure ()
   let from = fromMaybe now mbfrom
   let to = fromMaybe now mbto
+  let mbCustomerMobileCountryCode = mbCustomerCountryCode
+  let mbDriverMobileCountryCode = mbDriverCountryCode
   enableClickhouse <- L.runIO $ Se.lookupEnv "ENABLE_CLICKHOUSE"
   let useClickhouse = addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
   cont RideListCommonParams {..}
@@ -238,6 +246,8 @@ getRideListUtil ::
   Context.City ->
   Maybe Common.BookingStatus ->
   Maybe Currency ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe UTCTime ->
@@ -254,13 +264,13 @@ getRideListUtil ::
   Maybe HighPrecMoney ->
   Maybe Text ->
   Flow Common.RideListRes
-getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode $ \RideListCommonParams {..} -> do
+getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset _mbPaymentMode mbReqRideId mbReqShortRideId mbto _mbVehicleNo _mbFleetOwnerId _mbDriverId _mbFromAmount _mbToAmount mbRequestorId = do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbCustomerCountryCode mbDriverCountryCode mbfrom mbLimit mbOffset mbReqRideId mbReqShortRideId mbto _mbDriverId _mbFromAmount _mbToAmount _mbVehicleNo _mbFleetOwnerId _mbBookingStatus _mbPaymentMode $ \RideListCommonParams {..} -> do
     (shouldShowCustomerInfo, effectiveFleetOwnerId) <- resolveFleetAndCustomerVisibility mbFleetOwnerId
     rideItems <-
       if useClickhouse
-        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
-        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
     rideListItems <- traverse buildRideListItem rideItems
     let rideListItems' :: [Common.RideListItem]
@@ -310,7 +320,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
 getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe (Id Common.Driver) -> Maybe Text -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Int -> Maybe Common.PaymentMode -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe DRide.RideStatus -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Text -> Flow Common.RideListResV2
 getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone _mbDriverId mbDriverPhone mbfrom _mbFromAmount mbLimit mbOffset _mbPaymentMode mbRideId mbReqShortRideId mbRideStatus mbto _mbToAmount _mbFleetOwnerId = do
   let mbDriverIdText = getId <$> _mbDriverId
-  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode $ \RideListCommonParams {..} -> do
+  withRideListCommonParams merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone Nothing Nothing mbfrom mbLimit mbOffset mbRideId mbReqShortRideId mbto mbDriverIdText _mbFromAmount _mbToAmount Nothing _mbFleetOwnerId Nothing _mbPaymentMode $ \RideListCommonParams {..} -> do
     rideItems <-
       if useClickhouse
         then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId from to mbFromAmount mbToAmount
@@ -333,8 +343,10 @@ buildRideListItem QRide.RideItem {..} = do
         displayBookingId = displayBookingId,
         customerName,
         customerPhoneNo,
+        customerCountryCode = Just riderDetails.mobileCountryCode,
         driverName = rideDetails.driverName,
         driverPhoneNo,
+        driverCountryCode = rideDetails.driverCountryCode,
         tripCategory = castTripCategory tripCategory, -- TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
         tripCategoryV2 = tripCategory,
         vehicleNo = rideDetails.vehicleNumber,
@@ -628,6 +640,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
       { rideId = cast @DRide.Ride @Common.Ride ride.id,
         customerName = booking.riderName,
         customerPhoneNo,
+        customerCountryCode = Just riderDetails.mobileCountryCode,
         rideOtp = ride.otp,
         customerPickupLocation = mkLocationAPIEntity booking.fromLocation,
         customerDropLocation = mkLocationAPIEntity <$> booking.toLocation,
@@ -637,6 +650,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
         driverName = rideDetails.driverName,
         pickupDropOutsideOfThreshold = ride.pickupDropOutsideOfThreshold,
         driverPhoneNo,
+        driverCountryCode = rideDetails.driverCountryCode,
         vehicleNo = rideDetails.vehicleNumber,
         driverStartLocation = driverStartLocation,
         driverCurrentLocation = getCoordinates <$> mDriverLocation,
