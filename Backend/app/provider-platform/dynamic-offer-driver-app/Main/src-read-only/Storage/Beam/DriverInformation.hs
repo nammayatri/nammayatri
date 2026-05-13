@@ -49,6 +49,7 @@ data DriverInformationT f = DriverInformationT
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     dailyExtraKms :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    disabledReasonFlag :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag),
     dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus),

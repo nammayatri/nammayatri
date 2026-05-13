@@ -17,7 +17,8 @@ module Environment where
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
-import Kernel.External.Encryption (EncTools, mkDefPassettoContext)
+import Kernel.External.Encryption (EncTools)
+import Passetto.Lib (mkPassettoContextAuto)
 import qualified Kernel.Prelude
 import qualified Kernel.Prelude as Kernel
 import Kernel.Sms.Config (SmsConfig)
@@ -238,7 +239,7 @@ buildAppEnv AppCfg {..} consumerType = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   isShuttingDown <- mkShutdown
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg

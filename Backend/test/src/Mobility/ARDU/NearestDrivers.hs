@@ -79,7 +79,8 @@ createNearestDriverReq nearestRadius now =
             securityDepositGst = Nothing,
             subscriptionTdsRate = Nothing,
             airportEntryFeeGst = Nothing,
-            serviceVatPercentage = Nothing
+            serviceVatPercentage = Nothing,
+            subscriptionGst = DTC.GstBreakup Nothing Nothing Nothing
           },
       minWalletAmountForCashRides = Nothing,
       currentRideTripCategoryValidForForwardBatching = [],

@@ -615,7 +615,9 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     buildFRFSSubscriber :: Maybe Bool,
     baseRequestCity :: Maybe Context.City,
     baseRequestMerchant :: Maybe Text,
-    replicateFareProducts :: Maybe Bool
+    replicateFareProducts :: Maybe Bool,
+    issueCategorySourceMerchant :: Maybe Text,
+    issueCategorySourceCity :: Maybe Context.City
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -644,6 +646,8 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "baseRequestCity" form
       <*> parseMaybeInput "baseRequestMerchant" form
       <*> parseMaybeInput "replicateFareProducts" form
+      <*> parseMaybeInput "issueCategorySourceMerchant" form
+      <*> parseMaybeInput "issueCategorySourceCity" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -689,7 +693,9 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     buildFRFSSubscriber :: Maybe Bool,
     baseRequestCity :: Maybe Context.City,
     baseRequestMerchant :: Maybe Text,
-    replicateFareProducts :: Maybe Bool
+    replicateFareProducts :: Maybe Bool,
+    issueCategorySourceMerchant :: Maybe Text,
+    issueCategorySourceCity :: Maybe Context.City
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

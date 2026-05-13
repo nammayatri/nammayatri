@@ -101,6 +101,7 @@ library
     , http-client
     , mobility-core
     , passetto-client
+    , passetto-lib
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
@@ -172,6 +173,7 @@ executable mock-google-exe
     , mobility-core
     , mock-google
     , passetto-client
+    , passetto-lib
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor

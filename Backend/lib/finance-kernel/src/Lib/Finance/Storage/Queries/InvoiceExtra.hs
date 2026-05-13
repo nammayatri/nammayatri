@@ -125,3 +125,72 @@ findByReferenceIdWithOptions referenceId mbInvoiceType statusIn mbLimit mbOffset
     (Se.Desc Beam.issuedAt)
     mbLimit
     mbOffset
+
+-- | Commission invoices in date range (Issued/Draft only). ASC by issuedAt.
+-- Type filtering (FLEET_OWNER vs DRIVER) done in Haskell, not SQL — when
+-- issuedToId is provided it already pins the recipient. Paginated via
+-- (limit, offset) to bound per-query load under concurrent fleet chains.
+findCommissionInvoicesInRange ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- merchantOpCityId
+  UTCTime -> -- from
+  UTCTime -> -- to
+  Kernel.Prelude.Maybe Kernel.Prelude.Text -> -- fleetOwnerId / driverId
+  Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- limit
+  Kernel.Prelude.Maybe Kernel.Prelude.Int -> -- offset
+  m [DInvoice.Invoice]
+findCommissionInvoicesInRange merchantOpCityId from to mbFleetOwnerOrDriverId mbLimit mbOffset = do
+  let conds =
+        [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId]
+          <> [Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.Commission]
+          <> [Se.Is Beam.issuedAt $ Se.GreaterThanOrEq from]
+          <> [Se.Is Beam.issuedAt $ Se.LessThanOrEq to]
+          <> [Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft]]
+          <> [Se.Is Beam.issuedToId $ Se.Eq fid | Just fid <- [mbFleetOwnerOrDriverId]]
+  findAllWithOptionsKV
+    [Se.And conds]
+    (Se.Asc Beam.issuedAt)
+    mbLimit
+    mbOffset
+
+-- | Highest periodEnd of prior AggregatedCommission rows for this
+-- (merchantOpCity, recipient). Drives the runtime idempotency check.
+findLatestAggregatedCommissionPeriodEnd ::
+  (BeamFlow.BeamFlow m r) =>
+  Kernel.Prelude.Text -> -- merchantOpCityId
+  Kernel.Prelude.Text -> -- issuedToId
+  m (Kernel.Prelude.Maybe UTCTime)
+findLatestAggregatedCommissionPeriodEnd merchantOpCityId issuedToId = do
+  invoices <-
+    findAllWithOptionsKV
+      [ Se.And
+          [ Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId,
+            Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission,
+            Se.Is Beam.issuedToId $ Se.Eq issuedToId,
+            Se.Is Beam.status $ Se.In [DInvoice.Issued, DInvoice.Draft]
+          ]
+      ]
+      (Se.Desc Beam.periodEnd)
+      (Just 1)
+      Nothing
+  pure $ listToMaybe invoices >>= (.periodEnd)
+
+-- | DB fallback for the AggregatedCommission Redis sequence ("CMB" counter).
+-- Scoped to AggregatedCommission rows so the isolated series is recovered
+-- correctly on Redis miss.
+findLatestAggregatedCommissionByCreatedAt ::
+  (BeamFlow.BeamFlow m r) =>
+  UTCTime ->
+  m (Kernel.Prelude.Maybe DInvoice.Invoice)
+findLatestAggregatedCommissionByCreatedAt now = do
+  let todayStart = UTCTime (utctDay now) 0
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.invoiceType $ Se.Eq DInvoiceSpec.AggregatedCommission,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq todayStart
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe

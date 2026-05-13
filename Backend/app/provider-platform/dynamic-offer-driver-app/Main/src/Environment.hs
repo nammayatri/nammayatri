@@ -61,6 +61,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Client.TLS as HttpTLS
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
@@ -336,7 +337,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

@@ -51,3 +51,9 @@ ALTER TABLE atlas_app.finance_invoice ADD COLUMN reference_id text ;
 
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN payment_mode text ;
 ALTER TABLE atlas_app.finance_invoice ADD COLUMN merchant_gstin text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN period_start timestamp with time zone ;
+ALTER TABLE atlas_app.finance_invoice ADD COLUMN period_end timestamp with time zone ;

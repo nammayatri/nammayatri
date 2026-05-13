@@ -1788,7 +1788,7 @@ copyAllDefaultIssueCategories ::
   Context.City ->
   ServiceHandle m ->
   Identifier ->
-  m Common.CopyAllDefaultIssueCategoryRes
+  m Common.CopyAllIssueCategoryRes
 copyAllDefaultIssueCategories merchantShortId city issueHandle identifier = do
   _ <-
     issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
@@ -1829,7 +1829,62 @@ copyAllDefaultIssueCategories merchantShortId city issueHandle identifier = do
       toCopy
   let (failures, successes) = partitionEithers results
   pure $
-    Common.CopyAllDefaultIssueCategoryRes
+    Common.CopyAllIssueCategoryRes
+      { succeeded = successes,
+        failed = failures
+      }
+
+-----------------------------------------------------------
+-- Copy All Categories From Source API ---------------------
+
+copyAllIssueCategories ::
+  BeamFlow m r =>
+  ShortId Merchant ->
+  Context.City ->
+  Common.CopyAllIssueCategoryReq ->
+  ServiceHandle m ->
+  Identifier ->
+  m Common.CopyAllIssueCategoryRes
+copyAllIssueCategories merchantShortId city req issueHandle identifier = do
+  _ <-
+    issueHandle.findMOCityByMerchantShortIdAndCity merchantShortId city
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
+  sourceMoc <-
+    issueHandle.findMOCityByMerchantShortIdAndCity req.sourceMerchantShortId req.sourceCity
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> req.sourceMerchantShortId.getShortId <> "-city-" <> show req.sourceCity)
+  sourceCategories <- CQIC.findAllActiveByMerchantOpCityIdAndLanguage sourceMoc.id ENGLISH identifier
+  results <-
+    mapM
+      ( \(cat, _) -> do
+          result <-
+            withTryCatch "copyAllIssueCategories" $
+              copyIssueCategory
+                merchantShortId
+                city
+                Common.CopyIssueCategoryReq
+                  { sourceCategoryId = cat.id,
+                    targetMerchantShortId = merchantShortId,
+                    targetCity = city
+                  }
+                issueHandle
+                identifier
+          case result of
+            Left err -> do
+              let reason = show err
+              logWarning $ "Skipping category '" <> cat.category <> "': " <> reason
+              pure $
+                Left
+                  Common.FailedCategoryCopy
+                    { categoryId = cat.id,
+                      categoryName = cat.category,
+                      reason = reason
+                    }
+            Right res -> pure $ Right res
+      )
+      sourceCategories
+  let (failures, successes) = partitionEithers results
+  pure $
+    Common.CopyAllIssueCategoryRes
       { succeeded = successes,
         failed = failures
       }

@@ -67,9 +67,11 @@ import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as QTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
@@ -416,7 +418,13 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoices <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+
+  -- Default (no status filter): hide Voided/Cancelled. Caller can request
+  -- explicitly via ?status=Voided / ?status=Cancelled.
+  let invoices = case mbStatus of
+        Just _ -> invoicesAll
+        Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   items <- mapM buildInvoiceItem invoices
 
@@ -1300,7 +1308,14 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoices <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+
+  -- When no explicit status filter is sent, exclude Voided/Cancelled rows so
+  -- the PDF endpoint never renders a dead invoice. Caller can request these
+  -- explicitly via ?status=Voided / ?status=Cancelled.
+  let invoices = case mbStatus of
+        Just _ -> invoicesAll
+        Nothing -> filter (\i -> i.status `Kernel.Prelude.notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
@@ -1310,7 +1325,14 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   mbDriver <- QPerson.findById (Id (Kernel.Prelude.head invoices).issuedToId)
   let locale = languageToLocale (mbDriver >>= (.language))
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl,
+            sellerTradeName = transporterConfig.invoiceConfig >>= (.invoiceSellerTradeName),
+            appName = transporterConfig.invoiceConfig >>= (.invoiceAppName)
+          }
 
   -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
   -- skip those individually so one bad row doesn't kill the whole list response.
@@ -1325,7 +1347,18 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
           let mbTxn = Kernel.Prelude.listToMaybe txns
           pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
         Nothing -> pure (Nothing, Nothing, Nothing)
-      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+      -- Live-fetch AggregatedCommission party metadata (Y-tunnus + merchant VAT).
+      (mbRecipientBid, mbSellerBid, mbSellerVat) <- case inv.invoiceType of
+        AggregatedCommission -> do
+          mbRecipientBid' <- case inv.issuedToType of
+            FLEET_OWNER -> do
+              mbFleet <- QFOI.findByPrimaryKey (Id inv.issuedToId)
+              pure $ mbFleet >>= (.businessLicenseNumberDec)
+            _ -> pure Nothing
+          mbMerchant <- CQM.findById (Id inv.merchantId)
+          pure (mbRecipientBid', mbMerchant >>= (.businessId), mbMerchant >>= (.vatNumber))
+        _ -> pure (Nothing, Nothing, Nothing)
+      pure $ buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat
     case res of
       Right pdfData -> pure (Just pdfData)
       Left err -> do
@@ -1335,15 +1368,16 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   when (Kernel.Prelude.null pdfDatas) $
     throwError $ InvalidRequest "No invoices could be rendered (all failed)"
 
-  let lastInv = Kernel.Prelude.last invoices
-      html = case pdfDatas of
-        [single] -> renderInvoiceHtml cfg single
-        batch -> renderBatchInvoiceHtml cfg batch
+  -- Always render a single invoice PDF; never aggregate (have seperate handling for commission aggregation).
+  -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
+  let chosenPdfData = Kernel.Prelude.head pdfDatas
+      chosenInv = chosenPdfData.financeInvoice
+      html = renderInvoiceHtml cfg chosenPdfData
 
-  pdfBase64 <- generateFinanceInvoicePdf lastInv.invoiceNumber html
+  pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $
     API.FinanceInvoicePdfResp
       { pdfBase64 = pdfBase64,
-        invoiceNumber = lastInv.invoiceNumber
+        invoiceNumber = chosenInv.invoiceNumber
       }

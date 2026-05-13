@@ -601,6 +601,7 @@ types:
   UDYAMApproveDetails:
     - udyamId: Id DriverUdyam
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval
+    - udyamNumber: Maybe Text
   LDCApproveDetails:
     - documentId: Id CommonDriverOnboardingDocuments
     - tdsRate: Maybe Double            # Persisted on FleetOwnerInformation on approval

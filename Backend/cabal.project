@@ -29,6 +29,7 @@ packages:
   app/mocks/public-transport-provider-platform
   app/utils/route-extractor
   app/utils/image-api-helper
+  lib/passetto-lib
   lib/beckn-spec
   lib/beckn-services
   lib/payment

@@ -119,6 +119,9 @@ LedgerEntry:
       where: id
 
   extraIndexes:
+    - columns: [timestamp, fromAccountId]
+    - columns: [timestamp, toAccountId]
+    - columns: [timestamp, concernedIndividualId]
     - columns: [concernedIndividualId]
 
   extraOperations:

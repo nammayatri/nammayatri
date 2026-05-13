@@ -82,6 +82,7 @@ Merchant:
     mobileCountryCode: Maybe Text
     gstin: Maybe Text
     vatNumber: Maybe Text
+    businessId: Maybe Text
     fromTime: Maybe UTCTime
     toTime: Maybe UTCTime
     headCount: Maybe Int
@@ -939,6 +940,7 @@ TransporterConfig:
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
       onlineCommissionPaidOutDirectly: Maybe Bool
+      fetchWalletTransactionsFromClickhouse: Maybe Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
@@ -951,6 +953,7 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TaxConfig:
       rideGst: GstBreakup
+      subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
       defaultTdsRate: Maybe Double
@@ -958,11 +961,20 @@ TransporterConfig:
       invalidPanTdsRate: Double
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    CommissionAggregationFrequency:
+      enum: "DAILY, WEEKLY, MONTHLY"
     InvoiceConfig:
       driverInvoiceLineItemsVatInclusive: Bool
       emitLedgerEntries: Bool
       showVatInputLineItem: Maybe Bool
       logoUrl: Maybe BaseUrl
+      commissionAggregationEnabled: Maybe Bool
+      commissionAggregationFrequency: Maybe CommissionAggregationFrequency
+      commissionAggregationBatchSize: Maybe Int
+      invoiceSellerName: Maybe Text
+      invoiceSellerAddress: Maybe Text
+      invoiceSellerTradeName: Maybe Text
+      invoiceAppName: Maybe Text
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

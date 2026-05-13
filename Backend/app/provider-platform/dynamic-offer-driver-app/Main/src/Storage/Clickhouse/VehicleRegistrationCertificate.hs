@@ -14,6 +14,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
   { id :: C f (Id DRC.VehicleRegistrationCertificate),
     unencryptedCertificateNumber :: C f (Maybe Text),
     vehicleModel :: C f (Maybe Text),
+    vehicleManufacturer :: C f (Maybe Text),
     docsVerificationStatus :: C f (Maybe DDVS.DocsVerificationStatus),
     fleetOwnerId :: C f (Maybe Text)
   }
@@ -27,6 +28,7 @@ vehicleRegistrationCertificateTTable =
     { id = "id",
       unencryptedCertificateNumber = "unencrypted_certificate_number",
       vehicleModel = "vehicle_model",
+      vehicleManufacturer = "vehicle_manufacturer",
       docsVerificationStatus = "docs_verification_status",
       fleetOwnerId = "fleet_owner_id"
     }

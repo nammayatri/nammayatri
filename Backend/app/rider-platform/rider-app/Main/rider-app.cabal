@@ -1611,6 +1611,7 @@ library
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , payment
     , persistent
     , postgresql-simple
@@ -1753,6 +1754,7 @@ executable rider-app-exe
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , process
@@ -1891,6 +1893,7 @@ test-suite rider-app-test
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , process

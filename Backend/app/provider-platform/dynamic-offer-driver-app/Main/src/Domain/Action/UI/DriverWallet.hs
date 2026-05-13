@@ -34,9 +34,10 @@ module Domain.Action.UI.DriverWallet
 where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
-import Data.List (partition)
+import Data.List (partition, span)
 import qualified Data.Map.Strict as Map
 import qualified Data.Time
+import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
@@ -54,6 +55,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.HideSecrets
@@ -76,7 +78,6 @@ import Lib.Finance
     transfer,
   )
 import qualified Lib.Finance.Domain.Types.Account as FAccount
-import qualified Lib.Finance.Ledger.Service as LedgerService
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerEntry
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -89,6 +90,7 @@ import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.LedgerEntry as CHLE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOI
@@ -136,9 +138,10 @@ getWalletTransactions ::
     ) ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
     Kernel.Prelude.Maybe Data.Time.UTCTime ->
+    Kernel.Prelude.Maybe DriverWallet.AggregationLevel ->
     Environment.Flow DriverWallet.WalletSummaryResponse
   )
-getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
+getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate mbAggBy = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mbActiveFleetAssoc <- QFDA.findByDriverId driverId True
@@ -152,6 +155,7 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
   let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
       fromDate = fromMaybe (Data.Time.UTCTime (Data.Time.utctDay now) 0) mbFromDate
       toDate = fromMaybe now mbToDate
+      aggBy = fromMaybe DriverWallet.Day mbAggBy
       cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
       cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
   (mbWalletAcc, mbControlAcc) <- getWalletAndControlAccountsByOwner counterparty ownerId
@@ -160,15 +164,24 @@ getWalletTransactions (mbPersonId, _merchantId, mocId) mbFromDate mbToDate = do
     _ -> do
       currentBalance <- fromMaybe 0 <$> getWalletBalanceByOwner counterparty ownerId
       let accountIds = catMaybes [(.id) <$> mbWalletAcc, (.id) <$> mbControlAcc]
-      (additions, deductions, nonRedeemableBalance) <- classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff
-      let redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
+          useClickhouse = fromMaybe False transporterConfig.driverWalletConfig.fetchWalletTransactionsFromClickhouse
+      rows <-
+        if useClickhouse
+          then fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate
+          else fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate
+      let (additions, deductions, nonRedeemableBalance, netEarningsBalance) =
+            aggregateWalletRows accountIds cutoff rows
+          redeemableBalance = max 0 (currentBalance - nonRedeemableBalance)
+          agg = bucketizeRows accountIds (generateBucketWindows aggBy timeDiff fromDate toDate) rows
       pure $
         DriverWallet.WalletSummaryResponse
           { currentBalance,
             redeemableBalance,
             nonRedeemableBalance,
+            netEarningsBalance,
             additions,
-            deductions
+            deductions,
+            agg
           }
 
 emptyWalletSummary :: DriverWallet.WalletSummaryResponse
@@ -177,39 +190,69 @@ emptyWalletSummary =
     { currentBalance = 0,
       redeemableBalance = 0,
       nonRedeemableBalance = 0,
+      netEarningsBalance = 0,
       additions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
-      deductions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []}
+      deductions = DriverWallet.WalletItemGroup {totalAmount = 0, items = []},
+      agg = []
     }
 
--- | Fetch entries in a date range, partition into additions/deductions,
---   group by reference type, and compute per-item redeemable/nonRedeemable.
---   Also returns the top-level nonRedeemableBalance (sum of additions after cutoff).
---   Takes multiple account IDs (wallet Liability + Control cash-earnings tracker)
---   and merges entries so the driver's feed shows both online wallet movements
---   and cash-mode earnings in a single timeline.
-classifyEntries ::
+-- | Fetch wallet ledger entries from the primary Postgres ledger store and
+--   project them to the minimal row shape consumed by the aggregator.
+--   Merges across wallet Liability + Control accounts so cash-mode earnings
+--   and online wallet movements show up in the same timeline.
+fetchWalletRowsFromLedger ::
   (BeamFlow m r) =>
   [Id Account] ->
   Maybe Text ->
   UTCTime ->
   UTCTime ->
-  UTCTime -> -- payout cutoff time
-  m (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney)
-classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff = do
-  -- Use walletCreditRefs (single source of truth) + debit-only refs for full picture
+  m [CHLE.WalletEntryRow]
+fetchWalletRowsFromLedger accountIds mbConcernedIndividualId fromDate toDate = do
   let allRefs = walletCreditRefs ++ [walletReferencePayout]
-      accountIdSet = accountIds
-  entriesPerAccount <- forM accountIds $ \accountId ->
-    case mbConcernedIndividualId of
-      Just concernedIndividualId ->
-        LedgerService.findByAccountWithFiltersAndConcernedIndividual accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs) (Just concernedIndividualId)
-      Nothing ->
-        findByAccountWithFilters accountId (Just fromDate) (Just toDate) Nothing Nothing Nothing (Just allRefs)
-  let entries = concat entriesPerAccount
-      (addEntries, dedEntries) = partition (\e -> e.toAccountId `elem` accountIdSet) entries
+  entries <-
+    QLedgerEntry.findByAccountsWithConcernedIndividual
+      accountIds
+      allRefs
+      (Just fromDate)
+      (Just toDate)
+      Nothing
+      Nothing
+      mbConcernedIndividualId
+  pure $ map toWalletRow entries
+  where
+    toWalletRow e =
+      CHLE.WalletEntryRow
+        { walletAmount = e.amount,
+          walletToAccountId = e.toAccountId,
+          walletReferenceType = e.referenceType,
+          walletTimestamp = e.timestamp
+        }
 
-      -- For additions: compute total and non-redeemable (after cutoff) per reference type
-      addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.referenceType (e.amount, if e.timestamp >= cutoff then e.amount else 0) acc) Map.empty addEntries
+-- | Fetch the same wallet entries from ClickHouse. Used when the transporter
+--   config flag is on so the whole summary response is served from CH.
+fetchWalletRowsFromCH ::
+  (MonadFlow m, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m) =>
+  [Id Account] ->
+  Maybe Text ->
+  UTCTime ->
+  UTCTime ->
+  m [CHLE.WalletEntryRow]
+fetchWalletRowsFromCH accountIds mbConcernedIndividualId fromDate toDate = do
+  let allRefs = walletCreditRefs ++ [walletReferencePayout]
+  CHLE.findWalletEntries accountIds mbConcernedIndividualId fromDate toDate allRefs
+
+-- | Aggregate raw entries into the WalletSummary fields:
+--   per-reference additions/deductions groups, top-level non-redeemable
+--   balance, and net earnings (additions - deductions).
+aggregateWalletRows ::
+  [Id Account] ->
+  UTCTime -> -- payout cutoff time
+  [CHLE.WalletEntryRow] ->
+  (DriverWallet.WalletItemGroup, DriverWallet.WalletItemGroup, HighPrecMoney, HighPrecMoney)
+aggregateWalletRows accountIds cutoff entries =
+  let (addEntries, dedEntries) = partition (\e -> e.walletToAccountId `elem` accountIds) entries
+
+      addRefMap = foldl' (\acc e -> Map.insertWith (\(a1, b1) (a2, b2) -> (a1 + a2, b1 + b2)) e.walletReferenceType (e.walletAmount, if e.walletTimestamp >= cutoff then e.walletAmount else 0) acc) Map.empty addEntries
       addItems =
         map
           ( \(ref, (total, nonRedeem)) ->
@@ -225,8 +268,7 @@ classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff = do
       addTotal = sum (map (\(_, (t, _)) -> t) (Map.toList addRefMap))
       topLevelNonRedeemable = sum (map (\(_, (_, nr)) -> nr) (Map.toList addRefMap))
 
-      -- For deductions: all balance is redeemable
-      dedRefMap = foldl' (\acc e -> Map.insertWith (+) e.referenceType e.amount acc) Map.empty dedEntries
+      dedRefMap = foldl' (\acc e -> Map.insertWith (+) e.walletReferenceType e.walletAmount acc) Map.empty dedEntries
       dedItems =
         map
           ( \(ref, val) ->
@@ -240,8 +282,102 @@ classifyEntries accountIds mbConcernedIndividualId fromDate toDate cutoff = do
           )
           (Map.toList dedRefMap)
       dedTotal = sum (Map.elems dedRefMap)
+      netEarnings = addTotal - dedTotal
+   in ( DriverWallet.WalletItemGroup {totalAmount = addTotal, items = addItems},
+        DriverWallet.WalletItemGroup {totalAmount = dedTotal, items = dedItems},
+        topLevelNonRedeemable,
+        netEarnings
+      )
 
-  pure (DriverWallet.WalletItemGroup {totalAmount = addTotal, items = addItems}, DriverWallet.WalletItemGroup {totalAmount = dedTotal, items = dedItems}, topLevelNonRedeemable)
+-- | Group the already-fetched window rows into per-bucket aggregates without
+--   touching the database again. Sorts rows by timestamp once and walks
+--   buckets/rows together in O(R log R + R + B).
+--
+--   Splits rows between consecutive buckets at the next bucket's start so the
+--   1-second gap between Day buckets (Mon 23:59:59 -> Tue 00:00:00) doesn't
+--   drop entries. The last bucket uses an inclusive end since there is no
+--   successor.
+bucketizeRows ::
+  [Id Account] ->
+  [(UTCTime, UTCTime)] ->
+  [CHLE.WalletEntryRow] ->
+  [DriverWallet.WalletAggregateBucket]
+bucketizeRows accountIds windows rows =
+  let sortedRows = sortOn (.walletTimestamp) rows
+      isCredit e = e.walletToAccountId `elem` accountIds
+      mkBucket bStart bEnd inBucket =
+        let (creds, debs) = partition isCredit inBucket
+            earnings = sum (map (.walletAmount) creds)
+            deductionsT = sum (map (.walletAmount) debs)
+         in DriverWallet.WalletAggregateBucket
+              { from = bStart,
+                to = bEnd,
+                earnings = earnings,
+                deductions = deductionsT,
+                netEarnings = earnings - deductionsT
+              }
+      go [] _ = []
+      go [(bStart, bEnd)] remaining =
+        let valid = dropWhile (\e -> e.walletTimestamp < bStart) remaining
+            inBucket = takeWhile (\e -> e.walletTimestamp <= bEnd) valid
+         in [mkBucket bStart bEnd inBucket]
+      go ((bStart, bEnd) : ws@((nextStart, _) : _)) remaining =
+        let valid = dropWhile (\e -> e.walletTimestamp < bStart) remaining
+            (inBucket, rest) = span (\e -> e.walletTimestamp < nextStart) valid
+         in mkBucket bStart bEnd inBucket : go ws rest
+   in go windows sortedRows
+
+-- | Generate inclusive UTC `(from, to)` windows covering [fromDate, toDate]
+--   bucketed by the requested aggregation level. Buckets are computed in
+--   merchant local TZ (Day / ISO-week / calendar-month) and then clipped to
+--   the user's requested window so partial first/last buckets are allowed.
+generateBucketWindows ::
+  DriverWallet.AggregationLevel ->
+  Kernel.Prelude.NominalDiffTime ->
+  UTCTime ->
+  UTCTime ->
+  [(UTCTime, UTCTime)]
+generateBucketWindows level timeDiff fromDate toDate =
+  let toLocalDay t = Data.Time.utctDay (Data.Time.addUTCTime timeDiff t)
+      fromLocalDay = toLocalDay fromDate
+      toLocalDay' = toLocalDay toDate
+      localBuckets = case level of
+        DriverWallet.Day -> [(d, d) | d <- [fromLocalDay .. toLocalDay']]
+        DriverWallet.Week -> generateWeekBuckets fromLocalDay toLocalDay'
+        DriverWallet.Month -> generateMonthBuckets fromLocalDay toLocalDay'
+      toUtcWindow (startDay, endDay) =
+        let localStart = Data.Time.UTCTime startDay 0
+            localEnd = Data.Time.addUTCTime (-1) (Data.Time.UTCTime (Cal.addDays 1 endDay) 0)
+            utcStart = max fromDate (Data.Time.addUTCTime (negate timeDiff) localStart)
+            utcEnd = min toDate (Data.Time.addUTCTime (negate timeDiff) localEnd)
+         in (utcStart, utcEnd)
+   in map toUtcWindow localBuckets
+
+-- | Enumerate ISO weeks (Monday-anchored) overlapping [startDay, endDay].
+--   Each entry is (Monday, Sunday) of that week — caller clips to the
+--   requested window.
+generateWeekBuckets :: Cal.Day -> Cal.Day -> [(Cal.Day, Cal.Day)]
+generateWeekBuckets startDay endDay =
+  let mondayOf d = Cal.addDays (negate (fromIntegral (fromEnum (Cal.dayOfWeek d) - 1))) d
+      go mon
+        | mon > endDay = []
+        | otherwise = (mon, Cal.addDays 6 mon) : go (Cal.addDays 7 mon)
+   in go (mondayOf startDay)
+
+-- | Enumerate calendar months overlapping [startDay, endDay]. Each entry is
+--   (1st of month, last day of month) — caller clips to the requested window.
+generateMonthBuckets :: Cal.Day -> Cal.Day -> [(Cal.Day, Cal.Day)]
+generateMonthBuckets startDay endDay =
+  let (sy, sm, _) = Cal.toGregorian startDay
+      (ey, em, _) = Cal.toGregorian endDay
+      step (y, m)
+        | (y, m) > (ey, em) = []
+        | otherwise =
+          let firstDay = Cal.fromGregorian y m 1
+              lastDay = Cal.fromGregorian y m (Cal.gregorianMonthLength y m)
+              next = if m == 12 then (y + 1, 1) else (y, m + 1)
+           in (firstDay, lastDay) : step next
+   in step (sy, sm)
 
 referenceTypeToItemName :: Text -> Text
 referenceTypeToItemName ref
@@ -711,7 +847,9 @@ recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
               isVat = False,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
-              paymentMode = Just "CASH"
+              paymentMode = Just "CASH",
+              periodStart = Nothing,
+              periodEnd = Nothing
             }
     result <- runFinance ctx $ do
       _ <- transfer PlatformAsset OwnerLiability amount walletReferenceAirportCashRecharge

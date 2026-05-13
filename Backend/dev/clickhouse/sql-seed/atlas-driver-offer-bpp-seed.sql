@@ -18,6 +18,7 @@ CREATE TABLE atlas_driver_offer_bpp.ride_details (
     `id` String,
     `vehicle_number` Nullable(String),
     `fleet_owner_id` Nullable(String),
+    `default_service_tier_name` Nullable(String),
     `created_at` DateTime DEFAULT now()
 ) ENGINE = MergeTree() PRIMARY KEY (id);
 
@@ -27,6 +28,9 @@ CREATE TABLE atlas_driver_offer_bpp.ride (
     `fare` Nullable(Int),
     `driver_id` Nullable(String),
     `chargeable_distance` Nullable(Int),
+    `trip_start_time` Nullable(DateTime),
+    `trip_end_time` Nullable(DateTime),
+    `driver_arrival_time` Nullable(DateTime),
     `created_at` DateTime DEFAULT now(),
     `updated_at` DateTime DEFAULT now(),
     `version` DateTime DEFAULT now()
@@ -149,7 +153,19 @@ create table atlas_driver_offer_bpp.person (
     `first_name` String,
     `middle_name` Nullable(String),
     `last_name` Nullable(String),
+    `mobile_number` Nullable(String),
     `mobile_number_hash` Nullable(String),
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (id);
+
+create table atlas_driver_offer_bpp.vehicle_registration_certificate (
+    `id` String,
+    `unencrypted_certificate_number` Nullable(String),
+    `vehicle_model` Nullable(String),
+    `vehicle_manufacturer` Nullable(String),
+    `docs_verification_status` Nullable(String),
+    `fleet_owner_id` Nullable(String),
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (id);
@@ -165,3 +181,12 @@ create table atlas_driver_offer_bpp.fleet_rc_daily_stats (
     `version` DateTime DEFAULT now()
 ) ENGINE = ReplacingMergeTree(version)
 ORDER BY (merchant_local_date, fleet_owner_id, rc_id);
+
+CREATE TABLE atlas_driver_offer_bpp.fleet_owner_information (
+    `fleet_owner_person_id` String,
+    `fleet_name` Nullable(String),
+    `docs_verification_status` Nullable(String),
+    `merchant_operating_city_id` Nullable(String),
+    `version` DateTime DEFAULT now()
+) ENGINE = ReplacingMergeTree(version)
+ORDER BY (fleet_owner_person_id);

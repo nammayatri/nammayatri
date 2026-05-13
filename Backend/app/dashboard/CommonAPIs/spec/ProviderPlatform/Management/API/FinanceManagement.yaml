@@ -311,6 +311,7 @@ types:
   ReconciliationTriggerRes:
     - success: Bool
     - message: Text
+
   ReconciliationSummary:
     - totalDiscrepancies: Int
     - matchedRecords: Int

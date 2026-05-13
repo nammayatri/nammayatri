@@ -107,7 +107,7 @@ jobs:
 
           # Try attic, fall back to cachix on any failure
           attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
-            echo "$PATHS" | attic push cache-nixos-asia:oss && \
+            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
             echo "✅ Pushed to attic" || \
             { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
 

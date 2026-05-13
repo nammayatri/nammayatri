@@ -6,10 +6,10 @@ where
 
 import qualified API.Types.UI.FinanceInvoice as API
 import qualified Data.Time as DT
-import "beckn-spec" Domain.Types.Invoice (InvoiceType (..))
+import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import Domain.Types.Person
+import Domain.Types.Person (Person)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
@@ -23,6 +23,8 @@ import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtr
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
 import Tools.Error
@@ -52,7 +54,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
 
   let driverIdText = driverId.getId
 
-  invoices <- case mbInvoiceType of
+  invoicesAll <- case mbInvoiceType of
     Just Ride ->
       QFinanceInvoiceExtra.findBySupplierAndType
         driverIdText
@@ -69,6 +71,9 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
         toDate
         (Just limit)
         (Just offset)
+
+  -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
+  let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   items <- mapM buildInvoiceItem invoices
 
@@ -158,7 +163,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   let fromTime = toUTCTimeFrom <$> mbFrom
       toTime = toUTCTimeTo <$> mbTo
 
-  invoices <-
+  invoicesAll <-
     QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
       merchantOpCityId.getId
       fromTime
@@ -171,6 +176,9 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       []
       (mbLimit <|> Just 10)
       (mbOffset <|> Just 0)
+
+  -- Hide Voided/Cancelled (incl. 0-amount AggregatedCommission markers).
+  let invoices = filter (\i -> i.status `notElem` [FinanceInvoice.Voided, FinanceInvoice.Cancelled]) invoicesAll
 
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
@@ -188,10 +196,30 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       pure (mbTxn >>= (.paymentMethodType), mbTxn >>= (.cardBrand), mbTxn >>= (.cardLastFourDigits))
     Nothing -> pure (Nothing, Nothing, Nothing)
 
+  -- Live-fetch AggregatedCommission party metadata (Y-tunnus + merchant VAT)
+  -- since these aren't persisted on the Invoice row.
+  (mbRecipientBid, mbSellerBid, mbSellerVat) <- case inv.invoiceType of
+    AggregatedCommission -> do
+      mbRecipientBid' <- case inv.issuedToType of
+        FLEET_OWNER -> do
+          mbFleet <- QFOI.findByPrimaryKey (Id inv.issuedToId)
+          pure $ mbFleet >>= (.businessLicenseNumberDec)
+        _ -> pure Nothing
+      mbMerchant <- CQM.findById (Id inv.merchantId)
+      pure (mbRecipientBid', mbMerchant >>= (.businessId), mbMerchant >>= (.vatNumber))
+    _ -> pure (Nothing, Nothing, Nothing)
+
   let locale = languageToLocale (mbDriver >>= (.language))
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
-      pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
+            sellerTradeName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceSellerTradeName),
+            appName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceAppName)
+          }
+      pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat
       html = renderInvoiceHtml cfg pdfData
 
   pdfBase64 <- generateFinanceInvoicePdf inv.invoiceNumber html

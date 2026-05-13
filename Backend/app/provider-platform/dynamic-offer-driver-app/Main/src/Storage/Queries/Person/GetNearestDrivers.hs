@@ -146,6 +146,7 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
 
       -- Core eligibility filters
       guard $ not dpd.blocked
+      guard $ dpd.enabled
       guard $ dpd.subscribed
       guard $ isDriverModeEligible dpd.mode dpd.active
       guard $ isTripTypeEligible dpd

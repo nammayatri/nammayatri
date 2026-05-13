@@ -425,6 +425,7 @@ library
       Lib.Schema
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -672,6 +673,7 @@ library
       Storage.Clickhouse.FleetOwnerInformation
       Storage.Clickhouse.FleetRcDailyStats
       Storage.Clickhouse.JsonLogicTransaction
+      Storage.Clickhouse.LedgerEntry
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.Ride
@@ -1817,6 +1819,7 @@ library
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , payment
     , persistent
     , postgresql-simple
@@ -1963,6 +1966,7 @@ executable dynamic-offer-driver-app-exe
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , prometheus-client

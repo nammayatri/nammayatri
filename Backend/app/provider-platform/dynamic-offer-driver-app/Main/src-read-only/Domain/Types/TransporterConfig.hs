@@ -379,6 +379,8 @@ data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshol
 data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
+data CommissionAggregationFrequency = DAILY | WEEKLY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data CommunicationChannelCharLimits = CommunicationChannelCharLimits
   { pushBodyLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pushTitleLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -409,6 +411,7 @@ data DriverWalletConfig = DriverWalletConfig
     enableDriverWallet :: Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
+    fetchWalletTransactionsFromClickhouse :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     forceOnlineLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -431,8 +434,15 @@ data GstBreakup = GstBreakup
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data InvoiceConfig = InvoiceConfig
-  { driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
+  { commissionAggregationBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    commissionAggregationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
+    driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
     emitLedgerEntries :: Kernel.Prelude.Bool,
+    invoiceAppName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    invoiceSellerAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    invoiceSellerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
@@ -459,6 +469,7 @@ data TaxConfig = TaxConfig
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
@@ -474,5 +485,7 @@ instance FromJSON (TransporterConfigD 'Safe)
 instance ToJSON (TransporterConfigD 'Safe)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommissionAggregationFrequency)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutFeeType)

@@ -5,6 +5,7 @@ imports:
   WalletTransactionHistoryResponse: API.Types.UI.DriverWallet
   TopUpRequest: API.Types.UI.DriverWallet
   PayoutHistoryResponse: API.Types.UI.DriverWallet
+  AggregationLevel: API.Types.UI.DriverWallet
   PlanSubscribeRes: Domain.Action.UI.Plan
   APISuccess: Kernel.Types.APISuccess
   PayoutRequestStatus: Lib.Payment.Domain.Types.PayoutRequest
@@ -34,6 +35,7 @@ apis:
       query:
         - fromDate: UTCTime
         - toDate: UTCTime
+        - aggBy: AggregationLevel
       response:
         type: WalletSummaryResponse
   - POST:

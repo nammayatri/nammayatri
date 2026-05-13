@@ -311,10 +311,13 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   MobileValidation.validateMobileNumber transporterConfig reqDriverPhoneNo mobileCountryCode merchantOpCity.country
   phoneNumberHash <- getDbHash reqDriverPhoneNo
-  let role = case mbRole of
-        Just Common.FLEET -> DP.FLEET_OWNER
-        _ -> DP.DRIVER
-  entityDetails <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id role >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+  entityDetails <- case mbRole of
+    Just Common.FLEET -> do
+      mbFleetOwner <- QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.FLEET_OWNER
+      case mbFleetOwner of
+        Just person -> pure person
+        Nothing -> QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.FLEET_BUSINESS >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
+    _ -> QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneNumberHash merchant.id DP.DRIVER >>= fromMaybeM (DriverNotFound reqDriverPhoneNo)
   let merchantId = entityDetails.merchantId
   unless (merchant.id == merchantId && merchantOpCityId == entityDetails.merchantOperatingCityId) $ throwError (PersonDoesNotExist entityDetails.id.getId)
   (getEntityData, getMbFleetOwnerId) <- checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails merchant.fleetOwnerEnabledCheck
@@ -333,7 +336,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
         unless skipFleetChecks $ checkRCAssociationForFleet fleetOwnerId rcert
       void $ DCommon.runVerifyRCFlow skipFleetChecks getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
-            DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
+            role | DCommon.checkFleetOwnerRole role -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
             _ -> "dashboard -> addVehicleUnderUnknown"
       logTagInfo logTag (show getEntityData.id)
@@ -382,7 +385,7 @@ checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleet
     Just requestedPerson -> do
       case requestedPerson.role of
         -- Fleet add vehcile him or under FleetDriver (Driver who has active association with fleet)
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerId <- case mbFleetOwnerId of -- Have to discuss
             Nothing -> DCommon.checkFleetOwnerVerification requestorId fleetOwnerEnabledCheck >> pure requestorId
             Just val -> if requestorId == val then pure val else throwError AccessDenied
@@ -399,7 +402,7 @@ checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleet
     handleFleetOwnerFlow :: Text -> Flow (DP.Person, Maybe Text)
     handleFleetOwnerFlow fleetOwnerId =
       case entityDetails.role of
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           -- Under Fleet
           unless (fleetOwnerId == entityDetails.id.getId) $
             throwError (InvalidFleetOwner fleetOwnerId)
@@ -417,7 +420,7 @@ checkEnitiesAssociationValidation requestorId mbFleetOwnerId entityDetails fleet
           -- Under DCO
           verifyAndAssociateDriver targetPerson.id operatorPerson.id.getId
           pure (targetPerson, Nothing)
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           -- Under Fleet
           validateOperatorToFleetAssoc operatorPerson.id.getId targetPerson.id.getId
           pure (targetPerson, Just targetPerson.id.getId)
@@ -777,8 +780,9 @@ postDriverFleetUnlink ::
   Id Common.Driver ->
   Text ->
   Maybe Text ->
+  Maybe Bool ->
   Flow APISuccess
-postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
+postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId mbNotifyDriver = do
   (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -796,6 +800,18 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.OPERATOR
     _ -> throwError $ InvalidRequest "Invalid Data"
+  when (mbNotifyDriver == Just True) $ fork "Fleet vehicle unlink notification" $ do
+    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+    driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FLEET_VEHICLE_UNLINKED" Nothing Nothing driver.language Nothing
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let notification =
+            Notification.NotifReq
+              { title = merchantPN.title,
+                message = merchantPN.body,
+                entityId = personId.getId
+              }
+      Notification.notifyDriverOnEvents merchantOpCityId personId driver.deviceToken notification merchantPN.fcmNotificationType
   pure Success
 
 unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow ()
@@ -918,7 +934,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       parseVehicleInfo merchantOpCity
   when (length rcReq > 100) $ throwError $ MaxVehiclesLimitExceeded 100 -- TODO: Configure the limit
   case requestedPerson.role of
-    DP.FLEET_OWNER -> do
+    role | DCommon.checkFleetOwnerRole role -> do
       fleetOwnerId <- maybe (pure requestorId) (\val -> if requestorId == val then pure requestorId else throwError AccessDenied) req.fleetOwnerId
       DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
       unprocessedVehicleRouteMappingEntities <- case transporterConfig.requireRouteMappingInVehicle of
@@ -1181,7 +1197,7 @@ validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
           pure (Just fleetOwnerOrOperator.role, Just fleetOwnerOrOperatorId)
     Just requestedPerson -> do
       case requestedPerson.role of
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           -- Fleet Owner tries to do operation
           fleetOwnerid <- maybe (pure requestedPerson.id.getId) (\val -> if requestedPerson.id.getId == val then pure requestedPerson.id.getId else throwError AccessDenied) mbFleetOwnerId
           pure (Just DP.FLEET_OWNER, Just fleetOwnerid)
@@ -4410,7 +4426,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
               address = req.address <|> driverInfo.address
               addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
           QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
-        DP.FLEET_OWNER -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
           reqStripeIdNumber <- forM req.stripeIdNumber encrypt
           let newFleetType = fromMaybe fleetOwnerInfo.fleetType (DRegV2.castFleetType <$> req.fleetType)

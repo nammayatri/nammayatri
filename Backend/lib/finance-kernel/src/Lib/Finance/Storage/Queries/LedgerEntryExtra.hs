@@ -43,7 +43,24 @@ findByAccountsWithOptions ::
   Maybe Int -> -- limit
   Maybe Int -> -- offset
   m [Domain.LedgerEntry]
-findByAccountsWithOptions accountIds referenceTypes mbFrom mbTo limit offset = do
+findByAccountsWithOptions accountIds referenceTypes mbFrom mbTo limit offset =
+  findByAccountsWithConcernedIndividual accountIds referenceTypes mbFrom mbTo limit offset Nothing
+
+-- | Variant of 'findByAccountsWithOptions' that also filters by
+--   'concernedIndividualId' when supplied. Used by fleet-driver views where
+--   the wallet account is owned by the fleet but each driver should only see
+--   their own activity.
+findByAccountsWithConcernedIndividual ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  [Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account] ->
+  [Text] -> -- referenceTypes filter (empty list = no filter)
+  Maybe UTCTime -> -- from
+  Maybe UTCTime -> -- to
+  Maybe Int -> -- limit
+  Maybe Int -> -- offset
+  Maybe Text -> -- concernedIndividualId
+  m [Domain.LedgerEntry]
+findByAccountsWithConcernedIndividual accountIds referenceTypes mbFrom mbTo limit offset mbConcernedIndividualId = do
   let accountIdTexts = map Kernel.Types.Id.getId accountIds
   findAllWithOptionsKV
     [ Se.And
@@ -55,6 +72,7 @@ findByAccountsWithOptions accountIds referenceTypes mbFrom mbTo limit offset = d
             <> [Se.Is Beam.referenceType $ Se.In referenceTypes | not (null referenceTypes)]
             <> [Se.Is Beam.timestamp $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
             <> [Se.Is Beam.timestamp $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is Beam.concernedIndividualId $ Se.Eq mbConcernedIndividualId | isJust mbConcernedIndividualId]
         )
     ]
     (Se.Desc Beam.timestamp)

@@ -102,8 +102,15 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideDriverId :: C f Text,
     rideStatus :: C f RideStatus,
     rideTripStartTime :: C f (Maybe UTCTime),
+    rideTripEndTime :: C f (Maybe UTCTime),
+    rideDriverArrivalTime :: C f (Maybe UTCTime),
     ridePayoutRequestId :: C f (Maybe Text),
-    bookingPaymentInstrument :: C f (Maybe DMPM.PaymentInstrument)
+    bookingPaymentInstrument :: C f (Maybe DMPM.PaymentInstrument),
+    fleetName :: C f (Maybe Text),
+    fleetMobileNumberEncrypted :: C f (Maybe Text),
+    fleetMobileNumberHash :: C f (Maybe Text),
+    vehicleManufacturer :: C f (Maybe Text),
+    vehicleModel :: C f (Maybe Text)
   }
   deriving (Generic)
 
@@ -174,9 +181,16 @@ bppTransactionJoinTTable =
       rideFleetOwnerId = "ride_fleet_owner_id",
       rideDriverId = "ride_driver_id",
       rideTripStartTime = "ride_trip_start_time",
+      rideTripEndTime = "ride_trip_end_time",
+      rideDriverArrivalTime = "ride_driver_arrival_time",
       rideStatus = "ride_status",
       ridePayoutRequestId = "ride_payout_request_id",
-      bookingPaymentInstrument = "booking_payment_instrument"
+      bookingPaymentInstrument = "booking_payment_instrument",
+      fleetName = "fleet_name",
+      fleetMobileNumberEncrypted = "fleet_mobile_number",
+      fleetMobileNumberHash = "fleet_mobile_number_hash",
+      vehicleManufacturer = "vehicle_manufacturer",
+      vehicleModel = "vehicle_model"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
@@ -211,6 +225,8 @@ findAllRideItems ::
   Maybe DbHash ->
   Maybe DbHash ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   UTCTime ->
   UTCTime ->
   UTCTime ->
@@ -219,7 +235,7 @@ findAllRideItems ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -236,6 +252,8 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbRideId (\rid -> bppTransaction.rideDetailsId CH.==. rid)
                     CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
                     CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
+                    CH.&&. CH.whenJust_ mbCustomerMobileCountryCode (\ccc -> bppTransaction.riderDetailsMobileCountryCode CH.==. ccc)
+                    CH.&&. CH.whenJust_ mbDriverMobileCountryCode (\dcc -> bppTransaction.rideDetailsDriverCountryCode CH.==. Just dcc)
                     CH.&&. CH.whenJust_ mbVehicleNo (\vehicleNo -> bppTransaction.rideDetailsVehicleNumber CH.==. vehicleNo)
                     CH.&&. CH.whenJust_ mbFleetOwnerId (\foid -> bppTransaction.rideFleetOwnerId CH.==. Just foid)
                     CH.&&. CH.whenJust_ mbBookingStatus (`mkBookingStatusCond` bppTransaction)
@@ -267,9 +285,11 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
     mkPaymentModeCond Common.CASH ride = ride.bookingPaymentInstrument CH.==. Just DMPM.Cash
     mkPaymentModeCond Common.ONLINE ride = CH.not_ (ride.bookingPaymentInstrument CH.==. Just DMPM.Cash) CH.&&. CH.isNotNull ride.bookingPaymentInstrument
 
-    mkRideItem bppTxn@BppTransactionJoinT {..} =
+    mkRideItem bppTxn =
       QRE.RideItem
-        { rideDetails =
+        { rideShortId = bppTxn.rideShortId,
+          rideCreatedAt = bppTxn.rideCreatedAt,
+          rideDetails =
             RideDetails.RideDetails
               { RideDetails.createdAt = bppTxn.rideDetailsCreatedAt,
                 RideDetails.defaultServiceTierName = bppTxn.rideDetailsDefaultServiceTierName,
@@ -338,7 +358,16 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
           customerPickupLocation = Nothing,
           customerDropLocation = Nothing,
           payoutRequestId = Id <$> bppTxn.ridePayoutRequestId,
-          ..
+          vehicleServiceTierName = bppTxn.rideDetailsDefaultServiceTierName,
+          driverArrivalTime = bppTxn.rideDriverArrivalTime,
+          tripStartTime = bppTxn.rideTripStartTime,
+          tripEndTime = bppTxn.rideTripEndTime,
+          fleetOwnerId = Id <$> bppTxn.rideFleetOwnerId,
+          currency = fromMaybe INR bppTxn.rideCurrency,
+          fleetName = bppTxn.fleetName,
+          fleetNumber = EncryptedHashed <$> (Encrypted <$> bppTxn.fleetMobileNumberEncrypted) <*> (DbHash . encodeUtf8 <$> bppTxn.fleetMobileNumberHash),
+          vehicleManufacturer = bppTxn.vehicleManufacturer,
+          vehicleModel = bppTxn.vehicleModel
         }
 
 findAllRideItemsV2 ::

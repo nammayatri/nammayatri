@@ -37,6 +37,7 @@ import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import Domain.Types.FleetOwnerInformation as FOI
+import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -54,6 +55,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import qualified SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation as AggCommSched
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -233,6 +235,10 @@ createFleetOwnerInfo personId merchantId mbFleetType mbFleetName mbEnabled mbGst
             docsVerificationStatus = mbDocsVerificationStatus
           }
   QFOI.create fleetOwnerInfo
+  -- Bootstrap the AggregatedCommission scheduler chain for this fleet owner.
+  whenJust mbMerchantOperatingCityId $ \mocId ->
+    fork ("BootstrapAggCommChain:" <> personId.getId) $
+      AggCommSched.bootstrapAggregatedCommissionChain merchantId mocId personId.getId BeckInvoice.FLEET_OWNER
 
 fleetOwnerLogin ::
   FleetOwnerLoginReq ->

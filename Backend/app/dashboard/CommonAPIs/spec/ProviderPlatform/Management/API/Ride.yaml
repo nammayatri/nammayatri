@@ -50,6 +50,8 @@ apis:
         from: UTCTime
         to: UTCTime
         fleetOwnerId: Text
+        customerCountryCode: Text
+        driverCountryCode: Text
       auth: ApiAuthV2
       response:
         type: RideListRes
@@ -74,6 +76,8 @@ apis:
               from: UTCTime
               to: UTCTime
               fleetOwnerId: Text
+              customerCountryCode: Text
+              driverCountryCode: Text
             auth: ApiAuthV2
             response:
               type: RideListRes
@@ -235,8 +239,10 @@ types:
     - displayBookingId: Maybe Text
     - customerName: Maybe Text
     - customerPhoneNo: Text
+    - customerCountryCode: Maybe Text
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverCountryCode: Maybe Text
     - tripCategory: DeprecatedTripCategory # TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
     - tripCategoryV2: TripCategory
     - vehicleNo: Text
@@ -252,6 +258,14 @@ types:
     - customerPickupLocation: Maybe LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - payoutRequestId: Maybe (Id PayoutRequest)
+    - vehicleManufacturer: Maybe Text
+    - vehicleModel: Maybe Text
+    - fleetName: Maybe Text
+    - fleetNumber: Maybe Text
+    - vehicleServiceTierName: Maybe Text
+    - driverArrivalTime: Maybe UTCTime
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
@@ -307,6 +321,7 @@ types:
     - rideId: Id Ride
     - customerName: Maybe Text
     - customerPhoneNo: Text
+    - customerCountryCode: Maybe Text
     - rideOtp: Text
     - customerPickupLocation: LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
@@ -315,6 +330,7 @@ types:
     - driverId: Id Driver
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverCountryCode: Maybe Text
     - fleetOwnerId: Maybe Text
     - vehicleNo: Text
     - driverStartLocation: Maybe LatLong

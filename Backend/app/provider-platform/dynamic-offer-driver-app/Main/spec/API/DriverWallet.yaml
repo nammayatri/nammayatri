@@ -25,12 +25,23 @@ types:
   WalletItemGroup:
     totalAmount: HighPrecMoney
     items: "[WalletItem]"
+  AggregationLevel:
+    enum: "Day,Week,Month"
+    derive: "HttpInstance"
+  WalletAggregateBucket:
+    earnings: HighPrecMoney
+    deductions: HighPrecMoney
+    netEarnings: HighPrecMoney
+    from: UTCTime
+    to: UTCTime
   WalletSummaryResponse:
     currentBalance: HighPrecMoney
     redeemableBalance: HighPrecMoney
     nonRedeemableBalance: HighPrecMoney
+    netEarningsBalance: HighPrecMoney
     additions: WalletItemGroup
     deductions: WalletItemGroup
+    agg: "[WalletAggregateBucket]"
   TopUpRequest:
     amount: HighPrecMoney
     purpose: Maybe Text  # Optional. Use "airport" for airport entry fee recharge; omit for general wallet topup.
@@ -77,6 +88,7 @@ apis:
       query:
         - fromDate: UTCTime
         - toDate: UTCTime
+        - aggBy: AggregationLevel
       response:
         type: WalletSummaryResponse
   - POST:

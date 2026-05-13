@@ -119,6 +119,7 @@ buildDriverPoolDataFromDB driverIds = do
             totalRides = maybe 0 (.totalRides) ds,
             variant = v.variant,
             selectedServiceTiers = v.selectedServiceTiers,
+            enabled = di.enabled,
             blocked = di.blocked,
             subscribed = di.subscribed,
             canSwitchToRental = di.canSwitchToRental,
