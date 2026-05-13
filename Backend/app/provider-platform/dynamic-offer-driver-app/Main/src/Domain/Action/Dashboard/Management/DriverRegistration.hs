@@ -52,6 +52,7 @@ import qualified Data.Text.Encoding as TE
 import Data.Time (utctDay)
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
@@ -62,14 +63,13 @@ import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UdyamVer
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.ReferralPayout as ReferralPayout
-import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Types.AadhaarCard as DAadhaar
 import qualified Domain.Types.BusinessLicense as DBL
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCommonDoc
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as DVC
-import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverGstin as DGstin
+import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.DriverRCAssociation as DRCA
 import qualified Domain.Types.DriverUdyam as DUdyam

@@ -780,8 +780,9 @@ postDriverFleetUnlink ::
   Id Common.Driver ->
   Text ->
   Maybe Text ->
+  Maybe Bool ->
   Flow APISuccess
-postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId = do
+postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo mbFleetOwnerId mbNotifyDriver = do
   (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   let personId = cast @Common.Driver @DP.Person reqDriverId
@@ -799,6 +800,18 @@ postDriverFleetUnlink merchantShortId opCity requestorId reqDriverId vehicleNo m
       when (not isDriverOperator) $ throwError DriverNotPartOfOperator
       unlinkVehicleFromDriver merchant personId vehicleNo opCity DP.OPERATOR
     _ -> throwError $ InvalidRequest "Invalid Data"
+  when (mbNotifyDriver == Just True) $ fork "Fleet vehicle unlink notification" $ do
+    merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+    driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+    mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId "FLEET_VEHICLE_UNLINKED" Nothing Nothing driver.language Nothing
+    whenJust mbMerchantPN $ \merchantPN -> do
+      let notification =
+            Notification.NotifReq
+              { title = merchantPN.title,
+                message = merchantPN.body,
+                entityId = personId.getId
+              }
+      Notification.notifyDriverOnEvents merchantOpCityId personId driver.deviceToken notification merchantPN.fcmNotificationType
   pure Success
 
 unlinkVehicleFromDriver :: DM.Merchant -> Id DP.Person -> Text -> Context.City -> DP.Role -> Flow ()
