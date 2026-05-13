@@ -96,9 +96,4 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN v
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN docs_verification_status text ;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN vehicle_rating_remark text ;

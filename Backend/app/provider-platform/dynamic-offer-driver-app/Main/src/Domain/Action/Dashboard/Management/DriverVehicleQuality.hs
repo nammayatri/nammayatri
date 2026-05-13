@@ -115,8 +115,9 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   unless (req.rating >= 1 && req.rating <= 5) $
     throwError $ InvalidRequest "Rating must be between 1 and 5"
 
-  rc <- QVRC.findLastVehicleRCWrapper req.registrationNo >>= fromMaybeM (VehicleDoesNotExist req.registrationNo)
-  QVRC.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) rc.id
+  mbRC <- QVRC.findLastVehicleRCWrapper req.registrationNo
+  whenJust mbRC $ \rc ->
+    QVRC.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) rc.id
 
   mbVehicle <- QVehicle.findByRegistrationNo req.registrationNo
   whenJust mbVehicle $ \vehicle ->

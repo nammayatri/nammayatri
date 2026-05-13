@@ -21,7 +21,6 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     certificateNumberEncrypted :: B.C f Kernel.Prelude.Text,
     certificateNumberHash :: B.C f Kernel.External.Encryption.DbHash,
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus),
     documentImageId :: B.C f Kernel.Prelude.Text,
     failedRules :: B.C f [Kernel.Prelude.Text],
     fitnessExpiry :: B.C f Kernel.Prelude.UTCTime,
@@ -67,6 +66,6 @@ instance B.Table VehicleRegistrationCertificateT where
 
 type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
-$(enableKVPG (''VehicleRegistrationCertificateT) [('id)] [[('certificateNumberHash)]])
+$(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash]])
 
-$(mkTableInstances (''VehicleRegistrationCertificateT) "vehicle_registration_certificate")
+$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")
