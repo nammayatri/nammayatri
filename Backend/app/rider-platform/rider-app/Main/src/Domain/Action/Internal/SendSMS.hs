@@ -42,15 +42,16 @@ sendSMS ::
   Flow Shared.SendSMSRes
 sendSMS apiKey merchantShortIdText city req = do
   merchant <- findMerchantByShortId (ShortId merchantShortIdText)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError (AuthBlocked "Invalid BPP internal api key")
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
+  dashboardToken <- asks (.dashboardToken)
+  unless (Just dashboardToken == apiKey) $
+    throwError (AuthBlocked "Invalid Rider App dashboard token")
+  merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just city)
   smsCfg <- asks (.smsCfg)
 
   let lookupTemplate key = do
         messageKey <- fromMaybeM (InvalidRequest $ "Invalid message key: " <> key) $ readMaybe (T.unpack key)
         merchantMessage <-
-          QMM.findByMerchantOpCityIdAndMessageKeyVehicleCategory merchantOpCityId messageKey Nothing Nothing
+          QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey Nothing
             >>= fromMaybeM (MerchantMessageNotFound merchantOpCityId.getId (show messageKey))
         pure (merchantMessage.message, fromMaybe smsCfg.sender merchantMessage.senderHeader, merchantMessage.templateId, merchantMessage.messageType)
 

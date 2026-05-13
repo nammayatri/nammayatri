@@ -12,24 +12,18 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module API.Internal.SendSMS
-  ( API,
-    handler,
-  )
-where
+module SMS.API where
 
-import qualified Domain.Action.Internal.SendSMS as Domain
-import Environment
-import EulerHS.Prelude hiding (id)
-import qualified SMS.API as Shared
+import EulerHS.Prelude
+import SMS.Types
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Utils.Common
-import Storage.Beam.SystemConfigs ()
+import Servant
 
-type API = Shared.API
-
-handler :: FlowServer API
-handler = sendSMS
-
-sendSMS :: Text -> Context.City -> Maybe Text -> Domain.SendSMSReq -> FlowHandler Domain.SendSMSRes
-sendSMS merchantShortId city apiKey = withFlowHandlerAPI . Domain.sendSMS apiKey merchantShortId city
+type API =
+  ( "sendSMS"
+      :> Capture "merchantShortId" Text
+      :> Capture "city" Context.City
+      :> Header "api-key" Text
+      :> ReqBody '[JSON] SendSMSReq
+      :> Post '[JSON] SendSMSRes
+  )

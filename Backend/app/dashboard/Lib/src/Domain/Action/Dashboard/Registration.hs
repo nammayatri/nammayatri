@@ -374,7 +374,7 @@ initiate2FASetup Initiate2FASetupReq {..} = do
       decryptedMobileNumber <- decrypt person.mobileNumber
       let phoneNumber = person.mobileCountryCode <> decryptedMobileNumber
       reqId <- generateGUID
-      -- Send OTP via BPP internal SMS API (BPP generates the OTP)
+      -- Send OTP via internal SMS API (BPP or BAP generates the OTP)
       let smsReq =
             InternalClient.SendSMSReq
               { phoneNumber = phoneNumber,
@@ -382,8 +382,12 @@ initiate2FASetup Initiate2FASetupReq {..} = do
                 templateVars = Map.empty,
                 isOtp = Just True
               }
-      smsRes <- InternalClient.callBPPInternalSendSMS (getShortId merchantId) city' smsReq
-      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from BPP")
+      let callInternalSendSMS =
+            if DTServer.APP_BACKEND `elem` merchant.serverNames
+              then InternalClient.callBAPInternalSendSMS
+              else InternalClient.callBPPInternalSendSMS
+      smsRes <- callInternalSendSMS (getShortId merchantId) city' smsReq
+      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from internal SMS service")
       let pendingData =
             Pending2FASetupData
               { personId = person.id,

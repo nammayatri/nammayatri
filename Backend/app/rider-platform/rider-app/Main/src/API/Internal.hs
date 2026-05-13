@@ -18,6 +18,7 @@ import qualified API.Internal.InMemManagement as InMemManagement
 import qualified API.Internal.OfferDiscount as OfferDiscount
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
+import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.Sos as Sos
 import qualified API.Internal.StopEvents as StopEvents
 import qualified API.Internal.UpdateCancellationFeeStatus as UpdateCancellationFeeStatus
@@ -45,6 +46,7 @@ type API =
            :<|> Sos.API
            :<|> UpdateCancellationFeeStatus.API
            :<|> OfferDiscount.API
+           :<|> SendSMS.API
            :<|> InMemManagement.API
        )
 
@@ -67,4 +69,5 @@ handler =
     :<|> Sos.handler
     :<|> UpdateCancellationFeeStatus.handler
     :<|> OfferDiscount.handler
+    :<|> SendSMS.handler
     :<|> InMemManagement.handler

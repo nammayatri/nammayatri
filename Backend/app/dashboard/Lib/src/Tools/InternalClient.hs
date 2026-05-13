@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.InternalClient (SendSMSReq (..), SendSMSRes (..), callBPPInternalSendSMS) where
+module Tools.InternalClient (SendSMSReq (..), SendSMSRes (..), callBPPInternalSendSMS, callBAPInternalSendSMS) where
 
 import qualified Data.HashMap.Strict as HM
 import Data.Map.Strict (Map)
@@ -67,3 +67,20 @@ callBPPInternalSendSMS merchantShortId city req = do
   dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendSMSClient merchantShortId city (Just dataServer.token) req) "callBPPInternalSendSMS" (Proxy :: Proxy Raw)
+
+callBAPInternalSendSMS ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  City.City ->
+  SendSMSReq ->
+  m SendSMSRes
+callBAPInternalSendSMS merchantShortId city req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.APP_BACKEND) dataServers
+  dataServer <- maybe (throwError $ InternalError "APP_BACKEND data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendSMSClient merchantShortId city (Just dataServer.token) req) "callBAPInternalSendSMS" (Proxy :: Proxy Raw)
