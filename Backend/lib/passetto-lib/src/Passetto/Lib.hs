@@ -128,7 +128,7 @@ bulkDecryptWithKeys keys encs = mapM decryptOne encs
       plainBs <- case Box.boxSealOpen pk sk cipherBs of
         Just bs -> return bs
         Nothing -> throwError $ UnexpectedResponse
-                     "Decryption failed — wrong key or corrupted ciphertext"
+                     "Decryption failed wrong key or corrupted ciphertext"
       jsonText <- case TE.decodeUtf8' plainBs of
         Right t -> return t
         Left _  -> throwError $ UnexpectedResponse
@@ -162,7 +162,7 @@ mkPassettoContextFromKeys :: MonadIO m => m PassettoContext
 mkPassettoContextFromKeys = liftIO $ do
   sodiumInit
   keys <- loadKeypairs
-  putStrLn "[passetto-lib] PassettoContext built — all encrypt/decrypt calls will use local crypto."
+  putStrLn "[passetto-lib] PassettoContext built all encrypt/decrypt calls will use local crypto."
   return PassettoContext
     { bulkEncryptAction = bulkEncryptWithKeys keys
     , bulkDecryptAction = bulkDecryptWithKeys keys
@@ -173,11 +173,11 @@ mkPassettoContextAuto host port = do
   useLib <- liftIO $ lookupEnv "USE_PASSETTO_LIB"
   case useLib of
     Just "true" -> do
-      liftIO $ putStrLn "[passetto-lib] USE_PASSETTO_LIB=true → using in-process crypto lib."
+      liftIO $ putStrLn "[passetto-lib] USE_PASSETTO_LIB=true using in-process crypto lib."
       mkPassettoContextFromKeys
     Just val -> do
-      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> val <> " (not 'true') → using passetto HTTP service at " <> host <> ":" <> show port
+      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB=" <> val <> " (not 'true') using passetto HTTP service at " <> host <> ":" <> show port
       mkDefPassettoContext host port
     Nothing -> do
-      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB not set → using passetto HTTP service at " <> host <> ":" <> show port
+      liftIO $ putStrLn $ "[passetto-lib] USE_PASSETTO_LIB not set using passetto HTTP service at " <> host <> ":" <> show port
       mkDefPassettoContext host port
