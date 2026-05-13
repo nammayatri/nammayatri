@@ -1325,7 +1325,14 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   mbDriver <- QPerson.findById (Id (Kernel.Prelude.head invoices).issuedToId)
   let locale = languageToLocale (mbDriver >>= (.language))
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl}
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl,
+            sellerTradeName = transporterConfig.invoiceConfig >>= (.invoiceSellerTradeName),
+            appName = transporterConfig.invoiceConfig >>= (.invoiceAppName)
+          }
 
   -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
   -- skip those individually so one bad row doesn't kill the whole list response.

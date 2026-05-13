@@ -79,7 +79,15 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
 
   let locale = languageToLocale person.language
       tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-      cfg = InvoicePdfConfig {locale, timezone = tz, logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl}
+      cfg =
+        InvoicePdfConfig
+          { locale,
+            timezone = tz,
+            logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
+            -- AggregatedCommission isn't rendered for riders — these BPP-side fields aren't on RiderConfig.
+            sellerTradeName = Nothing,
+            appName = Nothing
+          }
 
   -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
   -- skip those individually so one bad row doesn't kill the whole list response.

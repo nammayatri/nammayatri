@@ -972,6 +972,8 @@ TransporterConfig:
       commissionAggregationBatchSize: Maybe Int
       invoiceSellerName: Maybe Text
       invoiceSellerAddress: Maybe Text
+      invoiceSellerTradeName: Maybe Text
+      invoiceAppName: Maybe Text
       derive': Generic, Show, ToJSON, FromJSON, Eq
     FeedbackNotificationConfig:
       enableFeedbackNotification: Bool

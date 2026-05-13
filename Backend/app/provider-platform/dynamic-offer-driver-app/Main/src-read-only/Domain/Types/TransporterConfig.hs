@@ -438,8 +438,10 @@ data InvoiceConfig = InvoiceConfig
     commissionAggregationFrequency :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CommissionAggregationFrequency,
     driverInvoiceLineItemsVatInclusive :: Kernel.Prelude.Bool,
     emitLedgerEntries :: Kernel.Prelude.Bool,
+    invoiceAppName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     invoiceSellerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    invoiceSellerTradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     logoUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
     showVatInputLineItem :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
