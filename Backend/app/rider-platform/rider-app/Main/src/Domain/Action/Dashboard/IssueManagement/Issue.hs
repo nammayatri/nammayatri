@@ -33,6 +33,7 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueMessageReorder,
     postIssueCategoryCopy,
     postIssueCategoryDefaultCopy,
+    postIssueCategoryAllCopy,
     -- Live chat APIs
     postIssueChatMessage,
     getIssueChatMessages,
@@ -377,9 +378,17 @@ postIssueCategoryCopy (Kernel.Types.Id.ShortId merchantShortId) city req =
 postIssueCategoryDefaultCopy ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllDefaultIssueCategoryRes
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes
 postIssueCategoryDefaultCopy (Kernel.Types.Id.ShortId merchantShortId) city =
   DIssue.copyAllDefaultIssueCategories (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle Common.CUSTOMER
+
+postIssueCategoryAllCopy ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes
+postIssueCategoryAllCopy (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.copyAllIssueCategories (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.CUSTOMER
 
 -----------------------------------------------------------
 -- Live chat APIs ------------------------------------------
