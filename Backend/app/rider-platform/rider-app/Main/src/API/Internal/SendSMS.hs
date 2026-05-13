@@ -24,7 +24,6 @@ import EulerHS.Prelude hiding (id)
 import qualified SMS.API as Shared
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
-import Storage.Beam.SystemConfigs ()
 
 type API = Shared.API
 

@@ -214,6 +214,9 @@
     },
     "offer": {
       "dim": []
+    },
+    "special_location": {
+      "dim": []
     }
   },
   "atlas_driver_offer_bpp": {
@@ -482,6 +485,9 @@
       "dim": []
     },
     "offer": {
+      "dim": []
+    },
+    "special_location": {
       "dim": []
     }
   },
