@@ -99,6 +99,70 @@
       });
     };
 
+    stale-access-matrix-migrations = {
+      enable = true;
+      name = "stale-access-matrix-migrations";
+      description = "Reject stale access_matrix INSERT migrations: added SQL whose api is absent from .hs files, or removed YAML userActionType whose SQL migration was not cleaned up.";
+      types = [ "file" ];
+      pass_filenames = false;
+      files = "Backend/(dev/migrations-read-only/.*\\.sql|.*/spec/.*\\.yaml)$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "stale-access-matrix-migrations";
+        text = ''
+          fail=0
+
+          # ── Check 1: added SQL lines ────────────────────────────────────────
+          # If a userActionType INSERT is being added, its api name must exist
+          # in the generated .hs files (i.e. the API still exists in YAML).
+          mapfile -t SQL_API_NAMES < <(
+            git diff --cached -- 'Backend/dev/migrations-read-only/**/*.sql' \
+              | grep '^\+' \
+              | grep '"migration":"userActionType"' \
+              | grep -oE '"api":"[^"]+"' \
+              | sed 's/"api":"//;s/"//' \
+              | sort -u
+          )
+
+          for api_name in "''${SQL_API_NAMES[@]}"; do
+            if ! grep -rqE "\b''${api_name}\b" Backend --include="*.hs" 2>/dev/null; then
+              echo "STALE access_matrix migration: api '""''${api_name}""' not found in any .hs file."
+              echo "  Delete the -- {\"api\":\"''${api_name}\"} comment + INSERT block from the migration."
+              fail=1
+            fi
+          done
+
+          # ── Check 2: removed YAML userActionType lines ──────────────────────
+          # If a userActionType is removed from a YAML spec, the corresponding
+          # SQL migration (matched via the "param" field) must also be cleaned up.
+          # YAML:  userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY CREATE_OVERLAY
+          # SQL:   -- {"api":"...","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT OVERLAY CREATE_OVERLAY",...}
+          mapfile -t REMOVED_PARAMS < <(
+            git diff --cached -- 'Backend/**/spec/**/*.yaml' \
+              | grep '^-' \
+              | grep 'userActionType:' \
+              | sed 's/.*userActionType:[[:space:]]*//' \
+              | sed 's/[[:space:]]*$//' \
+              | sort -u
+          )
+
+          for param in "''${REMOVED_PARAMS[@]}"; do
+            mapfile -t STALE_FILES < <(
+              grep -rl "\"param\":\"''${param}\"" Backend/dev/migrations-read-only \
+                --include="*.sql" 2>/dev/null
+            )
+            if [ "''${#STALE_FILES[@]}" -gt 0 ]; then
+              echo "STALE access_matrix migration: userActionType '""''${param}""' removed from YAML but SQL migration still exists."
+              echo "  Delete the -- {\"param\":\"''${param}\"} comment + INSERT block from:"
+              for f in "''${STALE_FILES[@]}"; do echo "    ''$f"; done
+              fail=1
+            fi
+          done
+
+          exit "''$fail"
+        '';
+      });
+    };
+
     yaml-constraint-tags = {
       enable = true;
       name = "yaml-constraint-tags";
