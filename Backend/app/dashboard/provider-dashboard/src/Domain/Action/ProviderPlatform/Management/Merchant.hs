@@ -62,6 +62,11 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigVehicleServiceTierCreate,
     getMerchantConfigVehicleServiceTierList,
     postMerchantConfigDebugLogUpdate,
+    getMerchantMerchantDocument,
+    getMerchantMerchantDocumentList,
+    postMerchantMerchantDocumentCreate,
+    postMerchantMerchantDocumentUpdate,
+    postMerchantMerchantDocumentDelete,
   )
 where
 
@@ -73,6 +78,7 @@ import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import qualified Kernel.External.Types
 import Kernel.Prelude
 import qualified Kernel.Storage.Queries.MerchantOperatingCity as KQMOC
 import Kernel.Types.APISuccess (APISuccess)
@@ -598,3 +604,61 @@ postMerchantConfigDebugLogUpdate merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigDebugLogUpdate) req
+
+getMerchantMerchantDocument ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Text ->
+  Maybe Kernel.External.Types.Language ->
+  Common.MerchantDocumentRoleT ->
+  Flow Common.MerchantDocumentItem
+getMerchantMerchantDocument merchantShortId opCity documentType language role = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantDocument) documentType language role
+
+getMerchantMerchantDocumentList ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe Kernel.External.Types.Language ->
+  Common.MerchantDocumentRoleT ->
+  Flow Common.MerchantDocumentListResp
+getMerchantMerchantDocumentList merchantShortId opCity apiTokenInfo language role = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantMerchantDocumentList) language role
+
+postMerchantMerchantDocumentCreate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Common.CreateMerchantDocumentReq ->
+  Flow Common.MerchantDocumentItem
+postMerchantMerchantDocumentCreate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantDocumentCreate) req
+
+postMerchantMerchantDocumentUpdate ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Common.UpdateMerchantDocumentReq ->
+  Flow Common.MerchantDocumentItem
+postMerchantMerchantDocumentUpdate merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantDocumentUpdate) req
+
+postMerchantMerchantDocumentDelete ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Common.DeleteMerchantDocumentReq ->
+  Flow APISuccess
+postMerchantMerchantDocumentDelete merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantDocumentDelete) req

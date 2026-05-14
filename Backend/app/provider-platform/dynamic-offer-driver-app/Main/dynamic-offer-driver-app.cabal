@@ -310,6 +310,7 @@ library
       Domain.Action.UI.Location
       Domain.Action.UI.Maps
       Domain.Action.UI.Merchant
+      Domain.Action.UI.MerchantDocument
       Domain.Action.UI.MerchantServiceConfig
       Domain.Action.UI.Message
       Domain.Action.UI.MeterRide
@@ -593,6 +594,7 @@ library
       Storage.Beam.InterCityTravelCities.InterCityTravelCities
       Storage.Beam.InterCityTravelCities.InterCityTravelCitiesGeom
       Storage.Beam.IssueManagement
+      Storage.Beam.MerchantDocument
       Storage.Beam.Payment
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
@@ -982,6 +984,7 @@ library
       API.Action.UI.Invoice
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
+      API.Action.UI.MerchantDocument
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
@@ -1059,6 +1062,7 @@ library
       API.Types.UI.Invoice
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
+      API.Types.UI.MerchantDocument
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
       API.Types.UI.Penalty

@@ -94,6 +94,11 @@ library
       IssueManagement.Storage.Queries.MediaFile
       IssueManagement.Tools.Error
       IssueManagement.Tools.UtilsTH
+      MerchantDocuments.Domain.Action.UI.MerchantDocument
+      MerchantDocuments.Domain.Types.Common
+      MerchantDocuments.Storage.BeamFlow
+      MerchantDocuments.Storage.CachedQueries.MerchantDocument
+      MerchantDocuments.Tools.Error
       Registry.Beckn.Interface
       Registry.Beckn.Interface.Nammayatri
       Registry.Beckn.Interface.Types
@@ -123,6 +128,9 @@ library
       API.Types.RiderPlatform.IssueManagement.Endpoints.IssueList
       API.Types.RiderPlatform.IssueManagement.Issue
       API.Types.RiderPlatform.IssueManagement.IssueList
+      MerchantDocuments.Domain.Types.MerchantDocument
+      MerchantDocuments.Storage.Beam.MerchantDocument
+      MerchantDocuments.Storage.Queries.MerchantDocument
       Safety.Domain.Types.PersonDefaultEmergencyNumber
       Safety.Domain.Types.SafetySettings
       Safety.Domain.Types.Sos

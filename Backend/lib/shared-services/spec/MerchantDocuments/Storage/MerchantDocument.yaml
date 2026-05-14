@@ -1,0 +1,93 @@
+imports:
+  UTCTime: Kernel.Prelude
+  Language: Kernel.External.Types
+  Merchant: MerchantDocuments.Domain.Types.Common
+  MerchantOperatingCity: MerchantDocuments.Domain.Types.Common
+
+MerchantDocument:
+  tableName: merchant_document
+  derives: "Generic, Show, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id MerchantDocument
+    merchantId: Id Merchant
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    documentType: Text
+    role: Role
+    language: Language
+    url: Text
+    title: Text
+    platformType: Maybe PlatformType
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    Role:
+      enum: "Driver,FleetOwner,Operator,Rider,Admin"
+      derive: "HttpInstance"
+    PlatformType:
+      enum: "WEB, ANDROID, IOS"
+      derive: "HttpInstance"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByMerchantIdRoleTypeCityLang:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - merchantId
+          - merchantOperatingCityId
+          - documentType
+          - role
+          - language
+    findByMerchantIdRoleType:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantId
+          - documentType
+          - role
+    findByMerchantIdCityRoleType:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantId
+          - merchantOperatingCityId
+          - documentType
+          - role
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId
+    findAllByMerchantIdAndRole:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantId
+          - role
+    findAllByMerchantIdCityAndRole:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantId
+          - merchantOperatingCityId
+          - role
+    updateUrlAndTitle:
+      kvFunction: updateOneWithKV
+      params: [url, title, updatedAt]
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+  constraints:
+    id: PrimaryKey
+    documentType: "!SecondaryKey"
+    role: "!SecondaryKey"
+
+  extraIndexes:
+    - columns: [merchantId, role]
+
+  defaultQueryTypeConstraint: "(MerchantDocuments.Storage.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
