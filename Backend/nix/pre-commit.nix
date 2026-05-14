@@ -103,7 +103,7 @@
       enable = true;
       name = "stale-access-matrix-migrations";
       description = "Reject stale access_matrix INSERT migrations: added SQL whose api is absent from .hs files, or removed YAML userActionType whose SQL migration was not cleaned up.";
-      types = [ "file" ];
+      types_or = [ "file" "deleted" ];
       pass_filenames = false;
       files = "Backend/(dev/migrations-read-only/.*\\.sql|.*/spec/.*\\.yaml)$";
       entry = lib.getExe (pkgs.writeShellApplication {
