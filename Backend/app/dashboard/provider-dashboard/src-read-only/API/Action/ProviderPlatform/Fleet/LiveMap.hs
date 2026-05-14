@@ -31,11 +31,11 @@ handler merchantId city = getLiveMapDrivers merchantId city
 
 type GetLiveMapDrivers =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.LIVE_MAP / 'API.Types.ProviderPlatform.Fleet.LiveMap.GET_LIVE_MAP_DRIVERS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.LIVE_MAP) / ('API.Types.ProviderPlatform.Fleet.LiveMap.GET_LIVE_MAP_DRIVERS))
       :> API.Types.ProviderPlatform.Fleet.LiveMap.GetLiveMapDrivers
   )
 
-getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
+getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe (Kernel.External.Maps.Types.LatLong) -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
 getLiveMapDrivers merchantShortId opCity apiTokenInfo radius fleetOwnerId driverIdForRadius point = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.LiveMap.getLiveMapDrivers merchantShortId opCity apiTokenInfo radius fleetOwnerId driverIdForRadius point

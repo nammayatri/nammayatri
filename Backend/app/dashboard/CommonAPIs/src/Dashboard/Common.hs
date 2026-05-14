@@ -168,6 +168,15 @@ data Summary = Summary
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DriverSummary = DriverSummary
+  { totalCount :: Int,
+    count :: Int,
+    onRideCount :: Int,
+    waitingCount :: Int
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data ListItemResult = SuccessItem | FailItem Text
   deriving stock (Show, Generic)
 
