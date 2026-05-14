@@ -18,6 +18,7 @@ import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Price (mkRoundedPriceAPIEntity)
 import qualified SharedLogic.Offer as SOffer
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S
@@ -71,9 +72,9 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           estimatedFare = estimatedFare.amountInt,
           estimatedTotalFare = estimatedTotalFare.amountInt,
           discount = discount <&> (.amountInt),
-          estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
-          estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
-          discountWithCurrency = mkPriceAPIEntity <$> discount,
+          estimatedFareWithCurrency = mkRoundedPriceAPIEntity estimatedFare,
+          estimatedTotalFareWithCurrency = mkRoundedPriceAPIEntity estimatedTotalFare,
+          discountWithCurrency = mkRoundedPriceAPIEntity <$> discount,
           vehicleVariant = vehicleServiceTierType,
           customerOffers = Nothing,
           quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
@@ -85,7 +86,7 @@ mkQuoteBreakupAPIEntity :: QuoteBreakup -> QuoteBreakupAPIEntity
 mkQuoteBreakupAPIEntity QuoteBreakup {..} = do
   QuoteBreakupAPIEntity
     { title = title,
-      priceWithCurrency = mkPriceAPIEntity price
+      priceWithCurrency = mkRoundedPriceAPIEntity price
     }
 
 instance ToJSON QuoteAPIDetails where

@@ -57,6 +57,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Price (mkRoundedPriceAPIEntity)
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
@@ -614,7 +615,7 @@ buildRideAPIEntity (_requesterId, booking, _isOnlinePayment) DRide.Ride {..} = d
         driverRegisteredAt = Just driverRegisteredAt',
         rideOtp = otp,
         computedPrice = totalFare <&> (.amountInt),
-        computedPriceWithCurrency = mkPriceAPIEntity <$> totalFare,
+        computedPriceWithCurrency = mkRoundedPriceAPIEntity <$> totalFare,
         chargeableRideDistance = distanceToHighPrecMeters <$> chargeableDistance,
         chargeableRideDistanceWithUnit = chargeableDistance,
         traveledRideDistance = traveledDistance,

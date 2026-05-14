@@ -61,6 +61,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Price (mkRoundedPriceAPIEntity, roundAmountByCurrency')
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
@@ -326,7 +327,7 @@ getCancellationDuesDetails (personId, merchantId) = do
       person.currentCity
   return $
     CancellationDuesDetailsRes
-      { cancellationDues = res.cancellationDues,
+      { cancellationDues = PriceAPIEntity (roundAmountByCurrency' res.cancellationDues.currency res.cancellationDues.amount) res.cancellationDues.currency,
         cancellationDuesPaid = res.cancellationDuesPaid,
         noOfTimesCancellationDuesPaid = res.noOfTimesCancellationDuesPaid,
         waivedOffAmount = res.waivedOffAmount,
