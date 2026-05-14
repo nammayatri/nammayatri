@@ -351,6 +351,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       ventilator = rc.ventilator,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
+      vehicleRatingRemark = rc.vehicleRatingRemark,
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
       downgradeReason = Nothing,
@@ -477,6 +478,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         ventilator = input.ventilator,
         luggageCapacity = Nothing,
         vehicleRating = Nothing,
+        vehicleRatingRemark = Nothing,
         failedRules = failedRules,
         docsVerificationStatus =
           if transporterConfig.enableManualDocumentStatusCheck == Just True

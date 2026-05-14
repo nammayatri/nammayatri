@@ -710,6 +710,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             ventilator = input.ventilator,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
+            vehicleRatingRemark = Nothing,
             failedRules = failedRules,
             docsVerificationStatus =
               if transporterConfig.enableManualDocumentStatusCheck == Just True

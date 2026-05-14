@@ -1,0 +1,72 @@
+imports:
+  Driver: Dashboard.Common
+  VehicleVariant: Dashboard.Common
+  Centesimal: Kernel.Types.Common
+  APISuccess: Kernel.Types.APISuccess
+
+module: DriverVehicleQuality
+
+apis:
+  - GET: # DriverVehicleQualityListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      mandatoryQuery:
+        maxVehicleAge: Int
+        minDriverRating: Double
+        vehicleVariant: VehicleVariant
+      query:
+        - limit: Int
+        - maxVehicleRating: Double
+        - offset: Int
+      response:
+        type: DriverVehicleQualityListRes
+
+  - GET: # DriverVehicleQualitySearchAPI
+      endpoint: /search
+      auth: ApiAuthV2
+      query:
+        - phoneNumber: Text
+        - vehicleNumber: Text
+      response:
+        type: "[DriverVehicleQualityResp]"
+
+  - POST: # UpdateVehicleRatingAPI
+      endpoint: /updateVehicleRating
+      auth: ApiAuthV2
+      request:
+        type: UpdateVehicleRatingReq
+      response:
+        type: APISuccess
+
+types:
+  DriverVehicleQualityListRes:
+    - totalItems: Int
+    - drivers: [DriverVehicleQualityResp]
+  DriverVehicleQualityResp:
+    - driverId: Id Driver
+    - driverName: Text
+    - phoneNumber: Maybe Text
+    - vehicleAge: Maybe Int
+    - manufacturingDate: Maybe Day
+    - driverRating: Maybe Centesimal
+    - totalRides: Int
+    - feedbackBadges: [FeedbackBadgeCount]
+    - vehicleVariant: VehicleVariant
+    - vehicleModel: Text
+    - vehicleMake: Maybe Text
+    - fuelType: Maybe Text
+    - vehicleColor: Text
+    - registrationNo: Text
+    - airConditioned: Maybe Bool
+    - vehicleName: Maybe Text
+    - vehicleCapacity: Maybe Int
+    - vehicleRating: Maybe Double
+    - vehicleRatingRemark: Maybe Text
+  FeedbackBadgeCount:
+    - badge: Text
+    - badgeCount: Int
+  UpdateVehicleRatingReq:
+    - registrationNo: Text
+    - rating: Double
+    - remark: Text
+    - derive: "'HideSecrets"

@@ -50,6 +50,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleModelYear :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    vehicleRatingRemark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     vehicleSeatBelts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant),
     ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
