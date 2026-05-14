@@ -1,6 +1,7 @@
 imports:
   Driver: Dashboard.Common
   Summary: Dashboard.Common
+  DriverSummary: Dashboard.Common
   Image: Dashboard.Common
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
@@ -1919,7 +1920,7 @@ types:
   DrivertoVehicleAssociationResT:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItemT]
-    - summary: Summary
+    - summary: DriverSummary
   DocsVerificationStatus:
     - enum: "ADMIN_PENDING, ADMIN_APPROVED, ADMIN_REJECTED"
     - derive: "HttpInstance"
@@ -1952,6 +1953,8 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - rcId: Maybe Text
+    - profilePhotoImageId: Maybe Text
+    - vehicleIconURL: Maybe Text
     - vehicleColor: Maybe Text
     - vehicleMake: Maybe Text
     - vehicleModel: Maybe Text

@@ -37,6 +37,11 @@ types:
     - driverStatus: Maybe Status
     - vehicleNumber: Text
     - vehicleVariant: VehicleVariant
+    - vehicleMake: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleIconURL: Maybe Text
+    - profilePhotoImageId: Maybe Text
     - position: LatLong
     - mobileCountryCode: Text
     - mobileNumber: Text

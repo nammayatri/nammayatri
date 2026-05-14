@@ -5,6 +5,7 @@ import qualified API.Types.ProviderPlatform.Fleet.LiveMap as Common
 import Domain.Action.Dashboard.Fleet.Driver (validateRequestorRoleAndGetEntityId)
 import Domain.Action.UI.Invoice (getSourceAndDestination, notAvailableText)
 import Domain.Action.UI.Person (getPersonNumber)
+import qualified Domain.Types.DocumentVerificationConfig as DDoc
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.Merchant
@@ -30,8 +31,10 @@ import qualified Kernel.Utils.Predicates as P
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Booking as CHB
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
+import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Vehicle as QV
@@ -144,12 +147,27 @@ buildMapDriverInfo country (mbRideId, position, driverInformation) = do
     mobileNumber <-
       getPersonNumber driver
         >>= fromMaybeM (InternalError $ "Driver mobile number is not present. DriverId: " <> driver.id.getId)
+
+    profilePhotoImageId <- do
+      profilePhotos <- QImage.findImagesByPersonAndType Nothing Nothing driver.merchantId driverId DDoc.ProfilePhoto
+      pure $ Kernel.Prelude.listToMaybe profilePhotos >>= \photo -> Just photo.id.getId
+
+    vehicleIconURL <- do
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
+      let mbServiceTier = find (\vst -> vehicle.variant `elem` vst.allowedVehicleVariant) cityVehicleServiceTiers
+      pure $ mbServiceTier >>= (.vehicleIconUrl) >>= \url -> Just $ show url
+
     pure
       Common.MapDriverInfoRes
         { driverName = unwords [driver.firstName, fromMaybe "" driver.lastName],
           driverStatus = castStatus <$> driverInformation.driverFlowStatus,
           vehicleNumber = vehicle.registrationNo,
           vehicleVariant = vehicle.variant,
+          vehicleMake = vehicle.make,
+          vehicleModel = Just vehicle.model,
+          vehicleColor = Just vehicle.color,
+          vehicleIconURL = vehicleIconURL,
+          profilePhotoImageId = profilePhotoImageId,
           position,
           mobileCountryCode = fromMaybe (P.getCountryMobileCode country) driver.mobileCountryCode,
           mobileNumber,
