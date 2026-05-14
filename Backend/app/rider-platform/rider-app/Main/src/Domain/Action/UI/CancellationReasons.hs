@@ -21,13 +21,14 @@ import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Person as Person
 import Environment
-import Kernel.Beam.Functions as B
 import qualified Kernel.External.Types as Lang
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.Ride as SRide
 import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -39,13 +40,38 @@ getRideBookingCancellationReasons ::
   Maybe Lang.Language ->
   Flow [API.CancellationReasonEntity]
 getRideBookingCancellationReasons _authInfo bookingId mbLang = do
-  booking <- B.runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
-  mbActiveRide <- B.runInReplica $ QRide.findActiveByRBId bookingId
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  mbActiveRide <- QRide.findActiveByRBId bookingId
+  now <- getCurrentTime
+  mbDriverPickupMeters <- case mbActiveRide of
+    Nothing -> pure Nothing
+    Just ride ->
+      withTryCatch "CancellationReasons:getDriverLoc" (SRide.getDriverLoc ride.id) >>= \case
+        Left _ -> pure Nothing
+        Right loc -> pure $ Just loc.pickupDist.getMeters
+  mbDriverOffer <- maybe (pure Nothing) (QDOffer.findById . Id) booking.selectedOfferId
   let merchantOperatingCityId = booking.merchantOperatingCityId
-      hasRideAssigned = isJust mbActiveRide
       isAC = fromMaybe False booking.isAirConditioned
+      mbVehicleVariant = (.vehicleVariant) <$> mbActiveRide
+      mbTimeSinceRideCreationSec =
+        mbActiveRide <&> \ride ->
+          round @Double @Int (realToFrac (diffUTCTime now ride.createdAt))
+      mbInitialPickupDist = do
+        offer <- mbDriverOffer
+        dist <- offer.distanceToPickup
+        pure $ distanceToMeters dist
       language = fromMaybe Lang.ENGLISH mbLang
-  configs <- CancelLogic.computeCancellationReasons (cast merchantOperatingCityId) hasRideAssigned isAC
+      cancelInput =
+        CancelLogic.CancellationReasonInput
+          { isAirConditioned = isAC,
+            vehicleVariant = mbVehicleVariant,
+            timeSinceRideCreation = mbTimeSinceRideCreationSec,
+            latestDriverPickupDistance = mbDriverPickupMeters,
+            estimatedFare = booking.estimatedFare.amountInt.getMoney,
+            initialDriverPickupDistance = (.getMeters) <$> mbInitialPickupDist
+          }
+  logDebug $ "CancellationReasons input: " <> show cancelInput
+  configs <- CancelLogic.computeCancellationReasons (cast merchantOperatingCityId) cancelInput
   forM configs $ \CancelLogic.CancellationReasonConfig {code, iconUrl} -> do
     mbTranslation <- CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache (cast merchantOperatingCityId) code language
     let resolvedText = maybe (mkDefaultText code) (.message) mbTranslation

@@ -315,7 +315,15 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       logicData :: (LYTU.Config DTE.Exophone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTE.Exophone)) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.CANCELLATION_REASONS -> do
-      let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
+      let defaultInput =
+            CancelLogic.CancellationReasonInput
+              { isAirConditioned = False,
+                vehicleVariant = Nothing,
+                timeSinceRideCreation = Nothing,
+                latestDriverPickupDistance = Nothing,
+                estimatedFare = 0,
+                initialDriverPickupDistance = Nothing
+              }
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
@@ -514,7 +522,15 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTE.Exophone))
           }
     LYTU.CANCELLATION_REASONS -> do
-      let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
+      let defaultInput =
+            CancelLogic.CancellationReasonInput
+              { isAirConditioned = False,
+                vehicleVariant = Nothing,
+                timeSinceRideCreation = Nothing,
+                latestDriverPickupDistance = Nothing,
+                estimatedFare = 0,
+                initialDriverPickupDistance = Nothing
+              }
       return $
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultInput,

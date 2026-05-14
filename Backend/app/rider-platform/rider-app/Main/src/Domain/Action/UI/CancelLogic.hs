@@ -22,6 +22,7 @@ where
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.VehicleVariant as DVV
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
@@ -38,8 +39,12 @@ data CancellationReasonConfig = CancellationReasonConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data CancellationReasonInput = CancellationReasonInput
-  { hasRideAssigned :: Bool,
-    isAirConditioned :: Bool
+  { isAirConditioned :: Bool,
+    vehicleVariant :: Maybe DVV.VehicleVariant,
+    timeSinceRideCreation :: Maybe Int,
+    latestDriverPickupDistance :: Maybe Int,
+    estimatedFare :: Int,
+    initialDriverPickupDistance :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -50,16 +55,10 @@ computeCancellationReasons ::
     EsqDBReplicaFlow m r
   ) =>
   Id DMOC.MerchantOperatingCity ->
-  Bool ->
-  Bool ->
+  CancellationReasonInput ->
   m [CancellationReasonConfig]
-computeCancellationReasons merchantOpCityId hasRideAssigned isAC = do
+computeCancellationReasons merchantOpCityId inputData = do
   localTime <- getLocalCurrentTime (19800 :: Seconds)
-  let inputData =
-        CancellationReasonInput
-          { hasRideAssigned = hasRideAssigned,
-            isAirConditioned = isAC
-          }
   (allLogics, _mbVersion) <-
     DynamicLogic.getAppDynamicLogic
       (cast merchantOpCityId)
