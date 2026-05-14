@@ -40,6 +40,7 @@ module Domain.Action.Beckn.OnUpdate
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
     ChangeServiceTierReq (..),
+    AddBaggageReq (..),
   )
 where
 
@@ -134,6 +135,7 @@ data OnUpdateReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
   | OUChangeServiceTierReq ChangeServiceTierReq
+  | OUAddBaggageReq AddBaggageReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -159,6 +161,7 @@ data ValidatedOnUpdateReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
   | OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq
+  | OUValidatedAddBaggageReq ValidatedAddBaggageReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -421,6 +424,21 @@ data ValidatedChangeServiceTierReq = ValidatedChangeServiceTierReq
     newQuoteId :: Maybe Text
   }
 
+data AddBaggageReq = AddBaggageReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    numberOfLuggages :: Int,
+    newEstimatedFare :: Maybe HighPrecMoney,
+    fareBreakups :: [Common.DFareBreakup],
+    transactionId :: Text
+  }
+
+data ValidatedAddBaggageReq = ValidatedAddBaggageReq
+  { booking :: DRB.Booking,
+    numberOfLuggages :: Int,
+    newEstimatedFare :: Maybe HighPrecMoney,
+    fareBreakups :: [Common.DFareBreakup]
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -622,6 +640,15 @@ onUpdate = \case
         mbSeatingCapacity = mbNewQuote >>= (.vehicleServiceTierSeatingCapacity)
     -- Single DB update with all changed fields after BPP confirms
     QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity
+  OUValidatedAddBaggageReq ValidatedAddBaggageReq {..} -> do
+    logInfo $ "Add baggage confirmed for booking: " <> booking.id.getId <> " to count: " <> show numberOfLuggages <> ", newFare: " <> show newEstimatedFare
+    whenJust newEstimatedFare $ \fare ->
+      QEBooking.updateEstimatedFare booking.id fare
+    -- Replace BOOKING-scoped FareBreakup rows with the recalculated breakdown from BPP.
+    unless (null fareBreakups) $ do
+      newBreakups <- traverse (Common.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareBreakups
+      QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
+      QFareBreakup.createMany newBreakups
 
 validateRequest ::
   ( CacheFlow m r,
@@ -739,6 +766,9 @@ validateRequest = \case
   OUChangeServiceTierReq ChangeServiceTierReq {..} -> do
     booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
     return $ OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq {..}
+  OUAddBaggageReq AddBaggageReq {..} -> do
+    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    return $ OUValidatedAddBaggageReq ValidatedAddBaggageReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

@@ -433,3 +433,64 @@ buildOnUpdateReqOrderV2 req' mbFarePolicy becknConfig = case req' of
           orderCreatedAt = Nothing,
           orderUpdatedAt = Nothing
         }
+  OU.AddBaggageBuildReq OU.DAddBaggageReq {..} -> do
+    let addBaggageTags =
+          [ Tag.getFullTagGroup
+              Tag.SEARCH_REQUEST_INFO
+              [ Tag.getFullTag Tag.NUMBER_OF_LUGGAGE (Just . T.pack $ show numberOfLuggages)
+              ]
+          ]
+    pure $
+      Spec.Order
+        { orderId = Just bookingId.getId,
+          orderItems = Nothing,
+          orderFulfillments =
+            Just
+              [ Spec.Fulfillment
+                  { fulfillmentId = Nothing,
+                    fulfillmentAgent = Nothing,
+                    fulfillmentCustomer = Nothing,
+                    fulfillmentState =
+                      Just $
+                        Spec.FulfillmentState
+                          { fulfillmentStateDescriptor =
+                              Just $
+                                Spec.Descriptor
+                                  { descriptorLongDesc = Nothing,
+                                    descriptorCode = Just $ show EventEnum.ADD_BAGGAGE,
+                                    descriptorName = Nothing,
+                                    descriptorShortDesc = Nothing
+                                  }
+                          },
+                    fulfillmentStops = Nothing,
+                    fulfillmentTags = Nothing,
+                    fulfillmentType = Nothing,
+                    fulfillmentVehicle = Nothing
+                  }
+              ],
+          orderBilling = Nothing,
+          orderCancellation = Nothing,
+          orderCancellationTerms = Nothing,
+          orderPayments = Nothing,
+          orderProvider = Nothing,
+          orderQuote =
+            Just $
+              Spec.Quotation
+                { quotationBreakup = Utils.mkQuotationBreakup fareParams,
+                  quotationPrice =
+                    Just $
+                      Spec.Price
+                        { priceComputedValue = Just $ show newEstimatedFare,
+                          priceCurrency = Just "INR",
+                          priceMaximumValue = Nothing,
+                          priceMinimumValue = Nothing,
+                          priceOfferedValue = Nothing,
+                          priceValue = Just $ show newEstimatedFare
+                        },
+                  quotationTtl = Nothing
+                },
+          orderTags = Just addBaggageTags,
+          orderStatus = Nothing,
+          orderCreatedAt = Nothing,
+          orderUpdatedAt = Nothing
+        }

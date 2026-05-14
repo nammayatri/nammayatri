@@ -76,6 +76,7 @@ library
       API.Types.UI.Payment
       API.UI
       API.UI.AadhaarVerification
+      API.UI.AddBaggage
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
@@ -203,6 +204,7 @@ library
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Offer
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.AddBaggage
       Domain.Action.Dashboard.RideBooking.Booking
       Domain.Action.Dashboard.RideBooking.Cancel
       Domain.Action.Dashboard.RideBooking.ChangeServiceTier
@@ -238,6 +240,7 @@ library
       Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
+      Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AttractionRecommend
@@ -804,6 +807,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.AddBaggage
       API.Action.Dashboard.RideBooking.Booking
       API.Action.Dashboard.RideBooking.Cancel
       API.Action.Dashboard.RideBooking.ChangeServiceTier
@@ -889,10 +893,12 @@ library
       API.Types.Dashboard.AppManagement.TransitOperator
       API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
       API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.AddBaggage
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel
       API.Types.Dashboard.RideBooking.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.AddBaggage
       API.Types.Dashboard.RideBooking.Endpoints.Booking
       API.Types.Dashboard.RideBooking.Endpoints.Cancel
       API.Types.Dashboard.RideBooking.Endpoints.ChangeServiceTier
