@@ -4449,7 +4449,13 @@ getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId
       case mbRc of
         Just rc -> case rc.fleetOwnerId of
           Just rcFleetOwnerId -> validateOperatorToFleetAssoc requestorId rcFleetOwnerId
-          Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
+          Nothing -> do
+            activeAssociationsOfRC <- DRCAE.findAllActiveAssociationByRCId rc.id
+            let rcAssociatedDriverIds = map (.driverId) activeAssociationsOfRC
+            isAnyDriverLinkedToOperator <- fmap or $ forM rcAssociatedDriverIds $ \driverId ->
+              isJust <$> (B.runInReplica $ QDOAExtra.findByDriverIdAndOperatorId driverId (Id requestorId) True)
+            unless isAnyDriverLinkedToOperator $
+              throwError (InvalidRequest "Vehicle's driver is not associated with this operator")
         Nothing -> throwError (InvalidRequest "Vehicle not found")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
