@@ -57,7 +57,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Types.Price (mkRoundedPriceAPIEntity)
+import Kernel.Types.Price ()
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)

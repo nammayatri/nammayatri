@@ -18,7 +18,7 @@ import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Price (mkRoundedPriceAPIEntity)
+import Kernel.Types.Price ()
 import qualified SharedLogic.Offer as SOffer
 import qualified Tools.JSON as J
 import qualified Tools.Schema as S

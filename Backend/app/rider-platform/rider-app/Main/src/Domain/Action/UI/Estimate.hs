@@ -28,7 +28,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
-import Kernel.Types.Price (mkRoundedPriceAPIEntity)
+import Kernel.Types.Price ()
 import Kernel.Utils.Common
 import qualified SharedLogic.Offer as SOffer
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails

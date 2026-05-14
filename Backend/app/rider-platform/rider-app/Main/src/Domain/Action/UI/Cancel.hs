@@ -61,7 +61,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Types.Price (mkRoundedPriceAPIEntity, roundAmountByCurrency')
+import Kernel.Types.Price ()
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
