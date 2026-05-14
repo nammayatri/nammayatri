@@ -27,6 +27,9 @@ create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParam
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Estimate.Estimate] -> m ())
 createMany = traverse_ create
 
+findAllByRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Estimate.Estimate])
+findAllByRequestId requestId = do findAllWithKV [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

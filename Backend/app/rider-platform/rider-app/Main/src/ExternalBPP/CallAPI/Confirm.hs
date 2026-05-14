@@ -12,6 +12,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import qualified ExternalBPP.Flow as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -22,7 +23,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)

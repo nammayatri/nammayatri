@@ -55,8 +55,8 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Interface.Types
 import qualified Kernel.External.Maps.Types
-import Kernel.External.MultiModal.Utils
 import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
+import Kernel.External.MultiModal.Utils
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Sms.Config (SmsConfig)

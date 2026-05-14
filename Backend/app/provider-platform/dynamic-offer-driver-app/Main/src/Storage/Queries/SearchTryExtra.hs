@@ -19,6 +19,12 @@ findLastByRequestId ::
   m (Maybe SearchTry)
 findLastByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) (Just 1) Nothing <&> listToMaybe
 
+findAllByRequestId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id SearchRequest ->
+  m [SearchTry]
+findAllByRequestId (Id searchRequest) = findAllWithOptionsKV [Se.Is BeamST.requestId $ Se.Eq searchRequest] (Se.Desc BeamST.searchRepeatCounter) Nothing Nothing
+
 findTryByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id SearchRequest ->

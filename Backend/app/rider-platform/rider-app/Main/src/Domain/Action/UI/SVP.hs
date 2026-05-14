@@ -27,8 +27,8 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.SvpJourney as DSvp
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Encryption (decrypt, getDbHash)
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Wallet.Interface.Types as Wallet
 import Kernel.Prelude

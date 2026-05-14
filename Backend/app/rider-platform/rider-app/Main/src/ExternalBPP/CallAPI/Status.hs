@@ -9,9 +9,9 @@ import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.Flow as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id

@@ -27,6 +27,7 @@ module Domain.Action.ProviderPlatform.Management.Ride
     getRideAgentList,
     getRideNearby,
     getRideCallCount,
+    getRideFlowDebug,
   )
 where
 
@@ -41,6 +42,7 @@ import Kernel.Types.Beckn.City as City
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified RiderPlatformClient.RiderApp as RiderClient
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Tools.Auth
@@ -165,3 +167,25 @@ getRideCallCount :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Comm
 getRideCallCount merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideCallCount) rideId
+
+getRideFlowDebug :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
+getRideFlowDebug merchantShortId opCity apiTokenInfo mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  -- Step 1: Get BPP (driver-app) side data
+  bppRes <- Client.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFlowDebug) mbBookingId mbRideId mbRideShortId mbSearchRequestId
+  -- Step 2: Get BAP (rider-app) side data using cross-reference IDs from BPP response
+  let txnId = bppRes.crossReferenceIds.transactionId
+  let bppBookingId' = bppRes.crossReferenceIds.bppBookingId
+  mbBapData <-
+    if isJust txnId || isJust bppBookingId'
+      then do
+        eitherRes <- try @_ @SomeException $ RiderClient.callRiderAppBapFlowDebug merchantShortId opCity (.getBapFlowDebug) Nothing bppBookingId' txnId
+        pure $ either (const Nothing) Just eitherRes
+      else pure Nothing
+  let mergedXRefIds =
+        bppRes.crossReferenceIds
+          { Common.bapSearchRequestId = mbBapData >>= (.searchRequest) >>= Just . (.id),
+            Common.bapBookingId = mbBapData >>= (.booking) >>= Just . (.id),
+            Common.bapRideId = mbBapData >>= (.ride) >>= Just . (.id)
+          }
+  pure bppRes {Common.bapData = mbBapData, Common.crossReferenceIds = mergedXRefIds}

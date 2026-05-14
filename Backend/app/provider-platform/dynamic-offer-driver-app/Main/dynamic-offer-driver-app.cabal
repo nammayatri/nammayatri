@@ -221,6 +221,7 @@ library
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
+      Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate

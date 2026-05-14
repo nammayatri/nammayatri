@@ -215,6 +215,7 @@ library
       Domain.Action.Dashboard.RideBooking.Registration
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
+      Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia

@@ -27,11 +27,14 @@ module Domain.Action.Dashboard.Ride
     validateMultipleRideSyncReq,
     cancellationChargesWaiveOff,
     cancellationChargesWaiveOffCore,
+    getRideFlowDebugBap,
   )
 where
 
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as ProviderCommon
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
+import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Dashboard.Common
@@ -660,3 +663,7 @@ cancellationChargesWaiveOffCore merchant booking ride = do
     _ -> do
       logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
       pure (Nothing, False)
+
+getRideFlowDebugBap :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ProviderCommon.BAPSideDebug
+getRideFlowDebugBap merchantShortId _opCity mbBapBookingId mbBppBookingId mbTransactionId =
+  RideFlowDebug.getBAPFlowDebug merchantShortId mbTransactionId mbBapBookingId mbBppBookingId

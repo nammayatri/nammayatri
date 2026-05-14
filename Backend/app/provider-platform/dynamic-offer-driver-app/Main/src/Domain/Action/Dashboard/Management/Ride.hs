@@ -28,12 +28,14 @@ module Domain.Action.Dashboard.Management.Ride
     postRideWaiverRideCancellationPenalty,
     getRideNearby,
     getRideCallCount,
+    getRideFlowDebug,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
+import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.CancellationReason as DCReason
@@ -198,3 +200,9 @@ postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
   where
     cancellationPenaltyLockKey :: Text -> Text
     cancellationPenaltyLockKey id = "Driver:Cancellation:Penalty:DriverFeeId-" <> id
+
+getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
+getRideFlowDebug merchantShortId opCity mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  RideFlowDebug.getRideFlowDebug merchantShortId merchantOpCityId mbRideId mbBookingId mbSearchRequestId mbRideShortId

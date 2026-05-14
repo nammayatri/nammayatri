@@ -751,7 +751,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
     )
   let (sourceMerchantShortId, sourceCity) = case (req.issueCategorySourceMerchant, req.issueCategorySourceCity) of
         (Just m, Just c) -> (ShortId m, c)
-        _                -> (ShortId baseRequestedCityMerchant.shortId.getShortId, baseOperatingCity.city)
+        _ -> (ShortId baseRequestedCityMerchant.shortId.getShortId, baseOperatingCity.city)
       targetMerchantShortId = ShortId newMerchantShortId.getShortId
   void $
     withTryCatch "copyIssueCategoriesOnCityCreate" $

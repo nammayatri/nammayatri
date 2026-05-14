@@ -34,6 +34,194 @@ data ActualRoute = ActualRoute
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BAPBookingDebug = BAPBookingDebug
+  { id :: Kernel.Prelude.Text,
+    bppBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    estimatedTotalFare :: Kernel.Types.Common.HighPrecMoney,
+    paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    paymentStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    providerId :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPDriverOfferDebug = BAPDriverOfferDebug
+  { id :: Kernel.Prelude.Text,
+    bppQuoteId :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    durationToPickup :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    validTill :: Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPEstimateDebug = BAPEstimateDebug
+  { id :: Kernel.Prelude.Text,
+    bppEstimateId :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    providerId :: Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    vehicleServiceTier :: Kernel.Prelude.Text,
+    validTill :: Kernel.Prelude.UTCTime,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPQuoteDebug = BAPQuoteDebug
+  { id :: Kernel.Prelude.Text,
+    providerId :: Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    quoteDetailsType :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPRideDebug = BAPRideDebug
+  { id :: Kernel.Prelude.Text,
+    bppRideId :: Kernel.Prelude.Text,
+    shortId :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Text,
+    vehicleNumber :: Kernel.Prelude.Text,
+    otp :: Kernel.Prelude.Text,
+    endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    totalFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    rideEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    trackingUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPSearchRequestDebug = BAPSearchRequestDebug
+  { id :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    riderPreferredOption :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BAPSideDebug = BAPSideDebug
+  { searchRequest :: Kernel.Prelude.Maybe BAPSearchRequestDebug,
+    estimates :: [BAPEstimateDebug],
+    quotes :: [BAPQuoteDebug],
+    driverOffers :: [BAPDriverOfferDebug],
+    booking :: Kernel.Prelude.Maybe BAPBookingDebug,
+    ride :: Kernel.Prelude.Maybe BAPRideDebug
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPBookingDebug = BPPBookingDebug
+  { id :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    riderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialZoneOtpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    searchTryId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPDriverQuoteDebug = BPPDriverQuoteDebug
+  { id :: Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    validTill :: Kernel.Prelude.UTCTime,
+    distanceToPickup :: Kernel.Types.Common.Meters,
+    durationToPickup :: Kernel.Types.Common.Seconds,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPEstimateDebug = BPPEstimateDebug
+  { id :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Text,
+    vehicleServiceTier :: Kernel.Prelude.Text,
+    minFare :: Kernel.Types.Common.HighPrecMoney,
+    maxFare :: Kernel.Types.Common.HighPrecMoney,
+    createdAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPRideDebug = BPPRideDebug
+  { id :: Kernel.Prelude.Text,
+    shortId :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Text,
+    otp :: Kernel.Prelude.Text,
+    endOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tripStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    tripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    rideEndedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPSearchRequestDebug = BPPSearchRequestDebug
+  { id :: Kernel.Prelude.Text,
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    autoAssignEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    area :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPSearchTryDebug = BPPSearchTryDebug
+  { id :: Kernel.Prelude.Text,
+    status :: Kernel.Prelude.Text,
+    vehicleServiceTier :: Kernel.Prelude.Text,
+    searchRepeatCounter :: Kernel.Prelude.Int,
+    searchRepeatType :: Kernel.Prelude.Text,
+    tripCategory :: Kernel.Prelude.Text,
+    createdAt :: Kernel.Prelude.UTCTime,
+    validTill :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data BPPSideDebug = BPPSideDebug
+  { searchRequest :: Kernel.Prelude.Maybe BPPSearchRequestDebug,
+    searchTries :: [BPPSearchTryDebug],
+    estimates :: [BPPEstimateDebug],
+    driverQuotes :: [BPPDriverQuoteDebug],
+    booking :: Kernel.Prelude.Maybe BPPBookingDebug,
+    ride :: Kernel.Prelude.Maybe BPPRideDebug
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data BookingStatus
   = UPCOMING
   | UPCOMING_6HRS
@@ -52,6 +240,19 @@ data CancellationSource
   | ByApplication
   | ByFleetOwner
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CrossReferenceIds = CrossReferenceIds
+  { transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bapSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bapBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bapRideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bppRideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rideShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DeprecatedTripCategory
@@ -180,6 +381,43 @@ data FareParametersDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FlowStage
+  = BAP_SEARCH_CREATED
+  | BPP_SEARCH_RECEIVED
+  | BPP_ESTIMATES_CREATED
+  | BAP_ON_SEARCH_RECEIVED
+  | BAP_SELECT_SENT
+  | BPP_DRIVER_SEARCH_STARTED
+  | BPP_DRIVER_QUOTES_RECEIVED
+  | BAP_ON_SELECT_RECEIVED
+  | BAP_INIT_SENT
+  | BPP_BOOKING_CREATED
+  | BAP_ON_INIT_RECEIVED
+  | BAP_CONFIRM_SENT
+  | BPP_CONFIRM_PROCESSED
+  | BAP_ON_CONFIRM_RECEIVED
+  | BPP_RIDE_STARTED
+  | BAP_RIDE_STARTED
+  | BPP_RIDE_COMPLETED
+  | BAP_RIDE_COMPLETED
+  | FLOW_CANCELLED
+  | FLOW_UNKNOWN
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FlowStageEntry = FlowStageEntry {stage :: FlowStage, status :: FlowStageStatus, timestamp :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime, detail :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FlowStageStatus
+  = STAGE_DONE
+  | STAGE_CURRENT
+  | STAGE_PENDING
+  | STAGE_FAILED
+  | STAGE_SKIPPED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data LocationAPIEntity = LocationAPIEntity
   { lat :: Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Double,
@@ -252,6 +490,21 @@ data PaymentMode
 data RideCallCountRes = RideCallCountRes {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, callCount :: Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RideFlowDebugRes = RideFlowDebugRes
+  { currentStage :: FlowStage,
+    tripCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    timeline :: [FlowStageEntry],
+    bapData :: Kernel.Prelude.Maybe BAPSideDebug,
+    bppData :: Kernel.Prelude.Maybe BPPSideDebug,
+    crossReferenceIds :: CrossReferenceIds,
+    issues :: [Kernel.Prelude.Text]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets RideFlowDebugRes where
+  hideSecrets = Kernel.Prelude.identity
 
 data RideInfo = RideInfo
   { rideShortId :: Kernel.Types.Id.ShortId Dashboard.Common.Ride,
@@ -492,7 +745,7 @@ data WalletTransactionItem = WalletTransactionItem {ledgerEntryId :: Kernel.Prel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("ride" :> (GetRideAgentList :<|> GetRideListHelper :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty :<|> GetRideNearby :<|> GetRideCallCount))
+type API = ("ride" :> (GetRideAgentList :<|> GetRideListHelper :<|> GetRideListV2 :<|> PostRideEndMultiple :<|> PostRideCancelMultiple :<|> GetRideInfo :<|> PostRideSync :<|> PostRideSyncMultiple :<|> PostRideRoute :<|> GetRideKaptureList :<|> GetRideFareBreakUp :<|> PostRideWaiverRideCancellationPenalty :<|> GetRideNearby :<|> GetRideCallCount :<|> GetRideFlowDebug))
 
 type GetRideAgentList =
   ( "agent" :> "list" :> QueryParam "bookingStatus" BookingStatus :> QueryParam "currency" Kernel.Types.Common.Currency
@@ -701,6 +954,15 @@ type GetRideNearby = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Dr
 
 type GetRideCallCount = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "callCount" :> Get '[JSON] RideCallCountRes)
 
+type GetRideFlowDebug =
+  ( "flowDebug" :> QueryParam "bookingId" Kernel.Prelude.Text :> QueryParam "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride)
+      :> QueryParam
+           "rideShortId"
+           (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
+      :> QueryParam "searchRequestId" Kernel.Prelude.Text
+      :> Get '[JSON] RideFlowDebugRes
+  )
+
 data RideAPIs = RideAPIs
   { getRideAgentList :: Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideListRes,
     getRideList :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe PaymentMode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> EulerHS.Types.EulerClient RideListRes,
@@ -715,13 +977,14 @@ data RideAPIs = RideAPIs
     getRideFareBreakUp :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient FareBreakUpRes,
     postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRideNearby :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient NearbyResp,
-    getRideCallCount :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideCallCountRes
+    getRideCallCount :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideCallCountRes,
+    getRideFlowDebug :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideFlowDebugRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount = rideClient
+    getRideAgentList :<|> getRideList :<|> getRideListV2 :<|> postRideEndMultiple :<|> postRideCancelMultiple :<|> getRideInfo :<|> postRideSync :<|> postRideSyncMultiple :<|> postRideRoute :<|> getRideKaptureList :<|> getRideFareBreakUp :<|> postRideWaiverRideCancellationPenalty :<|> getRideNearby :<|> getRideCallCount :<|> getRideFlowDebug = rideClient
 
 data RideUserActionType
   = GET_RIDE_AGENT_LIST
@@ -738,6 +1001,7 @@ data RideUserActionType
   | POST_RIDE_WAIVER_RIDE_CANCELLATION_PENALTY
   | GET_RIDE_NEARBY
   | GET_RIDE_CALL_COUNT
+  | GET_RIDE_FLOW_DEBUG
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
