@@ -95,7 +95,6 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
 
 createConnectAccount ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.ConnectAccountReq ->
@@ -104,7 +103,6 @@ createConnectAccount = runWithServiceConfig Payment.createConnectAccount (.creat
 
 retryAccountLink ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
@@ -113,7 +111,6 @@ retryAccountLink = runWithServiceConfig Payment.retryAccountLink (.retryBankAcco
 
 getAccount ::
   ServiceFlow m r =>
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Payment.AccountId ->
@@ -132,12 +129,11 @@ runWithServiceConfig ::
   ServiceFlow m r =>
   (Payment.PaymentServiceConfig -> req -> m resp) ->
   (DMSUC.MerchantServiceUsageConfig -> Payment.PaymentService) ->
-  Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   req ->
   m resp
-runWithServiceConfig func getCfg _merchantId merchantOpCityId paymentMode req = do
+runWithServiceConfig func getCfg merchantOpCityId paymentMode req = do
   orgPaymentsConfig <- QOMC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let paymentService = modifyPaymentServiceByMode (getCfg orgPaymentsConfig) (fromMaybe DMPM.LIVE paymentMode)
   orgPaymentServiceConfig <-

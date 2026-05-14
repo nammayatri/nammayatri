@@ -299,6 +299,7 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow = do
       vpa
       (fromMaybe "FULFILL_ONLY" pr.orderType)
       False
+      payoutServiceFlow
 
 -- | Build a PayoutRequest from a PayoutSubmission.
 buildPayoutRequest ::

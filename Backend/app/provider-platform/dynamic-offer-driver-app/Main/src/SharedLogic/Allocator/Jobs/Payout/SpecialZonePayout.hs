@@ -304,7 +304,7 @@ executeOldSpecialZonePayout scheduledPayout = do
               phoneNo <- mapM decrypt person.mobileNumber
               merchantOperatingCity <- CQMOC.findById opCityId >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
               let entityName = DLP.SPECIAL_ZONE_PAYOUT
-                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" False
+                  createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId "Payout for Airport Ride" (Just person.firstName) mbVpa "FULFILL_ONLY" False payoutServiceFlow
               case merchantId of
                 Nothing -> do
                   logWarning $ "No merchant ID for payout: " <> show scheduledPayout.id

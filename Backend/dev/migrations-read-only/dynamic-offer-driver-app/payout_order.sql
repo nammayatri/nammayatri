@@ -64,3 +64,10 @@ ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN pg_base_fee double pr
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN id_assigned_by_service_provider text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN transfer_status text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN transfer_id text ;
+ALTER TABLE atlas_driver_offer_bpp.payout_order ADD COLUMN transfer_amount double precision ;

@@ -89,6 +89,7 @@ data MembershipDetailsResp = MembershipDetailsResp
     nomineeInfo :: NomineeInfo,
     numberOfShares :: Kernel.Prelude.Int,
     panNumber :: Kernel.Prelude.Text,
+    shareAllotments :: [ShareAllotment],
     shareEndCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shareStartCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Domain.Types.StclMembership.ApplicationStatus,
@@ -99,6 +100,25 @@ data MembershipDetailsResp = MembershipDetailsResp
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NomineeInfo = NomineeInfo {nomineeAadhar :: Kernel.Prelude.Maybe Kernel.Prelude.Text, nomineeName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ShareAllotment = ShareAllotment
+  { applicationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    applicationId :: Kernel.Prelude.Text,
+    numberOfShares :: Kernel.Prelude.Int,
+    shareEndCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    shareStartCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    submittedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TopUpSharesReq = TopUpSharesReq
+  { amount :: Kernel.Prelude.Maybe Kernel.Types.Common.Money,
+    numberOfShares :: Kernel.Prelude.Int,
+    paymentServiceType :: Kernel.Prelude.Maybe Lib.Payment.Domain.Types.PaymentOrder.PaymentServiceType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
