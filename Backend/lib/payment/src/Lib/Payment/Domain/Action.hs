@@ -426,6 +426,9 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
   where
     isInProgress status = status `elem` [Payment.NEW, Payment.PENDING_VBV, Payment.STARTED, Payment.AUTHORIZING]
 
+    roundToCents :: HighPrecMoney -> Integer
+    roundToCents = round . (* 100)
+
     handleExistingOrder :: DOrder.PaymentOrder -> m (Maybe CreatePaymentServiceResp)
     handleExistingOrder existingOrder = do
       transactions <- HQTransaction.findAllByOrderId existingOrder.id
@@ -434,7 +437,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
         Nothing -> createNewPayment (Just existingOrder) -- all previous intents charged/cancelled, create new
         Just existingTxn -> do
           let paymentIntentId = fromMaybe existingOrder.paymentServiceOrderId existingTxn.txnId
-          if req.amount > existingTxn.amount
+          if roundToCents req.amount > roundToCents existingTxn.amount
             then do
               -- Amount increased: try incremental authorization first, fall back to cancel+create
               case mbIncrementAuthCall of
@@ -1739,6 +1742,7 @@ buildPaymentTransaction :: MonadFlow m => DOrder.PaymentOrder -> OrderTxn -> May
 buildPaymentTransaction order OrderTxn {..} respDump = do
   uuid <- generateGUID
   now <- getCurrentTime
+  -- fetch ride table here from payment order domain entity id and send commission as application fee.
   pure
     DTransaction.PaymentTransaction
       { id = uuid,
@@ -1747,7 +1751,7 @@ buildPaymentTransaction order OrderTxn {..} respDump = do
         txnUUID = transactionUUID,
         statusId = transactionStatusId,
         status = transactionStatus,
-        applicationFeeAmount = 0.0,
+        applicationFeeAmount = fromMaybe 0 applicationFeeAmount,
         retryCount = 0,
         createdAt = now,
         updatedAt = now,
