@@ -2515,23 +2515,23 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   (dueDriverFees', mKey) <- do
     case clearSelectedReq of
       Just req -> do
-        dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
+        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
         let len = length dfees
         let paymentIdLength = length req.driverFeeIds
         unless (len == paymentIdLength) $
           throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
         return (dfees, subscriptionConfig.partialDueClearanceMessageKey)
       Nothing -> do
-        dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
         return (dfees, Nothing)
 
   --------- to crub up cases related to double debit ----------
-  successfulInvoices <- mapM (\fee -> runInReplica (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
+  successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
-  invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
+  invoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
@@ -2567,7 +2567,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       return (vendorFees, finalInvoices)
 
     validateExistingInvoice invoice driverFees = do
-      invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
+      invoices <- runInMasterDbAndRedis $ QINV.findAllByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
       let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
       if isJust clearSelectedReq
