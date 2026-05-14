@@ -10,6 +10,7 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.FRFSTicketService
 import qualified "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Pass
 import qualified "rider-app" API.Types.Dashboard.AppManagement.PassOrganization
+import qualified "rider-app" API.Types.Dashboard.AppManagement.Passetto
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Payment
 import qualified "rider-app" API.Types.Dashboard.AppManagement.TicketDashboard
 import qualified "rider-app" API.Types.Dashboard.AppManagement.Tickets
@@ -30,6 +31,7 @@ data AppManagementAPIs = AppManagementAPIs
     merchantOnboardingDSL :: API.Types.Dashboard.AppManagement.MerchantOnboarding.MerchantOnboardingAPIs,
     passDSL :: API.Types.Dashboard.AppManagement.Pass.PassAPIs,
     passOrganizationDSL :: API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationAPIs,
+    passettoDSL :: API.Types.Dashboard.AppManagement.Passetto.PassettoAPIs,
     paymentDSL :: API.Types.Dashboard.AppManagement.Payment.PaymentAPIs,
     ticketDashboardDSL :: API.Types.Dashboard.AppManagement.TicketDashboard.TicketDashboardAPIs,
     ticketsDSL :: API.Types.Dashboard.AppManagement.Tickets.TicketsAPIs,
@@ -45,6 +47,7 @@ mkAppManagementAPIs merchantId city token = do
   let merchantOnboardingDSL = API.Types.Dashboard.AppManagement.MerchantOnboarding.mkMerchantOnboardingAPIs merchantOnboardingClientDSL
   let passDSL = API.Types.Dashboard.AppManagement.Pass.mkPassAPIs passClientDSL
   let passOrganizationDSL = API.Types.Dashboard.AppManagement.PassOrganization.mkPassOrganizationAPIs passOrganizationClientDSL
+  let passettoDSL = API.Types.Dashboard.AppManagement.Passetto.mkPassettoAPIs passettoClientDSL
   let paymentDSL = API.Types.Dashboard.AppManagement.Payment.mkPaymentAPIs paymentClientDSL
   let ticketDashboardDSL = API.Types.Dashboard.AppManagement.TicketDashboard.mkTicketDashboardAPIs ticketDashboardClientDSL
   let ticketsDSL = API.Types.Dashboard.AppManagement.Tickets.mkTicketsAPIs ticketsClientDSL
@@ -52,7 +55,7 @@ mkAppManagementAPIs merchantId city token = do
   let vehicleSeatLayoutMappingDSL = API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping.mkVehicleSeatLayoutMappingAPIs vehicleSeatLayoutMappingClientDSL
   (AppManagementAPIs {..})
   where
-    customerClientDSL :<|> eventManagementClientDSL :<|> fRFSTicketServiceClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> passOrganizationClientDSL :<|> paymentClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL :<|> vehicleSeatLayoutMappingClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
+    customerClientDSL :<|> eventManagementClientDSL :<|> fRFSTicketServiceClientDSL :<|> merchantOnboardingClientDSL :<|> passClientDSL :<|> passOrganizationClientDSL :<|> passettoClientDSL :<|> paymentClientDSL :<|> ticketDashboardClientDSL :<|> ticketsClientDSL :<|> transitOperatorClientDSL :<|> vehicleSeatLayoutMappingClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.AppManagementDSLAPI) merchantId city token
 
 callAppManagementAPI ::
   forall m r b c.

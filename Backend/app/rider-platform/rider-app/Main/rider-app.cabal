@@ -190,6 +190,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
+      Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
@@ -813,6 +814,7 @@ library
       API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
+      API.Action.Dashboard.AppManagement.Passetto
       API.Action.Dashboard.AppManagement.PassOrganization
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
@@ -912,6 +914,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
+      API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
@@ -922,6 +925,7 @@ library
       API.Types.Dashboard.AppManagement.FRFSTicketService
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
+      API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
