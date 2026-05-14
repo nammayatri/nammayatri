@@ -27,6 +27,7 @@ import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude
 import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude (NominalDiffTime)
 import Kernel.Sms.Config
@@ -57,6 +58,8 @@ import Kernel.Utils.Servant.SignatureAuth
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
+import qualified Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as HttpTLS
 import Passetto.Client
 import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
@@ -179,7 +182,8 @@ data AppCfg = AppCfg
     noSignatureSubscribers :: [Text],
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
-    ttenTokenCacheExpiry :: Seconds
+    ttenTokenCacheExpiry :: Seconds,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic, FromDhall)
 
@@ -304,13 +308,18 @@ data AppEnv = AppEnv
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    ttenTokenCacheExpiry :: Seconds
+    ttenTokenCacheExpiry :: Seconds,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
+    masterCloudForwarderManager :: Http.Manager
   }
   deriving (Generic)
 
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
+
+instance MCF.HasMasterCloudForwarder AppEnv where
+  masterCloudProxyConfig = (.masterCloudProxyConfig)
 
 toConnectInfo :: EsqDBConfig -> ConnectInfo
 toConnectInfo config =
@@ -382,6 +391,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
       serviceClickhouseCfg = driverClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  masterCloudForwarderManager <- Http.newManager (setResponseTimeout cfg.httpClientOptions.timeoutMs HttpTLS.tlsManagerSettings)
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
