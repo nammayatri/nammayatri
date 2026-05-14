@@ -42,6 +42,7 @@ import Domain.Types.OnUpdate
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRoute as RR
 import Domain.Types.Trip (isRideOtpTrip)
+import qualified Domain.Types.Trip as DTC
 import Environment
 import EulerHS.Prelude hiding (drop, id, state)
 import Kernel.Beam.Functions as B
@@ -89,6 +90,7 @@ data DUpdateReq
   | UAddStopReq AddStopReq
   | UEditStopReq EditStopReq
   | UChangeServiceTierReq ChangeServiceTierReq
+  | UAddBaggageReq AddBaggageReq
 
 data PaymentCompletedReq = PaymentCompletedReq
   { bookingId :: Id DBooking.Booking,
@@ -123,6 +125,11 @@ data ChangeServiceTierReq = ChangeServiceTierReq
     bppQuoteId :: Text
   }
 
+data AddBaggageReq = AddBaggageReq
+  { bookingId :: Id DBooking.Booking,
+    numberOfLuggages :: Int
+  }
+
 mkLocation :: Id DMOC.MerchantOperatingCity -> DL.Location' -> DL.Location
 mkLocation merchantOperatingCityId DL.Location' {..} = DL.Location {merchantOperatingCityId = Just merchantOperatingCityId, ..}
 
@@ -132,6 +139,7 @@ getBookingId (UEditLocationReq req) = req.bookingId
 getBookingId (UAddStopReq req) = req.bookingId
 getBookingId (UEditStopReq req) = req.bookingId
 getBookingId (UChangeServiceTierReq req) = req.bookingId
+getBookingId (UAddBaggageReq req) = req.bookingId
 
 data PaymentStatus = PAID | NOT_PAID
 
@@ -205,6 +213,74 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
 
   -- Send on_update to BAP to confirm the change
   sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare bppQuoteId
+handler (UAddBaggageReq AddBaggageReq {..}) = do
+  booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
+  unless (booking.status == DBooking.NEW) $
+    throwError $ AddBaggageInvalidBookingStatus (show booking.status)
+  unless (isRideOtpTrip booking.tripCategory) $
+    throwError AddBaggageNotSupported
+
+  -- BPP-side cap check (defense in depth; BAP already validates against riderConfig)
+  transporterCfg <-
+    SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  whenJust transporterCfg.maxNumberOfLuggages $ \maxN ->
+    when (numberOfLuggages > maxN) $ throwError (AddBaggageExceedsMax maxN)
+
+  -- Recover original FullFarePolicy (cached at confirm-time via cacheFarePolicyByQuoteId, long TTL)
+  fullFarePolicy <-
+    getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+      >>= fromMaybeM (AddBaggageFarePolicyNotFound booking.quoteId)
+
+  -- Mirror search-time nightShiftOverlapChecking, derived from tripCategory's pricing policy
+  let nightShiftOverlapChecking = case DTC.tripCategoryToPricingPolicy booking.tripCategory of
+        DTC.EstimateBased nsoc -> nsoc
+        DTC.QuoteBased nsoc -> nsoc
+
+  let origFareParams = booking.fareParams
+      origAdditionalCategories = (.chargeCategory) <$> origFareParams.conditionalCharges
+  let params =
+        CalculateFareParametersParams
+          { farePolicy = fullFarePolicy,
+            actualDistance = booking.estimatedDistance,
+            rideTime = booking.startTime,
+            returnTime = booking.returnTime,
+            roundTrip = fromMaybe False booking.roundTrip,
+            waitingTime = Nothing,
+            stopWaitingTimes = [],
+            actualRideDuration = Nothing,
+            vehicleAge = Nothing,
+            driverSelectedFare = origFareParams.driverSelectedFare,
+            customerExtraFee = origFareParams.customerExtraFee,
+            petCharges = origFareParams.petCharges,
+            nightShiftCharge = origFareParams.nightShiftCharge,
+            customerCancellationDues = origFareParams.customerCancellationDues,
+            estimatedCongestionCharge = booking.estimatedCongestionCharge,
+            nightShiftOverlapChecking = nightShiftOverlapChecking,
+            estimatedDistance = booking.estimatedDistance,
+            estimatedRideDuration = booking.estimatedDuration,
+            timeDiffFromUtc = Nothing,
+            tollCharges = booking.tollCharges,
+            noOfStops = length booking.stops,
+            currency = booking.currency,
+            distanceUnit = booking.distanceUnit,
+            shouldApplyBusinessDiscount = False,
+            shouldApplyPersonalDiscount = False,
+            merchantOperatingCityId = Just booking.merchantOperatingCityId,
+            mbAdditonalChargeCategories = if null origAdditionalCategories then Nothing else Just origAdditionalCategories,
+            numberOfLuggages = Just numberOfLuggages,
+            govtChargesRate = Just transporterCfg.taxConfig.rideGst,
+            pickupGateId = booking.pickupGateId
+          }
+
+  newFareParams <- FC.calculateFareParameters params
+  let newEstimatedFare = fareSum newFareParams (Just [])
+
+  QFP.create newFareParams
+  QRB.updateNumberOfLuggagesAndFare booking.id (Just numberOfLuggages) newFareParams.id newEstimatedFare
+
+  -- Send on_update to BAP so BAP mirrors the new luggage count + fare + breakup on its booking row
+  sendAddBaggageUpdateToBAP booking numberOfLuggages newEstimatedFare newFareParams
 handler (UEditLocationReq EditLocationReq {..}) = do
   when (isNothing origin' && isNothing destination') $
     throwError PickupOrDropLocationNotFound

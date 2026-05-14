@@ -123,6 +123,7 @@ parseEventV2 transactionId messageId bppUri order = do
         "ESTIMATED_END_TIME_RANGE_UPDATED" -> parseEstimatedEndTimeRangeUpdatedEvent order
         "PARCEL_IMAGE_UPLOADED" -> parseParcelImageUploaded order
         "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent transactionId order
+        "ADD_BAGGAGE" -> parseAddBaggageEvent transactionId order
         _ -> throwError $ InvalidRequest $ "Invalid event type: " <> eventType
 
 parseNewMessageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
@@ -291,5 +292,24 @@ parseChangeServiceTierEvent transactionId order = do
           newVehicleServiceTier = newServiceTier,
           newEstimatedFare,
           newQuoteId,
+          transactionId
+        }
+
+parseAddBaggageEvent :: (MonadFlow m) => Text -> Spec.Order -> m DOnUpdate.OnUpdateReq
+parseAddBaggageEvent transactionId order = do
+  bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in AddBaggage Event.")
+  luggageText <-
+    Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.NUMBER_OF_LUGGAGE order.orderTags
+      & fromMaybeM (InvalidRequest "number_of_luggage tag is not present in AddBaggage Event.")
+  numberOfLuggages <- readMaybe (T.unpack luggageText) & fromMaybeM (InvalidRequest $ "Invalid number_of_luggage: " <> luggageText)
+  let newEstimatedFare = order.orderQuote >>= (.quotationPrice) >>= (.priceValue) >>= readMaybe . T.unpack
+  let fareBreakups = maybe [] (mapMaybe Common.mkDFareBreakup) (order.orderQuote >>= (.quotationBreakup))
+  return $
+    DOnUpdate.OUAddBaggageReq
+      DOnUpdate.AddBaggageReq
+        { bppBookingId = Id bppBookingId,
+          numberOfLuggages,
+          newEstimatedFare,
+          fareBreakups,
           transactionId
         }
