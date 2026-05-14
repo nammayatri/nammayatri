@@ -22,6 +22,7 @@ module Beckn.ACL.Update
     AddStopBuildReqDetails (..),
     EditStopBuildReqDetails (..),
     ChangeServiceTierBuildReqDetails (..),
+    AddBaggageBuildReqDetails (..),
     UpdateStatus (..),
   )
 where
@@ -65,6 +66,7 @@ data UpdateBuildReqDetails
   | UAddStopBuildReqDetails AddStopBuildReqDetails
   | UEditStopBuildReqDetails EditStopBuildReqDetails
   | UChangeServiceTierBuildReqDetails ChangeServiceTierBuildReqDetails
+  | UAddBaggageBuildReqDetails AddBaggageBuildReqDetails
 
 data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
   { bppRideId :: Id DRide.BPPRide,
@@ -93,6 +95,10 @@ newtype EditStopBuildReqDetails = EditStopBuildReqDetails
 data ChangeServiceTierBuildReqDetails = ChangeServiceTierBuildReqDetails
   { newVehicleServiceTier :: DVST.ServiceTierType,
     bppQuoteId :: Text
+  }
+
+newtype AddBaggageBuildReqDetails = AddBaggageBuildReqDetails
+  { numberOfLuggages :: Int
   }
 
 buildUpdateReq ::
@@ -368,4 +374,53 @@ mkUpdateMessage req (UChangeServiceTierBuildReqDetails details) = do
                 ]
           },
       updateReqMessageUpdateTarget = "order.items, order.fullfillments"
+    }
+mkUpdateMessage req (UAddBaggageBuildReqDetails details) = do
+  let addBaggageTags =
+        [ Tag.getFullTagGroup
+            Tag.SEARCH_REQUEST_INFO
+            [ Tag.getFullTag Tag.NUMBER_OF_LUGGAGE (Just . T.pack $ show details.numberOfLuggages)
+            ]
+        ]
+  Spec.UpdateReqMessage
+    { updateReqMessageOrder =
+        Spec.Order
+          { orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Nothing,
+            orderId = Just $ req.bppBookingId.getId,
+            orderProvider = Nothing,
+            orderQuote = Nothing,
+            orderCreatedAt = Nothing,
+            orderUpdatedAt = Nothing,
+            orderStatus = Nothing,
+            orderPayments = Nothing,
+            orderTags = Just addBaggageTags,
+            orderItems = Nothing,
+            orderFulfillments =
+              Just
+                [ Spec.Fulfillment
+                    { fulfillmentId = Nothing,
+                      fulfillmentStops = Nothing,
+                      fulfillmentAgent = Nothing,
+                      fulfillmentCustomer = Nothing,
+                      fulfillmentState =
+                        Just $
+                          Spec.FulfillmentState
+                            { fulfillmentStateDescriptor =
+                                Just $
+                                  Spec.Descriptor
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.ADD_BAGGAGE,
+                                      descriptorName = Nothing,
+                                      descriptorShortDesc = Nothing
+                                    }
+                            },
+                      fulfillmentTags = Nothing,
+                      fulfillmentType = Nothing,
+                      fulfillmentVehicle = Nothing
+                    }
+                ]
+          },
+      updateReqMessageUpdateTarget = "order.fullfillments"
     }

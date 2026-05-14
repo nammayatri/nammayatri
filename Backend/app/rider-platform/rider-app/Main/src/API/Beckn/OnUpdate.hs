@@ -86,6 +86,7 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             DOnUpdate.OUValidatedEstimatedEndTimeRangeReq req -> return req.booking
             DOnUpdate.OUValidatedParcelImageFileUploadReq req -> return req.booking
             DOnUpdate.OUValidatedChangeServiceTierReq req -> return req.booking
+            DOnUpdate.OUValidatedAddBaggageReq req -> return req.booking
             DOnUpdate.OUValidatedEditDestError _ -> throwError $ InternalError "Error request is not supported for network observability"
           void $ pushLogs "on_update" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
   pure Ack

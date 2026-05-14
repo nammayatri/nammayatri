@@ -39,6 +39,7 @@ module SharedLogic.CallBAP
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,
+    sendAddBaggageUpdateToBAP
   )
 where
 
@@ -1290,4 +1291,38 @@ sendChangeServiceTierUpdateToBAP booking newVehicleServiceTier newEstimatedFare 
               }
     retryConfig <- asks (.shortDurationRetryCfg)
     onUpdateMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing changeServiceTierReq
+    void $ callOnUpdateV2 onUpdateMsg retryConfig merchant.id
+
+sendAddBaggageUpdateToBAP ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasHttpClientOptions r c,
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  DRB.Booking ->
+  Int ->
+  HighPrecMoney ->
+  Fare.FareParameters ->
+  m ()
+sendAddBaggageUpdateToBAP booking numberOfLuggages newEstimatedFare fareParams = do
+  isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
+  when isValueAddNP $ do
+    merchant <-
+      CQM.findById booking.providerId
+        >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
+    let addBaggageReq =
+          ACL.AddBaggageBuildReq
+            ACL.DAddBaggageReq
+              { bookingId = booking.id,
+                numberOfLuggages,
+                newEstimatedFare,
+                fareParams
+              }
+    retryConfig <- asks (.shortDurationRetryCfg)
+    onUpdateMsg <- ACL.buildOnUpdateMessageV2 merchant booking Nothing addBaggageReq
     void $ callOnUpdateV2 onUpdateMsg retryConfig merchant.id

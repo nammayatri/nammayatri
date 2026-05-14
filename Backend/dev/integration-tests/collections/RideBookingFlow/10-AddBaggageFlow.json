@@ -1,0 +1,318 @@
+{
+	"info": {
+		"name": "NY Add Baggage Flow (RideOTP)",
+		"description": "RideOTP flow + add baggage before ride starts: search in special zone -> confirm quote -> add baggage (fare recalculated) -> verify booking fare changed -> driver starts with OTP -> end.\n\nPrerequisites: same as 08-RideOtpFlow.json. AddBaggage endpoint must be wired and a fare policy with non-zero perLuggageCharge must be configured for the booked vehicle tier in the special zone.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.collectionVariables.get('_test_driver_number')) {",
+					"    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+					"    pm.collectionVariables.set('_test_driver_number', dNum);",
+					"    pm.collectionVariables.set('_test_rider_number', rNum);",
+					"    pm.collectionVariables.set('_test_reg_no', regNo);",
+					"    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Driver Auth",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"},
+				"url": {"raw": "{{baseURL_namma_P}}/auth", "host": ["{{baseURL_namma_P}}"], "path": ["auth"]}
+			}
+		},
+		{
+			"name": "Driver OTP",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"},
+				"url": {"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify", "host": ["{{baseURL_namma_P}}"], "path": ["auth", "{{driver_authId}}", "verify"]}
+			}
+		},
+		{
+			"name": "Add Vehicle (Dashboard)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"variant\": \"SUV\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"CAR\", \"make\": \"Toyota\", \"model\": \"Innova\", \"driverName\": \"Test Baggage Driver\", \"colour\": \"White\"}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
+			}
+		},
+		{
+			"name": "Enable Driver (Dashboard)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]}
+			}
+		},
+		{
+			"name": "Subscribe Plan",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{plan_id}}", "subscribe"]}
+			}
+		},
+		{
+			"name": "Set Driver Online",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s = Date.now(); while (Date.now() - s < 2000) {}"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "setActivity"], "query": [{"key": "active", "value": "true"}, {"key": "mode", "value": "%22ONLINE%22"}]}
+			}
+		},
+		{
+			"name": "Airport Cash Recharge (Dashboard)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["pm.environment.set('_recharge_ref', 'test-recharge-' + Date.now() + '-' + Math.floor(Math.random() * 100000));"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"amount\": 300, \"referenceId\": \"{{_recharge_ref}}\"}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverWallet/wallet/{{driver_id}}/airportCashRecharge", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driverWallet", "wallet", "{{driver_id}}", "airportCashRecharge"]}
+			}
+		},
+		{
+			"name": "Rider Auth",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"},
+				"url": {"raw": "{{baseUrl_app}}/auth", "host": ["{{baseUrl_app}}"], "path": ["auth"]}
+			}
+		},
+		{
+			"name": "Rider OTP",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"},
+				"url": {"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify", "host": ["{{baseUrl_app}}"], "path": ["auth", "{{rider_authId}}", "verify"]}
+			}
+		},
+		{
+			"name": "Ride Search (Special Zone Pickup)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["setTimeout(function(){}, 2000);"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('searchId', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const _d = 8000; const _s = Date.now(); while (Date.now() - _s < _d) {}"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Special Zone Pickup\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"},
+				"url": {"raw": "{{baseUrl_app}}/rideSearch", "host": ["{{baseUrl_app}}"], "path": ["rideSearch"]}
+			}
+		},
+		{
+			"name": "Get Search Results (Pick first quote)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["setTimeout(function(){}, 3000);"], "type": "text/javascript"}},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"var quotes = d.quotes || [];",
+							"var pickedQuote = null;",
+							"for (var i = 0; i < quotes.length; i++) {",
+							"    var inner = quotes[i].onDemandCab || quotes[i].onRentalCab || quotes[i].onMeterRide;",
+							"    if (!inner) continue;",
+							"    pickedQuote = inner;",
+							"    break;",
+							"}",
+							"if (pickedQuote) {",
+							"    pm.environment.set('sz_quoteId', pickedQuote.id);",
+							"    pm.environment.set('initial_fare', pickedQuote.estimatedTotalFare);",
+							"    pm.environment.set('initial_variant', pickedQuote.vehicleVariant);",
+							"    console.log('Selected quote:', pickedQuote.id, pickedQuote.vehicleVariant, 'fare:', pickedQuote.estimatedTotalFare);",
+							"}",
+							"pm.test('Has quotes', function () { pm.expect(quotes.length).to.be.above(0); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "{{searchId}}", "results"]}
+			}
+		},
+		{
+			"name": "Confirm Quote",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking ID:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const _d = 5000; const _s = Date.now(); while (Date.now() - _s < _d) {}"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseUrl_app}}/rideSearch/quotes/{{sz_quoteId}}/confirm", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "quotes", "{{sz_quoteId}}", "confirm"]}
+			}
+		},
+		{
+			"name": "Add Baggage (numberOfLuggages = 2)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"console.log('Baggage added to booking', pm.environment.get('customer_bookingId'));",
+							"// Wait for BPP recalc + on_update -> BAP update",
+							"const s = Date.now(); while (Date.now() - s < 5000) {}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"numberOfLuggages\": 2}"},
+				"url": {
+					"raw": "{{baseUrl_app}}/booking/{{customer_bookingId}}/addBaggage/confirm",
+					"host": ["{{baseUrl_app}}"],
+					"path": ["booking", "{{customer_bookingId}}", "addBaggage", "confirm"]
+				}
+			}
+		},
+		{
+			"name": "Verify Fare Updated (Rider)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s = Date.now(); while (Date.now() - s < 3000) {}"], "type": "text/javascript"}},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"if (d.list && d.list.length > 0) {",
+							"    var booking = d.list[0];",
+							"    var initialFare = parseFloat(pm.environment.get('initial_fare'));",
+							"    console.log('Initial fare:', initialFare, '-> updated fare:', booking.estimatedTotalFare, 'status:', booking.status);",
+							"    pm.test('Booking fare changed after AddBaggage', function () {",
+							"        pm.expect(booking.estimatedTotalFare).to.not.equal(initialFare);",
+							"    });",
+							"    // For a non-zero perLuggageCharge in the configured fare policy, new fare should be greater.",
+							"    pm.test('New fare is greater than initial (assuming perLuggageCharge > 0)', function () {",
+							"        pm.expect(booking.estimatedTotalFare).to.be.above(initialFare);",
+							"    });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "onlyActive", "value": "true"}, {"key": "offset", "value": "0"}]}
+			}
+		},
+		{
+			"name": "Get Booking (Extract OTP)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"if (d.list && d.list.length > 0) {",
+							"    var booking = d.list[0];",
+							"    pm.environment.set('customer_bookingId', booking.id);",
+							"    var szOtp = null;",
+							"    if (booking.bookingDetails && booking.bookingDetails.contents && booking.bookingDetails.contents.otpCode) {",
+							"        szOtp = booking.bookingDetails.contents.otpCode;",
+							"    }",
+							"    pm.environment.set('sz_otp', szOtp || '');",
+							"    console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', szOtp, 'Fare:', booking.estimatedTotalFare);",
+							"}",
+							"pm.test('Has OTP', function () { pm.expect(pm.environment.get('sz_otp')).to.be.a('string').that.is.not.empty; });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "onlyActive", "value": "true"}, {"key": "offset", "value": "0"}]}
+			}
+		},
+		{
+			"name": "Driver OTP Ride Start",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); if (d.id) { pm.environment.set('driver_ride_id', d.id); } console.log('Ride started with OTP after AddBaggage!');"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"specialZoneOtpCode\": \"{{sz_otp}}\", \"point\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/otpRide/start", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "otpRide", "start"]}
+			}
+		},
+		{
+			"name": "End Ride",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s = Date.now(); while (Date.now() - s < 1000) {}"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended!');"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "end"]}
+			}
+		},
+		{
+			"name": "Verify Booking Completed",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s = Date.now(); while (Date.now() - s < 3000) {}"], "type": "text/javascript"}},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); });",
+							"pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); });",
+							"console.log('AddBaggage flow completed! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "v2", "{{customer_bookingId}}"]}
+			}
+		}
+	]
+}

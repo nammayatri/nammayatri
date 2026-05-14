@@ -62,6 +62,7 @@ import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
 import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
+import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.ChangeServiceTier as ChangeServiceTier
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
@@ -171,6 +172,7 @@ type API =
            :<|> EDCMachine.API
            :<|> PartnerBookingStatement.API
            :<|> ChangeServiceTier.API
+           :<|> AddBaggage.API
        )
 
 handler :: FlowServer API
@@ -249,3 +251,4 @@ handler =
     :<|> EDCMachine.handler
     :<|> PartnerBookingStatement.handler
     :<|> ChangeServiceTier.handler
+    :<|> AddBaggage.handler

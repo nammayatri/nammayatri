@@ -1270,3 +1270,36 @@ instance IsHTTPError ChangeServiceTierError where
     ChangeServiceTierOriginalQuoteNotFound _ -> E400
 
 instance IsAPIError ChangeServiceTierError
+
+data AddBaggageError
+  = AddBaggageNotSupported
+  | AddBaggageInvalidBookingStatus Text
+  | AddBaggageSameCount
+  | AddBaggageExceedsMax Int
+  | AddBaggageNegativeCount
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AddBaggageError
+
+instance IsBaseError AddBaggageError where
+  toMessage AddBaggageNotSupported = Just "Add baggage is currently supported only for RideOTP bookings."
+  toMessage (AddBaggageInvalidBookingStatus status) = Just $ "Cannot add baggage in booking status: " <> status
+  toMessage AddBaggageSameCount = Just "Requested luggage count is the same as the current one."
+  toMessage (AddBaggageExceedsMax maxN) = Just $ "Number of luggages exceeds maximum allowed: " <> show maxN
+  toMessage AddBaggageNegativeCount = Just "Number of luggages must be non-negative."
+
+instance IsHTTPError AddBaggageError where
+  toErrorCode = \case
+    AddBaggageNotSupported -> "ADD_BAGGAGE_NOT_SUPPORTED"
+    AddBaggageInvalidBookingStatus _ -> "ADD_BAGGAGE_INVALID_BOOKING_STATUS"
+    AddBaggageSameCount -> "ADD_BAGGAGE_SAME_COUNT"
+    AddBaggageExceedsMax _ -> "ADD_BAGGAGE_EXCEEDS_MAX"
+    AddBaggageNegativeCount -> "ADD_BAGGAGE_NEGATIVE_COUNT"
+  toHttpCode = \case
+    AddBaggageNotSupported -> E400
+    AddBaggageInvalidBookingStatus _ -> E400
+    AddBaggageSameCount -> E400
+    AddBaggageExceedsMax _ -> E400
+    AddBaggageNegativeCount -> E400
+
+instance IsAPIError AddBaggageError

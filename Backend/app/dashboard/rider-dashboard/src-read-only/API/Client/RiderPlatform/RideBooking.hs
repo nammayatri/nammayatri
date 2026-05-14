@@ -4,6 +4,7 @@
 module API.Client.RiderPlatform.RideBooking where
 
 import qualified "rider-app" API.Dashboard
+import qualified "rider-app" API.Types.Dashboard.RideBooking.AddBaggage
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Booking
 import qualified "rider-app" API.Types.Dashboard.RideBooking.Cancel
 import qualified "rider-app" API.Types.Dashboard.RideBooking.ChangeServiceTier
@@ -26,7 +27,8 @@ import qualified "lib-dashboard" Tools.Auth.Merchant
 import qualified "lib-dashboard" Tools.Client
 
 data RideBookingAPIs = RideBookingAPIs
-  { bookingDSL :: API.Types.Dashboard.RideBooking.Booking.BookingAPIs,
+  { addBaggageDSL :: API.Types.Dashboard.RideBooking.AddBaggage.AddBaggageAPIs,
+    bookingDSL :: API.Types.Dashboard.RideBooking.Booking.BookingAPIs,
     cancelDSL :: API.Types.Dashboard.RideBooking.Cancel.CancelAPIs,
     changeServiceTierDSL :: API.Types.Dashboard.RideBooking.ChangeServiceTier.ChangeServiceTierAPIs,
     confirmDSL :: API.Types.Dashboard.RideBooking.Confirm.ConfirmAPIs,
@@ -43,6 +45,7 @@ data RideBookingAPIs = RideBookingAPIs
 
 mkRideBookingAPIs :: (Tools.Auth.Merchant.CheckedShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.City.City -> Text -> RideBookingAPIs)
 mkRideBookingAPIs merchantId city token = do
+  let addBaggageDSL = API.Types.Dashboard.RideBooking.AddBaggage.mkAddBaggageAPIs addBaggageClientDSL
   let bookingDSL = API.Types.Dashboard.RideBooking.Booking.mkBookingAPIs bookingClientDSL
   let cancelDSL = API.Types.Dashboard.RideBooking.Cancel.mkCancelAPIs cancelClientDSL
   let changeServiceTierDSL = API.Types.Dashboard.RideBooking.ChangeServiceTier.mkChangeServiceTierAPIs changeServiceTierClientDSL
@@ -58,7 +61,7 @@ mkRideBookingAPIs merchantId city token = do
   let selectDSL = API.Types.Dashboard.RideBooking.Select.mkSelectAPIs selectClientDSL
   (RideBookingAPIs {..})
   where
-    bookingClientDSL :<|> cancelClientDSL :<|> changeServiceTierClientDSL :<|> confirmClientDSL :<|> frontendClientDSL :<|> mapsClientDSL :<|> multiModalClientDSL :<|> notifyRideInfoClientDSL :<|> profileClientDSL :<|> quoteClientDSL :<|> registrationClientDSL :<|> searchClientDSL :<|> selectClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.RideBookingDSLAPI) merchantId city token
+    addBaggageClientDSL :<|> bookingClientDSL :<|> cancelClientDSL :<|> changeServiceTierClientDSL :<|> confirmClientDSL :<|> frontendClientDSL :<|> mapsClientDSL :<|> multiModalClientDSL :<|> notifyRideInfoClientDSL :<|> profileClientDSL :<|> quoteClientDSL :<|> registrationClientDSL :<|> searchClientDSL :<|> selectClientDSL = Tools.Client.clientWithMerchantAndCity (Proxy :: Proxy API.Dashboard.RideBookingDSLAPI) merchantId city token
 
 callRideBookingAPI ::
   forall m r b c.
