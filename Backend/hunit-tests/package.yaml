@@ -94,6 +94,7 @@ library:
     - DriverOperationHubUnitTests
     - CreateRequestUnitTests
     - EmailOtpUnitTests
+    - MerchantDocumentUnitTests
 
 executables:
   hunit-tests:

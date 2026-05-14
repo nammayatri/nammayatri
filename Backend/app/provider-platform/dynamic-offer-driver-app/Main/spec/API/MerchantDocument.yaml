@@ -1,0 +1,40 @@
+imports:
+  MerchantDocument: MerchantDocuments.Domain.Types.MerchantDocument
+  Role: MerchantDocuments.Domain.Types.MerchantDocument
+  Language: Kernel.External.Types
+  Merchant: Domain.Types.Merchant
+  City: Kernel.Types.Beckn.Context
+
+module: MerchantDocument
+
+types:
+  MerchantDocumentListRes:
+    documents: "[MerchantDocument]"
+
+apis:
+  - GET:
+      endpoint: /merchant/document/list
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        role: Role
+      query:
+        language: Language
+      response:
+        type: API.Types.UI.MerchantDocument.MerchantDocumentListRes
+
+  # Intentionally NoAuth: serves public documents (ToS, Privacy Policy, FAQ, etc.)
+  # to unauthenticated users during onboarding. Rate-limited via checkSlidingWindowLimit.
+  - GET:
+      endpoint: /merchant/document/{documentType}
+      auth: NoAuth
+      headers:
+        x-forwarded-for: Text
+      params:
+        documentType: Text
+      mandatoryQuery:
+        merchantId: Id Merchant
+      query:
+        language: Language
+        merchantCity: City
+      response:
+        type: MerchantDocuments.Domain.Types.MerchantDocument.MerchantDocument

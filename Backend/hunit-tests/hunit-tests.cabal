@@ -35,6 +35,7 @@ library
       DriverOperationHubUnitTests
       CreateRequestUnitTests
       EmailOtpUnitTests
+      MerchantDocumentUnitTests
   hs-source-dirs:
       src
   default-extensions:

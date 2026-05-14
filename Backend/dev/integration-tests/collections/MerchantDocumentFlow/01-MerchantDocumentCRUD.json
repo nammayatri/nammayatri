@@ -1,0 +1,365 @@
+{
+  "info": {
+    "name": "Merchant Document CRUD Flow",
+    "description": "Full CRUD lifecycle via Dashboard APIs + Provider UI read verification. Creates a merchant document, verifies via dashboard list and provider UI get, updates it, verifies the update, deletes it, and confirms deletion.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Driver Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{merchantId}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bpp_url}}/auth",
+          "host": ["{{bpp_url}}"],
+          "path": ["auth"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"merchant-doc-test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{bpp_url}}/auth/{{driver_authId}}/verify",
+          "host": ["{{bpp_url}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Create MerchantDocument",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"documentType\": \"TermsAndConditions\",\n    \"role\": \"Driver\",\n    \"language\": \"ENGLISH\",\n    \"url\": \"https://example.com/tos-integration-test.html\",\n    \"title\": \"Integration Test TOS\",\n    \"city\": null\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/create",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "create"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Create response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('id present', function () { pm.expect(d.id).to.be.a('string'); });",
+              "pm.test('documentType matches', function () { pm.expect(d.documentType).to.eql('TermsAndConditions'); });",
+              "pm.test('role matches', function () { pm.expect(d.role).to.eql('Driver'); });",
+              "pm.test('url matches', function () { pm.expect(d.url).to.eql('https://example.com/tos-integration-test.html'); });",
+              "pm.test('title matches', function () { pm.expect(d.title).to.eql('Integration Test TOS'); });",
+              "pm.environment.set('created_doc_id', d.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: List MerchantDocuments",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('List response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('documents is array', function () { pm.expect(d.documents).to.be.an('array'); });",
+              "var createdId = pm.environment.get('created_doc_id');",
+              "var found = d.documents.find(function(doc) { return doc.id === createdId; });",
+              "pm.test('Created doc appears in list', function () { pm.expect(found).to.not.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Get MerchantDocument by Type",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Get by type response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('documentType matches', function () { pm.expect(d.documentType).to.eql('TermsAndConditions'); });",
+              "pm.test('title matches', function () { pm.expect(d.title).to.eql('Integration Test TOS'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provider UI: List MerchantDocuments (TokenAuth)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{bpp_url}}/merchant/document/list?role=\"Driver\"&language=en",
+          "host": ["{{bpp_url}}"],
+          "path": ["merchant", "document", "list"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Provider UI list response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('documents is array', function () { pm.expect(d.documents).to.be.an('array'); });",
+              "pm.test('At least one document', function () { pm.expect(d.documents.length).to.be.above(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provider UI: Get MerchantDocument by Type (NoAuth)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{bpp_url}}/merchant/document/TermsAndConditions?merchantId={{merchantId}}&language=en&merchantCity={{city}}",
+          "host": ["{{bpp_url}}"],
+          "path": ["merchant", "document", "TermsAndConditions"],
+          "query": [
+            { "key": "merchantId", "value": "{{merchantId}}" },
+            { "key": "language", "value": "en" },
+            { "key": "merchantCity", "value": "{{city}}" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Provider UI get response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('title matches', function () { pm.expect(d.title).to.eql('Integration Test TOS'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Update MerchantDocument",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"{{created_doc_id}}\",\n    \"url\": \"https://example.com/tos-updated.html\",\n    \"title\": \"Integration Test TOS (Updated)\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/update",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "update"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Update response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('url updated', function () { pm.expect(d.url).to.eql('https://example.com/tos-updated.html'); });",
+              "pm.test('title updated', function () { pm.expect(d.title).to.eql('Integration Test TOS (Updated)'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Verify Update via Get",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/TermsAndConditions?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "TermsAndConditions"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Verify update response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('url reflects update', function () { pm.expect(d.url).to.eql('https://example.com/tos-updated.html'); });",
+              "pm.test('title reflects update', function () { pm.expect(d.title).to.eql('Integration Test TOS (Updated)'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Delete MerchantDocument",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"id\": \"{{created_doc_id}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Delete response:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard: Verify Deletion",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Post-delete list:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var createdId = pm.environment.get('created_doc_id');",
+              "var found = d.documents.find(function(doc) { return doc.id === createdId; });",
+              "pm.test('Deleted doc no longer in list', function () { pm.expect(found).to.be.undefined; });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

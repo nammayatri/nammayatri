@@ -36,6 +36,7 @@ import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
+import qualified API.Action.UI.MerchantDocument as MerchantDocument
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
@@ -99,6 +100,7 @@ type API =
   "ui"
     :> ( HealthCheckAPI
            :<|> Merchant.API
+           :<|> MerchantDocument.API
            :<|> Registration.API
            :<|> DemandHotspots.API
            :<|> DriverOnboarding.API
@@ -174,6 +176,7 @@ handler :: FlowServer API
 handler =
   healthCheck
     :<|> Merchant.handler
+    :<|> MerchantDocument.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
     :<|> DriverOnboarding.handler
