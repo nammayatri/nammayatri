@@ -28,6 +28,7 @@ import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..), SFTPConfig (..))
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -139,7 +140,8 @@ data HandlerEnv = HandlerEnv
     isMetroTestTransaction :: Bool,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic)
 
@@ -209,3 +211,6 @@ type Flow = FlowR HandlerEnv
 instance AuthenticatingEntity HandlerEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
+
+instance MCF.HasMasterCloudForwarder HandlerEnv where
+  masterCloudProxyConfig = (.masterCloudProxyConfig)

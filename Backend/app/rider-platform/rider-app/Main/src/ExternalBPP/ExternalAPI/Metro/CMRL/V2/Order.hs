@@ -19,6 +19,7 @@ import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Encryption
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
@@ -162,7 +163,7 @@ type TicketAPI =
 ticketAPI :: Proxy TicketAPI
 ticketAPI = Proxy
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => CMRLV2Config -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLV2Config -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
 createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   logInfo $ "[CMRLV2:Order] Starting createOrder for bookingId: " <> booking.id.getId
   orderId <- case booking.bppOrderId of

@@ -22,6 +22,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
@@ -46,7 +47,8 @@ confirm ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasField "cloudType" r (Maybe CloudType)
+    HasField "cloudType" r (Maybe CloudType),
+    HasMasterCloudForwarder r
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -123,7 +125,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasField "isMetroTestTransaction" r Bool,
         HasField "blackListedJobs" r [Text],
-        HasField "cloudType" r (Maybe CloudType)
+        HasField "cloudType" r (Maybe CloudType),
+        HasMasterCloudForwarder r
       ) =>
       DOrder ->
       m ()

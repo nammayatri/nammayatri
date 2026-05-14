@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -42,7 +43,7 @@ type FareMatrixAPI =
 fareMatrixAPI :: Proxy FareMatrixAPI
 fareMatrixAPI = Proxy
 
-getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m [FareMatrixRes]
+getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> m [FareMatrixRes]
 getFareMatrix config = do
   let eulerClient = \accessToken -> ET.client fareMatrixAPI (Just $ "Bearer " <> accessToken) cmrlAppType
   fareMatrixRes <- callCMRLAPI config eulerClient "getFareMatrix" fareMatrixAPI

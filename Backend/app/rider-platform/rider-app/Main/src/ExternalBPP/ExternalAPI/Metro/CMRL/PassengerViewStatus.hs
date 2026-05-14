@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -55,7 +56,7 @@ type PassengerViewStatusAPI =
 passengerViewStatusAPI :: Proxy PassengerViewStatusAPI
 passengerViewStatusAPI = Proxy
 
-getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> PassengerViewStatusReq -> m [TicketDetails]
+getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> PassengerViewStatusReq -> m [TicketDetails]
 getPassengerViewStatus config req = do
   let eulerClient = \accessToken -> ET.client passengerViewStatusAPI (Just $ "Bearer " <> accessToken) req
   response <- callCMRLAPI config eulerClient "getPassengerViewStatus" passengerViewStatusAPI

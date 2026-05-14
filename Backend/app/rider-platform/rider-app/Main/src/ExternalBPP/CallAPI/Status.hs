@@ -11,6 +11,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
@@ -28,7 +29,8 @@ status ::
     HasLongDurationRetryCfg r c,
     HasShortDurationRetryCfg r c,
     CallFRFSBPP.BecknAPICallFlow m r,
-    HasFlowEnv m r '["googleSAPrivateKey" ::: String]
+    HasFlowEnv m r '["googleSAPrivateKey" ::: String],
+    HasMasterCloudForwarder r
   ) =>
   Id Merchant ->
   MerchantOperatingCity ->

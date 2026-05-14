@@ -20,6 +20,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import ExternalBPP.CallAPI.Types
 import Kernel.Beam.Functions
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Types.Error
@@ -45,7 +46,7 @@ validateRequest DOnSelect {..} = do
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   return (merchant, quote, integratedBppConfig)
 
-onSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
+onSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> Maybe Bool -> Maybe CrisSdkResponse -> DIBC.IntegratedBPPConfig -> m ()
 onSelect onSelectReq merchant quote isSingleMode mbEnableOffer crisSdkResponse integratedBppConfig = do
   logDebug $ "onSelect isSingleMode: " <> show isSingleMode <> " mbEnableOffer: " <> show mbEnableOffer <> " crisSdkResponse: " <> show crisSdkResponse
   Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId

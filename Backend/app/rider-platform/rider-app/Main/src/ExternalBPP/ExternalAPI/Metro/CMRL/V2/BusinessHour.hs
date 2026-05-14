@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -37,7 +38,7 @@ type BusinessHourAPI =
 businessHourAPI :: Proxy BusinessHourAPI
 businessHourAPI = Proxy
 
-getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m BusinessHourRes
+getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLV2Config -> m BusinessHourRes
 getBusinessHour config = do
   logInfo $ "[CMRLV2:BusinessHour] Fetching business hours for operatorNameId: " <> show config.operatorNameId
   let eulerClient = \accessToken -> ET.client businessHourAPI (Just $ "Bearer " <> accessToken) config.operatorNameId

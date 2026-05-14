@@ -40,6 +40,7 @@ import qualified Domain.Types.Station as DStation
 import Environment
 import EulerHS.Prelude (safeHead)
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
@@ -120,7 +121,8 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
-    HasFlowEnv m r '["cloudType" ::: Maybe CloudType]
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
+    HasMasterCloudForwarder r
   )
 
 type ConfirmFlow m r c =
@@ -171,7 +173,8 @@ type GetFareFlow m r =
     HasField "ltsHedisEnv" r Hedis.HedisEnv,
     HasField "secondaryLTSHedisEnv" r (Maybe Hedis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
-    HasField "shortDurationRetryCfg" r RetryCfg
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasMasterCloudForwarder r
   )
 
 type GetStateFlow m r c =

@@ -44,6 +44,7 @@ import EulerHS.Prelude ((+||), (<|>), (||+))
 import ExternalBPP.CallAPI.Cancel
 import Kernel.Beam.Functions
 import Kernel.External.Encryption as ENC
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude as Prelude hiding (lookup)
 import Kernel.Sms.Config (SmsConfig)
@@ -108,7 +109,8 @@ validateRequest ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   DOrder ->
   m (Merchant, Booking.FRFSTicketBooking, [DFRFSQuoteCategory.FRFSQuoteCategory])
@@ -150,7 +152,8 @@ onConfirmFailure ::
     HasFlowEnv m r '["googleSAPrivateKey" ::: String],
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   BecknConfig ->
   Booking.FRFSTicketBooking ->

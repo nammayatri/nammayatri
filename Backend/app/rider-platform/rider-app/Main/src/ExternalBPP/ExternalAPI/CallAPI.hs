@@ -42,6 +42,7 @@ import qualified ExternalBPP.ExternalAPI.Subway.CRIS.RouteFareV3 as CRISRouteFar
 import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Randomizer
@@ -87,7 +88,7 @@ data SubwayFareDetail = SubwayFareDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe SubwayFareDetail -> m [FRFSUtils.FRFSFare]
 getFares riderId merchantId merchantOperatingCityId integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFareDetail = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   case integrationBPPConfig.providerConfig of
@@ -206,7 +207,7 @@ getRouteFareRequest sourceCode destCode changeOver rawChangeOver viaPoints perso
 extractStationCode :: Text -> Text
 extractStationCode code = fromMaybe code $ listToMaybe $ drop 1 $ T.splitOn "|" code
 
-createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> [FRFSQuoteCategory] -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quoteCategories = do
   Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   resp <-
@@ -220,7 +221,7 @@ createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking quote
   Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
   return resp
 
-getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
+getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
 getBppOrderId integratedBPPConfig booking = do
   case integratedBPPConfig.providerConfig of
     CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
@@ -230,7 +231,7 @@ getBppOrderId integratedBPPConfig booking = do
     CRIS _ -> Just <$> CRISBookJourney.getBppOrderId booking
     _ -> return Nothing
 
-getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
+getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus integrationBPPConfig booking = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStatus.getTicketStatus config' booking
@@ -240,25 +241,25 @@ getTicketStatus integrationBPPConfig booking = do
     CRIS _config' -> return []
     _ -> throwError $ InternalError "Unimplemented!"
 
-verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Text -> m TicketPayload
+verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Text -> m TicketPayload
 verifyTicket integrationBPPConfig encryptedQrData = do
   case integrationBPPConfig.providerConfig of
     DIRECT config' -> DIRECTVerify.verifyTicket config' encryptedQrData
     _ -> throwError $ InternalError "Unimplemented!"
 
-generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> TicketPayload -> m Text
+generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> TicketPayload -> m Text
 generateQR integrationBPPConfig ticketPayload = do
   case integrationBPPConfig.providerConfig of
     DIRECT config' -> DirectUTILS.generateQR config' ticketPayload
     _ -> throwError $ InternalError "Unimplemented!"
 
-generateUpdatedQRTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> Id FRFSTicketBooking -> (TicketPayload -> m TicketPayload) -> m [TicketPayload]
+generateUpdatedQRTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> Id FRFSTicketBooking -> (TicketPayload -> m TicketPayload) -> m [TicketPayload]
 generateUpdatedQRTicket integrationBPPConfig ticketBookingId updateFn = do
   case integrationBPPConfig.providerConfig of
     DIRECT config' -> DIRECTVerify.generateUpdatedQRTicket config' ticketBookingId updateFn
     _ -> throwError $ InternalError "Unimplemented!"
 
-getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
+getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
 getBusinessHour integrationBPPConfig = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLBusinessHour.getBusinessHour config'
@@ -277,25 +278,25 @@ getBusinessHour integrationBPPConfig = do
           }
     _ -> throwError $ InternalError "Unimplemented!"
 
-getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
+getDurationDetails :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> CMRLDurationDetails.DurationDetailsReq -> m [CMRLDurationDetails.DurationDetailsResult]
 getDurationDetails integrationBPPConfig req = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLDurationDetails.getDurationDetails config' req
     _ -> throwError $ InternalError "Unimplemented!"
 
-getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> m [CMRLFareMatrix.FareMatrixRes]
+getFareMatrix :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m [CMRLFareMatrix.FareMatrixRes]
 getFareMatrix integrationBPPConfig = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLFareMatrix.getFareMatrix config'
     _ -> throwError $ InternalError "Unimplemented!"
 
-getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
+getPassengerViewStatus :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> CMRLPassengerViewStatus.PassengerViewStatusReq -> m [CMRLPassengerViewStatus.TicketDetails]
 getPassengerViewStatus integrationBPPConfig req = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLPassengerViewStatus.getPassengerViewStatus config' req
     _ -> throwError $ InternalError "Unimplemented!"
 
-getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => IntegratedBPPConfig -> m [CMRLStationList.Station]
+getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => IntegratedBPPConfig -> m [CMRLStationList.Station]
 getStationList integrationBPPConfig = do
   case integrationBPPConfig.providerConfig of
     CMRL config' -> CMRLStationList.getStationList config'

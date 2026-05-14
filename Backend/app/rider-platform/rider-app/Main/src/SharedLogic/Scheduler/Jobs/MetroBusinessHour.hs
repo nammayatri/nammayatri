@@ -8,6 +8,7 @@ import qualified Data.Time as Time
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.RiderConfig as RC
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
@@ -22,7 +23,8 @@ updateMetroBusinessHour ::
   ( EsqDBFlow m r,
     CacheFlow m r,
     MonadFlow m,
-    EncFlow m r
+    EncFlow m r,
+    HasMasterCloudForwarder r
   ) =>
   Job 'MetroBusinessHour ->
   m ExecutionResult
