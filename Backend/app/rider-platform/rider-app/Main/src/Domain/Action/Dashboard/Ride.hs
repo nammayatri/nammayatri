@@ -664,6 +664,7 @@ cancellationChargesWaiveOffCore merchant booking ride = do
       logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
       pure (Nothing, False)
 
-getRideFlowDebugBap :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ProviderCommon.BAPSideDebug
-getRideFlowDebugBap merchantShortId _opCity mbBapBookingId mbBppBookingId mbTransactionId =
-  RideFlowDebug.getBAPFlowDebug merchantShortId mbTransactionId mbBapBookingId mbBppBookingId
+-- After codegen, param order is alphabetical: bapBookingId, bapRideId, bapRideShortId, bapSearchRequestId, bppBookingId, transactionId
+getRideFlowDebugBap :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ProviderCommon.BAPSideDebug
+getRideFlowDebugBap merchantShortId _opCity mbBapBookingId mbBapRideId mbBapRideShortId mbBapSearchRequestId mbBppBookingId mbTransactionId =
+  RideFlowDebug.getBAPFlowDebug merchantShortId mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId

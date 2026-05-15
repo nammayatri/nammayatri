@@ -201,8 +201,10 @@ postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
     cancellationPenaltyLockKey :: Text -> Text
     cancellationPenaltyLockKey id = "Driver:Cancellation:Penalty:DriverFeeId-" <> id
 
-getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
-getRideFlowDebug merchantShortId opCity mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
+-- After codegen, param order is alphabetical: bapBookingId, bapRideId, bapRideShortId, bapSearchRequestId, bookingId, rideId, rideShortId, searchRequestId
+-- BAP IDs are resolved at dashboard level; driver-app ignores them
+getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
+getRideFlowDebug merchantShortId opCity _mbBapBookingId _mbBapRideId _mbBapRideShortId _mbBapSearchRequestId mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   RideFlowDebug.getRideFlowDebug merchantShortId merchantOpCityId mbRideId mbBookingId mbSearchRequestId mbRideShortId

@@ -18,6 +18,7 @@ module Storage.Queries.Quote where
 import qualified Data.Time as T
 import qualified Domain.Types as DTC
 import Domain.Types.Quote
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
@@ -34,6 +35,9 @@ create quote = SQFP.create quote.fareParams >> createWithKV quote
 
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Quote -> m (Maybe Quote)
 findById (Id dQuoteId) = findOneWithKV [Se.Is BeamQSZ.id $ Se.Eq dQuoteId]
+
+findAllBySearchRequestId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DSR.SearchRequest -> m [Quote]
+findAllBySearchRequestId (Id srId) = findAllWithKV [Se.Is BeamQSZ.searchRequestId $ Se.Eq srId]
 
 {-
   The table named quote_special_zone in the QuoteT database was originally created exclusively for handling
