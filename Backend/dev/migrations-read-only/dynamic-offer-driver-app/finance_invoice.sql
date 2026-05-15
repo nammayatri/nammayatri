@@ -57,3 +57,9 @@ ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN merchant_gstin tex
 
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN period_start timestamp with time zone ;
 ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN period_end timestamp with time zone ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.finance_invoice ADD COLUMN signed_qr_code text ;

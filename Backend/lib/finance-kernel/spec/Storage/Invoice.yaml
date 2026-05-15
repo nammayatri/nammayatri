@@ -53,6 +53,7 @@ Invoice:
     merchantOperatingCityId: Text
     createdAt: UTCTime
     irn : Maybe Text
+    signedQRCode : Maybe Text
     paymentMode: Maybe Text
 
   sqlType:
@@ -85,9 +86,9 @@ Invoice:
       params: [status]
       where: id
 
-    updateIrnByInvoiceId:
+    updateIrnAndSignedQRByInvoiceId:
       kvFunction: updateWithKV
-      params: [irn]
+      params: [irn, signedQRCode]
       where: id
 
     findByReferenceId:
