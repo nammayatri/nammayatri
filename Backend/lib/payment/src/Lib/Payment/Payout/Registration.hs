@@ -107,7 +107,18 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing
+            autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing,
+            paymentFilter =
+              Just
+                PInterface.PaymentFilter
+                  { allowDefaultOptions = False,
+                    options =
+                      [ PInterface.PaymentFilterOption
+                          { paymentMethodType = "UPI",
+                            enable = True
+                          }
+                      ]
+                  }
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount

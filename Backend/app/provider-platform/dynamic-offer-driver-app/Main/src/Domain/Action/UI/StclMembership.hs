@@ -134,7 +134,8 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             splitSettlementDetails = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -270,6 +271,32 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
             pure $ PaymentInterface.getGatewayReferenceId paymentServiceConfig
           _ -> pure Nothing
         Nothing -> pure Nothing
+
+    let createOrderReq =
+          PaymentTypes.CreateOrderReq
+            { orderId = orderId,
+              orderShortId = shortIdText,
+              amount = highPrecAmount,
+              customerId = driverId.getId,
+              customerEmail = latest.emailId,
+              customerPhone = decryptedMobile,
+              customerFirstName = Just latest.firstName,
+              customerLastName = Just latest.lastName,
+              createMandate = Nothing,
+              mandateMaxAmount = Nothing,
+              mandateFrequency = Nothing,
+              mandateStartDate = Nothing,
+              mandateEndDate = Nothing,
+              metadataGatewayReferenceId = mbGatewayReferenceId,
+              optionsGetUpiDeepLinks = Nothing,
+              metadataExpiryInMins = Nothing,
+              splitSettlementDetails = Nothing,
+              basket = Nothing,
+              paymentRules = Nothing,
+              autoRefundPostSuccess = Nothing,
+              paymentFilter = Nothing
+            }
+
     let paymentServiceType = fromMaybe DOrder.STCL req.paymentServiceType
 
     -- Resolve the requested amount up front so we can compare it against any in-flight order before deciding
