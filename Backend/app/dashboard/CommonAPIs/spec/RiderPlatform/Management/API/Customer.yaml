@@ -1,6 +1,7 @@
 imports:
   Customer: Dashboard.Common
   Summary: Dashboard.Common
+  Ride: Dashboard.Common
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   PersonRes: Dashboard.Common
@@ -160,6 +161,13 @@ types:
     - noOfTimesCancellationDuesPaid: Int
     - waivedOffAmount: HighPrecMoney
     - noOfTimesWaiveOffUsed: Int
+    - duesBreakup: Maybe [CancellationDueBreakup]
+  CancellationDueBreakup:
+    - rideId: Id Ride
+    - dueAmount: PriceAPIEntity
+    - dueStatus: CancellationDuesPaymentStatus
+  CancellationDuesPaymentStatus:
+    - enum: "PENDING, PAID, WAIVED"
   UpdateSafetyCenterBlockingReq:
     - incrementCount: Maybe Bool
     - resetCount: Maybe Bool

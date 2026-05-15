@@ -93,7 +93,7 @@ getCancellationDuesDetails ::
   FlowHandler DCancel.CancellationDuesDetailsRes
 getCancellationDuesDetails (personId, merchantId) =
   withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ do
-    DCancel.getCancellationDuesDetails (personId, merchantId)
+    DCancel.getCancellationDuesDetails (personId, merchantId) False
 
 cancel ::
   Id SRB.Booking ->

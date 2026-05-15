@@ -19,6 +19,7 @@ import qualified Domain.Types.CancellationCharges as DCC
 import qualified Domain.Types.CancellationDuesDetails as DCDD
 import qualified Domain.Types.DailyStats as DDS
 import Domain.Types.Merchant (Merchant)
+import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (DbHash, getDbHash, unDbHash)
 import Kernel.Prelude
@@ -55,7 +56,15 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
     cancellationDuesPaid :: HighPrecMoney,
     noOfTimesCancellationDuesPaid :: Int,
     waivedOffAmount :: HighPrecMoney,
-    noOfTimesWaiveOffUsed :: Int
+    noOfTimesWaiveOffUsed :: Int,
+    duesBreakup :: Maybe [CancellationDueBreakup]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data CancellationDueBreakup = CancellationDueBreakup
+  { rideId :: Id DRide.Ride,
+    dueAmount :: PriceAPIEntity,
+    dueStatus :: DCDD.CancellationDuesPaymentStatus
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -77,21 +86,37 @@ getCancellationDuesDetails ::
   Id Merchant ->
   Context.City ->
   Maybe Text ->
+  Maybe Bool ->
   CancellationDuesReq ->
   m CancellationDuesDetailsRes
-getCancellationDuesDetails merchantId _merchantCity apiKey CancellationDuesReq {..} = do
+getCancellationDuesDetails merchantId _merchantCity apiKey mbIncludeBreakup CancellationDuesReq {..} = do
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   riderDetails <- QRD.findByMobileNumberHashAndMerchant customerMobileNumberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number Hash" (showDbHashHex customerMobileNumberHash))
+  mbDuesBreakup <-
+    if mbIncludeBreakup == Just True
+      then do
+        pendingDues <- QCDD.findAllPendingByRiderId riderDetails.id
+        let sorted = sortOn (Down . (.createdAt)) pendingDues
+        pure $ Just $ fmap mkBreakup sorted
+      else pure Nothing
   return $
     CancellationDuesDetailsRes
       { cancellationDues = PriceAPIEntity riderDetails.cancellationDues riderDetails.currency,
         cancellationDuesPaid = riderDetails.cancellationDuesPaid,
         noOfTimesCancellationDuesPaid = riderDetails.noOfTimesCanellationDuesPaid,
         waivedOffAmount = riderDetails.waivedOffAmount,
-        noOfTimesWaiveOffUsed = riderDetails.noOfTimesWaiveOffUsed
+        noOfTimesWaiveOffUsed = riderDetails.noOfTimesWaiveOffUsed,
+        duesBreakup = mbDuesBreakup
       }
+  where
+    mkBreakup row =
+      CancellationDueBreakup
+        { rideId = row.rideId,
+          dueAmount = PriceAPIEntity row.cancellationAmount row.currency,
+          dueStatus = row.paymentStatus
+        }
 
 customerCancellationDuesSync ::
   ( MonadFlow m,
