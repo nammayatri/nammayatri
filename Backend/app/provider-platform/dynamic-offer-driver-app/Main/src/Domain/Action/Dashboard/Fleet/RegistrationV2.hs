@@ -469,7 +469,8 @@ updateFleetOwnerInfo fleetOwnerInfo Common.FleetOwnerRegisterReqV2 {..} = do
       updFleetOwnerInfo =
         fleetOwnerInfo
           { FOI.fleetType = newFleetType,
-            FOI.registeredAt = Just now
+            FOI.registeredAt = Just now,
+            FOI.fleetName = fleetName
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo -- this update will backfill encrypted docs numbers
   -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
