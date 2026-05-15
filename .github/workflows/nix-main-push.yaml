@@ -42,6 +42,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Restore cabal cache
+        run: |
+          CABAL_CACHE=/home/khuzema/ny-cabal-cache/dist-newstyle
+          mkdir -p $CABAL_CACHE
+          ln -sfn $CABAL_CACHE Backend/dist-newstyle
+
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
@@ -154,6 +160,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Restore cabal cache
+        run: |
+          CABAL_CACHE=/home/khuzema/ny-cabal-cache/dist-newstyle
+          mkdir -p $CABAL_CACHE
+          ln -sfn $CABAL_CACHE Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |

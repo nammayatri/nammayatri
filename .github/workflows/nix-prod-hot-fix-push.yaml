@@ -87,6 +87,13 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
+      - name: Restore cabal cache
+        if: steps.check-conditions.outputs.should_build == 'true'
+        run: |
+          CABAL_CACHE=/home/khuzema/ny-cabal-cache/dist-newstyle
+          mkdir -p $CABAL_CACHE
+          ln -sfn $CABAL_CACHE Backend/dist-newstyle
+
       - name: Build (incremental cabal)
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
