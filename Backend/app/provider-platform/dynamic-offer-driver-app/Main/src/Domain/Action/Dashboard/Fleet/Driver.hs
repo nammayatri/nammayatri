@@ -2413,7 +2413,7 @@ getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNu
           (fromMaybe "+91" $ DCommon.appendPlusInMobileCountryCode mbMobileCountryCode)
           mobileNumberHash
           merchant.id
-          [DP.FLEET_OWNER, DP.OPERATOR]
+          [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
           >>= fromMaybeM (PersonDoesNotExist mobileNumber)
       pure person.id.getId
     (Nothing, Nothing, Just walletId) -> do

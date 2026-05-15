@@ -356,7 +356,7 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
             pure filtered
       -- Admin or no operator: all fleet owners in merchant+city.
       Just CommAPI.ROLE_FLEET_OWNER ->
-        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER] limit offset
+        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER, DP.FLEET_BUSINESS] limit offset
       -- No operator-to-operator: operator cannot list other operators.
       Just CommAPI.ROLE_OPERATOR
         | Just _ <- mbOperatorId ->
