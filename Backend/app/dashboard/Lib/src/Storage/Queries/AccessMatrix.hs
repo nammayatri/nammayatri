@@ -33,13 +33,15 @@ findByRoleIdAndEntityAndActionType ::
   Id DRole.Role ->
   DMatrix.ApiEntity ->
   DMatrix.UserActionTypeWrapper ->
+  Maybe Text ->
   m (Maybe DMatrix.AccessMatrixItem)
-findByRoleIdAndEntityAndActionType roleId apiEntity userActionType =
+findByRoleIdAndEntityAndActionType roleId apiEntity userActionType otherUserActionType =
   findOneWithKV
     [ Se.And
         [ Se.Is BeamAM.roleId $ Se.Eq $ getId roleId,
           Se.Is BeamAM.apiEntity $ Se.Eq apiEntity,
-          Se.Is BeamAM.userActionType $ Se.Eq userActionType
+          Se.Is BeamAM.userActionType $ Se.Eq userActionType,
+          Se.Is BeamAM.otherUserActionType $ Se.Eq otherUserActionType
         ]
     ]
 
@@ -62,12 +64,14 @@ updateUserAccessType ::
   Id DMatrix.AccessMatrixItem ->
   DMatrix.UserActionTypeWrapper ->
   DMatrix.UserAccessType ->
+  Maybe Text ->
   m ()
-updateUserAccessType accessMatrixItemId userActionType userAccessType = do
+updateUserAccessType accessMatrixItemId userActionType userAccessType otherUserActionType = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamAM.userActionType userActionType,
       Se.Set BeamAM.userAccessType userAccessType,
+      Se.Set BeamAM.otherUserActionType otherUserActionType,
       Se.Set BeamAM.updatedAt now
     ]
     [Se.Is BeamAM.id $ Se.Eq $ getId accessMatrixItemId]
