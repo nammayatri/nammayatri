@@ -28,6 +28,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Price ()
 import Kernel.Utils.Common
 import qualified SharedLogic.Offer as SOffer
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
@@ -124,9 +125,9 @@ mkEstimateAPIEntity isReferredRide offer (Estimate {..}) = do
         estimatedFare = estimatedFare.amountInt,
         estimatedTotalFare = estimatedTotalFare.amountInt,
         discount = discount <&> (.amountInt),
-        estimatedFareWithCurrency = mkPriceAPIEntity estimatedFare,
-        estimatedTotalFareWithCurrency = mkPriceAPIEntity estimatedTotalFare,
-        discountWithCurrency = mkPriceAPIEntity <$> discount,
+        estimatedFareWithCurrency = mkRoundedPriceAPIEntity estimatedFare,
+        estimatedTotalFareWithCurrency = mkRoundedPriceAPIEntity estimatedTotalFare,
+        discountWithCurrency = mkRoundedPriceAPIEntity <$> discount,
         nightShiftInfo = mkNightShiftInfoAPIEntity <$> nightShiftInfo,
         businessDiscountInfo = mkBusinessDiscountInfoAPIEntity <$> businessDiscountInfo,
         personalDiscountInfo = mkPersonalDiscountInfoAPIEntity <$> personalDiscountInfo,
@@ -155,7 +156,7 @@ mkEstimateBreakupAPIEntity EstimateBreakup {..} = do
   EstimateBreakupAPIEntity
     { title = title,
       price = price.value.amountInt,
-      priceWithCurrency = mkPriceAPIEntity price.value
+      priceWithCurrency = mkRoundedPriceAPIEntity price.value
     }
 
 data TollChargesInfoAPIEntity = TollChargesInfoAPIEntity
@@ -194,12 +195,12 @@ data PersonalDiscountInfoAPIEntity = PersonalDiscountInfoAPIEntity
 
 mkBusinessDiscountInfoAPIEntity :: BusinessDiscountInfo -> BusinessDiscountInfoAPIEntity
 mkBusinessDiscountInfoAPIEntity BusinessDiscountInfo {..} = do
-  let businessDiscountWithCurrency = mkPriceAPIEntity businessDiscount
+  let businessDiscountWithCurrency = mkRoundedPriceAPIEntity businessDiscount
   BusinessDiscountInfoAPIEntity {businessDiscount = businessDiscount.amountInt, ..}
 
 mkPersonalDiscountInfoAPIEntity :: PersonalDiscountInfo -> PersonalDiscountInfoAPIEntity
 mkPersonalDiscountInfoAPIEntity PersonalDiscountInfo {..} = do
-  let personalDiscountWithCurrency = mkPriceAPIEntity personalDiscount
+  let personalDiscountWithCurrency = mkRoundedPriceAPIEntity personalDiscount
   PersonalDiscountInfoAPIEntity {personalDiscount = personalDiscount.amountInt, ..}
 
 mkNightShiftInfoAPIEntity :: NightShiftInfo -> NightShiftInfoAPIEntity
