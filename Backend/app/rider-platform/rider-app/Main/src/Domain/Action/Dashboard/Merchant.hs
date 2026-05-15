@@ -117,7 +117,7 @@ import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYTADLR
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
-import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), PartnerInvoiceDataExportJobData (..), RiderJobType (DailyPassStatusUpdate, NyRegularMaster, PartnerInvoiceDataExport))
+import SharedLogic.JobScheduler (DailyPassStatusUpdateJobData (..), PartnerInvoiceDataExportJobData (..), PassExpiryReminderMasterJobData (..), RiderJobType (DailyPassStatusUpdate, NyRegularMaster, PartnerInvoiceDataExport, PassExpiryReminderMaster))
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SchedulerJob ()
@@ -1807,6 +1807,10 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
                     autoSchedule = True
                   }
           createJobIn @_ @'DailyPassStatusUpdate (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
+          pure Success
+        Just Common.PassExpiryReminderMasterTrigger -> do
+          let jobData = PassExpiryReminderMasterJobData {cursor = Nothing}
+          createJobIn @_ @'PassExpiryReminderMaster (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
 
