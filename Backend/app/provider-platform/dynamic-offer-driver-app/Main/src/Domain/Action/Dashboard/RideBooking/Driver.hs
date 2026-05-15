@@ -562,6 +562,13 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         cancelledCount = (.cancelledCount) <$> cancellationData,
         cancellationRate = (.cancellationRate) <$> cancellationData,
         windowSize = (.windowSize) <$> cancellationData,
+        lifetimeRidesCancelled = driverStats.ridesCancelled,
+        lifetimeRidesAssigned = driverStats.totalRidesAssigned,
+        lifetimeCancellationRate = do
+          cancelled <- driverStats.ridesCancelled
+          assigned <- driverStats.totalRidesAssigned
+          guard (assigned > 0)
+          pure (div (cancelled * 100) assigned),
         blockedDueToRiderComplains = not isACAllowedForDriver,
         driverTag = fmap Yudhishthira.removeTagExpiry <$> person.driverTag,
         driverTagObject = fmap Yudhishthira.convertToTagObject <$> person.driverTag,
@@ -760,7 +767,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   DomainRC.deactivateCurrentRC transporterConfig personId
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
 
@@ -792,7 +799,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
-  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
 

@@ -47,6 +47,8 @@ Invoice:
     status: InvoiceStatus
     issuedAt: UTCTime
     dueAt: Maybe UTCTime
+    periodStart: Maybe UTCTime
+    periodEnd: Maybe UTCTime
     merchantId: Text
     merchantOperatingCityId: Text
     createdAt: UTCTime

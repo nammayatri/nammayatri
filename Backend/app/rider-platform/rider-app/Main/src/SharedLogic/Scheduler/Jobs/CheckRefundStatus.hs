@@ -28,6 +28,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JMU
@@ -68,7 +69,8 @@ checkRefundStatusJob ::
     Redis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   Job 'CheckRefundStatus ->
   m ExecutionResult
@@ -115,7 +117,8 @@ processRefundStatus ::
     Redis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   DRefunds.Refunds ->
   DP.Person ->

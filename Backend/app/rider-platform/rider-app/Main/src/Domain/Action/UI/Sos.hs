@@ -1121,7 +1121,7 @@ buildExternalSOSDetails req person sosConfig _serviceConfig mbRide emergencyCont
   (lat, lon) <- resolveLocation req.customerLocation person mbRide
   let localNow = addUTCTime (secondsToNominalDiffTime riderConfig.timeDiffFromUtc) now
   let dateTimeStr = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d %H:%M:%S" localNow
-  let trackLink = mbSosId <&> \sosId -> buildSosTrackUrl riderConfig (mbRide <&> (.id.getId)) sosId
+  let trackLink = (mbRide >>= (.trackingUrl) <&> showBaseUrl) <|> (mbSosId <&> \sosId -> buildSosTrackUrl riderConfig (mbRide <&> (.id.getId)) sosId)
   let (ec1Name, ec1Phone, ec2Name, ec2Phone) = case emergencyContacts of
         (c1 : c2 : _) -> (Just c1.name, Just c1.mobileNumber, Just c2.name, Just c2.mobileNumber)
         (c1 : _) -> (Just c1.name, Just c1.mobileNumber, Nothing, Nothing)

@@ -5,6 +5,7 @@ module Lib.Payment.Storage.Queries.PayoutOrderExtra where
 import Data.Time (UTCTime (UTCTime, utctDay), secondsToDiffTime)
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (DbHash)
+import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types.Payout as Payout
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context (City)
@@ -90,8 +91,10 @@ updatePostCreateFieldsSafely ::
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
   Maybe Text ->
+  Maybe Payout.TransferStatus ->
+  Maybe Payout.TransferId ->
   m ()
-updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbAccountDetailsType mbPgBaseFee mbPgGst idAssignedByServiceProvider = do
+updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbAccountDetailsType mbPgBaseFee mbPgGst idAssignedByServiceProvider transferStatus transferId = do
   now <- getCurrentTime
   -- Update status only if still in initial placeholder state.
   updateWithKV
@@ -100,7 +103,9 @@ updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbA
       Se.Set Beam.pgBaseFee mbPgBaseFee,
       Se.Set Beam.pgGst mbPgGst,
       Se.Set Beam.updatedAt now,
-      Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider
+      Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
+      Se.Set Beam.transferStatus transferStatus,
+      Se.Set Beam.transferId (transferId <&> (.getTransferId))
     ]
     [ Se.And
         [ Se.Is Beam.orderId $ Se.Eq orderId,

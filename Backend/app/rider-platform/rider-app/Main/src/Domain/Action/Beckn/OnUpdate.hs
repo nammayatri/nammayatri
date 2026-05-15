@@ -39,6 +39,7 @@ module Domain.Action.Beckn.OnUpdate
     DestinationReachedReq (..),
     EstimatedEndTimeRangeReq (..),
     ParcelImageFileUploadReq (..),
+    ChangeServiceTierReq (..),
   )
 where
 
@@ -62,6 +63,7 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.ServiceTierType
 import Domain.Types.VehicleVariant
 import Environment
 import Kernel.Beam.Functions
@@ -131,6 +133,7 @@ data OnUpdateReq
   | OUDestinationReachedReq DestinationReachedReq
   | OUEstimatedEndTimeRangeReq EstimatedEndTimeRangeReq
   | OUParcelImageFileUploadReq ParcelImageFileUploadReq
+  | OUChangeServiceTierReq ChangeServiceTierReq
 
 data ValidatedOnUpdateReq
   = OUValidatedScheduledRideAssignedReq Common.ValidatedRideAssignedReq
@@ -155,6 +158,7 @@ data ValidatedOnUpdateReq
   | OUValidatedDestinationReachedReq ValidatedDestinationReachedReq
   | OUValidatedEstimatedEndTimeRangeReq ValidatedEstimatedEndTimeRangeReq
   | OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq
+  | OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq
 
 data BookingReallocationReq = BookingReallocationReq
   { bppBookingId :: Id DRB.BPPBooking,
@@ -402,6 +406,21 @@ data ValidatedParcelImageFileUploadReq = ValidatedParcelImageFileUploadReq
     isParcelImageUploaded :: Bool
   }
 
+data ChangeServiceTierReq = ChangeServiceTierReq
+  { bppBookingId :: Id DRB.BPPBooking,
+    newVehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    newEstimatedFare :: Maybe HighPrecMoney,
+    newQuoteId :: Maybe Text,
+    transactionId :: Text
+  }
+
+data ValidatedChangeServiceTierReq = ValidatedChangeServiceTierReq
+  { booking :: DRB.Booking,
+    newVehicleServiceTier :: Domain.Types.ServiceTierType.ServiceTierType,
+    newEstimatedFare :: Maybe HighPrecMoney,
+    newQuoteId :: Maybe Text
+  }
+
 onUpdate ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -586,6 +605,23 @@ onUpdate = \case
       let allBookingPartyIds = map (.partyId) allBookingParty
       allParty <- catMaybes <$> mapM QPerson.findById (nub $ booking.riderId : allBookingPartyIds)
       Notify.notifyToAllBookingParties allParty booking.tripCategory "PARCEL_IMAGE_UPLOADED"
+  OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq {..} -> do
+    logInfo $ "Change service tier confirmed for booking: " <> booking.id.getId <> " to tier: " <> show newVehicleServiceTier
+    -- Find the BAP quote matching the new tier from the same search request
+    mbCurrentQuote <- maybe (pure Nothing) (runInReplica . SQQ.findById) booking.quoteId
+    mbNewQuote <- case mbCurrentQuote of
+      Just currentQuote -> do
+        allQuotes <- runInReplica $ SQQ.findAllBySRId currentQuote.requestId
+        pure $ find (\q -> q.vehicleServiceTierType == newVehicleServiceTier) allQuotes
+      Nothing -> pure Nothing
+    let mbServiceTierName = mbNewQuote >>= (.serviceTierName)
+        mbServiceTierShortDesc = mbNewQuote >>= (.serviceTierShortDesc)
+        mbBapQuoteId = (.id.getId) <$> mbNewQuote
+        mbIsAirConditioned = mbNewQuote >>= (.isAirConditioned)
+        mbVehicleServiceTierAC = mbNewQuote >>= (.vehicleServiceTierAirConditioned)
+        mbSeatingCapacity = mbNewQuote >>= (.vehicleServiceTierSeatingCapacity)
+    -- Single DB update with all changed fields after BPP confirms
+    QEBooking.updateServiceTierOnChange booking.id newVehicleServiceTier newEstimatedFare mbBapQuoteId mbServiceTierName mbServiceTierShortDesc mbIsAirConditioned mbVehicleServiceTierAC mbSeatingCapacity
 
 validateRequest ::
   ( CacheFlow m r,
@@ -700,6 +736,9 @@ validateRequest = \case
     unless (ride.status == DRide.NEW) $ throwError $ RideInvalidStatus "This ride is not in progress"
     booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> ride.bookingId.getId)
     return $ OUValidatedParcelImageFileUploadReq ValidatedParcelImageFileUploadReq {..}
+  OUChangeServiceTierReq ChangeServiceTierReq {..} -> do
+    booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> bppBookingId.getId)
+    return $ OUValidatedChangeServiceTierReq ValidatedChangeServiceTierReq {..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

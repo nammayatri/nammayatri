@@ -8,13 +8,17 @@ import EulerHS.Prelude hiding (threadDelay)
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.Error
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder, runThroughMasterCloud)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
+import Kernel.Types.Error.BaseError.HTTPError.FromResponse (fromResponse)
 import Kernel.Utils.Common
-import Kernel.Utils.Monitoring.Prometheus.Servant
+import qualified Network.HTTP.Types as HTTP
 import Servant hiding (throwError)
+import Servant.Client (ClientError (FailureResponse))
+import qualified Servant.Client as SC
 import Tools.Error
 
 data AuthReq = AuthReq
@@ -53,15 +57,24 @@ refreshLockKey = "CMRLAuth:RefreshLock"
 cmrlAppType :: Text
 cmrlAppType = "CMRL_CUM_IQR"
 
-getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
-getAuthToken config = do
+maxLockWaitRetries :: Int
+maxLockWaitRetries = 5
+
+maxAuthRetries :: Int
+maxAuthRetries = 3
+
+getAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> m Text
+getAuthToken config = getAuthTokenWithRetries config maxLockWaitRetries
+
+getAuthTokenWithRetries :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> Int -> m Text
+getAuthTokenWithRetries config retriesLeft = do
   authToken :: (Maybe Text) <- Hedis.runInMultiCloudRedisMaybeResult $ Hedis.get authTokenKey
   case authToken of
-    Nothing -> resetAuthToken config
+    Nothing -> resetAuthToken config retriesLeft
     Just token -> return token
 
-resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> m Text
-resetAuthToken config = do
+resetAuthToken :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> Int -> m Text
+resetAuthToken config retriesLeft = do
   lockAcquired <- Hedis.tryLockRedis refreshLockKey 30
   if lockAcquired
     then do
@@ -69,7 +82,6 @@ resetAuthToken config = do
       let unlockLock = do
             logInfo "[CMRL:Auth] Releasing Redis lock"
             Hedis.unlockRedis refreshLockKey
-
       auth <-
         ( do
             -- Double check cache
@@ -82,7 +94,7 @@ resetAuthToken config = do
                 logInfo $ "[CMRL:Auth] Requesting new auth token from: " <> showBaseUrl config.networkHostUrl
                 password <- decrypt config.password
                 authRes <-
-                  callAPI config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL" authAPI
+                  runThroughMasterCloud config.networkHostUrl (ET.client authAPI $ AuthReq config.username password cmrlAppType) "authCMRL"
                     >>= fromEitherM (ExternalAPICallError (Just "CMRL_AUTH_API") config.networkHostUrl)
                 logInfo "[CMRL:Auth] Successfully obtained auth token"
                 let tokenExpiry = 2 * 3600
@@ -92,39 +104,69 @@ resetAuthToken config = do
           `finally` unlockLock
       return auth
     else do
-      logInfo "[CMRL:Auth] Redis lock already held by another pod, waiting 2 seconds"
-      threadDelay 2000000
-      getAuthToken config
+      if retriesLeft <= 0
+        then do
+          logError "[CMRL:Auth] Exceeded max lock wait retries, failing"
+          throwError $ InternalError "CMRL Auth token refresh failed after max retries"
+        else do
+          logInfo $ "[CMRL:Auth] Redis lock already held by another pod, waiting 2 seconds (retries left: " <> show retriesLeft <> ")"
+          threadDelay 2000000
+          getAuthTokenWithRetries config (retriesLeft - 1)
 
 callCMRLAPI ::
   ( HasCallStack,
     CoreMetrics m,
-    SanitizedUrl api,
     MonadFlow m,
     ToJSON res,
     CacheFlow m r,
     EncFlow m r,
     HasRequestId r,
-    MonadReader r m
+    MonadReader r m,
+    HasMasterCloudForwarder r
   ) =>
   CMRLConfig ->
   (Text -> ET.EulerClient res) ->
   Text ->
   Proxy api ->
   m res
-callCMRLAPI config eulerClientFunc description proxy = do
+callCMRLAPI config eulerClientFunc description _proxy = callCMRLAPIWithRetries config eulerClientFunc description _proxy maxAuthRetries
+
+callCMRLAPIWithRetries ::
+  ( HasCallStack,
+    CoreMetrics m,
+    MonadFlow m,
+    ToJSON res,
+    CacheFlow m r,
+    EncFlow m r,
+    HasRequestId r,
+    MonadReader r m,
+    HasMasterCloudForwarder r
+  ) =>
+  CMRLConfig ->
+  (Text -> ET.EulerClient res) ->
+  Text ->
+  Proxy api ->
+  Int ->
+  m res
+callCMRLAPIWithRetries config eulerClientFunc description _proxy authRetriesLeft = do
   token <- getAuthToken config
-  eitherResp <- withTryCatch "CMRL:auth" $ callApiUnwrappingApiError (identity @CMRLError) Nothing Nothing Nothing config.networkHostUrl (eulerClientFunc token) description proxy
-  case eitherResp of
-    Left exec -> do
-      let mbError = fromException @CMRLError exec
-          errorCode = mbError <&> toErrorCode
-      case errorCode of
-        Just "UNAUTHORIZED" -> do
-          void $ resetAuthToken config
-          callCMRLAPI config eulerClientFunc description proxy
-        _ -> do
-          case mbError of
-            Just err -> throwError err
-            Nothing -> throwError $ InternalError "CMRL API Failed"
+  result <- runThroughMasterCloud config.networkHostUrl (eulerClientFunc token) description
+  case result of
     Right resp -> return resp
+    Left clientErr -> case clientErr of
+      FailureResponse _req resp -> do
+        let code = HTTP.statusCode (SC.responseStatusCode resp)
+        if code == 401
+          then do
+            if authRetriesLeft <= 0
+              then do
+                logError "[CMRL:API] Token expired, max auth retries exceeded"
+                throwError $ InternalError "CMRL API auth failed after max retries"
+              else do
+                logError $ "[CMRL:API] Token expired, refreshing and retrying... (retries left: " <> show authRetriesLeft <> ")"
+                void $ resetAuthToken config maxLockWaitRetries
+                callCMRLAPIWithRetries config eulerClientFunc description _proxy (authRetriesLeft - 1)
+          else case fromResponse @CMRLError resp of
+            Just cmrlErr -> throwError cmrlErr
+            Nothing -> throwError $ InternalError "CMRL API Failed"
+      _ -> throwError $ InternalError "CMRL API Failed"

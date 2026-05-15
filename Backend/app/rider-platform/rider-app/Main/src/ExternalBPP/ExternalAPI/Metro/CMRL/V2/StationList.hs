@@ -6,6 +6,7 @@ import Data.Aeson
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Metro.CMRL.V2.Auth
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
@@ -37,7 +38,7 @@ type StationListAPI =
 stationListAPI :: Proxy StationListAPI
 stationListAPI = Proxy
 
-getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLV2Config -> m [Station]
+getStationList :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLV2Config -> m [Station]
 getStationList config = do
   logInfo $ "[CMRLV2:StationList] Fetching station list for operatorNameId: " <> show config.operatorNameId
   let eulerClient = \accessToken -> ET.client stationListAPI (Just $ "Bearer " <> accessToken) config.operatorNameId

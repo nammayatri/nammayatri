@@ -160,6 +160,7 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
   merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId True (Just verified)
+  DIQuery.updateDisabledReasonFlag Nothing (cast personId)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -350,6 +351,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       ventilator = rc.ventilator,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
+      vehicleRatingRemark = rc.vehicleRatingRemark,
       mYManufacturing = rc.mYManufacturing,
       selectedServiceTiers = [],
       downgradeReason = Nothing,
@@ -476,6 +478,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         ventilator = input.ventilator,
         luggageCapacity = Nothing,
         vehicleRating = Nothing,
+        vehicleRatingRemark = Nothing,
         failedRules = failedRules,
         docsVerificationStatus =
           if transporterConfig.enableManualDocumentStatusCheck == Just True

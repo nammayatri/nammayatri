@@ -35,6 +35,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
 import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
@@ -56,11 +57,11 @@ payoutOrderStatus ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe Text ->
-  Maybe Text ->
+  DPayoutOrder.PayoutOrder ->
   DPayment.PayoutStatusServiceReq ->
   m Payout.PayoutOrderStatusResp
-payoutOrderStatus clientSdkVersion merchantId merchantOperatingCityId mRoutingId idAssignedByServiceProvider serviceReq =
-  runWithServiceConfigAndName Payout.payoutOrderStatus (.payoutOrderStatus) (DPayment.mkPayoutOrderStatusReq idAssignedByServiceProvider) clientSdkVersion merchantId merchantOperatingCityId mRoutingId serviceReq
+payoutOrderStatus clientSdkVersion merchantId merchantOperatingCityId mRoutingId payoutOrder serviceReq =
+  runWithServiceConfigAndName Payout.payoutOrderStatus (.payoutOrderStatus) (DPayment.mkPayoutOrderStatusReq payoutOrder) clientSdkVersion merchantId merchantOperatingCityId mRoutingId serviceReq
 
 runWithServiceConfigAndName ::
   ServiceFlow m r =>

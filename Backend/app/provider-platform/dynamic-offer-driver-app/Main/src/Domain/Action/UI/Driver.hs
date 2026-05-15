@@ -438,6 +438,7 @@ data DriverInformationRes = DriverInformationRes
     ridesWithFareIssues :: Maybe DA.Value,
     totalRidesConsideredForFareIssues :: Maybe DA.Value,
     blockedReasonFlag :: Maybe BlockReasonFlag,
+    disabledReasonFlag :: Maybe DriverInfo.DisabledReasonFlag,
     softBlockStiers :: Maybe [ServiceTierType],
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
@@ -500,6 +501,7 @@ data DriverEntityRes = DriverEntityRes
     blocked :: Bool,
     blockExpiryTime :: Maybe UTCTime,
     blockedReasonFlag :: Maybe BlockReasonFlag,
+    disabledReasonFlag :: Maybe DriverInfo.DisabledReasonFlag,
     subscribed :: Bool,
     paymentPending :: Bool,
     verified :: Bool,
@@ -1260,6 +1262,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
         blocked = driverInfo.blocked || overchargingBlocked,
         blockExpiryTime = driverInfo.blockExpiryTime <|> blockedTill,
         blockedReasonFlag = driverInfo.blockReasonFlag,
+        disabledReasonFlag = driverInfo.disabledReasonFlag,
         verified = driverInfo.verified,
         subscribed = driverInfo.subscribed,
         paymentPending = driverInfo.paymentPending,
@@ -1605,7 +1608,14 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
   merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  membershipId <- if fromMaybe False merchantConfig.sendMembershipIdInProfile then ((.id) <$>) . listToMaybe <$> QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED else return Nothing
+  membershipId <-
+    if fromMaybe False merchantConfig.sendMembershipIdInProfile
+      then do
+        -- A driver may have multiple SUBMITTED rows after a share top-up. Pin the displayed
+        -- membership ID to the oldest allotment so it stays stable across top-ups.
+        memberships <- QStclMembership.findByDriverIdAndStatus id DStclMembership.SUBMITTED
+        pure $ (.id) <$> listToMaybe (DL.sortOn (.createdAt) memberships)
+      else return Nothing
   bankDetails <-
     if merchant.onlinePayment
       then do
@@ -1938,7 +1948,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       unlessM (validateSearchTryActive searchTry.id) $ do
         logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
         throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
-      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId searchTry.emailDomain searchTry.businessEmailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
       let farePolicy' =
             farePolicy
               { DFarePolicy.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,
@@ -2515,23 +2525,23 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
   (dueDriverFees', mKey) <- do
     case clearSelectedReq of
       Just req -> do
-        dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
+        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] (Just $ req.driverFeeIds) serviceName
         let len = length dfees
         let paymentIdLength = length req.driverFeeIds
         unless (len == paymentIdLength) $
           throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
         return (dfees, subscriptionConfig.partialDueClearanceMessageKey)
       Nothing -> do
-        dfees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
+        dfees <- runInMasterDbAndRedis $ QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
         return (dfees, Nothing)
 
   --------- to crub up cases related to double debit ----------
-  successfulInvoices <- mapM (\fee -> runInReplica (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
+  successfulInvoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findInvoiceByFeeIdAndStatus fee.id Domain.SUCCESS)) dueDriverFees'
   let allPaidFeeNotMarkedCleared = nub $ map INV.driverFeeId (concat successfulInvoices)
   forM_ allPaidFeeNotMarkedCleared $ \feeId -> QDF.updateStatus DDF.CLEARED feeId now
   let dueDriverFees = filter (\fee -> not $ fee.id `elem` allPaidFeeNotMarkedCleared) dueDriverFees'
   ----------------------------------------------------------
-  invoices <- mapM (\fee -> runInReplica (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
+  invoices <- mapM (\fee -> runInMasterDbAndRedis (QINV.findActiveManualInvoiceByFeeId fee.id Domain.MANUAL_INVOICE Domain.ACTIVE_INVOICE)) dueDriverFees
   let paymentService = subscriptionConfig.paymentServiceName
       sortedInvoices = mergeSortAndRemoveDuplicate invoices
       splitEnabled = subscriptionConfig.isVendorSplitEnabled == Just True
@@ -2567,7 +2577,7 @@ clearDriverDues (personId, _merchantId, opCityId) serviceName clearSelectedReq m
       return (vendorFees, finalInvoices)
 
     validateExistingInvoice invoice driverFees = do
-      invoices <- runInReplica $ QINV.findAllByInvoiceId invoice.id
+      invoices <- runInMasterDbAndRedis $ QINV.findAllByInvoiceId invoice.id
       let driverFeeIds = driverFees <&> getId . (.id)
       let currentDueDriverFee = (invoices <&> getId . (.driverFeeId)) `intersect` driverFeeIds
       if isJust clearSelectedReq
@@ -3381,7 +3391,7 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
       phoneNo <- mapM decrypt person.mobileNumber
       merchantOperatingCity <- CQMOC.findById (cast opCityId) >>= fromMaybeM (MerchantOperatingCityNotFound opCityId.getId)
       let payoutCurrency = maybe merchantOperatingCity.currency (.currency) (listToMaybe driverFeeToPayout)
-          createPayoutOrderReq = mkPayoutReq driverFeeToPayout person mbVpa uid phoneNo payoutCurrency
+          createPayoutOrderReq = mkPayoutReq driverFeeToPayout person mbVpa uid phoneNo payoutCurrency payoutServiceFlow
           entityName = DPayment.DRIVER_FEE
           createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName opCityId person.id mbPersonBankAccount
       logDebug $ "calling create payoutOrder with driverId: " <> personId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show uid
@@ -3434,10 +3444,11 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
         )
         (([], []), refundAmount)
         driverFeeSorted
-    mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency = do
+    mkPayoutReq driverFeeToPayout person vpa uid phoneNo currency payoutServiceFlow = do
+      let amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout
       DPayment.CreatePayoutServiceReq
         { orderId = uid,
-          amount = foldl (\acc dfee -> acc + fromMaybe 0.0 dfee.refundedAmount) 0.0 driverFeeToPayout,
+          amount,
           currency,
           customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
           customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
@@ -3446,7 +3457,9 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           remark = "Refund for security deposit",
           customerName = person.firstName,
           customerVpa = vpa,
-          isDynamicWebhookRequired = False
+          isDynamicWebhookRequired = False,
+          transferAmount = amount, -- for now keep it the same
+          payoutServiceFlow
         }
 
 isPlanVehCategoryOrCityChanged :: Id DMOC.MerchantOperatingCity -> Maybe DPlan.DriverPlan -> Maybe Vehicle -> (Bool, Bool)

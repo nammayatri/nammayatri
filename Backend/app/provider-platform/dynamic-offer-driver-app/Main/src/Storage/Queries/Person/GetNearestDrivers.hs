@@ -146,6 +146,7 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
 
       -- Core eligibility filters
       guard $ not dpd.blocked
+      guard $ dpd.enabled
       guard $ dpd.subscribed
       guard $ isDriverModeEligible dpd.mode dpd.active
       guard $ isTripTypeEligible dpd
@@ -156,7 +157,11 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
         guard $ isJust dpd.driverTripEndLocation
         guard $ maybe False (\tc -> tc `elem` currentRideTripCategoryValidForForwardBatching) dpd.onRideTripCategory
 
-      when onlinePayment $ guard dpd.chargesEnabled
+      when onlinePayment $ do
+        guard dpd.chargesEnabled
+        let effectiveMode = fromMaybe MP.LIVE dpd.bankAccountPaymentMode
+            requestedMode = fromMaybe MP.LIVE paymentMode
+        guard $ effectiveMode == requestedMode
 
       -- For on-ride drivers, compute two-leg distance (driver→drop + drop→pickup)
       let driverPoint = LatLong {lat = location.lat, lon = location.lon}
@@ -274,7 +279,13 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
         modeOff + if not (isDriverModeEligible dpd.mode dpd.active) then 1 else 0,
         tripType + if not (isTripTypeEligible dpd) then 1 else 0,
         onRideInelig + if dpd.onRide && not dpd.forwardBatchingEnabled then 1 else 0,
-        noPay + if onlinePayment && not dpd.chargesEnabled then 1 else 0
+        noPay
+          + if onlinePayment
+            && ( not dpd.chargesEnabled
+                   || fromMaybe MP.LIVE dpd.bankAccountPaymentMode /= fromMaybe MP.LIVE paymentMode
+               )
+            then 1
+            else 0
       )
 
     formatEligibilityLog :: (Int, Int, Int, Int, Int, Int, Int) -> Text

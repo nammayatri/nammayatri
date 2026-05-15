@@ -50,6 +50,8 @@ apis:
         from: UTCTime
         to: UTCTime
         fleetOwnerId: Text
+        customerCountryCode: Text
+        driverCountryCode: Text
       auth: ApiAuthV2
       response:
         type: RideListRes
@@ -74,6 +76,8 @@ apis:
               from: UTCTime
               to: UTCTime
               fleetOwnerId: Text
+              customerCountryCode: Text
+              driverCountryCode: Text
             auth: ApiAuthV2
             response:
               type: RideListRes
@@ -219,6 +223,17 @@ apis:
       response:
         type: RideCallCountRes
 
+  - GET: # RideFlowDebugAPI
+      endpoint: /flowDebug
+      auth: ApiAuthV2
+      query:
+        rideId: Id Ride
+        bookingId: Text
+        searchRequestId: Text
+        rideShortId: ShortId Ride
+      response:
+        type: RideFlowDebugRes
+
 types:
 
   RideListRes:
@@ -235,8 +250,10 @@ types:
     - displayBookingId: Maybe Text
     - customerName: Maybe Text
     - customerPhoneNo: Text
+    - customerCountryCode: Maybe Text
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverCountryCode: Maybe Text
     - tripCategory: DeprecatedTripCategory # TODO :: Deprecated, please do not maintain this in future. `tripCategory` is replaced with `tripCategoryV2`
     - tripCategoryV2: TripCategory
     - vehicleNo: Text
@@ -252,6 +269,14 @@ types:
     - customerPickupLocation: Maybe LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
     - payoutRequestId: Maybe (Id PayoutRequest)
+    - vehicleManufacturer: Maybe Text
+    - vehicleModel: Maybe Text
+    - fleetName: Maybe Text
+    - fleetNumber: Maybe Text
+    - vehicleServiceTierName: Maybe Text
+    - driverArrivalTime: Maybe UTCTime
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
   RideListItemV2:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
@@ -307,6 +332,7 @@ types:
     - rideId: Id Ride
     - customerName: Maybe Text
     - customerPhoneNo: Text
+    - customerCountryCode: Maybe Text
     - rideOtp: Text
     - customerPickupLocation: LocationAPIEntity
     - customerDropLocation: Maybe LocationAPIEntity
@@ -315,6 +341,7 @@ types:
     - driverId: Id Driver
     - driverName: Text
     - driverPhoneNo: Maybe Text
+    - driverCountryCode: Maybe Text
     - fleetOwnerId: Maybe Text
     - vehicleNo: Text
     - driverStartLocation: Maybe LatLong
@@ -560,6 +587,172 @@ types:
     - pickupCharge: PriceAPIEntity
     - extraDistanceFare: PriceAPIEntity
     - extraTimeFare: PriceAPIEntity
+
+  RideFlowDebugRes:
+    - currentStage: FlowStage
+    - tripCategory: Maybe Text
+    - timeline: [FlowStageEntry]
+    - bapData: Maybe BAPSideDebug
+    - bppData: Maybe BPPSideDebug
+    - crossReferenceIds: CrossReferenceIds
+    - issues: [Text]
+    - derive: "'HideSecrets"
+  FlowStage:
+    - enum: "BAP_SEARCH_CREATED, BPP_SEARCH_RECEIVED, BPP_ESTIMATES_CREATED, BAP_ON_SEARCH_RECEIVED, BAP_SELECT_SENT, BPP_DRIVER_SEARCH_STARTED, BPP_DRIVER_QUOTES_RECEIVED, BAP_ON_SELECT_RECEIVED, BAP_INIT_SENT, BPP_BOOKING_CREATED, BAP_ON_INIT_RECEIVED, BAP_CONFIRM_SENT, BPP_CONFIRM_PROCESSED, BAP_ON_CONFIRM_RECEIVED, BPP_RIDE_STARTED, BAP_RIDE_STARTED, BPP_RIDE_COMPLETED, BAP_RIDE_COMPLETED, FLOW_CANCELLED, FLOW_UNKNOWN"
+  FlowStageStatus:
+    - enum: "STAGE_DONE, STAGE_CURRENT, STAGE_PENDING, STAGE_FAILED, STAGE_SKIPPED"
+  FlowStageEntry:
+    - stage: FlowStage
+    - status: FlowStageStatus
+    - timestamp: Maybe UTCTime
+    - detail: Maybe Text
+
+  # Cross-reference IDs to link BAP and BPP sides
+  CrossReferenceIds:
+    - transactionId: Maybe Text
+    - bapSearchRequestId: Maybe Text
+    - bppSearchRequestId: Maybe Text
+    - bapBookingId: Maybe Text
+    - bppBookingId: Maybe Text
+    - bapRideId: Maybe Text
+    - bppRideId: Maybe Text
+    - rideShortId: Maybe Text
+
+  # ---- BAP (Rider-App) Side Debug Data ----
+  BAPSideDebug:
+    - searchRequest: Maybe BAPSearchRequestDebug
+    - estimates: [BAPEstimateDebug]
+    - quotes: [BAPQuoteDebug]
+    - driverOffers: [BAPDriverOfferDebug]
+    - booking: Maybe BAPBookingDebug
+    - ride: Maybe BAPRideDebug
+  BAPSearchRequestDebug:
+    - id: Text
+    - createdAt: UTCTime
+    - estimatedDistance: Maybe Meters
+    - estimatedDuration: Maybe Seconds
+    - riderPreferredOption: Maybe Text
+  BAPEstimateDebug:
+    - id: Text
+    - bppEstimateId: Text
+    - status: Text
+    - providerId: Text
+    - estimatedFare: HighPrecMoney
+    - tripCategory: Maybe Text
+    - vehicleServiceTier: Text
+    - validTill: UTCTime
+    - createdAt: UTCTime
+  BAPQuoteDebug:
+    - id: Text
+    - providerId: Text
+    - estimatedFare: HighPrecMoney
+    - tripCategory: Maybe Text
+    - quoteDetailsType: Text
+    - createdAt: UTCTime
+  BAPDriverOfferDebug:
+    - id: Text
+    - bppQuoteId: Text
+    - driverName: Text
+    - status: Text
+    - durationToPickup: Maybe Int
+    - validTill: UTCTime
+    - createdAt: UTCTime
+  BAPBookingDebug:
+    - id: Text
+    - bppBookingId: Maybe Text
+    - status: Text
+    - tripCategory: Maybe Text
+    - estimatedFare: HighPrecMoney
+    - estimatedTotalFare: HighPrecMoney
+    - paymentUrl: Maybe Text
+    - paymentStatus: Maybe Text
+    - providerId: Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  BAPRideDebug:
+    - id: Text
+    - bppRideId: Text
+    - shortId: Text
+    - status: Text
+    - driverName: Text
+    - vehicleNumber: Text
+    - otp: Text
+    - endOtp: Maybe Text
+    - fare: Maybe HighPrecMoney
+    - totalFare: Maybe HighPrecMoney
+    - rideStartTime: Maybe UTCTime
+    - rideEndTime: Maybe UTCTime
+    - trackingUrl: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+
+  # ---- BPP (Driver-App) Side Debug Data ----
+  BPPSideDebug:
+    - searchRequest: Maybe BPPSearchRequestDebug
+    - searchTries: [BPPSearchTryDebug]
+    - estimates: [BPPEstimateDebug]
+    - driverQuotes: [BPPDriverQuoteDebug]
+    - booking: Maybe BPPBookingDebug
+    - ride: Maybe BPPRideDebug
+  BPPSearchRequestDebug:
+    - id: Text
+    - transactionId: Maybe Text
+    - createdAt: UTCTime
+    - estimatedDistance: Maybe Meters
+    - estimatedDuration: Maybe Seconds
+    - autoAssignEnabled: Maybe Bool
+    - area: Maybe Text
+  BPPSearchTryDebug:
+    - id: Text
+    - status: Text
+    - vehicleServiceTier: Text
+    - searchRepeatCounter: Int
+    - searchRepeatType: Text
+    - tripCategory: Text
+    - createdAt: UTCTime
+    - validTill: UTCTime
+  BPPEstimateDebug:
+    - id: Text
+    - tripCategory: Text
+    - vehicleServiceTier: Text
+    - minFare: HighPrecMoney
+    - maxFare: HighPrecMoney
+    - createdAt: UTCTime
+  BPPDriverQuoteDebug:
+    - id: Text
+    - driverId: Text
+    - driverName: Text
+    - status: Text
+    - estimatedFare: HighPrecMoney
+    - validTill: UTCTime
+    - distanceToPickup: Meters
+    - durationToPickup: Seconds
+    - createdAt: UTCTime
+  BPPBookingDebug:
+    - id: Text
+    - status: Text
+    - tripCategory: Text
+    - estimatedFare: HighPrecMoney
+    - riderId: Maybe Text
+    - specialZoneOtpCode: Maybe Text
+    - searchTryId: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  BPPRideDebug:
+    - id: Text
+    - shortId: Text
+    - status: Text
+    - driverId: Text
+    - otp: Text
+    - endOtp: Maybe Text
+    - fare: Maybe HighPrecMoney
+    - tripStartTime: Maybe UTCTime
+    - tripEndTime: Maybe UTCTime
+    - chargeableDistance: Maybe Meters
+    - distanceCalculationFailed: Maybe Bool
+    - rideEndedBy: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

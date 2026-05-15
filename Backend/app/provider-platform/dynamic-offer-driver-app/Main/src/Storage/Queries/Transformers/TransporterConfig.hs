@@ -65,7 +65,8 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7,
             payoutFee = Nothing,
-            onlineCommissionPaidOutDirectly = Nothing
+            onlineCommissionPaidOutDirectly = Nothing,
+            fetchWalletTransactionsFromClickhouse = Nothing
           }
   parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 
@@ -76,6 +77,7 @@ parseTaxConfig merchantOperatingCityId mbVal = do
   let def =
         TaxConfig
           { rideGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
+            subscriptionGst = GstBreakup {cgstPercentage = Nothing, sgstPercentage = Nothing, igstPercentage = Nothing},
             airportEntryFeeGst = Nothing,
             securityDepositGst = Nothing,
             defaultTdsRate = Nothing,

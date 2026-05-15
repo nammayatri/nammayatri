@@ -204,6 +204,7 @@ handler merchant req validatedQuote = do
                 isAllocatorBatch = False,
                 paymentMethodInfo = paymentMethodInfo,
                 emailDomain = booking.emailDomain,
+                businessEmailDomain = booking.businessEmailDomain,
                 driverPreference = req.driverPreference
               }
       searchTry <- initiateDriverSearchBatch driverSearchBatchInput

@@ -26,6 +26,7 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import Kernel.Utils.Common
@@ -63,7 +64,8 @@ paymentOrderStatusCheckJob ::
     Redis.HedisLTSFlowEnv r,
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   Job 'PaymentOrderStatusCheck ->
   m ExecutionResult
@@ -121,7 +123,8 @@ processPaymentOrder ::
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     HasField "cloudType" r (Maybe CloudType),
     HasField "isMetroTestTransaction" r Bool,
-    HasField "blackListedJobs" r [Text]
+    HasField "blackListedJobs" r [Text],
+    HasMasterCloudForwarder r
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->

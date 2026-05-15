@@ -48,6 +48,7 @@ SearchTry:
     driverPreference: "Maybe [Text]"
     serviceTierArray: "[Text]"
     emailDomain: Maybe Text
+    businessEmailDomain: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 

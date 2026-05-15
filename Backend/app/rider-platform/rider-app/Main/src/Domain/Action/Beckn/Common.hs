@@ -64,6 +64,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -521,6 +522,16 @@ rideAssignedReqHandler req = do
       mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
+      when (bookingDiscountAmount > 0) $ do
+        guid <- generateGUID
+        QFareBreakup.create
+          DFareBreakup.FareBreakup
+            { id = guid,
+              entityId = booking.id.getId,
+              entityType = DFareBreakup.BOOKING,
+              amount = mkPrice (Just booking.estimatedFare.currency) bookingDiscountAmount,
+              description = "OFFER_DISCOUNT"
+            }
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {..} -> do
@@ -1092,7 +1103,21 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
-  QFareBreakup.createMany breakups
+  offerDiscountBreakup <-
+    if rideDiscountAmount > 0
+      then do
+        guid <- generateGUID
+        pure
+          [ DFareBreakup.FareBreakup
+              { id = guid,
+                entityId = ride.id.getId,
+                entityType = DFareBreakup.RIDE,
+                amount = mkPrice (Just totalFare.currency) rideDiscountAmount,
+                description = "OFFER_DISCOUNT"
+              }
+          ]
+      else pure []
+  QFareBreakup.createMany (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
@@ -1317,6 +1342,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
     whenJust cancellationFee $ \_ ->
       QRide.updateCancellationFeeStatus (Just DRide.PENDING) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
+    fork "mark pending sos as not resolved on ride cancel" $
+      SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
@@ -1807,7 +1834,8 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
             uid <- generateGUID
             let entityName = entity
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True
+                payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True payoutServiceFlow
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 

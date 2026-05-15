@@ -808,7 +808,7 @@ recalculateFareForDistance ServiceHandle {..} booking ride recalcDistance' thres
     then return (fromMaybe 0 booking.estimatedDistance, booking.estimatedFare, Nothing)
     else do
       stopsInfo <- if fromMaybe False ride.hasStops then QSI.findAllByRideId ride.id else return []
-      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.billingCategory farePolicy.vehicleServiceTier
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage booking.merchantOperatingCityId booking.emailDomain booking.businessEmailDomain booking.billingCategory farePolicy.vehicleServiceTier
       -- Recompute congestion charge at end ride if config enabled
       (farePolicyWithCongestion, endRideCongestionCharge) <-
         if thresholdConfig.recomputeCongestionChargeOnEndRide == Just True

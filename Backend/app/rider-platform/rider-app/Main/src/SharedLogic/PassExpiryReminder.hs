@@ -25,6 +25,11 @@ defaultDaysToExpire = 3
 defaultBatchSize :: Int
 defaultBatchSize = 100
 
+newtype PassExpiryReminderEntityData = PassExpiryReminderEntityData
+  { notificationKey :: Text
+  }
+  deriving (Generic, Show, ToJSON)
+
 -- Returns Just (offset + processed) if the batch was full (more rows likely), or Nothing when drained.
 sendPassExpiryReminderBatch ::
   (ServiceFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -59,7 +64,7 @@ sendPassExpiryReminderBatch merchantId merchantOperatingCityId mbCursor = do
         forM_ persons $ \person -> do
           let mbEndDate = Map.lookup person.id personIdToEndDate
               daysRemaining = maybe daysToExpire (fromIntegral . flip Time.diffDays todayLocal) mbEndDate
-              entity = Notification.Entity Notification.Product person.id.getId ()
+              entity = Notification.Entity Notification.Product person.id.getId (PassExpiryReminderEntityData {notificationKey = "PASS_EXPIRY_REMINDER"})
               templateParams = [("days", show daysRemaining)]
           TNotifications.dynamicNotifyPerson person (TNotifications.createNotificationReq "PASS_EXPIRY_REMINDER" identity) EmptyDynamicParam entity Nothing templateParams Nothing Nothing
       let processed = length passes

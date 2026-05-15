@@ -342,6 +342,7 @@ apis:
       auth: ApiAuthV2
       query:
         fleetOwnerId: Text
+        notifyDriver: Bool
       params:
         driverId: Id Driver
         vehicleNo: Text
@@ -359,6 +360,7 @@ apis:
               requestorId: Text
             query:
               fleetOwnerId: Text
+              notifyDriver: Bool
             response:
               type: APISuccess
 
@@ -600,6 +602,7 @@ apis:
         - to: Day
         - fleetOwnerId: Text
         - search: Text
+        - driverNumber: Text
         - limit: Int
         - offset: Int
         - sortDesc: Bool
@@ -618,6 +621,7 @@ apis:
               - to: Day
               - fleetOwnerId: Text
               - search: Text
+              - driverNumber: Text
               - limit: Int
               - offset: Int
               - sortDesc: Bool

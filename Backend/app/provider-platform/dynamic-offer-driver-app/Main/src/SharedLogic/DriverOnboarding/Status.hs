@@ -23,10 +23,14 @@ module SharedLogic.DriverOnboarding.Status
     processStatusEventForReminder,
     markDocsVerificationStatusRejectedForPerson,
     markDocsVerificationStatusRejectedForRC,
+    ensureNoActiveRidesUnderFleet,
+    cascadeFleetDisableToDrivers,
+    cascadeFleetEnableToDrivers,
   )
 where
 
 import Control.Applicative ((<|>))
+import Control.Monad.Extra (anyM)
 import Data.Either (fromRight)
 import Data.List (nub)
 import qualified Data.Text as T
@@ -82,17 +86,20 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
+import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DRAQuery
 import qualified Storage.Queries.DriverSSN as QDSSN
 import qualified Storage.Queries.DriverUdyam as QUDYAM
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHubRequestsExtra as QOHRE
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.RideExtra as QRideExtra
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleFitnessCertificate as VFCQuery
@@ -1056,6 +1063,7 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
       unless fleetOwnerInfo.enabled $ do
         QFOI.updateFleetOwnerEnabledStatus True personId
+        cascadeFleetEnableToDrivers personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
       unless driverInfo.enabled $ do
@@ -1066,7 +1074,33 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
 disableFleetOwnerOnRejectionDoc :: Id DP.Person -> Flow ()
 disableFleetOwnerOnRejectionDoc personId = do
   fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when fleetOwnerInfo.enabled $ QFOI.updateFleetOwnerEnabledStatus False personId
+  when fleetOwnerInfo.enabled $ do
+    ensureNoActiveRidesUnderFleet personId
+    QFOI.updateFleetOwnerEnabledStatus False personId
+    cascadeFleetDisableToDrivers personId
+
+-- | Throw InvalidRequest if any driver under the fleet has a NEW or
+--   INPROGRESS ride. Used as a guard before flipping fleet enabled to false.
+ensureNoActiveRidesUnderFleet :: Id DP.Person -> Flow ()
+ensureNoActiveRidesUnderFleet fleetOwnerId = do
+  driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
+  anyActive <- anyM (fmap isJust . QRideExtra.getUpcomingOrActiveByDriverId) driverIds
+  when anyActive $
+    throwError $ InvalidRequest "Cannot disable fleet: one or more drivers have active rides"
+
+-- | Disable every active driver under the fleet, tagging each with the
+--   FleetDisabled flag so the inverse cascade can find them.
+cascadeFleetDisableToDrivers :: Id DP.Person -> Flow ()
+cascadeFleetDisableToDrivers fleetOwnerId = do
+  driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
+  forM_ driverIds $ \driverId -> DIQueryExtra.markDisabledForFleetCascade (cast driverId)
+
+-- | Re-enable drivers previously disabled by 'cascadeFleetDisableToDrivers'.
+--   Drivers blocked for other reasons are left alone.
+cascadeFleetEnableToDrivers :: Id DP.Person -> Flow ()
+cascadeFleetEnableToDrivers fleetOwnerId = do
+  driverIds <- QFDA.getActiveDriverIdsByFleetOwnerId fleetOwnerId.getId
+  forM_ driverIds $ \driverId -> DIQueryExtra.clearFleetCascadeAndEnable (cast driverId)
 
 sendEnablementSms :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> DTC.TransporterConfig -> Id DM.Merchant -> Flow ()
 sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
@@ -1276,7 +1310,11 @@ getProcessedDriverDocuments driverId entityImagesInfo docType useHVSdkForDL = do
       return (status, Nothing, Nothing, Nothing, Nothing, Nothing)
     DVC.UDYAMCertificate -> do
       mbUdyam <- QUDYAM.findByDriverId driverId
-      return (mapStatus . (.verificationStatus) <$> mbUdyam, mbUdyam >>= (.rejectReason), Nothing, Nothing, mbS3Path, mbImageId)
+      case mbUdyam of
+        Just udyam -> return (Just $ mapStatus udyam.verificationStatus, udyam.rejectReason, Nothing, Nothing, mbS3Path, mbImageId)
+        Nothing -> do
+          let hasImage = not . null $ IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo DVC.UDYAMCertificate [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
+          return (if hasImage then Just MANUAL_VERIFICATION_REQUIRED else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId)
     DVC.TANCertificate -> commonDocStatus DVC.TANCertificate
     DVC.LDCCertificate -> commonDocStatus DVC.LDCCertificate
     DVC.BusinessLicense -> commonDocStatus DVC.BusinessLicense

@@ -238,6 +238,9 @@ SearchRequest:
       kvFunction: findOneWithKV
       where:
         and: [ transactionId, providerId ]
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
     updateIsAdvancedBookingEnabled:
       kvFunction: updateWithKV
       params: [ isAdvanceBookingEnabled ]

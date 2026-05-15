@@ -265,7 +265,7 @@ isRCNumberFormatValid documentVerificationConfig normalizedRCNumber = do
 getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
 getDriverDocumentInfo person = do
   case person.role of
-    Person.FLEET_OWNER -> do
+    role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
       res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
       decryptedPanNumber <- mapM decrypt res.panNumber
       decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
@@ -710,6 +710,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             ventilator = input.ventilator,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
+            vehicleRatingRemark = Nothing,
             failedRules = failedRules,
             docsVerificationStatus =
               if transporterConfig.enableManualDocumentStatusCheck == Just True

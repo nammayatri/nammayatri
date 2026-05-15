@@ -18,6 +18,7 @@ module Domain.Types.OnUpdate
   )
 where
 
+import qualified Domain.Types as DVST
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -25,6 +26,7 @@ import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Location as DL
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Id
 import SharedLogic.Beckn.Common as Reexport
 
@@ -47,6 +49,7 @@ data OnUpdateBuildReq
   | DriverReachedDestinationBuildReq DDriverReachedDestinationReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
   | ParcelImageUploadedBuildReq DParcelImageUploadedReq
+  | ChangeServiceTierBuildReq DChangeServiceTierReq
 
 data DErrorObject = DErrorObject
   { errorCode :: Text,
@@ -101,6 +104,13 @@ data DEditDestinationUpdateReq = DEditDestinationUpdateReq
 
 newtype DTollCrossedBuildReq = DTollCrossedBuildReq
   { bookingDetails :: BookingDetails
+  }
+
+data DChangeServiceTierReq = DChangeServiceTierReq
+  { bookingId :: Id DRB.Booking,
+    newVehicleServiceTier :: DVST.ServiceTierType,
+    newEstimatedFare :: HighPrecMoney,
+    bppQuoteId :: Text
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

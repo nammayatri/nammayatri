@@ -16,6 +16,7 @@ import ExternalBPP.ExternalAPI.Metro.CMRL.Error (CMRLError (..))
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus as UpdateQr
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
@@ -25,7 +26,7 @@ import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => CMRLConfig -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> IntegratedBPPConfig -> FRFSTicketBooking -> [FRFSQuoteCategory] -> Maybe Text -> m ProviderOrder
 createOrder config integratedBPPConfig booking quoteCategories mRiderNumber = do
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
@@ -113,7 +114,7 @@ type GenerateQRAPI =
 generateQRAPI :: Proxy GenerateQRAPI
 generateQRAPI = Proxy
 
-generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m) => CMRLConfig -> GenerateQRReq -> m [TicketInfo]
+generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, HasRequestId r, MonadReader r m, HasMasterCloudForwarder r) => CMRLConfig -> GenerateQRReq -> m [TicketInfo]
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
       eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq

@@ -67,6 +67,7 @@ library
       API.Internal.GeometryUpdate
       API.Internal.InMemManagement
       API.Internal.KnowYourDriver
+      API.Internal.MasterCloudForward
       API.Internal.Multimodal
       API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
@@ -188,6 +189,7 @@ library
       Domain.Action.Dashboard.Management.DriverGoHome
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
+      Domain.Action.Dashboard.Management.DriverVehicleQuality
       Domain.Action.Dashboard.Management.EntityInfo
       Domain.Action.Dashboard.Management.FeedbackForm
       Domain.Action.Dashboard.Management.FinanceManagement
@@ -219,6 +221,7 @@ library
       Domain.Action.Dashboard.RideBooking.Ride
       Domain.Action.Dashboard.RideBooking.SearchRequest
       Domain.Action.Dashboard.RideBooking.Volunteer
+      Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.External.LiveEKD
       Domain.Action.Internal.Auth
       Domain.Action.Internal.BulkLocUpdate
@@ -424,6 +427,7 @@ library
       Lib.Schema
       SharedLogic.AirportEntryFee
       SharedLogic.Allocator
+      SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -490,6 +494,7 @@ library
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
       SharedLogic.DriverPool.DriverPoolDataBuilder
+      SharedLogic.DriverPool.DriverPoolMigrations
       SharedLogic.DriverPool.LTSDataSync
       SharedLogic.DriverPool.Types
       SharedLogic.DynamicPricing
@@ -670,6 +675,7 @@ library
       Storage.Clickhouse.FleetOwnerInformation
       Storage.Clickhouse.FleetRcDailyStats
       Storage.Clickhouse.JsonLogicTransaction
+      Storage.Clickhouse.LedgerEntry
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.Ride
@@ -914,6 +920,7 @@ library
       API.Action.Dashboard.Management.DriverGoHome
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
+      API.Action.Dashboard.Management.DriverVehicleQuality
       API.Action.Dashboard.Management.EntityInfo
       API.Action.Dashboard.Management.FeedbackForm
       API.Action.Dashboard.Management.FinanceManagement
@@ -1815,6 +1822,7 @@ library
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , payment
     , persistent
     , postgresql-simple
@@ -1961,6 +1969,7 @@ executable dynamic-offer-driver-app-exe
     , network-uri
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , prometheus-client

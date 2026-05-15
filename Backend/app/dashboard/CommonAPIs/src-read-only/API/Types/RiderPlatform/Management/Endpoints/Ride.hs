@@ -3,6 +3,7 @@
 
 module API.Types.RiderPlatform.Management.Endpoints.Ride where
 
+import qualified API.Types.ProviderPlatform.Management.Endpoints.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Booking
 import qualified Dashboard.Common.Ride
@@ -305,7 +306,7 @@ newtype TicketRideListRes = TicketRideListRes {rides :: [RideInfo]}
   deriving stock (Show, Generic)
   deriving anyclass (ToSchema)
 
-type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList))
+type API = ("ride" :> (GetRideList :<|> GetRideInfo :<|> CancellationChargesWaiveOff :<|> GetShareRideInfo :<|> GetShareRideInfoByShortId :<|> GetRideTripRoute :<|> GetRidePickupRoute :<|> PostRideSyncMultiple :<|> PostRideCancelMultiple :<|> GetRideKaptureList :<|> GetRideFlowDebugBap))
 
 type GetRideList =
   ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int :> QueryParam "bookingStatus" BookingStatus
@@ -364,6 +365,14 @@ type GetRideKaptureList =
       :> Get '[JSON] TicketRideListRes
   )
 
+type GetRideFlowDebugBap =
+  ( "flowDebug" :> "bap" :> QueryParam "bapBookingId" Kernel.Prelude.Text :> QueryParam "bppBookingId" Kernel.Prelude.Text
+      :> QueryParam
+           "transactionId"
+           Kernel.Prelude.Text
+      :> Get '[JSON] API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
+  )
+
 data RideAPIs = RideAPIs
   { getRideList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe BookingStatus -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient RideListRes,
     getRideInfo :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideInfoRes,
@@ -374,13 +383,14 @@ data RideAPIs = RideAPIs
     getRidePickupRoute :: Kernel.Types.Id.Id Dashboard.Common.Ride -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient Kernel.External.Maps.GetRoutesResp,
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes
+    getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
+    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)
 mkRideAPIs rideClient = (RideAPIs {..})
   where
-    getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList = rideClient
+    getRideList :<|> getRideInfo :<|> cancellationChargesWaiveOff :<|> getShareRideInfo :<|> getShareRideInfoByShortId :<|> getRideTripRoute :<|> getRidePickupRoute :<|> postRideSyncMultiple :<|> postRideCancelMultiple :<|> getRideKaptureList :<|> getRideFlowDebugBap = rideClient
 
 data RideUserActionType
   = GET_RIDE_LIST
@@ -393,6 +403,7 @@ data RideUserActionType
   | POST_RIDE_SYNC_MULTIPLE
   | POST_RIDE_CANCEL_MULTIPLE
   | GET_RIDE_KAPTURE_LIST
+  | GET_RIDE_FLOW_DEBUG_BAP
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -103,6 +103,7 @@ dependencies:
   - euler-hs
   - unordered-containers
   - passetto-client
+  - passetto-lib
   - vector
   - cereal
   - beam-core

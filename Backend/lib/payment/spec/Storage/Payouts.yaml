@@ -6,6 +6,7 @@ imports:
   Price: Kernel.Types.Common
   PayoutOrderStatus : Kernel.External.Payout.Juspay.Types.Payout
   AccountDetailsType : Kernel.External.Payout.Juspay.Types.Payout
+  TransferStatus: Kernel.External.Payout.Interface.Types
   EntityName : Lib.Payment.Domain.Types.Common
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
@@ -24,6 +25,9 @@ PayoutOrder:
     amount : Price
     idAssignedByServiceProvider : Maybe Text
     status : PayoutOrderStatus
+    transferId : Maybe Text
+    transferAmount : Maybe HighPrecMoney
+    transferStatus : Maybe TransferStatus
     accountDetailsType : Maybe AccountDetailsType
     entityName : Maybe EntityName
     vpa : Maybe Text
@@ -68,6 +72,10 @@ PayoutOrder:
     updatePayoutOrderStatus:
       kvFunction: updateOneWithKV
       params: [status]
+      where: orderId
+    updatePayoutOrderStatusAndTransferStatus:
+      kvFunction: updateOneWithKV
+      params: [status, transferStatus]
       where: orderId
     findAllWithStatus:
       kvFunction: findAllWithKV

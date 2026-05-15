@@ -19,12 +19,13 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoesNotExist))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person ()
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.PersonExtra (updatePersonRole)
-import Tools.Error (TransporterError (TransporterConfigNotFound))
+import Tools.Error (FleetOwnerNotFoundError (FleetOwnerNotFound), TransporterError (TransporterConfigNotFound))
 
 -- This function will not be called.
 getAccountFetchUnverifiedAccounts ::
@@ -49,12 +50,19 @@ postAccountVerifyAccount _merchantShortId _opCity Common.VerifyAccountReq {..} =
         Common.Approved -> True
         _ -> False
   let fleetOwnerId' = Kernel.Types.Id.cast fleetOwnerId
-  mbFleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId'
-  let wasDisabled = maybe True (not . (.enabled)) mbFleetOwnerInfo
-  QFOI.updateFleetOwnerEnabledStatus enabled fleetOwnerId'
-  when (enabled && wasDisabled) $ do
-    person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
-    DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
+  fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId' >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId'.getId)
+  let wasDisabled = not fleetOwnerInfo.enabled
+  if enabled
+    then do
+      QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId'
+      SStatus.cascadeFleetEnableToDrivers fleetOwnerId'
+      when wasDisabled $ do
+        person <- QP.findById fleetOwnerId' >>= fromMaybeM (PersonDoesNotExist fleetOwnerId'.getId)
+        DRegistrationV2.sendFleetOnboardingSms fleetOwnerId' person.merchantOperatingCityId
+    else do
+      SStatus.ensureNoActiveRidesUnderFleet fleetOwnerId'
+      QFOI.updateFleetOwnerEnabledStatus False fleetOwnerId'
+      SStatus.cascadeFleetDisableToDrivers fleetOwnerId'
   pure Kernel.Types.APISuccess.Success
 
 putAccountUpdateRole ::

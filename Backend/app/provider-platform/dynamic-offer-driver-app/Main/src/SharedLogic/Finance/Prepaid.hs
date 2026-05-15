@@ -641,7 +641,9 @@ creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate 
                     isVat = False,
                     issuedToTaxNo = invoiceParams.gstinOfParty,
                     issuedByTaxNo = invoiceParams.merchantGstin,
-                    paymentMode = Just "ONLINE" -- subscription paid via Juspay autopay/manual
+                    paymentMode = Just "ONLINE", -- subscription paid via Juspay autopay/manual
+                    periodStart = Nothing,
+                    periodEnd = Nothing
                   }
           invoiceResult <- createInvoice invoiceInput entryIds
           case invoiceResult of

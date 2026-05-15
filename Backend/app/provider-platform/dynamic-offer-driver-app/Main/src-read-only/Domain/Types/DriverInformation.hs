@@ -52,6 +52,7 @@ data DriverInformationE e = DriverInformation
     compAadhaarImagePath :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     dailyCancellationRateBlockingCooldown :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     dailyExtraKms :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    disabledReasonFlag :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DisabledReasonFlag,
     dlNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     docsVerificationStatus :: Kernel.Prelude.Maybe Domain.Types.DocsVerificationStatus.DocsVerificationStatus,
     driverBankAccountDetails :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.DriverBankAccountDetails,
@@ -167,6 +168,7 @@ instance EncryptedItem DriverInformation where
           compAadhaarImagePath = compAadhaarImagePath entity,
           dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
           dailyExtraKms = dailyExtraKms entity,
+          disabledReasonFlag = disabledReasonFlag entity,
           dlNumber = dlNumber_,
           docsVerificationStatus = docsVerificationStatus entity,
           driverBankAccountDetails = driverBankAccountDetails entity,
@@ -274,6 +276,7 @@ instance EncryptedItem DriverInformation where
             compAadhaarImagePath = compAadhaarImagePath entity,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown entity,
             dailyExtraKms = dailyExtraKms entity,
+            disabledReasonFlag = disabledReasonFlag entity,
             dlNumber = dlNumber_,
             docsVerificationStatus = docsVerificationStatus entity,
             driverBankAccountDetails = driverBankAccountDetails entity,
@@ -363,6 +366,8 @@ data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAl
 
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data DisabledReasonFlag = FleetDisabled | AdminDisabled | DriverDisabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data DriverAutoPayStatus
   = PENDING
   | ACTIVE
@@ -405,6 +410,10 @@ data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisabledReasonFlag)
+
+$(mkHttpInstancesForEnum ''DisabledReasonFlag)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 

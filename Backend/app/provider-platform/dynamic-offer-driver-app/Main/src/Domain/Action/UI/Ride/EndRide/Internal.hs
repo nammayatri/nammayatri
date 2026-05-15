@@ -685,7 +685,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
-              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
+              periodStart = Nothing,
+              periodEnd = Nothing
             }
         -- DRIVER / FLEET_OWNER copy of the same Ride invoice. Honors
         -- driverInvoiceLineItemsVatInclusive so the supplier-side invoice
@@ -707,7 +709,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               isVat = isVat,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,
-              paymentMode = Just (if isOnline then "ONLINE" else "CASH")
+              paymentMode = Just (if isOnline then "ONLINE" else "CASH"),
+              periodStart = Nothing,
+              periodEnd = Nothing
             }
     let taxRefOnline = if isVat then walletReferenceVATOnline else walletReferenceGSTOnline
         taxRefCash = if isVat then walletReferenceVATCash else walletReferenceGSTCash
@@ -802,7 +806,9 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
                 isVat = isVat,
                 issuedToTaxNo = Nothing,
                 issuedByTaxNo = Nothing,
-                paymentMode = Nothing -- Commission is deducted from driver earnings; no rider payment involved.
+                paymentMode = Nothing, -- Commission is deducted from driver earnings; no rider payment involved.
+                periodStart = Nothing,
+                periodEnd = Nothing
               }
       commissionResult <- runFinance ctx $ do
         void $ transfer OwnerLiability SellerRevenue commissionAmount commissionRef

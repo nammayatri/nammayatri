@@ -15,6 +15,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Station as DStation
 import ExternalBPP.CallAPI.Types
 import qualified ExternalBPP.Flow as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Common
@@ -39,7 +40,7 @@ discoverySearch merchant bapConfig integratedBPPConfig req = do
     _ -> do
       void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m ()
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Maybe Text -> m ()
 search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig blacklistedServiceTiers blacklistedFareQuoteTypes isSingleMode mbProviderRouteId = do
   Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
   case integratedBPPConfig.providerConfig of

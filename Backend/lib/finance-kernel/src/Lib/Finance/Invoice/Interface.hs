@@ -106,6 +106,9 @@ data InvoiceInput = InvoiceInput
     gstBreakdown :: Maybe GstAmountBreakdown, -- caller-provided CGST/SGST/IGST amounts
     currency :: Currency,
     dueAt :: Maybe UTCTime,
+    -- Period bounds for aggregated invoices; Nothing for per-event invoices.
+    periodStart :: Maybe UTCTime,
+    periodEnd :: Maybe UTCTime,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
     merchantShortId :: Text,

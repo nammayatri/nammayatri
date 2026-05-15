@@ -28,12 +28,14 @@ module Domain.Action.Dashboard.Management.Ride
     postRideWaiverRideCancellationPenalty,
     getRideNearby,
     getRideCallCount,
+    getRideFlowDebug,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
+import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import qualified Domain.Types.CancellationReason as DCReason
@@ -63,6 +65,8 @@ getRideList ::
   Maybe Common.BookingStatus ->
   Maybe Currency ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe (Id Common.Driver) ->
   Maybe Text ->
   Maybe Text ->
@@ -76,9 +80,9 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbCustomerCountryCode mbDriverPhone mbDriverId mbDriverCountryCode mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
-  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) requestorId
+  DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) mbCustomerCountryCode mbDriverCountryCode requestorId
 
 getRideAgentList ::
   ShortId DM.Merchant ->
@@ -196,3 +200,9 @@ postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
   where
     cancellationPenaltyLockKey :: Text -> Text
     cancellationPenaltyLockKey id = "Driver:Cancellation:Penalty:DriverFeeId-" <> id
+
+getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
+getRideFlowDebug merchantShortId opCity mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  RideFlowDebug.getRideFlowDebug merchantShortId merchantOpCityId mbRideId mbBookingId mbSearchRequestId mbRideShortId

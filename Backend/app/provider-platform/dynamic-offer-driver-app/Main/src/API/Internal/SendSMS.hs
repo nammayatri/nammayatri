@@ -21,19 +21,12 @@ where
 import qualified Domain.Action.Internal.SendSMS as Domain
 import Environment
 import EulerHS.Prelude hiding (id)
+import qualified SMS.API as Shared
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
-import Servant
 import Storage.Beam.SystemConfigs ()
 
-type API =
-  ( "sendSMS"
-      :> Capture "merchantShortId" Text
-      :> Capture "city" Context.City
-      :> Header "api-key" Text
-      :> ReqBody '[JSON] Domain.SendSMSReq
-      :> Post '[JSON] Domain.SendSMSRes
-  )
+type API = Shared.API
 
 handler :: FlowServer API
 handler = sendSMS

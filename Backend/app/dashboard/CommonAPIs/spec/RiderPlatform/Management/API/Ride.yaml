@@ -4,6 +4,7 @@ imports:
   Ride: Dashboard.Common
   Sos: Dashboard.Common
   Summary: Dashboard.Common
+  BAPSideDebug: API.Types.ProviderPlatform.Management.Endpoints.Ride
   Distance: Kernel.Types.Distance
   HighPrecMeters : Kernel.Types.Distance
   ShortId: Kernel.Types.Id
@@ -20,7 +21,6 @@ imports:
   GetRoutesResp: Kernel.External.Maps
   MultipleRideSyncResp: Dashboard.Common.Ride
   CancellationReasonCode: Dashboard.Common.Booking
-  Booking: Dashboard.Common
   BookingStatus: Dashboard.RiderPlatform.Ride
   Classification: Kernel.External.Ticket.Interface.Types
 
@@ -131,6 +131,16 @@ apis:
         type: TicketRideListRes
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT RIDES TICKET_RIDE_LIST_API
+
+  - GET: # BAPFlowDebugAPI
+      endpoint: /flowDebug/bap
+      auth: ApiAuthV2
+      query:
+        transactionId: Text
+        bapBookingId: Text
+        bppBookingId: Text
+      response:
+        type: BAPSideDebug
 
 types:
   RideListRes:

@@ -34,6 +34,8 @@ data Invoice = Invoice
     merchantOperatingCityId :: Kernel.Prelude.Text,
     paymentMode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentOrderId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    periodEnd :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    periodStart :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.Invoice.InvoiceStatus,
     subtotal :: Kernel.Types.Common.HighPrecMoney,

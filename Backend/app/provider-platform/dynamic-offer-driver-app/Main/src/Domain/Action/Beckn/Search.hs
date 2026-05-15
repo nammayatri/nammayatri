@@ -385,8 +385,7 @@ handler ValidatedDSearchReq {..} sReq = do
   buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocName specialLocationSupportNumber now possibleTripOption.schedule sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
-    -- | Check if the pickup gate supports queueing and get default driver extra.
-    -- The pickupGateId is now extracted directly from the Area tag.
+
     getSpecialZoneQueueInfo :: SL.Area -> DLoc.Location -> Flow (Bool, Maybe HighPrecMoney, Maybe Text)
     getSpecialZoneQueueInfo SL.Default _ = pure (False, Nothing, Nothing)
     getSpecialZoneQueueInfo area fromLocation = do
@@ -434,8 +433,8 @@ handler ValidatedDSearchReq {..} sReq = do
     processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap (estimates, quotes) mbAreaForVST = do
       mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchantOpCityId configVersionMap
       -- Resolve domain discount using the correct email domain per billing category
-      mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
-      mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain SLT.PERSONAL fp.vehicleServiceTier
+      mbBusinessDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.businessEmailDomain sReq.businessEmailDomain SLT.BUSINESS fp.vehicleServiceTier
+      mbPersonalDiscount <- CQDDC.resolveDomainDiscountPercentage merchantOpCityId sReq.emailDomain sReq.businessEmailDomain SLT.PERSONAL fp.vehicleServiceTier
       let fp' = fp{DFP.businessDiscountPercentage = mbBusinessDiscount <|> fp.businessDiscountPercentage, DFP.personalDiscountPercentage = mbPersonalDiscount <|> fp.personalDiscountPercentage} :: DFP.FullFarePolicy
       case mbVehicleServiceTierItem of
         Just vehicleServiceTierItem -> do

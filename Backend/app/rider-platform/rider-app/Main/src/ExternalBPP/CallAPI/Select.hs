@@ -13,6 +13,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import ExternalBPP.CallAPI.Types
 import qualified ExternalBPP.Flow.Select as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
@@ -23,7 +24,8 @@ import qualified Tools.Metrics as Metrics
 select ::
   ( FRFSConfirmFlow m r c,
     HasField "blackListedJobs" r [Text],
-    HasField "cloudType" r (Maybe CloudType)
+    HasField "cloudType" r (Maybe CloudType),
+    HasMasterCloudForwarder r
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -79,7 +81,7 @@ select merchant merchantOperatingCity bapConfig quote quoteCategories crisSdkRes
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote quoteCategories
       processOnSelect integratedBPPConfig onSelectReq crisSdkResponse isSingleMode mbEnableOffer
   where
-    processOnSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType)) => IntegratedBPPConfig -> DOnSelect -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
+    processOnSelect :: (FRFSConfirmFlow m r c, HasField "blackListedJobs" r [Text], HasField "cloudType" r (Maybe CloudType), HasMasterCloudForwarder r) => IntegratedBPPConfig -> DOnSelect -> Maybe CrisSdkResponse -> Maybe Bool -> Maybe Bool -> m ()
     processOnSelect integratedBPPConfig onSelectReq crisSdkResp mbSingleMode enableOffer = do
       (merchant', quote', _) <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer crisSdkResp integratedBPPConfig

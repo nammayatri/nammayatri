@@ -30,8 +30,8 @@ handler merchantId city = getDriverWalletWalletBalance merchantId city :<|> getD
 getDriverWalletWalletBalance :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletBalanceResponse)
 getDriverWalletWalletBalance a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletBalance a3 a2 a1
 
-getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse)
-getDriverWalletWalletTransactions a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a5 a4 a3 a2 a1
+getDriverWalletWalletTransactions :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe API.Types.UI.DriverWallet.AggregationLevel -> Environment.FlowHandler API.Types.UI.DriverWallet.WalletSummaryResponse)
+getDriverWalletWalletTransactions a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.getDriverWalletWalletTransactions a6 a5 a4 a3 a2 a1
 
 postDriverWalletWalletPayout :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverWalletWalletPayout a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.DriverWallet.postDriverWalletWalletPayout a3 a2 a1

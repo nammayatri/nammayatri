@@ -160,5 +160,7 @@ populateTipAmount rideId tipAmount apiKey = do
           isVat = False, -- regeneration path: tax records unchanged, no need to re-create indirect_tax_transaction
           issuedToTaxNo = Nothing,
           issuedByTaxNo = Nothing,
-          paymentMode = inv.paymentMode -- preserve original; tip regen doesn't change payment method
+          paymentMode = inv.paymentMode, -- preserve original; tip regen doesn't change payment method
+          periodStart = inv.periodStart, -- preserve original (Nothing for non-aggregated invoices)
+          periodEnd = inv.periodEnd
         }

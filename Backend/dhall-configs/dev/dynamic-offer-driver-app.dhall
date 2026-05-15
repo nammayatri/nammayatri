@@ -101,6 +101,17 @@ let rccfgSecondary =
       , connectReadOnly = True
       }
 
+let ltsrcfg =
+      { connectHost = "localhost"
+      , connectPort = 6379
+      , connectAuth = None Text
+      , connectDatabase = +0
+      , connectMaxConnections = +50
+      , connectMaxIdleTime = +30
+      , connectTimeout = None Integer
+      , connectReadOnly = True
+      }
+
 let smsConfig =
       { sessionConfig = common.smsSessionConfig
       , credConfig =
@@ -297,6 +308,7 @@ let AllocatorJobType =
       | CheckPickupZoneArrival
       | ScheduledTDSDistribution
       | IffcoTokioInsurance
+      | AggregatedCommissionInvoiceCreation
       >
 
 let jobInfoMapx =
@@ -360,6 +372,9 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckPickupZoneArrival, mapValue = True }
       , { mapKey = AllocatorJobType.ScheduledTDSDistribution, mapValue = True }
       , { mapKey = AllocatorJobType.IffcoTokioInsurance, mapValue = True }
+      , { mapKey = AllocatorJobType.AggregatedCommissionInvoiceCreation
+        , mapValue = True
+        }
       ]
 
 let LocationTrackingeServiceConfig =
@@ -431,8 +446,8 @@ in  { esqDBCfg
     , hedisCfg = rcfg
     , hedisClusterCfg = rccfg
     , hedisSecondaryClusterCfg = rccfgSecondary
-    , ltsRedisCfg = rcfg
-    , secondaryLTSRedisCfg = Some rcfg
+    , ltsRedisCfg = ltsrcfg
+    , secondaryLTSRedisCfg = Some ltsrcfg
     , hedisNonCriticalCfg = rcfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
@@ -539,4 +554,8 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
+    , masterCloudProxyConfig =
+      { masterUrl = None Text
+      , masterSecret = Some "123"
+      }
     }

@@ -28,6 +28,7 @@ import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..), SFTPConfig (..))
 import Kernel.External.Encryption (EncTools)
+import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -52,6 +53,7 @@ import Lib.Scheduler.Environment (SchedulerConfig (..))
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
 import Tools.Metrics
@@ -138,7 +140,8 @@ data HandlerEnv = HandlerEnv
     isMetroTestTransaction :: Bool,
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic)
 
@@ -152,7 +155,7 @@ buildHandlerEnv HandlerCfg {..} = do
   esqDBReplicaEnv <- prepareEsqDBEnv appCfg.esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   eventRequestCounter <- registerEventRequestCounterMetric
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- (uncurry mkPassettoContextAuto) encTools.service
   let requestId = Nothing
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let sessionId = Nothing
@@ -208,3 +211,6 @@ type Flow = FlowR HandlerEnv
 instance AuthenticatingEntity HandlerEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
+
+instance MCF.HasMasterCloudForwarder HandlerEnv where
+  masterCloudProxyConfig = (.masterCloudProxyConfig)

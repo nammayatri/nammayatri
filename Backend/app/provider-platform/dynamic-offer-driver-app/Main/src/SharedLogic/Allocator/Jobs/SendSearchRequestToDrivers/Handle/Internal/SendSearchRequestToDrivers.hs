@@ -217,7 +217,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       DTR.TransporterConfig ->
       m HighPrecMoney
     getBaseFare searchReq farePolicy vehicleAge tripQuoteDetail transporterConfig = do
-      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage searchReq.merchantOperatingCityId searchTry.emailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
+      mbDomainDiscountPct <- CQDDC.resolveDomainDiscountPercentage searchReq.merchantOperatingCityId searchTry.emailDomain searchTry.businessEmailDomain searchTry.billingCategory farePolicy.vehicleServiceTier
       let farePolicy' =
             farePolicy
               { DFP.businessDiscountPercentage = mbDomainDiscountPct <|> farePolicy.businessDiscountPercentage,

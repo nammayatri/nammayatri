@@ -42,6 +42,7 @@ import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
+import qualified Kernel.External.MasterCloudForward as MCF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -73,6 +74,7 @@ import Lib.Scheduler.Types
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Passetto.Client
+import Passetto.Lib (mkPassettoContextAuto)
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
@@ -200,7 +202,8 @@ data AppCfg = AppCfg
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic, FromDhall)
 
@@ -320,7 +323,8 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
   }
   deriving (Generic)
 
@@ -341,7 +345,7 @@ buildAppEnv cfg@AppCfg {..} = do
   version <- lookupDeploymentVersion
   cloudType <- Just <$> lookupCloudType
   isShuttingDown <- newEmptyTMVarIO
-  passettoContext <- uncurry mkDefPassettoContext encTools.service
+  passettoContext <- uncurry mkPassettoContextAuto encTools.service
   bapMetrics <- registerBAPMetricsContainer metricsSearchDurationTimeout
   coreMetrics <- registerCoreMetricsContainer
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
@@ -418,6 +422,9 @@ data BAPs a = BAPs
 instance AuthenticatingEntity AppEnv where
   getSigningKey = (.signingKey)
   getSignatureExpiry = (.signatureExpiry)
+
+instance MCF.HasMasterCloudForwarder AppEnv where
+  masterCloudProxyConfig appEnv = appEnv.masterCloudProxyConfig
 
 instance Registry Flow where
   registryLookup = Registry.withSubscriberCache performLookup

@@ -5,6 +5,7 @@ module SharedLogic.DriverPool.DriverPoolDataBuilder
 where
 
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as DL
 import qualified Domain.Types.Extra.Plan as DExtraPlan
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as Person
@@ -14,6 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.DriverPool.DriverPoolData
+import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverPlan as QDP
@@ -38,14 +40,23 @@ getOrBuildDriverPoolDataBatch driverIds = do
   found <- getDriverPoolDataBatch driverIds
   let foundIds = map (.driverId) found
       missing = filter (`notElem` foundIds) driverIds
-  if null missing
-    then pure found
-    else do
-      -- Fetch missing from DB and populate Redis
-      logInfo $ "DriverPoolData cold start: building from DB for " <> show (length missing) <> " drivers"
-      builtFromDB <- buildDriverPoolDataFromDB missing
-      mapM_ setDriverPoolData builtFromDB
-      pure $ found <> builtFromDB
+
+  migratedFound <- Migrations.applyMigrations found
+  let migratedEntries = map fst migratedFound
+      toPersist = [e | (e, changed) <- migratedFound, changed]
+  unless (null toPersist) $ do
+    logInfo $ "DriverPoolData migrations: backfilled " <> show (length toPersist) <> " entries"
+    mapM_ setDriverPoolData toPersist
+
+  builtFromDB <-
+    if null missing
+      then pure []
+      else do
+        logInfo $ "DriverPoolData cold start: building from DB for " <> show (length missing) <> " drivers"
+        b <- buildDriverPoolDataFromDB missing
+        mapM_ setDriverPoolData b
+        pure b
+  pure $ migratedEntries <> builtFromDB
 
 -- | Build DriverPoolData from DB tables for drivers that don't have a Redis key yet.
 -- Fetches from: driver_information, vehicle, person, driver_bank_account,
@@ -71,11 +82,12 @@ buildDriverPoolDataFromDB driverIds = do
   driverStats <- QDS.findAllByDriverIds persons
   let dsMap = HashMap.fromList $ map (\ds -> (ds.driverId, ds)) driverStats
 
-  bankAccounts <- QDBA.getDriverBankAccounts personIds
-  let baMap = HashMap.fromList $ map (\ba -> (cast ba.driverId, ba)) bankAccounts
-
   fleetAssocs <- QFDA.findAllByDriverIds personIds
   let faMap = HashMap.fromList $ map (\fa -> (cast fa.driverId, fa)) fleetAssocs
+      fleetOwnerPersonIds = DL.nub $ map (\fa -> Id @Person.Person fa.fleetOwnerId) fleetAssocs
+
+  bankAccounts <- QDBA.getDriverBankAccounts (DL.nub (personIds <> fleetOwnerPersonIds))
+  let baMap = HashMap.fromList $ map (\ba -> (ba.driverId, ba)) bankAccounts
 
   safetyPlusPlans <- mapM (\did -> (did,) <$> QDP.findByDriverIdWithServiceName (cast did) (DExtraPlan.DASHCAM_RENTAL DExtraPlan.CAUTIO)) driverIds
   let spMap = HashMap.fromList safetyPlusPlans
@@ -87,8 +99,10 @@ buildDriverPoolDataFromDB driverIds = do
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
       let ds = HashMap.lookup did dsMap
-      let ba = HashMap.lookup did baMap
       let fa = HashMap.lookup did faMap
+      let effectiveBa = case fa of
+            Just assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) baMap
+            Nothing -> HashMap.lookup (cast did :: Id Person.Person) baMap
       let sp = join $ HashMap.lookup did spMap
       Just
         DriverPoolData
@@ -105,6 +119,7 @@ buildDriverPoolDataFromDB driverIds = do
             totalRides = maybe 0 (.totalRides) ds,
             variant = v.variant,
             selectedServiceTiers = v.selectedServiceTiers,
+            enabled = di.enabled,
             blocked = di.blocked,
             subscribed = di.subscribed,
             canSwitchToRental = di.canSwitchToRental,
@@ -120,7 +135,8 @@ buildDriverPoolDataFromDB driverIds = do
             tripDistanceMaxThreshold = di.tripDistanceMaxThreshold,
             maxPickupRadius = di.maxPickupRadius,
             isPetModeEnabled = di.isPetModeEnabled,
-            chargesEnabled = maybe False (.chargesEnabled) ba,
+            chargesEnabled = maybe False (.chargesEnabled) effectiveBa,
+            bankAccountPaymentMode = (.paymentMode) =<< effectiveBa,
             language = p.language,
             gender = p.gender,
             driverTag = p.driverTag,
@@ -138,5 +154,6 @@ buildDriverPoolDataFromDB driverIds = do
             airConditioned = v.airConditioned,
             luggageCapacity = v.luggageCapacity,
             vehicleRating = v.vehicleRating,
-            registrationNo = v.registrationNo
+            registrationNo = v.registrationNo,
+            schemaVersion = Just Migrations.currentSchemaVersion
           }

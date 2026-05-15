@@ -245,12 +245,13 @@ generateLoginRes ::
   m LoginRes
 generateLoginRes person merchant otp city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
-  (isToken, msg) <- check2FA _merchantAccess merchant otp
+  let twoFaRequired = is2FARequiredForPerson person merchant
+  (isToken, msg) <- check2FA _merchantAccess merchant twoFaRequired otp
   token <-
     if isToken
       then generateToken person.id merchant city
       else pure ""
-  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled msg city merchant.shortId
+  pure $ LoginRes token twoFaRequired _merchantAccess.is2faEnabled msg city merchant.shortId
 
 generateLoginResWithoutOtp ::
   ( BeamFlow m r,
@@ -265,11 +266,16 @@ generateLoginResWithoutOtp ::
 generateLoginResWithoutOtp person merchant city = do
   _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id city >>= fromMaybeM AccessDenied
   token <- generateToken person.id merchant city
-  pure $ LoginRes token merchant.is2faMandatory _merchantAccess.is2faEnabled "Logged in successfully" city merchant.shortId
+  pure $ LoginRes token (is2FARequiredForPerson person merchant) _merchantAccess.is2faEnabled "Logged in successfully" city merchant.shortId
 
-check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Maybe Text -> m (Bool, Text)
-check2FA merchantAccess merchant otp =
-  case (DMerchant.is2faMandatory merchant, DMerchantAccess.is2faEnabled merchantAccess) of
+is2FARequiredForPerson :: DP.Person -> DMerchant.Merchant -> Bool
+is2FARequiredForPerson person merchant =
+  DMerchant.is2faMandatory merchant
+    || maybe False (`elem` DMerchant.twoFactorMandatoryForRoles merchant) person.dashboardAccessType
+
+check2FA :: (EncFlow m r) => DMerchantAccess.MerchantAccess -> DMerchant.Merchant -> Bool -> Maybe Text -> m (Bool, Text)
+check2FA merchantAccess merchant twoFaRequired otp =
+  case (twoFaRequired, DMerchantAccess.is2faEnabled merchantAccess) of
     (True, True) -> handle2FA merchant merchantAccess.secretKey otp
     (True, False) -> pure (False, "2 Factor authentication is not enabled, it is mandatory for this merchant")
     _ -> pure (True, "Logged in successfully")
@@ -368,7 +374,7 @@ initiate2FASetup Initiate2FASetupReq {..} = do
       decryptedMobileNumber <- decrypt person.mobileNumber
       let phoneNumber = person.mobileCountryCode <> decryptedMobileNumber
       reqId <- generateGUID
-      -- Send OTP via BPP internal SMS API (BPP generates the OTP)
+      -- Send OTP via internal SMS API (BPP or BAP generates the OTP)
       let smsReq =
             InternalClient.SendSMSReq
               { phoneNumber = phoneNumber,
@@ -376,8 +382,12 @@ initiate2FASetup Initiate2FASetupReq {..} = do
                 templateVars = Map.empty,
                 isOtp = Just True
               }
-      smsRes <- InternalClient.callBPPInternalSendSMS (getShortId merchantId) city' smsReq
-      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from BPP")
+      let callInternalSendSMS =
+            if DTServer.APP_BACKEND `elem` merchant.serverNames
+              then InternalClient.callBAPInternalSendSMS
+              else InternalClient.callBPPInternalSendSMS
+      smsRes <- callInternalSendSMS (getShortId merchantId) city' smsReq
+      otpCode <- smsRes.otp & fromMaybeM (InternalError "OTP not returned from internal SMS service")
       let pendingData =
             Pending2FASetupData
               { personId = person.id,

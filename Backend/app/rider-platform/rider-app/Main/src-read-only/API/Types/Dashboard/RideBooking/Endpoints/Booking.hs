@@ -3,6 +3,7 @@
 
 module API.Types.Dashboard.RideBooking.Endpoints.Booking where
 
+import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified "this" Domain.Action.UI.Booking
@@ -16,8 +17,16 @@ import qualified EulerHS.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
+import Kernel.Utils.TH
 import Servant
 import Servant.Client
+
+data BookingSearchType
+  = BOOKING_ID
+  | PHONE
+  | OTP
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
 type API = ("booking" :> (PostBookingStatus :<|> GetBookingBooking :<|> GetBookingList :<|> GetBookingAgentL1ListHelper :<|> GetBookingAgentL2List))
 
@@ -29,7 +38,12 @@ type PostBookingStatus =
       :> Post '[JSON] Domain.Types.Booking.API.BookingAPIEntity
   )
 
-type GetBookingBooking = (Capture "bookingCode" Kernel.Prelude.Text :> "booking" :> Get '[JSON] Domain.Types.Booking.API.BookingAPIEntity)
+type GetBookingBooking =
+  ( Capture "searchValue" Kernel.Prelude.Text :> "booking" :> QueryParam "searchType" BookingSearchType :> QueryParam "mobileCountryCode" Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           Domain.Types.Booking.API.BookingAPIEntity
+  )
 
 type GetBookingList =
   ( "list" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> QueryParam "limit" EulerHS.Prelude.Integer
@@ -101,7 +115,7 @@ type GetBookingAgentL2List =
 
 data BookingAPIs = BookingAPIs
   { postBookingStatus :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
-    getBookingBooking :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
+    getBookingBooking :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe BookingSearchType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
     getBookingList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes,
     getBookingAgentL1List :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes,
     getBookingAgentL2List :: Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
@@ -120,5 +134,7 @@ data BookingUserActionType
   | GET_BOOKING_AGENT_L2_LIST
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+$(mkHttpInstancesForEnum ''BookingSearchType)
 
 $(Data.Singletons.TH.genSingletons [''BookingUserActionType])

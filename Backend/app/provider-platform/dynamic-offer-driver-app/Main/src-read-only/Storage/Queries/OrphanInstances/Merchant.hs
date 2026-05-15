@@ -21,7 +21,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
     pure $
       Just
         Domain.Types.Merchant.Merchant
-          { cipherText = cipherText,
+          { businessId = businessId,
+            cipherText = cipherText,
             city = city,
             country = country,
             createdAt = createdAt,
@@ -63,7 +64,8 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
 instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
   toTType' (Domain.Types.Merchant.Merchant {..}) = do
     Beam.MerchantT
-      { Beam.cipherText = cipherText,
+      { Beam.businessId = businessId,
+        Beam.cipherText = cipherText,
         Beam.city = city,
         Beam.country = country,
         Beam.createdAt = createdAt,

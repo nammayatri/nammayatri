@@ -5,6 +5,7 @@ module API.Types.Dashboard.RideBooking where
 
 import qualified API.Types.Dashboard.RideBooking.Booking
 import qualified API.Types.Dashboard.RideBooking.Cancel
+import qualified API.Types.Dashboard.RideBooking.ChangeServiceTier
 import qualified API.Types.Dashboard.RideBooking.Confirm
 import qualified API.Types.Dashboard.RideBooking.Frontend
 import qualified API.Types.Dashboard.RideBooking.Maps
@@ -25,6 +26,7 @@ import qualified Text.Show
 data RideBookingUserActionType
   = BOOKING API.Types.Dashboard.RideBooking.Booking.BookingUserActionType
   | CANCEL API.Types.Dashboard.RideBooking.Cancel.CancelUserActionType
+  | CHANGE_SERVICE_TIER API.Types.Dashboard.RideBooking.ChangeServiceTier.ChangeServiceTierUserActionType
   | CONFIRM API.Types.Dashboard.RideBooking.Confirm.ConfirmUserActionType
   | FRONTEND API.Types.Dashboard.RideBooking.Frontend.FrontendUserActionType
   | MAPS API.Types.Dashboard.RideBooking.Maps.MapsUserActionType
@@ -42,6 +44,7 @@ instance Text.Show.Show RideBookingUserActionType where
   show = \case
     BOOKING e -> "BOOKING/" <> show e
     CANCEL e -> "CANCEL/" <> show e
+    CHANGE_SERVICE_TIER e -> "CHANGE_SERVICE_TIER/" <> show e
     CONFIRM e -> "CONFIRM/" <> show e
     FRONTEND e -> "FRONTEND/" <> show e
     MAPS e -> "MAPS/" <> show e
@@ -64,6 +67,15 @@ instance Text.Read.Read RideBookingUserActionType where
                  )
                  | r1 <- stripPrefix "CANCEL/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( CHANGE_SERVICE_TIER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "CHANGE_SERVICE_TIER/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( CONFIRM v1,
                    r2

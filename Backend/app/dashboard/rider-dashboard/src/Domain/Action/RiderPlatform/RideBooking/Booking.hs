@@ -8,6 +8,7 @@ module Domain.Action.RiderPlatform.RideBooking.Booking
 where
 
 import qualified API.Client.RiderPlatform.RideBooking
+import qualified "rider-app" API.Types.Dashboard.RideBooking.Booking as DBT
 import Data.Time
 import qualified "rider-app" Domain.Action.UI.Booking
 import qualified "rider-app" Domain.Types.Booking
@@ -37,10 +38,10 @@ getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyA
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingList) customerId limit offset onlyActive status
 
-getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.Flow Domain.Types.Booking.API.BookingAPIEntity)
-getBookingBooking merchantShortId opCity bookingOtp = do
+getBookingBooking :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe DBT.BookingSearchType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Domain.Types.Booking.API.BookingAPIEntity)
+getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountryCode = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) bookingOtp
+  API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.bookingDSL.getBookingBooking) searchValue mbSearchType mbMobileCountryCode
 
 getBookingAgentL1List :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (EulerHS.Prelude.Integer) -> Kernel.Prelude.Maybe (Domain.Types.BookingStatus.BookingStatus) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe UTCTime -> Kernel.Prelude.Maybe UTCTime -> Environment.Flow Domain.Action.UI.Booking.BookingListRes)
 getBookingAgentL1List merchantShortId opCity apiTokenInfo limit offset status mbCustomerPhoneNo fromDate toDate = do

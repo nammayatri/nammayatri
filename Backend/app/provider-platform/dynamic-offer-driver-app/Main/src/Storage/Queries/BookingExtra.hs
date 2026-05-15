@@ -9,6 +9,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types as DVST
 import Domain.Types.Booking
 import Domain.Types.DriverQuote as DDQ
+import qualified Domain.Types.FareParameters as DFP
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -164,6 +165,22 @@ updateMultipleById estimatedFare maxEstimatedDistance estimatedDistance farePara
       Se.Set BeamB.updatedAt now
     ]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateVehicleServiceTierAndFare :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> DVST.ServiceTierType -> Id DFP.FareParameters -> HighPrecMoney -> Maybe Text -> Text -> Maybe Double -> Maybe Int -> Maybe Bool -> m ()
+updateVehicleServiceTierAndFare bookingId newServiceTier fareParamsId newEstimatedFare mbTierName newQuoteId mbAirConditioned mbSeatingCapacity mbIsAC = do
+  now <- getCurrentTime
+  let baseSets =
+        [ Se.Set BeamB.vehicleVariant newServiceTier,
+          Se.Set BeamB.fareParametersId (getId fareParamsId),
+          Se.Set BeamB.estimatedFare newEstimatedFare,
+          Se.Set BeamB.vehicleServiceTierName mbTierName,
+          Se.Set BeamB.quoteId newQuoteId,
+          Se.Set BeamB.updatedAt now
+        ]
+      acSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
+      seatSets = maybe [] (\s -> [Se.Set BeamB.vehicleServiceTierSeatingCapacity (Just s)]) mbSeatingCapacity
+      isACSets = maybe [] (\ac -> [Se.Set BeamB.isAirConditioned (Just ac)]) mbIsAC
+  updateOneWithKV (baseSets <> acSets <> seatSets <> isACSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 updateSpecialZoneOtpCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> Text -> m ()
 updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do

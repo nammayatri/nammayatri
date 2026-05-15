@@ -42,6 +42,7 @@ data Vehicle = Vehicle
     vehicleImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    vehicleRatingRemark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

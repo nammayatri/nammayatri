@@ -62,7 +62,7 @@ let ltsRedis =
       { connectHost = "localhost"
       , connectPort = 6379
       , connectAuth = None Text
-      , connectDatabase = +0
+      , connectDatabase = +1
       , connectMaxConnections = +50
       , connectMaxIdleTime = +30
       , connectTimeout = None Integer
@@ -521,4 +521,8 @@ in  { esqDBCfg
       }
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , masterCloudProxyConfig =
+      { masterUrl = Some "http://localhost:8116"
+      , masterSecret = Some "123"
+      }
     }

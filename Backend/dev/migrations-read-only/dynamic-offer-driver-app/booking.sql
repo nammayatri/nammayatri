@@ -240,3 +240,8 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN finance_invoice_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN discount_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN business_email_domain text ;

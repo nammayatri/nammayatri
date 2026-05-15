@@ -148,6 +148,7 @@ buildMerchant req = do
         isStrongNameCheckRequired = Just True,
         singleActiveSessionOnly = Just False,
         trackLoginLogoutForRoles = [],
+        twoFactorMandatoryForRoles = [],
         twoFaOtpTTLInSecs = Nothing,
         twoFaMaxOtpVerifyAttempts = Nothing,
         totpStepSize = Nothing,

@@ -64,6 +64,7 @@ library
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
+      API.Internal.SendSMS
       API.Internal.Sos
       API.Internal.StopEvents
       API.Internal.UpdateCancellationFeeStatus
@@ -82,6 +83,7 @@ library
       API.UI.Cancel
       API.UI.CancellationReason
       API.UI.CancelSearch
+      API.UI.ChangeServiceTier
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
@@ -203,6 +205,7 @@ library
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Booking
       Domain.Action.Dashboard.RideBooking.Cancel
+      Domain.Action.Dashboard.RideBooking.ChangeServiceTier
       Domain.Action.Dashboard.RideBooking.Confirm
       Domain.Action.Dashboard.RideBooking.Frontend
       Domain.Action.Dashboard.RideBooking.Maps
@@ -213,6 +216,7 @@ library
       Domain.Action.Dashboard.RideBooking.Registration
       Domain.Action.Dashboard.RideBooking.Search
       Domain.Action.Dashboard.RideBooking.Select
+      Domain.Action.Dashboard.RideFlowDebug
       Domain.Action.Dashboard.Route
       Domain.Action.Dashboard.Sos
       Domain.Action.Dashboard.SosMedia
@@ -228,6 +232,7 @@ library
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.SendSMS
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.UpdateCancellationFeeStatus
@@ -246,6 +251,7 @@ library
       Domain.Action.UI.CancellationReason
       Domain.Action.UI.CancellationReasons
       Domain.Action.UI.CancelLogic
+      Domain.Action.UI.ChangeServiceTier
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
@@ -800,6 +806,7 @@ library
       API.Action.Dashboard.RideBooking
       API.Action.Dashboard.RideBooking.Booking
       API.Action.Dashboard.RideBooking.Cancel
+      API.Action.Dashboard.RideBooking.ChangeServiceTier
       API.Action.Dashboard.RideBooking.Confirm
       API.Action.Dashboard.RideBooking.Frontend
       API.Action.Dashboard.RideBooking.Maps
@@ -884,9 +891,11 @@ library
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel
+      API.Types.Dashboard.RideBooking.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Booking
       API.Types.Dashboard.RideBooking.Endpoints.Cancel
+      API.Types.Dashboard.RideBooking.Endpoints.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Endpoints.Confirm
       API.Types.Dashboard.RideBooking.Endpoints.Frontend
       API.Types.Dashboard.RideBooking.Endpoints.Maps
@@ -1605,6 +1614,7 @@ library
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , payment
     , persistent
     , postgresql-simple
@@ -1747,6 +1757,7 @@ executable rider-app-exe
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , process
@@ -1885,6 +1896,7 @@ test-suite rider-app-test
     , mtl
     , openapi3
     , passetto-client
+    , passetto-lib
     , persistent
     , postgresql-simple
     , process

@@ -105,6 +105,9 @@ library
       Safety.Storage.Queries.PersonDefaultEmergencyNumberExtra
       Safety.Storage.Queries.SafetySettingsExtra
       Safety.Tools.Error
+      SMS.API
+      SMS.Domain
+      SMS.Types
       Toll.SharedLogic.TollsDetector
       Toll.Storage.BeamFlow
       Toll.Storage.CachedQueries.Toll

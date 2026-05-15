@@ -1249,3 +1249,32 @@ instance IsHTTPError RefundRequestError where
     RefundRequestAlreadyExists _ -> E400
 
 instance IsAPIError RefundRequestError
+
+data ChangeServiceTierError
+  = ChangeServiceTierNotSupported
+  | ChangeServiceTierInvalidStatus Text
+  | ChangeServiceTierSameTier
+  | ChangeServiceTierOriginalQuoteNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''ChangeServiceTierError
+
+instance IsBaseError ChangeServiceTierError where
+  toMessage ChangeServiceTierNotSupported = Just "Change service tier is currently supported only for RideOTP bookings."
+  toMessage (ChangeServiceTierInvalidStatus status) = Just $ "Cannot change service tier in booking status: " <> status
+  toMessage ChangeServiceTierSameTier = Just "New service tier is the same as the current one."
+  toMessage (ChangeServiceTierOriginalQuoteNotFound bookingId) = Just $ "Original quote not found for booking: " <> bookingId
+
+instance IsHTTPError ChangeServiceTierError where
+  toErrorCode = \case
+    ChangeServiceTierNotSupported -> "CHANGE_SERVICE_TIER_NOT_SUPPORTED"
+    ChangeServiceTierInvalidStatus _ -> "CHANGE_SERVICE_TIER_INVALID_STATUS"
+    ChangeServiceTierSameTier -> "CHANGE_SERVICE_TIER_SAME_TIER"
+    ChangeServiceTierOriginalQuoteNotFound _ -> "CHANGE_SERVICE_TIER_ORIGINAL_QUOTE_NOT_FOUND"
+  toHttpCode = \case
+    ChangeServiceTierNotSupported -> E400
+    ChangeServiceTierInvalidStatus _ -> E400
+    ChangeServiceTierSameTier -> E400
+    ChangeServiceTierOriginalQuoteNotFound _ -> E400
+
+instance IsAPIError ChangeServiceTierError

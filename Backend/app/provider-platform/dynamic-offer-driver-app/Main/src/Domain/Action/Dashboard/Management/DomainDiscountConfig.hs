@@ -43,7 +43,8 @@ postDomainDiscountConfigCreate merchantShortId opCity req = do
             merchantOperatingCityId = merchantOpCityId,
             updatedAt = now,
             vehicleServiceTier = req.vehicleServiceTier,
-            merchantId = Just (Id.cast merchant.id)
+            merchantId = Just (Id.cast merchant.id),
+            extendToPersonal = req.extendToPersonal
           }
   QDomainDiscount.create domainDiscountConfig
   CQDomainDiscount.clearCache merchantOpCityId req.domain billingCat req.vehicleServiceTier

@@ -12,6 +12,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import qualified ExternalBPP.Flow as Flow
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -46,7 +47,8 @@ confirm ::
     HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
     HasField "isMetroTestTransaction" r Bool,
     HasField "blackListedJobs" r [Text],
-    HasField "cloudType" r (Maybe CloudType)
+    HasField "cloudType" r (Maybe CloudType),
+    HasMasterCloudForwarder r
   ) =>
   Merchant ->
   MerchantOperatingCity ->
@@ -123,7 +125,8 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
         HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
         HasField "isMetroTestTransaction" r Bool,
         HasField "blackListedJobs" r [Text],
-        HasField "cloudType" r (Maybe CloudType)
+        HasField "cloudType" r (Maybe CloudType),
+        HasMasterCloudForwarder r
       ) =>
       DOrder ->
       m ()
