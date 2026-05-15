@@ -40,9 +40,9 @@ import qualified Domain.Types.Station as DStation
 import Environment
 import EulerHS.Prelude (safeHead)
 import Kernel.External.Encryption
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
 import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
