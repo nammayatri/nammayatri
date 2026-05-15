@@ -487,6 +487,8 @@ postWalletTopup (mbPersonId, merchantId, mocId) = doWalletTopup mbPersonId merch
     doWalletTopup mbP mId mocId0 r =
       do
         driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbP
+        driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+        when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
         when (r.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
         Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
           (createOrderResp, orderId) <- SPayment.createWalletTopupOrder (driverId, mId, mocId0) r.amount
@@ -572,6 +574,8 @@ recordAirportCashRecharge ::
   Text -> -- referenceId for idempotency (e.g. booth receipt id)
   m ()
 recordAirportCashRecharge (driverId, merchantId, mocId) amount referenceId = do
+  driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+  when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   when (amount <= 0) $ throwError $ InvalidRequest "Cash recharge amount must be greater than zero"
   existing <- getEntriesByReference walletReferenceAirportCashRecharge referenceId
   when (null existing) $ do
