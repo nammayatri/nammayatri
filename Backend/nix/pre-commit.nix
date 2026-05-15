@@ -53,6 +53,7 @@
       enable = true;
       name = "ddl-migrations-no-dml";
       description = "Reject DML (INSERT/UPDATE/DELETE) in Backend/dev/ddl-migrations/ — that directory must hold pure DDL only. Move DML to dev/feature-migrations/ or dev/local-testing-data/.";
+      language = "system";
       types = [ "file" ];
       pass_filenames = false;
       files = "Backend/dev/ddl-migrations/.*\\.sql$";
@@ -103,9 +104,9 @@
       enable = true;
       name = "stale-access-matrix-migrations";
       description = "Reject stale access_matrix INSERT migrations: added SQL whose api is absent from .hs files, or removed YAML userActionType whose SQL migration was not cleaned up.";
-      types_or = [ "file" "deleted" ];
+      language = "system";
       pass_filenames = false;
-      files = "Backend/(dev/migrations-read-only/.*\\.sql|.*/spec/.*\\.yaml)$";
+      files = "Backend/";
       entry = lib.getExe (pkgs.writeShellApplication {
         name = "stale-access-matrix-migrations";
         text = ''
@@ -167,6 +168,7 @@
       enable = true;
       name = "yaml-constraint-tags";
       description = "Reject unquoted YAML tags (e.g. !SecondaryKey) in Storage spec constraints — they are silently dropped by the NammaDSL parser";
+      language = "system";
       types = [ "file" ];
       pass_filenames = true;
       files = "Backend/.*/spec/Storage/.*\\.yaml$";
