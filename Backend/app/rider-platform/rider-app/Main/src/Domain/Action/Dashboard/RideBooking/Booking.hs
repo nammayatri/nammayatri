@@ -59,7 +59,7 @@ getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountr
     findByDisplayOrRawId code = do
       mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId code
       let bookingId = fromMaybe (Kernel.Types.Id.Id code) mbBookingIdFromDisplay
-      SQB.findById bookingId >>= fromMaybeM (BookingNotFound code)
+      SQB.findByIdOrCode bookingId >>= fromMaybeM (BookingNotFound code)
 
     findByPhone m countryCode phone = do
       phoneHash <- getDbHash phone

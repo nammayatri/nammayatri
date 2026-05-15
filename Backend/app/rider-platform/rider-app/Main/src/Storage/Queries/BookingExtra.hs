@@ -194,6 +194,14 @@ findLatestSelfAndPartyBookingByRiderId (Id riderId) =
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
 findById (Id bookingId) = findOneWithKV [Se.Is BeamB.id $ Se.Eq bookingId]
 
+findByIdOrCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> m (Maybe Booking)
+findByIdOrCode (Id bookingId) = findOneWithKV
+  [ Se.Or
+      [ Se.Is BeamB.id $ Se.Eq bookingId,
+        Se.Is BeamB.displayBookingId $ Se.Eq (Just bookingId)
+      ]
+  ]
+
 findByBPPBookingId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BPPBooking -> m (Maybe Booking)
 findByBPPBookingId (Id bppRbId) = findOneWithKV [Se.Is BeamB.bppBookingId $ Se.Eq $ Just bppRbId]
 
