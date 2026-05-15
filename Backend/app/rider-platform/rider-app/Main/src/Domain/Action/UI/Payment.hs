@@ -156,7 +156,8 @@ createOrder (personId, merchantId) rideId = do
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -216,7 +217,8 @@ createRideBookingPaymentOrder booking = do
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -871,7 +873,8 @@ postWalletRecharge (personId, merchantId) req = do
             splitSettlementDetails = Nothing,
             basket = Nothing,
             paymentRules = mbPaymentRules,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

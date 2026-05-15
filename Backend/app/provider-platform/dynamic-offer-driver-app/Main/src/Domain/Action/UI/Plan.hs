@@ -1060,7 +1060,8 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             splitSettlementDetails = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)
