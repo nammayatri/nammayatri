@@ -13,6 +13,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2 as Common
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement as Common
 import Data.List.Extra (notNull)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Internal.DriverMode as DriverMode
@@ -153,7 +154,7 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   when (null fleetOperatorAssocList) $ throwError (InvalidRequest $ "Fleet id " <> fleetOwnerId <> " is not associated with operator")
 
   fleetOwner <- B.runInReplica $ QP.findById (Id fleetOwnerId :: Id DP.Person) >>= fromMaybeM (FleetOwnerNotFound fleetOwnerId)
-  unless (fleetOwner.role == DP.FLEET_OWNER) $
+  unless (DCommon.checkFleetOwnerRole fleetOwner.role) $
     throwError (InvalidRequest "Invalid fleet owner")
 
   let activeAssociations = filter (\assoc -> assoc.isActive) fleetOperatorAssocList
@@ -205,9 +206,9 @@ postFleetManagementFleetLinkSendOtpUtil merchantShortId opCity requestorId req s
   mobileNumberHash <- getDbHash req.mobileNumber
   let enabled = Just False
   fleetOwner <- do
-    mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+    mbPerson <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
     mbFleetOwner <- forM mbPerson $ \person -> case person.role of
-      DP.FLEET_OWNER -> pure person
+      role | DCommon.checkFleetOwnerRole role -> pure person
       _ -> throwError (InvalidRequest "Person should be fleet owner")
 
     case mbFleetOwner of
@@ -279,7 +280,7 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   fleetOwner <- B.runInReplica $ QP.findById (cast req.fleetOwnerId) >>= fromMaybeM (FleetOwnerNotFound (getId req.fleetOwnerId))
-  unless (fleetOwner.role == DP.FLEET_OWNER) $
+  unless (DCommon.checkFleetOwnerRole fleetOwner.role) $
     throwError (InvalidRequest "Invalid fleet owner")
 
   checkAssocOperator <- B.runInReplica $ QFOA.findByFleetOwnerIdAndOperatorId fleetOwner.id operator.id True

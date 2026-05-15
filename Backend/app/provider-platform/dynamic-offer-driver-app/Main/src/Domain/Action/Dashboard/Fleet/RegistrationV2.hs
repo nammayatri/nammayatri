@@ -409,7 +409,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
   smsCfg <- asks (.smsCfg)
   let merchantOpCityId = merchantOpCity.id
   mobileNumberHash <- getDbHash mobileNumber
-  mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+  mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
   personId <- case mbPerson of
     Just person -> pure person.id
     Nothing -> do

@@ -1233,9 +1233,14 @@ isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
   case (requestedPersonDetails.role, personDetails.role) of
     (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
     (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.FLEET_BUSINESS) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
     (DP.OPERATOR, DP.OPERATOR) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
     (DP.FLEET_OWNER, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_OWNER, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_BUSINESS, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_BUSINESS, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
     (DP.ADMIN, _) -> return True
     _ -> return False
 
@@ -1282,6 +1287,7 @@ getDriverEarnings merchantShortId opCity from to earningType dId requestorId = d
       case (requestedPersonDetails.role, driverDetails.role) of
         (DP.OPERATOR, DP.DRIVER) -> checkDriverOperatorAssociation driverDetails.id requestedPersonDetails.id
         (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
+        (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id driverDetails.id
         _ -> return False
 
 ---------------------------------------------------------------------
