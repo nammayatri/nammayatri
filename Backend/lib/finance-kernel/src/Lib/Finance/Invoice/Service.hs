@@ -130,6 +130,7 @@ createInvoice input entryIds = do
             createdAt = now,
             updatedAt = now,
             irn = Nothing,
+            signedQRCode = Nothing,
             paymentMode = input.paymentMode
           }
 

@@ -39,6 +39,7 @@ data InvoiceT f = InvoiceT
     periodEnd :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     periodStart :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
     referenceId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    signedQRCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     status :: (B.C f Lib.Finance.Domain.Types.Invoice.InvoiceStatus),
     subtotal :: (B.C f Kernel.Types.Common.HighPrecMoney),
     supplierAddress :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
