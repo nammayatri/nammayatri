@@ -333,7 +333,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   splitSettlementDetails,
                   basket = Nothing,
                   paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId

@@ -884,7 +884,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             splitSettlementDetails = splitSettlementDetails,
             basket = basket,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
