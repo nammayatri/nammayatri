@@ -20,14 +20,26 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data CancellationDueBreakup = CancellationDueBreakup {rideId :: Kernel.Types.Id.Id Dashboard.Common.Ride, dueAmount :: Kernel.Types.Common.PriceAPIEntity, dueStatus :: CancellationDuesPaymentStatus}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CancellationDuesDetailsRes = CancellationDuesDetailsRes
   { cancellationDues :: Kernel.Types.Common.PriceAPIEntity,
     cancellationDuesPaid :: Kernel.Types.Common.HighPrecMoney,
     noOfTimesCancellationDuesPaid :: Kernel.Prelude.Int,
     waivedOffAmount :: Kernel.Types.Common.HighPrecMoney,
-    noOfTimesWaiveOffUsed :: Kernel.Prelude.Int
+    noOfTimesWaiveOffUsed :: Kernel.Prelude.Int,
+    duesBreakup :: Kernel.Prelude.Maybe [CancellationDueBreakup]
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CancellationDuesPaymentStatus
+  = PENDING
+  | PAID
+  | WAIVED
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq

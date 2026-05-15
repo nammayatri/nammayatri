@@ -28,6 +28,7 @@ module Domain.Action.Dashboard.Customer
 where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as Common
+import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Customer as CommonC
 import qualified Dashboard.Common as Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -207,15 +208,26 @@ getCustomerCancellationDuesDetails ::
   Flow Common.CancellationDuesDetailsRes
 getCustomerCancellationDuesDetails merchantShortId _ personId = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  res <- DCancel.getCancellationDuesDetails (cast personId, merchant.id)
+  res <- DCancel.getCancellationDuesDetails (cast personId, merchant.id) True
   return $
     Common.CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,
         cancellationDuesPaid = res.cancellationDuesPaid,
         noOfTimesCancellationDuesPaid = res.noOfTimesCancellationDuesPaid,
         waivedOffAmount = res.waivedOffAmount,
-        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed
+        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed,
+        duesBreakup = fmap (map mkCommonBreakup) res.duesBreakup
       }
+  where
+    mkCommonBreakup b =
+      Common.CancellationDueBreakup
+        { rideId = cast b.rideId,
+          dueAmount = b.dueAmount,
+          dueStatus = toCommonStatus b.dueStatus
+        }
+    toCommonStatus CallBPPInternal.PENDING = CommonC.PENDING
+    toCommonStatus CallBPPInternal.PAID = CommonC.PAID
+    toCommonStatus CallBPPInternal.WAIVED = CommonC.WAIVED
 
 postCustomerUpdateSafetyCenterBlocking ::
   ShortId DM.Merchant ->

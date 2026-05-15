@@ -24,6 +24,7 @@ import Domain.Types.Common
 import qualified Domain.Types.FeedbackForm as DFF
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
+import qualified Domain.Types.Ride as DRide
 import EulerHS.Types (EulerClient, client)
 import IssueManagement.Common (IssueReportType)
 import Kernel.External.Encryption (DbHash)
@@ -185,9 +186,23 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
     cancellationDuesPaid :: HighPrecMoney,
     noOfTimesCancellationDuesPaid :: Int,
     waivedOffAmount :: HighPrecMoney,
-    noOfTimesWaiveOffUsed :: Int
+    noOfTimesWaiveOffUsed :: Int,
+    duesBreakup :: Maybe [CancellationDueBreakup]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+-- rideId here is the BPP-side rideId — the only id stored in the BPP
+-- cancellation_dues_details table. Consumers on the BAP must translate to
+-- Id DRide.Ride before exposing it externally.
+data CancellationDueBreakup = CancellationDueBreakup
+  { rideId :: Id DRide.BPPRide,
+    dueAmount :: PriceAPIEntity,
+    dueStatus :: CancellationDuesPaymentStatus
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data CancellationDuesPaymentStatus = PENDING | PAID | WAIVED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type GetCancellationDuesDetailsAPI =
   "internal"
@@ -195,10 +210,11 @@ type GetCancellationDuesDetailsAPI =
     :> Capture "merchantCity" Context.City
     :> "getCancellationDuesDetails"
     :> Header "token" Text
+    :> QueryParam "includeBreakup" Bool
     :> ReqBody '[JSON] CancellationDuesReq
     :> Get '[JSON] CancellationDuesDetailsRes
 
-getCancellationDuesDetailsClient :: Text -> Context.City -> Maybe Text -> CancellationDuesReq -> EulerClient CancellationDuesDetailsRes
+getCancellationDuesDetailsClient :: Text -> Context.City -> Maybe Text -> Maybe Bool -> CancellationDuesReq -> EulerClient CancellationDuesDetailsRes
 getCancellationDuesDetailsClient = client getCancellationDuesDetailsApi
 
 getCancellationDuesDetailsApi :: Proxy GetCancellationDuesDetailsAPI
@@ -215,10 +231,11 @@ getCancellationDuesDetails ::
   Text ->
   DbHash ->
   Context.City ->
+  Bool ->
   m CancellationDuesDetailsRes
-getCancellationDuesDetails apiKey internalUrl merchantId mobileHash merchantCity = do
+getCancellationDuesDetails apiKey internalUrl merchantId mobileHash merchantCity includeBreakup = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (CancellationDuesReq mobileHash)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getCancellationDuesDetailsClient merchantId merchantCity (Just apiKey) (Just includeBreakup) (CancellationDuesReq mobileHash)) "GetCancellationDuesDetails" getCancellationDuesDetailsApi
 
 data GetFavouriteDriverInfoReq = GetFavouriteDriverInfoReq
   { customerMobileNumber :: Text,
