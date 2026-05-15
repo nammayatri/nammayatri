@@ -34,6 +34,9 @@ library
       AddVehicleUnitTests
       DriverOperationHubUnitTests
       CreateRequestUnitTests
+      CancellationDuesUnitTests
+      StclMembershipUnitTests
+      FleetRoleUnitTests
   hs-source-dirs:
       src
   default-extensions:
