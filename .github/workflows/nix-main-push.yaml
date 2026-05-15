@@ -59,13 +59,13 @@ jobs:
 
           nix develop .#backend --command bash -c "
             cd Backend
-            cabal install all --installdir=$STAGING/bin --overwrite-policy=always
+            cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
 
           for f in $STAGING/bin/*; do
             ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
           done
-          
+
           cp -r Backend/dhall-configs $STAGING/opt/app/dhall-configs
           cp -r Backend/swagger $STAGING/opt/app/swagger
 
@@ -172,7 +172,7 @@ jobs:
 
           nix develop .#backend --command bash -c "
             cd Backend
-            cabal install all --installdir=$STAGING/bin --overwrite-policy=always
+            cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
 
           for f in $STAGING/bin/*; do
