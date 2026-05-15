@@ -7,10 +7,18 @@ let
   commitHash = builtins.substring 0 6 (self.rev or "dev");
   tagPrefix = builtins.getEnv "DOCKER_TAG_PREFIX";
   imageTag = if tagPrefix != "" then "${tagPrefix}${commitHash}" else commitHash;
+  localBinariesPath = builtins.getEnv "LOCAL_BINARIES_PATH";
+  localBuild = localBinariesPath != "";
 in
 {
   config = {
-    perSystem = { self', pkgs, lib, ... }: {
+    perSystem = { self', pkgs, lib, ... }:
+      let
+        nammayatriBinaries = if localBuild
+          then builtins.path { path = /. + localBinariesPath; name = "nammayatri-local"; }
+          else self'.packages.nammayatri;
+      in
+      {
       packages = lib.optionalAttrs pkgs.stdenv.isLinux {
         dockerImage = (pkgs.dockerTools.buildImage {
           name = imageName;
@@ -22,7 +30,7 @@ in
               awscli
               coreutils
               bash
-              self'.packages.nammayatri
+              nammayatriBinaries
               gdal
               postgis
               curl
@@ -45,7 +53,7 @@ in
               # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
               "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ];
-            Cmd = [ "${self'.packages.nammayatri}/bin/rider-app-exe" ];
+            Cmd = [ "${nammayatriBinaries}/bin/rider-app-exe" ];
           };
 
           # Test that the docker image contains contents we expected for

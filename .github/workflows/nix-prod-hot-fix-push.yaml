@@ -87,29 +87,34 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
-      - name: Build all flake outputs
+      - name: Build (incremental cabal)
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
           set -o pipefail
-          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+          nix develop .#backend --command bash -c "
+            cd Backend
+            cabal build all 2>&1
+          " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee build-log.txt
 
-      - name: Push to Cache
+      - name: Collect binaries to staging
         if: steps.check-conditions.outputs.should_build == 'true'
-        continue-on-error: true
-        env:
-          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          PATHS=$(jq -r '.[].outPaths[]' ./result)
-          echo "Paths to push: $(echo "$PATHS" | wc -l)"
+          STAGING=/home/khuzema/ny-staging
+          mkdir -p $STAGING/bin $STAGING/opt/app
 
-          # Try attic, fall back to cachix on any failure
-          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
-            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
-            echo "✅ Pushed to attic" || \
-            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
+          nix develop .#backend --command bash -c "
+            cd Backend
+            cabal install all --installdir=$STAGING/bin --overwrite-policy=always
+          "
+
+          for f in $STAGING/bin/*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
+          done
+
+          cp -r Backend/dhall-configs $STAGING/opt/app/dhall-configs
+          cp -r Backend/swagger $STAGING/opt/app/swagger
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'
@@ -125,10 +130,11 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true' && (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         env:
           DOCKER_REGISTRY: ghcr.io
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage
-    
-          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
           gunzip -c ./result > image.tar || cp ./result image.tar
