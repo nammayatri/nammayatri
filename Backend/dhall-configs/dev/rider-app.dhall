@@ -517,4 +517,6 @@ in  { esqDBCfg
       }
     , blackListedJobs = [] : List Text
     , emailServiceConfig
+    , bapHostRedirectMap =
+      [] : List { mapKey : Text, mapValue : Optional Text }
     }

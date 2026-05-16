@@ -101,7 +101,7 @@ handler :: FlowServer API
 handler =
   mainServer
     :<|> IGM.handler
-    :<|> const FRFS.handler
+    :<|> FRFS.handlerM
     :<|> Beckn.handler -- TODO : Revert after 2.x release
     :<|> const Beckn.handler -- TODO : Revert after 2.x release
     :<|> writeSwaggerHTMLFlow

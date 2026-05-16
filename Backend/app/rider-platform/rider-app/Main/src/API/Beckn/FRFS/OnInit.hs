@@ -14,6 +14,7 @@
 
 module API.Beckn.FRFS.OnInit where
 
+import qualified API.Beckn.FRFS.Forwarding as Forwarding
 import qualified Beckn.ACL.FRFS.OnInit as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
@@ -23,11 +24,13 @@ import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -37,14 +40,21 @@ import TransactionLogs.PushLogs
 
 type API = Spec.OnInitAPIBS
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onInit
 
-onInit :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
-onInit _ reqBS = withFlowHandlerAPI $ do
+onInit :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onInit mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
   req <- case decodeOnInitReq reqBS of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
+  mbForwarded <- Forwarding.maybeForwardOnInit mbMerchantId authResult req reqBS
+  case mbForwarded of
+    Just ack -> pure ack
+    Nothing -> processOnInit req
+
+processOnInit :: Spec.OnInitReq -> Flow Spec.AckResponse
+processOnInit req = do
   transaction_id <- req.onInitReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnInit request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do

@@ -40,6 +40,7 @@ import Domain.Types.FeedbackForm
 import qualified Domain.Types.Merchant as DM
 import Email.Types (EmailServiceConfig)
 import EulerHS.Prelude (newEmptyTMVarIO, (+||), (||+))
+import Kernel.External.BapHostRedirect (BapHostRedirectMap)
 import Kernel.External.Encryption (EncTools)
 import Kernel.External.Infobip.Types (InfoBIPConfig)
 import Kernel.External.Slack.Types (SlackConfig)
@@ -200,7 +201,8 @@ data AppCfg = AppCfg
     corporatePartnerApiToken :: Text,
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    bapHostRedirectMap :: BapHostRedirectMap
   }
   deriving (Generic, FromDhall)
 
@@ -320,7 +322,8 @@ data AppEnv = AppEnv
     noSignatureSubscribers :: [Text],
     blackListedJobs :: [Text],
     cloudType :: Maybe CloudType,
-    sftpConfig :: SFTPConfig
+    sftpConfig :: SFTPConfig,
+    bapHostRedirectMap :: BapHostRedirectMap
   }
   deriving (Generic)
 
