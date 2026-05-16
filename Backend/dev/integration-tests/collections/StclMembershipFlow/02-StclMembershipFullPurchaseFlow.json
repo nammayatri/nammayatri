@@ -1,342 +1,455 @@
 {
-	"info": {
-		"name": "STCL Membership - Full Purchase + Cap Guard (5 shares in one go)",
-		"description": "Driver buys all 5 shares in a single submitApplication call, completes Juspay payment via mock CHARGED, verifies membership shows 5 shares in 1 allotment. Edits KYC via updateApplication and asserts via GET /membership. Then asserts that a subsequent buyAdditionalShares (+1) is rejected because the per-driver cap (5) would be exceeded.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"if (!pm.collectionVariables.get('_test_driver_number')) {",
-					"  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
-					"  pm.collectionVariables.set('_test_driver_number', dNum);",
-					"  console.log('Test driver:', dNum);",
-					"}"
-				]
-			}
-		}
-	],
-	"item": [
-		{
-			"name": "Driver Auth (sendOTP)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.environment.set('driver_authId', d.authId);",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Content-Type", "value": "application/json" }],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
-				},
-				"url": {
-					"raw": "{{baseURL_namma_P}}/auth",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["auth"]
-				}
-			}
-		},
-		{
-			"name": "Driver Auth Verify",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.environment.set('driver_token', d.token);",
-							"pm.environment.set('driver_id', d.person.id);",
-							"console.log('Driver ID:', d.person.id);",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('token present', function () { pm.expect(d.token).to.be.a('string'); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Content-Type", "value": "application/json" }],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"stcl-test-device\"\n}"
-				},
-				"url": {
-					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["auth", "{{driver_authId}}", "verify"]
-				}
-			}
-		},
-		{
-			"name": "Submit Application (5 shares - full cap)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Submit order:', JSON.stringify(d));",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"var orderId = d.id || d.orderId || d.order_id;",
-							"var orderShortId = d.order_id || d.orderShortId || orderId;",
-							"pm.test('Order IDs present', function () {",
-							"    pm.expect(orderId).to.be.a('string');",
-							"    pm.expect(orderShortId).to.be.a('string');",
-							"});",
-							"pm.environment.set('stcl_order_id', orderId);",
-							"pm.environment.set('stcl_order_short_id', orderShortId);"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{ "key": "Content-Type", "value": "application/json" },
-					{ "key": "token", "value": "{{driver_token}}" }
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"firstName\": \"Full\",\n  \"lastName\": \"Driver\",\n  \"memberCategory\": \"Driver\",\n  \"numberOfShares\": 5,\n  \"dateOfBirth\": \"1988-07-22\",\n  \"aadharNumber\": \"999999999955\",\n  \"panNumber\": \"FULLD1234F\",\n  \"mobileNumber\": \"{{_test_driver_number}}\",\n  \"emailId\": \"stcl-full-test@example.com\",\n  \"fatherMotherName\": \"Full Father\",\n  \"address\": {\n    \"streetAddress1\": \"50 Outer Ring Road\",\n    \"streetAddress2\": \"Floor 3\",\n    \"city\": \"Bangalore\",\n    \"stateName\": \"Karnataka\",\n    \"postalCode\": \"560100\"\n  },\n  \"addressProofType\": \"AADHAAR\",\n  \"bankDetails\": {\n    \"bankName\": \"HDFC Bank\",\n    \"branch\": \"Whitefield\",\n    \"accountNumber\": \"99999999999999\",\n    \"ifscCode\": \"HDFC0009999\"\n  },\n  \"vehicleInfo\": {\n    \"vehicleType\": \"ThreeWheeler\",\n    \"fuelTypes\": [\"CNG\"]\n  },\n  \"nomineeInfo\": {\n    \"nomineeName\": \"Full Nominee\"\n  },\n  \"declaration\": {\n    \"place\": \"Bangalore\",\n    \"date\": \"2026-01-01\",\n    \"signature\": \"Full Driver\",\n    \"termsAccepted\": true\n  },\n  \"amount\": 500\n}"
-				},
-				"url": {
-					"raw": "{{baseURL_namma_P}}/submitApplication",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["submitApplication"]
-				}
-			}
-		},
-		{
-			"name": "Override Juspay Status (CHARGED, full 5)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Mock override accepted', function () {",
-							"    pm.response.to.have.status(200);",
-							"    pm.expect(d.ok).to.be.true;",
-							"});"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [{ "key": "Content-Type", "value": "application/json" }],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 500.0,\n    \"effective_amount\": 500.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
-				},
-				"url": {
-					"raw": "{{mockServerUrl}}/mock/status",
-					"host": ["{{mockServerUrl}}"],
-					"path": ["mock", "status"]
-				}
-			}
-		},
-		{
-			"name": "Get Payment Status v2 (flips PENDING -> SUBMITTED)",
-			"event": [
-				{
-					"listen": "prerequest",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"const start = Date.now();",
-							"while (Date.now() - start < 1500) { /* settle override */ }"
-						]
-					}
-				},
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Payment is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [{ "key": "token", "value": "{{driver_token}}" }],
-				"url": {
-					"raw": "{{baseURL_namma_P}}/payment/status/v2/{{stcl_order_short_id}}",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["payment", "status", "v2", "{{stcl_order_short_id}}"]
-				}
-			}
-		},
-		{
-			"name": "Get Membership (after full purchase)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"console.log('Membership:', JSON.stringify(d));",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Status is SUBMITTED', function () { pm.expect(d.status).to.eql('SUBMITTED'); });",
-							"pm.test('Total numberOfShares is 5', function () { pm.expect(d.numberOfShares).to.eql(5); });",
-							"pm.test('One shareAllotment row', function () { pm.expect(d.shareAllotments.length).to.eql(1); });",
-							"pm.test('Single allotment carries all 5 shares', function () { pm.expect(d.shareAllotments[0].numberOfShares).to.eql(5); });",
-							"pm.test('Nominee is Full Nominee', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Full Nominee'); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [{ "key": "token", "value": "{{driver_token}}" }],
-				"url": {
-					"raw": "{{baseURL_namma_P}}/membership",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["membership"]
-				}
-			}
-		},
-		{
-			"name": "Update Application (change nominee + address)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "PUT",
-				"header": [
-					{ "key": "Content-Type", "value": "application/json" },
-					{ "key": "token", "value": "{{driver_token}}" }
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"nomineeName\": \"Updated Full Nominee\",\n  \"address\": {\n    \"streetAddress1\": \"99 Updated Road\",\n    \"streetAddress2\": \"Floor 9\",\n    \"city\": \"Bangalore\",\n    \"stateName\": \"Karnataka\",\n    \"postalCode\": \"560200\"\n  }\n}"
-				},
-				"url": {
-					"raw": "{{baseURL_namma_P}}/updateApplication",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["updateApplication"]
-				}
-			}
-		},
-		{
-			"name": "Get Membership (after update)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Nominee updated', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Updated Full Nominee'); });",
-							"pm.test('Address street updated', function () { pm.expect(d.address.streetAddress1).to.eql('99 Updated Road'); });",
-							"pm.test('Address postalCode updated', function () { pm.expect(d.address.postalCode).to.eql('560200'); });",
-							"pm.test('Still 5 shares (update does not change quantity)', function () { pm.expect(d.numberOfShares).to.eql(5); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [{ "key": "token", "value": "{{driver_token}}" }],
-				"url": {
-					"raw": "{{baseURL_namma_P}}/membership",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["membership"]
-				}
-			}
-		},
-		{
-			"name": "Buy Additional Shares (+1) — must be rejected by cap guard",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"console.log('Cap-exceeded response:', pm.response.code, pm.response.text());",
-							"pm.test('Request rejected (non-2xx)', function () {",
-							"    pm.expect(pm.response.code).to.be.above(399);",
-							"});",
-							"pm.test('Error mentions cap', function () {",
-							"    pm.expect(pm.response.text().toLowerCase()).to.include('cannot exceed');",
-							"});"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "POST",
-				"header": [
-					{ "key": "Content-Type", "value": "application/json" },
-					{ "key": "token", "value": "{{driver_token}}" }
-				],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n  \"numberOfShares\": 1,\n  \"amount\": 100\n}"
-				},
-				"url": {
-					"raw": "{{baseURL_namma_P}}/buyAdditionalShares",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["buyAdditionalShares"]
-				}
-			}
-		},
-		{
-			"name": "Get Membership (cap guard did not change state)",
-			"event": [
-				{
-					"listen": "test",
-					"script": {
-						"type": "text/javascript",
-						"exec": [
-							"var d = pm.response.json();",
-							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Still 5 shares (rejected top-up made no change)', function () { pm.expect(d.numberOfShares).to.eql(5); });",
-							"pm.test('Still one allotment', function () { pm.expect(d.shareAllotments.length).to.eql(1); });"
-						]
-					}
-				}
-			],
-			"request": {
-				"method": "GET",
-				"header": [{ "key": "token", "value": "{{driver_token}}" }],
-				"url": {
-					"raw": "{{baseURL_namma_P}}/membership",
-					"host": ["{{baseURL_namma_P}}"],
-					"path": ["membership"]
-				}
-			}
-		}
-	]
+  "info": {
+    "name": "STCL Membership - Full Purchase + Cap Guard (5 shares in one go)",
+    "description": "Driver buys all 5 shares in a single submitApplication call, completes Juspay payment via mock CHARGED, verifies membership shows 5 shares in 1 allotment. Edits KYC via updateApplication and asserts via GET /membership. Then asserts that a subsequent buyAdditionalShares (+1) is rejected because the per-driver cap (5) would be exceeded.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "// Set envType=Local in Local env files; omit / set to 'Master' otherwise.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "  var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  pm.collectionVariables.set('_test_driver_number', dNum);",
+          "  console.log('Test driver:', dNum);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth (sendOTP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Auth Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"stcl-test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Submit Application (5 shares - full cap)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Submit order:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var orderId = d.id || d.orderId || d.order_id;",
+              "var orderShortId = d.order_id || d.orderShortId || orderId;",
+              "pm.test('Order IDs present', function () {",
+              "    pm.expect(orderId).to.be.a('string');",
+              "    pm.expect(orderShortId).to.be.a('string');",
+              "});",
+              "pm.environment.set('stcl_order_id', orderId);",
+              "pm.environment.set('stcl_order_short_id', orderShortId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverId\": \"{{driver_id}}\",\n  \"firstName\": \"Full\",\n  \"lastName\": \"Driver\",\n  \"memberCategory\": \"Driver\",\n  \"numberOfShares\": 5,\n  \"dateOfBirth\": \"1988-07-22\",\n  \"aadharNumber\": \"999999999955\",\n  \"panNumber\": \"FULLD1234F\",\n  \"mobileNumber\": \"{{_test_driver_number}}\",\n  \"emailId\": \"stcl-full-test@example.com\",\n  \"fatherMotherName\": \"Full Father\",\n  \"address\": {\n    \"streetAddress1\": \"50 Outer Ring Road\",\n    \"streetAddress2\": \"Floor 3\",\n    \"city\": \"Bangalore\",\n    \"stateName\": \"Karnataka\",\n    \"postalCode\": \"560100\"\n  },\n  \"addressProofType\": \"AADHAAR\",\n  \"bankDetails\": {\n    \"bankName\": \"HDFC Bank\",\n    \"branch\": \"Whitefield\",\n    \"accountNumber\": \"99999999999999\",\n    \"ifscCode\": \"HDFC0009999\"\n  },\n  \"vehicleInfo\": {\n    \"vehicleType\": \"ThreeWheeler\",\n    \"fuelTypes\": [\"CNG\"]\n  },\n  \"nomineeInfo\": {\n    \"nomineeName\": \"Full Nominee\"\n  },\n  \"declaration\": {\n    \"place\": \"Bangalore\",\n    \"date\": \"2026-01-01\",\n    \"signature\": \"Full Driver\",\n    \"termsAccepted\": true\n  },\n  \"amount\": 500\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/submitApplication",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "submitApplication"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Override Juspay Status (CHARGED, full 5)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Mock override accepted', function () {",
+              "    pm.response.to.have.status(200);",
+              "    pm.expect(d.ok).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 500.0,\n    \"effective_amount\": 500.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/status",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Payment Status v2 (flips PENDING -> SUBMITTED)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now();",
+              "while (Date.now() - start < 1500) { /* settle override */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Payment is CHARGED', function () { pm.expect(d.status).to.eql('CHARGED'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/payment/status/v2/{{stcl_order_short_id}}",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "payment",
+            "status",
+            "v2",
+            "{{stcl_order_short_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Membership (after full purchase)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Membership:', JSON.stringify(d));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Status is SUBMITTED', function () { pm.expect(d.status).to.eql('SUBMITTED'); });",
+              "pm.test('Total numberOfShares is 5', function () { pm.expect(d.numberOfShares).to.eql(5); });",
+              "pm.test('One shareAllotment row', function () { pm.expect(d.shareAllotments.length).to.eql(1); });",
+              "pm.test('Single allotment carries all 5 shares', function () { pm.expect(d.shareAllotments[0].numberOfShares).to.eql(5); });",
+              "pm.test('Nominee is Full Nominee', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Full Nominee'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/membership",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "membership"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Application (change nominee + address)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nomineeName\": \"Updated Full Nominee\",\n  \"address\": {\n    \"streetAddress1\": \"99 Updated Road\",\n    \"streetAddress2\": \"Floor 9\",\n    \"city\": \"Bangalore\",\n    \"stateName\": \"Karnataka\",\n    \"postalCode\": \"560200\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/updateApplication",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "updateApplication"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Membership (after update)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Nominee updated', function () { pm.expect(d.nomineeInfo.nomineeName).to.eql('Updated Full Nominee'); });",
+              "pm.test('Address street updated', function () { pm.expect(d.address.streetAddress1).to.eql('99 Updated Road'); });",
+              "pm.test('Address postalCode updated', function () { pm.expect(d.address.postalCode).to.eql('560200'); });",
+              "pm.test('Still 5 shares (update does not change quantity)', function () { pm.expect(d.numberOfShares).to.eql(5); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/membership",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "membership"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Buy Additional Shares (+1) \u2014 must be rejected by cap guard",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "console.log('Cap-exceeded response:', pm.response.code, pm.response.text());",
+              "pm.test('Request rejected (non-2xx)', function () {",
+              "    pm.expect(pm.response.code).to.be.above(399);",
+              "});",
+              "pm.test('Error mentions cap', function () {",
+              "    pm.expect(pm.response.text().toLowerCase()).to.include('cannot exceed');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"numberOfShares\": 1,\n  \"amount\": 100\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/buyAdditionalShares",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "buyAdditionalShares"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Membership (cap guard did not change state)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Still 5 shares (rejected top-up made no change)', function () { pm.expect(d.numberOfShares).to.eql(5); });",
+              "pm.test('Still one allotment', function () { pm.expect(d.shareAllotments.length).to.eql(1); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/membership",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "membership"
+          ]
+        }
+      }
+    }
+  ]
 }

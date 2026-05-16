@@ -98,7 +98,7 @@ enable_all_drivers() {
 list_suites() {
     echo "=== Ride Booking Flow ==="
     for env_name in "${RIDE_ENVS[@]}"; do
-        local env_file="$RIDE_DIR/Local_${env_name}.postman_environment.json"
+        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
         if [ -f "$env_file" ]; then
             echo "  $env_name:"
             for f in "$RIDE_DIR"/*.json; do
@@ -113,7 +113,7 @@ list_suites() {
         echo ""
         echo "=== $label Ticket Booking Flow ==="
         [ -d "$dir" ] || continue
-        for env_file in "$dir"/Local_*.postman_environment.json; do
+        for env_file in "$dir"/Local/Local_*.postman_environment.json; do
             [ -f "$env_file" ] || continue
             local env_name
             env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
@@ -262,7 +262,7 @@ run_rides() {
             continue
         fi
 
-        local env_file="$RIDE_DIR/Local_${env_name}.postman_environment.json"
+        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
         if [ ! -f "$env_file" ]; then
             echo "WARNING: Environment not found: $env_file, skipping $env_name"
             continue
@@ -337,7 +337,7 @@ run_frfs() {
     local failed_suites=""
 
     # Iterate over environment files
-    for env_file in "$flow_dir"/Local_*.postman_environment.json; do
+    for env_file in "$flow_dir"/Local/Local_*.postman_environment.json; do
         [ -f "$env_file" ] || continue
         local env_name
         env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
@@ -398,7 +398,7 @@ run_scheduler() {
     local filter_suite="${2:-}"
     local passed=0 failed=0 failed_suites=""
 
-    for env_file in "$SCHEDULER_DIR"/Local_*.postman_environment.json; do
+    for env_file in "$SCHEDULER_DIR"/Local/Local_*.postman_environment.json; do
         [ -f "$env_file" ] || continue
         local env_name
         env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')

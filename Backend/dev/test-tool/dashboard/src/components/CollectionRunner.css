@@ -25,15 +25,26 @@
   letter-spacing: 0.5px;
 }
 .cr-selector select {
-  background: #0d1117;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #0d1117;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238b949e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1.5l5 5 5-5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 10px 6px;
   border: 1px solid #30363d;
   color: #c9d1d9;
-  padding: 5px 8px;
+  padding: 5px 28px 5px 8px;
   border-radius: 4px;
   font-size: 12px;
   font-family: inherit;
   min-width: 160px;
+  cursor: pointer;
 }
+.cr-selector select:hover { border-color: #484f58; }
+.cr-selector select:focus { outline: none; border-color: #1f6feb; }
+.cr-selector select:disabled { opacity: 0.6; cursor: not-allowed; }
 .cr-actions {
   display: flex;
   gap: 6px;

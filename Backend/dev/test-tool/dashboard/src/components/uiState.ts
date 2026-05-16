@@ -13,7 +13,7 @@
 // The bag is a flat string-keyed dict; values can be any JSON. Don't put
 // secrets in here — the server has no auth.
 
-const PROXY_BASE = 'http://localhost:7082';
+import { PROXY_BASE } from '../config';
 
 export type UiState = Record<string, unknown>;
 

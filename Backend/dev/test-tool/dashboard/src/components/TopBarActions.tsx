@@ -4,8 +4,8 @@ import { showAlert, showConfirm } from './Dialogs';
 import { NativeAppLauncher } from './NativeAppLauncher';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-
-const PROXY_BASE = 'http://localhost:7082';
+import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE } from '../config';
+import { Terminal as IntegratedTerminal } from './Terminal';
 
 interface SyncStatus {
   running: boolean;
@@ -40,6 +40,7 @@ export const TopBarActions: React.FC = () => {
   const [syncFrom, setSyncFrom] = useState<string>('prod');
   const [syncRunning, setSyncRunning] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
+  const [forceFetch, setForceFetch] = useState(false);
 
   // Status modal
   const [statusOpen, setStatusOpen] = useState(false);
@@ -52,6 +53,9 @@ export const TopBarActions: React.FC = () => {
   const [ccRef, setCcRef] = useState<string>('');
   const [ccIsStarting, setCcIsStarting] = useState(false);
   const ccLogBoxRef = useRef<HTMLPreElement | null>(null);
+
+  // Integrated terminal modal state.
+  const [terminalOpen, setTerminalOpen] = useState(false);
 
   // Floating-panel collapse state. The bar used to live inline in the
   // top bar and crowded out the mode tabs at narrow widths; now it
@@ -88,7 +92,7 @@ export const TopBarActions: React.FC = () => {
     (async () => {
       const [ui, envsRes] = await Promise.all([
         loadUiState(),
-        fetch(`${PROXY_BASE}/api/config-sync/envs`).then(r => r.ok ? r.json() : { envs: [] }).catch(() => ({ envs: [] })),
+        fetch(`${CONTEXT_API}/api/config-sync/envs`).then(r => r.ok ? r.json() : { envs: [] }).catch(() => ({ envs: [] })),
       ]);
       if (cancelled) return;
       if (Array.isArray(envsRes.envs)) setSyncEnvs(envsRes.envs);
@@ -107,7 +111,7 @@ export const TopBarActions: React.FC = () => {
   // On mount, fetch current status to detect a sync that was already running
   // (e.g. the auto-sync triggered on test-context-api startup).
   useEffect(() => {
-    fetch(`${PROXY_BASE}/api/config-sync/status`)
+    fetch(`${CONTEXT_API}/api/config-sync/status`)
       .then(r => r.json())
       .then((d: SyncStatus) => {
         setStatusData(d);
@@ -121,7 +125,7 @@ export const TopBarActions: React.FC = () => {
     if (!syncRunning && !statusOpen) return;
     const t = setInterval(async () => {
       try {
-        const r = await fetch(`${PROXY_BASE}/api/config-sync/status`);
+        const r = await fetch(`${CONTEXT_API}/api/config-sync/status`);
         const d: SyncStatus = await r.json();
         setStatusData(d);
         if (!d.running && syncRunning) {
@@ -144,7 +148,7 @@ export const TopBarActions: React.FC = () => {
 
   // Initial fetch of control-center status to recover state across page reloads.
   useEffect(() => {
-    fetch(`${PROXY_BASE}/api/control-center/status`)
+    fetch(`${LOCAL_API_BASE}/api/control-center/status`)
       .then(r => r.json())
       .then((d: ControlCenterStatus) => setCcData(d))
       .catch(() => { });
@@ -156,7 +160,7 @@ export const TopBarActions: React.FC = () => {
     if (!isPolling && !ccModalOpen) return;
     const t = setInterval(async () => {
       try {
-        const r = await fetch(`${PROXY_BASE}/api/control-center/status`);
+        const r = await fetch(`${LOCAL_API_BASE}/api/control-center/status`);
         const d: ControlCenterStatus = await r.json();
         setCcData(d);
       } catch { /* keep polling */ }
@@ -182,17 +186,17 @@ export const TopBarActions: React.FC = () => {
   const triggerConfigSync = async () => {
     if (syncRunning) { setStatusOpen(true); return; }
     const ok = await showConfirm(
-      `Sync data from "${syncFrom}" → local?\n\nRider, driver, and mock-registry services will be restarted.`,
+      `Sync data from "${syncFrom}" → local?${forceFetch ? '\n\nForce-fetch is ON — local patched data will be discarded and re-downloaded from S3.' : ''}\n\nRider, driver, and mock-registry services will be restarted.`,
       { title: 'Sync Data', confirmLabel: `Sync from ${syncFrom}`, variant: 'info' },
     );
     if (!ok) return;
     setSyncRunning(true);
     setSyncStatus('running');
     try {
-      const r = await fetch(`${PROXY_BASE}/api/config-sync/import`, {
+      const r = await fetch(`${CONTEXT_API}/api/config-sync/import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: syncFrom }),
+        body: JSON.stringify({ from: syncFrom, forceFetch }),
       });
       if (!r.ok) {
         setSyncRunning(false);
@@ -217,7 +221,7 @@ export const TopBarActions: React.FC = () => {
     if (ccIsStarting) return;
     setCcIsStarting(true);
     try {
-      const r = await fetch(`${PROXY_BASE}/api/control-center/start`, {
+      const r = await fetch(`${LOCAL_API_BASE}/api/control-center/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ref: ccRef.trim() || undefined }),
@@ -248,7 +252,7 @@ export const TopBarActions: React.FC = () => {
     );
     if (!ok) return;
     try {
-      await fetch(`${PROXY_BASE}/api/control-center/stop`, { method: 'POST' });
+      await fetch(`${LOCAL_API_BASE}/api/control-center/stop`, { method: 'POST' });
       setCcData(prev => prev ? { ...prev, running: false, ready: false } : prev);
     } catch (e) {
       showAlert(String(e), { title: 'Could not stop Control Center', variant: 'danger' });
@@ -264,7 +268,7 @@ export const TopBarActions: React.FC = () => {
     if (!ok) return;
     setFlushState('flushing');
     try {
-      const res = await fetch(`${PROXY_BASE}/api/redis/flushall`, { method: 'POST' });
+      const res = await fetch(`${CONTEXT_API}/api/redis/flushall`, { method: 'POST' });
       const data = await res.json();
       setFlushState(data.result === 'ok' ? 'done' : 'error');
     } catch {
@@ -341,6 +345,13 @@ export const TopBarActions: React.FC = () => {
                   title="Flush all Redis keys"
                 >
                   {flushState === 'flushing' ? '🗑 Flushing…' : flushState === 'done' ? '🗑 Flushed' : flushState === 'error' ? '🗑 Error' : '🗑 Flush Redis'}
+                </button>
+                <button
+                  className="tb-btn"
+                  onClick={() => setTerminalOpen(true)}
+                  title="Open an integrated PTY-backed shell running on the test-context-api host"
+                >
+                  💻 Terminal
                 </button>
               </div>
             </div>
@@ -509,6 +520,21 @@ export const TopBarActions: React.FC = () => {
                     {syncEnvs.map(env => (<option key={env} value={env}>{env}</option>))}
                   </select>
                 </div>
+                <div className="tb-modal-form-field">
+                  <label htmlFor="sync-force-fetch" style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                    <input
+                      id="sync-force-fetch"
+                      type="checkbox"
+                      checked={forceFetch}
+                      onChange={e => setForceFetch(e.target.checked)}
+                      disabled={syncRunning}
+                    />
+                    Force fetch
+                  </label>
+                  <div className="tb-modal-form-hint">
+                    Re-download from S3 even if a patched copy already exists locally.
+                  </div>
+                </div>
                 <div className="tb-modal-form-actions">
                   <button
                     className="tb-btn tb-modal-form-primary"
@@ -541,6 +567,22 @@ export const TopBarActions: React.FC = () => {
               >
                 📋 Copy
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {terminalOpen && (
+        <div className="tb-modal-backdrop" onClick={() => setTerminalOpen(false)}>
+          <div className="tb-modal tb-modal-terminal" onClick={e => e.stopPropagation()}>
+            <div className="tb-modal-header">
+              <span className="tb-modal-title">
+                💻 Terminal
+                <span className="tb-pill tb-pill-run">PTY · bash</span>
+              </span>
+              <button className="tb-modal-close" onClick={() => setTerminalOpen(false)} title="Close terminal (kills the shell)">✕</button>
+            </div>
+            <div className="tb-modal-body">
+              <IntegratedTerminal onClose={() => setTerminalOpen(false)} />
             </div>
           </div>
         </div>

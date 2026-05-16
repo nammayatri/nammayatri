@@ -3,6 +3,7 @@ import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
 import { FinanceViewer } from './components/FinanceViewer';
+import { RemoteStackPanel } from './components/RemoteStackPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import { DialogHost } from './components/Dialogs';
@@ -11,6 +12,7 @@ import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from 
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
+import { PROXY_BASE } from './config';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -542,7 +544,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance' | 'remote'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -611,7 +613,7 @@ function App() {
       return;
     }
     setPaymentMethodsLoading(true);
-    axios.get('http://localhost:7082/proxy/rider/payment/methods', {
+    axios.get(`${PROXY_BASE}/proxy/rider/payment/methods`, {
       headers: { token: config.token, 'Content-Type': 'application/json' },
       timeout: 5000,
     }).then(resp => {
@@ -975,6 +977,9 @@ function App() {
           <button className={`mode-tab ${appMode === 'finance' ? 'active' : ''}`} onClick={() => setAppMode('finance')}>
             Finance Visualization
           </button>
+          <button className={`mode-tab ${appMode === 'remote' ? 'active' : ''}`} onClick={() => setAppMode('remote')}>
+            Remote Stack
+          </button>
           <span className="mode-tabs-spacer" />
           <TopBarActions />
         </div>
@@ -984,6 +989,8 @@ function App() {
               <CollectionRunner onLog={log} />
             ) : appMode === 'finance' ? (
               <FinanceViewer />
+            ) : appMode === 'remote' ? (
+              <RemoteStackPanel />
             ) : (
             <>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}

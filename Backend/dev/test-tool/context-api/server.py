@@ -31,13 +31,115 @@ import os
 import subprocess
 import threading
 import time
+import base64
+import uuid
+import errno
+import fcntl
+import struct
+import select as _select
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import re
 import signal
 import urllib.request
 import urllib.error
+
+try:
+    import pty as _pty
+    import termios as _termios
+except Exception:
+    _pty = None
+    _termios = None
+
+
+_terminal_sessions: dict = {}
+_terminal_lock = threading.Lock()
+
+
+def _terminal_spawn(cols: int, rows: int, cwd: str, shell: str):
+    """Fork a PTY-backed child running `shell`. Returns (session_id, pid, fd)."""
+    if _pty is None or _termios is None:
+        raise RuntimeError("pty/termios not available on this platform")
+    pid, fd = _pty.fork()
+    if pid == 0:
+        try:
+            try:
+                os.setsid()
+            except Exception:
+                pass
+            try:
+                fcntl.ioctl(0, _termios.TIOCSWINSZ,
+                            struct.pack("HHHH", rows, cols, 0, 0))
+            except Exception:
+                pass
+            try:
+                os.chdir(cwd)
+            except Exception:
+                pass
+            env = os.environ.copy()
+            env["TERM"] = "xterm-256color"
+            env.setdefault("LANG", env.get("LANG", "en_US.UTF-8"))
+            os.execvpe(shell, [shell, "-l"], env)
+        except Exception as e:
+            sys.stderr.write(f"pty exec failed: {e}\n")
+            os._exit(127)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+    sid = uuid.uuid4().hex
+    with _terminal_lock:
+        _terminal_sessions[sid] = {
+            "fd": fd,
+            "pid": pid,
+            "cwd": cwd,
+            "shell": shell,
+            "lock": threading.Lock(),
+            "closed": False,
+        }
+    return sid, pid, fd
+
+
+def _terminal_close(sid: str):
+    with _terminal_lock:
+        sess = _terminal_sessions.pop(sid, None)
+    if not sess:
+        return None
+    sess["closed"] = True
+    fd = sess["fd"]
+    pid = sess["pid"]
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGTERM)
+    except Exception:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            pass
+    deadline = time.time() + 1.0
+    while time.time() < deadline:
+        try:
+            wpid, _st = os.waitpid(pid, os.WNOHANG)
+            if wpid == pid:
+                break
+        except ChildProcessError:
+            break
+        except Exception:
+            break
+        time.sleep(0.05)
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except Exception:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+    try:
+        os.close(fd)
+    except Exception:
+        pass
+    try:
+        os.waitpid(pid, os.WNOHANG)
+    except Exception:
+        pass
+    return sess
 
 # Flush print() to the process-compose log file in real time (not at exit).
 sys.stdout.reconfigure(line_buffering=True)
@@ -175,9 +277,12 @@ def _restart_haskell_services():
     time.sleep(3)
 
 
-def run_config_sync(from_env: str, restart_services: bool = True):
+def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False):
     """Run `config_transfer.py import --from <env> --to local --fetch --fetch-url <URL>`.
-    Streams stdout into _config_sync_state['log']. Restarts haskell services on success."""
+    Streams stdout into _config_sync_state['log']. Restarts haskell services on success.
+
+    force_fetch=True passes `--force-fetch` so the importer ignores any
+    previously-patched local bundle and re-downloads from S3."""
     if from_env not in CONFIG_SYNC_BUNDLE_URLS:
         msg = f"unknown env '{from_env}'. Available: {list(CONFIG_SYNC_BUNDLE_URLS)}"
         with _config_sync_lock:
@@ -230,11 +335,14 @@ def run_config_sync(from_env: str, restart_services: bool = True):
             return p.returncode
 
         # Step 1: prod import (no feature-migrations yet).
-        rc = _run("import", [
+        import_args = [
             "import", "--from", from_env, "--to", "local",
             "--fetch", "--fetch-url", url,
             "--skip-feature-migrations",
-        ])
+        ]
+        if force_fetch:
+            import_args.append("--force-fetch")
+        rc = _run("import", import_args)
         with _config_sync_lock:
             _config_sync_state["exit_code"] = rc
         if rc != 0:
@@ -272,12 +380,16 @@ def run_config_sync(from_env: str, restart_services: bool = True):
             _config_sync_state["finished_at"] = time.time()
 
 
-def trigger_config_sync(from_env: str):
+def trigger_config_sync(from_env: str, force_fetch: bool = False):
     """Kick off a config-sync in a daemon thread. Returns True if accepted, False if one is already running."""
     with _config_sync_lock:
         if _config_sync_state["running"]:
             return False
-    threading.Thread(target=run_config_sync, args=(from_env,), daemon=True).start()
+    threading.Thread(
+        target=run_config_sync,
+        kwargs={"from_env": from_env, "force_fetch": force_fetch},
+        daemon=True,
+    ).start()
     return True
 
 
@@ -1462,6 +1574,33 @@ def get_admin_credentials():
 
 # ── Collection Scanner ──
 
+ENV_TYPES = ("Local", "Master")
+
+
+def _read_env_file(f, env_type):
+    try:
+        env_data = json.loads(f.read_text())
+        vals = {v["key"]: v["value"] for v in env_data.get(
+            "values", []) if v.get("enabled", True)}
+        env_name = f.name.replace("Local_", "").replace("Master_", "").replace(
+            ".postman_environment.json", "")
+        return {
+            "filename": f.name,
+            "envType": env_type,
+            "envName": env_name,
+            "name": env_data.get("name", env_name),
+            "city": vals.get("city", ""),
+            "state": vals.get("state", ""),
+            "merchant": vals.get("dashboard_merchant_id", ""),
+            "bapShortId": vals.get("bap_short_id", ""),
+            "origin": {"lat": float(vals.get("origin_lat", 0)), "lon": float(vals.get("origin_lon", 0))},
+            "destination": {"lat": float(vals.get("dest_lat", 0)), "lon": float(vals.get("dest_lon", 0))},
+            "variables": vals,
+        }
+    except Exception:
+        return None
+
+
 def scan_collections():
     """Walk integration-tests/collections/ and return metadata for each collection group."""
     result = []
@@ -1470,43 +1609,38 @@ def scan_collections():
     for subdir in sorted(COLLECTIONS_DIR.iterdir()):
         if not subdir.is_dir():
             continue
-        group = {"directory": subdir.name, "environments": [], "suites": []}
-        for f in sorted(subdir.iterdir()):
-            if not f.suffix == ".json":
+        group = {
+            "directory": subdir.name,
+            "envTypes": list(ENV_TYPES),
+            "environments": [],
+            "suites": [],
+        }
+        for env_type in ENV_TYPES:
+            env_dir = subdir / env_type
+            if not env_dir.is_dir():
                 continue
-            if f.name.startswith("Local_") and f.name.endswith(".postman_environment.json"):
-                try:
-                    env_data = json.loads(f.read_text())
-                    vals = {v["key"]: v["value"] for v in env_data.get(
-                        "values", []) if v.get("enabled", True)}
-                    env_name = f.name.replace("Local_", "").replace(
-                        ".postman_environment.json", "")
-                    group["environments"].append({
-                        "filename": f.name,
-                        "envName": env_name,
-                        "name": env_data.get("name", env_name),
-                        "city": vals.get("city", ""),
-                        "state": vals.get("state", ""),
-                        "merchant": vals.get("dashboard_merchant_id", ""),
-                        "bapShortId": vals.get("bap_short_id", ""),
-                        "origin": {"lat": float(vals.get("origin_lat", 0)), "lon": float(vals.get("origin_lon", 0))},
-                        "destination": {"lat": float(vals.get("dest_lat", 0)), "lon": float(vals.get("dest_lon", 0))},
-                        "variables": vals,
-                    })
-                except Exception:
-                    pass
-            elif not f.name.startswith("Local_"):
-                try:
-                    col_data = json.loads(f.read_text())
-                    info = col_data.get("info", {})
-                    group["suites"].append({
-                        "filename": f.name,
-                        "name": info.get("name", f.stem),
-                        "description": info.get("description", ""),
-                        "itemCount": len(col_data.get("item", [])),
-                    })
-                except Exception:
-                    pass
+            for f in sorted(env_dir.iterdir()):
+                if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
+                    continue
+                env = _read_env_file(f, env_type)
+                if env is not None:
+                    group["environments"].append(env)
+        for f in sorted(subdir.iterdir()):
+            if not f.is_file() or f.suffix != ".json":
+                continue
+            if f.name.endswith(".postman_environment.json"):
+                continue
+            try:
+                col_data = json.loads(f.read_text())
+                info = col_data.get("info", {})
+                group["suites"].append({
+                    "filename": f.name,
+                    "name": info.get("name", f.stem),
+                    "description": info.get("description", ""),
+                    "itemCount": len(col_data.get("item", [])),
+                })
+            except Exception:
+                pass
         if group["environments"] or group["suites"]:
             result.append(group)
     return result
@@ -2106,6 +2240,167 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"logs": logs})
             return True
 
+        if method == "POST" and path == "/api/terminal/start":
+            body = self._read_json_body() or {}
+            cols = int(body.get("cols") or 80)
+            rows = int(body.get("rows") or 24)
+            cwd = body.get("cwd") or str(PROJECT_ROOT)
+            shell = body.get("shell") or os.environ.get("SHELL", "/bin/bash")
+            try:
+                sid, pid, _fd = _terminal_spawn(cols, rows, cwd, shell)
+                self._send_json({"session": sid, "pid": pid})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "GET" and path == "/api/terminal/stream":
+            qs = parse_qs(parsed.query)
+            sid = (qs.get("session") or [""])[0]
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 404)
+                return True
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("X-Accel-Buffering", "no")
+                self.send_header("Connection", "keep-alive")
+                self._cors_headers()
+                self.end_headers()
+            except Exception:
+                return True
+            fd = sess["fd"]
+            pid = sess["pid"]
+            exit_code = None
+            try:
+                while True:
+                    if sess.get("closed"):
+                        break
+                    try:
+                        r, _w, _x = _select.select([fd], [], [], 0.5)
+                    except (OSError, ValueError):
+                        break
+                    if r:
+                        try:
+                            chunk = os.read(fd, 4096)
+                        except OSError as e:
+                            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                                continue
+                            chunk = b""
+                        if not chunk:
+                            try:
+                                _wpid, status = os.waitpid(pid, os.WNOHANG)
+                                if _wpid == pid:
+                                    exit_code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
+                            except Exception:
+                                pass
+                            break
+                        try:
+                            payload = json.dumps({"b64": base64.b64encode(chunk).decode("ascii")})
+                            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            return True
+                    else:
+                        try:
+                            wpid, status = os.waitpid(pid, os.WNOHANG)
+                            if wpid == pid:
+                                exit_code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
+                                try:
+                                    chunk = os.read(fd, 65536)
+                                    if chunk:
+                                        payload = json.dumps({"b64": base64.b64encode(chunk).decode("ascii")})
+                                        self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                                        self.wfile.flush()
+                                except Exception:
+                                    pass
+                                break
+                        except ChildProcessError:
+                            break
+                        try:
+                            self.wfile.write(b": ping\n\n")
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            return True
+            finally:
+                try:
+                    end_payload = json.dumps({"exit": exit_code})
+                    self.wfile.write(f"event: end\ndata: {end_payload}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                except Exception:
+                    pass
+                with _terminal_lock:
+                    s = _terminal_sessions.pop(sid, None)
+                if s:
+                    try:
+                        os.close(s["fd"])
+                    except Exception:
+                        pass
+                    try:
+                        os.waitpid(s["pid"], os.WNOHANG)
+                    except Exception:
+                        pass
+            return True
+
+        if method == "POST" and path == "/api/terminal/input":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            try:
+                data = base64.b64decode(body.get("data", "") or "")
+            except Exception as e:
+                self._send_json({"error": f"bad base64: {e}"}, 400)
+                return True
+            try:
+                with sess["lock"]:
+                    written = 0
+                    while written < len(data):
+                        try:
+                            n = os.write(sess["fd"], data[written:])
+                            if n <= 0:
+                                break
+                            written += n
+                        except BlockingIOError:
+                            _select.select([], [sess["fd"]], [], 1.0)
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "POST" and path == "/api/terminal/resize":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            cols = int(body.get("cols") or 80)
+            rows = int(body.get("rows") or 24)
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            try:
+                fcntl.ioctl(sess["fd"], _termios.TIOCSWINSZ,
+                            struct.pack("HHHH", rows, cols, 0, 0))
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "POST" and path == "/api/terminal/kill":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            sess = _terminal_close(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            self._send_json({"ok": True})
+            return True
+
         if method == "GET" and path == "/api/config-sync/envs":
             self._send_json({
                 "envs": list(CONFIG_SYNC_BUNDLE_URLS.keys()),
@@ -2153,14 +2448,15 @@ class ContextHandler(BaseHTTPRequestHandler):
         if method == "POST" and path == "/api/config-sync/import":
             body = self._read_json_body()
             from_env = body.get("from", CONFIG_SYNC_DEFAULT_FROM)
+            force_fetch = bool(body.get("forceFetch", False))
             if from_env not in CONFIG_SYNC_BUNDLE_URLS:
                 self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_BUNDLE_URLS)}, 400)
                 return True
-            accepted = trigger_config_sync(from_env)
+            accepted = trigger_config_sync(from_env, force_fetch=force_fetch)
             if not accepted:
                 self._send_json({"error": "another config-sync is already running"}, 409)
                 return True
-            self._send_json({"started": True, "from": from_env})
+            self._send_json({"started": True, "from": from_env, "forceFetch": force_fetch})
             return True
 
         if method == "GET" and path == "/api/control-center/status":

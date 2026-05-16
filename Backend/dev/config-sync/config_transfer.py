@@ -1609,10 +1609,14 @@ def cmd_import(args):
 
     schemas = args.schemas or list(config_tables.keys())
 
-    # Read from patched data directory
+    # Read from patched data directory. --force-fetch wipes any existing
+    # patched copy so we always re-download from CloudFront.
     patched_base = DATA_DIR / direction
+    if getattr(args, "force_fetch", False) and patched_base.exists():
+        print(f"--force-fetch: removing existing patched data at {patched_base}")
+        shutil.rmtree(patched_base)
     if not patched_base.exists():
-        if getattr(args, "fetch", False):
+        if getattr(args, "fetch", False) or getattr(args, "force_fetch", False):
             fetch_url = args.fetch_url or DEFAULT_CLOUDFRONT_URL
             if not fetch_url:
                 sys.exit(
@@ -2086,6 +2090,8 @@ Examples:
     p_imp.add_argument("--local-dir", help="Read from custom dir instead of patched data")
     p_imp.add_argument("--fetch", action="store_true",
                        help="If the patched directory is missing locally, download <from>_to_<to>.zip from the public CloudFront URL and extract it")
+    p_imp.add_argument("--force-fetch", action="store_true",
+                       help="Always re-download from CloudFront, wiping any existing patched data. Implies --fetch.")
     p_imp.add_argument("--fetch-url", default=None,
                        help=f"CloudFront base URL for --fetch (default: $CONFIG_SYNC_CLOUDFRONT_URL = {DEFAULT_CLOUDFRONT_URL!r})")
     p_imp.add_argument("--skip-feature-migrations", action="store_true",

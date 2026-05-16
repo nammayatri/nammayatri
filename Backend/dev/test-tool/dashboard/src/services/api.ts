@@ -4,8 +4,7 @@ import { ApiDef } from '../api-catalog/types';
 import { ParsedStep } from './postman-parser';
 import { resolveVariables, executeTestScript, executePrereqScript, VariableStores, PostmanRuntimeResult } from './postman-runtime';
 import { startLogCapture, stopLogCapture } from './context';
-
-const PROXY_BASE = 'http://localhost:7082';
+import { PROXY_BASE } from '../config';
 
 export interface ApiResult {
   ok: boolean;

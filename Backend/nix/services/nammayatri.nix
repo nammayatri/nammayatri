@@ -22,6 +22,18 @@ in
         options = {
           enable = lib.mkEnableOption "Enable nammayatri stack";
           useCabal = lib.mkEnableOption "Use cabal instead of Nix";
+          profile = lib.mkOption {
+            type = types.enum [ "full" "backend" "testDashboard" ];
+            default = "full";
+            description = ''
+              Which subset of the stack to launch:
+                full           — backend (ny + tools) + all test processes (default).
+                backend        — backend (ny + tools) + test-context-api + mock-server;
+                                 no test-dashboard / test-local-api processes.
+                testDashboard  — only test-dashboard + test-local-api; assumes the backend
+                                 stack (including test-context-api) runs locally or remotely.
+            '';
+          };
         };
       };
     };
@@ -49,9 +61,7 @@ in
       #
       # Pinned URLs + hashes mean no first-run downloads and no cache leakage
       # into the repo (which is what `Backend/plugins/` was before).
-      metabaseDrivers = [
-        # (none — Postgres is built-in)
-      ];
+      metabaseDrivers = [];
       metabasePluginsDir = pkgs.linkFarm "metabase-plugins" (map
         (d: {
           name = "${d.name}.metabase-driver.jar";
@@ -80,6 +90,42 @@ in
                 user: atlas_superuser
                 password: ""
                 dbname: atlas_dev
+                ssl: false
+            - name: atlas_driver_offer_bpp_clickhouse
+              engine: clickhouse
+              details:
+                host: localhost
+                port: 8123
+                user: default
+                password: ""
+                dbname: atlas_driver_offer_bpp
+                ssl: false
+            - name: atlas_app_clickhouse
+              engine: clickhouse
+              details:
+                host: localhost
+                port: 8123
+                user: default
+                password: ""
+                dbname: atlas_app
+                ssl: false
+            - name: atlas_kafka_clickhouse
+              engine: clickhouse
+              details:
+                host: localhost
+                port: 8123
+                user: default
+                password: ""
+                dbname: atlas_kafka
+                ssl: false
+            - name: app_monitor_clickhouse
+              engine: clickhouse
+              details:
+                host: localhost
+                port: 8123
+                user: default
+                password: ""
+                dbname: app_monitor
                 ssl: false
       '';
 
@@ -187,6 +233,32 @@ in
           })
           cabalExecutables);
 
+      inBackend  = cfg.profile == "full" || cfg.profile == "backend";
+      inTestDash = cfg.profile == "full" || cfg.profile == "testDashboard";
+      backendProcs =
+        cabalExecutables ++ [
+          "rider-producer-exe"
+          "nammayatri-init"
+          "log-cleaner"
+          "cabal-build"
+          "beckn-gateway"
+          "mock-registry"
+          "location-tracking-service"
+          "notification-service"
+          "osrm-server"
+          "driver-proxy"
+          "metabase"
+          "metabase-setup"
+          "redis-commander"
+          "mock-server"
+          "test-context-api"
+        ];
+      disableAll = names: lib.listToAttrs (map
+        (n: lib.nameValuePair n {
+          disabled = lib.mkForce true;
+          depends_on = lib.mkForce {};
+        })
+        names);
     in
     {
       settings = {
@@ -194,7 +266,34 @@ in
         # Local Haskell processes
         imports = [ haskellProcesses ];
 
-        processes = {
+        processes = lib.mkMerge [
+          (lib.mkIf (!inBackend)  (disableAll backendProcs))
+          (lib.mkIf (!inTestDash) (disableAll [ "test-local-api" "test-dashboard" ]))
+          # When the backend slice is disabled, the test-dashboard / test-local-api
+          # processes would otherwise wait on disabled backend processes
+          # (nammayatri-init, rider-app-exe, …) — process-compose treats that as
+          # a hard failure rather than auto-satisfying. Clear those depends_on
+          # entries so the dashboard slice runs standalone.
+          (lib.mkIf (!inBackend) {
+            test-local-api.depends_on = lib.mkForce {};
+            test-dashboard.depends_on = lib.mkForce {};
+          })
+          # kafka should start only after zookeeper is healthy
+          (lib.mkIf inBackend { kafka.depends_on."zookeeper".condition = "process_healthy"; })
+          # Override passetto-service startup: skip passetto-init (keys are seeded via passetto-seed.sql).
+          # The upstream process-compose.nix runs `passetto-init $password $keys` on every boot,
+          # which unconditionally appends keys — causing pool growth across restarts.
+          (lib.mkIf inBackend {
+            passetto-service.command = lib.mkForce (pkgs.writeShellApplication {
+              name = "passetto-service";
+              runtimeInputs = [ inputs'.passetto.packages.passetto-service ];
+              text = ''
+                set -x
+                MASTER_PASSWORD=1 passetto-server
+              '';
+            });
+          })
+          {
           # Rider producer: same binary as producer-exe, different env vars
           rider-producer-exe = {
             imports = [
@@ -287,8 +386,8 @@ in
                   fi
                 fi
                 while true; do
-                  find .. -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
-                  find /private/tmp -maxdepth 1 -name '*.log' -size +100M -exec truncate -s 0 {} \;
+                  find .. -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
+                  find /private/tmp -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
                   sleep 1
                 done
               '';
@@ -413,6 +512,17 @@ in
               "dynamic-offer-driver-app-exe".condition = "process_healthy";
               "mock-registry".condition = "process_healthy";
             };
+            availability = {
+              restart = "on_failure";
+              backoff_seconds = 20;
+              max_restarts = 30;
+            };
+          };
+          test-local-api = {
+            imports = [ common ];
+            command = "${pkgs.python3}/bin/python3 dev/test-tool/local-api/server.py";
+            namespace = lib.mkForce "test";
+            depends_on."nammayatri-init".condition = "process_completed_successfully";
             availability = {
               restart = "on_failure";
               backoff_seconds = 20;
@@ -846,11 +956,27 @@ in
               max_restarts = 50;
             };
           };
-        };
+        }
+        ];
       };
 
       # External services
-      services = {
+      services = lib.mkMerge [
+      # When the backend slice is disabled, the infra services (db / redis /
+      # kafka / clickhouse / nginx / passetto) are expected to live on
+      # another host or terminal — turn them off here so this profile is a
+      # pure consumer.
+      (lib.mkIf (cfg.profile == "testDashboard") {
+        postgres-with-replica.db-primary.enable = lib.mkForce false;
+        redis."redis".enable                    = lib.mkForce false;
+        redis-cluster."cluster1".enable         = lib.mkForce false;
+        zookeeper."zookeeper".enable            = lib.mkForce false;
+        apache-kafka."kafka".enable             = lib.mkForce false;
+        nginx."nginx".enable                    = lib.mkForce false;
+        passetto.enable                         = lib.mkForce false;
+        clickhouse."clickhouse-db".enable       = lib.mkForce false;
+      })
+      {
         postgres-with-replica.db-primary = {
           enable = true;
           extraMasterDBSettings = { name, ... }: {
@@ -914,33 +1040,18 @@ in
           enable = true;
           port = 8085;
         };
-      };
-      # kafka should start only after zookeeper is healthy
-      settings.processes.kafka.depends_on."zookeeper".condition = "process_healthy";
 
-      services.passetto = {
-        enable = true;
-        port = 8079;
-        extraDbSettings = { name, ... }: {
-          port = 5422;
-          socketDir = "$HOME/NY/socket/${name}";
+        passetto = {
+          enable = true;
+          port = 8079;
+          extraDbSettings = { name, ... }: {
+            port = 5422;
+            socketDir = "$HOME/NY/socket/${name}";
+          };
+          package = inputs'.passetto.packages.passetto-service;
         };
-        package = inputs'.passetto.packages.passetto-service;
-      };
 
-      # Override passetto-service startup: skip passetto-init (keys are seeded via passetto-seed.sql).
-      # The upstream process-compose.nix runs `passetto-init $password $keys` on every boot,
-      # which unconditionally appends keys — causing pool growth across restarts.
-      settings.processes.passetto-service.command = lib.mkForce (pkgs.writeShellApplication {
-        name = "passetto-service";
-        runtimeInputs = [ inputs'.passetto.packages.passetto-service ];
-        text = ''
-          set -x
-          MASTER_PASSWORD=1 passetto-server
-        '';
-      });
-
-      services.clickhouse."clickhouse-db" = {
+        clickhouse."clickhouse-db" = {
         enable = true;
         port = 9000;
         extraConfig.http_port = 8123;
@@ -965,7 +1076,15 @@ in
               ../../dev/clickhouse/sql-seed/app-monitor-seed.sql
             ];
           }
+          {
+            name = "atlas_app";
+            schemas = [
+              ../../dev/clickhouse/sql-seed/atlas-app-seed.sql
+            ];
+          }
         ];
-      };
+        };
+      }
+      ];
     };
 }

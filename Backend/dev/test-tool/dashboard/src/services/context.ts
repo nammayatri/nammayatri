@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const CONTEXT_API = 'http://localhost:7082';
+import { PROXY_BASE as CONTEXT_API } from '../config';
 
 export interface RiderInfo {
   person_id: string;
@@ -102,6 +101,7 @@ export async function fetchDrivers(): Promise<DriverInfo[]> {
 
 export interface CollectionEnvironment {
   filename: string;
+  envType: string;
   envName: string;
   name: string;
   city: string;
@@ -122,6 +122,7 @@ export interface CollectionSuite {
 
 export interface CollectionGroup {
   directory: string;
+  envTypes: string[];
   environments: CollectionEnvironment[];
   suites: CollectionSuite[];
 }

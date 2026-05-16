@@ -118,6 +118,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Selection state
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
   const [selectedDir, setSelectedDir] = useState('');
+  const [selectedEnvType, setSelectedEnvType] = useState('Local');
   const [selectedEnv, setSelectedEnv] = useState('');
   const [selectedSuite, setSelectedSuite] = useState('');
 
@@ -148,20 +149,39 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   }, []);
 
   const currentGroup = groups.find(g => g.directory === selectedDir);
-  const currentEnv = currentGroup?.environments.find(e => e.envName === selectedEnv);
+  const envTypes = currentGroup?.envTypes ?? ['Local', 'Master'];
+  const filteredEnvs = (currentGroup?.environments ?? []).filter(e => e.envType === selectedEnvType);
+  const currentEnv = filteredEnvs.find(e => e.envName === selectedEnv);
   const currentSuite = currentGroup?.suites.find(s => s.filename === selectedSuite);
 
-  // Auto-select first env and suite when group changes
+  // Mock-server steps are only meaningful on Local env. On any other env type
+  // (e.g. Master) the local mock processes aren't running, so we hide those
+  // steps from the runner — mirrors the collection-level prerequest that
+  // calls pm.execution.skipRequest() for Newman.
+  const isMockOnlyStep = useCallback((s: ParsedStep) => (
+    s.service === 'mock-server' ||
+    s.rawUrl.includes('{{mockServerUrl}}') ||
+    s.rawUrl.includes('{{mock_fcm_url}}')
+  ), []);
+  const visibleSteps = selectedEnvType === 'Local' ? steps : steps.filter(s => !isMockOnlyStep(s));
+  const visibleStepIds = new Set(visibleSteps.map(s => s.id));
+  const visibleNodes = nodes
+    .map(n => ({ ...n, stepIds: n.stepIds.filter(id => visibleStepIds.has(id)) }))
+    .filter(n => n.stepIds.length > 0);
+
+  // Auto-select first env and suite when group / env-type changes
   useEffect(() => {
     if (currentGroup) {
-      if (currentGroup.environments.length > 0 && !currentGroup.environments.find(e => e.envName === selectedEnv)) {
-        setSelectedEnv(currentGroup.environments[0].envName);
+      if (filteredEnvs.length > 0 && !filteredEnvs.find(e => e.envName === selectedEnv)) {
+        setSelectedEnv(filteredEnvs[0].envName);
+      } else if (filteredEnvs.length === 0) {
+        setSelectedEnv('');
       }
       if (currentGroup.suites.length > 0 && !currentGroup.suites.find(s => s.filename === selectedSuite)) {
         setSelectedSuite(currentGroup.suites[0].filename);
       }
     }
-  }, [selectedDir, currentGroup]);
+  }, [selectedDir, selectedEnvType, currentGroup]);
 
   // Load and parse collection when suite changes
   useEffect(() => {
@@ -226,7 +246,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
   // Run all steps sequentially
   const runAll = useCallback(async () => {
-    if (isRunning || steps.length === 0) return;
+    if (isRunning || visibleSteps.length === 0) return;
     abortRef.current = false;
     setIsRunning(true);
     setStepStates({});
@@ -251,9 +271,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     }
     storesRef.current = freshStores;
 
-    onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) --`);
+    onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) [${selectedEnvType}] --`);
 
-    for (const step of steps) {
+    for (const step of visibleSteps) {
       if (abortRef.current) break;
 
       setRunningStepId(step.id);
@@ -300,7 +320,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, steps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, onLog]);
+  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -376,11 +396,19 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <label>
+          <span>Env Type</span>
+          <select value={selectedEnvType} onChange={e => setSelectedEnvType(e.target.value)}>
+            {envTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label>
           <span>Environment</span>
-          <select value={selectedEnv} onChange={e => setSelectedEnv(e.target.value)}>
-            {currentGroup?.environments.map(e => (
-              <option key={e.envName} value={e.envName}>{e.city} ({e.envName})</option>
-            ))}
+          <select value={selectedEnv} onChange={e => setSelectedEnv(e.target.value)} disabled={filteredEnvs.length === 0}>
+            {filteredEnvs.length === 0
+              ? <option value="">No {selectedEnvType} environments</option>
+              : filteredEnvs.map(e => (
+                  <option key={e.envName} value={e.envName}>{e.city} ({e.envName})</option>
+                ))}
           </select>
         </label>
         <label>
@@ -392,8 +420,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <div className="cr-actions">
-          <button className="cr-run-btn" onClick={runAll} disabled={isRunning || steps.length === 0}>
-            {isRunning ? 'Running...' : `Run (${steps.length} steps)`}
+          <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
+            {isRunning ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
         </div>
@@ -401,7 +429,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
       {/* Step list */}
       <div className="cr-steps">
-        {nodes.map(node => (
+        {visibleNodes.map(node => (
           <div key={node.id} className="cr-node">
             <div className="cr-node-header">
               <span className={`cr-tag cr-tag-${node.tag}`}>{node.tag}</span>
@@ -474,6 +502,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </div>
         ))}
         {steps.length === 0 && <div className="cr-empty">Select a collection, environment, and suite to load steps.</div>}
+        {steps.length > 0 && visibleSteps.length === 0 && (
+          <div className="cr-empty">All steps in this suite are mock-only; nothing to run on envType={selectedEnvType}.</div>
+        )}
       </div>
 
       {/* JSON Viewer Modal */}

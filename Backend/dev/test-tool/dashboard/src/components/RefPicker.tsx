@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-
-const PROXY_BASE = 'http://localhost:7082';
+import { LOCAL_API_BASE as PROXY_BASE } from '../config';
 
 interface RefSummary {
   name: string;

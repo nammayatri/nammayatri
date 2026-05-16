@@ -15,8 +15,6 @@ interface Props {
   onAdminCredentialsChange?: (email: string, password: string) => void;
 }
 
-const PROXY_BASE = 'http://localhost:7082';
-
 export const ConfigBar: React.FC<Props> = ({ config, onChange, onRun, onStop, isRunning, onCityChange, onDriverChange, onMerchantShortIdChange, onAdminCredentialsChange }) => {
   const [riderMerchants, setRiderMerchants] = useState<MerchantInfo[]>([]);
   const [driverMerchants, setDriverMerchants] = useState<MerchantInfo[]>([]);

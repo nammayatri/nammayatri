@@ -107,22 +107,38 @@ To speed up the compilation times, we use 6 parallel jobs by default. If you hav
 
 #### Running backend services
 
-To run the backend either use:
+The stack is split into three independent process-compose launchers. The
+default workflow uses three terminals:
 
 ```sh
-# From nix develop shell
+# Terminal 1 — backend services only (rider/driver/dashboards/db/redis/kafka/…)
 , run-mobility-stack-dev
+
+# Terminal 2 — test infra (mock-server + test-context-api on port 7082)
+, run-test-context-server
+
+# Terminal 3 — dashboard (port 7070) + local-api (port 7083)
+, run-local-test-dashboard
+# → http://localhost:7070
 ```
 
-This will run the mobility stack using `cabal run` which is the recommend approach for development environment.
+If you want everything in a single terminal (the previous behaviour):
 
-You can also use Nix to run the mobility stack, but this is slower compared to the cabal way because it involves doing a full Nix build.
+```sh
+, run-mobility-stack-full
+```
+
+Backend-only via Nix (slower; full Nix build, no cabal):
 
 ```sh
 , run-mobility-stack-nix
 # Or (if you are not in the git repo):
 nix run github:nammayatri/nammyatri#run-mobility-stack-nix
 ```
+
+For a deep dive on what each piece does — including the SSH **Remote Stack**
+tab that lets you run `, run-test-context-server` on another host and point
+the local dashboard at it — see [`dev/test-tool/README.md`](./dev/test-tool/README.md).
 
 ##### External services
 

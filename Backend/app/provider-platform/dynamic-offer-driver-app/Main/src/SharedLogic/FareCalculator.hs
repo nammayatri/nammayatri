@@ -43,6 +43,8 @@ module SharedLogic.FareCalculator
     clampDiscountToDiscountable,
     ComponentMap,
     entryFeeForGateId,
+    parseCodeValue,
+    ParsedCodeValue (..),
   )
 where
 
@@ -1435,7 +1437,6 @@ discountApplicableComponents =
     PriorityChargeComponent,
     NightShiftChargeComponent,
     StopChargeComponent,
-    CustomerExtraFeeComponent,
     DeadKmFareComponent,
     ExtraKmFareComponent,
     RideDurationFareComponent,

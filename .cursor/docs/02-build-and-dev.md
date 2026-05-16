@@ -61,11 +61,18 @@ Always compile (`cabal build all`) to verify correctness before proceeding.
 | `, run-generator` | Generate code from YAML specs |
 | `, run-generator --all` | Regenerate all specs |
 | `, run-generator --apply-hint` | Generate with HLint auto-fixes |
-| `, run-mobility-stack-dev` | Start all external services (Postgres, Redis, Kafka, etc.) |
+| `, run-mobility-stack-dev` | Start backend stack only (Postgres, Redis, Kafka, rider/driver/dashboards) |
+| `, run-test-context-server` | Start test-context-api + mock-server (port 7082) |
+| `, run-local-test-dashboard` | Start test-dashboard + test-local-api (port 7070) |
+| `, run-mobility-stack-full` | Legacy one-shot: everything in one process-compose UI |
 | `, ghcid lib/<package-name>` | Fast compile feedback loop |
 | `, hpack` | Regenerate .cabal files from package.yaml |
 | `, docs` | Run Hoogle documentation server |
 | `, kill-svc-ports` | Kill lingering service processes |
+
+The three test-stack commands are designed to run in separate terminals (or on
+separate hosts). Architecture and the SSH **Remote Stack** runner are
+documented in `Backend/dev/test-tool/README.md`.
 
 ## Frontend (PureScript)
 

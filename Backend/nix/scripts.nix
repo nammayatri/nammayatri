@@ -9,8 +9,7 @@ _:
       # Shell snippet that SIGKILLs any process holding one of the service ports.
       # Shared between the standalone `kill-svc-ports` script and the
       # pre-flight inside `run-mobility-stack-dev`/`run-mobility-stack-nix`.
-      killSvcPortsScript =
-        let ports = import ./services/ports.nix; in
+      killPortsSnippet = portList:
         lib.concatMapStrings
           (port: ''
             set +e
@@ -24,7 +23,13 @@ _:
               echo "No processes found on port ${builtins.toString port}"
             fi
           '')
-          (lib.attrValues ports);
+          portList;
+      killSvcPortsScript =
+        let ports = import ./services/ports.nix; in
+        killPortsSnippet (lib.attrValues ports);
+      # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api).
+      localTestDashboardPorts = [ 7070 7083 ];
+      killLocalTestDashboardPortsScript = killPortsSnippet localTestDashboardPorts;
     in
     {
       mission-control.scripts = {
@@ -217,7 +222,10 @@ _:
         run-mobility-stack-dev = {
           category = "Backend";
           description = ''
-            Run the nammayatri backend components via "cabal run".
+            Run the nammayatri backend + test-context-api + mock-server
+            (no test-dashboard). Pair with ", run-local-test-dashboard" in
+            another terminal — or use ", run-mobility-stack-full" for the
+            legacy single-terminal experience.
           '';
           exec = ''
             export DEV=1
@@ -235,6 +243,49 @@ _:
             fi
             # -S NAME forces stable sort by process name (no re-ordering on status change)
             nix run .#run-mobility-stack-dev -- -S NAME "$@"
+          '';
+        };
+
+        run-mobility-stack-full = {
+          category = "Backend";
+          description = ''
+            Run the FULL nammayatri stack in one terminal: backend +
+            test-context-api + mock-server + test-local-api + test-dashboard.
+            Equivalent to the previous ", run-mobility-stack-dev" behaviour.
+          '';
+          exec = ''
+            export DEV=1
+            echo "── Pre-flight: freeing service ports ──"
+            ${killSvcPortsScript}
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
+            _hard=$(ulimit -Hs 2>/dev/null || true)
+            if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+              ulimit -s "$_hard" 2>/dev/null || true
+              ulimit -n "$_hard" 2>/dev/null || true
+            fi
+            nix run .#run-mobility-stack-full -- -S NAME "$@"
+          '';
+        };
+
+        run-local-test-dashboard = {
+          category = "Backend";
+          description = ''
+            Run only the test-dashboard (port 7070, React) + test-local-api
+            (port 7083). The Remote Stack tab inside the dashboard SSHs into
+            a host (or localhost), rsyncs the repo, and launches
+            ", run-mobility-stack-dev" there, streaming the PTY back.
+          '';
+          exec = ''
+            export DEV=1
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
+            _hard=$(ulimit -Hs 2>/dev/null || true)
+            if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+              ulimit -s "$_hard" 2>/dev/null || true
+              ulimit -n "$_hard" 2>/dev/null || true
+            fi
+            nix run .#run-local-test-dashboard -- -S NAME "$@"
           '';
         };
 

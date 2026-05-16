@@ -480,6 +480,16 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       fixedCardChargeCaption = show Tags.FIXED_CARD_CHARGE
       fixedCardChargeItem = mkBreakupItem fixedCardChargeCaption . (mkValue . highPrecMoneyToText) <$> (farePolicy.cardCharge >>= (.fixed))
 
+      customerExtraFeeTaxItem = do
+        config <- farePolicy.vatChargeConfig
+        guard (FarePolicyD.CustomerExtraFeeComponent `elem` config.appliesOn)
+        case SFC.parseCodeValue config.value of
+          Just (SFC.ParsedPercentage pct) ->
+            Just $ mkBreakupItem (show Tags.CUSTOMER_EXTRA_FEE_TAX_MULTIPLIER) (mkValue $ show (1 + fromRational pct :: Double))
+          Just (SFC.ParsedFixed amount) ->
+            Just $ mkBreakupItem (show Tags.CUSTOMER_EXTRA_FEE_TAX_FIXED) (mkValue $ highPrecMoneyToText amount)
+          Nothing -> Nothing
+
       additionalDetailsBreakups = processAdditionalDetails farePolicy.farePolicyDetails
       conditionalCharges = processAdditionalCharges farePolicy.conditionalCharges
   catMaybes
@@ -509,7 +519,8 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTol
       boothChargePercentageItem,
       returnFeeFixedItem,
       returnFeePercentageItem,
-      governmentChargeItem
+      governmentChargeItem,
+      customerExtraFeeTaxItem
     ]
     <> additionalDetailsBreakups
     <> driverExtraFeeBoundsMinFeeItems

@@ -29,7 +29,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -59,6 +59,7 @@ ROUTES = [
     ("/ebix",        ebix,        "ebix"),
     ("/mlpricing",   mlpricing,   "mlpricing"),
     ("/ondc",        ondc,        "ondc"),
+    ("/cac",         cac,         "cac"),
 ]
 
 
