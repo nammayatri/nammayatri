@@ -8,6 +8,7 @@ import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -64,5 +65,9 @@ data PassStatusResp = PassStatusResp {remark :: Kernel.Prelude.Maybe Kernel.Prel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteDetails = RouteDetails {destStopId :: Kernel.Prelude.Text, destStopName :: Kernel.Prelude.Text, srcStopId :: Kernel.Prelude.Text, srcStopName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UploadImageReq = UploadImageReq {file :: EulerHS.Prelude.FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

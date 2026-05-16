@@ -6,6 +6,7 @@ module Domain.Action.RiderPlatform.AppManagement.PassOrganization
     postPassOrganizationPassDetailsVerify,
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
+    getPassOrganizationPassDetailsMedia,
   )
 where
 
@@ -54,3 +55,8 @@ getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Mer
 getPassOrganizationGetOrganizations merchantShortId opCity apiTokenInfo passEnum = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationGetOrganizations) passEnum
+
+getPassOrganizationPassDetailsMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text)
+getPassOrganizationPassDetailsMedia merchantShortId opCity apiTokenInfo filePath = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationPassDetailsMedia) filePath

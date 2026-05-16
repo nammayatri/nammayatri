@@ -76,7 +76,7 @@ data VerifyPassDetailsReq = VerifyPassDetailsReq {verifications :: [PassDetailsV
 instance Kernel.Types.HideSecrets.HideSecrets VerifyPassDetailsReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations))
+type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsMedia))
 
 type GetPassOrganizationGetPassOrganization = ("getPassOrganization" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get '[JSON] GetOrganizationResp)
 
@@ -106,18 +106,21 @@ type PostPassOrganizationUpdate =
 
 type GetPassOrganizationGetOrganizations = ("getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> Get '[JSON] [GetOrganizationResp])
 
+type GetPassOrganizationPassDetailsMedia = ("passDetails" :> "media" :> MandatoryQueryParam "filePath" Kernel.Prelude.Text :> Get '[JSON] Kernel.Prelude.Text)
+
 data PassOrganizationAPIs = PassOrganizationAPIs
   { getPassOrganizationGetPassOrganization :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient GetOrganizationResp,
     getPassOrganizationPassDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PassDetailsListResp,
     postPassOrganizationPassDetailsVerify :: VerifyPassDetailsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPassOrganizationUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> PassOrganizationUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [GetOrganizationResp]
+    getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [GetOrganizationResp],
+    getPassOrganizationPassDetailsMedia :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Prelude.Text
   }
 
 mkPassOrganizationAPIs :: (Client EulerHS.Types.EulerClient API -> PassOrganizationAPIs)
 mkPassOrganizationAPIs passOrganizationClient = (PassOrganizationAPIs {..})
   where
-    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations = passOrganizationClient
+    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations :<|> getPassOrganizationPassDetailsMedia = passOrganizationClient
 
 data PassOrganizationUserActionType
   = GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION
@@ -125,6 +128,7 @@ data PassOrganizationUserActionType
   | POST_PASS_ORGANIZATION_PASS_DETAILS_VERIFY
   | POST_PASS_ORGANIZATION_UPDATE
   | GET_PASS_ORGANIZATION_GET_ORGANIZATIONS
+  | GET_PASS_ORGANIZATION_PASS_DETAILS_MEDIA
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

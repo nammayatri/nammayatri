@@ -109,3 +109,10 @@ apis:
         passEnum: Text
       response:
         type: "[GetOrganizationResp]"
+  - GET:
+      endpoint: /passDetails/media
+      auth: ApiAuthV2
+      mandatoryQuery:
+        filePath: Text
+      response:
+        type: Text

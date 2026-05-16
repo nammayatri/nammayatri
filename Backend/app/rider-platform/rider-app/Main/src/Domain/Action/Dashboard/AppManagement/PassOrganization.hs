@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
     postPassOrganizationPassDetailsVerify,
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
+    getPassOrganizationPassDetailsMedia,
   )
 where
 
@@ -106,22 +107,24 @@ mkPassDetailsInfoResp passDetails =
 postPassOrganizationPassDetailsVerify :: (Id.ShortId DMerchant.Merchant -> Context.City -> PassOrganizationAPI.VerifyPassDetailsReq -> Environment.Flow APISuccess.APISuccess)
 postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
-  forM_ req.verifications $ \v -> do
-    pd <- QPassDetails.findById v.passDetailsId >>= fromMaybeM (PassDetailsNotFound v.passDetailsId.getId)
-    unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
   now <- Utils.getCurrentTime
-  let validTill = Data.Time.addUTCTime (730 * Data.Time.nominalDay) now
-
-  forM_ (GHC.Exts.groupWith (\pdV -> (pdV.verificationStatus, pdV.graduationDate, pdV.remark, pdV.numberOfStages)) req.verifications) $ \pdVs -> do
-    let pdV = Kernel.Prelude.head pdVs
-    let passDetailsIds = map (\pd -> pd.passDetailsId) pdVs
+  -- Per-row update with field-level coalescing: if the dashboard verifier sends
+  -- `null` (or omits) graduationDate / remark / numberOfStages, we keep the value
+  -- already in the DB rather than blanking the column to NULL.
+  forM_ req.verifications $ \pdV -> do
+    pd <- QPassDetails.findById pdV.passDetailsId >>= fromMaybeM (PassDetailsNotFound pdV.passDetailsId.getId)
+    unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+    let mergedGraduationDate = pdV.graduationDate <|> pd.graduationDate
+        mergedRemark = pdV.remark <|> pd.remark
+        mergedNumberOfStages = pdV.numberOfStages <|> pd.numberOfStages
+    validTill <- DPassDetails.computeValidTill now callerMoc.id mergedGraduationDate
     QPassDetails.updateVerificationStatus
       pdV.verificationStatus
       validTill
-      pdV.remark
-      pdV.graduationDate
-      pdV.numberOfStages
-      passDetailsIds
+      mergedRemark
+      mergedGraduationDate
+      mergedNumberOfStages
+      [pdV.passDetailsId]
   pure APISuccess.Success
 
 postPassOrganizationUpdate :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DPerson.Person -> PassOrganizationAPI.PassOrganizationUpdateReq -> Environment.Flow APISuccess.APISuccess)
@@ -170,3 +173,6 @@ mkGetOrganizationResp org =
       PassOrganizationAPI.name = org.name,
       PassOrganizationAPI.address = org.address
     }
+
+getPassOrganizationPassDetailsMedia :: (Id.ShortId DMerchant.Merchant -> Context.City -> Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text)
+getPassOrganizationPassDetailsMedia _ _ = DPassDetails.fetchPassMediaFromS3

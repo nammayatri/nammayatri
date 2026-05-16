@@ -7,6 +7,7 @@ imports:
   UTCTime: Data.Time
   APISuccess: Kernel.Types.APISuccess
   Gender: Domain.Types.Person
+  FilePath: EulerHS.Prelude
 module: PassDetails
 
 types:
@@ -63,6 +64,9 @@ types:
     name: Text
     address: Maybe Text
 
+  UploadImageReq:
+    file: FilePath
+
 apis:
   - GET:
       endpoint: /getOrganizations/{passEnum}
@@ -94,3 +98,17 @@ apis:
         passEnum: Text
       response:
         type: PassStatusResp
+  - POST:
+      endpoint: /passDetails/uploadImage
+      auth: TokenAuth
+      multipart:
+        type: API.Types.UI.PassDetails.UploadImageReq
+      response:
+        type: Text
+  - GET:
+      endpoint: /passDetails/media
+      auth: TokenAuth
+      mandatoryQuery:
+        filePath: Text
+      response:
+        type: Text

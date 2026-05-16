@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
 module Domain.Action.UI.PassDetails
@@ -5,15 +6,23 @@ module Domain.Action.UI.PassDetails
     postPassDetailsUpdate,
     getPassDetailsData,
     getPassDetailsVerificationStatus,
+    postPassDetailsUploadImage,
+    getPassDetailsMedia,
+    fetchPassMediaFromS3,
     parsePassEnum,
     parseVerificationStatus,
+    computeValidTill,
   )
 where
 
 import qualified API.Types.UI.PassDetails as PassDetailsAPI
+import AWS.S3 as S3
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Data.ByteString as BS
 import qualified Data.List as L
+import qualified Data.Text as T
 import qualified Data.Time
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -21,24 +30,42 @@ import qualified Domain.Types.PassDetails as DPassDetails
 import qualified Domain.Types.PassOrganization as DPassOrganization
 import qualified Domain.Types.PassType as DPassType
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RiderConfig as DRiderConfig
 import qualified Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude as EHP (withFile)
+import EulerHS.Types (base64Encode)
+import GHC.IO.Handle (hFileSize)
+import GHC.IO.IOMode (IOMode (..))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
+import qualified Kernel.External.Maps.Google.MapsClient.Types as GT
 import Kernel.External.Maps.Types (LatLong (..))
+import qualified Kernel.External.MultiModal.Interface as KMultiModal
+import Kernel.External.MultiModal.Interface.Types (GeneralVehicleType (..), GetTransitRoutesReq (..), MultiModalLeg, SortingType (..))
+import qualified Kernel.External.MultiModal.OpenTripPlanner.Types as OTPTypes
 import qualified Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id as Id
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime)
+import qualified Kernel.Types.TimeBound as DTB
+import Kernel.Types.TryException (withTryCatch)
+import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
-import qualified Lib.JourneyModule.Utils as JMUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
+import qualified Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassOrganization as QPassOrganization
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.MultiModal as TMultiModal
 
 parsePassEnum :: Kernel.Prelude.Text -> Environment.Flow DPassType.PassEnum
 parsePassEnum "StudentPass" = pure DPassType.StudentPass
@@ -69,12 +96,8 @@ getGetOrganizations (mbPersonId, _merchantId) passEnumText = do
   pure $ map mkPassOrganizationResp organizations
 
 mkPassOrganizationResp :: DPassOrganization.PassOrganization -> PassDetailsAPI.GetOrganizationResp
-mkPassOrganizationResp organization =
-  PassDetailsAPI.GetOrganizationResp
-    { PassDetailsAPI.id = organization.id,
-      PassDetailsAPI.name = organization.name,
-      PassDetailsAPI.address = organization.address
-    }
+mkPassOrganizationResp DPassOrganization.PassOrganization {..} =
+  PassDetailsAPI.GetOrganizationResp {..}
 
 postPassDetailsUpdate ::
   ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
@@ -98,7 +121,7 @@ createPassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPa
 createPassDetail req person passEnum = do
   passDetailId <- generateGUID
   now <- getCurrentTime
-  let validTill = Data.Time.addUTCTime (730 * Data.Time.nominalDay) now
+  validTill <- computeValidTill now person.merchantOperatingCityId req.graduationDate
   encAadharNo <- mapM encrypt req.aadharNo
   (applicableRouteIds, routePairs, numberOfStages) <- processRouteDetails person.merchantOperatingCityId req.routeDetails
   refNumber <- getNextReferenceNumber
@@ -147,6 +170,22 @@ getNextReferenceNumber =
     refNumberKey :: Kernel.Prelude.Text
     refNumberKey = "CachedQueries:PassDetails:NextReferenceNumber"
 
+computeValidTill ::
+  Data.Time.UTCTime ->
+  Id.Id DMOC.MerchantOperatingCity ->
+  Kernel.Prelude.Maybe Data.Time.UTCTime ->
+  Environment.Flow Data.Time.UTCTime
+computeValidTill now moid mbGraduationDate = do
+  case mbGraduationDate of
+    Just gradDate
+      | gradDate <= now ->
+        Utils.throwError $ InvalidRequest "graduationDate must be in the future"
+    _ -> pure ()
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+  let durationDays = maybe 730 (.validityDurationDays) riderConfig.studentPassVerifyConfig
+      configValidTill = Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
+  pure $ maybe configValidTill (min configValidTill) mbGraduationDate
+
 updatePassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPassDetails.PassDetails -> Environment.Flow ()
 updatePassDetail req person passDetail = do
   encAadharNo <- mapM encrypt req.aadharNo
@@ -174,8 +213,6 @@ updatePassDetail req person passDetail = do
           }
   QPassDetails.updateByPrimaryKey updatedPassDetails
 
--- | Look up route IDs, build RoutePairs (with LatLong), and total stage count from request route details.
--- Dedups input by (srcStopId, destStopId) so a duplicate submission doesn't double-count.
 processRouteDetails ::
   Id.Id DMOC.MerchantOperatingCity ->
   [PassDetailsAPI.RouteDetails] ->
@@ -187,36 +224,45 @@ processRouteDetails moid routeDetails = do
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
     Nothing -> pure (Nothing, [], Nothing)
     Just integratedBPPConfig -> do
-      (allRouteIds, allRoutePairs, totalStages) <- foldM (processOneRouteDetail integratedBPPConfig) ([], [], 0) dedupedRouteDetails
+      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+      (allRouteIds, allRoutePairs, totalStages) <- foldM (processOneRouteDetail riderConfig integratedBPPConfig) ([], [], 0) dedupedRouteDetails
       pure (Just (L.nub allRouteIds), allRoutePairs, Just totalStages)
 
 processOneRouteDetail ::
+  DRiderConfig.RiderConfig ->
   DIBC.IntegratedBPPConfig ->
   ([Kernel.Prelude.Text], [DPassDetails.RoutePair], Int) ->
   PassDetailsAPI.RouteDetails ->
   Environment.Flow ([Kernel.Prelude.Text], [DPassDetails.RoutePair], Int)
-processOneRouteDetail integratedBPPConfig (accRouteIds, accRoutePairs, accStages) rd = do
+processOneRouteDetail riderConfig integratedBPPConfig (accRouteIds, accRoutePairs, accStages) rd = do
   let srcStopCode = rd.srcStopId
       destStopCode = rd.destStopId
-  -- Primary: cached station lookup (route-independent)
+  srcMappings <- OTPRest.getRouteStopMappingByStopCode srcStopCode integratedBPPConfig
+  destMappings <- OTPRest.getRouteStopMappingByStopCode destStopCode integratedBPPConfig
+  let destRouteSet = map (.routeCode) destMappings
+      commonRoutes = L.nub $ filter (`elem` destRouteSet) (map (.routeCode) srcMappings)
+
   mbSrcStationLatLong <- tryStationLatLong integratedBPPConfig srcStopCode
   mbDestStationLatLong <- tryStationLatLong integratedBPPConfig destStopCode
-  forwardRoutes <- JMUtils.getRouteCodesFromTo srcStopCode destStopCode integratedBPPConfig
-  reverseRoutes <- JMUtils.getRouteCodesFromTo destStopCode srcStopCode integratedBPPConfig
-  let routeIds = L.nub $ forwardRoutes <> reverseRoutes
-  -- Trip lookup is needed for stage calc; reused as fallback for any missing stop coords.
-  (srcLatLong, destLatLong, stages) <- case routeIds of
-    [] -> Utils.throwError $ InvalidRequest ("No routes found between stops " <> srcStopCode <> " and " <> destStopCode)
+  let mbSrcMappingPt = (.stopPoint) <$> Kernel.Prelude.listToMaybe srcMappings
+      mbDestMappingPt = (.stopPoint) <$> Kernel.Prelude.listToMaybe destMappings
+
+  (routeIdsForPair, stages, srcLatLong, destLatLong) <- case commonRoutes of
     (routeCode : _) -> do
-      trip <- OTPRest.getExampleTrip integratedBPPConfig routeCode >>= fromMaybeM (InvalidRequest "Could not fetch trip details for route")
-      srcTripStop <- OTPRest.findTripStopByStopCode trip srcStopCode & fromMaybeM (InvalidRequest ("Source stop not found in trip: " <> srcStopCode))
-      destTripStop <- OTPRest.findTripStopByStopCode trip destStopCode & fromMaybeM (InvalidRequest ("Destination stop not found in trip: " <> destStopCode))
-      stages <- case (OTPRest.extractStageFromTripStop srcTripStop, OTPRest.extractStageFromTripStop destTripStop) of
-        (Just s, Just d) -> pure (abs (d - s))
-        _ -> Utils.throwError $ InvalidRequest "Stage Calculation Failed"
-      let srcLL = fromMaybe (LatLong {lat = srcTripStop.lat, lon = srcTripStop.lon}) mbSrcStationLatLong
-          destLL = fromMaybe (LatLong {lat = destTripStop.lat, lon = destTripStop.lon}) mbDestStationLatLong
-      pure (srcLL, destLL, stages)
+      mbStages <- tryStagesFromStageFare integratedBPPConfig commonRoutes srcStopCode destStopCode
+      (s, srcLL, destLL) <- case mbStages of
+        Just stages -> do
+          srcLL <- (mbSrcStationLatLong <|> mbSrcMappingPt) & fromMaybeM (InternalError $ "Missing coordinates for stop " <> srcStopCode)
+          destLL <- (mbDestStationLatLong <|> mbDestMappingPt) & fromMaybeM (InternalError $ "Missing coordinates for stop " <> destStopCode)
+          pure (stages, srcLL, destLL)
+        Nothing -> stagesAndCoordsFromTrip integratedBPPConfig routeCode srcStopCode destStopCode mbSrcStationLatLong mbDestStationLatLong
+      pure (commonRoutes, s, srcLL, destLL)
+    [] -> do
+      logInfo $ "PassDetails OTP fallback for srcStop=" <> srcStopCode <> " destStop=" <> destStopCode
+      srcLL <- (mbSrcStationLatLong <|> mbSrcMappingPt) & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> srcStopCode)
+      destLL <- (mbDestStationLatLong <|> mbDestMappingPt) & fromMaybeM (InvalidRequest $ "Missing coordinates for stop " <> destStopCode)
+      (otpRouteIds, otpStages) <- stagesViaOTP riderConfig integratedBPPConfig srcStopCode destStopCode srcLL destLL
+      pure (otpRouteIds, otpStages, srcLL, destLL)
   let forwardPair =
         DPassDetails.RoutePair
           { srcStopName = rd.srcStopName,
@@ -235,10 +281,135 @@ processOneRouteDetail integratedBPPConfig (accRouteIds, accRoutePairs, accStages
             srcLatLong = destLatLong,
             destLatLong = srcLatLong
           }
-  pure (accRouteIds <> routeIds, accRoutePairs <> [forwardPair, reversePair], accStages + stages)
+  pure (accRouteIds <> routeIdsForPair, accRoutePairs <> [forwardPair, reversePair], accStages + stages)
 
--- | Try fetching a stop's lat/long via cached OTPRest station lookup.
--- Returns Nothing if the stop is unknown or missing coordinates so the caller can fall back.
+tryStagesFromStageFare ::
+  DIBC.IntegratedBPPConfig ->
+  [Kernel.Prelude.Text] ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  Environment.Flow (Maybe Int)
+tryStagesFromStageFare _ [] _ _ = pure Nothing
+tryStagesFromStageFare integratedBPPConfig (routeCode : rest) srcStopCode destStopCode = do
+  fareProducts <- QFRFSRouteFareProduct.findByRouteCode routeCode integratedBPPConfig.id
+  case find (\fp -> fp.timeBounds == DTB.Unbounded) fareProducts of
+    Nothing -> tryStagesFromStageFare integratedBPPConfig rest srcStopCode destStopCode
+    Just fareProduct -> do
+      mbSrc <- QFRFSRouteStopStageFare.findByRouteAndStopCode fareProduct.farePolicyId routeCode srcStopCode
+      mbDest <- QFRFSRouteStopStageFare.findByRouteAndStopCode fareProduct.farePolicyId routeCode destStopCode
+      case (mbSrc, mbDest) of
+        (Just s, Just d) -> pure $ Just $ max 1 (abs (d.stage - s.stage))
+        _ -> tryStagesFromStageFare integratedBPPConfig rest srcStopCode destStopCode
+
+stagesAndCoordsFromTrip ::
+  DIBC.IntegratedBPPConfig ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  Maybe LatLong ->
+  Maybe LatLong ->
+  Environment.Flow (Int, LatLong, LatLong)
+stagesAndCoordsFromTrip integratedBPPConfig routeCode srcStopCode destStopCode mbSrcStationLatLong mbDestStationLatLong = do
+  trip <- OTPRest.getExampleTrip integratedBPPConfig routeCode >>= fromMaybeM (InvalidRequest "Could not fetch trip details for route")
+  srcTripStop <- OTPRest.findTripStopByStopCode trip srcStopCode & fromMaybeM (InvalidRequest ("Source stop not found in trip: " <> srcStopCode))
+  destTripStop <- OTPRest.findTripStopByStopCode trip destStopCode & fromMaybeM (InvalidRequest ("Destination stop not found in trip: " <> destStopCode))
+  stages <- case (OTPRest.extractStageFromTripStop srcTripStop, OTPRest.extractStageFromTripStop destTripStop) of
+    (Just s, Just d) -> pure $ max 1 (abs (d - s))
+    _ -> Utils.throwError $ InvalidRequest "Stage Calculation Failed"
+  let srcLL = fromMaybe (LatLong {lat = srcTripStop.lat, lon = srcTripStop.lon}) mbSrcStationLatLong
+      destLL = fromMaybe (LatLong {lat = destTripStop.lat, lon = destTripStop.lon}) mbDestStationLatLong
+  pure (stages, srcLL, destLL)
+
+stagesViaOTP ::
+  DRiderConfig.RiderConfig ->
+  DIBC.IntegratedBPPConfig ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  LatLong ->
+  LatLong ->
+  Environment.Flow ([Kernel.Prelude.Text], Int)
+stagesViaOTP riderConfig integratedBPPConfig srcStopCode destStopCode srcLL destLL = do
+  transitServiceReq <- TMultiModal.getTransitServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+
+  departureTime <- nextPeakHourIST
+  let transitRoutesReq =
+        GetTransitRoutesReq
+          { origin = GT.WayPointV2 {location = GT.LocationV2 {latLng = GT.LatLngV2 {latitude = srcLL.lat, longitude = srcLL.lon}}},
+            destination = GT.WayPointV2 {location = GT.LocationV2 {latLng = GT.LatLngV2 {latitude = destLL.lat, longitude = destLL.lon}}},
+            arrivalTime = Nothing,
+            departureTime = Just departureTime,
+            mode = Nothing,
+            transitPreferences = Nothing,
+            transportModes = Just [Just (OTPTypes.TransportMode "BUS")],
+            minimumWalkDistance = riderConfig.minimumWalkDistance,
+            permissibleModes = [Bus, Walk],
+            maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+            sortingType = Fastest,
+            walkSpeed = Nothing
+          }
+
+  eOtpResponse <- withTryCatch "stagesViaOTP:getTransitRoutes" (KMultiModal.getTransitRoutes Nothing transitServiceReq transitRoutesReq)
+  otpResponse <- case eOtpResponse of
+    Right (Just r) -> pure r
+    _ -> Utils.throwError $ InvalidRequest $ "No routes found between stops " <> srcStopCode <> " and " <> destStopCode
+  perItinerary <- forM otpResponse.routes $ \route -> do
+    let busLegs = filter (\leg -> leg.mode == Bus) route.legs
+    case busLegs of
+      [] -> pure Nothing
+      _ -> do
+        legResults <- mapM (computeLegStages integratedBPPConfig) busLegs
+        let computedLegs = catMaybes legResults
+            partialStages = sum computedLegs
+            cleanStages = if all isJust legResults then Just partialStages else Nothing
+            itineraryRouteIds = collectBusLegRouteIds busLegs
+        pure $ Just (cleanStages, partialStages, itineraryRouteIds)
+  let usable = catMaybes perItinerary
+      allRouteIds = L.nub $ concatMap (\(_, _, rids) -> rids) usable
+      cleanStagesList = [s | (Just s, _, _) <- usable]
+      partialStagesList = [p | (Nothing, p, _) <- usable]
+  chosenStages <- case (cleanStagesList, partialStagesList) of
+    (s : rest, _) -> pure (Kernel.Prelude.minimum (s : rest))
+    ([], p : rest) -> pure (Kernel.Prelude.minimum (p : rest)) -- failing-bucket fallback: under-counts on purpose, see docstring
+    ([], []) -> Utils.throwError $ InvalidRequest $ "No routes found between stops " <> srcStopCode <> " and " <> destStopCode
+  pure (allRouteIds, max 1 chosenStages)
+
+nextPeakHourIST :: Environment.Flow Data.Time.UTCTime
+nextPeakHourIST = do
+  now <- getCurrentTime
+  let istOffset = 19800 :: Data.Time.NominalDiffTime -- +05:30
+      nowIST = Data.Time.addUTCTime istOffset now
+      today = Data.Time.utctDay nowIST
+      tomorrow = Data.Time.addDays 1 today
+      nineHrs = Data.Time.secondsToDiffTime (9 * 3600)
+      tomorrowNineIST = Data.Time.UTCTime tomorrow nineHrs
+  pure $ Data.Time.addUTCTime (negate istOffset) tomorrowNineIST
+
+computeLegStages :: DIBC.IntegratedBPPConfig -> MultiModalLeg -> Environment.Flow (Maybe Int)
+computeLegStages integratedBPPConfig leg = do
+  let mbLegRouteCode = (Kernel.Prelude.listToMaybe leg.routeDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode
+      mbFromCode = (leg.fromStopDetails >>= (.stopCode)) <|> ((leg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+      mbToCode = (leg.toStopDetails >>= (.stopCode)) <|> ((leg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+  case (mbLegRouteCode, mbFromCode, mbToCode) of
+    (Just legRouteCode, Just fromCode, Just toCode) -> do
+      mbTrip <- OTPRest.getExampleTrip integratedBPPConfig legRouteCode
+      pure $ do
+        trip <- mbTrip
+        srcStop <- OTPRest.findTripStopByStopCode trip fromCode
+        destStop <- OTPRest.findTripStopByStopCode trip toCode
+        s <- OTPRest.extractStageFromTripStop srcStop
+        d <- OTPRest.extractStageFromTripStop destStop
+        pure (max 1 (abs (d - s)))
+    _ -> pure Nothing
+
+collectBusLegRouteIds :: [MultiModalLeg] -> [Kernel.Prelude.Text]
+collectBusLegRouteIds busLegs =
+  L.nub $
+    [ gtfsIdtoDomainCode gtfsId
+      | leg <- busLegs,
+        rd <- leg.routeDetails,
+        Just gtfsId <- [rd.gtfsId]
+    ]
+
 tryStationLatLong :: DIBC.IntegratedBPPConfig -> Kernel.Prelude.Text -> Environment.Flow (Maybe LatLong)
 tryStationLatLong integratedBPPConfig stopCode = do
   mbStation <- OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig
@@ -264,26 +435,12 @@ getPassDetailsData (mbPersonId, _) passEnumText = do
   pure $ mkPassDetailResp passDetail org
 
 mkPassDetailResp :: DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
-mkPassDetailResp passDetail org =
+mkPassDetailResp DPassDetails.PassDetails {..} org =
   PassDetailsAPI.PassDetailsDataResp
-    { PassDetailsAPI.passDetailsId = passDetail.id,
-      PassDetailsAPI.name = passDetail.name,
-      PassDetailsAPI.age = passDetail.age,
-      PassDetailsAPI.gender = passDetail.gender,
-      PassDetailsAPI.guardianName = passDetail.guardianName,
-      PassDetailsAPI.address = passDetail.address,
-      PassDetailsAPI.pincode = passDetail.pincode,
-      PassDetailsAPI.studentClass = passDetail.studentClass,
-      PassDetailsAPI.idCardPicture = passDetail.idCardPicture,
-      PassDetailsAPI.selfImage = passDetail.selfImage,
-      PassDetailsAPI.routePairs = passDetail.routePairs,
-      PassDetailsAPI.passOrganizationId = org.id,
-      PassDetailsAPI.passOrganizationName = org.name,
-      PassDetailsAPI.registerNo = passDetail.registerNo,
-      PassDetailsAPI.graduationDate = passDetail.graduationDate,
-      PassDetailsAPI.verificationStatus = passDetail.verificationStatus,
-      PassDetailsAPI.validTill = passDetail.validTill,
-      PassDetailsAPI.remark = passDetail.remark
+    { passDetailsId = id,
+      passOrganizationId = org.id,
+      passOrganizationName = org.name,
+      ..
     }
 
 getPassDetailsVerificationStatus ::
@@ -301,9 +458,91 @@ getPassDetailsVerificationStatus (mbPersonId, _) passEnumText = do
   pure $ mkPassStatusResp passDetail
 
 mkPassStatusResp :: DPassDetails.PassDetails -> PassDetailsAPI.PassStatusResp
-mkPassStatusResp passDetail =
-  PassDetailsAPI.PassStatusResp
-    { PassDetailsAPI.verificationStatus = passDetail.verificationStatus,
-      PassDetailsAPI.validTill = passDetail.validTill,
-      PassDetailsAPI.remark = passDetail.remark
-    }
+mkPassStatusResp DPassDetails.PassDetails {..} =
+  PassDetailsAPI.PassStatusResp {..}
+
+instance FromMultipart Tmp PassDetailsAPI.UploadImageReq where
+  fromMultipart form = do
+    fileData <- lookupFile "file" form
+    let fileName = fdFileName fileData
+        tmpPath = fdPayload fileData
+        encodedPath = T.unpack $ fileName <> "\NUL" <> T.pack tmpPath
+    pure $ PassDetailsAPI.UploadImageReq {file = encodedPath}
+
+instance ToMultipart Tmp PassDetailsAPI.UploadImageReq where
+  toMultipart req =
+    MultipartData
+      []
+      [FileData "file" "" "image/jpeg" req.file]
+
+-- | Upload a single image file to S3 and return its public URL.
+postPassDetailsUploadImage ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    PassDetailsAPI.UploadImageReq ->
+    Environment.Flow Kernel.Prelude.Text
+  )
+postPassDetailsUploadImage (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  let (originalFileName, actualFilePath) = case T.splitOn "\NUL" (T.pack req.file) of
+        [fname, p] -> (fname, T.unpack p)
+        _ -> ("", req.file)
+  fileExtension <- allowedFileExtension originalFileName
+  fileSize <- L.runIO $ EHP.withFile actualFilePath ReadMode hFileSize
+  when (fileSize > fromIntegral merchantConfig.mediaFileSizeUpperLimit) $
+    Utils.throwError $ FileSizeExceededError (show fileSize)
+  rawBytes <- L.runIO $ BS.readFile actualFilePath
+  let normalize ext = if ext == ".jpeg" then ".jpg" else ext
+  unless (detectFileType rawBytes == Just (normalize fileExtension)) $
+    Utils.throwError $ InvalidRequest "Uploaded file content does not match the declared file type"
+  imageId :: Id.Id DPassDetails.PassDetails <- generateGUID
+  let imageData = base64Encode rawBytes
+      s3FileType = if fileExtension == ".pdf" then S3.PDF else S3.Image
+  filePath <- S3.createFilePath "/pass-details/" ("pass-details-" <> personId.getId <> "-" <> imageId.getId) s3FileType fileExtension
+  let fileUrl =
+        merchantConfig.mediaFileUrlPattern
+          & T.replace "<DOMAIN>" "passDetails"
+          & T.replace "<FILE_PATH>" filePath
+  S3.put (T.unpack filePath) imageData
+  pure fileUrl
+
+getPassDetailsMedia ::
+  ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
+      Id.Id DMerchant.Merchant
+    ) ->
+    Kernel.Prelude.Text ->
+    Environment.Flow Kernel.Prelude.Text
+  )
+getPassDetailsMedia (mbPersonId, _) filePath = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  let ownerPrefix = "/pass-details/pass-details-" <> personId.getId <> "-"
+  unless (T.isPrefixOf ownerPrefix filePath) $
+    Utils.throwError AccessDenied
+  fetchPassMediaFromS3 filePath
+
+fetchPassMediaFromS3 :: Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text
+fetchPassMediaFromS3 filePath = do
+  when (T.isInfixOf ".." filePath) $
+    Utils.throwError $ InvalidRequest "filePath must not contain path-traversal sequences"
+  unless (T.isPrefixOf "/pass-details/" filePath) $
+    Utils.throwError $ InvalidRequest "filePath must reside under /pass-details/"
+  S3.get (T.unpack filePath)
+
+allowedFileExtension :: Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text
+allowedFileExtension name =
+  let lowerName = T.toLower name
+   in if
+          | T.isSuffixOf ".png" lowerName -> pure ".png"
+          | T.isSuffixOf ".jpeg" lowerName -> pure ".jpeg"
+          | T.isSuffixOf ".jpg" lowerName -> pure ".jpg"
+          | T.isSuffixOf ".pdf" lowerName -> pure ".pdf"
+          | otherwise -> Utils.throwError $ InvalidRequest "Only jpg, jpeg, png, and pdf files are allowed"
+
+detectFileType :: BS.ByteString -> Maybe Kernel.Prelude.Text
+detectFileType bs
+  | BS.isPrefixOf (BS.pack [0xFF, 0xD8, 0xFF]) bs = Just ".jpg"
+  | BS.isPrefixOf (BS.pack [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) bs = Just ".png"
+  | BS.isPrefixOf (BS.pack [0x25, 0x50, 0x44, 0x46, 0x2D]) bs = Just ".pdf"
+  | otherwise = Nothing
