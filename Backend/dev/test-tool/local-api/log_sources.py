@@ -55,6 +55,12 @@ def open_stream(slug: str, spec: dict, name: str) -> Optional[dict]:
     return None
 
 
+def open_stage_stream(slug: str, stage_id: str) -> dict:
+    """Stream a stage's live output directly by stage id, without requiring a
+    matching `logs:` entry in the spec. Used by the generic per-stage viewer."""
+    return _stage_stream(slug, {"stage": stage_id})
+
+
 def _stage_stream(slug: str, ldef: dict) -> dict:
     stage_id = ldef.get("stage")
     sess = stage_runner.session_for(slug, stage_id) if stage_id else None

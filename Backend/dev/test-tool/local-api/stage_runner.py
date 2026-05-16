@@ -36,7 +36,42 @@ from spec_loader import PROJECT_ROOT, build_ctx, template
 import input_store
 
 STATE_ROOT = PROJECT_ROOT / "data" / "launcher-state"
-SESSION_RING = 8000  # max bytes buffered per stage for SSE replay
+SESSION_RING = 40000  # max chunks buffered per stage for SSE replay (5x previous)
+
+# Friendly aliases → nixpkgs attribute paths. Anything not in this map is
+# forwarded verbatim, so specs can also use raw nixpkgs attrs (e.g. "ruby_3_3").
+NIX_TOOL_MAP: Dict[str, str] = {
+    "node18":    "nodejs_18",
+    "node20":    "nodejs_20",
+    "node22":    "nodejs_22",
+    "java11":    "jdk11",
+    "java17":    "jdk17",
+    "java21":    "jdk21",
+    "yarn":      "yarn",
+    "pnpm":      "pnpm",
+    "adb":       "android-tools",
+    "gradle":    "gradle",
+    "watchman":  "watchman",
+    "python3":   "python3",
+    "ruby":      "ruby",
+    "git":       "git",
+    "cocoapods": "cocoapods",
+}
+
+
+def _nix_packages(tools: Optional[List[str]]) -> List[str]:
+    return [NIX_TOOL_MAP.get(t, t) for t in (tools or []) if t]
+
+
+def _wrap_with_nix(cmd: str, tools: Optional[List[str]]) -> str:
+    """If the spec lists `tools:`, run `cmd` inside `nix-shell -p ...` so the
+    requested toolchain (correct node, JDK, adb, …) is on PATH for every stage.
+    No-ops when `tools` is empty or `cmd` is blank."""
+    pkgs = _nix_packages(tools)
+    if not pkgs or not (cmd or "").strip():
+        return cmd
+    pkg_args = " ".join(shlex.quote(p) for p in pkgs)
+    return f"nix-shell --quiet -p {pkg_args} --run {shlex.quote(cmd)}"
 
 
 def _state_dir(slug: str) -> Path:
@@ -312,18 +347,20 @@ def run_stage(slug: str, spec: dict, stage_id: str, force: bool = False,
     if stage.get("builtin") == "source":
         return _run_source_stage(slug, spec, stage, fp)
 
+    tools = spec.get("tools") or []
+
     # Apply hooks.preStart once per stage launch (best effort).
     for cmd in (spec.get("hooks") or {}).get("preStart", []) or []:
-        cmd = template(cmd, ctx)
+        cmd = _wrap_with_nix(template(cmd, ctx), tools)
         try:
-            subprocess.run(["bash", "-lc", cmd], check=False, timeout=15)
+            subprocess.run(["bash", "-lc", cmd], check=False, timeout=60)
         except Exception:  # noqa: BLE001
             pass
 
     # Apply adb reverses if declared.
-    _apply_adb_reverses(spec, ctx)
+    _apply_adb_reverses(spec, ctx, tools)
 
-    command = template(stage.get("run") or "", ctx)
+    command = _wrap_with_nix(template(stage.get("run") or "", ctx), tools)
     env = {k: template(v, ctx) for k, v in (spec.get("env") or {}).items()}
     cwd = _resolve_cwd(spec, stage, ctx)
     sess = _make_session(slug, stage_id, command, cwd, env, cols, rows)
@@ -371,7 +408,7 @@ def _resolve_cwd(spec: dict, stage: dict, ctx: Dict[str, Any]) -> Path:
     return p
 
 
-def _apply_adb_reverses(spec: dict, ctx: Dict[str, Any]) -> None:
+def _apply_adb_reverses(spec: dict, ctx: Dict[str, Any], tools: Optional[List[str]] = None) -> None:
     names = spec.get("adbReverse") or []
     if not names:
         return
@@ -380,10 +417,12 @@ def _apply_adb_reverses(spec: dict, ctx: Dict[str, Any]) -> None:
         port = ports.get(n)
         if not port:
             continue
+        inner = f"adb reverse tcp:{port} tcp:{port}"
+        wrapped = _wrap_with_nix(inner, tools)
         try:
             subprocess.run(
-                ["adb", "reverse", f"tcp:{port}", f"tcp:{port}"],
-                check=False, timeout=5,
+                ["bash", "-lc", wrapped],
+                check=False, timeout=30,
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
         except Exception:  # noqa: BLE001

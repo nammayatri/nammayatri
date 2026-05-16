@@ -47,17 +47,21 @@ stages:
     needs: [sync-source]
     cwd: provider
     run: |
-      mkdir -p android/app/src/lynx
-      cp "${inputs.GOOGLE_SERVICES_JSON}" android/app/src/lynx/google-services.json
+      set -e
+      variant="${inputs.VARIANT}"
+      variant_lc=$(printf '%s' "$variant" | tr '[:upper:]' '[:lower:]')
+      mkdir -p "android/app/src/${variant}"
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "android/app/src/${variant}/google-services.json"
       if [ -f configs.zip ]; then unzip -o configs.zip; fi
-      mkdir -p configs/master/android/lynx
-      cp configs/master/android/nammaYatri/.env             configs/master/android/lynx/.env             2>/dev/null || true
-      cp configs/master/android/nammaYatri/local.properties configs/master/android/lynx/local.properties 2>/dev/null || true
-      cp "${inputs.GOOGLE_SERVICES_JSON}" configs/master/android/lynx/google-services.json
-      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://localhost:${ports.backend}/ui|" configs/master/android/lynx/.env || true
-      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://localhost:8013/v2|" configs/master/android/lynx/.env || true
+      mkdir -p "configs/master/android/${variant}"
+      cp "configs/master/android/nammaYatri/.env"             "configs/master/android/${variant}/.env"             2>/dev/null || true
+      cp "configs/master/android/nammaYatri/local.properties" "configs/master/android/${variant}/local.properties" 2>/dev/null || true
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "configs/master/android/${variant}/google-services.json"
+      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://localhost:${ports.backend}/ui|" "configs/master/android/${variant}/.env" || true
+      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://localhost:8013/v2|" "configs/master/android/${variant}/.env" || true
+      echo "materialized for variant=$variant (lc=$variant_lc)"
     lifecycle: one-shot
-    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, ports.backend]
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, ports.backend]
 
   - id: install
     needs: [sync-source]

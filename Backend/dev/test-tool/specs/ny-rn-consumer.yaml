@@ -25,16 +25,23 @@ inputs:
     type: file
     accept: [".json"]
     storeAs: path
-    required: true
+    required: false
   - key: VARIANT
     label: App variant
     type: select
     options: [Bridge, NammaYatri, Yatri, ManaYatri, YatriSathi, Lynx, BharatTaxi]
     default: Lynx
+    required: true
   - key: APP_ID
     label: Android package id
     type: text
     default: "in.mobility.international.debug"
+    required: true
+  - key: CLIENT_ID
+    label: Client ID (local.properties)
+    type: text
+    default: "nammayatribap"
+    required: true
 
 stages:
   - id: sync-source
@@ -45,12 +52,28 @@ stages:
   - id: materialize
     needs: [sync-source]
     run: |
-      cp "${inputs.GOOGLE_SERVICES_JSON}" consumer/android/app/synx/google-services.json || \
-        cp "${inputs.GOOGLE_SERVICES_JSON}" consumer/android/app/google-services.json
+      set -e
+      variant_dir=$(printf '%s' "${inputs.VARIANT}" | tr '[:upper:]' '[:lower:]')
+      target="consumer/android/app/${variant_dir}"
+      mkdir -p "$target"
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "$target/google-services.json"
+      echo "google-services.json → $target/google-services.json"
+
       mkdir -p consumer/env
-      printf 'BASE_URL="http://localhost:%s/v2"\n' "${ports.backend}" > consumer/env/.env.development
+      {
+        printf 'BASE_URL="http://localhost:%s/v2"\n' "${ports.backend}"
+        printf 'CAC_CONFIG_URL="http://localhost:%s/cac/consumer"\n' "${ports.mock}"
+      } > consumer/env/.env.development
+
+      props="consumer/android/local.properties"
+      touch "$props"
+      tmp=$(mktemp)
+      grep -v '^CLIENT_ID=' "$props" > "$tmp" || true
+      printf 'CLIENT_ID=%s\n' "${inputs.CLIENT_ID}" >> "$tmp"
+      mv "$tmp" "$props"
+      echo "CLIENT_ID=${inputs.CLIENT_ID} → local.properties"
     lifecycle: one-shot
-    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, ports.backend]
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.CLIENT_ID, ports.backend, ports.mock]
 
   - id: install
     needs: [sync-source]
@@ -82,8 +105,52 @@ stages:
 
   - id: set-devhost
     needs: [metro]
-    cwd: consumer
-    run: "./scripts/android-set-devhost.sh ${inputs.APP_ID} localhost:${ports.metro}"
+    run: |
+      set -euo pipefail
+      PKG="${inputs.APP_ID}"
+      HOSTPORT="localhost:${ports.metro}"
+      PREF_PATH="shared_prefs/${PKG}_preferences.xml"
+
+      echo "waiting for an adb device to come online (up to 5 min)…"
+      deadline=$(( $(date +%s) + 300 ))
+      while :; do
+        if adb get-state 1>/dev/null 2>&1; then
+          echo "device online: $(adb devices | sed -n '2p')"
+          break
+        fi
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+          echo "✗ no adb device after 5 min — is an emulator/phone connected?" >&2
+          exit 1
+        fi
+        sleep 2
+      done
+      adb wait-for-device
+      # Ensure the app is actually installed before we try to run-as it.
+      until adb shell pm path "$PKG" 1>/dev/null 2>&1; do
+        echo "waiting for $PKG to be installed on device…"
+        sleep 2
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+          echo "✗ $PKG not installed on device — run build-android first" >&2
+          exit 1
+        fi
+      done
+
+      EXISTING=$(adb shell run-as "$PKG" cat "$PREF_PATH" 2>/dev/null || true)
+      if [ -z "$EXISTING" ] || ! echo "$EXISTING" | grep -q "<map>"; then
+        EXISTING=$'<?xml version=\'1.0\' encoding=\'utf-8\' standalone=\'yes\' ?>\n<map>\n</map>'
+      fi
+      UPDATED=$(printf '%s\n' "$EXISTING" \
+        | sed -E "/<string name=\"debug_http_host\">[^<]*<\/string>/d" \
+        | sed -E "s|</map>|    <string name=\"debug_http_host\">${HOSTPORT}</string>\n</map>|")
+
+      TMP=$(mktemp)
+      printf '%s\n' "$UPDATED" > "$TMP"
+      adb shell am force-stop "$PKG"
+      adb shell run-as "$PKG" sh -c "'cat > ${PREF_PATH}'" < "$TMP"
+      adb shell run-as "$PKG" cat "$PREF_PATH"
+      adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+      rm -f "$TMP"
+      echo "✓ $PKG → $HOSTPORT (launched)"
     lifecycle: one-shot
 
 workflows:

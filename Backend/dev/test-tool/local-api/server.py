@@ -72,6 +72,51 @@ _control_center_lock = threading.Lock()
 _control_center_proc = None  # type: ignore[var-annotated]
 
 
+def _browse_folder(initial: str) -> dict:
+    """Open a native folder-picker dialog and return the absolute path.
+
+    Falls back across platforms: AppleScript on macOS, zenity/kdialog on Linux.
+    """
+    try:
+        start = os.path.abspath(os.path.expanduser(initial or "~"))
+    except Exception:
+        start = os.path.expanduser("~")
+    if not os.path.isdir(start):
+        start = os.path.expanduser("~")
+
+    plat = sys.platform
+    try:
+        if plat == "darwin":
+            script = (
+                'set theFolder to choose folder with prompt "Select local checkout"'
+                f' default location (POSIX file "{start}")\n'
+                "POSIX path of theFolder"
+            )
+            res = subprocess.run(
+                ["osascript", "-e", script],
+                capture_output=True, text=True, timeout=300,
+            )
+            if res.returncode != 0:
+                return {"path": None, "cancelled": True}
+            picked = res.stdout.strip().rstrip("/")
+            return {"path": picked or None}
+        for cmd in (
+            ["zenity", "--file-selection", "--directory", f"--filename={start}/"],
+            ["kdialog", "--getexistingdirectory", start],
+        ):
+            if shutil.which(cmd[0]):
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                if res.returncode != 0:
+                    return {"path": None, "cancelled": True}
+                picked = res.stdout.strip().rstrip("/")
+                return {"path": picked or None}
+        return {"path": None, "error": "no folder picker available on this platform"}
+    except subprocess.TimeoutExpired:
+        return {"path": None, "error": "folder picker timed out"}
+    except Exception as e:  # noqa: BLE001
+        return {"path": None, "error": str(e)}
+
+
 def _probe_control_center_ready() -> bool:
     try:
         req = urllib.request.Request(CONTROL_CENTER_URL, method="GET")
@@ -2133,6 +2178,13 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._remote_stream(session_id)
             return True
 
+        # POST /api/browse-folder  body: {initial?: str}  → {path: str|null}
+        if method == "POST" and path == "/api/browse-folder":
+            body = self._read_json_body() or {}
+            initial = (body.get("initial") or "").strip() or os.path.expanduser("~")
+            self._send_json(_browse_folder(initial))
+            return True
+
         # ── Generic spec-driven launcher routes ─────────────────────────
         if self._handle_launcher(method, path, parsed):
             return True
@@ -2350,6 +2402,12 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._send_json(stage_runner.list_sessions(slug))
             return True
 
+        # GET /api/launcher/{slug}/stage/{id}/stream  (SSE — per-stage live log)
+        if method == "GET" and tail.startswith("stage/") and tail.endswith("/stream"):
+            stage_id = tail[len("stage/"):-len("/stream")]
+            self._launcher_stage_stream(slug, stage_id)
+            return True
+
         # GET /api/launcher/{slug}/logs/{name}/stream  (SSE)
         if method == "GET" and tail.startswith("logs/") and tail.endswith("/stream"):
             log_name = tail[len("logs/"):-len("/stream")]
@@ -2358,6 +2416,29 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         self._send_json({"error": f"unknown launcher route {tail!r}"}, 404)
         return True
+
+    def _launcher_stage_stream(self, slug: str, stage_id: str) -> None:
+        import base64 as _b64
+        stream = log_sources.open_stage_stream(slug, stage_id)
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Accel-Buffering", "no")
+            self._cors_headers()
+            self.end_headers()
+        except BrokenPipeError:
+            stream["close"]()
+            return
+        try:
+            for chunk in stream["iter"]:
+                payload = json.dumps({"b64": _b64.b64encode(chunk).decode()})
+                self.wfile.write(b"data: " + payload.encode() + b"\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            stream["close"]()
 
     def _launcher_log_stream(self, slug: str, spec: dict, log_name: str) -> None:
         import base64 as _b64

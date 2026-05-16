@@ -23,6 +23,7 @@ import qualified API.Beckn.FRFS.OnStatus as OnStatus
 import qualified API.Beckn.FRFS.OnUpdate as OnUpdate
 import qualified Domain.Types.Merchant as DM
 import Environment
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Id
 import Kernel.Utils.Servant.SignatureAuth
@@ -55,10 +56,20 @@ type APIM =
 
 handler :: FlowServer API
 handler auth =
-  OnSearch.handler auth
+  OnSearch.handler Nothing auth
     :<|> OnSelect.handler auth
-    :<|> OnInit.handler auth
-    :<|> OnConfirm.handler auth
-    :<|> OnStatus.handler auth
-    :<|> OnCancel.handler auth
-    :<|> OnUpdate.handler auth
+    :<|> OnInit.handler Nothing auth
+    :<|> OnConfirm.handler Nothing auth
+    :<|> OnStatus.handler Nothing auth
+    :<|> OnCancel.handler Nothing auth
+    :<|> OnUpdate.handler Nothing auth
+
+handlerM :: Id DM.Merchant -> FlowServer API
+handlerM merchantId auth =
+  OnSearch.handler (Just merchantId) auth
+    :<|> OnSelect.handler auth
+    :<|> OnInit.handler (Just merchantId) auth
+    :<|> OnConfirm.handler (Just merchantId) auth
+    :<|> OnStatus.handler (Just merchantId) auth
+    :<|> OnCancel.handler (Just merchantId) auth
+    :<|> OnUpdate.handler (Just merchantId) auth

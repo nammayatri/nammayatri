@@ -14,6 +14,7 @@
 
 module API.Beckn.FRFS.OnConfirm where
 
+import qualified API.Beckn.FRFS.Forwarding as Forwarding
 import qualified Beckn.ACL.FRFS.OnConfirm as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
@@ -21,6 +22,7 @@ import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
@@ -39,14 +41,21 @@ import TransactionLogs.PushLogs
 
 type API = Spec.OnConfirmAPIBS
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onConfirm
 
-onConfirm :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
-onConfirm _ reqBS = withFlowHandlerAPI $ do
+onConfirm :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onConfirm mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
   req <- case decodeOnConfirmReq reqBS of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
+  mbForwarded <- Forwarding.maybeForwardOnConfirm mbMerchantId authResult req reqBS
+  case mbForwarded of
+    Just ack -> pure ack
+    Nothing -> processOnConfirm req
+
+processOnConfirm :: Spec.OnConfirmReq -> Flow Spec.AckResponse
+processOnConfirm req = do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")

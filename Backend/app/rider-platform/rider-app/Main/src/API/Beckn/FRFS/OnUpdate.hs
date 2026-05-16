@@ -14,15 +14,18 @@
 
 module API.Beckn.FRFS.OnUpdate where
 
+import qualified API.Beckn.FRFS.Forwarding as Forwarding
 import qualified Beckn.ACL.FRFS.OnUpdate as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnUpdate as DOnUpdate
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
@@ -30,14 +33,22 @@ import TransactionLogs.PushLogs
 
 type API = Spec.OnUpdateAPI
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onUpdate
 
 onUpdate ::
+  Maybe (Id DM.Merchant) ->
   SignatureAuthResult ->
   Spec.OnUpdateReq ->
   FlowHandler Spec.AckResponse
-onUpdate _ req = withFlowHandlerAPI $ do
+onUpdate mbMerchantId authResult req = withFlowHandlerAPI $ do
+  mbForwarded <- Forwarding.maybeForwardOnUpdate mbMerchantId authResult req
+  case mbForwarded of
+    Just ack -> pure ack
+    Nothing -> processOnUpdate req
+
+processOnUpdate :: Spec.OnUpdateReq -> Flow Spec.AckResponse
+processOnUpdate req = do
   transaction_id <- req.onUpdateReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   withTransactionIdLogTag' transaction_id $ do
     logDebug $ "Received OnUpdate request" <> encodeToText req

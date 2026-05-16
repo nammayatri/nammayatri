@@ -1,9 +1,9 @@
 # yaml-language-server: $schema=./_schema.json
-name: control-center
-title: Control Center
+name: control-center-backend
+title: Control Center — Backend
 icon: assets/icons/control-center.svg
 category: tool
-tags: [node, vite, dashboard]
+tags: [node, dashboard, backend]
 
 source:
   url: https://github.com/nammayatri/control-center
@@ -11,14 +11,12 @@ source:
   destDir: data/control-center
 
 ports:
-  - { name: server,   port: 4001, protocol: http, allowOverride: true }
-  - { name: frontend, port: 4002, protocol: http, allowOverride: true, openInBrowser: true }
+  - { name: server, port: 4001, protocol: http, allowOverride: true }
 
 tools: [node22]
 
 domains:
   - { name: api, url: "http://localhost:4001" }
-  - { name: ui,  url: "http://localhost:4002" }
 
 inputs:
   - key: GOOGLE_PLAY_SERVICE_ACCOUNT_KEY
@@ -43,12 +41,7 @@ inputs:
     required: false
 
 env:
-  PORT:                         "${ports.server}"
-  VITE_API_URL:                 "http://localhost:8017"
-  VITE_BAP_URL:                 "http://localhost:8017"
-  VITE_BPP_URL:                 "http://localhost:8018"
-  VITE_RIDER_APP_URL:           "http://localhost:8013"
-  VITE_BACKEND_URL:             "http://localhost:${ports.server}"
+  PORT:                            "${ports.server}"
   GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: "${inputs.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY}"
   APP_STORE_CONNECT_ACCOUNTS:      "${inputs.APP_STORE_CONNECT_ACCOUNTS}"
   OPENROUTER_API_KEY:              "${inputs.OPENROUTER_API_KEY}"
@@ -67,12 +60,6 @@ stages:
     lifecycle: one-shot
     invalidatedBy: [server/package.json, server/package-lock.json]
 
-  - id: frontend-install
-    needs: [sync-source]
-    run: "npm install"
-    lifecycle: one-shot
-    invalidatedBy: [package.json, package-lock.json]
-
   - id: server
     needs: [server-install]
     cwd: server
@@ -80,23 +67,11 @@ stages:
     lifecycle: long-running
     readyProbe: { kind: http, url: "http://localhost:${ports.server}" }
 
-  - id: frontend
-    needs: [frontend-install]
-    run: "npm run dev"
-    lifecycle: long-running
-    readyProbe: { kind: http, url: "http://localhost:${ports.frontend}" }
-
 workflows:
-  first-run:        [sync-source, server-install, frontend-install, server, frontend]
-  refresh-server:   [server]
-  refresh-frontend: [frontend]
-  reinstall:        [server-install, frontend-install, server, frontend]
-
-logs:
-  - { name: server,   kind: stage, stage: server }
-  - { name: frontend, kind: stage, stage: frontend }
+  first-run: [sync-source, server-install, server]
+  refresh:   [server]
+  reinstall: [server-install, server]
 
 hooks:
   preStart:
-    - "lsof -ti :${ports.server}   | xargs -r kill -9"
-    - "lsof -ti :${ports.frontend} | xargs -r kill -9"
+    - "lsof -ti :${ports.server} | xargs -r kill -9"

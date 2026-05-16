@@ -14,11 +14,13 @@
 
 module API.Beckn.FRFS.OnCancel where
 
+import qualified API.Beckn.FRFS.Forwarding as Forwarding
 import qualified Beckn.ACL.FRFS.OnCancel as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
+import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -34,14 +36,22 @@ import TransactionLogs.PushLogs
 
 type API = Spec.OnCancelAPI
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onCancel
 
 onCancel ::
+  Maybe (Id DM.Merchant) ->
   SignatureAuthResult ->
   Spec.OnCancelReq ->
   FlowHandler Spec.AckResponse
-onCancel _ req = withFlowHandlerAPI $ do
+onCancel mbMerchantId authResult req = withFlowHandlerAPI $ do
+  mbForwarded <- Forwarding.maybeForwardOnCancel mbMerchantId authResult req
+  case mbForwarded of
+    Just ack -> pure ack
+    Nothing -> processOnCancel req
+
+processOnCancel :: Spec.OnCancelReq -> Flow Spec.AckResponse
+processOnCancel req = do
   transaction_id <- req.onCancelReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   message_id <- req.onCancelReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   withTransactionIdLogTag' transaction_id $ do

@@ -41,6 +41,15 @@ export const setSource = (
     body: JSON.stringify(body),
   });
 
+export const browseFolder = (
+  initial?: string,
+): Promise<{ path: string | null; cancelled?: boolean; error?: string }> =>
+  j(`${LOCAL_API_BASE}/api/browse-folder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ initial: initial || '' }),
+  });
+
 export const runWorkflow = (slug: string, name: string): Promise<any> =>
   j(`${base}/${encodeURIComponent(slug)}/workflow/${encodeURIComponent(name)}`, {
     method: 'POST',
@@ -63,6 +72,9 @@ export const getStatus = (slug: string): Promise<{ stages: any[] }> =>
 
 export const logStreamUrl = (slug: string, logName: string): string =>
   `${base}/${encodeURIComponent(slug)}/logs/${encodeURIComponent(logName)}/stream`;
+
+export const stageStreamUrl = (slug: string, stageId: string): string =>
+  `${base}/${encodeURIComponent(slug)}/stage/${encodeURIComponent(stageId)}/stream`;
 
 export const fileToBase64 = (file: File): Promise<string> =>
   new Promise((resolve, reject) => {

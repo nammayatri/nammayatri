@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   listLaunchers, getLauncher, setInputs, setSource, runWorkflow,
-  runStage, stopStage, logStreamUrl, fileToBase64,
+  runStage, stopStage, stageStreamUrl, fileToBase64, browseFolder,
 } from '../services/launcher';
 import {
-  LauncherSummary, LauncherDetailPayload, SpecInput, StageStatus, SpecLog,
+  LauncherSummary, LauncherDetailPayload, SpecInput, StageStatus,
 } from '../types/launcher';
 import './ToolsPanel.css';
 
@@ -88,7 +88,7 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
   const [data, setData] = useState<LauncherDetailPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [activeLog, setActiveLog] = useState<string | null>(null);
+  const [expandedStage, setExpandedStage] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try { setData(await getLauncher(slug)); setError(null); }
@@ -191,58 +191,57 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
             {spec.stages.map(st => {
               const s = stageById[st.id];
               const state = s?.state || 'idle';
+              const isExpanded = expandedStage === st.id;
               return (
-                <tr key={st.id} className={`stage-row state-${state}`}>
-                  <td><code>{st.id}</code>{st.builtin && <span className="stage-builtin"> (builtin: {st.builtin})</span>}</td>
-                  <td><span className={`stage-state state-${state}`}>{state}</span>{s?.stale ? ' · stale' : ''}</td>
-                  <td>{st.lifecycle || 'one-shot'}</td>
-                  <td>{s?.lastExit === null || s?.lastExit === undefined ? '—' : s.lastExit}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm"
-                      disabled={busy !== null}
-                      onClick={() => handleStage(st.id, false)}
-                    >Run</button>
-                    <button
-                      className="btn btn-sm"
-                      disabled={busy !== null}
-                      onClick={() => handleStage(st.id, true)}
-                      title="Force re-run"
-                    >Force</button>
-                    {state === 'running' && (
+                <React.Fragment key={st.id}>
+                  <tr
+                    className={`stage-row state-${state} ${isExpanded ? 'expanded' : ''}`}
+                    onClick={() => setExpandedStage(isExpanded ? null : st.id)}
+                    style={{ cursor: 'pointer' }}
+                    title="Click to view stage progress"
+                  >
+                    <td>
+                      <span className="stage-caret">{isExpanded ? '▾' : '▸'}</span>{' '}
+                      <code>{st.id}</code>
+                      {st.builtin && <span className="stage-builtin"> (builtin: {st.builtin})</span>}
+                    </td>
+                    <td><span className={`stage-state state-${state}`}>{state}</span>{s?.stale ? ' · stale' : ''}</td>
+                    <td>{st.lifecycle || 'one-shot'}</td>
+                    <td>{s?.lastExit === null || s?.lastExit === undefined ? '—' : s.lastExit}</td>
+                    <td onClick={e => e.stopPropagation()}>
                       <button
-                        className="btn btn-sm btn-danger"
+                        className="btn btn-sm"
                         disabled={busy !== null}
-                        onClick={() => handleStop(st.id)}
-                      >Stop</button>
-                    )}
-                  </td>
-                </tr>
+                        onClick={() => handleStage(st.id, false)}
+                      >Run</button>
+                      <button
+                        className="btn btn-sm"
+                        disabled={busy !== null}
+                        onClick={() => handleStage(st.id, true)}
+                        title="Force re-run"
+                      >Force</button>
+                      {state === 'running' && (
+                        <button
+                          className="btn btn-sm btn-danger"
+                          disabled={busy !== null}
+                          onClick={() => handleStop(st.id)}
+                        >Stop</button>
+                      )}
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="stage-detail-row">
+                      <td colSpan={5}>
+                        <LiveLog key={`stage-${st.id}`} url={stageStreamUrl(slug, st.id)} />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>
         </table>
       </Section>
-
-      {spec.logs && spec.logs.length > 0 && (
-        <Section title="Logs">
-          <div className="log-tabs">
-            {spec.logs.map(l => (
-              <button
-                key={l.name}
-                className={`log-tab ${activeLog === l.name ? 'active' : ''}`}
-                onClick={() => setActiveLog(activeLog === l.name ? null : l.name)}
-              >{l.name} · {l.kind}</button>
-            ))}
-          </div>
-          {activeLog && (
-            <LiveLog
-              key={activeLog}
-              url={logStreamUrl(slug, activeLog)}
-            />
-          )}
-        </Section>
-      )}
 
       {spec.domains && spec.domains.length > 0 && (
         <Section title="Open">
@@ -297,6 +296,18 @@ const SourceEditor: React.FC<{
         <input value={localPath} onChange={e => setLocalPath(e.target.value)} placeholder="/abs/path/to/local/checkout" />
         <button
           className="btn btn-sm"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              const res = await browseFolder(localPath.trim());
+              if (res.path) setLocalPath(res.path);
+              else if (res.error) alert(`Browse failed: ${res.error}`);
+            } finally { setBusy(false); }
+          }}
+        >Browse…</button>
+        <button
+          className="btn btn-sm"
           disabled={busy || !localPath.trim()}
           onClick={async () => { setBusy(true); try { await setSource(slug, { localPath: localPath.trim() }); onChanged(); } finally { setBusy(false); } }}
         >Symlink</button>
@@ -324,7 +335,10 @@ const InputsForm: React.FC<{
   const valueOf = (k: string): string => {
     const v = pending[k] !== undefined ? pending[k] : current[k];
     if (v == null) return '';
-    if (typeof v === 'object') return ''; // descriptors don't render as text inputs
+    if (typeof v === 'object') {
+      if ('value' in v && typeof (v as any).value !== 'object') return String((v as any).value ?? '');
+      return '';
+    }
     return String(v);
   };
 
@@ -416,6 +430,70 @@ const InputsForm: React.FC<{
   );
 };
 
+const ANSI_FG: Record<number, string> = {
+  30: '#3b3b3b', 31: '#e06c75', 32: '#98c379', 33: '#e5c07b',
+  34: '#61afef', 35: '#c678dd', 36: '#56b6c2', 37: '#dcdcdc',
+  90: '#5c6370', 91: '#ff7b85', 92: '#b5e890', 93: '#ffd787',
+  94: '#83c5ff', 95: '#e29bf0', 96: '#7fd0d8', 97: '#ffffff',
+};
+const ANSI_BG: Record<number, string> = {
+  40: '#3b3b3b', 41: '#e06c75', 42: '#98c379', 43: '#e5c07b',
+  44: '#61afef', 45: '#c678dd', 46: '#56b6c2', 47: '#dcdcdc',
+};
+
+type AnsiStyle = { fg?: string; bg?: string; bold?: boolean; dim?: boolean; italic?: boolean; underline?: boolean };
+
+const applySgr = (st: AnsiStyle, codes: number[]): AnsiStyle => {
+  let next = { ...st };
+  if (codes.length === 0) codes = [0];
+  for (const c of codes) {
+    if (c === 0) next = {};
+    else if (c === 1) next.bold = true;
+    else if (c === 2) next.dim = true;
+    else if (c === 3) next.italic = true;
+    else if (c === 4) next.underline = true;
+    else if (c === 22) { next.bold = false; next.dim = false; }
+    else if (c === 23) next.italic = false;
+    else if (c === 24) next.underline = false;
+    else if (c === 39) next.fg = undefined;
+    else if (c === 49) next.bg = undefined;
+    else if (ANSI_FG[c]) next.fg = ANSI_FG[c];
+    else if (ANSI_BG[c]) next.bg = ANSI_BG[c];
+  }
+  return next;
+};
+
+const ansiToSpans = (text: string): React.ReactNode[] => {
+  const out: React.ReactNode[] = [];
+  // Match either an ANSI CSI sequence or a bare "[..m" pattern
+  // (some shells/terminals strip the ESC before reaching us).
+  const re = /\x1b\[([0-9;]*)m|\[([0-9;]+)m/g;
+  let style: AnsiStyle = {};
+  let last = 0;
+  let key = 0;
+  const flush = (chunk: string) => {
+    if (!chunk) return;
+    const hasStyle = style.fg || style.bg || style.bold || style.dim || style.italic || style.underline;
+    if (!hasStyle) { out.push(chunk); return; }
+    const css: React.CSSProperties = {};
+    if (style.fg) css.color = style.fg;
+    if (style.bg) css.background = style.bg;
+    if (style.bold) css.fontWeight = 600;
+    if (style.dim) css.opacity = 0.65;
+    if (style.italic) css.fontStyle = 'italic';
+    if (style.underline) css.textDecoration = 'underline';
+    out.push(<span key={key++} style={css}>{chunk}</span>);
+  };
+  for (let m; (m = re.exec(text)); ) {
+    flush(text.slice(last, m.index));
+    const codes = (m[1] ?? m[2] ?? '').split(';').filter(s => s !== '').map(n => parseInt(n, 10));
+    style = applySgr(style, codes);
+    last = m.index + m[0].length;
+  }
+  flush(text.slice(last));
+  return out;
+};
+
 const LiveLog: React.FC<{ url: string }> = ({ url }) => {
   const [lines, setLines] = useState<string[]>([]);
   const preRef = React.useRef<HTMLPreElement | null>(null);
@@ -433,8 +511,8 @@ const LiveLog: React.FC<{ url: string }> = ({ url }) => {
           for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
           const text = decoder.decode(bytes);
           setLines(prev => {
-            const merged = (prev.join('') + text).split('\n');
-            const tail = merged.slice(-1000);
+            const merged = (prev.join('\n') + text).split('\n');
+            const tail = merged.slice(-5000);
             return tail;
           });
         }
@@ -448,5 +526,11 @@ const LiveLog: React.FC<{ url: string }> = ({ url }) => {
     if (preRef.current) preRef.current.scrollTop = preRef.current.scrollHeight;
   }, [lines]);
 
-  return <pre ref={preRef} className="live-log">{lines.join('\n')}</pre>;
+  return (
+    <pre ref={preRef} className="live-log">
+      {lines.map((ln, i) => (
+        <div key={i} className="live-log-line">{ansiToSpans(ln)}</div>
+      ))}
+    </pre>
+  );
 };

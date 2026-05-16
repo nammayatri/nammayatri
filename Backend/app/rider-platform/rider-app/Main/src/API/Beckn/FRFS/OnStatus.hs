@@ -14,17 +14,20 @@
 
 module API.Beckn.FRFS.OnStatus where
 
+import qualified API.Beckn.FRFS.Forwarding as Forwarding
 import qualified Beckn.ACL.FRFS.OnStatus as ACL
 import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.Aeson (eitherDecodeStrict')
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
+import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude (ByteString)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
@@ -32,14 +35,21 @@ import TransactionLogs.PushLogs
 
 type API = Spec.OnStatusAPIBS
 
-handler :: SignatureAuthResult -> FlowServer API
+handler :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> FlowServer API
 handler = onStatus
 
-onStatus :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
-onStatus _ reqBS = withFlowHandlerAPI $ do
+onStatus :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
+onStatus mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
   req <- case decodeOnStatusReq reqBS of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
+  mbForwarded <- Forwarding.maybeForwardOnStatus mbMerchantId authResult req reqBS
+  case mbForwarded of
+    Just ack -> pure ack
+    Nothing -> processOnStatus req
+
+processOnStatus :: Spec.OnStatusReq -> Flow Spec.AckResponse
+processOnStatus req = do
   transaction_id <- req.onStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnStatus request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do

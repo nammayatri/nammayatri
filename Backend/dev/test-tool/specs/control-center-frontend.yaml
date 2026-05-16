@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=./_schema.json
+name: control-center-frontend
+title: Control Center — Frontend
+icon: assets/icons/control-center.svg
+category: tool
+tags: [node, vite, dashboard, frontend]
+
+source:
+  url: https://github.com/nammayatri/control-center
+  ref: main
+  destDir: data/control-center
+
+ports:
+  - { name: frontend, port: 4002, protocol: http, allowOverride: true, openInBrowser: true }
+  - { name: server,   port: 4001, protocol: http, allowOverride: true }
+
+tools: [node22]
+
+domains:
+  - { name: ui, url: "http://localhost:4002" }
+  - { name: admin, url: "http://admin.localhost:4002" }
+
+env:
+  PORT:               "${ports.frontend}"
+  VITE_API_URL:       "http://localhost:8017"
+  VITE_BAP_URL:       "http://localhost:8017"
+  VITE_BPP_URL:       "http://localhost:8018"
+  VITE_RIDER_APP_URL: "http://localhost:8013"
+  VITE_BACKEND_URL:   "http://localhost:${ports.server}"
+
+stages:
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: frontend-install
+    needs: [sync-source]
+    run: "npm install"
+    lifecycle: one-shot
+    invalidatedBy: [package.json, package-lock.json]
+
+  - id: frontend
+    needs: [frontend-install]
+    run: "npm run dev -- --port ${ports.frontend} --strictPort --host"
+    lifecycle: long-running
+    readyProbe: { kind: http, url: "http://localhost:${ports.frontend}" }
+
+workflows:
+  first-run: [sync-source, frontend-install, frontend]
+  refresh:   [frontend]
+  reinstall: [frontend-install, frontend]
+
+hooks:
+  preStart:
+    - "lsof -ti :${ports.frontend} | xargs -r kill -9"
