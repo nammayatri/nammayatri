@@ -1472,6 +1472,9 @@ getDriverFleetDriverVehicleAssociation merchantShortId _opCity fleetOwnerId mbLi
             let driverId = fda.driverId
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             let driverName = Just driver.firstName
+                firstName = Just driver.firstName
+                middleName = driver.middleName
+                lastName = driver.lastName
                 conductorName = driver.lastName
             driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
             decryptedVehicleRC <- decrypt vrca.certificateNumber
@@ -1654,6 +1657,9 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
               Just (_, rc) -> getVehicleDetails rc ------- if driver is using fleet vehicle
               Nothing -> getVehicleDetails $ snd $ head associations -------- otherwise give the latest active association
         let driverName = Just driver.firstName
+            firstName = Just driver.firstName
+            middleName = driver.middleName
+            lastName = driver.lastName
             conductorName = driver.lastName
         driverPhoneNo <- mapM decrypt driver.mobileNumber
         let driverMobileCountryCode = driver.mobileCountryCode
@@ -1772,6 +1778,9 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   enabled = Just driverInfo'.enabled,
                   driverId = driverId,
                   driverName = driverName,
+                  firstName = firstName,
+                  middleName = middleName,
+                  lastName = lastName,
                   conductorName = conductorName,
                   driverPhoneNo = driverPhoneNo,
                   driverMobileCountryCode = driverMobileCountryCode,
@@ -1898,7 +1907,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
             return (completedRides, earning)
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
         let rcActiveAssociation = mbActiveAssoc
-        ((driverName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode, enabled, driverDocsVerificationStatus), mbAssociatedOn) <- case rcActiveAssociation of
+        ((driverName, middleName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode, enabled, driverDocsVerificationStatus), mbAssociatedOn) <- case rcActiveAssociation of
           Just activeAssociation -> do
             driverInfo <- getFleetDriverInfo fleetOwnerId activeAssociation.driverId False
             return (driverInfo, Just activeAssociation.associatedOn)
@@ -1908,7 +1917,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
               Just latestAssoc -> do
                 driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
                 return (driverInfo, Just latestAssoc.associatedOn)
-              Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
+              Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
         (driverMobileCountryCodeValue, driverEmailValue) <- case driverId of
           Just driverIdText -> do
             let mbDriver = Map.lookup (Id @DP.Person driverIdText) personMap
@@ -1994,6 +2003,9 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   enabled = enabled,
                   driverId = driverId,
                   driverName = driverName,
+                  firstName = driverName,
+                  middleName = middleName,
+                  lastName = conductorName,
                   conductorName = conductorName,
                   driverPhoneNo = driverPhoneNo,
                   isRcAssociated = isRcAssociated,
@@ -2299,7 +2311,7 @@ validateDriverAssociationWithOperator driverId operatorId = do
       mbFOA <- B.runInReplica $ QFleetOperatorAssociation.findByFleetOwnerIdAndOperatorId (Id foId) opId True
       pure $ isJust mbFOA
 
-getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text, Maybe Bool, Maybe DDVS.DocsVerificationStatus)
+getFleetDriverInfo :: Text -> Id DP.Person -> Bool -> Flow (Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe DrInfo.DriverMode, Maybe Bool, Maybe Bool, Maybe Text, Maybe Bool, Maybe DDVS.DocsVerificationStatus)
 getFleetDriverInfo fleetOwnerId driverId isDriver = do
   mbDriver <- QPerson.findById driverId
   mbDriverInfo' <- QDriverInfo.findById driverId
@@ -2318,8 +2330,8 @@ getFleetDriverInfo fleetOwnerId driverId isDriver = do
               Nothing -> return (False, True, Nothing)
           else return (False, False, Nothing)
       mobileNumber <- mapM decrypt driver.mobileNumber
-      return (Just driver.firstName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode, Just driverInfo'.enabled, driverInfo'.docsVerificationStatus)
-    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+      return (Just driver.firstName, driver.middleName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode, Just driverInfo'.enabled, driverInfo'.docsVerificationStatus)
+    (_, _) -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
 ---------------------------------------------------------------------
 postDriverFleetVehicleDriverRcStatus ::
