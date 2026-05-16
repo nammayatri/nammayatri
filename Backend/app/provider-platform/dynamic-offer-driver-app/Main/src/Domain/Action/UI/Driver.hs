@@ -482,7 +482,8 @@ data DriverInformationRes = DriverInformationRes
     driverReferralApplied :: Bool,
     fleetReferralApplied :: Bool,
     operatorReferralApplied :: Bool,
-    membershipId :: Maybe (Id DStclMembership.StclMembership)
+    membershipId :: Maybe (Id DStclMembership.StclMembership),
+    createdAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1699,6 +1700,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           bankIfsc = bankIfsc',
           bankVerificationStatus = bankVerificationStatus',
           upiId = payoutVpa,
+          createdAt = registeredAt,
           ..
         }
 
