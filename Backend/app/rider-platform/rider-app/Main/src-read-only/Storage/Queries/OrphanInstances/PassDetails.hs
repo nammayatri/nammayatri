@@ -20,12 +20,15 @@ instance FromTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
       Just
         Domain.Types.PassDetails.PassDetails
           { aadharNo = EncryptedHashed <$> (Encrypted <$> aadharNoEncrypted) <*> aadharNoHash,
-            address = address,
+            academicYearEnd = academicYearEnd,
+            academicYearStart = academicYearStart,
+            address = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< address,
             age = age,
             applicableRouteIds = applicableRouteIds,
             createdAt = createdAt,
+            department = department,
             gender = gender,
-            graduationDate = graduationDate,
+            guardianMobileNumber = EncryptedHashed <$> (Encrypted <$> guardianMobileNumberEncrypted) <*> guardianMobileNumberHash,
             guardianName = guardianName,
             id = Kernel.Types.Id.Id id,
             idCardPicture = idCardPicture,
@@ -42,23 +45,27 @@ instance FromTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
             remark = remark,
             routePairs = fromMaybe [] ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs),
             selfImage = selfImage,
-            studentClass = studentClass,
             updatedAt = updatedAt,
             validTill = validTill,
-            verificationStatus = verificationStatus
+            verificationStatus = verificationStatus,
+            year = year
           }
 
 instance ToTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
   toTType' (Domain.Types.PassDetails.PassDetails {..}) = do
     Beam.PassDetailsT
-      { Beam.aadharNoEncrypted = ((aadharNo <&> unEncrypted . (.encrypted))),
-        Beam.aadharNoHash = (aadharNo <&> (.hash)),
-        Beam.address = address,
+      { Beam.aadharNoEncrypted = aadharNo <&> unEncrypted . (.encrypted),
+        Beam.aadharNoHash = aadharNo <&> (.hash),
+        Beam.academicYearEnd = academicYearEnd,
+        Beam.academicYearStart = academicYearStart,
+        Beam.address = Kernel.Prelude.toJSON <$> address,
         Beam.age = age,
         Beam.applicableRouteIds = applicableRouteIds,
         Beam.createdAt = createdAt,
+        Beam.department = department,
         Beam.gender = gender,
-        Beam.graduationDate = graduationDate,
+        Beam.guardianMobileNumberEncrypted = guardianMobileNumber <&> unEncrypted . (.encrypted),
+        Beam.guardianMobileNumberHash = guardianMobileNumber <&> (.hash),
         Beam.guardianName = guardianName,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.idCardPicture = idCardPicture,
@@ -75,8 +82,8 @@ instance ToTType' Beam.PassDetails Domain.Types.PassDetails.PassDetails where
         Beam.remark = remark,
         Beam.routePairs = Just (Kernel.Prelude.toJSON routePairs),
         Beam.selfImage = selfImage,
-        Beam.studentClass = studentClass,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill,
-        Beam.verificationStatus = verificationStatus
+        Beam.verificationStatus = verificationStatus,
+        Beam.year = year
       }

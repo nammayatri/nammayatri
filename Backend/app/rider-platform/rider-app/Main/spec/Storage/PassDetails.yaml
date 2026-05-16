@@ -8,6 +8,7 @@ imports:
   PassEnum: Domain.Types.PassType
   Gender: Domain.Types.Person
   LatLong: Kernel.External.Maps.Types
+  LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
 
@@ -28,6 +29,11 @@ PassDetails:
       destLatLong: LatLong
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
+    PassDetailAddress:
+      latLng: LatLngV2
+      placeName: Text
+      derive': "Show, Eq, Generic, ToJSON, FromJSON, ToSchema"
+
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <VerificationStatus>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <VerificationStatus>
@@ -38,11 +44,13 @@ PassDetails:
     passOrganizationId: Id PassOrganization
     name: Text
     registerNo: Maybe Text
-    studentClass: Maybe Text
+    department: Maybe Text
+    year: Maybe Text
     age: Maybe Int
     gender: Gender
     guardianName: Maybe Text
-    address: Maybe Text
+    guardianMobileNumber: Maybe (EncryptedHashedField e Text)
+    address: Maybe PassDetailAddress
     pincode: Maybe Text
     idCardPicture: Maybe Text
     selfImage: Text
@@ -51,7 +59,8 @@ PassDetails:
     aadharNo: Maybe (EncryptedHashedField e Text)
     remark: Maybe Text
     routePairs: "[RoutePair]"
-    graduationDate: Maybe UTCTime
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     referenceNumber: Maybe Int
     createdAt: UTCTime
@@ -63,20 +72,30 @@ PassDetails:
 
   beamType:
     routePairs: Maybe Value
+    address: Maybe Value
 
   beamFields:
     aadharNo:
       aadharNoEncrypted: Maybe Text
       aadharNoHash: Maybe DbHash
+    guardianMobileNumber:
+      guardianMobileNumberEncrypted: Maybe Text
+      guardianMobileNumberHash: Maybe DbHash
 
   fromTType:
     routePairs: |-
       fromMaybe [] ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< routePairs)|E
+    address: |-
+      ((\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< address)|E
     aadharNo: EncryptedHashed <$> (Encrypted <$> aadharNoEncrypted) <*> aadharNoHash|E
+    guardianMobileNumber: EncryptedHashed <$> (Encrypted <$> guardianMobileNumberEncrypted) <*> guardianMobileNumberHash|E
   toTType:
     routePairs: Just (Kernel.Prelude.toJSON routePairs)|E
+    address: (Kernel.Prelude.toJSON <$> address)|E
     aadharNoEncrypted: (aadharNo <&> unEncrypted . (.encrypted))|E
     aadharNoHash: (aadharNo <&> (.hash))|E
+    guardianMobileNumberEncrypted: (guardianMobileNumber <&> unEncrypted . (.encrypted))|E
+    guardianMobileNumberHash: (guardianMobileNumber <&> (.hash))|E
 
   constraints:
     id: PrimaryKey
@@ -84,17 +103,12 @@ PassDetails:
     passOrganizationId: SecondaryKey
 
   sqlType:
-    name: text
-    idCardPicture: text
-    verificationStatus: text
-    address: text
-    guardianName: text
-    studentClass: text
+    address: jsonb
     routePairs: jsonb
-    remark: text
-    passEnum: text
     aadharNoEncrypted: character varying(255)
     aadharNoHash: bytea
+    guardianMobileNumberEncrypted: character varying(255)
+    guardianMobileNumberHash: bytea
 
   queries:
     findById:
@@ -119,13 +133,13 @@ PassDetails:
 
     updateVerificationStatus:
       kvFunction: updateWithKV
-      params: [verificationStatus, validTill, remark, graduationDate, numberOfStages]
+      params: [verificationStatus, validTill, remark, numberOfStages, academicYearStart, academicYearEnd]
       where:
         in: [id]
 
     updatePassDetails:
       kvFunction: updateWithKV
-      params: [name, passOrganizationId, idCardPicture, address, age, guardianName, studentClass, routePairs, graduationDate, verificationStatus, numberOfStages, applicableRouteIds, updatedAt]
+      params: [name, passOrganizationId, idCardPicture, address, age, guardianName, department, year, routePairs, academicYearStart, academicYearEnd, verificationStatus, numberOfStages, applicableRouteIds, updatedAt]
       where:
         and: [personId, passEnum]
 

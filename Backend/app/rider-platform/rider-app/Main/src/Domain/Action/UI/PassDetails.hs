@@ -39,7 +39,7 @@ import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
 import Kernel.Beam.Functions as B
-import Kernel.External.Encryption (encrypt)
+import Kernel.External.Encryption (decrypt, encrypt)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as GT
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -121,8 +121,9 @@ createPassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPa
 createPassDetail req person passEnum = do
   passDetailId <- generateGUID
   now <- getCurrentTime
-  validTill <- computeValidTill now person.merchantOperatingCityId req.graduationDate
+  validTill <- computeValidTill now person.merchantOperatingCityId
   encAadharNo <- mapM encrypt req.aadharNo
+  encGuardianMobile <- mapM encrypt req.guardianMobileNumber
   (applicableRouteIds, routePairs, numberOfStages) <- processRouteDetails person.merchantOperatingCityId req.routeDetails
   refNumber <- getNextReferenceNumber
 
@@ -130,8 +131,10 @@ createPassDetail req person passEnum = do
         DPassDetails.PassDetails
           { id = passDetailId,
             name = req.name,
-            studentClass = req.studentClass,
+            department = req.department,
+            year = req.year,
             guardianName = req.guardianName,
+            guardianMobileNumber = encGuardianMobile,
             age = req.age,
             gender = req.gender,
             idCardPicture = req.idCardPicture,
@@ -147,7 +150,8 @@ createPassDetail req person passEnum = do
             verificationStatus = DPassDetails.PENDING,
             validTill = validTill,
             remark = Nothing,
-            graduationDate = req.graduationDate,
+            academicYearStart = req.academicYearStart,
+            academicYearEnd = req.academicYearEnd,
             numberOfStages = numberOfStages,
             referenceNumber = Just (fromInteger refNumber),
             applicableRouteIds = applicableRouteIds,
@@ -173,22 +177,16 @@ getNextReferenceNumber =
 computeValidTill ::
   Data.Time.UTCTime ->
   Id.Id DMOC.MerchantOperatingCity ->
-  Kernel.Prelude.Maybe Data.Time.UTCTime ->
   Environment.Flow Data.Time.UTCTime
-computeValidTill now moid mbGraduationDate = do
-  case mbGraduationDate of
-    Just gradDate
-      | gradDate <= now ->
-        Utils.throwError $ InvalidRequest "graduationDate must be in the future"
-    _ -> pure ()
+computeValidTill now moid = do
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
-  let durationDays = maybe 730 (.validityDurationDays) riderConfig.studentPassVerifyConfig
-      configValidTill = Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
-  pure $ maybe configValidTill (min configValidTill) mbGraduationDate
+  let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
+  pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
 
 updatePassDetail :: PassDetailsAPI.PassDetailsUpdateReq -> DPerson.Person -> DPassDetails.PassDetails -> Environment.Flow ()
 updatePassDetail req person passDetail = do
   encAadharNo <- mapM encrypt req.aadharNo
+  encGuardianMobile <- mapM encrypt req.guardianMobileNumber
   (applicableRouteIds, routePairs, numberOfStages) <- processRouteDetails person.merchantOperatingCityId req.routeDetails
 
   let updatedPassDetails =
@@ -202,12 +200,15 @@ updatePassDetail req person passDetail = do
             DPassDetails.age = req.age <|> passDetail.age,
             DPassDetails.gender = req.gender,
             DPassDetails.guardianName = req.guardianName <|> passDetail.guardianName,
-            DPassDetails.studentClass = req.studentClass <|> passDetail.studentClass,
+            DPassDetails.guardianMobileNumber = encGuardianMobile <|> passDetail.guardianMobileNumber,
+            DPassDetails.department = req.department <|> passDetail.department,
+            DPassDetails.year = req.year <|> passDetail.year,
             DPassDetails.aadharNo = encAadharNo <|> passDetail.aadharNo,
             DPassDetails.routePairs = routePairs,
             DPassDetails.applicableRouteIds = applicableRouteIds,
             DPassDetails.numberOfStages = numberOfStages,
-            DPassDetails.graduationDate = req.graduationDate <|> passDetail.graduationDate,
+            DPassDetails.academicYearStart = req.academicYearStart <|> passDetail.academicYearStart,
+            DPassDetails.academicYearEnd = req.academicYearEnd <|> passDetail.academicYearEnd,
             DPassDetails.verificationStatus = DPassDetails.PENDING,
             DPassDetails.remark = Nothing
           }
@@ -432,14 +433,16 @@ getPassDetailsData (mbPersonId, _) passEnumText = do
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   passDetail <- QPassDetails.findByPersonId person.id passEnum >>= fromMaybeM (PassDetailsNotFound personId.getId)
   org <- QPassOrganization.findById passDetail.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound passDetail.passOrganizationId.getId)
-  pure $ mkPassDetailResp passDetail org
+  decGuardianMobile <- mapM decrypt passDetail.guardianMobileNumber
+  pure $ mkPassDetailResp decGuardianMobile passDetail org
 
-mkPassDetailResp :: DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
-mkPassDetailResp DPassDetails.PassDetails {..} org =
+mkPassDetailResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> DPassOrganization.PassOrganization -> PassDetailsAPI.PassDetailsDataResp
+mkPassDetailResp decGuardianMobile DPassDetails.PassDetails {..} org =
   PassDetailsAPI.PassDetailsDataResp
     { passDetailsId = id,
       passOrganizationId = org.id,
       passOrganizationName = org.name,
+      guardianMobileNumber = decGuardianMobile,
       ..
     }
 

@@ -3,8 +3,10 @@ imports:
   PassOrganization: Domain.Types.PassOrganization
   VerificationStatus: Domain.Types.PassDetails
   RoutePair: Domain.Types.PassDetails
+  PassDetailAddress: Domain.Types.PassDetails
   Pass: Domain.Types.Pass
   UTCTime: Data.Time
+  Day: Data.Time
   APISuccess: Kernel.Types.APISuccess
   Gender: Domain.Types.Person
   FilePath: EulerHS.Prelude
@@ -21,25 +23,30 @@ types:
     passOrganizationId: Id PassOrganization
     name: Text
     idCardPicture: Maybe Text
-    address: Maybe Text
+    address: "Maybe PassDetailAddress"
     age: Maybe Int
     gender: Gender
     pincode: Maybe Text
     selfImage: Text
     guardianName: Maybe Text
-    studentClass: Maybe Text
+    guardianMobileNumber: Maybe Text
+    department: Maybe Text
+    year: Maybe Text
     routeDetails: "[RouteDetails]"
     registerNo: Maybe Text
     aadharNo: Maybe Text
-    graduationDate: Maybe UTCTime
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
 
   PassDetailsDataResp:
     passDetailsId: Id PassDetails
     name: Text
     age: Maybe Int
     guardianName: Maybe Text
-    address: Maybe Text
-    studentClass: Maybe Text
+    guardianMobileNumber: Maybe Text
+    address: "Maybe PassDetailAddress"
+    department: Maybe Text
+    year: Maybe Text
     idCardPicture: Maybe Text
     routePairs: "[RoutePair]"
     selfImage: Text
@@ -48,7 +55,8 @@ types:
     passOrganizationId: Id PassOrganization
     passOrganizationName: Text
     registerNo: Maybe Text
-    graduationDate: Maybe UTCTime
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     verificationStatus: VerificationStatus
     validTill: UTCTime
     remark: Maybe Text

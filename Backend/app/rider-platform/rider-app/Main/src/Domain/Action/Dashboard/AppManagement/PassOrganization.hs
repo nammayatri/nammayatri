@@ -24,6 +24,7 @@ import qualified "this" Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified GHC.Exts
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
@@ -72,7 +73,9 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
     Nothing ->
       QPassDetails.findAllByMerchantIdAndMerchantOperatingCityId cappedLimit offset callerMoc.merchantId callerMoc.id passEnum statuses
   let offset' = fromMaybe 0 offset
-      passDetailsInfo = map mkPassDetailsInfoResp passDetails
+  passDetailsInfo <- forM passDetails $ \pd -> do
+    decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
+    pure $ mkPassDetailsInfoResp decGuardianMobile pd
   pure $
     PassOrganizationAPI.PassDetailsListResp
       { PassOrganizationAPI.passDetails = passDetailsInfo,
@@ -80,8 +83,8 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
         PassOrganizationAPI.offset = offset'
       }
 
-mkPassDetailsInfoResp :: DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
-mkPassDetailsInfoResp passDetails =
+mkPassDetailsInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
+mkPassDetailsInfoResp decGuardianMobile passDetails =
   PassOrganizationAPI.PassDetailsInfoResp
     { PassOrganizationAPI.passDetailsId = passDetails.id,
       PassOrganizationAPI.personId = passDetails.personId,
@@ -96,8 +99,11 @@ mkPassDetailsInfoResp passDetails =
       PassOrganizationAPI.routePairs = passDetails.routePairs,
       PassOrganizationAPI.age = passDetails.age,
       PassOrganizationAPI.guardianName = passDetails.guardianName,
-      PassOrganizationAPI.studentClass = passDetails.studentClass,
-      PassOrganizationAPI.graduationDate = passDetails.graduationDate,
+      PassOrganizationAPI.guardianMobileNumber = decGuardianMobile,
+      PassOrganizationAPI.department = passDetails.department,
+      PassOrganizationAPI.year = passDetails.year,
+      PassOrganizationAPI.academicYearStart = passDetails.academicYearStart,
+      PassOrganizationAPI.academicYearEnd = passDetails.academicYearEnd,
       PassOrganizationAPI.numberOfStages = passDetails.numberOfStages,
       PassOrganizationAPI.remark = passDetails.remark,
       PassOrganizationAPI.createdAt = passDetails.createdAt,
@@ -109,21 +115,23 @@ postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
   now <- Utils.getCurrentTime
   -- Per-row update with field-level coalescing: if the dashboard verifier sends
-  -- `null` (or omits) graduationDate / remark / numberOfStages, we keep the value
-  -- already in the DB rather than blanking the column to NULL.
+  -- `null` (or omits) academicYearStart / academicYearEnd / remark / numberOfStages,
+  -- we keep the value already in the DB rather than blanking the column to NULL.
   forM_ req.verifications $ \pdV -> do
     pd <- QPassDetails.findById pdV.passDetailsId >>= fromMaybeM (PassDetailsNotFound pdV.passDetailsId.getId)
     unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
-    let mergedGraduationDate = pdV.graduationDate <|> pd.graduationDate
-        mergedRemark = pdV.remark <|> pd.remark
+    let mergedRemark = pdV.remark <|> pd.remark
         mergedNumberOfStages = pdV.numberOfStages <|> pd.numberOfStages
-    validTill <- DPassDetails.computeValidTill now callerMoc.id mergedGraduationDate
+        mergedAcademicYearStart = pdV.academicYearStart <|> pd.academicYearStart
+        mergedAcademicYearEnd = pdV.academicYearEnd <|> pd.academicYearEnd
+    validTill <- DPassDetails.computeValidTill now callerMoc.id
     QPassDetails.updateVerificationStatus
       pdV.verificationStatus
       validTill
       mergedRemark
-      mergedGraduationDate
       mergedNumberOfStages
+      mergedAcademicYearStart
+      mergedAcademicYearEnd
       [pdV.passDetailsId]
   pure APISuccess.Success
 

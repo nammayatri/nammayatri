@@ -19,10 +19,13 @@ data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassDetailsDataResp = PassDetailsDataResp
-  { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
+    academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
+    address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
-    graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
@@ -34,19 +37,22 @@ data PassDetailsDataResp = PassDetailsDataResp
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
     selfImage :: Kernel.Prelude.Text,
-    studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validTill :: Data.Time.UTCTime,
-    verificationStatus :: Domain.Types.PassDetails.VerificationStatus
+    verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassDetailsUpdateReq = PassDetailsUpdateReq
   { aadharNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
+    academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
+    address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
-    graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
@@ -55,7 +61,7 @@ data PassDetailsUpdateReq = PassDetailsUpdateReq
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeDetails :: [RouteDetails],
     selfImage :: Kernel.Prelude.Text,
-    studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

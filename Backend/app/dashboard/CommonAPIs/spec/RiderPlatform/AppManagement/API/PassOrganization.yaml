@@ -3,8 +3,10 @@ imports:
   PassOrganization: Domain.Types.PassOrganization
   VerificationStatus: Domain.Types.PassDetails
   RoutePair: Domain.Types.PassDetails
+  PassDetailAddress: Domain.Types.PassDetails
   Person: Domain.Types.Person
   UTCTime: Data.Time
+  Day: Data.Time
   APISuccess: Kernel.Types.APISuccess
   PassEnum: Domain.Types.PassType
   Gender: Domain.Types.Person
@@ -25,15 +27,18 @@ types:
     idCardPicture: Maybe Text
     verificationStatus: VerificationStatus
     validTill: UTCTime
-    address: Maybe Text
+    address: "Maybe PassDetailAddress"
     gender: Gender
     pincode: Maybe Text
     selfImage: Text
     routePairs: "[RoutePair]"
     age: Maybe Int
     guardianName: Maybe Text
-    studentClass: Maybe Text
-    graduationDate: Maybe UTCTime
+    guardianMobileNumber: Maybe Text
+    department: Maybe Text
+    year: Maybe Text
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     remark: Maybe Text
     createdAt: UTCTime
@@ -46,7 +51,8 @@ types:
 
   PassDetailsVerification:
     passDetailsId: Id PassDetails
-    graduationDate: Maybe UTCTime
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     verificationStatus: VerificationStatus
     remark: Maybe Text
