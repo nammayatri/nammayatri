@@ -1933,6 +1933,9 @@ types:
     - driverId: Maybe Text
     - vehicleNo: Maybe Text
     - driverName: Maybe Text
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
     - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
@@ -1959,6 +1962,9 @@ types:
     - vehicleModel: Maybe Text
     - vehicleYear: Maybe Int
     - driverName: Maybe Text
+    - firstName: Maybe Text
+    - middleName: Maybe Text
+    - lastName: Maybe Text
     - conductorName: Maybe Text
     - status: Maybe DriverMode
     - driverPhoneNo: Maybe Text
