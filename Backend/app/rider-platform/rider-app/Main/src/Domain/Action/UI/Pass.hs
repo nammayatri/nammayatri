@@ -1144,8 +1144,8 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
 
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
-      -- Check if there are other passes with the same passTypeId that already have this deviceId
-      duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+      -- Check if there are other passes with the same passTypeId that already have this deviceId.
+      duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
       let otherDevicePasses = filter (\p -> p.id /= purchasedPass.id && p.deviceId == deviceId) duplicatePasses
 
       case otherDevicePasses of
