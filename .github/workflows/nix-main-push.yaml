@@ -45,8 +45,11 @@ jobs:
       - name: Restore cabal cache
         run: |
           CABAL_CACHE=/home/khuzema/ny-cabal-cache/dist-newstyle
+          CABAL_DIR=/home/khuzema/ny-cabal-cache/.cabal-dir
           mkdir -p $CABAL_CACHE
+          mkdir -p $CABAL_DIR
           ln -sfn $CABAL_CACHE Backend/dist-newstyle
+          ln -sfn $CABAL_DIR Backend/.cabal-dir
 
       - name: Build (incremental cabal)
         run: |
@@ -164,8 +167,11 @@ jobs:
       - name: Restore cabal cache
         run: |
           CABAL_CACHE=/home/khuzema/ny-cabal-cache/dist-newstyle
+          CABAL_DIR=/home/khuzema/ny-cabal-cache/.cabal-dir
           mkdir -p $CABAL_CACHE
+          mkdir -p $CABAL_DIR
           ln -sfn $CABAL_CACHE Backend/dist-newstyle
+          ln -sfn $CABAL_DIR Backend/.cabal-dir
 
       - name: Build (incremental cabal)
         run: |
