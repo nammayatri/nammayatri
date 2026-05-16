@@ -25,6 +25,13 @@
   padding: 6px 8px; border-radius: 4px; font: inherit;
 }
 .rsp-form input:disabled, .rsp-form select:disabled { opacity: 0.55; }
+.rsp-form input[readonly] {
+  background: #161b22;
+  color: #8b949e;
+  cursor: default;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+}
 
 .rsp-actions { display: flex; gap: 8px; align-items: center; }
 .rsp-actions button {

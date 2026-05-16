@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
-import { NativeAppLauncher } from './NativeAppLauncher';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
 import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE } from '../config';
 import { Terminal as IntegratedTerminal } from './Terminal';
+import { FinanceViewer } from './FinanceViewer';
 
 interface SyncStatus {
   running: boolean;
@@ -56,6 +56,9 @@ export const TopBarActions: React.FC = () => {
 
   // Integrated terminal modal state.
   const [terminalOpen, setTerminalOpen] = useState(false);
+
+  // Finance visualization modal state.
+  const [financeOpen, setFinanceOpen] = useState(false);
 
   // Floating-panel collapse state. The bar used to live inline in the
   // top bar and crowded out the mode tabs at narrow widths; now it
@@ -374,24 +377,17 @@ export const TopBarActions: React.FC = () => {
               </div>
             )}
 
-            {/* Group 3: Client Applications */}
-            <div className="tb-floating-section" title="Client Applications">
-              <div className="tb-floating-section-label">Client Applications</div>
+            {/* Group 3: Visualizations */}
+            <div className="tb-floating-section" title="Visualizations">
+              <div className="tb-floating-section-label">Visualizations</div>
               <div className="tb-floating-section-row">
                 <button
-                  className={`tb-btn tb-cc${ccData?.ready ? ' tb-ok' : ccData?.error ? ' tb-err' : ''}${ccData?.running && !ccData.ready ? ' tb-running' : ''}`}
-                  onClick={openCcModal}
-                  title="Open Control Center launcher (start / stop / open inside)"
+                  className="tb-btn"
+                  onClick={() => setFinanceOpen(true)}
+                  title="Open Finance Visualization dashboard"
                 >
-                  🚀 Control Center
-                  {ccData?.ready && <span className="tb-status-chip is-ready" style={{ marginLeft: 6 }}><span className="tb-status-chip-dot" />ready</span>}
-                  {ccData?.running && !ccData.ready && <span className="tb-status-chip is-running" style={{ marginLeft: 6 }}><span className="tb-status-chip-dot" />{ccElapsed}s</span>}
-                  {ccData?.error && <span className="tb-status-chip is-error" style={{ marginLeft: 6 }}><span className="tb-status-chip-dot" />error</span>}
+                  📊 Finance
                 </button>
-                {/* Customer + Driver are independent launchers — separate
-                    button, modal, Metro, and log buffer each. */}
-                <NativeAppLauncher app="customer" label="Customer App" icon="📱" />
-                <NativeAppLauncher app="driver"   label="Driver App"   icon="🛺" />
               </div>
             </div>
           </div>
@@ -567,6 +563,19 @@ export const TopBarActions: React.FC = () => {
               >
                 📋 Copy
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {financeOpen && (
+        <div className="tb-modal-backdrop" onClick={() => setFinanceOpen(false)}>
+          <div className="tb-modal tb-modal-terminal" onClick={e => e.stopPropagation()}>
+            <div className="tb-modal-header">
+              <span className="tb-modal-title">📊 Finance Visualization</span>
+              <button className="tb-modal-close" onClick={() => setFinanceOpen(false)} title="Close">✕</button>
+            </div>
+            <div className="tb-modal-body" style={{ overflow: 'auto' }}>
+              <FinanceViewer />
             </div>
           </div>
         </div>

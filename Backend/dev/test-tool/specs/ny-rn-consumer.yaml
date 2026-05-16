@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=./_schema.json
+name: ny-rn-consumer
+title: NY Consumer App (Android)
+icon: assets/icons/mobile.svg
+category: mobile
+tags: [react-native, android, consumer]
+
+source:
+  url: https://github.com/nammayatri/ny-react-native
+  ref: main
+  destDir: data/ny-react-native
+
+ports:
+  - { name: metro,   port: 8082, protocol: tcp,  allowOverride: true }
+  - { name: backend, port: 8013, protocol: http }
+  - { name: mock,    port: 8080, protocol: http }
+
+adbReverse: [metro, backend, mock]
+
+tools: [node22, java17, yarn, adb]
+
+inputs:
+  - key: GOOGLE_SERVICES_JSON
+    label: Firebase google-services.json
+    type: file
+    accept: [".json"]
+    storeAs: path
+    required: true
+  - key: VARIANT
+    label: App variant
+    type: select
+    options: [Bridge, NammaYatri, Yatri, ManaYatri, YatriSathi, Lynx, BharatTaxi]
+    default: Lynx
+  - key: APP_ID
+    label: Android package id
+    type: text
+    default: "in.mobility.international.debug"
+
+stages:
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: materialize
+    needs: [sync-source]
+    run: |
+      cp "${inputs.GOOGLE_SERVICES_JSON}" consumer/android/app/synx/google-services.json || \
+        cp "${inputs.GOOGLE_SERVICES_JSON}" consumer/android/app/google-services.json
+      mkdir -p consumer/env
+      printf 'BASE_URL="http://localhost:%s/v2"\n' "${ports.backend}" > consumer/env/.env.development
+    lifecycle: one-shot
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, ports.backend]
+
+  - id: install
+    needs: [sync-source]
+    cwd: consumer
+    run: "yarn install"
+    lifecycle: one-shot
+    invalidatedBy: [consumer/package.json, consumer/yarn.lock]
+
+  - id: re-watch
+    needs: [install]
+    cwd: consumer
+    run: "yarn re:start"
+    lifecycle: long-running
+    readyProbe: { kind: log, pattern: "watching" }
+
+  - id: metro
+    needs: [install]
+    cwd: consumer
+    run: "yarn start --port ${ports.metro}"
+    lifecycle: long-running
+    readyProbe: { kind: log, pattern: "Welcome to Metro" }
+
+  - id: build-android
+    needs: [install, materialize]
+    cwd: consumer
+    run: "yarn android:variant ${inputs.VARIANT}DevDebug --appId ${inputs.APP_ID}"
+    lifecycle: one-shot
+    invalidatedBy: ["consumer/android/**", "*.gradle"]
+
+  - id: set-devhost
+    needs: [metro]
+    cwd: consumer
+    run: "./scripts/android-set-devhost.sh ${inputs.APP_ID} localhost:${ports.metro}"
+    lifecycle: one-shot
+
+workflows:
+  first-run:      [sync-source, materialize, install, re-watch, metro, build-android, set-devhost]
+  refresh-js:     [metro, set-devhost]
+  refresh-native: [build-android, metro, set-devhost]
+  reinstall:      [install, re-watch, metro, build-android, set-devhost]
+
+logs:
+  - { name: re-watch, kind: stage, stage: re-watch }
+  - { name: metro,    kind: stage, stage: metro }
+  - { name: build,    kind: stage, stage: build-android }
+  - { name: logcat,   kind: cmd,   cmd: "adb logcat -s ReactNativeJS:V ReactNative:V" }
+
+hooks:
+  preStart:
+    - "lsof -ti :${ports.metro} | xargs -r kill -9"

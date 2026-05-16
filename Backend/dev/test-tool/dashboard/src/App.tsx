@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
-import { FinanceViewer } from './components/FinanceViewer';
+import { ToolsPanel } from './components/ToolsPanel';
 import { RemoteStackPanel } from './components/RemoteStackPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
@@ -544,7 +544,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance' | 'remote'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -974,8 +974,8 @@ function App() {
           <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
             Custom Flows
           </button>
-          <button className={`mode-tab ${appMode === 'finance' ? 'active' : ''}`} onClick={() => setAppMode('finance')}>
-            Finance Visualization
+          <button className={`mode-tab ${appMode === 'tools' ? 'active' : ''}`} onClick={() => setAppMode('tools')}>
+            Client Applications
           </button>
           <button className={`mode-tab ${appMode === 'remote' ? 'active' : ''}`} onClick={() => setAppMode('remote')}>
             Remote Stack
@@ -987,8 +987,8 @@ function App() {
           <div className="content">
             {appMode === 'collections' ? (
               <CollectionRunner onLog={log} />
-            ) : appMode === 'finance' ? (
-              <FinanceViewer />
+            ) : appMode === 'tools' ? (
+              <ToolsPanel title="Client Applications" />
             ) : appMode === 'remote' ? (
               <RemoteStackPanel />
             ) : (
@@ -1054,10 +1054,14 @@ function App() {
             </>
             )}
           </div>
-          <div className="log-resize-handle" onMouseDown={onResizeStart} />
-          <div className="content-logs" style={{ width: logWidth }}>
-            <LogPanel logs={logs} onClear={clearLogs} />
-          </div>
+          {appMode !== 'remote' && appMode !== 'tools' && (
+            <>
+              <div className="log-resize-handle" onMouseDown={onResizeStart} />
+              <div className="content-logs" style={{ width: logWidth }}>
+                <LogPanel logs={logs} onClear={clearLogs} />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

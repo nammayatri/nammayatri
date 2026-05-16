@@ -173,8 +173,15 @@ in
         "unified-dashboard-exe"
       ];
 
+      # In non-backend profiles (e.g. testDashboard) every haskell process is
+      # disabled — but referencing `cabal run` / the nix-built exe path here
+      # still forces evaluation of every haskell derivation, which kicks off
+      # a full cabal build at `, run-local-test-dashboard` time. Short-circuit
+      # to a noop command in those profiles so the derivation graph stays slim.
       haskellProcessFor = name:
-        if cfg.useCabal
+        if cfg.profile != "full" && cfg.profile != "backend"
+        then { command = ":"; }
+        else if cfg.useCabal
         then {
           command = "set -x; pwd; cabal run ${cabalTargetForExe.${name}}";
           environment.CABAL_TARGET = cabalTargetForExe.${name};
@@ -253,10 +260,16 @@ in
           "mock-server"
           "test-context-api"
         ];
+      # Force-disable a process: also clobber its command + depends_on with
+      # mkForce. Clobbering the command matters because the original command
+      # often interpolates `${ny.config.haskellProjects…finalPackages.X}`,
+      # which would otherwise force the haskell derivation to build even
+      # though the process never runs.
       disableAll = names: lib.listToAttrs (map
         (n: lib.nameValuePair n {
           disabled = lib.mkForce true;
           depends_on = lib.mkForce {};
+          command = lib.mkForce ":";
         })
         names);
     in
@@ -520,7 +533,7 @@ in
           };
           test-local-api = {
             imports = [ common ];
-            command = "${pkgs.python3}/bin/python3 dev/test-tool/local-api/server.py";
+            command = "${pkgs.python3.withPackages (ps: with ps; [ pyyaml ])}/bin/python3 dev/test-tool/local-api/server.py";
             namespace = lib.mkForce "test";
             depends_on."nammayatri-init".condition = "process_completed_successfully";
             availability = {
@@ -922,7 +935,7 @@ in
             };
             availability = {
               restart = "always";
-              backoff_seconds = 20;
+              backoff_seconds = 15;
               max_restarts = 50;
             };
           };
@@ -950,6 +963,22 @@ in
               failure_threshold = 6;
               timeout_seconds = 5;
             };
+            availability = {
+              restart = "always";
+              backoff_seconds = 20;
+              max_restarts = 50;
+            };
+          };
+
+          rider-app-scheduler-exe = {
+            availability = {
+              restart = "always";
+              backoff_seconds = 20;
+              max_restarts = 50;
+            };
+          };
+
+          driver-offer-allocator-exe = {
             availability = {
               restart = "always";
               backoff_seconds = 20;

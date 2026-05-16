@@ -88,6 +88,10 @@ export const Terminal: React.FC<TerminalProps> = ({
     termRef.current = term;
     fitRef.current = fit;
 
+    if (attachSessionId) {
+      sessionRef.current = attachSessionId;
+    }
+
     const decoder = new TextDecoder('utf-8');
 
     const start = async () => {
@@ -111,6 +115,21 @@ export const Terminal: React.FC<TerminalProps> = ({
         }
         if (!sessionId) return;
         sessionRef.current = sessionId;
+
+        // The first fit() ran before onResize was registered (xterm fires
+        // resize synchronously during fit), so the PTY is still at whatever
+        // size remote_start created it with (default 120×32). Re-fit now that
+        // we have a session, and push the current geometry explicitly so the
+        // PTY (and any TUI like process-compose inside it) redraws to the
+        // real container width.
+        try { fit.fit(); } catch { /* ignore */ }
+        try {
+          await fetch(`${apiBase}/resize`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session: sessionId, cols: term.cols, rows: term.rows }),
+          });
+        } catch { /* swallow */ }
 
         const es = new EventSource(`${apiBase}/stream?session=${encodeURIComponent(sessionId)}`);
         esRef.current = es;
@@ -183,7 +202,11 @@ export const Terminal: React.FC<TerminalProps> = ({
       if (resizeTimerRef.current) window.clearTimeout(resizeTimerRef.current);
       const sid = sessionRef.current;
       if (esRef.current) { try { esRef.current.close(); } catch { /* ignore */ } }
-      if (sid) {
+      // Only kill sessions we created. When `attachSessionId` was provided,
+      // the parent (e.g. RemoteStackPanel reattaching after a page refresh /
+      // tab switch) owns the lifecycle — killing it here would tear down a
+      // long-running stack the user wants to keep alive.
+      if (sid && !attachSessionId) {
         fetch(`${apiBase}/kill`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -201,8 +224,12 @@ export const Terminal: React.FC<TerminalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiBase, attachSessionId]);
 
+  const refocus = () => {
+    try { termRef.current?.focus(); } catch { /* ignore */ }
+  };
+
   return (
-    <div className="tb-term-root">
+    <div className="tb-term-root" onPointerDown={refocus}>
       <div className="tb-term-host" ref={containerRef} />
     </div>
   );

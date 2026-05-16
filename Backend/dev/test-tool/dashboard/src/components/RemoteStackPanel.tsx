@@ -28,6 +28,9 @@ interface PanelState {
 }
 
 const DEFAULT_REMOTE_DIR = '/tmp/nammayatri';
+// Canonical start command — sent server-side as the inner command of the PTY.
+// The exact argv (including this string) is echoed into the terminal by
+// local-api as the first line of the session, so users see what runs.
 const DEFAULT_COMMAND = 'cd Backend && nix develop .#backend -c , run-mobility-stack-dev';
 const FORM_STORAGE_KEY = 'ny.remoteStack.target';
 
@@ -164,11 +167,6 @@ export const RemoteStackPanel: React.FC = () => {
   };
 
   const onClearData = async () => {
-    if (!window.confirm(
-      isLocalhost
-        ? 'Wipe <repo>/data/* (postgres, kafka, metabase, …) locally?'
-        : `Wipe data on ${target.host} (under ${target.remoteDir})?`,
-    )) return;
     setBusy('clear-data');
     setState(prev => ({ ...prev, error: undefined, status: 'Clearing data…' }));
     try {
@@ -187,7 +185,10 @@ export const RemoteStackPanel: React.FC = () => {
     setBusy('start');
     setState(prev => ({ ...prev, error: undefined, status: 'Starting…' }));
     try {
-      const res = await remoteStart(target);
+      // Always send the canonical Start command so the field displayed in
+      // the UI matches what local-api executes (even if an older value got
+      // persisted to localStorage from a previous build).
+      const res = await remoteStart({ ...target, command: DEFAULT_COMMAND });
       if (res.error || !res.session) {
         setState(prev => ({ ...prev, error: res.error || 'start failed', status: undefined }));
       } else {
@@ -284,13 +285,6 @@ export const RemoteStackPanel: React.FC = () => {
             <option value="rsync">rsync</option>
             <option value="skip">skip</option>
           </select>
-        </label>
-        <label className="rsp-wide">
-          <span>Command</span>
-          <input
-            value={target.command || DEFAULT_COMMAND}
-            onChange={e => update('command', e.target.value)}
-          />
         </label>
       </div>
 

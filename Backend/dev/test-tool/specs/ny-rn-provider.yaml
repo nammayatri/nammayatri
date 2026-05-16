@@ -1,0 +1,102 @@
+# yaml-language-server: $schema=./_schema.json
+name: ny-rn-provider
+title: NY Driver App (Android)
+icon: assets/icons/mobile.svg
+category: mobile
+tags: [react-native, android, driver]
+
+source:
+  url: https://github.com/nammayatri/ny-react-native
+  ref: main
+  destDir: data/ny-react-native
+
+ports:
+  - { name: metro,   port: 8083, protocol: tcp,  allowOverride: true }
+  - { name: backend, port: 8016, protocol: http }
+  - { name: grpc,    port: 50051, protocol: tcp }
+  - { name: mock,    port: 8080, protocol: http }
+
+adbReverse: [metro, backend, grpc, mock]
+
+tools: [node22, java17, yarn, adb]
+
+inputs:
+  - key: GOOGLE_SERVICES_JSON
+    label: Firebase google-services.json
+    type: file
+    accept: [".json"]
+    storeAs: path
+    required: true
+  - key: VARIANT
+    label: App variant
+    type: select
+    options: [nammaYatri, jatriSaathi, bridge, manaYatri, yatri, lynx, bharatTaxi]
+    default: lynx
+  - key: APP_ID
+    label: Android package id
+    type: text
+    default: "in.mobility.lynxdriver.debug"
+
+stages:
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: materialize
+    needs: [sync-source]
+    cwd: provider
+    run: |
+      mkdir -p android/app/src/lynx
+      cp "${inputs.GOOGLE_SERVICES_JSON}" android/app/src/lynx/google-services.json
+      if [ -f configs.zip ]; then unzip -o configs.zip; fi
+      mkdir -p configs/master/android/lynx
+      cp configs/master/android/nammaYatri/.env             configs/master/android/lynx/.env             2>/dev/null || true
+      cp configs/master/android/nammaYatri/local.properties configs/master/android/lynx/local.properties 2>/dev/null || true
+      cp "${inputs.GOOGLE_SERVICES_JSON}" configs/master/android/lynx/google-services.json
+      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://localhost:${ports.backend}/ui|" configs/master/android/lynx/.env || true
+      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://localhost:8013/v2|" configs/master/android/lynx/.env || true
+    lifecycle: one-shot
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, ports.backend]
+
+  - id: install
+    needs: [sync-source]
+    cwd: provider
+    run: "yarn install"
+    lifecycle: one-shot
+    invalidatedBy: [provider/package.json, provider/yarn.lock]
+
+  - id: metro
+    needs: [install]
+    cwd: provider
+    run: "yarn start --port ${ports.metro}"
+    lifecycle: long-running
+    readyProbe: { kind: log, pattern: "Welcome to Metro" }
+
+  - id: build-android
+    needs: [install, materialize]
+    cwd: provider/android
+    run: "./gradlew app:installLynxMasterDebug"
+    lifecycle: one-shot
+    invalidatedBy: ["provider/android/**", "*.gradle"]
+
+  - id: set-devhost
+    needs: [metro]
+    cwd: provider
+    run: "./scripts/android-set-devhost.sh ${inputs.APP_ID} localhost:${ports.metro}"
+    lifecycle: one-shot
+
+workflows:
+  first-run:      [sync-source, materialize, install, metro, build-android, set-devhost]
+  refresh-js:     [metro, set-devhost]
+  refresh-native: [build-android, metro, set-devhost]
+  reinstall:      [install, metro, build-android, set-devhost]
+
+logs:
+  - { name: metro,  kind: stage, stage: metro }
+  - { name: build,  kind: stage, stage: build-android }
+  - { name: logcat, kind: cmd,   cmd: "adb logcat -s ReactNativeJS:V ReactNative:V" }
+
+hooks:
+  preStart:
+    - "lsof -ti :${ports.metro} | xargs -r kill -9"

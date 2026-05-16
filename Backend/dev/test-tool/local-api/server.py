@@ -27,6 +27,14 @@ import signal
 import urllib.request
 import urllib.error
 
+# ── Generic spec-driven launcher (additive: coexists with control-center /
+# ny-react-native handlers below; the legacy handlers are scheduled for
+# removal once the spec-driven Tools panel is validated end-to-end).
+import spec_loader
+import stage_runner
+import log_sources
+import input_store
+
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
@@ -845,6 +853,33 @@ REMOTE_DEFAULT_COMMAND = (
 )
 REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
 
+# Matches DEC private-mode set/reset: ESC [ ? <nums> h|l   (e.g. \x1b[?1049h,
+# \x1b[?1000;1002;1006h). Used to snoop the PTY stream so we can replay the
+# *latest* mode state on reattach — the byte ring drops the original startup
+# escapes after a while, which leaves xterm out of alt-screen/mouse-tracking
+# and the TUI unclickable.
+_DECSET_RE = re.compile(rb"\x1b\[\?([\d;]+)([hl])")
+
+
+def _snoop_modes(modes: dict, chunk: bytes) -> None:
+    for m in _DECSET_RE.finditer(chunk):
+        action = m.group(2)  # b'h' = set, b'l' = reset
+        for n in m.group(1).split(b";"):
+            if n:
+                try:
+                    modes[int(n)] = action
+                except ValueError:
+                    pass
+
+
+def _replay_modes_bytes(modes: dict) -> bytes:
+    if not modes:
+        return b""
+    out = bytearray()
+    for n, action in modes.items():
+        out += b"\x1b[?" + str(n).encode() + action
+    return bytes(out)
+
 _remote_sessions: dict = {}        # session_id -> session dict
 _remote_sessions_lock = threading.Lock()
 
@@ -866,6 +901,7 @@ def _remote_session_make(kind: str, host: str) -> dict:
         "finished_at": None,
         "buf": _deque(maxlen=4000),   # text-line ring (for /status)
         "byte_buf": bytearray(),      # raw bytes ring (for /stream re-attach)
+        "modes": {},                  # latest DEC private-mode state: {num: b'h'|b'l'}
         "subscribers": [],            # list[queue.Queue]
         "lock": threading.Lock(),
     }
@@ -904,6 +940,7 @@ def _remote_pty_reader(session: dict) -> None:
             session["byte_buf"].extend(chunk)
             if len(session["byte_buf"]) > REMOTE_BUFFER_BYTES:
                 del session["byte_buf"][:len(session["byte_buf"]) - REMOTE_BUFFER_BYTES]
+            _snoop_modes(session["modes"], chunk)
             # Keep a coarse text log for the /status fallback.
             try:
                 text = chunk.decode("utf-8", errors="replace")
@@ -939,12 +976,15 @@ def _remote_pty_reader(session: dict) -> None:
 def _remote_pipe_reader(session: dict, stream) -> None:
     """Non-PTY reader (used by rsync). stream is a subprocess pipe."""
     import queue as _queue
+    import re as _re
+    _lf_to_crlf = _re.compile(rb"(?<!\r)\n")
     while True:
         chunk = stream.read(4096)
         if not chunk:
             break
         if isinstance(chunk, str):
             chunk = chunk.encode()
+        chunk = _lf_to_crlf.sub(b"\r\n", chunk)
         with session["lock"]:
             session["byte_buf"].extend(chunk)
             if len(session["byte_buf"]) > REMOTE_BUFFER_BYTES:
@@ -2093,6 +2133,10 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self._remote_stream(session_id)
             return True
 
+        # ── Generic spec-driven launcher routes ─────────────────────────
+        if self._handle_launcher(method, path, parsed):
+            return True
+
         self._send_json({"error": "not found"}, 404)
         return True
 
@@ -2113,10 +2157,14 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             return
 
         q: _queue.Queue = _queue.Queue(maxsize=256)
+        is_pty = session.get("master_fd") is not None
         with session["lock"]:
             backlog = bytes(session["byte_buf"])
+            mode_prefix = _replay_modes_bytes(session["modes"])
             session["subscribers"].append(q)
             running = session["running"]
+            cols = session.get("cols") or 120
+            rows = session.get("rows") or 32
 
         def _send_event(chunk: bytes):
             payload = json.dumps({"b64": _base64.b64encode(chunk).decode()})
@@ -2124,8 +2172,33 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             self.wfile.flush()
 
         try:
+            # Replay the byte ring so xterm reconstructs the TUI's mode state
+            # (alternate screen, mouse tracking, hidden cursor, keypad mode).
+            # Without this the new xterm misses the startup mode-setting
+            # escapes and renders process-compose's draws into the wrong
+            # buffer — rows look highlighted and input doesn't reach the TUI.
+            if mode_prefix:
+                _send_event(mode_prefix)
             if backlog:
                 _send_event(backlog)
+            if is_pty and running:
+                fd = session["master_fd"]
+                # The replayed frame is stale (it was drawn for whatever size
+                # the PTY was when the bytes were captured). Pulse the PTY
+                # size to force a SIGWINCH — and follow with Ctrl+L — so the
+                # TUI redraws fresh against the now-correctly-moded xterm.
+                # We pulse to (cols-1) and back so the kernel sees a real
+                # change either way; same-size ioctls don't emit SIGWINCH.
+                try:
+                    _set_pty_size(fd, rows, max(20, cols - 1))
+                    time.sleep(0.05)
+                    _set_pty_size(fd, rows, cols)
+                except Exception:
+                    pass
+                try:
+                    os.write(fd, b"\x0c")
+                except OSError:
+                    pass
             if not running and session.get("exit_code") is not None:
                 _send_event(f"\r\n[exit {session['exit_code']}]\r\n".encode())
                 return
@@ -2150,6 +2223,167 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                     session["subscribers"].remove(q)
                 except ValueError:
                     pass
+
+    # ── Spec-driven launcher endpoints (additive) ────────────────────────────
+
+    def _handle_launcher(self, method: str, path: str, parsed) -> bool:
+        if not path.startswith("/api/launcher"):
+            return False
+
+        # GET /api/launcher  → list specs (with status summary)
+        if method == "GET" and path == "/api/launcher":
+            out = []
+            for s in spec_loader.get_specs():
+                out.append({
+                    "name": s["name"],
+                    "title": s["title"],
+                    "icon": s.get("icon"),
+                    "category": s.get("category"),
+                    "tags": s.get("tags") or [],
+                    "ports": s.get("ports") or [],
+                    "domains": s.get("domains") or [],
+                })
+            self._send_json(out)
+            return True
+
+        parts = path.split("/")
+        # /api/launcher/{slug}/...
+        if len(parts) < 4:
+            self._send_json({"error": "bad launcher path"}, 400)
+            return True
+        slug = parts[3]
+        spec = spec_loader.get_spec(slug)
+        if spec is None:
+            self._send_json({"error": f"unknown launcher {slug!r}"}, 404)
+            return True
+        tail = "/".join(parts[4:])
+
+        # GET /api/launcher/{slug}
+        if method == "GET" and tail == "":
+            inputs_view = input_store.public_view(slug, spec)
+            stages = [stage_runner.stage_status(slug, spec, st) for st in spec["stages"]]
+            self._send_json({
+                "spec": spec,
+                "inputs": inputs_view,
+                "stages": stages,
+                "missingRequired": input_store.missing_required(slug, spec),
+            })
+            return True
+
+        # POST /api/launcher/{slug}/inputs
+        if method == "POST" and tail == "inputs":
+            body = self._read_json_body() or {}
+            updated = {}
+            by_key = {i["key"]: i for i in spec.get("inputs", [])}
+            for key, payload in body.items():
+                idef = by_key.get(key)
+                if not idef:
+                    continue
+                try:
+                    value = input_store.upsert_input(slug, idef, payload if isinstance(payload, dict) else {"value": payload})
+                    updated[key] = bool(value) if idef["type"] in ("file", "secret-text") else value
+                except Exception as e:  # noqa: BLE001
+                    self._send_json({"error": f"input {key!r}: {e}"}, 400)
+                    return True
+            self._send_json({"updated": updated, "inputs": input_store.public_view(slug, spec)})
+            return True
+
+        # POST /api/launcher/{slug}/source  {ref?: str, localPath?: str|null}
+        if method == "POST" and tail == "source":
+            body = self._read_json_body() or {}
+            if "localPath" in body:
+                result = stage_runner.set_local_path(slug, spec, body.get("localPath") or None)
+                self._send_json(result)
+                return True
+            if "ref" in body:
+                # Persist the ref override under the spec_loader cache by
+                # writing into the spec file? For now write into per-launcher
+                # state so the spec file stays canonical.
+                state = stage_runner._load_state(slug)
+                state["sourceRefOverride"] = (body["ref"] or "").strip() or None
+                if state["sourceRefOverride"]:
+                    spec["source"]["ref"] = state["sourceRefOverride"]
+                stage_runner._save_state(slug, state)
+                self._send_json({"ref": spec["source"].get("ref")})
+                return True
+            self._send_json({"error": "expected ref or localPath"}, 400)
+            return True
+
+        # POST /api/launcher/{slug}/workflow/{name}
+        if method == "POST" and tail.startswith("workflow/"):
+            wf = tail.split("/", 1)[1]
+            stages = (spec.get("workflows") or {}).get(wf)
+            if not stages:
+                self._send_json({"error": f"unknown workflow {wf!r}"}, 404)
+                return True
+            results = []
+            for sid in stages:
+                r = stage_runner.run_stage(slug, spec, sid, force=False)
+                results.append({"stage": sid, **r})
+                if r.get("error"):
+                    break
+            self._send_json({"workflow": wf, "results": results})
+            return True
+
+        # POST /api/launcher/{slug}/stage/{id}  body: {force?: bool}
+        if method == "POST" and tail.startswith("stage/"):
+            sub = tail.split("/", 1)[1]
+            if sub.endswith("/stop"):
+                stage_id = sub[:-len("/stop")]
+                stopped = stage_runner.stop_stage(slug, stage_id)
+                self._send_json({"stopped": stopped, "stage": stage_id})
+                return True
+            stage_id = sub
+            body = self._read_json_body() or {}
+            r = stage_runner.run_stage(slug, spec, stage_id, force=bool(body.get("force")))
+            self._send_json({"stage": stage_id, **r})
+            return True
+
+        # GET /api/launcher/{slug}/status
+        if method == "GET" and tail == "status":
+            stages = [stage_runner.stage_status(slug, spec, st) for st in spec["stages"]]
+            self._send_json({"slug": slug, "stages": stages})
+            return True
+
+        # GET /api/launcher/{slug}/sessions
+        if method == "GET" and tail == "sessions":
+            self._send_json(stage_runner.list_sessions(slug))
+            return True
+
+        # GET /api/launcher/{slug}/logs/{name}/stream  (SSE)
+        if method == "GET" and tail.startswith("logs/") and tail.endswith("/stream"):
+            log_name = tail[len("logs/"):-len("/stream")]
+            self._launcher_log_stream(slug, spec, log_name)
+            return True
+
+        self._send_json({"error": f"unknown launcher route {tail!r}"}, 404)
+        return True
+
+    def _launcher_log_stream(self, slug: str, spec: dict, log_name: str) -> None:
+        import base64 as _b64
+        stream = log_sources.open_stream(slug, spec, log_name)
+        if stream is None:
+            self._send_json({"error": f"unknown log source {log_name!r}"}, 404)
+            return
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Accel-Buffering", "no")
+            self._cors_headers()
+            self.end_headers()
+        except BrokenPipeError:
+            stream["close"]()
+            return
+        try:
+            for chunk in stream["iter"]:
+                payload = json.dumps({"b64": _b64.b64encode(chunk).decode()})
+                self.wfile.write(b"data: " + payload.encode() + b"\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            stream["close"]()
 
     def do_GET(self):
         self._handle("GET")
