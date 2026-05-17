@@ -1,0 +1,197 @@
+.coverage-report {
+  padding: 16px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.cov-loading { padding: 40px; text-align: center; color: #888; }
+.cov-empty { padding: 24px; text-align: center; color: #888; font-style: italic; }
+
+/* Header */
+.cov-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cov-tabs { display: flex; gap: 4px; }
+.cov-tab {
+  padding: 6px 14px;
+  border: 1px solid #333;
+  background: #1a1a2e;
+  color: #aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.cov-tab.active { background: #2d2d4e; color: #fff; border-color: #5a5aff; }
+.cov-tab:hover { background: #252545; }
+
+.cov-actions { display: flex; gap: 8px; }
+.cov-btn {
+  padding: 6px 12px;
+  background: #2d4a7a;
+  color: #ddd;
+  border: 1px solid #3a6aaa;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.cov-btn:hover { background: #3a5a9a; }
+.cov-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.cov-btn-secondary { background: #3a3a5a; border-color: #5a5a7a; }
+.cov-btn-danger { background: #5a2a2a; border-color: #8a3a3a; color: #faa; }
+.cov-btn-danger:hover { background: #7a3a3a; }
+
+/* Overview stats */
+.cov-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.cov-stat-card {
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 14px;
+}
+.cov-stat-title { font-size: 12px; color: #888; margin-bottom: 4px; }
+.cov-stat-value { font-size: 22px; font-weight: 600; color: #eee; margin-bottom: 8px; }
+.cov-stat-bar { height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+.cov-stat-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.cov-stat-percent { font-size: 11px; color: #888; margin-top: 4px; }
+
+.cov-stat-blue .cov-stat-fill { background: #4a9eff; }
+.cov-stat-green .cov-stat-fill { background: #4acf8a; }
+.cov-stat-purple .cov-stat-fill { background: #9b59b6; }
+.cov-stat-orange .cov-stat-fill { background: #e67e22; }
+
+/* Summary bar */
+.cov-summary-bar {
+  display: flex;
+  gap: 24px;
+  padding: 10px 14px;
+  background: #1a1a2e;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+.cov-summary-item { display: flex; gap: 6px; align-items: center; }
+.cov-summary-label { font-size: 12px; color: #888; }
+.cov-summary-value { font-size: 13px; color: #ddd; font-weight: 500; }
+
+/* Coverage bars */
+.cov-bar-section { margin-bottom: 20px; }
+.cov-bar-section h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+.cov-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.cov-bar-label { font-size: 12px; color: #888; width: 50px; }
+.cov-bar-track { flex: 1; height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
+.cov-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.cov-bar-text { font-size: 11px; color: #888; min-width: 100px; }
+
+/* Runs */
+.cov-runs-section h3 { font-size: 13px; color: #aaa; margin-bottom: 8px; }
+.cov-runs-list { display: flex; flex-direction: column; gap: 4px; }
+.cov-run-item {
+  display: flex; gap: 12px; align-items: center;
+  padding: 6px 10px; background: #1a1a2e; border-radius: 4px;
+  font-size: 12px;
+}
+.cov-run-id { color: #aaa; font-family: monospace; }
+.cov-run-hits { color: #4a9eff; }
+.cov-run-time { color: #666; margin-left: auto; }
+
+/* Service tab */
+.cov-service-tab { display: flex; flex-direction: column; gap: 8px; }
+.cov-filter-bar { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
+.cov-filter-input {
+  flex: 1; padding: 8px 12px; background: #1a1a2e; border: 1px solid #333;
+  border-radius: 4px; color: #ddd; font-size: 13px;
+}
+.cov-filter-input::placeholder { color: #555; }
+.cov-filter-count { font-size: 12px; color: #888; white-space: nowrap; }
+
+.cov-endpoint-list { display: flex; flex-direction: column; gap: 2px; }
+.cov-endpoint {
+  background: #1a1a2e; border: 1px solid #252540; border-radius: 4px;
+  overflow: hidden;
+}
+.cov-endpoint.cov-uncovered { border-left: 3px solid #e74c3c; }
+.cov-endpoint.cov-covered { border-left: 3px solid #2ecc71; }
+
+.cov-endpoint-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; cursor: pointer;
+}
+.cov-endpoint-header:hover { background: #222240; }
+
+.cov-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cov-dot-pass { background: #2ecc71; }
+.cov-dot-fail { background: #e74c3c; }
+
+.cov-endpoint-key { font-size: 12px; font-family: monospace; color: #ddd; }
+.cov-hit-badge {
+  font-size: 10px; background: #2d4a7a; color: #8ac; padding: 1px 5px;
+  border-radius: 3px;
+}
+.cov-scenario-badge {
+  font-size: 10px; padding: 1px 6px; border-radius: 3px;
+}
+.cov-scenario-badge.full { background: #1a4a2a; color: #6f6; }
+.cov-scenario-badge.partial { background: #4a3a1a; color: #fa0; }
+.cov-scenario-badge.empty { background: #4a1a1a; color: #f66; }
+.cov-tags { font-size: 10px; color: #666; margin-left: auto; }
+
+/* Scenario detail */
+.cov-scenario-detail { padding: 8px 10px 10px 26px; border-top: 1px solid #252540; }
+.cov-scenario-field { margin-bottom: 6px; }
+.cov-field-name { font-size: 11px; color: #888; font-family: monospace; display: block; margin-bottom: 3px; }
+.cov-field-values { display: flex; flex-wrap: wrap; gap: 4px; }
+.cov-value-chip {
+  font-size: 10px; padding: 2px 6px; border-radius: 3px; font-family: monospace;
+}
+.cov-value-chip.tested { background: #1a4a2a; color: #6f6; border: 1px solid #2a6a3a; }
+.cov-value-chip.untested { background: #2a1a1a; color: #a66; border: 1px solid #4a2a2a; }
+
+/* Chains tab */
+.cov-chains-tab { padding: 8px 0; }
+.cov-chains-desc { font-size: 12px; color: #888; margin-bottom: 12px; }
+.cov-chain-list { display: flex; flex-direction: column; gap: 6px; }
+.cov-chain-item {
+  background: #1a1a2e; border: 1px solid #252540; border-radius: 4px;
+  padding: 8px 10px;
+}
+.cov-chain-trigger { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+.cov-chain-svc {
+  font-size: 10px; background: #2d3a5a; color: #8ac; padding: 1px 5px;
+  border-radius: 3px;
+}
+.cov-chain-method { font-size: 11px; color: #aaa; font-weight: 600; }
+.cov-chain-path { font-size: 11px; color: #ddd; font-family: monospace; }
+.cov-chain-internal { padding-left: 16px; }
+.cov-chain-internal-item { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
+.cov-chain-arrow { color: #555; font-size: 12px; }
+
+/* Gaps tab */
+.cov-gaps-tab { padding: 8px 0; }
+.cov-gaps-tab h3 { font-size: 14px; color: #ddd; margin-bottom: 4px; }
+.cov-gaps-desc { font-size: 12px; color: #888; margin-bottom: 12px; }
+.cov-gap-list { display: flex; flex-direction: column; gap: 3px; }
+.cov-gap-item {
+  display: flex; gap: 8px; align-items: center;
+  padding: 6px 10px; background: #1a1a2e; border-radius: 4px;
+  font-size: 12px;
+}
+.cov-gap-item.cov-gap-critical { border-left: 3px solid #e74c3c; }
+.cov-gap-item.cov-gap-partial { border-left: 3px solid #f39c12; }
+.cov-gap-svc {
+  font-size: 10px; padding: 1px 5px; border-radius: 3px; min-width: 42px; text-align: center;
+}
+.cov-gap-svc-rider { background: #1a2a4a; color: #6af; }
+.cov-gap-svc-driver { background: #1a3a2a; color: #6f6; }
+.cov-gap-endpoint { font-family: monospace; color: #ccc; }
+.cov-gap-reason { color: #888; margin-left: auto; font-size: 11px; }

@@ -13,6 +13,78 @@ export interface ApiResult {
   elapsed: number;
 }
 
+// ── Coverage Auto-Recording ──
+
+let _coverageRunId: string = `run-${Date.now()}`;
+let _coverageBatch: any[] = [];
+let _coverageFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function startNewCoverageRun(id?: string) {
+  _coverageRunId = id || `run-${Date.now()}`;
+  _coverageBatch = [];
+}
+
+function _extractFingerprint(body: any): Record<string, any> {
+  if (!body || typeof body !== 'object') return {};
+  const fp: Record<string, any> = {};
+
+  const interesting = (val: any): boolean => {
+    if (val === null || val === undefined) return true;
+    if (typeof val === 'boolean') return true;
+    if (typeof val === 'string' && val === val.toUpperCase() && val.length > 1 && !val.includes(' ')) return true; // enum-like
+    return false;
+  };
+
+  for (const [key, val] of Object.entries(body)) {
+    if (interesting(val)) {
+      fp[key] = val;
+    } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      // One level deep for nested objects (e.g. paymentInstrument.instrumentType)
+      for (const [subKey, subVal] of Object.entries(val)) {
+        if (interesting(subVal)) {
+          fp[`${key}.${subKey}`] = subVal;
+        }
+      }
+    }
+  }
+  return fp;
+}
+
+function _normalizePath(path: string): string {
+  // Replace UUIDs and IDs with placeholders for grouping
+  return path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '{id}')
+             .replace(/\/[0-9a-f]{24,}/gi, '/{id}');
+}
+
+function _recordCoverageHit(service: string, method: string, path: string, body?: any) {
+  const hit = {
+    runId: _coverageRunId,
+    service,
+    method,
+    path: _normalizePath(path),
+    fingerprint: _extractFingerprint(body),
+    timestamp: Date.now() / 1000,
+  };
+  _coverageBatch.push(hit);
+
+  // Flush in batches (debounced 2s)
+  if (_coverageFlushTimer) clearTimeout(_coverageFlushTimer);
+  _coverageFlushTimer = setTimeout(_flushCoverageBatch, 2000);
+}
+
+function _flushCoverageBatch() {
+  if (_coverageBatch.length === 0) return;
+  const batch = [..._coverageBatch];
+  _coverageBatch = [];
+  // Fire and forget
+  axios.post(`${PROXY_BASE}/api/coverage/record`, batch, { timeout: 5000 }).catch(() => {});
+}
+
+// Flush on page unload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', _flushCoverageBatch);
+}
+
 // --- Driver location pinger: keeps LTS geo bucket alive ---
 let locationPingerInterval: ReturnType<typeof setInterval> | null = null;
 let pingerLogFn: ((level: 'info' | 'req' | 'error', msg: string) => void) | null = null;
@@ -167,9 +239,14 @@ export async function callStep(
       catalogApi.extractFromResponse(resp.data, ctx);
     }
 
+    // Auto-record coverage
+    _recordCoverageHit(step.service, step.method, path, body);
+
     return { ok: true, status: resp.status, data: resp.data, elapsed };
   } catch (err: any) {
     const elapsed = Math.round(performance.now() - start);
+    // Still record the hit (even failures are coverage)
+    _recordCoverageHit(step.service, step.method, path, body);
     if (err.response) {
       return { ok: false, status: err.response.status, data: err.response.data, elapsed };
     }
@@ -277,6 +354,9 @@ export async function callPostmanStep(
   }
 
   const elapsed = Math.round(performance.now() - start);
+
+  // Auto-record coverage for Postman steps
+  _recordCoverageHit(step.service, step.method, resolvedPath, body);
 
   // 8. Execute test script FIRST (may include delays for async callbacks like FRFS on_search)
   let assertions: PostmanRuntimeResult['assertions'] = [];

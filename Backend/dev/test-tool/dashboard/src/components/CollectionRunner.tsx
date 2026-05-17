@@ -13,7 +13,7 @@ import {
 } from '../services/context';
 import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '../services/postman-parser';
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
-import { callPostmanStep, PostmanStepResult } from '../services/api';
+import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { StepResult, LogEntry } from '../types';
 
 interface Props {
@@ -130,6 +130,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   // Execution state
   const [isRunning, setIsRunning] = useState(false);
   const [runningStepId, setRunningStepId] = useState<string | null>(null);
+  const [runAllProgress, setRunAllProgress] = useState<{ current: number; total: number; currentSuite: string } | null>(null);
+  const [runAllResults, setRunAllResults] = useState<Array<{ group: string; env: string; suite: string; passed: number; failed: number; total: number }>>([]);
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
 
@@ -272,6 +274,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     storesRef.current = freshStores;
 
     onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) [${selectedEnvType}] --`);
+    startNewCoverageRun(`collection-${selectedDir}-${selectedSuite}-${Date.now()}`);
 
     for (const step of visibleSteps) {
       if (abortRef.current) break;
@@ -323,6 +326,123 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
+
+  // Run ALL suites across ALL collections and environments
+  const runAllCollections = useCallback(async () => {
+    if (isRunning || groups.length === 0) return;
+    abortRef.current = false;
+    setIsRunning(true);
+    setRunAllResults([]);
+
+    // Build the full list of (group, env, suite) combos
+    const jobs: Array<{ group: CollectionGroup; env: CollectionEnvironment; suite: CollectionSuite }> = [];
+    for (const group of groups) {
+      for (const env of group.environments) {
+        for (const suite of group.suites) {
+          jobs.push({ group, env, suite });
+        }
+      }
+    }
+
+    setRunAllProgress({ current: 0, total: jobs.length, currentSuite: '' });
+    startNewCoverageRun(`run-all-${Date.now()}`);
+    onLog('info', `== Running ALL ${jobs.length} collection suites ==`);
+
+    for (let i = 0; i < jobs.length; i++) {
+      if (abortRef.current) break;
+
+      const { group, env, suite } = jobs[i];
+      const label = `${group.directory} / ${suite.name} (${env.city})`;
+      setRunAllProgress({ current: i + 1, total: jobs.length, currentSuite: label });
+      onLog('info', `-- [${i + 1}/${jobs.length}] ${label} --`);
+
+      // Fetch and parse the collection
+      const raw = await fetchCollection(group.directory, suite.filename);
+      if (!raw) {
+        onLog('error', `  Failed to fetch collection: ${suite.filename}`);
+        setRunAllResults(prev => [...prev, { group: group.directory, env: env.envName, suite: suite.name, passed: 0, failed: 0, total: 0 }]);
+        continue;
+      }
+
+      const parsed = parseCollection(raw as PostmanCollection, env.variables);
+
+      // Init variable stores
+      const stores: VariableStores = {
+        environment: { ...env.variables },
+        collection: { ...parsed.collectionVars },
+      };
+      if (raw.event) {
+        for (const ev of raw.event) {
+          if (ev.listen === 'prerequest' && ev.script?.exec) {
+            await executePrereqScript(ev.script.exec.join('\n'), stores);
+          }
+        }
+      }
+
+      // Update UI to show this suite's steps
+      setSteps(parsed.steps);
+      setNodes(parsed.nodes);
+      setStepStates({});
+      setSelectedDir(group.directory);
+      setSelectedEnv(env.envName);
+      setSelectedSuite(suite.filename);
+
+      // Run all steps
+      let passed = 0;
+      let failed = 0;
+      for (const step of parsed.steps) {
+        if (abortRef.current) break;
+
+        setRunningStepId(step.id);
+        setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
+
+        const start = performance.now();
+        const result = await callPostmanStep(step, stores);
+        const durationMs = Math.round(performance.now() - start);
+
+        const stepFailed = result.assertions.some(a => !a.passed) || !!result.scriptError;
+        const status = stepFailed ? 'fail' : 'pass';
+
+        if (stepFailed) failed++;
+        else passed++;
+
+        setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
+
+        const logLevel = stepFailed ? 'error' : 'success';
+        const assertSummary = result.assertions.length > 0
+          ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length}]`
+          : '';
+        onLog(logLevel, `  ${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms)${assertSummary}`, {
+          request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
+          response: { status: result.status, body: result.data, headers: result.responseHeaders },
+          serviceLogs: result.serviceLogs,
+        });
+
+        for (const line of result.consoleLogs) {
+          onLog('info', `    [script] ${line}`);
+        }
+
+        if (stepFailed) {
+          if (result.scriptError) onLog('error', `    Script error: ${result.scriptError}`);
+          for (const a of result.assertions.filter(a => !a.passed)) {
+            onLog('error', `    Assertion failed: ${a.name} — ${a.error}`);
+          }
+          setExpandedSteps(prev => new Set(prev).add(step.id));
+          break; // bail on first failure within a suite
+        }
+      }
+
+      const suiteResult = { group: group.directory, env: env.envName, suite: suite.name, passed, failed, total: parsed.steps.length };
+      setRunAllResults(prev => [...prev, suiteResult]);
+      const statusEmoji = failed > 0 ? 'FAIL' : 'PASS';
+      onLog(failed > 0 ? 'error' : 'success', `  [${statusEmoji}] ${label}: ${passed}/${parsed.steps.length} passed`);
+    }
+
+    setIsRunning(false);
+    setRunningStepId(null);
+    setRunAllProgress(null);
+    onLog('info', '== All collections complete ==');
+  }, [isRunning, groups, onLog]);
 
   // Re-run a single step in isolation (uses current variable state)
   const rerunStep = useCallback(async (stepId: string) => {
@@ -421,11 +541,45 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         </label>
         <div className="cr-actions">
           <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
-            {isRunning ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+            {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+          </button>
+          <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0}>
+            {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
         </div>
       </div>
+
+      {/* Run All progress banner */}
+      {runAllProgress && (
+        <div className="cr-run-all-progress">
+          <div className="cr-run-all-bar">
+            <div className="cr-run-all-fill" style={{ width: `${(runAllProgress.current / runAllProgress.total) * 100}%` }} />
+          </div>
+          <span className="cr-run-all-label">
+            Suite {runAllProgress.current}/{runAllProgress.total}: {runAllProgress.currentSuite}
+          </span>
+        </div>
+      )}
+
+      {/* Run All results summary */}
+      {runAllResults.length > 0 && !runAllProgress && (
+        <div className="cr-run-all-summary">
+          <div className="cr-run-all-summary-header">
+            All Collections Results — {runAllResults.filter(r => r.failed === 0).length}/{runAllResults.length} suites passed
+          </div>
+          <div className="cr-run-all-results">
+            {runAllResults.map((r, i) => (
+              <div key={i} className={`cr-run-all-result ${r.failed > 0 ? 'cr-result-fail' : 'cr-result-pass'}`}>
+                <span className={`cr-result-dot ${r.failed > 0 ? 'cr-dot-fail' : 'cr-dot-pass'}`} />
+                <span className="cr-result-suite">{r.suite}</span>
+                <span className="cr-result-env">{r.env}</span>
+                <span className="cr-result-score">{r.passed}/{r.total}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Step list */}
       <div className="cr-steps">

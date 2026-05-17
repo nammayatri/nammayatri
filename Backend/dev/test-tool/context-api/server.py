@@ -2098,6 +2098,480 @@ def clear_finance_data(schema):
         return {"error": str(e)}
 
 
+# ── Code Coverage Tracking ──────────────────────────────────────────────
+# Fetches OpenAPI specs from rider/driver, extracts endpoints + enum schemas,
+# records test fingerprints, generates coverage reports.
+
+COVERAGE_DATA_DIR = SCRIPT_DIR / "coverage-data"
+COVERAGE_DATA_DIR.mkdir(exist_ok=True)
+COVERAGE_SPEC_CACHE = COVERAGE_DATA_DIR / "spec-cache.json"
+COVERAGE_RUNS_FILE = COVERAGE_DATA_DIR / "runs.json"
+_coverage_lock = threading.Lock()
+
+
+def _fetch_openapi_spec(service_url: str) -> dict | None:
+    """Fetch /openapi JSON from a running service."""
+    try:
+        req = urllib.request.Request(f"{service_url}/openapi", method="GET")
+        req.add_header("Accept", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        print(f"  \033[91m[Coverage]\033[0m Failed to fetch openapi from {service_url}: {e}")
+        return None
+
+
+def _extract_enum_fields_from_schema(schema: dict, components: dict, depth: int = 0) -> dict:
+    """Recursively extract enum fields from an OpenAPI schema object.
+    Returns {fieldName: [enumValues]} for all enum properties.
+    Merges enum values across oneOf/anyOf variants (e.g. fareProductType across SearchReq variants)."""
+    if depth > 8:
+        return {}
+    enums = {}
+
+    def _merge_enum(field: str, values: list):
+        if field in enums:
+            existing = set(str(v) for v in enums[field])
+            for v in values:
+                if str(v) not in existing:
+                    enums[field].append(v)
+                    existing.add(str(v))
+        else:
+            enums[field] = list(values)
+
+    # Resolve $ref
+    if "$ref" in schema:
+        ref_path = schema["$ref"].replace("#/components/schemas/", "")
+        schema = components.get("schemas", {}).get(ref_path, {})
+
+    # Handle allOf/oneOf/anyOf — merge enum values across variants
+    for combiner in ("allOf", "oneOf", "anyOf"):
+        if combiner in schema:
+            for sub in schema[combiner]:
+                sub_enums = _extract_enum_fields_from_schema(sub, components, depth + 1)
+                for field, values in sub_enums.items():
+                    _merge_enum(field, values)
+
+    properties = schema.get("properties", {})
+    for field_name, field_schema in properties.items():
+        # Resolve field $ref
+        resolved = field_schema
+        if "$ref" in field_schema:
+            ref_path = field_schema["$ref"].replace("#/components/schemas/", "")
+            resolved = components.get("schemas", {}).get(ref_path, {})
+
+        if "enum" in resolved:
+            _merge_enum(field_name, resolved["enum"])
+        elif resolved.get("type") == "boolean":
+            _merge_enum(field_name, [True, False])
+        # Recurse into nested objects to find deeper enums
+        elif resolved.get("type") == "object" or "properties" in resolved or "$ref" in resolved:
+            sub_enums = _extract_enum_fields_from_schema(resolved, components, depth + 1)
+            for sub_field, sub_values in sub_enums.items():
+                _merge_enum(f"{field_name}.{sub_field}", sub_values)
+
+    return enums
+
+
+def _normalize_path_params(path: str) -> str:
+    """Normalize path parameters: {anyName} -> {id}, strip query strings."""
+    # Strip query string
+    path = path.split("?")[0]
+    # Replace named path params with generic {id}
+    path = re.sub(r'\{[^}]+\}', '{id}', path)
+    return path
+
+
+def _extract_coverage_spec(openapi: dict, service_name: str) -> dict:
+    """Extract endpoints and their scenario-defining enum fields from an OpenAPI spec."""
+    components = openapi.get("components", {})
+    paths = openapi.get("paths", {})
+    endpoints = {}
+
+    for path, methods in paths.items():
+        for method, operation in methods.items():
+            if method in ("parameters", "summary", "description"):
+                continue
+            method_upper = method.upper()
+            normalized = _normalize_path_params(path)
+            key = f"{method_upper} {normalized}"
+            # Multiple OpenAPI paths may normalize to the same key — merge enum fields
+            if key in endpoints:
+                existing = endpoints[key]["enumFields"]
+                for f, vals in enum_fields.items():
+                    if f in existing:
+                        existing[f] = list(set(existing[f] + vals))
+                    else:
+                        existing[f] = vals
+                endpoints[key]["scenarios"] = [f"{f}:{v}" for f, vals in existing.items() for v in vals]
+                continue
+
+            # Extract enum fields from request body schema
+            enum_fields = {}
+            request_body = operation.get("requestBody", {})
+            content = request_body.get("content", {})
+            # Match any JSON content type (application/json, application/json;charset=utf-8, etc.)
+            json_content = {}
+            for ct_key, ct_val in content.items():
+                if ct_key.startswith("application/json"):
+                    json_content = ct_val
+                    break
+            body_schema = json_content.get("schema", {})
+            if body_schema:
+                enum_fields = _extract_enum_fields_from_schema(body_schema, components)
+
+            # Extract enum fields from query/path parameters
+            for param in operation.get("parameters", []):
+                param_schema = param.get("schema", {})
+                if "$ref" in param_schema:
+                    ref_path = param_schema["$ref"].replace("#/components/schemas/", "")
+                    param_schema = components.get("schemas", {}).get(ref_path, {})
+                if "enum" in param_schema:
+                    enum_fields[param.get("name", "")] = param_schema["enum"]
+
+            # Generate scenario axes from enum fields
+            scenarios = []
+            for field, values in enum_fields.items():
+                for val in values:
+                    scenarios.append(f"{field}:{val}")
+
+            endpoints[key] = {
+                "method": method_upper,
+                "path": path,
+                "service": service_name,
+                "enumFields": enum_fields,
+                "scenarios": scenarios,
+                "operationId": operation.get("operationId", ""),
+                "summary": operation.get("summary", ""),
+                "tags": operation.get("tags", []),
+            }
+
+    return endpoints
+
+
+def get_coverage_spec(force_refresh: bool = False) -> dict:
+    """Get the full coverage spec (all endpoints + enums) for rider + driver.
+    Caches to disk; pass force_refresh=True to re-fetch from live services."""
+    with _coverage_lock:
+        if not force_refresh and COVERAGE_SPEC_CACHE.is_file():
+            try:
+                cached = json.loads(COVERAGE_SPEC_CACHE.read_text())
+                # Cache is valid for 1 hour
+                if time.time() - cached.get("_cached_at", 0) < 3600:
+                    return cached
+            except Exception:
+                pass
+
+        spec = {"rider": {}, "driver": {}, "_cached_at": time.time()}
+
+        rider_openapi = _fetch_openapi_spec(RIDER_URL)
+        if rider_openapi:
+            spec["rider"] = _extract_coverage_spec(rider_openapi, "rider")
+
+        driver_openapi = _fetch_openapi_spec(DRIVER_URL)
+        if driver_openapi:
+            spec["driver"] = _extract_coverage_spec(driver_openapi, "driver")
+
+        spec["summary"] = {
+            "rider_endpoints": len(spec["rider"]),
+            "driver_endpoints": len(spec["driver"]),
+            "total_endpoints": len(spec["rider"]) + len(spec["driver"]),
+            "rider_scenarios": sum(len(e["scenarios"]) for e in spec["rider"].values()),
+            "driver_scenarios": sum(len(e["scenarios"]) for e in spec["driver"].values()),
+        }
+
+        try:
+            COVERAGE_SPEC_CACHE.write_text(json.dumps(spec, default=str))
+        except Exception:
+            pass
+
+        return spec
+
+
+def _load_coverage_runs() -> dict:
+    """Load all recorded coverage runs from disk."""
+    if COVERAGE_RUNS_FILE.is_file():
+        try:
+            return json.loads(COVERAGE_RUNS_FILE.read_text())
+        except Exception:
+            pass
+    return {"runs": []}
+
+
+def _save_coverage_runs(data: dict):
+    """Save coverage runs to disk."""
+    try:
+        COVERAGE_RUNS_FILE.write_text(json.dumps(data, default=str))
+    except Exception as e:
+        print(f"  \033[91m[Coverage]\033[0m Failed to save runs: {e}")
+
+
+def record_coverage_hit(hit: dict):
+    """Record a single API call fingerprint.
+    hit: {runId, service, method, path, fingerprint: {field: value, ...}, timestamp}
+    """
+    with _coverage_lock:
+        data = _load_coverage_runs()
+
+        run_id = hit.get("runId", "default")
+        # Find or create run
+        run = None
+        for r in data["runs"]:
+            if r["id"] == run_id:
+                run = r
+                break
+        if not run:
+            run = {
+                "id": run_id,
+                "startedAt": hit.get("timestamp", time.time()),
+                "hits": [],
+            }
+            data["runs"].append(run)
+
+        run["hits"].append({
+            "service": hit.get("service", ""),
+            "method": hit.get("method", ""),
+            "path": hit.get("path", ""),
+            "fingerprint": hit.get("fingerprint", {}),
+            "timestamp": hit.get("timestamp", time.time()),
+        })
+        run["lastHitAt"] = hit.get("timestamp", time.time())
+
+        # Keep only last 50 runs
+        if len(data["runs"]) > 50:
+            data["runs"] = data["runs"][-50:]
+
+        _save_coverage_runs(data)
+
+
+def record_coverage_batch(hits: list):
+    """Record multiple coverage hits at once."""
+    with _coverage_lock:
+        data = _load_coverage_runs()
+
+        for hit in hits:
+            run_id = hit.get("runId", "default")
+            run = None
+            for r in data["runs"]:
+                if r["id"] == run_id:
+                    run = r
+                    break
+            if not run:
+                run = {
+                    "id": run_id,
+                    "startedAt": hit.get("timestamp", time.time()),
+                    "hits": [],
+                }
+                data["runs"].append(run)
+
+            run["hits"].append({
+                "service": hit.get("service", ""),
+                "method": hit.get("method", ""),
+                "path": hit.get("path", ""),
+                "fingerprint": hit.get("fingerprint", {}),
+                "timestamp": hit.get("timestamp", time.time()),
+            })
+            run["lastHitAt"] = hit.get("timestamp", time.time())
+
+        if len(data["runs"]) > 50:
+            data["runs"] = data["runs"][-50:]
+
+        _save_coverage_runs(data)
+
+
+def get_coverage_report(run_ids: list | None = None) -> dict:
+    """Generate a coverage report comparing recorded hits against the spec.
+    If run_ids is None, uses all runs combined."""
+    spec = get_coverage_spec()
+    runs_data = _load_coverage_runs()
+
+    # Collect all hits (optionally filtered by run_ids)
+    all_hits = []
+    selected_runs = []
+    for run in runs_data.get("runs", []):
+        if run_ids is None or run["id"] in run_ids:
+            all_hits.extend(run["hits"])
+            selected_runs.append({"id": run["id"], "startedAt": run.get("startedAt"), "hitCount": len(run["hits"])})
+
+    # Build hit index: {service: {"METHOD /path": count}}
+    hit_index = {"rider": {}, "driver": {}}
+    fingerprint_index = {"rider": {}, "driver": {}}
+
+    # Map hit service names to spec service names
+    SERVICE_MAP = {
+        "rider": "rider",
+        "driver": "driver",
+        "lts": "driver",           # LTS endpoints are in driver OpenAPI
+        "provider-dashboard": None, # Dashboard endpoints are separate
+        "rider-dashboard": None,
+        "mock-idfy": None,
+        "mock-server": None,
+        "internal": None,
+    }
+
+    for hit in all_hits:
+        raw_service = hit.get("service", "")
+        service = SERVICE_MAP.get(raw_service, raw_service)
+        if service not in hit_index:
+            continue
+        # Normalize hit path: strip query string, normalize params
+        hit_path = _normalize_path_params(hit["path"])
+        key = f"{hit['method']} {hit_path}"
+        if key not in hit_index[service]:
+            hit_index[service][key] = 0
+            fingerprint_index[service][key] = []
+        hit_index[service][key] += 1
+        if hit.get("fingerprint"):
+            fingerprint_index[service][key].append(hit["fingerprint"])
+
+    # Compare against spec
+    report = {"rider": {}, "driver": {}}
+    totals = {"rider": {"total": 0, "covered": 0, "scenarios_total": 0, "scenarios_covered": 0},
+              "driver": {"total": 0, "covered": 0, "scenarios_total": 0, "scenarios_covered": 0}}
+
+    for service in ("rider", "driver"):
+        for endpoint_key, endpoint_spec in spec.get(service, {}).items():
+            totals[service]["total"] += 1
+            hit_count = hit_index[service].get(endpoint_key, 0)
+            is_covered = hit_count > 0
+            if is_covered:
+                totals[service]["covered"] += 1
+
+            # Scenario coverage: check which enum values were actually sent
+            scenario_coverage = {}
+            fingerprints = fingerprint_index[service].get(endpoint_key, [])
+            for field, possible_values in endpoint_spec.get("enumFields", {}).items():
+                totals[service]["scenarios_total"] += len(possible_values)
+                tested_values = set()
+                for fp in fingerprints:
+                    if field in fp:
+                        tested_values.add(str(fp[field]))
+                covered_count = len(tested_values.intersection(set(str(v) for v in possible_values)))
+                totals[service]["scenarios_covered"] += covered_count
+                scenario_coverage[field] = {
+                    "possible": possible_values,
+                    "tested": list(tested_values),
+                    "coverage": covered_count / len(possible_values) if possible_values else 1.0,
+                }
+
+            report[service][endpoint_key] = {
+                "covered": is_covered,
+                "hitCount": hit_count,
+                "scenarioCoverage": scenario_coverage,
+                "operationId": endpoint_spec.get("operationId", ""),
+                "tags": endpoint_spec.get("tags", []),
+            }
+
+    # Overall percentages
+    for service in ("rider", "driver"):
+        t = totals[service]
+        t["endpointCoverage"] = (t["covered"] / t["total"] * 100) if t["total"] > 0 else 0
+        t["scenarioCoverage"] = (t["scenarios_covered"] / t["scenarios_total"] * 100) if t["scenarios_total"] > 0 else 0
+
+    return {
+        "totals": totals,
+        "report": report,
+        "runs": selected_runs,
+        "totalHits": len(all_hits),
+    }
+
+
+def get_coverage_chains(run_id: str | None = None, time_window_s: float = 5.0) -> dict:
+    """Parse service logs to detect internal API chains triggered during a test run.
+    Groups internal requests by time proximity to identify call chains."""
+    runs_data = _load_coverage_runs()
+
+    # Get time bounds for the run
+    target_run = None
+    if run_id:
+        for r in runs_data.get("runs", []):
+            if r["id"] == run_id:
+                target_run = r
+                break
+
+    # Parse logs for Request&Response entries
+    log_pattern = re.compile(
+        r'Request&Response\] \|> Request: RequestInfo \{requestMethod = "(\w+)", '
+        r'rawPathInfo = "([^"]+)"'
+    )
+    timestamp_pattern = re.compile(r'"timestamp":"([^"]+)"')
+
+    chains = []
+    service_hits = {}  # {service: [{method, path, timestamp_str}]}
+
+    for service_name, log_path in SERVICE_LOGS.items():
+        if not log_path.is_file():
+            continue
+        # Only read rider-app and driver-app logs for chain detection
+        if service_name not in ("rider-app", "driver-app"):
+            continue
+
+        service_hits[service_name] = []
+        try:
+            # Read last 500KB of the log for recent entries
+            file_size = log_path.stat().st_size
+            read_start = max(0, file_size - 512 * 1024)
+            with open(log_path, "r") as f:
+                if read_start > 0:
+                    f.seek(read_start)
+                    f.readline()  # skip partial line
+                for line in f:
+                    m = log_pattern.search(line)
+                    ts_m = timestamp_pattern.search(line)
+                    if m and ts_m:
+                        method = m.group(1)
+                        path = m.group(2)
+                        ts = ts_m.group(1)
+                        # Skip health checks
+                        if path in ("/v2", "/ui", "/healthcheck"):
+                            continue
+                        service_hits[service_name].append({
+                            "method": method,
+                            "path": path,
+                            "timestamp": ts,
+                        })
+        except Exception as e:
+            print(f"  \033[91m[Coverage]\033[0m Error reading {log_path}: {e}")
+
+    # Group into chains by time proximity
+    # A chain is: a user-facing hit on one service triggers hits on other services within time_window_s
+    all_entries = []
+    for svc, hits in service_hits.items():
+        for h in hits:
+            all_entries.append({**h, "service": svc})
+
+    # Sort by timestamp
+    all_entries.sort(key=lambda x: x["timestamp"])
+
+    # Simple chain grouping: consecutive entries within time_window_s of each other
+    if all_entries:
+        current_chain = [all_entries[0]]
+        for entry in all_entries[1:]:
+            # Simple heuristic: if entries are close in time, they're part of the same chain
+            current_chain.append(entry)
+            if len(current_chain) > 20:
+                chains.append(current_chain)
+                current_chain = []
+        if current_chain:
+            chains.append(current_chain)
+
+    # Summarize: for each user-facing endpoint, what internal endpoints were triggered
+    chain_summary = []
+    for chain in chains[-50:]:  # Last 50 chains
+        if len(chain) < 2:
+            continue
+        chain_summary.append({
+            "trigger": {"service": chain[0]["service"], "method": chain[0]["method"], "path": chain[0]["path"]},
+            "internal": [{"service": e["service"], "method": e["method"], "path": e["path"]} for e in chain[1:]],
+            "timestamp": chain[0]["timestamp"],
+        })
+
+    return {
+        "chains": chain_summary,
+        "serviceHitCounts": {svc: len(hits) for svc, hits in service_hits.items()},
+    }
+
+
 class ContextHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         print(f"  \033[93m[Context API]\033[0m {args[0]}")
@@ -3367,6 +3841,57 @@ class ContextHandler(BaseHTTPRequestHandler):
                         {"error": f"No ride found with id {ride_id}"}, 404)
             except Exception as e:
                 self._send_json({"error": str(e)}, 500)
+            return True
+
+        # ── Coverage API ──
+        if method == "GET" and path == "/api/coverage/spec":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            force = qs.get("refresh", ["0"])[0] == "1"
+            self._send_json(get_coverage_spec(force_refresh=force))
+            return True
+
+        if method == "POST" and path == "/api/coverage/record":
+            body = self._read_json_body()
+            if isinstance(body, list):
+                record_coverage_batch(body)
+            else:
+                record_coverage_hit(body)
+            self._send_json({"recorded": True})
+            return True
+
+        if method == "GET" and path == "/api/coverage/report":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_ids = qs.get("runId", None)
+            self._send_json(get_coverage_report(run_ids))
+            return True
+
+        if method == "GET" and path == "/api/coverage/chains":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_id = qs.get("runId", [None])[0]
+            self._send_json(get_coverage_chains(run_id))
+            return True
+
+        if method == "GET" and path == "/api/coverage/runs":
+            data = _load_coverage_runs()
+            # Return run summaries without full hit data
+            runs = []
+            for r in data.get("runs", []):
+                runs.append({
+                    "id": r["id"],
+                    "startedAt": r.get("startedAt"),
+                    "lastHitAt": r.get("lastHitAt"),
+                    "hitCount": len(r.get("hits", [])),
+                })
+            self._send_json({"runs": runs})
+            return True
+
+        if method == "DELETE" and path == "/api/coverage/runs":
+            with _coverage_lock:
+                _save_coverage_runs({"runs": []})
+            self._send_json({"cleared": True})
             return True
 
         # GET API endpoints
