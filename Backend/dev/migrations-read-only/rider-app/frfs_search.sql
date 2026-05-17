@@ -145,3 +145,8 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN cloud_type text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
