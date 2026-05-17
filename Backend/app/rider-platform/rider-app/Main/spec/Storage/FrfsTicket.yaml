@@ -494,6 +494,7 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
+    tripId: "!SecondaryKey"
 
   queries:
     findById:
