@@ -6,7 +6,7 @@ module Domain.Action.UI.PassDetails
     postPassDetailsUpdate,
     getPassDetailsData,
     getPassDetailsVerificationStatus,
-    postPassDetailsUploadImage,
+    postPassDetailsUploadDocument,
     getPassDetailsMedia,
     fetchPassMediaFromS3,
     parsePassEnum,
@@ -464,29 +464,28 @@ mkPassStatusResp :: DPassDetails.PassDetails -> PassDetailsAPI.PassStatusResp
 mkPassStatusResp DPassDetails.PassDetails {..} =
   PassDetailsAPI.PassStatusResp {..}
 
-instance FromMultipart Tmp PassDetailsAPI.UploadImageReq where
+instance FromMultipart Tmp PassDetailsAPI.UploadDocumentReq where
   fromMultipart form = do
     fileData <- lookupFile "file" form
     let fileName = fdFileName fileData
         tmpPath = fdPayload fileData
         encodedPath = T.unpack $ fileName <> "\NUL" <> T.pack tmpPath
-    pure $ PassDetailsAPI.UploadImageReq {file = encodedPath}
+    pure $ PassDetailsAPI.UploadDocumentReq {file = encodedPath}
 
-instance ToMultipart Tmp PassDetailsAPI.UploadImageReq where
+instance ToMultipart Tmp PassDetailsAPI.UploadDocumentReq where
   toMultipart req =
     MultipartData
       []
       [FileData "file" "" "image/jpeg" req.file]
 
--- | Upload a single image file to S3 and return its public URL.
-postPassDetailsUploadImage ::
+postPassDetailsUploadDocument ::
   ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
       Id.Id DMerchant.Merchant
     ) ->
-    PassDetailsAPI.UploadImageReq ->
+    PassDetailsAPI.UploadDocumentReq ->
     Environment.Flow Kernel.Prelude.Text
   )
-postPassDetailsUploadImage (mbPersonId, merchantId) req = do
+postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
   merchantConfig <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   let (originalFileName, actualFilePath) = case T.splitOn "\NUL" (T.pack req.file) of

@@ -58,10 +58,10 @@ type API =
            API.Types.UI.PassDetails.PassStatusResp
       :<|> TokenAuth
       :> "passDetails"
-      :> "uploadImage"
+      :> "uploadDocument"
       :> Kernel.ServantMultipart.MultipartForm
            Kernel.ServantMultipart.Tmp
-           API.Types.UI.PassDetails.UploadImageReq
+           API.Types.UI.PassDetails.UploadDocumentReq
       :> Post
            '[JSON]
            Kernel.Prelude.Text
@@ -77,7 +77,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadImage :<|> getPassDetailsMedia
+handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadDocument :<|> getPassDetailsMedia
 
 getGetOrganizations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -116,14 +116,14 @@ getPassDetailsVerificationStatus ::
   )
 getPassDetailsVerificationStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsVerificationStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-postPassDetailsUploadImage ::
+postPassDetailsUploadDocument ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    API.Types.UI.PassDetails.UploadImageReq ->
+    API.Types.UI.PassDetails.UploadDocumentReq ->
     Environment.FlowHandler Kernel.Prelude.Text
   )
-postPassDetailsUploadImage a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.postPassDetailsUploadImage (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postPassDetailsUploadDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.postPassDetailsUploadDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPassDetailsMedia :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
 getPassDetailsMedia a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsMedia (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

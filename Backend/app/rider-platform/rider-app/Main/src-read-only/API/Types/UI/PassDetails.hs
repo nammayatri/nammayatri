@@ -74,6 +74,6 @@ data RouteDetails = RouteDetails {destStopId :: Kernel.Prelude.Text, destStopNam
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadImageReq = UploadImageReq {file :: EulerHS.Prelude.FilePath}
+data UploadDocumentReq = UploadDocumentReq {file :: EulerHS.Prelude.FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

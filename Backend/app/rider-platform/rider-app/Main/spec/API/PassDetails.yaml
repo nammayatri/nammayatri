@@ -72,7 +72,7 @@ types:
     name: Text
     address: Maybe Text
 
-  UploadImageReq:
+  UploadDocumentReq:
     file: FilePath
 
 apis:
@@ -107,10 +107,10 @@ apis:
       response:
         type: PassStatusResp
   - POST:
-      endpoint: /passDetails/uploadImage
+      endpoint: /passDetails/uploadDocument
       auth: TokenAuth
       multipart:
-        type: API.Types.UI.PassDetails.UploadImageReq
+        type: UploadDocumentReq
       response:
         type: Text
   - GET:
