@@ -28,6 +28,7 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
 SPECS_DIR = SCRIPT_DIR.parent / "specs"
 
 _TEMPLATE_RE = re.compile(r"\$\{([^}]+)\}")
+_ESCAPE_SENTINEL = "\x00__TT_DOLLAR_BRACE__\x00"
 
 
 class SpecError(Exception):
@@ -113,6 +114,33 @@ def _coerce_logs(raw: Any) -> List[dict]:
     return out
 
 
+def _coerce_workflows(raw: Any) -> dict:
+    """Accept either:
+        workflows:
+          first-run: [a, b, c]                       # legacy: just stages
+          fresh-emulator:                            # new: object with description
+            description: "Wipe and cold-boot…"
+            stages: [reset-emulator, a, b, c]
+    Returns {'workflows': {name: [stages]}, 'workflowDescriptions': {name: desc}}.
+    """
+    flows: dict = {}
+    descs: dict = {}
+    for name, value in (raw or {}).items():
+        if isinstance(value, list):
+            flows[name] = [str(s) for s in value]
+        elif isinstance(value, dict):
+            stages = value.get("stages") or []
+            if not isinstance(stages, list):
+                raise SpecError(f"workflow {name!r}: 'stages' must be a list")
+            flows[name] = [str(s) for s in stages]
+            desc = value.get("description")
+            if desc:
+                descs[name] = str(desc)
+        else:
+            raise SpecError(f"workflow {name!r}: must be a list of stages or an object with stages+description")
+    return {"workflows": flows, "workflowDescriptions": descs}
+
+
 def load_spec(path: Path) -> dict:
     """Parse a single YAML spec file. Validates required fields and shapes."""
     _ensure_yaml()
@@ -136,7 +164,7 @@ def load_spec(path: Path) -> dict:
         "inputs": _coerce_inputs(raw.get("inputs")),
         "env": dict(raw.get("env") or {}),
         "stages": _coerce_stages(raw.get("stages")),
-        "workflows": dict(raw.get("workflows") or {}),
+        **_coerce_workflows(raw.get("workflows")),
         "logs": _coerce_logs(raw.get("logs")),
         "hooks": dict(raw.get("hooks") or {}),
         "_path": str(path),
@@ -202,25 +230,38 @@ def discover_specs(specs_dir: Path = SPECS_DIR) -> List[dict]:
     return out
 
 
+_KNOWN_BUCKETS = frozenset({"ports", "inputs", "source", "env"})
+_KNOWN_SCALARS = frozenset({"destDir", "repoRoot"})
+
+
 def template(value: Any, ctx: Dict[str, Any]) -> Any:
     """Recursively substitute ${a.b} references in strings using ctx.
 
     ctx shape: {"ports": {"metro": 8082}, "inputs": {"VARIANT": "Lynx"}, ...}
-    Unresolved references become empty strings (callers should validate before
-    invocation; this is the runtime substitutor).
+    Only references in a known namespace (ports.*, inputs.*, source.*, env.*)
+    or a known top-level scalar (destDir, repoRoot) are substituted. Anything
+    else — e.g. `${ANDROID_HOME}`, `${PATH}` — is passed through unchanged so
+    the shell can expand it at runtime. `$${...}` still works as an explicit
+    escape for legacy specs.
     """
     if isinstance(value, str):
         def repl(m: re.Match) -> str:
             ref = m.group(1)
-            bucket, _, key = ref.partition(".")
-            if not key:
-                return str(ctx.get(ref, ""))
+            bucket, sep, key = ref.partition(".")
+            if not sep:
+                if ref in _KNOWN_SCALARS:
+                    return str(ctx.get(ref, ""))
+                return m.group(0)
+            if bucket not in _KNOWN_BUCKETS:
+                return m.group(0)
             container = ctx.get(bucket)
             if isinstance(container, dict):
                 v = container.get(key)
                 return "" if v is None else str(v)
-            return ""
-        return _TEMPLATE_RE.sub(repl, value)
+            return m.group(0)
+        protected = value.replace("$${", _ESCAPE_SENTINEL)
+        substituted = _TEMPLATE_RE.sub(repl, protected)
+        return substituted.replace(_ESCAPE_SENTINEL, "${")
     if isinstance(value, dict):
         return {k: template(v, ctx) for k, v in value.items()}
     if isinstance(value, list):
@@ -229,17 +270,34 @@ def template(value: Any, ctx: Dict[str, Any]) -> Any:
 
 
 def build_ctx(spec: dict, inputs: Dict[str, Any], port_overrides: Dict[str, int]) -> Dict[str, Any]:
-    """Build the template context from a spec + current input/port state."""
+    """Build the template context from a spec + current input/port state.
+
+    Spec-declared `default:` values are layered *under* user inputs, so
+    fields the user never touched still resolve to a usable string instead
+    of silently becoming empty (e.g. `--appId ${inputs.APP_ID}` losing its
+    argument because the user only edited GOOGLE_SERVICES_JSON)."""
     ports = {p["name"]: port_overrides.get(p["name"], p["port"]) for p in spec["ports"]}
     dest_dir = (spec.get("source") or {}).get("destDir") or ""
     abs_dest = str((PROJECT_ROOT / dest_dir).resolve()) if dest_dir else str(PROJECT_ROOT)
+    merged_inputs: Dict[str, Any] = {}
+    for i in spec.get("inputs") or []:
+        if "default" in i and i["default"] is not None:
+            merged_inputs[i["key"]] = i["default"]
+    if inputs:
+        for k, v in inputs.items():
+            if v is not None and v != "":
+                merged_inputs[k] = v
+    import os as _os
     return {
         "ports": ports,
-        "inputs": inputs or {},
+        "inputs": merged_inputs,
         "source": {
             "ref": (spec.get("source") or {}).get("ref", ""),
             "url": (spec.get("source") or {}).get("url", ""),
         },
+        # Lets specs reach host env vars in `env:` blocks or stage `run:`
+        # strings via ${env.FOO}. Unset values resolve to empty string.
+        "env": dict(_os.environ),
         "destDir": abs_dest,
         "repoRoot": str(PROJECT_ROOT),
     }

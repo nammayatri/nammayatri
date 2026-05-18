@@ -167,17 +167,38 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
       {spec.workflows && Object.keys(spec.workflows).length > 0 && (
         <Section title="Workflows">
           <div className="tool-row">
-            {Object.entries(spec.workflows).map(([name, stages]) => (
-              <button
-                key={name}
-                className="btn btn-primary"
-                disabled={busy !== null}
-                onClick={() => handleWorkflow(name)}
-                title={stages.join(' → ')}
-              >
-                ▶ {name}
-              </button>
-            ))}
+            {Object.entries(spec.workflows).map(([name, stages]) => {
+              const description = spec.workflowDescriptions?.[name];
+              return (
+                <div key={name} className="workflow-item">
+                  <button
+                    className="btn btn-primary"
+                    disabled={busy !== null}
+                    onClick={() => handleWorkflow(name)}
+                  >
+                    ▶ {name}
+                  </button>
+                  {(description || stages.length > 0) && (
+                    <span
+                      className="workflow-info"
+                      tabIndex={0}
+                      aria-label={`About ${name} workflow`}
+                      role="button"
+                    >
+                      &#9432;
+                      <span className="workflow-tooltip" role="tooltip">
+                        {description && (
+                          <span className="workflow-tooltip-desc">{description}</span>
+                        )}
+                        <span className="workflow-tooltip-steps">
+                          <strong>Steps:</strong> {stages.join(' → ')}
+                        </span>
+                      </span>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Section>
       )}
@@ -232,7 +253,7 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
                   {isExpanded && (
                     <tr className="stage-detail-row">
                       <td colSpan={5}>
-                        <LiveLog key={`stage-${st.id}`} url={stageStreamUrl(slug, st.id)} />
+                        <StageDetail status={s} slug={slug} stageId={st.id} />
                       </td>
                     </tr>
                   )}
@@ -463,6 +484,24 @@ const applySgr = (st: AnsiStyle, codes: number[]): AnsiStyle => {
   return next;
 };
 
+// Strip non-color terminal noise: cursor moves, line erases, scroll regions,
+// OSC titles, and collapse carriage returns so spinner lines don't pile up.
+// Keeps SGR (color/bold/etc) sequences intact for ansiToSpans to render.
+const stripNoise = (text: string): string => {
+  // OSC: ESC ] ... BEL  or  ESC ] ... ESC \
+  text = text.replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '');
+  // CSI sequences that are NOT SGR ('m'): drop them
+  text = text.replace(/\x1b\[[0-9;?]*[A-LN-Za-ln-z]/g, '');
+  // Bare "[2K" / "[1G" style sequences (ESC stripped by some pipes)
+  text = text.replace(/\[[0-9;?]*[A-LN-Za-ln-z]/g, '');
+  // Other single-char escapes (e.g. ESC =, ESC >)
+  text = text.replace(/\x1b[=>]/g, '');
+  // Collapse \r — treat as "rewind to start of line" by dropping
+  // everything before the \r on the same line
+  text = text.replace(/[^\n]*\r(?!\n)/g, '');
+  return text;
+};
+
 const ansiToSpans = (text: string): React.ReactNode[] => {
   const out: React.ReactNode[] = [];
   // Match either an ANSI CSI sequence or a bare "[..m" pattern
@@ -494,6 +533,48 @@ const ansiToSpans = (text: string): React.ReactNode[] => {
   return out;
 };
 
+const StageDetail: React.FC<{
+  status: StageStatus | undefined;
+  slug: string;
+  stageId: string;
+}> = ({ status, slug, stageId }) => {
+  const hasPersisted = !!(status?.command || status?.outputTail);
+  const isRunning = status?.state === 'running';
+  return (
+    <div className="stage-detail">
+      {!hasPersisted && !isRunning && (
+        <div className="stage-detail-empty">
+          No output yet for this run. Click <b>Force</b> to re-run.
+        </div>
+      )}
+      {status?.command && (
+        <div className="stage-detail-cmd">
+          <div className="stage-detail-label">Command</div>
+          <pre className="stage-detail-pre"><code>{status.command}</code></pre>
+        </div>
+      )}
+      {isRunning ? (
+        <>
+          <div className="stage-detail-label">Live output</div>
+          <LiveLog
+            key={`stage-${stageId}-${status?.startedAt ?? 'run'}`}
+            url={stageStreamUrl(slug, stageId)}
+          />
+        </>
+      ) : status?.outputTail ? (
+        <>
+          <div className="stage-detail-label">Output</div>
+          <pre className="stage-detail-output">
+            {stripNoise(status.outputTail).split('\n').map((ln, i) => (
+              <div key={i} className="live-log-line">{ansiToSpans(ln)}</div>
+            ))}
+          </pre>
+        </>
+      ) : null}
+    </div>
+  );
+};
+
 const LiveLog: React.FC<{ url: string }> = ({ url }) => {
   const [lines, setLines] = useState<string[]>([]);
   const preRef = React.useRef<HTMLPreElement | null>(null);
@@ -501,7 +582,7 @@ const LiveLog: React.FC<{ url: string }> = ({ url }) => {
   useEffect(() => {
     setLines([]);
     const es = new EventSource(url);
-    const decoder = new TextDecoder('utf-8');
+    const decoder = new TextDecoder('utf-8', { fatal: false });
     es.onmessage = (e) => {
       try {
         const obj = JSON.parse(e.data);
@@ -509,7 +590,7 @@ const LiveLog: React.FC<{ url: string }> = ({ url }) => {
           const bin = atob(obj.b64);
           const bytes = new Uint8Array(bin.length);
           for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          const text = decoder.decode(bytes);
+          const text = stripNoise(decoder.decode(bytes, { stream: true }));
           setLines(prev => {
             const merged = (prev.join('\n') + text).split('\n');
             const tail = merged.slice(-5000);

@@ -3,9 +3,9 @@
 A stage is a unit of shell work. Stages declare `needs:` for ordering, a
 `lifecycle:` of one-shot or long-running, and `invalidatedBy:` keys that
 say *what changes make this stage stale*. The runner spawns each stage in
-a PTY, fans out the output to SSE subscribers, and persists a per-stage
-state record (status, hash, exit code, started/finished) so the dashboard
-can survive restarts.
+a PTY, fans out the output to SSE subscribers, and tracks per-stage state
+(status, hash, exit code, started/finished) **purely in memory** — restart
+the API server and every launcher resets to a clean IDLE slate.
 
 This module deliberately re-implements PTY plumbing rather than reaching
 into server.py's remote-session globals — it keeps the new subsystem
@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import errno
 import fcntl
-import json
 import os
 import pty
 import queue as _queue
@@ -35,8 +34,23 @@ from typing import Any, Callable, Dict, List, Optional
 from spec_loader import PROJECT_ROOT, build_ctx, template
 import input_store
 
-STATE_ROOT = PROJECT_ROOT / "data" / "launcher-state"
 SESSION_RING = 40000  # max chunks buffered per stage for SSE replay (5x previous)
+OUTPUT_TAIL_BYTES = 16384
+RUN_HISTORY_LIMIT = 10
+
+
+def _resolve_home() -> str:
+    """Return the user's home directory, even if HOME is unset.
+    Falls back to passwd lookup, then to '~' expansion."""
+    home = os.environ.get("HOME")
+    if home:
+        return home
+    try:
+        import pwd
+        return pwd.getpwuid(os.getuid()).pw_dir
+    except Exception:  # noqa: BLE001
+        pass
+    return os.path.expanduser("~") or "/"
 
 # Friendly aliases → nixpkgs attribute paths. Anything not in this map is
 # forwarded verbatim, so specs can also use raw nixpkgs attrs (e.g. "ruby_3_3").
@@ -56,6 +70,12 @@ NIX_TOOL_MAP: Dict[str, str] = {
     "ruby":      "ruby",
     "git":       "git",
     "cocoapods": "cocoapods",
+    "coreutils": "coreutils",
+    "gawk":      "gawk",
+    "gnused":    "gnused",
+    "gnugrep":   "gnugrep",
+    "findutils": "findutils",
+    "procps":    "procps",
 }
 
 
@@ -74,31 +94,24 @@ def _wrap_with_nix(cmd: str, tools: Optional[List[str]]) -> str:
     return f"nix-shell --quiet -p {pkg_args} --run {shlex.quote(cmd)}"
 
 
-def _state_dir(slug: str) -> Path:
-    d = STATE_ROOT / slug
-    d.mkdir(parents=True, exist_ok=True)
-    return d
+# ── In-memory launcher state ────────────────────────────────────────────────
+# Per-launcher: stages → {fingerprint, last_exit, started_at, finished_at,
+# command, output_tail, runs, log}; ports → port overrides;
+# sourceRefOverride → user-pinned git ref.
+# Resets to empty on every server restart by design — no disk persistence.
 
-
-def _state_path(slug: str) -> Path:
-    return _state_dir(slug) / "state.json"
+_state: Dict[str, Dict[str, Any]] = {}
+_state_lock = threading.Lock()
 
 
 def _load_state(slug: str) -> Dict[str, Any]:
-    p = _state_path(slug)
-    if not p.is_file():
-        return {"stages": {}, "ports": {}}
-    try:
-        return json.loads(p.read_text())
-    except Exception:  # noqa: BLE001
-        return {"stages": {}, "ports": {}}
+    with _state_lock:
+        return _state.setdefault(slug, {"stages": {}, "ports": {}})
 
 
 def _save_state(slug: str, st: Dict[str, Any]) -> None:
-    p = _state_path(slug)
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(st, indent=2, default=str))
-    tmp.replace(p)
+    with _state_lock:
+        _state[slug] = st
 
 
 # ── In-memory live sessions ─────────────────────────────────────────────────
@@ -198,6 +211,17 @@ def _spawn_session(session: dict) -> None:
     master_fd, slave_fd = pty.openpty()
     _set_pty_size(master_fd, session["rows"], session["cols"])
     full_env = {**os.environ, **session["env"]}
+    # Generic shell sanity: HOME / USER must be set or every "~" expansion and
+    # passwd-driven lookup breaks. Some wrappers (nix-shell --pure, restricted
+    # shells, sudo without -E) strip these, so backfill from passwd if missing.
+    if not full_env.get("HOME"):
+        full_env["HOME"] = _resolve_home()
+    if not full_env.get("USER"):
+        try:
+            import pwd
+            full_env["USER"] = pwd.getpwuid(os.getuid()).pw_name
+        except Exception:  # noqa: BLE001
+            full_env["USER"] = os.environ.get("LOGNAME", "")
     proc = subprocess.Popen(
         ["bash", "-lc", session["command"]],
         cwd=session["cwd"],
@@ -287,6 +311,70 @@ def get_session(session_id: str) -> Optional[dict]:
         return _sessions.get(session_id)
 
 
+def wait_for_stage(slug: str, stage: dict, session_id: str,
+                   timeout: float = 1800.0, poll: float = 0.5,
+                   long_running_grace: float = 120.0) -> dict:
+    """Block until a spawned stage is considered done.
+
+    one-shot   → wait for the subprocess to exit; returns its exit code.
+    long-running with readyProbe.kind == 'log' → wait until the regex pattern
+                 (case-insensitive, ANSI-stripped) appears in the session's
+                 output buffer; returns ready=True. If the pattern hasn't
+                 matched within `long_running_grace` seconds AND the process
+                 is still running, returns ready=True with noteProbeUnmatched
+                 so the workflow advances rather than stalling forever.
+    long-running without readyProbe → return immediately after a brief settle
+                 so the process has a chance to bind ports.
+
+    On timeout returns {timeout: True}. On unknown session returns {error: ...}.
+    """
+    import re
+    deadline = time.time() + timeout
+    lifecycle = stage.get("lifecycle", "one-shot")
+    sess = get_session(session_id)
+    if sess is None:
+        return {"error": f"session {session_id!r} not found"}
+
+    if lifecycle == "one-shot":
+        proc = sess.get("proc")
+        if proc is None:
+            return {"error": "no process attached"}
+        while time.time() < deadline:
+            if proc.poll() is not None:
+                return {"exit": proc.returncode, "ready": proc.returncode == 0}
+            time.sleep(poll)
+        return {"timeout": True}
+
+    probe = stage.get("readyProbe") or {}
+    if probe.get("kind") != "log" or not probe.get("pattern"):
+        # No probe → give the process a moment to start listening, then advance.
+        time.sleep(3.0)
+        return {"ready": True, "noProbe": True}
+
+    # Strip ANSI escape sequences before matching so colorized output still hits.
+    ansi_re = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+    pattern = re.compile(probe["pattern"], re.IGNORECASE)
+    grace_deadline = time.time() + long_running_grace
+
+    while time.time() < deadline:
+        proc = sess.get("proc")
+        if proc is not None and proc.poll() is not None:
+            return {"exit": proc.returncode, "ready": False,
+                    "reason": "process exited before ready"}
+        with sess["lock"]:
+            raw = b"".join(sess["buf"]).decode("utf-8", errors="replace")
+        clean = ansi_re.sub("", raw)
+        if pattern.search(clean):
+            return {"ready": True}
+        if time.time() >= grace_deadline:
+            return {"ready": True, "noteProbeUnmatched": True,
+                    "reason": f"readyProbe pattern {probe['pattern']!r} not seen "
+                              f"within {long_running_grace:.0f}s; process still "
+                              "running, advancing workflow"}
+        time.sleep(poll)
+    return {"timeout": True}
+
+
 def stage_status(slug: str, spec: dict, stage: dict) -> dict:
     """Compute the live status snapshot of one stage."""
     persisted = _load_state(slug).get("stages", {}).get(stage["id"], {})
@@ -312,6 +400,9 @@ def stage_status(slug: str, spec: dict, stage: dict) -> dict:
         "startedAt": persisted.get("started_at") if not live else live.get("started_at"),
         "finishedAt": persisted.get("finished_at") if not live else live.get("finished_at"),
         "sessionId": live["id"] if live else None,
+        "command": (live.get("command") if live else None) or persisted.get("command"),
+        "outputTail": persisted.get("output_tail"),
+        "runs": persisted.get("runs", []),
     }
 
 
@@ -349,9 +440,24 @@ def run_stage(slug: str, spec: dict, stage_id: str, force: bool = False,
 
     tools = spec.get("tools") or []
 
-    # Apply hooks.preStart once per stage launch (best effort).
-    for cmd in (spec.get("hooks") or {}).get("preStart", []) or []:
-        cmd = _wrap_with_nix(template(cmd, ctx), tools)
+    # Apply hooks.preStart (best effort). Each entry is either:
+    #   - a bare string (legacy)                → runs before every stage
+    #   - { cmd: str, stages: [id, ...] }       → runs only before listed stages
+    # Stage-scoped form avoids cross-stage side effects (e.g. a "kill anything
+    # on :8082" cleanup nuking metro right after build-android starts).
+    for hook in (spec.get("hooks") or {}).get("preStart", []) or []:
+        if isinstance(hook, str):
+            cmd_src = hook
+        elif isinstance(hook, dict):
+            scope = hook.get("stages")
+            if scope and stage_id not in scope:
+                continue
+            cmd_src = hook.get("cmd") or ""
+        else:
+            continue
+        cmd = _wrap_with_nix(template(cmd_src, ctx), tools)
+        if not cmd.strip():
+            continue
         try:
             subprocess.run(["bash", "-lc", cmd], check=False, timeout=60)
         except Exception:  # noqa: BLE001
@@ -361,7 +467,7 @@ def run_stage(slug: str, spec: dict, stage_id: str, force: bool = False,
     _apply_adb_reverses(spec, ctx, tools)
 
     command = _wrap_with_nix(template(stage.get("run") or "", ctx), tools)
-    env = {k: template(v, ctx) for k, v in (spec.get("env") or {}).items()}
+    env = {k: v for k, v in ((k, template(v, ctx)) for k, v in (spec.get("env") or {}).items()) if v != ""}
     cwd = _resolve_cwd(spec, stage, ctx)
     sess = _make_session(slug, stage_id, command, cwd, env, cols, rows)
     sess["fingerprint"] = fp
@@ -378,15 +484,32 @@ def run_stage(slug: str, spec: dict, stage_id: str, force: bool = False,
         return {"error": f"spawn failed: {e}"}
 
     # On exit, persist the result.
-    def _watch_exit(s=sess, _fp=fp):
+    def _watch_exit(s=sess, _fp=fp, _cmd=command):
         proc = s["proc"]
         proc.wait()
+        with s["lock"]:
+            tail_bytes = b"".join(s["buf"])[-OUTPUT_TAIL_BYTES:]
+        output_tail = tail_bytes.decode("utf-8", errors="replace")
+        finished_at = time.time()
         state = _load_state(slug)
-        state.setdefault("stages", {})[stage_id] = {
+        prev = state.setdefault("stages", {}).get(stage_id, {}) or {}
+        runs = list(prev.get("runs") or [])
+        runs.append({
+            "command": _cmd,
+            "exit": proc.returncode,
+            "started_at": s["started_at"],
+            "finished_at": finished_at,
+            "output_tail": output_tail,
+        })
+        runs = runs[-RUN_HISTORY_LIMIT:]
+        state["stages"][stage_id] = {
             "fingerprint": _fp,
             "last_exit": proc.returncode,
             "started_at": s["started_at"],
-            "finished_at": time.time(),
+            "finished_at": finished_at,
+            "command": _cmd,
+            "output_tail": output_tail,
+            "runs": runs,
         }
         _save_state(slug, state)
 
@@ -429,8 +552,11 @@ def _apply_adb_reverses(spec: dict, ctx: Dict[str, Any], tools: Optional[List[st
             pass
 
 
-def _run_source_stage(slug: str, spec: dict, stage: dict, fp: str) -> dict:
-    """Built-in source-sync: clone or fast-forward; no-op when destDir is a symlink."""
+def _run_source_stage(slug: str, spec: dict, stage: dict, fp: str,
+                      cols: int = 120, rows: int = 30) -> dict:
+    """Built-in source-sync: clone or fast-forward via the same PTY+session
+    machinery as user stages, so progress streams live to the dashboard.
+    No-ops when destDir is a symlink."""
     src = spec.get("source") or {}
     url = src.get("url")
     ref = src.get("ref") or "main"
@@ -439,45 +565,85 @@ def _run_source_stage(slug: str, spec: dict, stage: dict, fp: str) -> dict:
         return {"skipped": True, "reason": "no source"}
     dest = PROJECT_ROOT / dest_rel
     dest.parent.mkdir(parents=True, exist_ok=True)
-    log_lines: List[str] = []
 
-    def _run(cmd: List[str], cwd: Optional[Path] = None) -> int:
-        try:
-            cp = subprocess.run(cmd, cwd=str(cwd) if cwd else None,
-                                capture_output=True, text=True, timeout=300)
-            if cp.stdout:
-                log_lines.append(cp.stdout)
-            if cp.stderr:
-                log_lines.append(cp.stderr)
-            return cp.returncode
-        except Exception as e:  # noqa: BLE001
-            log_lines.append(f"ERROR: {e}")
-            return 1
+    dest_q = shlex.quote(str(dest))
+    url_q = shlex.quote(url)
+    ref_q = shlex.quote(ref)
+    needs_clone = (not dest.exists()) or (not (dest / ".git").exists())
+    is_symlink = dest.is_symlink()
 
-    if dest.is_symlink():
-        log_lines.append(f"destDir {dest} is a symlink → local-path mode, skipping clone")
-        rc = 0
-    elif not dest.exists():
-        rc = _run(["git", "clone", url, str(dest)])
-        if rc == 0:
-            rc = _run(["git", "checkout", ref], cwd=dest)
+    if is_symlink:
+        script = f'echo "destDir {dest_q} is a symlink → local-path mode, skipping clone"'
+    elif needs_clone:
+        cleanup = ""
+        if dest.exists():
+            cleanup = (
+                f'echo "destDir {dest_q} exists but is not a git checkout → removing and re-cloning"; '
+                f'rm -rf -- {dest_q} || {{ echo "ERROR: failed to remove stale destDir"; exit 1; }}; '
+            )
+        script = (
+            f'set -e; {cleanup}'
+            f'git clone --progress {url_q} {dest_q} && '
+            f'git -C {dest_q} checkout {ref_q}'
+        )
     else:
-        rc = _run(["git", "fetch", "origin"], cwd=dest)
-        if rc == 0:
-            rc = _run(["git", "checkout", ref], cwd=dest)
-        if rc == 0:
-            _run(["git", "pull", "--ff-only"], cwd=dest)
+        script = (
+            f'set -e; '
+            f'git -C {dest_q} fetch --progress origin && '
+            f'git -C {dest_q} checkout {ref_q} && '
+            f'git -C {dest_q} pull --ff-only --progress'
+        )
 
-    state = _load_state(slug)
-    state.setdefault("stages", {})[stage["id"]] = {
-        "fingerprint": fp,
-        "last_exit": rc,
-        "started_at": time.time(),
-        "finished_at": time.time(),
-        "log": "\n".join(log_lines)[-4000:],
-    }
-    _save_state(slug, state)
-    return {"builtin": True, "exitCode": rc, "log": "\n".join(log_lines)[-4000:]}
+    # Existing running session for this stage? Re-attach.
+    existing = session_for(slug, stage["id"])
+    if existing and existing.get("running"):
+        return {"sessionId": existing["id"], "attached": True}
+
+    sess = _make_session(slug, stage["id"], script, dest.parent, {}, cols, rows)
+    sess["fingerprint"] = fp
+    with _runner_lock:
+        _sessions[sess["id"]] = sess
+        _by_stage[f"{slug}/{stage['id']}"] = sess["id"]
+    try:
+        _spawn_session(sess)
+    except Exception as e:  # noqa: BLE001
+        with _runner_lock:
+            _sessions.pop(sess["id"], None)
+            if _by_stage.get(f"{slug}/{stage['id']}") == sess["id"]:
+                _by_stage.pop(f"{slug}/{stage['id']}", None)
+        return {"error": f"spawn failed: {e}"}
+
+    def _watch_exit(s=sess, _fp=fp, _cmd=script):
+        proc = s["proc"]
+        proc.wait()
+        with s["lock"]:
+            tail_bytes = b"".join(s["buf"])[-OUTPUT_TAIL_BYTES:]
+        output_tail = tail_bytes.decode("utf-8", errors="replace")
+        finished_at = time.time()
+        st = _load_state(slug)
+        prev = st.setdefault("stages", {}).get(stage["id"], {}) or {}
+        runs = list(prev.get("runs") or [])
+        runs.append({
+            "command": _cmd,
+            "exit": proc.returncode,
+            "started_at": s["started_at"],
+            "finished_at": finished_at,
+            "output_tail": output_tail,
+        })
+        runs = runs[-RUN_HISTORY_LIMIT:]
+        st["stages"][stage["id"]] = {
+            "fingerprint": _fp,
+            "last_exit": proc.returncode,
+            "started_at": s["started_at"],
+            "finished_at": finished_at,
+            "command": _cmd,
+            "output_tail": output_tail,
+            "runs": runs,
+        }
+        _save_state(slug, st)
+
+    threading.Thread(target=_watch_exit, daemon=True).start()
+    return {"sessionId": sess["id"], "started": True, "builtin": True, "fingerprint": fp}
 
 
 def stop_stage(slug: str, stage_id: str) -> bool:
@@ -507,7 +673,7 @@ def list_sessions(slug: Optional[str] = None) -> List[dict]:
 
 # ── Source override (local path) ────────────────────────────────────────────
 
-def set_local_path(slug: str, spec: dict, local_path: Optional[str]) -> dict:
+def set_local_path(_slug: str, spec: dict, local_path: Optional[str]) -> dict:
     """Repoint the launcher's destDir at a user-chosen local path via symlink,
     or revert to the default cloned path when local_path is None/empty."""
     src = spec.get("source") or {}

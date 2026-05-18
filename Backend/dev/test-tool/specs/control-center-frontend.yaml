@@ -18,7 +18,7 @@ tools: [node22]
 
 domains:
   - { name: ui, url: "http://localhost:4002" }
-  - { name: admin, url: "http://admin.localhost:4002" }
+  - { name: fleet, url: "http://fleet.localhost:4002" }
 
 env:
   PORT:               "${ports.frontend}"
@@ -47,9 +47,25 @@ stages:
     readyProbe: { kind: http, url: "http://localhost:${ports.frontend}" }
 
 workflows:
-  first-run: [sync-source, frontend-install, frontend]
-  refresh:   [frontend]
-  reinstall: [frontend-install, frontend]
+  first-run:
+    description: >-
+      End-to-end bring-up: clone/update the repo, install JS deps, then start
+      the Vite dev server for the control-center frontend. Use this the first
+      time you launch this service or after pulling a clean clone.
+    stages: [sync-source, frontend-install, frontend]
+
+  refresh:
+    description: >-
+      Restart only the Vite dev server. Use after editing source when deps
+      haven't changed — HMR usually handles it, but a hard restart helps if
+      Vite gets into a bad state.
+    stages: [frontend]
+
+  reinstall:
+    description: >-
+      Reinstall frontend deps and restart the dev server. Use after
+      package.json/lockfile changes or when node_modules looks broken.
+    stages: [frontend-install, frontend]
 
 hooks:
   preStart:

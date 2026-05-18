@@ -2374,6 +2374,22 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                 results.append({"stage": sid, **r})
                 if r.get("error"):
                     break
+                if r.get("skipped"):
+                    continue
+                session_id = r.get("sessionId")
+                if not session_id:
+                    continue
+                stage_def = next((s for s in spec["stages"] if s["id"] == sid), None)
+                if not stage_def:
+                    continue
+                wait_r = stage_runner.wait_for_stage(slug, stage_def, session_id)
+                results[-1]["wait"] = wait_r
+                if wait_r.get("error") or wait_r.get("timeout"):
+                    break
+                if stage_def.get("lifecycle", "one-shot") == "one-shot" and wait_r.get("exit", 0) != 0:
+                    break
+                if stage_def.get("lifecycle") == "long-running" and wait_r.get("ready") is False:
+                    break
             self._send_json({"workflow": wf, "results": results})
             return True
 

@@ -486,6 +486,41 @@
   font-size: 12px;
   padding: 6px 2px;
 }
+.stage-detail { display: flex; flex-direction: column; gap: 10px; }
+.stage-detail-label {
+  color: var(--text-dim);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.stage-detail-pre {
+  background: #07080c;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin: 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: #cfd8ff;
+}
+.stage-detail-output {
+  background: #07080c;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  margin: 0;
+  font-size: 11.5px;
+  max-height: 220px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: #c8c8c8;
+}
+.stage-runs { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.stage-run { border: 1px solid var(--border); border-radius: 4px; padding: 8px; background: var(--bg-elev-2); }
+.stage-run.exit-bad { border-color: rgba(224, 108, 117, 0.5); }
+.stage-run-head { display: flex; gap: 12px; font-size: 11px; color: var(--text-dim); margin-bottom: 6px; }
 
 /* ── Log tabs / live log ──────────────────────────────────────────── */
 
@@ -556,3 +591,87 @@ a.btn::after {
   border: 3px solid var(--bg);
 }
 .tools-panel::-webkit-scrollbar-thumb:hover { background: #475073; }
+
+/* ── Workflow buttons with info icon + custom tooltip ─────────────── */
+.workflow-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+.workflow-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--text-mute);
+  cursor: help;
+  user-select: none;
+  outline: none;
+}
+.workflow-info:hover,
+.workflow-info:focus-visible {
+  color: var(--text);
+}
+
+.workflow-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  min-width: 240px;
+  max-width: 360px;
+  padding: 10px 12px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  font-size: 12.5px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 1000;
+}
+.workflow-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--bg-elev-2);
+}
+.workflow-info:hover .workflow-tooltip,
+.workflow-info:focus-visible .workflow-tooltip,
+.workflow-info:focus-within .workflow-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+.workflow-tooltip-desc {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.workflow-tooltip-steps {
+  display: block;
+  color: var(--text-dim);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  word-break: break-word;
+}
+.workflow-tooltip-steps strong {
+  color: var(--text);
+  font-family: inherit;
+  margin-right: 4px;
+}

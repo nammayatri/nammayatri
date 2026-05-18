@@ -66,6 +66,7 @@ export interface LauncherSpec {
   env?: Record<string, string>;
   stages: SpecStage[];
   workflows?: Record<string, string[]>;
+  workflowDescriptions?: Record<string, string>;
   logs?: SpecLog[];
   hooks?: { preStart?: string[]; postStop?: string[] };
 }
@@ -91,6 +92,17 @@ export interface StageStatus {
   startedAt: number | null;
   finishedAt: number | null;
   sessionId: string | null;
+  command?: string | null;
+  outputTail?: string | null;
+  runs?: StageRun[];
+}
+
+export interface StageRun {
+  command: string;
+  exit: number | null;
+  started_at: number | null;
+  finished_at: number | null;
+  output_tail: string;
 }
 
 export interface InputView {

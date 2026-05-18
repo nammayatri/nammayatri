@@ -201,9 +201,7 @@ _:
         run-mobility-stack-nix = {
           category = "Backend";
           description = ''
-            Run the nammayatri backend components via Nix.
-
-            NOTE: This is slower, due to doing full nix build.
+            Run the nammayatri backend components via Nix (This is slower, due to doing full nix build).
           '';
           exec = ''
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
@@ -221,12 +219,7 @@ _:
 
         run-mobility-stack-dev = {
           category = "Backend";
-          description = ''
-            Run the nammayatri backend + test-context-api + mock-server
-            (no test-dashboard). Pair with ", run-local-test-dashboard" in
-            another terminal — or use ", run-mobility-stack-full" for the
-            legacy single-terminal experience.
-          '';
+          description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
             export DEV=1
             # Free up service ports first so a stale process from a prior run
@@ -248,11 +241,7 @@ _:
 
         run-mobility-stack-full = {
           category = "Backend";
-          description = ''
-            Run the FULL nammayatri stack in one terminal: backend +
-            test-context-api + mock-server + test-local-api + test-dashboard.
-            Equivalent to the previous ", run-mobility-stack-dev" behaviour.
-          '';
+          description = "Run the FULL nammayatri stack in one terminal: backend + test-context-api + mock-server + test-local-api + test-dashboard.";
           exec = ''
             export DEV=1
             echo "── Pre-flight: freeing service ports ──"
@@ -270,12 +259,7 @@ _:
 
         run-local-test-dashboard = {
           category = "Backend";
-          description = ''
-            Run only the test-dashboard (port 7070, React) + test-local-api
-            (port 7083). The Remote Stack tab inside the dashboard SSHs into
-            a host (or localhost), rsyncs the repo, and launches
-            ", run-mobility-stack-dev" there, streaming the PTY back.
-          '';
+          description = "Run only the test-dashboard (port 7070, React) + test-local-api (port 7083).";
           exec = ''
             export DEV=1
             echo "── Pre-flight: freeing dashboard ports ──"
@@ -299,14 +283,7 @@ _:
 
         clear-data = {
           category = "Backend";
-          description = ''
-            Wipe runtime state under <repo-root>/data/ (postgres, kafka,
-            zookeeper, metabase, redis-commander, etc.) but PRESERVE
-            ny-react-native/ and control-center/ — those are expensive to
-            re-clone + re-install. Asks for confirmation before deleting.
-            Stop services first with ", kill-svc-ports" if they are still
-            running.
-          '';
+          description = "Wipe runtime state under <repo-root>/data/ (preserves ny-react-native/ and control-center/); asks for confirmation.";
           exec = ''
             set -euo pipefail
             DATA_DIR="''${FLAKE_ROOT}/data"
@@ -402,11 +379,7 @@ _:
 
         run-mobility-stack-test = {
           category = "Backend";
-          description = ''
-            Start the full mobility stack, import config from master, run integration tests, then stop everything.
-            Usage: , run-mobility-stack-test [test-args]
-            Example: , run-mobility-stack-test rides NY_Bangalore
-          '';
+          description = "Start the full mobility stack, import config from master, run integration tests, then stop everything.";
           exec =
             let
               # All ports that run-mobility-stack-dev uses

@@ -96,7 +96,20 @@
     },
     "workflows": {
       "type": "object",
-      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "array", "items": { "type": "string" } },
+          {
+            "type": "object",
+            "required": ["stages"],
+            "additionalProperties": false,
+            "properties": {
+              "stages":      { "type": "array", "items": { "type": "string" } },
+              "description": { "type": "string" }
+            }
+          }
+        ]
+      }
     },
     "logs": {
       "type": "array",
@@ -119,7 +132,23 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "preStart": { "type": "array", "items": { "type": "string" } },
+        "preStart": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["cmd"],
+                "properties": {
+                  "cmd": { "type": "string" },
+                  "stages": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            ]
+          }
+        },
         "postStop": { "type": "array", "items": { "type": "string" } }
       }
     }
