@@ -18,27 +18,28 @@ jobs:
   check-conditions:
     runs-on: ubuntu-latest
     outputs:
-      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}      
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
       should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
+      runner: ${{ steps.set-runner.outputs.runner }}
     steps:
       - name: Apply labels
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-      
+
       - name: Check global conditions
         id: evaluate
         run: |
           # Check if workflow should proceed (non-matrix conditions)
-          if [[ "${{ github.event.pull_request.merged }}" == "true" || 
-                "${{ github.event_name }}" != "pull_request" || 
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ||
+                "${{ github.event_name }}" != "pull_request" ||
                 "${{ github.event.action }}" != "closed" ]]; then
             echo "should_proceed=true" >> $GITHUB_OUTPUT
           else
             echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
-      
+
       - name: Check docker push conditions
         id: check-docker-push
         run: |
@@ -52,6 +53,17 @@ jobs:
           else
             echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set runner based on branch
+        id: set-runner
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ]]; then
+            echo "runner=x86_64-linux-ny-push-bap" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ]]; then
+            echo "runner=x86_64-linux-ny-push-bpp" >> $GITHUB_OUTPUT
+          else
+            echo "runner=x86_64-linux-ny-push-common" >> $GITHUB_OUTPUT
+          fi
   build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
@@ -61,7 +73,6 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-ny-push
             arch: amd64
             name: Master Release Build
             continue-on-error: false
@@ -70,7 +81,7 @@ jobs:
           #   name: Mac Cache Server
           #   continue-on-error: false
       fail-fast: false
-    runs-on: ${{ matrix.host }}
+    runs-on: ${{ needs.check-conditions.outputs.runner }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
@@ -158,7 +169,7 @@ jobs:
     name: Analyze Build Times
     needs: [build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux-ny-push
+    runs-on: ${{ needs.check-conditions.outputs.runner }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

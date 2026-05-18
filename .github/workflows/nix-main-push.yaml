@@ -32,7 +32,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-ny-push
+            host: x86_64-linux-ny-push-main
             arch: amd64
             name: Master Local Build
             continue-on-error: false
@@ -109,7 +109,7 @@ jobs:
     name: Analyze Master Build Times
     needs: [master-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux-ny-push
+    runs-on: x86_64-linux-ny-push-main
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -153,7 +153,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-ny-push
+            host: x86_64-linux-ny-push-main
             arch: amd64
             name: Prod Release Build
             continue-on-error: false
@@ -232,7 +232,7 @@ jobs:
     name: Analyze Prod Build Times
     needs: [prod-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux-ny-push
+    runs-on: x86_64-linux-ny-push-main
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
