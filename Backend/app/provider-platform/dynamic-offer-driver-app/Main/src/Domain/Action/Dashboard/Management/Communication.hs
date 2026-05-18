@@ -13,7 +13,7 @@ module Domain.Action.Dashboard.Management.Communication
     deleteCommunicationDelete,
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
-    getCommunicationTemplate,
+    postCommunicationTemplate,
     CommunicationDeliveryDispatchPayload (..),
     processFleetCommunicationDeliveryPayload,
   )
@@ -23,7 +23,8 @@ import qualified API.Types.ProviderPlatform.Management.Communication as CommAPI
 import qualified Dashboard.Common
 import qualified Data.Aeson as Aeson
 import Data.Function (on)
-import Data.List (nub, nubBy)
+import Data.List (find, nub, nubBy)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TEnc
 import qualified Domain.Types.Communication as DComm
@@ -67,6 +68,13 @@ import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
+
+indianCountryCodes :: Set.Set Text
+indianCountryCodes = Set.fromList ["+91", "91", "091"]
+
+isIndianMobileNumber :: Text -> Text -> Bool
+isIndianMobileNumber mobileCountryCode _mobileNumber =
+  Set.member mobileCountryCode indianCountryCodes
 
 -- | Payload for Kafka: one message per delivery (per recipient × per channel).
 -- Consumer uses this to send via PUSH/SMS/WhatsApp without reading Communication from DB.
@@ -473,6 +481,7 @@ buildRecipientItem person = do
         name,
         role = personRoleToCommRole person.role,
         phone,
+        mobileCountryCode = person.mobileCountryCode,
         email = person.email,
         fleetOwnerName = Nothing,
         operatorName = Nothing
@@ -951,32 +960,47 @@ fromDomainCTA cta = CommAPI.CTAButtonReq {label = cta.label, url = cta.url, link
 -- | GET /communication/template?domain=...&channel=...
 -- Returns templateId, messageBody and templateName from MerchantMessage
 -- for the given communication domain and channel.
-getCommunicationTemplate ::
+postCommunicationTemplate ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  CommAPI.CommunicationDomainType ->
-  CommAPI.CommunicationChannelType ->
+  CommAPI.GetTemplateRequest ->
   Environment.Flow CommAPI.CommunicationTemplateResponse
-getCommunicationTemplate merchantShortId opCity apiDomain apiChannel = do
+postCommunicationTemplate merchantShortId opCity getTemplateReq = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  let mmDomain :: DMM.MessageDomain
-      mmDomain =
-        case apiDomain of
-          CommAPI.COMM_FLEET -> DMM.FLEET
-          CommAPI.COMM_RIDE_HAILING -> DMM.RIDE_HAILING
-          CommAPI.COMM_GENERAL -> DMM.GENERAL
-      mmChannel :: DMM.MediaChannel
-      mmChannel =
-        case apiChannel of
-          CommAPI.CH_SMS -> DMM.SMS
-          CommAPI.CH_WHATSAPP -> DMM.WHATSAPP
-          _ -> DMM.SMS -- fallback for unsupported channels
-  mbTemplate <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just mmDomain) (Just mmChannel)
-  template <- fromMaybeM (InvalidRequest "Template not found for given domain & channel") mbTemplate
-  pure
-    CommAPI.CommunicationTemplateResponse
-      { templateId = template.templateId,
-        messageBody = template.message,
-        templateName = template.templateName
-      }
+  let (hasIndianNumbers, hasNonIndianNumbers) =
+        foldr (\m (indian, nonIndian) ->
+          if isIndianMobileNumber m.mobileCountryCode m.mobileNumber
+          then (True, nonIndian)
+          else (indian, True)
+        ) (False, False) getTemplateReq.mobileNumbers
+      hasMixedNumbers = hasIndianNumbers && hasNonIndianNumbers
+  if not hasIndianNumbers
+    then pure
+      CommAPI.CommunicationTemplateResponse
+        { templateId = "",
+          messageBody = "",
+          templateName = Nothing,
+          recommendCustomMessage = True
+        }
+    else do
+      let mmDomain :: DMM.MessageDomain
+          mmDomain =
+            case getTemplateReq.domain of
+              CommAPI.COMM_FLEET -> DMM.FLEET
+              CommAPI.COMM_RIDE_HAILING -> DMM.RIDE_HAILING
+              CommAPI.COMM_GENERAL -> DMM.GENERAL
+      mmChannel <-
+        case getTemplateReq.channel of
+          CommAPI.CH_SMS -> pure DMM.SMS
+          CommAPI.CH_WHATSAPP -> pure DMM.WHATSAPP
+          _ -> throwError (InvalidRequest "Template lookup is supported only for SMS and WhatsApp")
+      mbTemplate <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just mmDomain) (Just mmChannel)
+      template <- fromMaybeM (InvalidRequest "Template not found for given domain & channel") mbTemplate
+      pure
+        CommAPI.CommunicationTemplateResponse
+          { templateId = template.templateId,
+            messageBody = template.message,
+            templateName = template.templateName,
+            recommendCustomMessage = hasMixedNumbers
+          }
