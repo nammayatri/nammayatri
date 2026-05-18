@@ -45,13 +45,16 @@ jobs:
       - name: Restore cabal cache
         run: |
           CABAL_CACHE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/dist-newstyle
+          CABAL_STORE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
           mkdir -p $CABAL_CACHE
+          mkdir -p $CABAL_STORE
           ln -sfn $CABAL_CACHE Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal build all 2>&1
           " | while IFS= read -r line; do
@@ -64,6 +67,7 @@ jobs:
           mkdir -p $STAGING/bin $STAGING/opt/app
 
           nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
@@ -164,13 +168,16 @@ jobs:
       - name: Restore cabal cache
         run: |
           CABAL_CACHE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/dist-newstyle
+          CABAL_STORE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
           mkdir -p $CABAL_CACHE
+          mkdir -p $CABAL_STORE
           ln -sfn $CABAL_CACHE Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal build all 2>&1
           " | while IFS= read -r line; do
@@ -183,6 +190,7 @@ jobs:
           mkdir -p $STAGING/bin $STAGING/opt/app
 
           nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
