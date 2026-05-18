@@ -398,6 +398,7 @@ data UserActionType
   | EXEMPT_DRIVER_FEE
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | WHITELIST_MERCHANT_OPERATING_CITY
+  | CONTROL_CENTER
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
@@ -440,6 +441,7 @@ data AccessMatrixItem = AccessMatrixItem
     apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
     userActionType :: UserActionTypeWrapper,
+    otherUserActionType :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
@@ -465,7 +467,8 @@ data AccessMatrixRowAPIEntity = AccessMatrixRowAPIEntity
 data AccessMatrixItemAPIEntity = AccessMatrixItemAPIEntity
   { apiEntity :: ApiEntity,
     userAccessType :: UserAccessType,
-    userActionType :: UserActionTypeWrapper
+    userActionType :: UserActionTypeWrapper,
+    otherUserActionType :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
