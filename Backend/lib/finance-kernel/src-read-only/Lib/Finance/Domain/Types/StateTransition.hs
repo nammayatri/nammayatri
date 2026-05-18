@@ -46,8 +46,8 @@ data PaymentState
   | CASH_PENDING
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentEntityType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentEntityType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentEvent))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentEvent)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentState))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentState)

@@ -55,8 +55,8 @@ data TransactionType
   | PGFee
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''GstCreditType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''GstCreditType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SaleType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SaleType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TransactionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TransactionType)

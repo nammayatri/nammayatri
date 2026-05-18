@@ -5,6 +5,7 @@ module Storage.Beam.TransporterConfig where
 
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import qualified Domain.Types.AdminRequest
 import Domain.Types.Common ()
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
@@ -150,6 +151,7 @@ data TransporterConfigT f = TransporterConfigT
     editLocDriverPermissionNeeded :: B.C f Kernel.Prelude.Bool,
     editLocTimeThreshold :: B.C f Kernel.Types.Common.Seconds,
     emailOtpConfig :: B.C f (Kernel.Prelude.Maybe Email.Types.EmailOTPConfig),
+    enableAdminMakerChecker :: B.C f (Kernel.Prelude.Maybe [Domain.Types.AdminRequest.ActionType]),
     enableCoinsToDirectPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableDirectWalletIncentives :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -323,8 +325,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)

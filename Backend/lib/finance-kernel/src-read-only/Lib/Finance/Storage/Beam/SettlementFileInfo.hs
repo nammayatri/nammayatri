@@ -11,15 +11,15 @@ import qualified Lib.Finance.Domain.Types.SettlementFileInfo
 import Tools.Beam.UtilsTH
 
 data SettlementFileInfoT f = SettlementFileInfoT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    fileName :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    lastProcessedIndex :: (B.C f Kernel.Prelude.Int),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    paymentGatewayName :: (B.C f Kernel.Prelude.Text),
-    status :: (B.C f Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    fileName :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    lastProcessedIndex :: B.C f Kernel.Prelude.Int,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    paymentGatewayName :: B.C f Kernel.Prelude.Text,
+    status :: B.C f Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table SettlementFileInfoT where
 
 type SettlementFileInfo = SettlementFileInfoT Identity
 
-$(enableKVPG (''SettlementFileInfoT) [('id)] [[('fileName)], [('paymentGatewayName)]])
+$(enableKVPG ''SettlementFileInfoT ['id] [['fileName], ['paymentGatewayName]])
 
-$(mkTableInstancesGenericSchema (''SettlementFileInfoT) "settlement_file_info")
+$(mkTableInstancesGenericSchema ''SettlementFileInfoT "settlement_file_info")

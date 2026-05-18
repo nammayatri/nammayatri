@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByDateAndType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByDateAndType reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
 
 findById ::
@@ -35,17 +35,17 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findByReconciliationStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationStatus -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationStatus -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findByReconciliationStatus reconStatus = do findAllWithKV [Se.Is Beam.reconStatus $ Se.Eq reconStatus]
 
 findBySummaryId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findBySummaryId summaryId = do findAllWithKV [Se.Is Beam.summaryId $ Se.Eq (Kernel.Types.Id.getId summaryId)]
 
 findExceptions ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry]))
+  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationType -> m [Lib.Finance.Domain.Types.ReconciliationEntry.ReconciliationEntry])
 findExceptions reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
 
 findByPrimaryKey ::

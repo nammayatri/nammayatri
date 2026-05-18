@@ -24,6 +24,7 @@ data AccountInput = AccountInput
     -- (e.g. vehicle category for per-category wallet isolation).
     subLedger :: Maybe Text,
     currency :: Currency,
+    description :: Maybe Text,
     merchantId :: Text,
     merchantOperatingCityId :: Text
   }

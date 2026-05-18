@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findAllByPaymentGatewayMerchantCityAndStatus ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> m ([Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileStatus -> m [Lib.Finance.Domain.Types.SettlementFileInfo.SettlementFileInfo])
 findAllByPaymentGatewayMerchantCityAndStatus paymentGatewayName merchantId merchantOperatingCityId status = do
   findAllWithKV
     [ Se.And

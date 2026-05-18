@@ -17,7 +17,7 @@ findByReferenceIn ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   [Text] ->
   Text ->
-  m ([Domain.LedgerEntry])
+  m [Domain.LedgerEntry]
 findByReferenceIn referenceTypes referenceId =
   findAllWithKV
     [ Se.And
@@ -30,7 +30,7 @@ findByReferenceIn referenceTypes referenceId =
 findAllByReferenceId ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   Text ->
-  m ([Domain.LedgerEntry])
+  m [Domain.LedgerEntry]
 findAllByReferenceId refId =
   findAllWithKV [Se.Is Beam.referenceId $ Se.Eq refId]
 
