@@ -488,7 +488,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"passOrganizationId\": \"{{pass_organization_id}}\",\n    \"name\": \"Test Student\",\n    \"idCardPicture\": \"data:image/png;base64,idcard\",\n    \"address\": \"12 College Rd, Chennai\",\n    \"age\": 17,\n    \"gender\": \"MALE\",\n    \"pincode\": \"600020\",\n    \"selfImage\": \"data:image/png;base64,selfie\",\n    \"guardianName\": \"Test Guardian\",\n    \"studentClass\": \"12\",\n    \"routeDetails\": [\n        {\"srcStopName\": \"{{route1_src_name}}\", \"srcStopId\": \"{{route1_src_id}}\", \"destStopName\": \"{{route1_dest_name}}\", \"destStopId\": \"{{route1_dest_id}}\"},\n        {\"srcStopName\": \"{{route2_src_name}}\", \"srcStopId\": \"{{route2_src_id}}\", \"destStopName\": \"{{route2_dest_name}}\", \"destStopId\": \"{{route2_dest_id}}\"}\n    ],\n    \"registerNo\": \"REG12345\",\n    \"aadharNo\": \"123456789012\"\n}"
+          "raw": "{\n    \"passOrganizationId\": \"{{pass_organization_id}}\",\n    \"name\": \"Test Student\",\n    \"idCardPicture\": \"data:image/png;base64,idcard\",\n    \"address\": {\"latLng\": {\"latitude\": 13.0827, \"longitude\": 80.2707}, \"placeName\": \"12 College Rd, Chennai\"},\n    \"age\": 17,\n    \"gender\": \"MALE\",\n    \"pincode\": \"600020\",\n    \"selfImage\": \"data:image/png;base64,selfie\",\n    \"guardianName\": \"Test Guardian\",\n    \"guardianMobileNumber\": \"+919876543210\",\n    \"department\": \"Computer Science\",\n    \"year\": \"3\",\n    \"routeDetails\": [\n        {\"srcStopName\": \"{{route1_src_name}}\", \"srcStopId\": \"{{route1_src_id}}\", \"destStopName\": \"{{route1_dest_name}}\", \"destStopId\": \"{{route1_dest_id}}\"},\n        {\"srcStopName\": \"{{route2_src_name}}\", \"srcStopId\": \"{{route2_src_id}}\", \"destStopName\": \"{{route2_dest_name}}\", \"destStopId\": \"{{route2_dest_id}}\"}\n    ],\n    \"registerNo\": \"REG12345\",\n    \"aadharNo\": \"123456789012\",\n    \"academicYearStart\": \"2026-06-01\",\n    \"academicYearEnd\": \"2027-05-31\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/update",
@@ -715,7 +715,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"CLG_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"College verified\"\n        }\n    ]\n}"
+          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"CLG_VERIFIED\",\n            \"academicYearStart\": \"2026-06-01\",\n            \"academicYearEnd\": \"2027-05-31\",\n            \"numberOfStages\": 14,\n            \"remark\": \"College verified\"\n        }\n    ]\n}"
         },
         "url": {
           "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",
@@ -804,7 +804,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"MTC_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"MTC verified - eligible for student pass\"\n        }\n    ]\n}"
+          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"MTC_VERIFIED\",\n            \"academicYearStart\": \"2026-06-01\",\n            \"academicYearEnd\": \"2027-05-31\",\n            \"numberOfStages\": 14,\n            \"remark\": \"MTC verified - eligible for student pass\"\n        }\n    ]\n}"
         },
         "url": {
           "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",

@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
     postPassOrganizationPassDetailsVerify,
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
+    getPassOrganizationPassDetailsDocument,
   )
 where
 
@@ -23,12 +24,16 @@ import qualified "this" Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified GHC.Exts
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime)
 import qualified Kernel.Utils.Common as Utils
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.PassDetails as QPassDetails
@@ -71,7 +76,9 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
     Nothing ->
       QPassDetails.findAllByMerchantIdAndMerchantOperatingCityId cappedLimit offset callerMoc.merchantId callerMoc.id passEnum statuses
   let offset' = fromMaybe 0 offset
-      passDetailsInfo = map mkPassDetailsInfoResp passDetails
+  passDetailsInfo <- forM passDetails $ \pd -> do
+    decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
+    pure $ mkPassDetailsInfoResp decGuardianMobile pd
   pure $
     PassOrganizationAPI.PassDetailsListResp
       { PassOrganizationAPI.passDetails = passDetailsInfo,
@@ -79,8 +86,8 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
         PassOrganizationAPI.offset = offset'
       }
 
-mkPassDetailsInfoResp :: DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
-mkPassDetailsInfoResp passDetails =
+mkPassDetailsInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
+mkPassDetailsInfoResp decGuardianMobile passDetails =
   PassOrganizationAPI.PassDetailsInfoResp
     { PassOrganizationAPI.passDetailsId = passDetails.id,
       PassOrganizationAPI.personId = passDetails.personId,
@@ -95,8 +102,11 @@ mkPassDetailsInfoResp passDetails =
       PassOrganizationAPI.routePairs = passDetails.routePairs,
       PassOrganizationAPI.age = passDetails.age,
       PassOrganizationAPI.guardianName = passDetails.guardianName,
-      PassOrganizationAPI.studentClass = passDetails.studentClass,
-      PassOrganizationAPI.graduationDate = passDetails.graduationDate,
+      PassOrganizationAPI.guardianMobileNumber = decGuardianMobile,
+      PassOrganizationAPI.department = passDetails.department,
+      PassOrganizationAPI.year = passDetails.year,
+      PassOrganizationAPI.academicYearStart = passDetails.academicYearStart,
+      PassOrganizationAPI.academicYearEnd = passDetails.academicYearEnd,
       PassOrganizationAPI.numberOfStages = passDetails.numberOfStages,
       PassOrganizationAPI.remark = passDetails.remark,
       PassOrganizationAPI.createdAt = passDetails.createdAt,
@@ -106,22 +116,23 @@ mkPassDetailsInfoResp passDetails =
 postPassOrganizationPassDetailsVerify :: (Id.ShortId DMerchant.Merchant -> Context.City -> PassOrganizationAPI.VerifyPassDetailsReq -> Environment.Flow APISuccess.APISuccess)
 postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
-  forM_ req.verifications $ \v -> do
-    pd <- QPassDetails.findById v.passDetailsId >>= fromMaybeM (PassDetailsNotFound v.passDetailsId.getId)
-    unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
   now <- Utils.getCurrentTime
-  let validTill = Data.Time.addUTCTime (730 * Data.Time.nominalDay) now
-
-  forM_ (GHC.Exts.groupWith (\pdV -> (pdV.verificationStatus, pdV.graduationDate, pdV.remark, pdV.numberOfStages)) req.verifications) $ \pdVs -> do
-    let pdV = Kernel.Prelude.head pdVs
-    let passDetailsIds = map (\pd -> pd.passDetailsId) pdVs
+  forM_ req.verifications $ \pdV -> do
+    pd <- QPassDetails.findById pdV.passDetailsId >>= fromMaybeM (PassDetailsNotFound pdV.passDetailsId.getId)
+    unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+    let mergedRemark = pdV.remark <|> pd.remark
+        mergedNumberOfStages = pdV.numberOfStages <|> pd.numberOfStages
+        mergedAcademicYearStart = pdV.academicYearStart <|> pd.academicYearStart
+        mergedAcademicYearEnd = pdV.academicYearEnd <|> pd.academicYearEnd
+    validTill <- DPassDetails.computeValidTill now callerMoc.id
     QPassDetails.updateVerificationStatus
       pdV.verificationStatus
       validTill
-      pdV.remark
-      pdV.graduationDate
-      pdV.numberOfStages
-      passDetailsIds
+      mergedRemark
+      mergedNumberOfStages
+      mergedAcademicYearStart
+      mergedAcademicYearEnd
+      [pdV.passDetailsId]
   pure APISuccess.Success
 
 postPassOrganizationUpdate :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DPerson.Person -> PassOrganizationAPI.PassOrganizationUpdateReq -> Environment.Flow APISuccess.APISuccess)
@@ -170,3 +181,10 @@ mkGetOrganizationResp org =
       PassOrganizationAPI.name = org.name,
       PassOrganizationAPI.address = org.address
     }
+
+getPassOrganizationPassDetailsDocument :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DMF.MediaFile -> Environment.Flow Kernel.Prelude.Text)
+getPassOrganizationPassDetailsDocument merchantShortId opCity documentId = do
+  _ <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  mediaFile <- QMediaFile.findById documentId >>= fromMaybeM (InvalidRequest "Document not found")
+  s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Document has no associated S3 path")
+  DPassDetails.fetchPassDocumentFromS3 s3FilePath

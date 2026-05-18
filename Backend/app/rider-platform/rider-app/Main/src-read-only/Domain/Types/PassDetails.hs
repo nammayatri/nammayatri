@@ -5,13 +5,16 @@ module Domain.Types.PassDetails where
 
 import Data.Aeson
 import qualified Data.Time
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
+import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Id
@@ -20,15 +23,18 @@ import qualified Tools.Beam.UtilsTH
 
 data PassDetailsE e = PassDetails
   { aadharNo :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
-    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    academicYearStart :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     applicableRouteIds :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     createdAt :: Data.Time.UTCTime,
+    department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
-    graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    guardianMobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
-    idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
@@ -41,11 +47,11 @@ data PassDetailsE e = PassDetails
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Prelude.Text,
-    studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
     updatedAt :: Data.Time.UTCTime,
     validTill :: Data.Time.UTCTime,
-    verificationStatus :: Domain.Types.PassDetails.VerificationStatus
+    verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving (Generic)
 
@@ -57,15 +63,19 @@ instance EncryptedItem PassDetails where
   type Unencrypted PassDetails = (DecryptedPassDetails, HashSalt)
   encryptItem (entity, salt) = do
     aadharNo_ <- encryptItem $ (,salt) <$> aadharNo entity
+    guardianMobileNumber_ <- encryptItem $ (,salt) <$> guardianMobileNumber entity
     pure
       PassDetails
         { aadharNo = aadharNo_,
+          academicYearEnd = academicYearEnd entity,
+          academicYearStart = academicYearStart entity,
           address = address entity,
           age = age entity,
           applicableRouteIds = applicableRouteIds entity,
           createdAt = createdAt entity,
+          department = department entity,
           gender = gender entity,
-          graduationDate = graduationDate entity,
+          guardianMobileNumber = guardianMobileNumber_,
           guardianName = guardianName entity,
           id = id entity,
           idCardPicture = idCardPicture entity,
@@ -82,22 +92,26 @@ instance EncryptedItem PassDetails where
           remark = remark entity,
           routePairs = routePairs entity,
           selfImage = selfImage entity,
-          studentClass = studentClass entity,
           updatedAt = updatedAt entity,
           validTill = validTill entity,
-          verificationStatus = verificationStatus entity
+          verificationStatus = verificationStatus entity,
+          year = year entity
         }
   decryptItem entity = do
     aadharNo_ <- fmap fst <$> decryptItem (aadharNo entity)
+    guardianMobileNumber_ <- fmap fst <$> decryptItem (guardianMobileNumber entity)
     pure
       ( PassDetails
           { aadharNo = aadharNo_,
+            academicYearEnd = academicYearEnd entity,
+            academicYearStart = academicYearStart entity,
             address = address entity,
             age = age entity,
             applicableRouteIds = applicableRouteIds entity,
             createdAt = createdAt entity,
+            department = department entity,
             gender = gender entity,
-            graduationDate = graduationDate entity,
+            guardianMobileNumber = guardianMobileNumber_,
             guardianName = guardianName entity,
             id = id entity,
             idCardPicture = idCardPicture entity,
@@ -114,10 +128,10 @@ instance EncryptedItem PassDetails where
             remark = remark entity,
             routePairs = routePairs entity,
             selfImage = selfImage entity,
-            studentClass = studentClass entity,
             updatedAt = updatedAt entity,
             validTill = validTill entity,
-            verificationStatus = verificationStatus entity
+            verificationStatus = verificationStatus entity,
+            year = year entity
           },
         ""
       )
@@ -126,6 +140,9 @@ instance EncryptedItem' PassDetails where
   type UnencryptedItem PassDetails = DecryptedPassDetails
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
+
+data PassDetailAddress = PassDetailAddress {latLng :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2, placeName :: Kernel.Prelude.Text}
+  deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 data RoutePair = RoutePair
   { destLatLong :: Kernel.External.Maps.Types.LatLong,

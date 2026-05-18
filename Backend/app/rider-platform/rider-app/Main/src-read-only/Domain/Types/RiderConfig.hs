@@ -255,7 +255,7 @@ data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, 
 data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notificationMessage :: Kernel.Prelude.Text, notificationTitle :: Kernel.Prelude.Text, vehicleNo :: Kernel.Prelude.Text}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int}
+data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
