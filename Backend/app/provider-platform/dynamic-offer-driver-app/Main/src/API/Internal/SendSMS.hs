@@ -21,9 +21,9 @@ where
 import qualified Domain.Action.Internal.SendSMS as Domain
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified SMS.API as Shared
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
+import qualified SMS.API as Shared
 import Storage.Beam.SystemConfigs ()
 
 type API = Shared.API

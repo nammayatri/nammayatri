@@ -555,7 +555,5 @@ in  { esqDBCfg
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
     , masterCloudProxyConfig =
-      { masterUrl = None Text
-      , masterSecret = Some "123"
-      }
+      { masterUrl = None Text, masterSecret = Some "123" }
     }

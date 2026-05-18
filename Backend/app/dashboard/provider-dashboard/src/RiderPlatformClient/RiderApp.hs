@@ -22,6 +22,7 @@ where
 import qualified "rider-app" API.Dashboard as BAP
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as ProviderRide
 import qualified Dashboard.Common.Exotel as Exotel
+import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Domain.Types.ServerName
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
@@ -30,7 +31,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (callAPI)
-import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import Servant
 import qualified "rider-app" Tools.Auth as RiderAuth
 import Tools.Client
