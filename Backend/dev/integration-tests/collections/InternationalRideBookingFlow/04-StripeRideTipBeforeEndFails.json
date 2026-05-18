@@ -327,7 +327,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",
@@ -893,7 +893,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",

@@ -70,6 +70,17 @@
   font-size: 12px;
   cursor: pointer;
 }
+.cr-version-input {
+  background: #161b22;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  width: 160px;
+}
+.cr-version-input:disabled { opacity: 0.5; }
+.cr-version-input::placeholder { color: #6e7681; }
 .cr-run-all-btn {
   background: #1f6feb;
   color: #fff;
