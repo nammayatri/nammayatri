@@ -297,6 +297,7 @@ library
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.FleetOwnerList
+      Domain.Action.UI.FRFSFleetOperator
       Domain.Action.UI.Insurance
       Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
@@ -407,6 +408,7 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
+      Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
@@ -414,11 +416,13 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.RouteStopMapping
       Domain.Types.TicketKapture
       Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
+      Kernel.External.MultiModal.Types
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
       Lib.DriverScore
@@ -511,6 +515,9 @@ library
       SharedLogic.External.LocationTrackingService.API.StartRide
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
+      SharedLogic.External.Nandi.API.Nandi
+      SharedLogic.External.Nandi.Flow
+      SharedLogic.External.Nandi.Types
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
@@ -525,6 +532,7 @@ library
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance
+      SharedLogic.IntegratedBPPConfig
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
       SharedLogic.KnowledgeCenter
@@ -648,6 +656,8 @@ library
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.TransporterConfig
       Storage.CachedQueries.MonetaryRewardConfig
+      Storage.CachedQueries.OTPRest.Common
+      Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PlanExtra
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
@@ -823,6 +833,7 @@ library
       Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
       Storage.Queries.Transformers.FleetRcDailyStats
+      Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
       Storage.Queries.Transformers.MerchantClientConfig
@@ -880,6 +891,7 @@ library
       Tools.Metrics.ARDUBPPMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
+      Tools.MultiModal
       Tools.Notifications
       Tools.OpenAPIInstances
       Tools.PartnerSdk
@@ -965,6 +977,7 @@ library
       API.Action.UI.FareCalculator
       API.Action.UI.FinanceInvoice
       API.Action.UI.FleetOwnerList
+      API.Action.UI.FRFSFleetOperator
       API.Action.UI.Insurance
       API.Action.UI.Invoice
       API.Action.UI.LmsModule
@@ -1041,6 +1054,7 @@ library
       API.Types.UI.FareCalculator
       API.Types.UI.FinanceInvoice
       API.Types.UI.FleetOwnerList
+      API.Types.UI.FRFSFleetOperator
       API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.LmsModule
@@ -1162,6 +1176,7 @@ library
       Domain.Types.IdfyVerification
       Domain.Types.IffcoTokioInsurance
       Domain.Types.Image
+      Domain.Types.IntegratedBPPConfig
       Domain.Types.Invoice
       Domain.Types.KioskLocation
       Domain.Types.KioskLocationTranslation
@@ -1344,6 +1359,7 @@ library
       Storage.Beam.IdfyVerification
       Storage.Beam.IffcoTokioInsurance
       Storage.Beam.Image
+      Storage.Beam.IntegratedBPPConfig
       Storage.Beam.Invoice
       Storage.Beam.KioskLocation
       Storage.Beam.KioskLocationTranslation
@@ -1531,6 +1547,7 @@ library
       Storage.Queries.IdfyVerification
       Storage.Queries.IffcoTokioInsurance
       Storage.Queries.Image
+      Storage.Queries.IntegratedBPPConfig
       Storage.Queries.Invoice
       Storage.Queries.KioskLocation
       Storage.Queries.KioskLocationTranslation
@@ -1614,6 +1631,7 @@ library
       Storage.Queries.OrphanInstances.FleetRcDailyStats
       Storage.Queries.OrphanInstances.IffcoTokioInsurance
       Storage.Queries.OrphanInstances.Image
+      Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation
       Storage.Queries.OrphanInstances.KnowledgeCenter

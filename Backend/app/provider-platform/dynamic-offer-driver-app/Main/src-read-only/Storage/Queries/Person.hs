@@ -141,6 +141,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
       Se.Set Beam.nyClubConsent nyClubConsent,
       Se.Set Beam.onboardedFromDashboard onboardedFromDashboard,
+      Se.Set Beam.operatorBadgeToken operatorBadgeToken,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.qrImageId (Kernel.Types.Id.getId <$> qrImageId),
       Se.Set Beam.reactBundleVersion reactBundleVersion,

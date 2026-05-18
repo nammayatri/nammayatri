@@ -306,7 +306,8 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       email = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      password = Nothing
     }
 
 fleetOwnerVerify ::

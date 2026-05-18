@@ -3,13 +3,13 @@
 
  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
 
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.This program
 
  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ or FITNESS FOR A PARTICULAR PURPOSE.See the GNU Affero General Public License for more details.You should have received a copy of
 
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ the GNU Affero General Public License along with this program.If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Domain.Action.UI.Registration
@@ -32,10 +32,11 @@ module Domain.Action.UI.Registration
     marketingEventsPreLogin,
     marketingEventsPostLogin,
     signatureAuth,
+    authConductorToken,
   )
 where
 
-import Data.OpenApi hiding (email, info, name, url)
+import Data.OpenApi hiding (email, info, name, password, url)
 import Data.Text hiding (elem)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
@@ -45,6 +46,7 @@ import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Extra.Plan as DEP
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DO
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -80,6 +82,9 @@ import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.External.Nandi.Flow as NandiFlow
+import SharedLogic.External.Nandi.Types (GimsEmployeeLoginReq (..))
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -93,10 +98,12 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Text.Hex as Hex
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Event as TE
 import Tools.MarketingEvents as TM
+import Tools.MultiModal (getOTPRestServiceReq)
 import Tools.Whatsapp as Whatsapp
 
 data AuthReq = AuthReq
@@ -105,6 +112,7 @@ data AuthReq = AuthReq
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
     email :: Maybe Text,
+    password :: Maybe Text,
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
@@ -236,6 +244,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Use authConductorToken instead of authWithOtp"
 
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
@@ -423,6 +432,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Use authConductorToken for conductor authentication"
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
@@ -469,7 +479,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
         nyClubConsent = Just False,
         reactBundleVersion = mbReactBundleVersion,
-        cloudType = mbCloudType
+        cloudType = mbCloudType,
+        operatorBadgeToken = Nothing
       }
 
 makeSession ::
@@ -818,3 +829,146 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+
+-- | Authenticate conductor using email/password via GIMS employee login.
+-- Returns auth token directly (no OTP).
+authConductorToken ::
+  AuthReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow AuthRes
+authConductorToken req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbClientId = do
+  email <- req.email & fromMaybeM (InvalidRequest "Email is required for CONDUCTORTOKEN auth")
+  password <- req.password & fromMaybeM (InvalidRequest "Password is required for CONDUCTORTOKEN auth")
+  smsCfg <- asks (.smsCfg)
+  deploymentVersion <- asks (.version)
+  cloudType <- asks (.cloudType)
+  merchant <-
+    QMerchant.findById (Id req.merchantId)
+      >>= fromMaybeM (MerchantNotFound req.merchantId)
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
+
+  -- Get GIMS config
+  integratedBPPConfig <- findIntegratedBPPConfig Nothing merchantOpCityId "BUS" DIBC.APPLICATION
+  baseUrl <- getOTPRestServiceReq merchant.id merchantOpCityId
+  let gtfsId = integratedBPPConfig.feedKey
+
+  -- Hash email and password (SHA256 with hashSalt) before sending to GIMS
+  emailDbHash <- getDbHash email
+  passwordDbHash <- getDbHash password
+  let emailHashHex = Hex.encodeHex (unDbHash emailDbHash)
+      passwordHashHex = Hex.encodeHex (unDbHash passwordDbHash)
+
+  -- Call GIMS employee login with pre-hashed credentials
+  gimsResp <-
+    NandiFlow.gimsEmployeeLogin
+      baseUrl
+      gtfsId
+      GimsEmployeeLoginReq
+        { auth_type = Just "Email",
+          email_hash = emailHashHex,
+          password_hash = passwordHashHex
+        }
+
+  unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
+
+  operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
+
+  -- Lookup or create person.
+  -- NOTE: operatorBadgeToken is used as the identity key. If GIMS rotates tokens for
+  -- the same employee, a duplicate Person row will be created. A stable employee ID
+  -- (e.g. GIMS employee ID or email hash) should be used as the canonical key once
+  -- GIMS exposes one.
+  person <-
+    QP.findByOperatorBadgeTokenAndMerchantId (Just operatorBadgeToken) merchant.id
+      >>= maybe (createConductorPerson req operatorBadgeToken merchant merchantOpCityId) return
+
+  checkSlidingWindowLimit (authHitsCountKey person)
+  let entityId = getId person.id
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      scfg = sessionConfig smsCfg
+      mkId = getId merchant.id
+
+  -- Create direct token (no OTP)
+  token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
+  _ <- QR.create token
+  void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
+
+  -- Verification flow
+  cleanCachedTokens person.id
+  QR.deleteByPersonIdExceptNew person.id token.id
+  _ <- QR.setVerified True token.id
+  when person.isNew $
+    QP.setIsNewFalse False person.id
+  decPerson <- decrypt person
+  let personAPIEntity = SP.makePersonAPIEntity decPerson
+  return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+
+-- | Create a new conductor person from GIMS employee data.
+createConductorPerson ::
+  AuthReq ->
+  Text ->
+  DO.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Flow SP.Person
+createConductorPerson req operatorBadgeToken merchant merchantOpCityId = do
+  now <- getCurrentTime
+  personId <- generateGUID
+  let email = req.email
+      name = fromMaybe "Conductor" req.name
+  let person =
+        SP.Person
+          { id = personId,
+            firstName = name,
+            middleName = Nothing,
+            lastName = Nothing,
+            role = SP.CONDUCTOR,
+            gender = SP.UNKNOWN,
+            hometown = Nothing,
+            languagesSpoken = Nothing,
+            identifierType = SP.CONDUCTORTOKEN,
+            email = email,
+            mobileNumber = Nothing,
+            maskedMobileDigits = Nothing,
+            mobileCountryCode = Nothing,
+            passwordHash = Nothing,
+            identifier = Just operatorBadgeToken,
+            isNew = True,
+            onboardedFromDashboard = False,
+            merchantId = merchant.id,
+            deviceToken = Nothing,
+            whatsappNotificationEnrollStatus = Nothing,
+            language = Nothing,
+            description = Nothing,
+            createdAt = now,
+            updatedAt = now,
+            alternateMobileNumber = Nothing,
+            faceImageId = Nothing,
+            qrImageId = Nothing,
+            merchantOperatingCityId = merchantOpCityId,
+            totalEarnedCoins = 0,
+            usedCoins = 0,
+            registrationLat = Nothing,
+            registrationLon = Nothing,
+            useFakeOtp = Nothing,
+            clientSdkVersion = Nothing,
+            reactBundleVersion = Nothing,
+            clientBundleVersion = Nothing,
+            clientConfigVersion = Nothing,
+            cloudType = Nothing,
+            clientDevice = Nothing,
+            backendConfigVersion = Nothing,
+            backendAppVersion = Nothing,
+            driverTag = Nothing,
+            clientId = Nothing,
+            nyClubConsent = Nothing,
+            operatorBadgeToken = Just operatorBadgeToken
+          }
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  QP.create person
+  createDriverDetails personId merchant.id merchantOpCityId transporterConfig
+  pure person

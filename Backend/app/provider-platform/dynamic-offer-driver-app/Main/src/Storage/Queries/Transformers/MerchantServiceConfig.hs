@@ -14,6 +14,7 @@ import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.MultiModal.Types as MultiModal
 import qualified Kernel.External.Notification as Notification
 import Kernel.External.Notification.Interface.Types as Notification
 import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
@@ -134,6 +135,12 @@ getConfigJSON = \case
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
     Payment.PaytmEDCConfig cfg -> toJSON cfg
+  Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+    MultiModal.GoogleTransitConfig baseUrl apiKey -> toJSON $ A.object ["baseUrl" A..= baseUrl, "apiKey" A..= apiKey]
+    MultiModal.OTPTransitConfig baseUrl -> toJSON $ A.object ["baseUrl" A..= baseUrl]
+  Domain.MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
+    MultiModal.GoogleTransitConfig baseUrl apiKey -> toJSON $ A.object ["baseUrl" A..= baseUrl, "apiKey" A..= apiKey]
+    MultiModal.OTPTransitConfig baseUrl -> toJSON $ A.object ["baseUrl" A..= baseUrl]
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -214,6 +221,12 @@ getServiceName = \case
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
   Domain.AirportReachargeServiceConfig paymentCfg -> Domain.AirportReachargeService $ getPaymentServiceConfigJson paymentCfg
+  Domain.MultiModalServiceConfig multiModalCfg -> case multiModalCfg of
+    MultiModal.GoogleTransitConfig _ _ -> Domain.MultiModalService MultiModal.GoogleTransit
+    MultiModal.OTPTransitConfig _ -> Domain.MultiModalService MultiModal.OTPTransit
+  Domain.MultiModalStaticDataServiceConfig multiModalStaticDataCfg -> case multiModalStaticDataCfg of
+    MultiModal.GoogleTransitConfig _ _ -> Domain.MultiModalStaticDataService MultiModal.GoogleTransit
+    MultiModal.OTPTransitConfig _ -> Domain.MultiModalStaticDataService MultiModal.OTPTransit
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -306,6 +319,26 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
       Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.MultiModalService MultiModal.GoogleTransit ->
+    eitherValue configJSON >>= \jsonVal -> case A.fromJSON jsonVal of
+      A.Success (MultiModal.GoogleTransitConfig bu ak) -> Right $ Domain.MultiModalServiceConfig $ MultiModal.GoogleTransitConfig bu ak
+      A.Success _ -> Left "Config type mismatch: expected GoogleTransitConfig for GoogleTransit service"
+      A.Error e -> Left $ T.pack e
+  Domain.MultiModalService MultiModal.OTPTransit ->
+    eitherValue configJSON >>= \jsonVal -> case A.fromJSON jsonVal of
+      A.Success (MultiModal.OTPTransitConfig bu) -> Right $ Domain.MultiModalServiceConfig $ MultiModal.OTPTransitConfig bu
+      A.Success _ -> Left "Config type mismatch: expected OTPTransitConfig for OTPTransit service"
+      A.Error e -> Left $ T.pack e
+  Domain.MultiModalStaticDataService MultiModal.GoogleTransit ->
+    eitherValue configJSON >>= \jsonVal -> case A.fromJSON jsonVal of
+      A.Success (MultiModal.GoogleTransitConfig bu ak) -> Right $ Domain.MultiModalStaticDataServiceConfig $ MultiModal.GoogleTransitConfig bu ak
+      A.Success _ -> Left "Config type mismatch: expected GoogleTransitConfig for GoogleTransit static service"
+      A.Error e -> Left $ T.pack e
+  Domain.MultiModalStaticDataService MultiModal.OTPTransit ->
+    eitherValue configJSON >>= \jsonVal -> case A.fromJSON jsonVal of
+      A.Success (MultiModal.OTPTransitConfig bu) -> Right $ Domain.MultiModalStaticDataServiceConfig $ MultiModal.OTPTransitConfig bu
+      A.Success _ -> Left "Config type mismatch: expected OTPTransitConfig for OTPTransit static service"
+      A.Error e -> Left $ T.pack e
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of
