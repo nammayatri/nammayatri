@@ -958,7 +958,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
-      applicationFeeAmount' = fromMaybe 0 booking.commission
+      applicationFeeAmount' = fromMaybe 0 rideCommission
 
   if not onlinePayment
     then do
