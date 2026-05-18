@@ -73,3 +73,8 @@ ALTER TABLE atlas_driver_offer_bpp.stcl_membership DROP COLUMN aadhar_number_has
 
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN address_proof_type text ;
 ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN address_proof_image_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.stcl_membership ADD COLUMN is_additional_share_purchase boolean ;
