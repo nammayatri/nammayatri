@@ -1,0 +1,51 @@
+# Finance Kernel - InvoiceTemplate Table
+# Namma-DSL YAML specification
+
+imports:
+  UTCTime: Kernel.Prelude
+  InvoiceType: Domain.Types.Invoice
+  Language: Kernel.External.Types
+
+InvoiceTemplate:
+  tableName: invoice_template
+  derives: "Generic"
+
+  fields:
+    id: Id InvoiceTemplate
+    merchantId: Text
+    merchantOperatingCityId: Text
+    invoiceType: Maybe InvoiceType
+    language: Language
+    template: Text
+    lineItemRowTemplate: Text
+    totalsLineRowTemplate: Text
+    updatedAt: UTCTime
+    createdAt: UTCTime
+
+  sqlType:
+    template: text
+    lineItemRowTemplate: text
+    totalsLineRowTemplate: text
+
+  constraints:
+    id: PrimaryKey
+
+  extraIndexes:
+    - columns: [merchantOperatingCityId, invoiceType, language]
+      unique: true
+
+  queries:
+    findByMerchantOpCityIdInvoiceTypeAndLanguage:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, invoiceType, language]
+
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

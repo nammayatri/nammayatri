@@ -513,6 +513,7 @@ library
       SharedLogic.PublicTransport
       SharedLogic.Quote
       SharedLogic.Referral
+      SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -574,6 +575,7 @@ library
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
+      Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.JourneyLeg
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache

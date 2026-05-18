@@ -44,7 +44,10 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
+import Kernel.External.Types (Language (ENGLISH))
 import Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Invoice.RenderTemplate as FRT
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
@@ -1323,16 +1326,11 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
   transporterConfig <- QTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-  let locale = languageToLocale mbLanguage
+  let lang = fromMaybe ENGLISH mbLanguage
       tz = DT.minutesToTimeZone (fromIntegral transporterConfig.timeDiffFromUtc `div` 60)
-      cfg =
-        InvoicePdfConfig
-          { locale,
-            timezone = tz,
-            logoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl,
-            sellerTradeName = transporterConfig.invoiceConfig >>= (.invoiceSellerTradeName),
-            appName = transporterConfig.invoiceConfig >>= (.invoiceAppName)
-          }
+      tmplLogoUrl = transporterConfig.invoiceConfig >>= (.logoUrl) <&> showBaseUrl
+      tmplSellerTradeName = transporterConfig.invoiceConfig >>= (.invoiceSellerTradeName)
+      tmplAppName = transporterConfig.invoiceConfig >>= (.invoiceAppName)
 
   -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
   -- skip those individually so one bad row doesn't kill the whole list response.
@@ -1372,8 +1370,27 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      html = renderInvoiceHtml cfg chosenPdfData
-
+      ctx =
+        FRT.buildInvoiceContext
+          FRT.BuildInvoiceContextInput
+            { language = lang,
+              logoUrl = tmplLogoUrl,
+              sellerTradeName = tmplSellerTradeName,
+              appName = tmplAppName,
+              invoice = chosenInv,
+              lineItems = chosenPdfData.parsedLineItems,
+              mbTaxTxn = chosenPdfData.mbTaxTxn,
+              mbPaymentMode = chosenPdfData.mbPaymentMethodType,
+              mbCardBrand = chosenPdfData.mbCardBrand,
+              mbCardLastFour = chosenPdfData.mbCardLastFour,
+              mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
+              mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+            }
+      mbInvType = case chosenInv.invoiceType of
+        AggregatedCommission -> Just AggregatedCommission
+        _ -> Nothing
+  html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
   pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $

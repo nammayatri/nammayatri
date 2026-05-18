@@ -102,6 +102,10 @@ import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
 import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
+import Data.Time (UTCTime (..), fromGregorian)
+import qualified "beckn-spec" Domain.Types.Invoice as DTI
+import Kernel.External.Types (Language (ENGLISH))
+import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 
 $(YTH.generateGenericDefault ''DTP.PayoutConfig)
 $(YTH.generateGenericDefault ''DTRN.RideRelatedNotificationConfig)
@@ -120,6 +124,57 @@ $(genToSchema ''CancellationCoinData)
 $(genToSchema ''DynamicPricingData)
 $(genToSchema ''UserCancellationDuesData)
 $(genToSchema ''UserCancellationDuesWaiveOffData)
+$(genToSchema ''FRT.InvoiceContext)
+
+instance Default FRT.InvoiceContext where
+  def =
+    FRT.InvoiceContext
+      { invoiceNumber = "",
+        issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
+        dueAt = Nothing,
+        invoiceType = DTI.Ride,
+        currency = INR,
+        currencyCode = "",
+        merchantId = "",
+        merchantShortId = "",
+        paymentMode = Nothing,
+        hasAdjustments = False,
+        issuedToName = Nothing,
+        issuedToAddress = Nothing,
+        supplierName = Nothing,
+        supplierAddress = Nothing,
+        supplierGSTIN = Nothing,
+        supplierTaxNo = Nothing,
+        issuedByName = Nothing,
+        issuedByAddress = Nothing,
+        merchantGstin = Nothing,
+        sellerTradeName = Nothing,
+        mbRecipientBusinessId = Nothing,
+        mbSellerBusinessId = Nothing,
+        mbSellerVatNumber = Nothing,
+        logoUrl = Nothing,
+        appName = Nothing,
+        periodStart = Nothing,
+        periodEnd = Nothing,
+        taxTxnRate = Nothing,
+        taxTxnGstRate = Nothing,
+        cardBrand = Nothing,
+        cardLastFour = Nothing,
+        lineItems = []
+      }
+
+instance Default FRT.RenderLineItem where
+  def =
+    FRT.RenderLineItem
+      { description = "",
+        descriptionType = Nothing,
+        amount = 0,
+        taxAmount = 0,
+        groupId = Nothing,
+        isExternalCharge = False,
+        itemType = Nothing,
+        language = ENGLISH
+      }
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYT.CreateNammaTagRequest -> Environment.Flow LYT.CreateNammaTagResponse)
 postNammaTagTagCreate merchantShortId opCity req = do
@@ -306,6 +361,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     --   let configWrap = LYT.Config def Nothing 1
     --   logicData :: (LYT.Config DTT.TransporterConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
     --   YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DTT.TransporterConfig) transporterConfig.referralLinkPassword req logicData
+    LYT.INVOICE_TEMPLATE _scope -> do
+      logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (cast merchantOpCityId) (Proxy :: Proxy A.Value) transporterConfig.referralLinkPassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYT.LogicDomain -> Environment.Flow [LYT.GetLogicsResp]
@@ -505,6 +563,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYT.DomainSchemaResp
           { LYT.defaultValue = A.toJSON (LYT.Config defaultConfig Nothing 1),
             LYT.schema = toInlinedSchemaValue (Proxy @(LYT.Config DTPN.MerchantPushNotification))
+          }
+    LYT.INVOICE_TEMPLATE _scope ->
+      return $
+        LYT.DomainSchemaResp
+          { LYT.defaultValue = A.toJSON (def :: FRT.InvoiceContext),
+            LYT.schema = toInlinedSchemaValue (Proxy @FRT.InvoiceContext)
           }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 
