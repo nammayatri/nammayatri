@@ -764,7 +764,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
     email <- mapM decrypt person.email
 
     -- 4. Create NEW payment order for debt settlement
-    let debtApplicationFeeAmount = fromMaybe 0 booking.commission
+    let debtApplicationFeeAmount = fromMaybe 0 ride.commission
     let createPaymentIntentServiceReq =
           DPayment.CreatePaymentIntentServiceReq
             { amount = duesResp.totalDueAmount,
