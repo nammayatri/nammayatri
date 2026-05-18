@@ -199,6 +199,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.termsAccepted = req.declaration.termsAccepted,
             Domain.status = Domain.PENDING,
             Domain.paymentStatus = Nothing,
+            Domain.isAdditionalSharePurchase = Just False,
             Domain.applicationCount = Nothing,
             Domain.shareStartCount = Nothing,
             Domain.shareEndCount = Nothing,
@@ -318,8 +319,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
                   basket = Nothing,
-                  paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  paymentRules = Nothing
                 }
         SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
       Nothing -> do
@@ -363,8 +363,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
                   basket = Nothing,
-                  paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  paymentRules = Nothing
                 }
 
         createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
@@ -380,6 +379,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   Domain.numberOfShares = req.numberOfShares,
                   Domain.status = Domain.PENDING,
                   Domain.paymentStatus = Nothing,
+                  Domain.isAdditionalSharePurchase = Just True,
                   Domain.applicationCount = Nothing,
                   Domain.shareStartCount = Nothing,
                   Domain.shareEndCount = Nothing,
