@@ -289,6 +289,8 @@ export interface PostmanStepResult extends ApiResult {
   resolvedHeaders?: Record<string, string>;
   /** Response headers (lower-cased keys, as returned by axios) */
   responseHeaders?: Record<string, string>;
+  /** Upstream latency in ms — measured on context-api side (excludes browser/nginx/proxy overhead) */
+  upstreamMs: number;
 }
 
 /**
@@ -354,6 +356,9 @@ export async function callPostmanStep(
   }
 
   const elapsed = Math.round(performance.now() - start);
+  // X-Upstream-Latency-Ms = time measured on context-api side for the upstream
+  // HTTP call only (excludes browser, nginx, proxy overhead)
+  const upstreamMs = parseInt(responseHeaders['x-upstream-latency-ms'] || '0', 10) || elapsed;
 
   // Auto-record coverage for Postman steps
   _recordCoverageHit(step.service, step.method, resolvedPath, body);
@@ -377,7 +382,7 @@ export async function callPostmanStep(
   //    the wait for async service activity (beckn callbacks, allocator) lives.
   const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
 
-  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
 function normalizeHeaders(h: any): Record<string, string> {

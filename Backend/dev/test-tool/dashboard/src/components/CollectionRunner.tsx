@@ -13,6 +13,7 @@ import {
 } from '../services/context';
 import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '../services/postman-parser';
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
+import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { StepResult, LogEntry } from '../types';
 
@@ -132,6 +133,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [runningStepId, setRunningStepId] = useState<string | null>(null);
   const [runAllProgress, setRunAllProgress] = useState<{ current: number; total: number; currentSuite: string } | null>(null);
   const [runAllResults, setRunAllResults] = useState<Array<{ group: string; env: string; suite: string; passed: number; failed: number; total: number }>>([]);
+  const [versionId, setVersionId] = useState<string>('');
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
 
@@ -390,6 +392,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       // Run all steps
       let passed = 0;
       let failed = 0;
+      const suiteStepMetrics: Array<{ name: string; method: string; path: string; elapsed_ms: number }> = [];
       for (const step of parsed.steps) {
         if (abortRef.current) break;
 
@@ -405,6 +408,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
         if (stepFailed) failed++;
         else passed++;
+
+        // result.upstreamMs = measured on context-api side, excludes browser/nginx/proxy overhead
+        suiteStepMetrics.push({
+          name: step.name,
+          method: step.method,
+          path: result.resolvedUrl || step.pathTemplate,
+          elapsed_ms: result.upstreamMs,
+        });
 
         setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
 
@@ -436,13 +447,39 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       setRunAllResults(prev => [...prev, suiteResult]);
       const statusEmoji = failed > 0 ? 'FAIL' : 'PASS';
       onLog(failed > 0 ? 'error' : 'success', `  [${statusEmoji}] ${label}: ${passed}/${parsed.steps.length} passed`);
+
+      if (versionId && failed === 0) {
+        try {
+          const metricsResp = await fetch(`${PROXY_BASE}/api/metrics/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              versionId,
+              collection: group.directory,
+              env: env.envName,
+              suite: suite.name,
+              steps: suiteStepMetrics,
+              allPassed: true,
+            }),
+          });
+          const metricsBody = await metricsResp.json().catch(() => ({}));
+          if (metricsResp.ok && metricsBody.pushed) {
+            onLog('info', `  [metrics] ✓ pushed to Grafana — ${group.directory}-${env.envName}-${suite.name} version=${versionId}`);
+          } else {
+            const reason = metricsBody.msg || `HTTP ${metricsResp.status}`;
+            onLog('info', `  [metrics] ✗ push failed — ${reason}`);
+          }
+        } catch (e: any) {
+          onLog('info', `  [metrics] ✗ push error — ${e?.message || e}`);
+        }
+      }
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     setRunAllProgress(null);
     onLog('info', '== All collections complete ==');
-  }, [isRunning, groups, onLog]);
+  }, [isRunning, groups, onLog, versionId]);
 
   // Re-run a single step in isolation (uses current variable state)
   const rerunStep = useCallback(async (stepId: string) => {
@@ -543,6 +580,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
             {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
           </button>
+          <input
+            className="cr-version-input"
+            type="text"
+            placeholder="Version ID (e.g. v1.2.3)"
+            value={versionId}
+            onChange={e => setVersionId(e.target.value)}
+            disabled={isRunning}
+            title="Version ID tagged on metrics pushed to Grafana"
+          />
           <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0}>
             {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
           </button>
