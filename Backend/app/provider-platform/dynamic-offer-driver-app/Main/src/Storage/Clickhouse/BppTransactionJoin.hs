@@ -234,8 +234,9 @@ findAllRideItems ::
   Maybe Text ->
   Maybe HighPrecMoney ->
   Maybe HighPrecMoney ->
+  Maybe TripCategory ->
   m [QRE.RideItem]
-findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount = do
+findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookingStatus mbPaymentMode mbRideShortId mbRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo mbFleetOwnerId mbFromAmount mbToAmount mbTripCategory = do
   bppTransaction <-
     CH.findAll $
       CH.select $
@@ -261,6 +262,7 @@ findAllRideItems _isDashboardRequest merchant opCity limitVal offsetVal mbBookin
                     CH.&&. CH.whenJust_ mbToAmount (\ta -> bppTransaction.rideFareAmount CH.<=. ta)
                     CH.&&. CH.whenJust_ mbDriverId (\did -> bppTransaction.rideDriverId CH.==. did)
                     CH.&&. CH.whenJust_ mbPaymentMode (`mkPaymentModeCond` bppTransaction)
+                    CH.&&. CH.whenJust_ mbTripCategory (\tc -> bppTransaction.bookingTripCategory CH.==. tc)
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
   return $ fmap mkRideItem bppTransaction
