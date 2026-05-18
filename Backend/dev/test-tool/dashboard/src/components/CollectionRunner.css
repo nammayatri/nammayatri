@@ -194,6 +194,7 @@
 .cr-step-pass { border-left-color: #238636; }
 .cr-step-fail { border-left-color: #da3633; }
 .cr-step-running { border-left-color: #1f6feb; }
+.cr-step-skip { border-left-color: #6e7681; }
 
 .cr-step-header {
   display: flex;
@@ -215,6 +216,7 @@
 .cr-dot-running { background: #1f6feb; animation: pulse 1s infinite; }
 .cr-dot-pass { background: #238636; }
 .cr-dot-fail { background: #da3633; }
+.cr-dot-skip { background: #6e7681; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
 .cr-step-method {
@@ -261,6 +263,51 @@
 }
 .cr-rerun-btn:hover { background: #da3633; color: #fff; }
 .cr-rerun-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Step-by-Step mode: toggle in action bar + per-step Run/Skip */
+.cr-manual-toggle-btn {
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.cr-manual-toggle-btn:hover { background: #30363d; }
+.cr-manual-toggle-btn:disabled { opacity: 0.5; cursor: default; }
+.cr-manual-toggle-active {
+  background: #1f6feb;
+  color: #fff;
+  border-color: #388bfd;
+}
+.cr-manual-toggle-active:hover { background: #388bfd; }
+
+.cr-step-run-btn {
+  font-size: 9px;
+  background: #0d2818;
+  border: 1px solid #238636;
+  color: #56d364;
+  padding: 1px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cr-step-run-btn:hover:not(:disabled) { background: #238636; color: #fff; }
+.cr-step-run-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.cr-step-skip-btn {
+  font-size: 9px;
+  background: #1c1f24;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  padding: 1px 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cr-step-skip-btn:hover:not(:disabled) { background: #30363d; color: #c9d1d9; }
+.cr-step-skip-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* Step detail */
 .cr-step-detail {

@@ -1,0 +1,248 @@
+{
+	"info": {
+		"name": "NY Intercity Airport OTP Flow (BLR Airport -> Mysore)",
+		"description": "Airport special-zone intercity OTP flow: rider books a one-way intercity ride from the Bangalore Airport special zone to Mysore. Booking returns an OTP, driver starts the ride via otpRide/start without an allocation phase.\n\nPrerequisites:\n- BLR Airport special_location seeded with gates/polygon (sz_origin_lat/lon must fall inside).\n- fare_product entries for InterCity_OneWayRideOtp + the chosen vehicle variant at this special zone (auto-synced from prod).\n- If the airport special zone has no Intercity_RideOtp fare_product, this test will fail at 'Has quotes' assertion.\n",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"(function () {",
+					"  var envType = pm.environment.get('envType') || 'Local';",
+					"  if (envType === 'Local') return;",
+					"  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+					"  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+					"    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+					"  }",
+					"})();",
+					"if (!pm.collectionVariables.get('_test_driver_number')) {",
+					"    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+					"    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+					"    pm.collectionVariables.set('_test_driver_number', dNum);",
+					"    pm.collectionVariables.set('_test_rider_number', rNum);",
+					"    pm.collectionVariables.set('_test_reg_no', regNo);",
+					"    console.log('Test driver:', dNum, 'rider:', rNum, 'reg:', regNo);",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "Driver Auth",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"},
+				"url": {"raw": "{{baseURL_namma_P}}/auth", "host": ["{{baseURL_namma_P}}"], "path": ["auth"]}
+			}
+		},
+		{
+			"name": "Driver OTP",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"},
+				"url": {"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify", "host": ["{{baseURL_namma_P}}"], "path": ["auth", "{{driver_authId}}", "verify"]}
+			}
+		},
+		{
+			"name": "Add Vehicle (Dashboard)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Intercity Airport Driver\", \"colour\": \"White\"}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
+			}
+		},
+		{
+			"name": "Enable Driver (Dashboard)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]}
+			}
+		},
+		{
+			"name": "Subscribe Plan (Driver)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{plan_id}}", "subscribe"]}
+			}
+		},
+		{
+			"name": "Enable Intercity Switch (Driver Profile)",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('canSwitchToInterCity set to true');"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"canSwitchToInterCity\": true}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/profile", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "profile"]}
+			}
+		},
+		{
+			"name": "Set Driver Online",
+			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "setActivity"], "query": [{"key": "active", "value": "true"}, {"key": "mode", "value": "%22ONLINE%22"}]}
+			}
+		},
+		{
+			"name": "Airport Cash Recharge (Dashboard)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["pm.environment.set('_recharge_ref', 'test-recharge-' + Date.now() + '-' + Math.floor(Math.random() * 100000));"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Airport cash recharge of 300 INR done');"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"amount\": 300, \"referenceId\": \"{{_recharge_ref}}\"}"},
+				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverWallet/wallet/{{driver_id}}/airportCashRecharge", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driverWallet", "wallet", "{{driver_id}}", "airportCashRecharge"]}
+			}
+		},
+		{
+			"name": "Rider Auth",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"},
+				"url": {"raw": "{{baseUrl_app}}/auth", "host": ["{{baseUrl_app}}"], "path": ["auth"]}
+			}
+		},
+		{
+			"name": "Rider OTP",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}],
+				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"},
+				"url": {"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify", "host": ["{{baseUrl_app}}"], "path": ["auth", "{{rider_authId}}", "verify"]}
+			}
+		},
+		{
+			"name": "Ride Search (Intercity from Airport SZ -> Mysore)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["var startTs = new Date(Date.now() + 30 * 60 * 1000).toISOString(); pm.environment.set('_intercity_start_time', startTs);"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('searchId', d.searchId); console.log('Search ID:', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); const w=parseInt(pm.environment.get('search_wait_ms')||'8000',10); while(Date.now()-s<w){}"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"fareProductType\": \"INTER_CITY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Bangalore Airport\", \"areaCode\": \"560300\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}, \"stops\": [{\"address\": {\"area\": \"{{intercity_dest_city}}\", \"areaCode\": \"570001\", \"city\": \"{{intercity_dest_city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}], \"roundTrip\": false, \"isSourceManuallyMoved\": false, \"isDestinationManuallyMoved\": false, \"isSpecialLocation\": true, \"startTime\": \"{{_intercity_start_time}}\"}}"},
+				"url": {"raw": "{{baseUrl_app}}/rideSearch", "host": ["{{baseUrl_app}}"], "path": ["rideSearch"]}
+			}
+		},
+		{
+			"name": "Get Intercity Airport Quotes",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": [
+					"var d = pm.response.json();",
+					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+					"var quotes = d.quotes || [];",
+					"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+					"var pick = null;",
+					"for (var i=0; i<quotes.length; i++) {",
+					"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
+					"  if (!inner) continue;",
+					"  if (inner.vehicleVariant === want) { pick = inner; break; }",
+					"}",
+					"if (!pick && quotes.length > 0) pick = quotes[0].onIntercityCab || quotes[0].onDemandCab;",
+					"if (pick) { pm.environment.set('sz_quoteId', pick.id); console.log('Airport Intercity Quote:', pick.id, 'variant:', pick.vehicleVariant, 'fare:', pick.estimatedTotalFare); }",
+					"pm.test('Has intercity SZ quotes', function () { pm.expect(pm.environment.get('sz_quoteId')).to.be.a('string').that.is.not.empty; });"
+				], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "{{searchId}}", "results"]}
+			}
+		},
+		{
+			"name": "Confirm Intercity Airport Quote",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<5000){}"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
+				"body": {"mode": "raw", "raw": "{}"},
+				"url": {"raw": "{{baseUrl_app}}/rideSearch/quotes/{{sz_quoteId}}/confirm", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "quotes", "{{sz_quoteId}}", "confirm"]}
+			}
+		},
+		{
+			"name": "Get Booking (Extract Special Zone OTP)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": [
+					"var d = pm.response.json();",
+					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+					"if (d.list && d.list.length > 0) {",
+					"  var booking = d.list[0];",
+					"  pm.environment.set('customer_bookingId', booking.id);",
+					"  var otp = null;",
+					"  if (booking.bookingDetails && booking.bookingDetails.contents && booking.bookingDetails.contents.otpCode) otp = booking.bookingDetails.contents.otpCode;",
+					"  pm.environment.set('sz_otp', otp || '');",
+					"  console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', otp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
+					"  pm.test('Booking NEW or CONFIRMED', function () { pm.expect(booking.status).to.be.oneOf(['NEW','CONFIRMED']); });",
+					"}",
+					"pm.test('Has SZ OTP', function () { pm.expect(pm.environment.get('sz_otp')).to.be.a('string').that.is.not.empty; });"
+				], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&offset=0", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "offset", "value": "0"}]}
+			}
+		},
+		{
+			"name": "Driver OTP Ride Start (Intercity Airport SZ)",
+			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); if (d.id) { pm.environment.set('driver_ride_id', d.id); console.log('Airport intercity ride started! Ride:', d.id); }"], "type": "text/javascript"}}],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"specialZoneOtpCode\": \"{{sz_otp}}\", \"point\": {\"lat\": {{sz_origin_lat}}, \"lon\": {{sz_origin_lon}}}}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/otpRide/start", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "otpRide", "start"]}
+			}
+		},
+		{
+			"name": "End Ride (At Mysore)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<1500){}"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Airport intercity ride ended at Mysore');"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "POST",
+				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
+				"body": {"mode": "raw", "raw": "{\"point\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}"},
+				"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "end"]}
+			}
+		},
+		{
+			"name": "Verify Booking Completed (Rider)",
+			"event": [
+				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
+				{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); }); pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); }); console.log('Intercity airport flow done!');"], "type": "text/javascript"}}
+			],
+			"request": {
+				"method": "GET",
+				"header": [{"key": "token", "value": "{{rider_token}}"}],
+				"url": {"raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "v2", "{{customer_bookingId}}"]}
+			}
+		}
+	]
+}
