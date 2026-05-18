@@ -78,6 +78,7 @@ withRedirect ::
   Flow (Maybe Spec.AckResponse)
 withRedirect mbMerchantId mbBapUriText act = do
   redirectMap <- asks (.bapHostRedirectMap)
+  logError $ "FRFS forwarding check: bap_uri=" <> show mbBapUriText <> " merchantId=" <> show (getId <$> mbMerchantId) <> " redirectMap=" <> show redirectMap
   case mbBapUriText >>= parseBaseUrl of
     Nothing -> pure Nothing
     Just bapUri ->
@@ -98,7 +99,7 @@ signed authResult =
   withHeaders [("Authorization", decodeUtf8 $ HttpSig.encode authResult.signature)]
 
 logForward :: Text -> BaseUrl -> Flow ()
-logForward tag url = logInfo $ "Forwarding FRFS " <> tag <> " to " <> showBaseUrl url
+logForward tag url = logError $ "Forwarding FRFS " <> tag <> " to " <> showBaseUrl url
 
 forwardOnSearch :: BaseUrl -> SignatureAuthResult -> ByteString -> Flow Spec.AckResponse
 forwardOnSearch baseUrl authResult reqBS = do

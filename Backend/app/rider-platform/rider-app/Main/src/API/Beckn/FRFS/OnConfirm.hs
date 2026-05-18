@@ -65,7 +65,7 @@ processOnConfirm req = do
   routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode ticketBooking.toStationCode integratedBppConfig
   let fromStationProviderCode = fromMaybe ticketBooking.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
       toStationProviderCode = fromMaybe ticketBooking.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
-  logDebug $ "Received OnConfirm request" <> encodeToText req
+  logError $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq fromStationProviderCode toStationProviderCode req
     case dOnConfirmReq of
