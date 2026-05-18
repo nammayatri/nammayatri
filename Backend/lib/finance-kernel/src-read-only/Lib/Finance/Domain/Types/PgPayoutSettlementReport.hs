@@ -62,18 +62,18 @@ data SettlementType = CREDIT | DEBIT deriving (Eq, Ord, Show, Read, Generic, ToJ
 
 data TxnStatus = SUCCESS | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FulfillmentInstrument))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FulfillmentInstrument)
 
-$(mkHttpInstancesForEnum (''FulfillmentInstrument))
+$(mkHttpInstancesForEnum ''FulfillmentInstrument)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementMode)
 
-$(mkHttpInstancesForEnum (''SettlementMode))
+$(mkHttpInstancesForEnum ''SettlementMode)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementType)
 
-$(mkHttpInstancesForEnum (''SettlementType))
+$(mkHttpInstancesForEnum ''SettlementType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''TxnStatus)
 
-$(mkHttpInstancesForEnum (''TxnStatus))
+$(mkHttpInstancesForEnum ''TxnStatus)

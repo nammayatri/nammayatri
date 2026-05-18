@@ -24,12 +24,12 @@ createMany = traverse_ create
 
 findByDateAndType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByDateAndType reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
 
 findByDateRange ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+  (Kernel.Prelude.UTCTime -> Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationType -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByDateRange reconciliationDate reconciliationType = do findAllWithKV [Se.And [Se.Is Beam.reconciliationDate $ Se.Eq reconciliationDate, Se.Is Beam.reconciliationType $ Se.Eq reconciliationType]]
 
 findById ::
@@ -37,7 +37,7 @@ findById ::
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary -> m (Maybe Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary]))
+findByMerchantId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.ReconciliationSummary.ReconciliationSummary])
 findByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq merchantId]
 
 updateStatus ::

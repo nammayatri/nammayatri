@@ -836,11 +836,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_driver_name_
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN recompute_congestion_charge_on_end_ride boolean ;
 
 
@@ -910,3 +905,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stcl_config jso
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_location_staleness_threshold_seconds integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_admin_maker_checker text[] ;

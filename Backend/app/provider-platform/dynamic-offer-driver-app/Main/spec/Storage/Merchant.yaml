@@ -53,6 +53,7 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
+  ActionType: Domain.Types.AdminRequest
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1289,6 +1290,7 @@ TransporterConfig:
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
+    enableAdminMakerChecker: Maybe [ActionType]
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1650,6 +1652,7 @@ TransporterConfig:
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
+    enableAdminMakerChecker: "text[]"
 
   default:
     mediaFileUrlPattern: |-

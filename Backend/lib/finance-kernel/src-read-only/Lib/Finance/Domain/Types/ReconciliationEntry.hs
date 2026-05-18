@@ -68,12 +68,12 @@ data RideMode = ONLINE | CASH deriving (Eq, Ord, Show, Read, Generic, ToJSON, Fr
 
 data RideStatus = COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FinanceComponent))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FinanceComponent)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReconciliationStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ReconciliationType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ReconciliationType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideMode))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideMode)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)

@@ -53,6 +53,6 @@ data Invoice = Invoice
 
 data InvoiceStatus = Draft | Issued | Paid | PartiallyPaid | Cancelled | Voided deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''InvoiceStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''InvoiceStatus)
 
-$(mkHttpInstancesForEnum (''InvoiceStatus))
+$(mkHttpInstancesForEnum ''InvoiceStatus)
