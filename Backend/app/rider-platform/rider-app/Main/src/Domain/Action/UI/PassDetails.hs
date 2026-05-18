@@ -7,8 +7,8 @@ module Domain.Action.UI.PassDetails
     getPassDetailsData,
     getPassDetailsVerificationStatus,
     postPassDetailsUploadDocument,
-    getPassDetailsMedia,
-    fetchPassMediaFromS3,
+    getPassDetailsDocument,
+    fetchPassDocumentFromS3,
     parsePassEnum,
     parseVerificationStatus,
     computeValidTill,
@@ -38,6 +38,8 @@ import qualified EulerHS.Prelude as EHP (withFile)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
 import GHC.IO.IOMode (IOMode (..))
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, encrypt)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as GT
@@ -55,6 +57,7 @@ import Kernel.Types.TryException (withTryCatch)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
@@ -483,7 +486,7 @@ postPassDetailsUploadDocument ::
       Id.Id DMerchant.Merchant
     ) ->
     PassDetailsAPI.UploadDocumentReq ->
-    Environment.Flow Kernel.Prelude.Text
+    Environment.Flow PassDetailsAPI.UploadDocumentResp
   )
 postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
@@ -499,38 +502,49 @@ postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
   let normalize ext = if ext == ".jpeg" then ".jpg" else ext
   unless (detectFileType rawBytes == Just (normalize fileExtension)) $
     Utils.throwError $ InvalidRequest "Uploaded file content does not match the declared file type"
-  imageId :: Id.Id DPassDetails.PassDetails <- generateGUID
+  documentId <- generateGUID
   let imageData = base64Encode rawBytes
       s3FileType = if fileExtension == ".pdf" then S3.PDF else S3.Image
-  filePath <- S3.createFilePath "/pass-details/" ("pass-details-" <> personId.getId <> "-" <> imageId.getId) s3FileType fileExtension
+  s3FilePath <- S3.createFilePath "/pass-details/" ("pass-details-" <> personId.getId <> "-" <> documentId.getId) s3FileType fileExtension
   let fileUrl =
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "passDetails"
-          & T.replace "<FILE_PATH>" filePath
-  S3.put (T.unpack filePath) imageData
-  pure fileUrl
+          & T.replace "<FILE_PATH>" s3FilePath
+  S3.put (T.unpack s3FilePath) imageData
+  now <- getCurrentTime
+  QMediaFile.create $
+    DMF.MediaFile
+      { id = documentId,
+        _type = s3FileType,
+        url = fileUrl,
+        s3FilePath = Just s3FilePath,
+        createdAt = now
+      }
+  pure $ PassDetailsAPI.UploadDocumentResp {documentId}
 
-getPassDetailsMedia ::
+getPassDetailsDocument ::
   ( ( Kernel.Prelude.Maybe (Id.Id DPerson.Person),
       Id.Id DMerchant.Merchant
     ) ->
-    Kernel.Prelude.Text ->
+    Id.Id DMF.MediaFile ->
     Environment.Flow Kernel.Prelude.Text
   )
-getPassDetailsMedia (mbPersonId, _) filePath = do
+getPassDetailsDocument (mbPersonId, _) documentId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "personId")
+  mediaFile <- QMediaFile.findById documentId >>= fromMaybeM (InvalidRequest "Document not found")
+  s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Document has no associated S3 path")
   let ownerPrefix = "/pass-details/pass-details-" <> personId.getId <> "-"
-  unless (T.isPrefixOf ownerPrefix filePath) $
+  unless (T.isInfixOf ownerPrefix s3FilePath) $
     Utils.throwError AccessDenied
-  fetchPassMediaFromS3 filePath
+  fetchPassDocumentFromS3 s3FilePath
 
-fetchPassMediaFromS3 :: Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text
-fetchPassMediaFromS3 filePath = do
-  when (T.isInfixOf ".." filePath) $
+fetchPassDocumentFromS3 :: Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text
+fetchPassDocumentFromS3 s3FilePath = do
+  when (T.isInfixOf ".." s3FilePath) $
     Utils.throwError $ InvalidRequest "filePath must not contain path-traversal sequences"
-  unless (T.isPrefixOf "/pass-details/" filePath) $
+  unless (T.isInfixOf "/pass-details/" s3FilePath) $
     Utils.throwError $ InvalidRequest "filePath must reside under /pass-details/"
-  S3.get (T.unpack filePath)
+  S3.get (T.unpack s3FilePath)
 
 allowedFileExtension :: Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text
 allowedFileExtension name =

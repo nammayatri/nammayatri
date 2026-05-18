@@ -37,3 +37,9 @@ CREATE INDEX CONCURRENTLY pass_details_idx_pass_organization_id ON atlas_app.pas
 CREATE INDEX CONCURRENTLY pass_details_idx_person_id ON atlas_app.pass_details USING btree (person_id);
 CREATE INDEX CONCURRENTLY pass_details_idx_pass_enum_person_id ON atlas_app.pass_details USING btree (pass_enum, person_id);
 CREATE INDEX CONCURRENTLY pass_details_idx_reference_number ON atlas_app.pass_details USING btree (reference_number);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_details ALTER COLUMN self_image TYPE character varying(36);
+ALTER TABLE atlas_app.pass_details ALTER COLUMN id_card_picture TYPE character varying(36);

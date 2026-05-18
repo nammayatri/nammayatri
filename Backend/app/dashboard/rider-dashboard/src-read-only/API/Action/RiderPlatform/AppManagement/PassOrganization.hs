@@ -15,6 +15,7 @@ import qualified "rider-app" Domain.Types.PassOrganization
 import qualified "rider-app" Domain.Types.Person
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -24,10 +25,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsMedia))
+type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city :<|> getPassOrganizationPassDetailsMedia merchantId city
+handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city :<|> getPassOrganizationPassDetailsDocument merchantId city
 
 type GetPassOrganizationGetPassOrganization =
   ( ApiAuth
@@ -69,12 +70,12 @@ type GetPassOrganizationGetOrganizations =
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationGetOrganizations
   )
 
-type GetPassOrganizationPassDetailsMedia =
+type GetPassOrganizationPassDetailsDocument =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
       'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_MEDIA)
-      :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetailsMedia
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT)
+      :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetailsDocument
   )
 
 getPassOrganizationGetPassOrganization :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp)
@@ -92,5 +93,5 @@ postPassOrganizationUpdate merchantShortId opCity apiTokenInfo personId req = wi
 getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp])
 getPassOrganizationGetOrganizations merchantShortId opCity apiTokenInfo passEnum = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationGetOrganizations merchantShortId opCity apiTokenInfo passEnum
 
-getPassOrganizationPassDetailsMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
-getPassOrganizationPassDetailsMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetailsMedia merchantShortId opCity apiTokenInfo filePath
+getPassOrganizationPassDetailsDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
+getPassOrganizationPassDetailsDocument merchantShortId opCity apiTokenInfo documentId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetailsDocument merchantShortId opCity apiTokenInfo documentId

@@ -3,6 +3,7 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Person: Domain.Types.Person
   PassOrganization: Domain.Types.PassOrganization
+  MediaFile: IssueManagement.Domain.Types.MediaFile
   UTCTime: Data.Time
   Value: Data.Aeson
   PassEnum: Domain.Types.PassType
@@ -52,8 +53,8 @@ PassDetails:
     guardianMobileNumber: Maybe (EncryptedHashedField e Text)
     address: Maybe PassDetailAddress
     pincode: Maybe Text
-    idCardPicture: Maybe Text
-    selfImage: Text
+    idCardPicture: Maybe (Id MediaFile)
+    selfImage: Id MediaFile
     verificationStatus: VerificationStatus
     validTill: UTCTime
     aadharNo: Maybe (EncryptedHashedField e Text)

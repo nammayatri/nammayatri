@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
@@ -64,20 +65,20 @@ type API =
            API.Types.UI.PassDetails.UploadDocumentReq
       :> Post
            '[JSON]
-           Kernel.Prelude.Text
+           API.Types.UI.PassDetails.UploadDocumentResp
       :<|> TokenAuth
       :> "passDetails"
-      :> "media"
-      :> MandatoryQueryParam
-           "filePath"
-           Kernel.Prelude.Text
+      :> "document"
+      :> Capture
+           "documentId"
+           (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
       :> Get
            '[JSON]
            Kernel.Prelude.Text
   )
 
 handler :: Environment.FlowServer API
-handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadDocument :<|> getPassDetailsMedia
+handler = getGetOrganizations :<|> postPassDetailsUpdate :<|> getPassDetailsData :<|> getPassDetailsVerificationStatus :<|> postPassDetailsUploadDocument :<|> getPassDetailsDocument
 
 getGetOrganizations ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -121,9 +122,15 @@ postPassDetailsUploadDocument ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.PassDetails.UploadDocumentReq ->
-    Environment.FlowHandler Kernel.Prelude.Text
+    Environment.FlowHandler API.Types.UI.PassDetails.UploadDocumentResp
   )
 postPassDetailsUploadDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.postPassDetailsUploadDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
-getPassDetailsMedia :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
-getPassDetailsMedia a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsMedia (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getPassDetailsDocument ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
+    Environment.FlowHandler Kernel.Prelude.Text
+  )
+getPassDetailsDocument a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PassDetails.getPassDetailsDocument (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

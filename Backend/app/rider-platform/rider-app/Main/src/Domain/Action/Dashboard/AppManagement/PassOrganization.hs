@@ -7,7 +7,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
     postPassOrganizationPassDetailsVerify,
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
-    getPassOrganizationPassDetailsMedia,
+    getPassOrganizationPassDetailsDocument,
   )
 where
 
@@ -24,6 +24,8 @@ import qualified "this" Domain.Types.Person as DPerson
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified GHC.Exts
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -31,6 +33,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime)
 import qualified Kernel.Utils.Common as Utils
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.PassDetails as QPassDetails
@@ -114,9 +117,6 @@ postPassOrganizationPassDetailsVerify :: (Id.ShortId DMerchant.Merchant -> Conte
 postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
   now <- Utils.getCurrentTime
-  -- Per-row update with field-level coalescing: if the dashboard verifier sends
-  -- `null` (or omits) academicYearStart / academicYearEnd / remark / numberOfStages,
-  -- we keep the value already in the DB rather than blanking the column to NULL.
   forM_ req.verifications $ \pdV -> do
     pd <- QPassDetails.findById pdV.passDetailsId >>= fromMaybeM (PassDetailsNotFound pdV.passDetailsId.getId)
     unless (pd.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
@@ -182,5 +182,9 @@ mkGetOrganizationResp org =
       PassOrganizationAPI.address = org.address
     }
 
-getPassOrganizationPassDetailsMedia :: (Id.ShortId DMerchant.Merchant -> Context.City -> Kernel.Prelude.Text -> Environment.Flow Kernel.Prelude.Text)
-getPassOrganizationPassDetailsMedia _ _ = DPassDetails.fetchPassMediaFromS3
+getPassOrganizationPassDetailsDocument :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DMF.MediaFile -> Environment.Flow Kernel.Prelude.Text)
+getPassOrganizationPassDetailsDocument merchantShortId opCity documentId = do
+  _ <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  mediaFile <- QMediaFile.findById documentId >>= fromMaybeM (InvalidRequest "Document not found")
+  s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Document has no associated S3 path")
+  DPassDetails.fetchPassDocumentFromS3 s3FilePath

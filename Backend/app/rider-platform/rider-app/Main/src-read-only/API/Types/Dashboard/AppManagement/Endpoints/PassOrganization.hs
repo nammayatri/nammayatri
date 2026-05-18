@@ -12,6 +12,7 @@ import qualified "this" Domain.Types.PassType
 import qualified "this" Domain.Types.Person
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
@@ -34,7 +35,7 @@ data PassDetailsInfoResp = PassDetailsInfoResp
     gender :: Domain.Types.Person.Gender,
     guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     name :: Kernel.Prelude.Text,
     numberOfStages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     passDetailsId :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
@@ -42,7 +43,7 @@ data PassDetailsInfoResp = PassDetailsInfoResp
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Prelude.Text,
+    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
     updatedAt :: Data.Time.UTCTime,
     validTill :: Data.Time.UTCTime,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
@@ -80,7 +81,7 @@ data VerifyPassDetailsReq = VerifyPassDetailsReq {verifications :: [PassDetailsV
 instance Kernel.Types.HideSecrets.HideSecrets VerifyPassDetailsReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsMedia))
+type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument))
 
 type GetPassOrganizationGetPassOrganization = ("getPassOrganization" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get '[JSON] GetOrganizationResp)
 
@@ -110,7 +111,12 @@ type PostPassOrganizationUpdate =
 
 type GetPassOrganizationGetOrganizations = ("getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> Get '[JSON] [GetOrganizationResp])
 
-type GetPassOrganizationPassDetailsMedia = ("passDetails" :> "media" :> MandatoryQueryParam "filePath" Kernel.Prelude.Text :> Get '[JSON] Kernel.Prelude.Text)
+type GetPassOrganizationPassDetailsDocument =
+  ( "passDetails" :> "document" :> Capture "documentId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
+      :> Get
+           '[JSON]
+           Kernel.Prelude.Text
+  )
 
 data PassOrganizationAPIs = PassOrganizationAPIs
   { getPassOrganizationGetPassOrganization :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient GetOrganizationResp,
@@ -118,13 +124,13 @@ data PassOrganizationAPIs = PassOrganizationAPIs
     postPassOrganizationPassDetailsVerify :: VerifyPassDetailsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPassOrganizationUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> PassOrganizationUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [GetOrganizationResp],
-    getPassOrganizationPassDetailsMedia :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Prelude.Text
+    getPassOrganizationPassDetailsDocument :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text
   }
 
 mkPassOrganizationAPIs :: (Client EulerHS.Types.EulerClient API -> PassOrganizationAPIs)
 mkPassOrganizationAPIs passOrganizationClient = (PassOrganizationAPIs {..})
   where
-    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations :<|> getPassOrganizationPassDetailsMedia = passOrganizationClient
+    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations :<|> getPassOrganizationPassDetailsDocument = passOrganizationClient
 
 data PassOrganizationUserActionType
   = GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION
@@ -132,7 +138,7 @@ data PassOrganizationUserActionType
   | POST_PASS_ORGANIZATION_PASS_DETAILS_VERIFY
   | POST_PASS_ORGANIZATION_UPDATE
   | GET_PASS_ORGANIZATION_GET_ORGANIZATIONS
-  | GET_PASS_ORGANIZATION_PASS_DETAILS_MEDIA
+  | GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

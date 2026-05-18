@@ -5,6 +5,7 @@ imports:
   RoutePair: Domain.Types.PassDetails
   PassDetailAddress: Domain.Types.PassDetails
   Person: Domain.Types.Person
+  MediaFile: IssueManagement.Domain.Types.MediaFile
   UTCTime: Data.Time
   Day: Data.Time
   APISuccess: Kernel.Types.APISuccess
@@ -24,13 +25,13 @@ types:
     passDetailsId: Id PassDetails
     personId: Id Person
     name: Text
-    idCardPicture: Maybe Text
+    idCardPicture: "Maybe (Id MediaFile)"
     verificationStatus: VerificationStatus
     validTill: UTCTime
     address: "Maybe PassDetailAddress"
     gender: Gender
     pincode: Maybe Text
-    selfImage: Text
+    selfImage: Id MediaFile
     routePairs: "[RoutePair]"
     age: Maybe Int
     guardianName: Maybe Text
@@ -116,9 +117,9 @@ apis:
       response:
         type: "[GetOrganizationResp]"
   - GET:
-      endpoint: /passDetails/media
+      endpoint: /passDetails/document/{documentId}
       auth: ApiAuthV2
-      mandatoryQuery:
-        filePath: Text
+      params:
+        documentId: Id MediaFile
       response:
         type: Text

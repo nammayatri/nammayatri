@@ -11,6 +11,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Google.MapsClient.Types
@@ -33,7 +34,7 @@ data PassDetailsE e = PassDetails
     guardianMobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
-    idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     name :: Kernel.Prelude.Text,
@@ -46,7 +47,7 @@ data PassDetailsE e = PassDetails
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Prelude.Text,
+    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
     updatedAt :: Data.Time.UTCTime,
     validTill :: Data.Time.UTCTime,
     verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
