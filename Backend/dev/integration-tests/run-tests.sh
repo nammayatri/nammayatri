@@ -46,6 +46,7 @@ LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
+FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
@@ -447,6 +448,7 @@ run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
+run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
 run_sms() {
     echo ""
     echo "  NOTE: The first OTP test runs with useFakeSms (no real SMS sent)."
@@ -479,6 +481,7 @@ show_help() {
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
     echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
+    echo "  fleet               Run fleet management suites (driver name, association)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
@@ -511,6 +514,8 @@ show_help() {
     echo "  ./run-tests.sh intercity NY_Bangalore 01-IntercityRideFlow  # Specific intercity suite"
     echo "  ./run-tests.sh rental                             # All rental suites, all cities"
     echo "  ./run-tests.sh rental NY_Bangalore 01-RentalRideFlow        # Specific rental suite"
+    echo "  ./run-tests.sh fleet                              # All fleet management suites"
+    echo "  ./run-tests.sh fleet NY_Bangalore                 # Fleet suites for Bangalore"
     echo "  ./run-tests.sh sms                                          # Kaleyra SMS (OTP only by default)"
     echo "  ./run-tests.sh sms NY_Bangalore                             # Kaleyra SMS for Bangalore"
     echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
@@ -569,6 +574,9 @@ case "${1:-}" in
         ;;
     rental)
         run_rental "${2:-}" "${3:-}"
+        ;;
+    fleet)
+        run_fleet "${2:-}" "${3:-}"
         ;;
     sms|kaleyra)
         run_sms "${2:-}" "${3:-}"
