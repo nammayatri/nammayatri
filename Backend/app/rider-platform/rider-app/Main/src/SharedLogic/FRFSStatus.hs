@@ -376,6 +376,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       let isSingleMode = fromMaybe False booking.isSingleMode
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+      nwAddress <- asks (.nwAddress)
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -394,6 +395,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+                webhookUrl = Just $ showBaseUrl nwAddress,
                 splitSettlementDetails = splitSettlementDetails,
                 basket = Nothing,
                 paymentRules = Nothing,

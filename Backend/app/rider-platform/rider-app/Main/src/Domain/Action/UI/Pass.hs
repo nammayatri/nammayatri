@@ -172,6 +172,7 @@ purchasePassWithPayment ::
     EncFlow m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
     HasField "isMetroTestTransaction" r Bool
   ) =>
@@ -312,6 +313,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled False
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+        nwAddress <- asks (.nwAddress)
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -330,6 +332,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
+                  webhookUrl = Just $ showBaseUrl nwAddress,
                   splitSettlementDetails,
                   basket = Nothing,
                   paymentRules = Nothing,
