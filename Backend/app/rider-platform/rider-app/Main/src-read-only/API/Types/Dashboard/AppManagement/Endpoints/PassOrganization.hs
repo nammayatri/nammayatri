@@ -21,6 +21,13 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
+data AssignDepotReq = AssignDepotReq {depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, passOrganizationIds :: [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets AssignDepotReq where
+  hideSecrets = Kernel.Prelude.identity
+
 data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe Kernel.Prelude.Text, id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization, name :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -81,7 +88,7 @@ data VerifyPassDetailsReq = VerifyPassDetailsReq {verifications :: [PassDetailsV
 instance Kernel.Types.HideSecrets.HideSecrets VerifyPassDetailsReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument))
+type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument :<|> PostPassOrganizationAssignDepot))
 
 type GetPassOrganizationGetPassOrganization = ("getPassOrganization" :> Capture "personId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> Get '[JSON] GetOrganizationResp)
 
@@ -109,7 +116,12 @@ type PostPassOrganizationUpdate =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetPassOrganizationGetOrganizations = ("getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> Get '[JSON] [GetOrganizationResp])
+type GetPassOrganizationGetOrganizations =
+  ( "getOrganizations" :> Capture "passEnum" Kernel.Prelude.Text :> QueryParam "depotPersonId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> Get
+           '[JSON]
+           [GetOrganizationResp]
+  )
 
 type GetPassOrganizationPassDetailsDocument =
   ( "passDetails" :> "document" :> Capture "documentId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile)
@@ -118,19 +130,27 @@ type GetPassOrganizationPassDetailsDocument =
            Kernel.Prelude.Text
   )
 
+type PostPassOrganizationAssignDepot =
+  ( "assignDepot" :> Capture "depotPersonId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] AssignDepotReq
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
 data PassOrganizationAPIs = PassOrganizationAPIs
   { getPassOrganizationGetPassOrganization :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient GetOrganizationResp,
     getPassOrganizationPassDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PassDetailsListResp,
     postPassOrganizationPassDetailsVerify :: VerifyPassDetailsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPassOrganizationUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> PassOrganizationUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [GetOrganizationResp],
-    getPassOrganizationPassDetailsDocument :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text
+    getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient [GetOrganizationResp],
+    getPassOrganizationPassDetailsDocument :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
+    postPassOrganizationAssignDepot :: Kernel.Types.Id.Id Domain.Types.Person.Person -> AssignDepotReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPassOrganizationAPIs :: (Client EulerHS.Types.EulerClient API -> PassOrganizationAPIs)
 mkPassOrganizationAPIs passOrganizationClient = (PassOrganizationAPIs {..})
   where
-    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations :<|> getPassOrganizationPassDetailsDocument = passOrganizationClient
+    getPassOrganizationGetPassOrganization :<|> getPassOrganizationPassDetails :<|> postPassOrganizationPassDetailsVerify :<|> postPassOrganizationUpdate :<|> getPassOrganizationGetOrganizations :<|> getPassOrganizationPassDetailsDocument :<|> postPassOrganizationAssignDepot = passOrganizationClient
 
 data PassOrganizationUserActionType
   = GET_PASS_ORGANIZATION_GET_PASS_ORGANIZATION
@@ -139,6 +159,7 @@ data PassOrganizationUserActionType
   | POST_PASS_ORGANIZATION_UPDATE
   | GET_PASS_ORGANIZATION_GET_ORGANIZATIONS
   | GET_PASS_ORGANIZATION_PASS_DETAILS_DOCUMENT
+  | POST_PASS_ORGANIZATION_ASSIGN_DEPOT
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
