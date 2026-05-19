@@ -36,10 +36,10 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ri
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Ride as DRide
-import qualified Domain.Types as DTC
 import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import qualified Domain.Action.UI.Ride.CancelRide as CHandler
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
+import qualified Domain.Types as DTC
 import qualified Domain.Types.CancellationReason as DCReason
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.Merchant as DM
