@@ -50,7 +50,7 @@ export interface ParsedStep {
   index: number;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'internal';
+  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'juspay-payment' | 'internal';
   /** URL path with {{var}} placeholders, relative to proxy prefix */
   pathTemplate: string;
   /** Raw URL template before service resolution */
@@ -88,6 +88,7 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   // Routing it through the rider proxy preserves the /dashboard prefix extracted from the env URL.
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
+  'mock_server_url': { service: 'juspay-payment' },
 };
 
 // ── Parser ──

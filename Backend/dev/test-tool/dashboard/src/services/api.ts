@@ -274,6 +274,7 @@ const SERVICE_PROXY_MAP: Record<string, string> = {
   'rider-dashboard': '/proxy/rider-dashboard',
   'mock-idfy': '/proxy/mock-idfy',
   'mock-server': '/proxy/mock-server',
+  'juspay-payment': '/proxy/juspay-payment',
 };
 
 export interface PostmanStepResult extends ApiResult {
