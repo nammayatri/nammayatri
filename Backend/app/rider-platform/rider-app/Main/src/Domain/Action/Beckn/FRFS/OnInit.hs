@@ -79,7 +79,8 @@ onInit ::
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
     Metrics.HasBAPMetrics m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   DOnInit ->
   Merchant.Merchant ->
@@ -134,7 +135,8 @@ createPayments ::
     BeamFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
