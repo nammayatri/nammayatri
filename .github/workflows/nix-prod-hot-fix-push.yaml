@@ -123,7 +123,8 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
           STAGING=/home/khuzema/ny-staging
-          mkdir -p $STAGING/bin $STAGING/opt/app
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
           nix develop .#backend --command bash -c "
             export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
@@ -135,8 +136,8 @@ jobs:
             ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
           done
 
-          cp -r Backend/dhall-configs $STAGING/opt/app/dhall-configs
-          cp -r Backend/swagger $STAGING/opt/app/swagger
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'
