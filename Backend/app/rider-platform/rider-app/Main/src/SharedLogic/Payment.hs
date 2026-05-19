@@ -774,7 +774,8 @@ type MakePaymentIntentConstraints m r c =
     ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   )
 
 makePaymentIntent ::
@@ -814,7 +815,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 }
           incrementAuthCall piId amount applicationFeeAmount =
             TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
-          serviceReq =
+      nwAddress <- asks (.nwAddress)
+      let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
                 currency = req.currency,
@@ -838,6 +840,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 metadataExpiryInMins = Nothing,
                 basket = Nothing,
                 paymentRules = Nothing,
+                webhookUrl = Just $ showBaseUrl nwAddress,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,

@@ -357,6 +357,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     metadataExpiryInMins :: Maybe Int,
     basket :: Maybe [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
+    webhookUrl :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -530,6 +531,7 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 basket = req.basket,
                 paymentRules = req.paymentRules,
                 autoRefundPostSuccess = Nothing,
+                webhookUrl = req.webhookUrl,
                 paymentFilter = Nothing
               }
       resp <- createPaymentCall paymentReq

@@ -88,6 +88,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
@@ -106,6 +107,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ Kernel.Prelude.showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
