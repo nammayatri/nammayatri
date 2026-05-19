@@ -7,6 +7,7 @@ module Domain.Action.RiderPlatform.AppManagement.PassOrganization
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
     getPassOrganizationPassDetailsDocument,
+    postPassOrganizationAssignDepot,
   )
 where
 
@@ -52,12 +53,18 @@ postPassOrganizationUpdate merchantShortId opCity apiTokenInfo personId req = do
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.postPassOrganizationUpdate) personId req)
 
-getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow [API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp])
-getPassOrganizationGetOrganizations merchantShortId opCity apiTokenInfo passEnum = do
+getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.Flow [API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp])
+getPassOrganizationGetOrganizations merchantShortId opCity apiTokenInfo passEnum depotPersonId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationGetOrganizations) passEnum
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationGetOrganizations) passEnum depotPersonId
 
 getPassOrganizationPassDetailsDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.Flow Kernel.Prelude.Text)
 getPassOrganizationPassDetailsDocument merchantShortId opCity apiTokenInfo documentId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationPassDetailsDocument) documentId
+
+postPassOrganizationAssignDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.PassOrganization.AssignDepotReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postPassOrganizationAssignDepot merchantShortId opCity apiTokenInfo depotPersonId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.postPassOrganizationAssignDepot) depotPersonId req)

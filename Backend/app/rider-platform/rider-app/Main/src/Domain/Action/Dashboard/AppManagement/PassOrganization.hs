@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
     getPassOrganizationPassDetailsDocument,
+    postPassOrganizationAssignDepot,
   )
 where
 
@@ -38,6 +39,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassOrganization as QPassOrganization
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 allVerificationStatuses :: [DPassDetails.VerificationStatus]
@@ -164,15 +166,28 @@ mkPassOrganization req personId merchantShortId opCity = do
         DPassOrganization.passEnum = req.passEnum,
         DPassOrganization.id = newId,
         DPassOrganization.createdAt = now,
-        DPassOrganization.updatedAt = now
+        DPassOrganization.updatedAt = now,
+        DPassOrganization.depotPersonId = Nothing,
+        DPassOrganization.depotId = Nothing
       }
 
-getPassOrganizationGetOrganizations :: (Id.ShortId DMerchant.Merchant -> Context.City -> Kernel.Prelude.Text -> Environment.Flow [PassOrganizationAPI.GetOrganizationResp])
-getPassOrganizationGetOrganizations merchantShortId opCity passEnumText = do
+getPassOrganizationGetOrganizations ::
+  ( Id.ShortId DMerchant.Merchant ->
+    Context.City ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe (Id.Id DPerson.Person) ->
+    Environment.Flow [PassOrganizationAPI.GetOrganizationResp]
+  )
+getPassOrganizationGetOrganizations merchantShortId opCity passEnumText mbDepotPersonId = do
   passEnum <- DPassDetails.parsePassEnum passEnumText
   merchantOperatingCity <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
-  organizations <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCity.id passEnum
-  pure $ map mkGetOrganizationResp organizations
+  organizations <- case mbDepotPersonId of
+    Just depotPersonId -> do
+      orgs <- QPassOrganization.findByDepotPersonId (Just depotPersonId)
+      pure $ filter (\o -> o.passEnum == passEnum) orgs
+    Nothing ->
+      QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCity.id passEnum
+  pure $ map mkGetOrganizationResp $ filter (\o -> o.merchantOperatingCityId == merchantOperatingCity.id) organizations
 
 mkGetOrganizationResp :: DPassOrganization.PassOrganization -> PassOrganizationAPI.GetOrganizationResp
 mkGetOrganizationResp org =
@@ -188,3 +203,21 @@ getPassOrganizationPassDetailsDocument merchantShortId opCity documentId = do
   mediaFile <- QMediaFile.findById documentId >>= fromMaybeM (InvalidRequest "Document not found")
   s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Document has no associated S3 path")
   DPassDetails.fetchPassDocumentFromS3 s3FilePath
+
+postPassOrganizationAssignDepot ::
+  ( Id.ShortId DMerchant.Merchant ->
+    Context.City ->
+    Id.Id DPerson.Person ->
+    PassOrganizationAPI.AssignDepotReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postPassOrganizationAssignDepot merchantShortId opCity depotPersonId req = do
+  callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  depotPerson <- QPerson.findById depotPersonId >>= fromMaybeM (PersonNotFound depotPersonId.getId)
+  unless (depotPerson.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+  when (null req.passOrganizationIds) $ Utils.throwError (InvalidRequest "passOrganizationIds must not be empty")
+  forM_ req.passOrganizationIds $ \pid -> do
+    org <- QPassOrganization.findById pid >>= fromMaybeM (PassOrganizationNotFound pid.getId)
+    unless (org.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+  QPassOrganization.updateDepotAssignment (Just depotPersonId) req.depotId req.passOrganizationIds
+  pure APISuccess.Success

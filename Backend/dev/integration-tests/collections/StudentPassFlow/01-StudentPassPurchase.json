@@ -297,6 +297,107 @@
       }
     },
     {
+      "name": "Dashboard Assign Depot to PassOrganization",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Assign depot OK', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('APISuccess shape', function () { pm.expect(d).to.have.property('result'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"passOrganizationIds\": [\"{{pass_organization_id}}\"], \"depotId\": \"depot-test-001\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot/{{admin_person_id}}",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "assignDepot",
+            "{{admin_person_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard List Organizations (passEnum + depotPersonId filter)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for KV drainer to flush the assignDepot update before reading by depotPersonId.",
+              "console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Got organizations list', function () { pm.response.to.have.status(200); pm.expect(d).to.be.an('array').that.is.not.empty; });",
+              "var found = d.find(function (o) { return o.id === pm.environment.get('pass_organization_id'); });",
+              "pm.test('Assigned org appears in depot-filtered list', function () { pm.expect(found).to.exist; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/getOrganizations/{{pass_enum}}?depotPersonId={{admin_person_id}}",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "getOrganizations",
+            "{{pass_enum}}"
+          ],
+          "query": [
+            {
+              "key": "depotPersonId",
+              "value": "{{admin_person_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "Dashboard Update PassOrganization (Update existing)",
       "event": [
         {
