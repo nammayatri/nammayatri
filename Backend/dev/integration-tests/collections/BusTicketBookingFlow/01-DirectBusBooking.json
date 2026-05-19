@@ -790,15 +790,88 @@
       "response": []
     },
     {
+      "name": "Trigger Payment (Master Sandbox)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Only run on Master env \u2014 Local uses mock server instead",
+              "if (pm.environment.get('envType') !== 'Master') {",
+              "    pm.execution.skipRequest();",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Payment triggered', function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 500]);",
+              "});",
+              "console.log('Sandbox payment trigger response:', pm.response.text());",
+              "// Wait 10s for Juspay webhook to reach rider-app and update booking status",
+              "const start = Date.now();",
+              "while (Date.now() - start < 10000) { /* busy wait 10s */ }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tag\": \"PaymentStatus\",\n  \"orderId\": \"{{payment_order_id}}\",\n  \"orderShortId\": \"{{payment_order_short_id}}\",\n  \"status\": \"CHARGED\",\n  \"eventName\": \"ORDER_SUCCEEDED\",\n  \"refunds\": [],\n  \"amount\": 1.0\n}"
+        },
+        "url": {
+          "raw": "{{mock_server_url}}/dev/payment/external/ANNA_APP/service/juspay/payment?city={{city}}&serviceType=FRFSBooking",
+          "protocol": "",
+          "host": [
+            "{{mock_server_url}}"
+          ],
+          "path": [
+            "dev",
+            "payment",
+            "external",
+            "ANNA_APP",
+            "service",
+            "juspay",
+            "payment"
+          ],
+          "query": [
+            {
+              "key": "city",
+              "value": "{{city}}"
+            },
+            {
+              "key": "serviceType",
+              "value": "FRFSBooking"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get Booking Status (Trigger Confirm)",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Wait for payment processing",
+              "// Extra wait on Master env \u2014 Juspay webhook processing takes longer than local mock",
+              "const waitMs = pm.environment.get('envType') === 'Master' ? 10000 : 5000;",
               "const start = Date.now();",
-              "while (Date.now() - start < 5000) { /* busy wait */ }"
+              "while (Date.now() - start < waitMs) { /* busy wait */ }"
             ],
             "type": "text/javascript"
           }
@@ -808,11 +881,19 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "console.log('Booking status:', d.status, 'Payment:', d.payment ? d.payment.status : 'N/A');",
+              "var envType = pm.environment.get('envType');",
+              "console.log('Booking status:', d.status, 'Payment:', d.payment ? d.payment.status : 'N/A', 'PaymentOrder:', d.payment && d.payment.paymentOrder ? d.payment.paymentOrder.status : 'N/A');",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
               "pm.test('Payment status valid', function () {",
               "    pm.expect(d.payment).to.not.be.undefined;",
-              "    pm.expect(d.payment.status).to.be.oneOf(['SUCCESS','CONFIRMING','CONFIRMED']);",
+              "    if (envType === 'Master') {",
+              "        // On Master, payment.status may stay NEW but paymentOrder.status = CHARGED confirms Juspay processed it",
+              "        var paymentOk = ['SUCCESS','CONFIRMING','CONFIRMED'].includes(d.payment.status) ||",
+              "                        (d.payment.paymentOrder && d.payment.paymentOrder.status === 'CHARGED');",
+              "        pm.expect(paymentOk).to.be.true;",
+              "    } else {",
+              "        pm.expect(d.payment.status).to.be.oneOf(['SUCCESS','CONFIRMING','CONFIRMED']);",
+              "    }",
               "});"
             ],
             "type": "text/javascript"

@@ -2651,6 +2651,9 @@ class ContextHandler(BaseHTTPRequestHandler):
         elif path.startswith("/proxy/driver/"):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]
+        elif path.startswith("/proxy/juspay-payment/"):
+            target_base = os.environ.get("MOCK_SERVER_URL", "http://localhost:8091/")
+            target_path = path[len("/proxy/juspay-payment"):]
         else:
             return False
 
@@ -3913,7 +3916,7 @@ class ContextHandler(BaseHTTPRequestHandler):
             return True
 
         # GET API endpoints (POST also allowed for metrics/push and webhook)
-        _post_allowed = {"/api/metrics/push", "/api/webhook/run-all"}
+        _post_allowed = {"/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all"}
         if method != "GET" and not path.startswith("/proxy/") and path not in _post_allowed:
             self._send_json({"error": "method not allowed"}, 405)
             return True
@@ -4001,7 +4004,7 @@ class ContextHandler(BaseHTTPRequestHandler):
             schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
             self._send_json(get_finance_reference_types(schema))
         # ── Metrics push (from dashboard after suite completes) ──────────────
-        elif method == "POST" and path == "/api/metrics/push":
+        elif method == "POST" and path in ("/api/metrics/push", "/metrics/push"):
             body = self._read_json_body()
             version_id = body.get("versionId", "unknown")
             collection = body.get("collection", "unknown")
@@ -4017,7 +4020,7 @@ class ContextHandler(BaseHTTPRequestHandler):
             return True
 
         # ── Webhook: trigger run-all Master collections ───────────────────
-        elif method == "POST" and path == "/api/webhook/run-all":
+        elif method == "POST" and path in ("/api/webhook/run-all", "/webhook/run-all"):
             body = self._read_json_body()
             version_id = body.get("versionId", "unknown")
             if not version_id or version_id == "unknown":
@@ -4034,7 +4037,7 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"runId": run_id, "versionId": version_id, "status": "started"})
             return True
 
-        elif method == "GET" and path == "/api/webhook/run-all/status":
+        elif method == "GET" and path in ("/api/webhook/run-all/status", "/webhook/run-all/status"):
             from urllib.parse import parse_qs
             qs = parse_qs(parsed.query)
             run_id = qs.get("runId", [None])[0]
