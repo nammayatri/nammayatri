@@ -47,6 +47,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
+import Kernel.Prelude (showBaseUrl)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -1037,6 +1038,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   orderId <- generateGUIDText
   orderShortId <- generateShortId
+  nwAddress <- asks (.nwAddress)
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       amount = plan.registrationAmount
       createOrderReq =
@@ -1055,6 +1057,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress,
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,

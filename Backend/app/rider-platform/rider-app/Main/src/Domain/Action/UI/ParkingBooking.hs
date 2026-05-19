@@ -72,6 +72,7 @@ postMultimodalParkingBook mbApiKey req = do
   customerEmail <- fromMaybe "noreply@nammayatri.in" <$> mapM decrypt person.email
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+  nwAddress <- asks (.nwAddress)
   udf1 <- SLUtils.getPersonUdf1 person
   let createOrderReq =
         Payment.CreateOrderReq
@@ -91,6 +92,7 @@ postMultimodalParkingBook mbApiKey req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ Kernel.Prelude.showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
