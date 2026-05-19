@@ -161,6 +161,7 @@ getServiceNameConfigJSON = \case
     Payment.PaytmEDCConfig cfg -> (Domain.MembershipPaymentService Payment.PaytmEDC, toJSON cfg)
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+    Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> (Domain.IncidentReportService IncidentReport.ERSS, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
