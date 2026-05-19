@@ -73,11 +73,11 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
     if transporterConfig.canAddCancellationFee
       then do
         localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
-        (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime ride.cancellationChargesLogicVersion Nothing
+        (allLogics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF localTime Nothing Nothing
         response <- withTryCatch "runLogics:canWaiveOffResult" $ LYDL.runLogicsWithDebugLog LYDL.Driver (cast ride.merchantOperatingCityId) LYT.USER_CANCELLATION_DUES_WAIVE_OFF (Just booking.transactionId) allLogics logicInput
         case response of
           Left e -> do
-            logError $ "Error in running UserCancellationDuesLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
+            logError $ "Error in running UserCancellationDuesWaiveOffLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
             return False
           Right resp -> do
             case (A.fromJSON resp.result :: A.Result UserCancellationDues.UserCancellationDuesWaiveOffResult) of
@@ -85,7 +85,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
                 logTagInfo ("bookingId-" <> getId booking.id) ("result.waiveOff: " <> show result.canWaiveOff)
                 return result.canWaiveOff
               A.Error e -> do
-                logError $ "Error in parsing UserCancellationDuesResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
+                logError $ "Error in parsing UserCancellationDuesWaiveOffResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
                 return False
       else return False
 
