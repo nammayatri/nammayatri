@@ -1,4 +1,4 @@
-name: Nix CI (Main Push)
+name: Nix CI (Cabal Push Main)
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux
+            host: x86_64-linux-ny-push-main
             arch: amd64
             name: Master Local Build
             continue-on-error: false
@@ -42,27 +42,56 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build all flake outputs (Master Local mode)
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Build (incremental cabal)
         run: |
           set -o pipefail
-          NIX_LOCAL_BUILD="1" nix build github:srid/devour-flake#default --impure --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal build all --enable-optimization=0 --ghc-options='-funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively' 2>&1
+          " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee master-build-log.txt
 
-      - name: Push to Cache (Local mode)        
-        continue-on-error: true
-        env:
-          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Collect binaries to staging
         run: |
-          PATHS=$(jq -r '.[].outPaths[]' ./result)
-          echo "Paths to push: $(echo "$PATHS" | wc -l)"
+          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
-          # Try attic, fall back to cachix on any failure
-          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
-            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
-            echo "✅ Pushed to attic" || \
-            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
+          "
+
+          for f in $STAGING/bin/*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
 
       - name: Upload master build log
         continue-on-error: true
@@ -76,10 +105,11 @@ jobs:
         id: docker
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
         env:
-          DOCKER_REGISTRY: ghcr.io          
-          DOCKER_TAG_PREFIX: "master-"          
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "cabal-master-"
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
-          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
@@ -88,12 +118,16 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
   
   analyze-master-build-times:
     name: Analyze Master Build Times
     needs: [master-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux
+    runs-on: x86_64-linux-ny-push-main
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -137,7 +171,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux
+            host: x86_64-linux-ny-push-main
             arch: amd64
             name: Prod Release Build
             continue-on-error: false
@@ -149,27 +183,56 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Build all flake outputs
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Build (incremental cabal)
         run: |
           set -o pipefail
-          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal build all 2>&1
+          " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee prod-build-log.txt
 
-      - name: Push to Cache
-        continue-on-error: true
-        env:
-          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
+      - name: Collect binaries to staging
         run: |
-          PATHS=$(jq -r '.[].outPaths[]' ./result)
-          echo "Paths to push: $(echo "$PATHS" | wc -l)"
+          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
-          # Try attic, fall back to cachix on any failure
-          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
-            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
-            echo "✅ Pushed to attic" || \
-            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
+          "
+
+          for f in $STAGING/bin/*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
 
       - name: Upload build log
         continue-on-error: true
@@ -184,11 +247,12 @@ jobs:
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
         env:
           DOCKER_REGISTRY: ghcr.io
-          DOCKER_TAG_PREFIX: "prod-"
+          DOCKER_TAG_PREFIX: "cabal-prod-"
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
-          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
           gunzip -c ./result > image.tar || cp ./result image.tar
@@ -196,11 +260,15 @@ jobs:
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
+
   analyze-prod-build-times:
     name: Analyze Prod Build Times
     needs: [prod-build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux
+    runs-on: x86_64-linux-ny-push-main
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

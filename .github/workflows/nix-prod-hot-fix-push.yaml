@@ -18,28 +18,27 @@ jobs:
   check-conditions:
     runs-on: ubuntu-latest
     outputs:
-      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}      
       should-push-docker: ${{ steps.check-docker-push.outputs.should_push_docker }}
-      runner: ${{ steps.set-runner.outputs.runner }}
     steps:
       - name: Apply labels
         if: github.event_name == 'pull_request' && github.event.action != 'closed'
         uses: actions/labeler@v4
         with:
           repo-token: "${{ secrets.GITHUB_TOKEN }}"
-
+      
       - name: Check global conditions
         id: evaluate
         run: |
           # Check if workflow should proceed (non-matrix conditions)
-          if [[ "${{ github.event.pull_request.merged }}" == "true" ||
-                "${{ github.event_name }}" != "pull_request" ||
+          if [[ "${{ github.event.pull_request.merged }}" == "true" || 
+                "${{ github.event_name }}" != "pull_request" || 
                 "${{ github.event.action }}" != "closed" ]]; then
             echo "should_proceed=true" >> $GITHUB_OUTPUT
           else
             echo "should_proceed=false" >> $GITHUB_OUTPUT
           fi
-
+      
       - name: Check docker push conditions
         id: check-docker-push
         run: |
@@ -53,17 +52,6 @@ jobs:
           else
             echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
-
-      - name: Set runner based on branch
-        id: set-runner
-        run: |
-          if [[ "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ]]; then
-            echo "runner=x86_64-linux-ny-push-bap" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ]]; then
-            echo "runner=x86_64-linux-ny-push-bpp" >> $GITHUB_OUTPUT
-          else
-            echo "runner=x86_64-linux-ny-push-common" >> $GITHUB_OUTPUT
-          fi
   build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
@@ -73,6 +61,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
+            host: x86_64-linux
             arch: amd64
             name: Master Release Build
             continue-on-error: false
@@ -81,7 +70,7 @@ jobs:
           #   name: Mac Cache Server
           #   continue-on-error: false
       fail-fast: false
-    runs-on: ${{ needs.check-conditions.outputs.runner }}
+    runs-on: ${{ matrix.host }}
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
@@ -98,60 +87,29 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
-      - name: Compute cache key
-        if: steps.check-conditions.outputs.should_build == 'true'
-        id: cache-key
-        run: |
-          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
-          echo "key=$KEY" >> $GITHUB_OUTPUT
-
-      - name: Restore cabal cache
-        if: steps.check-conditions.outputs.should_build == 'true'
-        run: |
-          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
-          KEY_FILE="$CACHE_ROOT/.cache-key"
-          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
-
-          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle"
-            rm -rf "$CACHE_ROOT/dist-newstyle"
-          fi
-
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
-          echo "$CURRENT_KEY" > "$KEY_FILE"
-          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
-
-      - name: Build (incremental cabal)
+      - name: Build all flake outputs
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
           set -o pipefail
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-            cd Backend
-            cabal build all --enable-optimization=2 2>&1
-          " | while IFS= read -r line; do
+          nix build github:srid/devour-flake#default --system ${{ matrix.system }} -L --print-out-paths --no-write-lock-file --override-input flake . --out-link ./result 2>&1 | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee build-log.txt
 
-      - name: Collect binaries to staging
+      - name: Push to Cache
         if: steps.check-conditions.outputs.should_build == 'true'
+        continue-on-error: true
+        env:
+          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
+          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
         run: |
-          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
-          rm -rf "$STAGING"
-          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+          PATHS=$(jq -r '.[].outPaths[]' ./result)
+          echo "Paths to push: $(echo "$PATHS" | wc -l)"
 
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-            cd Backend
-            cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
-          "
-
-          for f in $STAGING/bin/*; do
-            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
-          done
-
-          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
-          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+          # Try attic, fall back to cachix on any failure
+          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
+            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
+            echo "✅ Pushed to attic" || \
+            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
 
       - name: Upload build log
         if: steps.check-conditions.outputs.should_build == 'true'
@@ -167,11 +125,10 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true' && (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         env:
           DOCKER_REGISTRY: ghcr.io
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage --impure
-
-          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          nix build .#packages.${{ matrix.system }}.dockerImage
+    
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
           gunzip -c ./result > image.tar || cp ./result image.tar
@@ -179,16 +136,12 @@ jobs:
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
-
-      - name: Cleanup staging dir
-        if: always()
-        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
     
   analyze-build-times:
     name: Analyze Build Times
     needs: [build, check-conditions]
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: ${{ needs.check-conditions.outputs.runner }}
+    runs-on: x86_64-linux
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
