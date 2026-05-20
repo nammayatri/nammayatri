@@ -161,7 +161,9 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    routeCode :: Data.Maybe.Maybe Data.Text.Text,
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
