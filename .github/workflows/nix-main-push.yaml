@@ -42,13 +42,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
       - name: Restore cabal cache
         run: |
-          CABAL_CACHE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/dist-newstyle
-          CABAL_STORE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-          mkdir -p $CABAL_CACHE
-          mkdir -p $CABAL_STORE
-          ln -sfn $CABAL_CACHE Backend/dist-newstyle
+          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
@@ -63,7 +76,7 @@ jobs:
 
       - name: Collect binaries to staging
         run: |
-          STAGING=/home/khuzema/ny-staging
+          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
@@ -94,7 +107,7 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "master-"
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
@@ -105,6 +118,10 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
   
   analyze-master-build-times:
     name: Analyze Master Build Times
@@ -166,13 +183,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
       - name: Restore cabal cache
         run: |
-          CABAL_CACHE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/dist-newstyle
-          CABAL_STORE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-          mkdir -p $CABAL_CACHE
-          mkdir -p $CABAL_STORE
-          ln -sfn $CABAL_CACHE Backend/dist-newstyle
+          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
@@ -187,7 +217,7 @@ jobs:
 
       - name: Collect binaries to staging
         run: |
-          STAGING=/home/khuzema/ny-staging
+          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
@@ -218,7 +248,7 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "prod-"
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
@@ -229,6 +259,10 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
 
   analyze-prod-build-times:
     name: Analyze Prod Build Times

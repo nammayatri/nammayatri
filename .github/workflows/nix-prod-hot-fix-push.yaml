@@ -98,14 +98,28 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true'
         uses: actions/checkout@v4
 
+      - name: Compute cache key
+        if: steps.check-conditions.outputs.should_build == 'true'
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
       - name: Restore cabal cache
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          CABAL_CACHE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/dist-newstyle
-          CABAL_STORE=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-          mkdir -p $CABAL_CACHE
-          mkdir -p $CABAL_STORE
-          ln -sfn $CABAL_CACHE Backend/dist-newstyle
+          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         if: steps.check-conditions.outputs.should_build == 'true'
@@ -122,7 +136,7 @@ jobs:
       - name: Collect binaries to staging
         if: steps.check-conditions.outputs.should_build == 'true'
         run: |
-          STAGING=/home/khuzema/ny-staging
+          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
@@ -153,7 +167,7 @@ jobs:
         if: steps.check-conditions.outputs.should_build == 'true' && (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         env:
           DOCKER_REGISTRY: ghcr.io
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging
+          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
@@ -165,6 +179,10 @@ jobs:
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
     
   analyze-build-times:
     name: Analyze Build Times

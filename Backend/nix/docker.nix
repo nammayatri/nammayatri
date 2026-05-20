@@ -12,10 +12,23 @@ let
 in
 {
   config = {
-    perSystem = { self', pkgs, lib, ... }:
+    perSystem = { self', pkgs, lib, config, ... }:
       let
         nammayatriBinaries = if localBuild
-          then builtins.path { path = /. + localBinariesPath; name = "nammayatri-local"; }
+          then pkgs.runCommand "nammayatri-local" {
+            nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
+            buildInputs =
+              config.haskellProjects.default.outputs.devShell.buildInputs
+              ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client ];
+            src = /. + localBinariesPath;
+          } ''
+            cp -r $src $out
+            chmod -R +w $out/bin
+            for exe in $out/bin/*; do
+              wrapProgram "$exe" \
+                --set LD_LIBRARY_PATH "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+            done
+          ''
           else self'.packages.nammayatri;
       in
       {
