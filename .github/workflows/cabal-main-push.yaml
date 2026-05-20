@@ -50,7 +50,7 @@ jobs:
 
       - name: Restore cabal cache
         run: |
-          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
           KEY_FILE="$CACHE_ROOT/.cache-key"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
@@ -67,7 +67,7 @@ jobs:
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal build all --enable-optimization=0 --ghc-options='-funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively' 2>&1
           " | while IFS= read -r line; do
@@ -76,12 +76,12 @@ jobs:
 
       - name: Collect binaries to staging
         run: |
-          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
+          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
@@ -107,7 +107,7 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "cabal-master-"
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
+          LOCAL_BINARIES_PATH: $HOME/ny-staging/${{ github.run_id }}
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
@@ -121,7 +121,7 @@ jobs:
 
       - name: Cleanup staging dir
         if: always()
-        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
   
   analyze-master-build-times:
     name: Analyze Master Build Times
@@ -191,7 +191,7 @@ jobs:
 
       - name: Restore cabal cache
         run: |
-          CACHE_ROOT=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}
+          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
           KEY_FILE="$CACHE_ROOT/.cache-key"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
@@ -208,7 +208,7 @@ jobs:
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal build all 2>&1
           " | while IFS= read -r line; do
@@ -217,12 +217,12 @@ jobs:
 
       - name: Collect binaries to staging
         run: |
-          STAGING=/home/khuzema/ny-staging/$GITHUB_RUN_ID
+          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=/home/khuzema/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
             cabal install all:exes --installdir=$STAGING/bin --overwrite-policy=always
           "
@@ -248,7 +248,7 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "cabal-prod-"
-          LOCAL_BINARIES_PATH: /home/khuzema/ny-staging/${{ github.run_id }}
+          LOCAL_BINARIES_PATH: $HOME/ny-staging/${{ github.run_id }}
         run: |
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
@@ -262,7 +262,7 @@ jobs:
 
       - name: Cleanup staging dir
         if: always()
-        run: rm -rf /home/khuzema/ny-staging/${{ github.run_id }}
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
 
   analyze-prod-build-times:
     name: Analyze Prod Build Times
