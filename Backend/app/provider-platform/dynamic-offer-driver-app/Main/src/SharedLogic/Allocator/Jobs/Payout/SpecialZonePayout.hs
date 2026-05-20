@@ -24,7 +24,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Payout.Interface as IPayout
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -56,7 +55,6 @@ sendSpecialZonePayout ::
     PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>
@@ -82,7 +80,6 @@ handleNewFlow ::
     PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>
@@ -111,7 +108,6 @@ executeSpecialZonePayout ::
     PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>
@@ -165,7 +161,6 @@ handleOldFlow ::
     PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>
@@ -220,7 +215,6 @@ executeOldSpecialZonePayout ::
     PaymentBeamFlow.BeamFlow m r,
     Redis.HedisFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
-    HasKafkaProducer r,
     RideEnd.EndRideFlow m r,
     LocationUpdateFlow m r c
   ) =>

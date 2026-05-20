@@ -936,6 +936,7 @@ TransporterConfig:
       maxWalletPayoutsPerDay: Maybe Int
       minimumWalletPayoutAmount: HighPrecMoney
       minWalletAmountForCashRides: Maybe HighPrecMoney
+      earningsBalanceWarningPct: Maybe Int
       payoutCutOffDays: Int
       payoutFee: Maybe PayoutFeeConfig
       forceOnlineLedger: Maybe Bool
@@ -945,6 +946,16 @@ TransporterConfig:
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
       fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
+      subscriptionBalanceWarningPct: Maybe Int
+      fleetSubscriptionBalanceWarningPct: Maybe Int
+      # Financial-communication PN throttle (stored in same JSON blob, no migration needed).
+      # finPnMinTriggerThreshold: minimum number of end-ride trigger events before the first
+      #   PN is dispatched (per owner per day).  Default: 3.
+      # finPnMaxDailyCount: maximum number of PNs that may be sent per owner per day.
+      #   Default: 2.  Once this cap is hit the comms are suppressed until the daily TTL
+      #   resets (86400 s from the first trigger of the day).
+      finPnMinTriggerThreshold: Maybe Int
+      finPnMaxDailyCount: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     GstBreakup:
       cgstPercentage: Maybe HighPrecMoney
@@ -1287,6 +1298,7 @@ TransporterConfig:
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
+    enableFinancialNotifications: Maybe Bool
 
   beamType:
     currency: Maybe Currency

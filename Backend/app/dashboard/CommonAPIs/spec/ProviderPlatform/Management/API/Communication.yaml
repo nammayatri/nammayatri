@@ -104,6 +104,16 @@ apis:
       response:
         type: CommunicationTemplateResponse
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION GET_COMMUNICATION_TEMPLATE
+  - POST:
+      endpoint: /{communicationId}/markRead
+      params:
+        communicationId: Id Communication
+      mandatoryQuery:
+        - personId: Id Person
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION MARK_READ_COMMUNICATION
 
 types:
   CommunicationMessageStatus:
@@ -112,7 +122,7 @@ types:
     - enum: "CH_PUSH, CH_SMS, CH_EMAIL, CH_WHATSAPP, CH_WEB"
     - derive: "HttpInstance"
   CommunicationDomainType:
-    - enum: "COMM_FLEET, COMM_RIDE_HAILING, COMM_GENERAL"
+    - enum: "COMM_FLEET, COMM_RIDE_HAILING, COMM_GENERAL, COMM_FINANCIAL"
     - derive: "HttpInstance"
   CommunicationContentTypeEnum:
     - enum: "CONTENT_TEXT, CONTENT_IMAGE, CONTENT_VIDEO"

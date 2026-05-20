@@ -66,6 +66,7 @@ sendScheduledBatchPayout ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -103,6 +104,7 @@ processCategory ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -136,6 +138,7 @@ processWalletPayouts ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasField "blackListedJobs" r [Text],
     Redis.HedisLTSFlowEnv r
   ) =>
@@ -208,6 +211,7 @@ processOneWalletPayout ::
     BeamFlow m r,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl],
     HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     Redis.HedisLTSFlowEnv r
   ) =>
   DSPC.ScheduledPayoutConfig ->

@@ -106,6 +106,7 @@ import qualified SharedLogic.DriverFee as SLDriverFee
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Finance.Prepaid
 import SharedLogic.Finance.Wallet
+import SharedLogic.FinancialCommunication (FinancialEventType (..), resolveFleetOwner, sendFinancialNotification)
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
@@ -206,6 +207,8 @@ getStatus ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -340,6 +343,8 @@ getStatusV2 ::
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
@@ -583,7 +588,9 @@ processPayment ::
     Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Driver ->
@@ -616,7 +623,9 @@ processNonClearedDriverFees ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -639,7 +648,9 @@ processSubscriptionPurchasePayment ::
     Redis.HedisLTSFlowEnv r,
     HasField "schedulerType" r SchedulerType,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -770,7 +781,28 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
                   <> show (SPayment.roundToTwoDecimalPlaces creditAmount)
                   <> " is successful"
               prepaidRechargeTitle = "Recharge Successful!"
-          sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+          mbFleetOwnerId <- resolveFleetOwner person.id
+          case mbFleetOwnerId of
+            Nothing ->
+              sendNotificationToDriver
+                person.merchantOperatingCityId
+                FCM.SHOW
+                Nothing
+                FCM.PREPAID_RECHARGE_SUCCESS
+                prepaidRechargeTitle
+                prepaidRechargeMessage
+                person
+                person.deviceToken
+            Just _ ->
+              sendFinancialNotification
+                merchantId
+                person.merchantOperatingCityId
+                person
+                mbFleetOwnerId
+                FE_SUBSCRIPTION_RECHARGE
+                prepaidRechargeTitle
+                prepaidRechargeMessage
+                Nothing
 
 updatePrepaidBalanceAndExpiry ::
   ( MonadFlow m,
@@ -778,7 +810,9 @@ updatePrepaidBalanceAndExpiry ::
     EsqDBReplicaFlow m r,
     EsqDBFlow m r,
     EncFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text
   ) =>
   Id DM.Merchant ->
   DP.Person ->
@@ -843,7 +877,28 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
               <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings)
               <> " is successful"
           prepaidRechargeTitle = "Recharge Successful!"
-      sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
+      mbFleetOwnerId <- resolveFleetOwner person.id
+      case mbFleetOwnerId of
+        Nothing ->
+          sendNotificationToDriver
+            person.merchantOperatingCityId
+            FCM.SHOW
+            Nothing
+            FCM.PREPAID_RECHARGE_SUCCESS
+            prepaidRechargeTitle
+            prepaidRechargeMessage
+            person
+            person.deviceToken
+        Just _ ->
+          sendFinancialNotification
+            merchantId
+            person.merchantOperatingCityId
+            person
+            mbFleetOwnerId
+            FE_SUBSCRIPTION_RECHARGE
+            prepaidRechargeTitle
+            prepaidRechargeMessage
+            Nothing
       pure (fst newBalance, Nothing)
 
 updatePaymentStatus ::

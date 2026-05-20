@@ -905,3 +905,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_membership
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stcl_config json ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_financial_notifications boolean ;

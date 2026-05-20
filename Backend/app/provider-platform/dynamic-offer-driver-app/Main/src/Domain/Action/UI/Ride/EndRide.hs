@@ -193,7 +193,9 @@ data ServiceHandle m = ServiceHandle
   }
 
 buildEndRideHandle ::
-  LocUpd.LocationUpdateFlow m r c =>
+  ( LocUpd.LocationUpdateFlow m r c,
+    EndRideFlow m r
+  ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe (Id DRide.Ride) ->
@@ -250,6 +252,7 @@ type EndRideFlow m r =
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     LT.HasLocationService m r,
     HasKafkaProducer r,
+    HasField "fleetCommunicationDispatchTopic" r Text,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasFlowEnv m r '["appBackendBapInternal" ::: CallBAPInternal.AppBackendBapInternal],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],

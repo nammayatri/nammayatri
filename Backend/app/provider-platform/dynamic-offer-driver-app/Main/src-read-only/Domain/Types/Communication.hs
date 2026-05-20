@@ -38,13 +38,13 @@ data Communication = Communication
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data CTAButton = CTAButton {label :: Kernel.Prelude.Text, linkType :: Kernel.Prelude.Text, url :: Kernel.Prelude.Text} deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+data CTAButton = CTAButton {label :: Kernel.Prelude.Text, linkType :: Kernel.Prelude.Text, url :: Kernel.Prelude.Text} deriving (Generic, (Show), (Eq), (ToJSON), (FromJSON), (ToSchema))
 
 data ChannelType = CH_PUSH | CH_SMS | CH_EMAIL | CH_WHATSAPP | CH_WEB deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data CommunicationContentType = CT_TEXT | CT_IMAGE | CT_VIDEO deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data CommunicationDomain = CD_FLEET | CD_RIDE_HAILING | CD_GENERAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data CommunicationDomain = CD_FLEET | CD_RIDE_HAILING | CD_GENERAL | CD_FINANCIAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data CommunicationSenderRole = SR_ADMIN | SR_OPERATOR | SR_FLEET_OWNER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -52,26 +52,26 @@ data CommunicationStatus = ST_DRAFT | ST_QUEUED | ST_SENDING | ST_SENT | ST_FAIL
 
 data CommunicationTriggerType = TT_MANUAL | TT_SYSTEM | TT_SCHEDULED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ChannelType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ChannelType))
 
-$(mkHttpInstancesForEnum ''ChannelType)
+$(mkHttpInstancesForEnum (''ChannelType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationContentType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommunicationContentType))
 
-$(mkHttpInstancesForEnum ''CommunicationContentType)
+$(mkHttpInstancesForEnum (''CommunicationContentType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationDomain)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommunicationDomain))
 
-$(mkHttpInstancesForEnum ''CommunicationDomain)
+$(mkHttpInstancesForEnum (''CommunicationDomain))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationSenderRole)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommunicationSenderRole))
 
-$(mkHttpInstancesForEnum ''CommunicationSenderRole)
+$(mkHttpInstancesForEnum (''CommunicationSenderRole))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommunicationStatus))
 
-$(mkHttpInstancesForEnum ''CommunicationStatus)
+$(mkHttpInstancesForEnum (''CommunicationStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationTriggerType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CommunicationTriggerType))
 
-$(mkHttpInstancesForEnum ''CommunicationTriggerType)
+$(mkHttpInstancesForEnum (''CommunicationTriggerType))
