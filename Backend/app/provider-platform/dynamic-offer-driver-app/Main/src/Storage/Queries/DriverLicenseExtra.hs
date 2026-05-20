@@ -13,23 +13,39 @@ import qualified Storage.Beam.DriverLicense as BeamDL
 import Storage.Queries.OrphanInstances.DriverLicense ()
 
 -- Extra code goes here --
-upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
+upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m (Kernel.Types.Id.Id DriverLicense)
 upsert a@DriverLicense {..} = do
-  res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
-  if isJust res
-    then
+  res <-
+    findOneWithKV
+      [ Se.Or
+          [ Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash)),
+            Se.Is BeamDL.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)
+          ]
+      ]
+  case res of
+    Just existing -> do
       updateOneWithKV
-        [ Se.Set BeamDL.driverDob driverDob,
+        [ Se.Set BeamDL.driverId (Kernel.Types.Id.getId driverId),
+          Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
+          Se.Set BeamDL.licenseNumberEncrypted (a.licenseNumber & unEncrypted . encrypted),
+          Se.Set BeamDL.licenseNumberHash (a.licenseNumber & (.hash)),
           Se.Set BeamDL.licenseExpiry licenseExpiry,
           Se.Set BeamDL.classOfVehicles classOfVehicles,
-          Se.Set BeamDL.driverId (Kernel.Types.Id.getId driverId),
+          Se.Set BeamDL.dateOfIssue dateOfIssue,
+          Se.Set BeamDL.vehicleCategory vehicleCategory,
+          Se.Set BeamDL.documentImageId1 (Kernel.Types.Id.getId documentImageId1),
+          Se.Set BeamDL.documentImageId2 (Kernel.Types.Id.getId <$> documentImageId2),
           Se.Set BeamDL.verificationStatus verificationStatus,
+          Se.Set BeamDL.rejectReason rejectReason,
           Se.Set BeamDL.failedRules failedRules,
           Se.Set BeamDL.updatedAt updatedAt
         ]
-        [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
-    else createWithKV a
+        [Se.Is BeamDL.id $ Se.Eq (Kernel.Types.Id.getId existing.id)]
+      pure existing.id
+    Nothing -> do
+      createWithKV a
+      pure a.id
 
 findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
