@@ -353,6 +353,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     metadataExpiryInMins :: Maybe Int,
     basket :: Maybe [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
+    webhookUrl :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
     discountAmount :: Maybe HighPrecMoney,
@@ -521,7 +522,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
                 optionsGetUpiDeepLinks = req.optionsGetUpiDeepLinks,
                 metadataExpiryInMins = req.metadataExpiryInMins,
                 basket = req.basket,
-                paymentRules = req.paymentRules
+                paymentRules = req.paymentRules,
+                webhookUrl = req.webhookUrl
               }
       resp <- createPaymentCall paymentReq
       now <- getCurrentTime

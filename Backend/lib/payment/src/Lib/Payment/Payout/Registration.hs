@@ -54,7 +54,8 @@ initiateRegistration ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Id DCommon.Merchant ->
   Maybe (Id DCommon.MerchantOperatingCity) ->
@@ -84,6 +85,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
                 }
       else pure Nothing
 
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         PInterface.CreateOrderReq
           { orderId = orderId,
@@ -104,7 +106,8 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount

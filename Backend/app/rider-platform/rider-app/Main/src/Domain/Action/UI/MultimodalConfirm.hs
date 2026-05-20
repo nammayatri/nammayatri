@@ -372,6 +372,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
@@ -389,7 +390,8 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing,  --- assigned in shared kernel
+            webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing
