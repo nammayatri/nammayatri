@@ -408,7 +408,6 @@ library
       Domain.Types.FarePolicy.FarePolicySlabsDetails
       Domain.Types.FarePolicy.FarePolicySlabsDetails.FarePolicySlabsDetailsSlab
       Domain.Types.Feedback.FeedbackForm
-      Domain.Types.FleetOperatorTripAction
       Domain.Types.Geometry
       Domain.Types.InterCityTravelCities
       Domain.Types.LmsEnumTypes
@@ -416,13 +415,11 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
-      Domain.Types.RouteStopMapping
       Domain.Types.TicketKapture
       Domain.Types.UpgradedTier
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
-      Kernel.External.MultiModal.Types
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
       Lib.DriverScore
@@ -515,9 +512,6 @@ library
       SharedLogic.External.LocationTrackingService.API.StartRide
       SharedLogic.External.LocationTrackingService.Flow
       SharedLogic.External.LocationTrackingService.Types
-      SharedLogic.External.Nandi.API.Nandi
-      SharedLogic.External.Nandi.Flow
-      SharedLogic.External.Nandi.Types
       SharedLogic.FareCalculator
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
@@ -891,7 +885,6 @@ library
       Tools.Metrics.ARDUBPPMetrics.Types
       Tools.Metrics.SendSearchRequestToDriverMetrics
       Tools.Metrics.SendSearchRequestToDriverMetrics.Types
-      Tools.MultiModal
       Tools.Notifications
       Tools.OpenAPIInstances
       Tools.PartnerSdk
@@ -1822,6 +1815,7 @@ library
     , finance-kernel
     , generic-lens
     , geohash ==1.0.1
+    , gtfs-data-server
     , hashable
     , haskell-cac
     , hex-text

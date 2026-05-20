@@ -9,8 +9,6 @@ ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN merchant_id 
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN platform_type text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN config_json json NOT NULL;
-ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN provider_name text ;
-ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN vehicle_category text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD PRIMARY KEY ( id);
@@ -39,3 +37,9 @@ CREATE INDEX CONCURRENTLY integrated_bpp_config_idx_city_domain_platform_type_ve
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.integrated_bpp_config ADD COLUMN vehicle_category text ;

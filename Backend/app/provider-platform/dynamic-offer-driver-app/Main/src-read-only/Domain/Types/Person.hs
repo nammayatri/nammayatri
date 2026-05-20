@@ -188,7 +188,7 @@ type Driver = Person
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | CONDUCTORTOKEN deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | EMAIL_PASSWORD deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
 data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR | CONDUCTOR deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 

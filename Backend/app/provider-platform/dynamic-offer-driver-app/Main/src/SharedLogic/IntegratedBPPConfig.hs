@@ -1,9 +1,17 @@
-module SharedLogic.IntegratedBPPConfig where
+module SharedLogic.IntegratedBPPConfig
+  ( findMaybeIntegratedBPPConfig,
+    findIntegratedBPPConfig,
+    findAllIntegratedBPPConfig,
+    findAllIntegratedBPPConfigAcrossCities,
+    getGimsBaseUrl,
+  )
+where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
@@ -17,13 +25,15 @@ findMaybeIntegratedBPPConfig ::
   Text ->
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
-findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType = do
-  mbById <- maybe (pure Nothing) QIBC.findById mbIntegratedBPPConfigId
-  case mbById of
-    Just cfg -> pure $ Just cfg
-    Nothing -> do
-      moc <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
-      listToMaybe <$> QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) vehicleCategory platformType
+findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
+  case mbIntegratedBPPConfigId of
+    Just configId ->
+      IM.withInMemCache ["IntegratedBPPConfig", getId configId] 3600 $
+        QIBC.findById configId
+    Nothing ->
+      IM.withInMemCache ["IntegratedBPPConfig", getId merchantOperatingCityId, vehicleCategory, show platformType] 3600 $ do
+        moc <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
+        listToMaybe <$> QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) (Just vehicleCategory) platformType
 
 findIntegratedBPPConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -44,7 +54,7 @@ findAllIntegratedBPPConfig ::
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType = do
   moc <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
-  QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) vehicleCategory platformType
+  QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) (Just vehicleCategory) platformType
 
 findAllIntegratedBPPConfigAcrossCities ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -52,4 +62,9 @@ findAllIntegratedBPPConfigAcrossCities ::
   PlatformType ->
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType =
-  QIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType
+  QIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) (Just vehicleCategory) platformType
+
+getGimsBaseUrl :: (MonadFlow m) => IntegratedBPPConfig -> m BaseUrl
+getGimsBaseUrl cfg = case cfg.providerConfig of
+  DIRECT directCfg -> directCfg.baseUrl & fromMaybeM (InvalidRequest "GIMS baseUrl not configured in IntegratedBPPConfig")
+  ONDC _ -> throwError $ InvalidRequest "GIMS requires DIRECT provider config"

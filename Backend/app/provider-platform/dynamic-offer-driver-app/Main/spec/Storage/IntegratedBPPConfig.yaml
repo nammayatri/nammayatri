@@ -19,7 +19,7 @@ IntegratedBPPConfig:
     city: Maybe City
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
-    vehicleCategory: Text
+    vehicleCategory: Maybe Text
     platformType: PlatformType
 
   beamFields:
@@ -43,6 +43,7 @@ IntegratedBPPConfig:
     DIRECTConfig:
       cipherKey: Text
       qrRefreshTtl: Maybe Seconds
+      baseUrl: Maybe BaseUrl
       derive': "Generic, FromJSON, ToJSON, Eq, Show"
     ONDCBecknConfig:
       networkHostUrl: Maybe BaseUrl

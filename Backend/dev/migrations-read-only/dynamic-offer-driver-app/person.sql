@@ -142,3 +142,8 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN operator_badge_token text ;
 ------- SQL updates -------
 
 CREATE INDEX CONCURRENTLY person_idx_operator_badge_token ON atlas_driver_offer_bpp.person USING btree (operator_badge_token);
+
+
+
+------- SQL updates -------
+

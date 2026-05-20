@@ -4,11 +4,14 @@ imports:
   City: Kernel.Types.Beckn.Context
   VehicleCategory: BecknV2.FRFS.Enums
   TimeBound: Kernel.Types.TimeBound
-  FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
 
 module: FRFSFleetOperator
 
 types:
+  FleetOperatorTripAction:
+    enum: "TripStart, TripEnd, TripReset, TripRollback"
+    derive: "Ord, Read"
+
   FRFSStationAPI:
     name: Maybe Text
     code: Text

@@ -91,7 +91,7 @@ postDriverProfileUpdateAuthDataTriggerOTP (mbPersonId, _merchantId, merchantOpCi
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       storeAndSendOTP otpCode identifierType personId person smsCfg useFakeOtpM merchantOpCityId Nothing Nothing (Just receiverEmail)
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-    SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Conductor token identifier is not supported for profile update"
+    SP.EMAIL_PASSWORD -> throwError $ InvalidRequest "EMAIL_PASSWORD identifier is not supported for profile update"
 
   pure APISuccess.Success
   where
@@ -183,7 +183,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"
       QPersonExtra.updateEmailByPersonId personId storedEmail
     SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
-    SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "Conductor token identifier is not supported for profile update"
+    SP.EMAIL_PASSWORD -> throwError $ InvalidRequest "EMAIL_PASSWORD identifier is not supported for profile update"
 
   void $ Redis.del redisKey
 

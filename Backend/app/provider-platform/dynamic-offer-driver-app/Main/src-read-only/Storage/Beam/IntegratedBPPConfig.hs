@@ -14,18 +14,18 @@ import qualified Kernel.Types.Beckn.Context
 import Tools.Beam.UtilsTH
 
 data IntegratedBPPConfigT f = IntegratedBPPConfigT
-  { agencyKey :: B.C f Kernel.Prelude.Text,
-    city :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City),
-    domain :: B.C f Kernel.Prelude.Text,
-    feedKey :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    platformType :: B.C f Domain.Types.IntegratedBPPConfig.PlatformType,
-    configJSON :: B.C f Data.Aeson.Value,
-    vehicleCategory :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { agencyKey :: (B.C f Kernel.Prelude.Text),
+    city :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City)),
+    domain :: (B.C f Kernel.Prelude.Text),
+    feedKey :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    platformType :: (B.C f Domain.Types.IntegratedBPPConfig.PlatformType),
+    configJSON :: (B.C f Data.Aeson.Value),
+    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table IntegratedBPPConfigT where
 
 type IntegratedBPPConfig = IntegratedBPPConfigT Identity
 
-$(enableKVPG ''IntegratedBPPConfigT ['id] [['agencyKey]])
+$(enableKVPG (''IntegratedBPPConfigT) [('id)] [[('agencyKey)]])
 
-$(mkTableInstances ''IntegratedBPPConfigT "integrated_bpp_config")
+$(mkTableInstances (''IntegratedBPPConfigT) "integrated_bpp_config")

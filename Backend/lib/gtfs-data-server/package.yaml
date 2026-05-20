@@ -1,0 +1,111 @@
+name: gtfs-data-server
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+flags:
+  Local:
+    description: Enable this flag for faster compile times
+    manual: true
+    default: false
+
+description: Please see the README on GitHub at <https://github.com/nammayatri/nammayatri#readme>
+
+default-extensions:
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveAnyClass
+  - DeriveFunctor
+  - DeriveGeneric
+  - DerivingStrategies
+  - DuplicateRecordFields
+  - ExplicitNamespaces
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - LambdaCase
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - NoImplicitPrelude
+  - OverloadedStrings
+  - PackageImports
+  - PatternSynonyms
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TemplateHaskell
+  - TupleSections
+  - TypeApplications
+  - TypeFamilies
+  - TypeOperators
+  - ViewPatterns
+  - BlockArguments
+  - TypeSynonymInstances
+  - UndecidableInstances
+  - DerivingStrategies
+
+dependencies:
+  - base >= 4.7 && < 5
+  - record-dot-preprocessor
+  - record-hasfield
+  - aeson
+  - text
+  - time
+  - euler-hs
+  - servant
+  - servant-client
+  - servant-server
+  - servant-openapi3
+  - openapi3
+  - http-client
+  - http-types
+  - exceptions
+  - bytestring
+  - containers
+  - unordered-containers
+
+ghc-options:
+  - -fwrite-ide-info
+  - -hiedir=.hie
+  - -fplugin=RecordDotPreprocessor
+
+library:
+  source-dirs:
+    - src
+  exposed-modules:
+    - Lib.GtfsDataServer.API.Nandi
+    - Lib.GtfsDataServer.Domain.Types.RouteStopMapping
+    - Lib.GtfsDataServer.Flow
+    - Lib.GtfsDataServer.Types
+  ghc-options:
+    - -Wall
+    - -Wcompat
+    - -Widentities
+    - -fhide-source-paths
+    - -Werror
+    - -Wwarn=ambiguous-fields
+  when:
+    - condition: flag(Local)
+      then:
+        ghc-options:
+          - -O0
+          - -funfolding-use-threshold20
+          - -fno-cse
+          - -fmax-simplifier-iterations1
+          - -fno-specialise-aggressively
+          - -j4
+      else:
+        ghc-options:
+          - -O2
+          - -j4
+  dependencies:
+    - mobility-core
+    - beckn-spec

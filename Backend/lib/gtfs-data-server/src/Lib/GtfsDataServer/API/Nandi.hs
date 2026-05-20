@@ -1,10 +1,10 @@
-module SharedLogic.External.Nandi.API.Nandi where
+module Lib.GtfsDataServer.API.Nandi where
 
 import Data.Aeson
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
+import Lib.GtfsDataServer.Types
 import Servant
-import SharedLogic.External.Nandi.Types
 
 type RouteStopMappingByRouteIdAPI = "route-stop-mapping" :> Capture "gtfs_id" Text :> "route" :> Capture "route_code" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
@@ -34,7 +34,14 @@ type OperatorEmployeeLoginAPI =
     :> ReqBody '[JSON] GimsEmployeeLoginReq
     :> Post '[JSON] GimsEmployeeLoginResp
 
-type StopChildrenAPI = "station" :> "child" :> Capture "gtfs_id" Text :> "stopCode" :> Capture "stop_code" Text :> Get '[JSON] StopCodeResponse
+type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
+
+type StopCodeAPI = "stop-code" :> Capture "gtfs_id" Text :> Capture "provider_stop_code" Text :> Get '[JSON] StopCodeResponse
+
+type OperatorVerifyAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "verify"
+    :> ReqBody '[JSON] GimsVerifyReq
+    :> Post '[JSON] GimsVerifyResp
 
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
@@ -63,6 +70,12 @@ operatorEmployeeLoginAPI = Proxy
 stopChildrenAPI :: Proxy StopChildrenAPI
 stopChildrenAPI = Proxy
 
+stopCodeAPI :: Proxy StopCodeAPI
+stopCodeAPI = Proxy
+
+operatorVerifyAPI :: Proxy OperatorVerifyAPI
+operatorVerifyAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -87,5 +100,11 @@ postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
 postOperatorEmployeeLogin :: Text -> GimsEmployeeLoginReq -> ET.EulerClient GimsEmployeeLoginResp
 postOperatorEmployeeLogin = ET.client operatorEmployeeLoginAPI
 
-getNandiStopChildren :: Text -> Text -> ET.EulerClient StopCodeResponse
+getNandiStopChildren :: Text -> Text -> ET.EulerClient [Text]
 getNandiStopChildren = ET.client stopChildrenAPI
+
+getNandiStopCode :: Text -> Text -> ET.EulerClient StopCodeResponse
+getNandiStopCode = ET.client stopCodeAPI
+
+postOperatorVerify :: Text -> GimsVerifyReq -> ET.EulerClient GimsVerifyResp
+postOperatorVerify = ET.client operatorVerifyAPI

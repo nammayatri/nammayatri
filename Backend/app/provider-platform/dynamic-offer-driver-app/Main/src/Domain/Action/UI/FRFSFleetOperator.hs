@@ -7,11 +7,10 @@ module Domain.Action.UI.FRFSFleetOperator
 where
 
 import API.Types.UI.FRFSFleetOperator
-import BecknV2.FRFS.Enums (VehicleCategory)
+import BecknV2.FRFS.Enums (VehicleCategory (..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (unpack)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
@@ -27,14 +26,13 @@ import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id (Id (..), getId)
 import Kernel.Types.TimeBound (TimeBound (..))
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, logInfo, throwError)
+import qualified Lib.GtfsDataServer.Flow as NandiFlow
+import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest)
-import qualified SharedLogic.External.Nandi.Flow as NandiFlow
-import SharedLogic.External.Nandi.Types
-import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig)
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (GenericError (InvalidRequest))
-import Tools.MultiModal (getOTPRestServiceReq)
 
 getV2FrfsRoute ::
   ( ( Maybe (Id Domain.Types.Person.Person),
@@ -80,8 +78,8 @@ getV2FrfsRoute (_, _merchantId, merchantOpCityId) routeCode mbConfigId mbPlatfor
         case tripDetails of
           Just tripInfo -> do
             let tripStops = tripInfo.stops
-                stopSchedules = map (\stop -> SharedLogic.External.Nandi.Types.StopSchedule stop.stopCode stop.scheduledArrival stop.scheduledDeparture stop.stopPosition) tripStops
-                stopInfos = map (\stop -> SharedLogic.External.Nandi.Types.StopInfo stop.stopId stop.stopCode (fromMaybe stop.stopCode stop.stopName) stop.stopPosition stop.lat stop.lon) tripStops
+                stopSchedules = map (\stop -> Lib.GtfsDataServer.Types.StopSchedule stop.stopCode stop.scheduledArrival stop.scheduledDeparture stop.stopPosition) tripStops
+                stopInfos = map (\stop -> Lib.GtfsDataServer.Types.StopInfo stop.stopId stop.stopCode (fromMaybe stop.stopCode stop.stopName) stop.stopPosition stop.lat stop.lon) tripStops
                 hashmapSchedule = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopSchedules
                 hashmapStop = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopInfos
             foldM
@@ -119,7 +117,7 @@ getV2FrfsRoute (_, _merchantId, merchantOpCityId) routeCode mbConfigId mbPlatfor
                               distance = Nothing,
                               color = Nothing,
                               towards = Nothing,
-                              integratedBppConfigId = getId stop.integratedBppConfigId,
+                              integratedBppConfigId = stop.integratedBppConfigId,
                               parentStopCode = Nothing
                             }
                         ) :
@@ -171,20 +169,23 @@ postFrfsFleetOperatorTripAction ::
     FleetOperatorTripActionReq ->
     Flow FleetOperatorTripActionResp
   )
-postFrfsFleetOperatorTripAction (_, merchantId, merchantOpCityId) req = do
+postFrfsFleetOperatorTripAction (mbCallerId, _merchantId, merchantOpCityId) req = do
   let FleetOperatorTripActionReq {action = act, personId = pid} = req
+  callerId <- mbCallerId & fromMaybeM (InvalidRequest "Unauthorized")
+  unless (getId callerId == pid) $
+    throwError $ InvalidRequest "Unauthorized: personId mismatch"
 
-  person <- QPerson.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
+  person <- QPerson.findById callerId >>= fromMaybeM (PersonNotFound pid)
   condToken <- person.operatorBadgeToken & fromMaybeM (InvalidRequest $ "No operatorBadgeToken for person: " <> pid)
 
   integratedBPPConfig <-
     findIntegratedBPPConfig
       Nothing
       merchantOpCityId
-      "BUS"
+      (show BUS)
       MULTIMODAL
 
-  baseUrl <- getOTPRestServiceReq merchantId merchantOpCityId
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
 
   let anchor =
         GimsOperationAnchor
@@ -277,25 +278,31 @@ postFrfsFleetOperatorTripAction (_, merchantId, merchantOpCityId) req = do
             }
 
     handleTripReset baseUrl gtfsId anchor redisKey numTrips = do
+      let lockKey = redisKey <> ":lock"
+      lockAcquired <- Hedis.setNxExpire lockKey 30 ("1" :: Text)
+      unless lockAcquired $ do
+        logError $ "FRFSFleetOperator: Could not acquire lock for trip reset - " <> redisKey
+        throwError $ InvalidRequest "Could not acquire lock for trip action"
       let GimsOperationAnchor {conductor_token = ct, driver_token = dt, vehicle_number = vn} = anchor
-      void $
-        NandiFlow.gimsTripAction
-          baseUrl
-          gtfsId
-          GimsTripActionReq
-            { action = GimsTripActionReset,
-              trip_number = Nothing,
-              timestamp = Nothing,
-              conductor_token = ct,
-              driver_token = dt,
-              vehicle_number = vn
+      flip finally (void $ Hedis.del lockKey) $ do
+        void $
+          NandiFlow.gimsTripAction
+            baseUrl
+            gtfsId
+            GimsTripActionReq
+              { action = GimsTripActionReset,
+                trip_number = Nothing,
+                timestamp = Nothing,
+                conductor_token = ct,
+                driver_token = dt,
+                vehicle_number = vn
+              }
+        void $ Hedis.del redisKey
+        return $
+          FleetOperatorTripActionResp
+            { currentTripNumber = 0,
+              hasUpcomingTrips = numTrips > 0
             }
-      void $ Hedis.del redisKey
-      return $
-        FleetOperatorTripActionResp
-          { currentTripNumber = 0,
-            hasUpcomingTrips = numTrips > 0
-          }
 
     handleTripRollback baseUrl gtfsId anchor redisKey epochNow numTrips = do
       let lockKey = redisKey <> ":lock"
@@ -340,11 +347,14 @@ postFrfsFleetOperatorCurrentOperation ::
     FleetOperatorCurrentOperationReq ->
     Flow FleetOperatorCurrentOperationResp
   )
-postFrfsFleetOperatorCurrentOperation (_, merchantId, merchantOpCityId) req = do
+postFrfsFleetOperatorCurrentOperation (mbCallerId, _merchantId, merchantOpCityId) req = do
   let FleetOperatorCurrentOperationReq {personId = pid} = req
   logInfo "FRFSFleetOperator: Current operation"
+  callerId <- mbCallerId & fromMaybeM (InvalidRequest "Unauthorized")
+  unless (getId callerId == pid) $
+    throwError $ InvalidRequest "Unauthorized: personId mismatch"
 
-  person <- QPerson.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
+  person <- QPerson.findById callerId >>= fromMaybeM (PersonNotFound pid)
   condToken <- person.operatorBadgeToken & fromMaybeM (InvalidRequest $ "No operatorBadgeToken for person: " <> pid)
 
   -- 1.Find BPP config for BUS/MULTIMODAL
@@ -352,11 +362,11 @@ postFrfsFleetOperatorCurrentOperation (_, merchantId, merchantOpCityId) req = do
     findIntegratedBPPConfig
       Nothing
       merchantOpCityId
-      "BUS"
+      (show BUS)
       MULTIMODAL
 
   -- 2.Get OTP REST base URL
-  baseUrl <- getOTPRestServiceReq merchantId merchantOpCityId
+  baseUrl <- getGimsBaseUrl integratedBPPConfig
 
   let anchor =
         GimsOperationAnchor
@@ -394,8 +404,8 @@ postFrfsFleetOperatorCurrentOperation (_, merchantId, merchantOpCityId) req = do
       { waybillNo = wNo,
         vehicleNumber = vNum,
         gtfsId = DIBC.feedKey integratedBPPConfig,
-        conductorToken = cToken,
-        driverToken = dToken,
+        conductorToken = Just cToken,
+        driverToken = Just dToken,
         history = map transformTripInfo hist,
         current = transformTripInfo <$> curr,
         upcoming = map transformTripInfo upc

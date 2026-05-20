@@ -24,13 +24,14 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
-    vehicleCategory :: Kernel.Prelude.Text,
+    vehicleCategory :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data DIRECTConfig = DIRECTConfig {cipherKey :: Kernel.Prelude.Text, qrRefreshTtl :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds} deriving (Generic, FromJSON, ToJSON, Eq, Show)
+data DIRECTConfig = DIRECTConfig {baseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl, cipherKey :: Kernel.Prelude.Text, qrRefreshTtl :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds}
+  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
 
 data ONDCBecknConfig = ONDCBecknConfig
   { fareCachingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -41,14 +42,14 @@ data ONDCBecknConfig = ONDCBecknConfig
     redisPrefix :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     singleTicketForMultiplePassengers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
-  deriving (Generic, FromJSON, ToJSON, Eq, Show)
+  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
-data ProviderConfig = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig deriving (Generic, FromJSON, ToJSON, Eq, Show)
+data ProviderConfig = DIRECT Domain.Types.IntegratedBPPConfig.DIRECTConfig | ONDC Domain.Types.IntegratedBPPConfig.ONDCBecknConfig deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PlatformType))
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''PlatformType)
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''PlatformType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PlatformType))

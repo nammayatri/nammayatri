@@ -1,31 +1,46 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module SharedLogic.External.Nandi.Types where
+module Lib.GtfsDataServer.Types where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import Data.OpenApi ()
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Kernel.External.Maps.Types
+import Kernel.External.Maps (HasCoordinates (..))
+import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Types.HideSecrets (HideSecrets (..))
-import qualified Kernel.Types.Time
+import Kernel.Types.Time (Seconds)
+
+sanitizeJsonQuotes :: Text -> Text
+sanitizeJsonQuotes = T.replace "'" "\""
+
+data Gate = Gate
+  { gateName :: String,
+    stopCode :: String,
+    lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+instance HasCoordinates Gate
 
 data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
-  { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
-    providerCode :: Kernel.Prelude.Text,
-    routeCode :: Kernel.Prelude.Text,
-    sequenceNum :: Kernel.Prelude.Int,
-    stopCode :: Kernel.Prelude.Text,
-    stopName :: Kernel.Prelude.Text,
-    stopPoint :: Kernel.External.Maps.Types.LatLong,
+  { estimatedTravelTimeFromPreviousStop :: Maybe Seconds,
+    providerCode :: Text,
+    routeCode :: Text,
+    sequenceNum :: Int,
+    stopCode :: Text,
+    stopName :: Text,
+    stopPoint :: LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     hindiName :: Maybe Text,
     regionalName :: Maybe Text,
-    parentStopCode :: Maybe Text
+    parentStopCode :: Maybe Text,
+    gates :: Maybe [Gate]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data RouteInfoNandi = RouteInfoNandi
   { id :: Text,
@@ -34,12 +49,19 @@ data RouteInfoNandi = RouteInfoNandi
     mode :: BecknV2.FRFS.Enums.VehicleCategory,
     agencyName :: Maybe Text,
     tripCount :: Maybe Int,
-    startPoint :: Kernel.External.Maps.Types.LatLong,
-    endPoint :: Kernel.External.Maps.Types.LatLong,
+    startPoint :: LatLong,
+    endPoint :: LatLong,
     stopCount :: Maybe Int,
     serviceTierType :: Maybe BecknV2.FRFS.Enums.ServiceTierType
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+data ExtraInfo = ExtraInfo
+  { fareStageNumber :: Maybe Text,
+    providerStopCode :: Maybe Text,
+    isStageStop :: Maybe Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 data StopInfo = StopInfo
   { stopId :: Text,
@@ -62,14 +84,14 @@ instance FromJSON StopInfo where
       <*> v .: "lon"
 
 instance ToJSON StopInfo where
-  toJSON (StopInfo stopId stopCode stopName sequenceNum lat lon) =
+  toJSON (StopInfo sId sCode sName seqNum lat' lon') =
     object
-      [ "stopId" .= stopId,
-        "stopCode" .= stopCode,
-        "stopName" .= stopName,
-        "sequence" .= sequenceNum,
-        "lat" .= lat,
-        "lon" .= lon
+      [ "stopId" .= sId,
+        "stopCode" .= sCode,
+        "stopName" .= sName,
+        "sequence" .= seqNum,
+        "lat" .= lat',
+        "lon" .= lon'
       ]
 
 data StopSchedule = StopSchedule
@@ -89,24 +111,13 @@ instance FromJSON StopSchedule where
       <*> v .: "sequence"
 
 instance ToJSON StopSchedule where
-  toJSON (StopSchedule stopCode arrivalTime departureTime sequenceNum) =
+  toJSON (StopSchedule sCode arrTime depTime seqNum) =
     object
-      [ "stopCode" .= stopCode,
-        "arrivalTime" .= arrivalTime,
-        "departureTime" .= departureTime,
-        "sequence" .= sequenceNum
+      [ "stopCode" .= sCode,
+        "arrivalTime" .= arrTime,
+        "departureTime" .= depTime,
+        "sequence" .= seqNum
       ]
-
-data ExtraInfo = ExtraInfo
-  { fareStageNumber :: Maybe Text,
-    providerStopCode :: Maybe Text,
-    isStageStop :: Maybe Bool
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
-
--- Replace single quotes with double quotes
-sanitizeJsonQuotes :: Text -> Text
-sanitizeJsonQuotes = T.replace "'" "\""
 
 data TripStopDetail = TripStopDetail
   { stopId :: Text,
@@ -120,7 +131,7 @@ data TripStopDetail = TripStopDetail
     extraInfo :: Maybe ExtraInfo,
     stopPosition :: Int
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
 
 instance FromJSON TripStopDetail where
   parseJSON = withObject "TripStopDetail" $ \obj -> do
@@ -130,25 +141,17 @@ instance FromJSON TripStopDetail where
         Nothing -> pure Nothing
         Just headsignText -> do
           let sanitized = sanitizeJsonQuotes headsignText
-          -- Try to parse headsign as JSON first
           case eitherDecodeStrict (TE.encodeUtf8 sanitized) of
             Right (Object headsignObj) -> do
-              -- Parse as ExtraInfo object
-              extraInfo <- parseJSON (Object headsignObj)
-              pure (Just extraInfo)
+              ei <- parseJSON (Object headsignObj)
+              pure (Just ei)
             Right (String jsonString) -> do
-              -- The JSON string contains another JSON object, parse that
               case eitherDecodeStrict (TE.encodeUtf8 (sanitizeJsonQuotes jsonString)) of
                 Right (Object headsignObj) -> do
-                  extraInfo <- parseJSON (Object headsignObj)
-                  pure (Just extraInfo)
-                _ -> do
-                  -- Fallback: treat as simple text for fareStageNumber
-                  pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
-            _ -> do
-              -- Fallback: treat as simple text for fareStageNumber
-              pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
-
+                  ei <- parseJSON (Object headsignObj)
+                  pure (Just ei)
+                _ -> pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
+            _ -> pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
     TripStopDetail
       <$> obj .: "stopId"
       <*> obj .: "stopCode"
@@ -162,25 +165,25 @@ instance FromJSON TripStopDetail where
       <*> obj .: "stopPosition"
 
 instance ToJSON TripStopDetail where
-  toJSON (TripStopDetail stopId stopCode stopName platformCode lat lon scheduledArrival scheduledDeparture extraInfo stopPosition) =
+  toJSON (TripStopDetail sId sCode sName pCode lat' lon' schedArr schedDep ei stopPos) =
     object
-      [ "stopId" .= stopId,
-        "stopCode" .= stopCode,
-        "stopName" .= stopName,
-        "platformCode" .= platformCode,
-        "lat" .= lat,
-        "lon" .= lon,
-        "scheduledArrival" .= scheduledArrival,
-        "scheduledDeparture" .= scheduledDeparture,
-        "extraInfo" .= extraInfo,
-        "stopPosition" .= stopPosition
+      [ "stopId" .= sId,
+        "stopCode" .= sCode,
+        "stopName" .= sName,
+        "platformCode" .= pCode,
+        "lat" .= lat',
+        "lon" .= lon',
+        "scheduledArrival" .= schedArr,
+        "scheduledDeparture" .= schedDep,
+        "extraInfo" .= ei,
+        "stopPosition" .= stopPos
       ]
 
 data TripDetails = TripDetails
   { tripId :: Text,
     stops :: [TripStopDetail]
   }
-  deriving (Generic, Show, ToSchema)
+  deriving (Generic, Show)
 
 instance FromJSON TripDetails where
   parseJSON = withObject "TripDetails" $ \obj ->
@@ -189,17 +192,20 @@ instance FromJSON TripDetails where
       <*> obj .: "stops"
 
 instance ToJSON TripDetails where
-  toJSON (TripDetails tripId stops) =
-    object
-      [ "tripId" .= tripId,
-        "stops" .= stops
-      ]
+  toJSON (TripDetails tid ss) =
+    object ["tripId" .= tid, "stops" .= ss]
+
+-- | Single stop-code lookup response (GIMS "stop-code" endpoint).
+newtype StopCodeResponse = StopCodeResponse
+  { stop_code :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsTripAction
   = GimsTripActionStart
   | GimsTripActionEnd
   | GimsTripActionReset
-  deriving (Show, Read, Eq, Ord, Generic, ToSchema)
+  deriving (Show, Read, Eq, Ord, Generic)
 
 instance ToJSON GimsTripAction where
   toJSON GimsTripActionStart = toJSON ("start" :: Text)
@@ -221,25 +227,13 @@ data GimsTripActionReq = GimsTripActionReq
     driver_token :: Maybe Text,
     vehicle_number :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToSchema, Show)
-
-instance ToJSON GimsTripActionReq where
-  toJSON (GimsTripActionReq act tn ts ct dt vn) =
-    object $
-      ("action" .= act) :
-      catMaybes
-        [ ("trip_number" .=) <$> tn,
-          ("timestamp" .=) <$> ts,
-          ("conductor_token" .=) <$> ct,
-          ("driver_token" .=) <$> dt,
-          ("vehicle_number" .=) <$> vn
-        ]
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
     number_of_trips :: Int
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsCurrentTripDetailsReq = GimsCurrentTripDetailsReq
   { previous_trip_number :: Int,
@@ -247,17 +241,7 @@ data GimsCurrentTripDetailsReq = GimsCurrentTripDetailsReq
     driver_token :: Maybe Text,
     vehicle_number :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToSchema, Show)
-
-instance ToJSON GimsCurrentTripDetailsReq where
-  toJSON (GimsCurrentTripDetailsReq ptn ct dt vn) =
-    object $
-      ("previous_trip_number" .= ptn) :
-      catMaybes
-        [ ("conductor_token" .=) <$> ct,
-          ("driver_token" .=) <$> dt,
-          ("vehicle_number" .=) <$> vn
-        ]
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsTripInfo = GimsTripInfo
   { trip_number :: Int,
@@ -270,7 +254,7 @@ data GimsTripInfo = GimsTripInfo
     end_time :: Maybe Text
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, ToSchema)
+  deriving anyclass (ToJSON)
 
 instance FromJSON GimsTripInfo where
   parseJSON = withObject "GimsTripInfo" $ \v -> do
@@ -287,54 +271,54 @@ instance FromJSON GimsTripInfo where
 data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
   { waybill_no :: Text,
     vehicle_number :: Text,
-    conductor_token :: Maybe Text,
-    driver_token :: Maybe Text,
+    conductor_token :: Text,
+    driver_token :: Text,
     history :: [GimsTripInfo],
     current :: Maybe GimsTripInfo,
     upcoming :: [GimsTripInfo]
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsOperationAnchor = GimsOperationAnchor
   { conductor_token :: Maybe Text,
     driver_token :: Maybe Text,
     vehicle_number :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToSchema, Show)
-
-instance ToJSON GimsOperationAnchor where
-  toJSON (GimsOperationAnchor ct dt vn) =
-    object $
-      catMaybes
-        [ ("conductor_token" .=) <$> ct,
-          ("driver_token" .=) <$> dt,
-          ("vehicle_number" .=) <$> vn
-        ]
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance HideSecrets GimsOperationAnchor where
   hideSecrets = identity
 
--- | Request body for the fleet-operator employee login endpoint.
+-- | Verify conductor badge token against device serial number (GIMS "verify" endpoint).
+data GimsVerifyReq = GimsVerifyReq
+  { operator_badge_token :: Text,
+    device_serial_number :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+instance HideSecrets GimsVerifyReq where
+  hideSecrets = identity
+
+newtype GimsVerifyResp = GimsVerifyResp
+  { verified :: Bool
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
+
+-- | Employee login request for conductor EMAIL_PASSWORD auth (driver-app only).
 -- GIMS expects pre-hashed values: SHA256(hashSalt <> value).
 data GimsEmployeeLoginReq = GimsEmployeeLoginReq
   { auth_type :: Maybe Text,
     email_hash :: Text,
     password_hash :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)
 
 instance HideSecrets GimsEmployeeLoginReq where
   hideSecrets req = req {email_hash = "***", password_hash = "***"}
 
--- | Response body from the fleet-operator employee login endpoint.
--- Returns verification status and optional badge token.
+-- | Response from the employee login endpoint (driver-app only).
 data GimsEmployeeLoginResp = GimsEmployeeLoginResp
   { verified :: Bool,
     token :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
-
-data StopCodeResponse = StopCodeResponse
-  { stopCodes :: [Text]
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToJSON, Show)

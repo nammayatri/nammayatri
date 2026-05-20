@@ -28,7 +28,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
-      enum: "MOBILENUMBER, AADHAAR, EMAIL, CONDUCTORTOKEN"
+      enum: "MOBILENUMBER, AADHAAR, EMAIL, EMAIL_PASSWORD"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     Gender:

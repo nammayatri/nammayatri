@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByPlatformAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
 findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
   findAllWithKV
     [ Se.And
@@ -40,7 +40,7 @@ findByAgencyId agencyKey = do findOneWithKV [Se.And [Se.Is Beam.agencyKey $ Se.E
 
 findByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
 findByDomainAndCityAndVehicleCategory domain city vehicleCategory platformType = do
   findAllWithKV
     [ Se.And
