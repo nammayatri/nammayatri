@@ -226,6 +226,8 @@ _:
             # doesn't hold the port and crash a fresh service start.
             echo "── Pre-flight: freeing service ports ──"
             ${killSvcPortsScript}
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.

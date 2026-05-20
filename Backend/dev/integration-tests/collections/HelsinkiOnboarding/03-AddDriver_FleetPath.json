@@ -1,0 +1,57 @@
+{
+	"info": {
+		"_postman_id": "helsinki-onboarding-03f-add-driver-fleet-probe",
+		"name": "Helsinki Onboarding 03F - Add Driver (FLEET role probe)",
+		"description": "Probes the FLEET-role path: fleet owner calls /fleet/addDrivers (multipart CSV) directly. This is INFORMATIONAL — per the project notes, FLEET role may not yet have access to all driver-add APIs. The orchestrator runs this but does not gate on its success; results are captured for inspection. Compare against the master BPP dashboard DB (`atlas_bpp_dashboard.access_matrix WHERE role_id = FLEET_role_id`) to confirm permission gaps.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "01 - FLEET role attempts /fleet/addDrivers (multipart CSV)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const code = pm.response.code;",
+							"pm.test('Endpoint reachable (200, 400, 401, 403, or 404)', () => pm.expect([200, 400, 401, 403, 404]).to.include(code));",
+							"console.log('FLEET path /fleet/addDrivers response:', code, pm.response.text().slice(0, 300));",
+							"if (code === 200) {",
+							"  pm.test('FLEET path works — add-driver succeeded as FLEET role', () => true);",
+							"} else if (code === 401 || code === 403) {",
+							"  console.warn('FLEET role lacks access to /fleet/addDrivers — expected per project notes');",
+							"} else if (code === 404) {",
+							"  console.warn('Endpoint not mounted on this build — check rebasing-with-msil-main branch');",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "token", "value": "{{fleet_owner_token}}" }
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "text",
+							"value": "firstName,lastName,mobileNumber,mobileCountryCode,email\nFleetDriver1,Test,{{driver_mobile}},{{country_code}},fleet-driver-{{driver_mobile}}@helsinki.test\n",
+							"description": "Inline CSV body. Real Postman runs may need this as a file upload via Postman UI — newman supports inline text fields."
+						},
+						{ "key": "fleetOwnerId", "type": "text", "value": "{{fleet_owner_id}}" }
+					]
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/addDrivers?fleetOwnerId={{fleet_owner_id}}",
+					"host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+					"path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "addDrivers"],
+					"query": [ { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" } ]
+				}
+			}
+		}
+	]
+}

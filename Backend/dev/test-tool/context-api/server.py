@@ -198,8 +198,10 @@ DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
+# Keep in sync with config_transfer.py's DEFAULT_FETCH_VERSIONS. master is on v1
+# (older zip layout still uploaded); prod / prod_international are on v2.
 CONFIG_SYNC_BUNDLE_URLS = {
-    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v2",
+    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1",
     "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
     "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v2",
 }
