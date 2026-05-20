@@ -462,7 +462,7 @@ in
             imports = [ common ];
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
             environment = {
-              DEV = "true";
+              BYPASS_LTS_S3_AND_GCP = "true";
             };
             availability = {
               restart = "on_failure";

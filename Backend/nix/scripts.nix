@@ -221,7 +221,6 @@ _:
           category = "Backend";
           description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
-            export DEV=1
             # Free up service ports first so a stale process from a prior run
             # doesn't hold the port and crash a fresh service start.
             echo "── Pre-flight: freeing service ports ──"
@@ -245,7 +244,6 @@ _:
           category = "Backend";
           description = "Run the FULL nammayatri stack in one terminal: backend + test-context-api + mock-server + test-local-api + test-dashboard.";
           exec = ''
-            export DEV=1
             echo "── Pre-flight: freeing service ports ──"
             ${killSvcPortsScript}
             echo "── Pre-flight: freeing dashboard ports ──"
@@ -263,7 +261,6 @@ _:
           category = "Backend";
           description = "Run only the test-dashboard (port 7070, React) + test-local-api (port 7083).";
           exec = ''
-            export DEV=1
             echo "── Pre-flight: freeing dashboard ports ──"
             ${killLocalTestDashboardPortsScript}
             _hard=$(ulimit -Hs 2>/dev/null || true)
@@ -490,7 +487,6 @@ _:
               echo "  Step 2: Starting mobility stack..."
               echo "═══════════════════════════════════════"
 
-              export DEV=1
               nix run .#run-mobility-stack-dev &
               STACK_PID=$!
 
