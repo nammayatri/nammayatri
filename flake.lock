@@ -1951,11 +1951,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1777300069,
-        "narHash": "sha256-/AlFRoRnwAJSTAZPc2da9o9ix/dU3ZK/fvqyIwe8tTg=",
+        "lastModified": 1779208257,
+        "narHash": "sha256-1DJli8kb43N/26kxfHPhEoUyoruSekAUhgi/CbysG78=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "3bbc8fbd79d983ea0fc36d888f747c538ef7d6df",
+        "rev": "7583ec7d455ffa82f6edc8c8f63e9e876629bbaa",
         "type": "github"
       },
       "original": {
