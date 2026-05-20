@@ -3,6 +3,7 @@
 
 module Storage.Beam.VehicleServiceTier where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
@@ -12,6 +13,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data VehicleServiceTierT f = VehicleServiceTierT
@@ -25,6 +27,7 @@ data VehicleServiceTierT f = VehicleServiceTierT
     fareAdditionPerKmOverBaseServiceTier :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     id :: (B.C f Kernel.Prelude.Text),
     isAirConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isAirportRideEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isIntercityEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     isRentalsEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
@@ -39,8 +42,10 @@ data VehicleServiceTierT f = VehicleServiceTierT
     seatingCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     serviceTierType :: (B.C f Domain.Types.Common.ServiceTierType),
     shortDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    specialZone :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
     stopFcmSuppressCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     stopFcmThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    vehicleAgeThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months)),
     vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
     vehicleIconUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     vehicleRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),

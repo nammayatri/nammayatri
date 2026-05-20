@@ -75,6 +75,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.AirportEntryFee as AirportEntryFee
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
@@ -292,7 +293,7 @@ otpRideCreate driver otpCode booking clientId = do
       | otherwise = throwM exc
 
     isNotAllowedVehicleVariant driverVehicleVariant bookingServiceTier = do
-      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
+      vehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookingServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show bookingServiceTier))
       return $ driverVehicleVariant `notElem` vehicleServiceTierItem.allowedVehicleVariant
 
 arrivedAtStop :: Id DRide.Ride -> LatLong -> Flow APISuccess
