@@ -57,6 +57,7 @@ apis:
         status: InvoiceStatus
         fleetOwnerOrDriverId: Text
         issuedToType: IssuedToType
+        issuedToTypes: [IssuedToType] # Multi-value IN filter; mirrors /finance/invoice/list
         language: Language
       auth: ApiAuthV2
       response:
@@ -76,6 +77,7 @@ apis:
         status: InvoiceStatus
         fleetOwnerOrDriverId: Text
         issuedToType: IssuedToType
+        issuedToTypes: [IssuedToType] # Added new query param to filter by multiple issuedToType values (IN clause)
       auth: ApiAuthV2
       response:
         type: InvoiceListRes
