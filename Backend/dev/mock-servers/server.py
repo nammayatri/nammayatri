@@ -25,6 +25,7 @@ Two override mechanisms for test automation:
 import argparse
 import json
 import logging
+import os
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
@@ -281,7 +282,16 @@ class MockHandler(BaseHTTPRequestHandler):
     # outside the dev stack.
 
     _SQL_WHERE_OPS = {"=", "!=", "<", "<=", ">", ">=", "LIKE", "IN", "IS NULL", "IS NOT NULL"}
-    _SQL_DB_DEFAULT = {"host": "localhost", "port": 5434, "user": "atlas_app_user"}
+    # `atlas_superuser` has SELECT across all schemas (atlas_app + atlas_driver_offer_bpp + …).
+    # `atlas_app_user` is scoped to atlas_app only and 500s on cross-schema queries.
+    # Local dev Postgres uses trust auth so password is ignored — kept optional for
+    # environments that switch to md5/scram. Override any of these via env vars.
+    _SQL_DB_DEFAULT = {
+        "host": os.environ.get("MOCK_SQL_HOST", "localhost"),
+        "port": int(os.environ.get("MOCK_SQL_PORT", "5434")),
+        "user": os.environ.get("MOCK_SQL_USER", "atlas_superuser"),
+        **({"password": os.environ["MOCK_SQL_PASSWORD"]} if os.environ.get("MOCK_SQL_PASSWORD") else {}),
+    }
 
     def _build_where(self, clauses):
         """Build a (SQL, params) pair from a where_clause list.
