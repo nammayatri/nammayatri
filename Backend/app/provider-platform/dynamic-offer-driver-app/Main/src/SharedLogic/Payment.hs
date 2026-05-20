@@ -88,7 +88,8 @@ createOrder ::
     EncFlow m r,
     CoreMetrics m,
     MonadFlow m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DMSC.ServiceName ->
@@ -123,6 +124,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
   logInfo $ "split details: " <> show splitSettlementDetails
   when (amount <= 0) $ throwError (InternalError "Invalid Amount :- should be greater than 0")
   unless (isJust existingInvoice) $ QIN.createMany invoices
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         CreateOrderReq
           { orderId = invoiceId.getId,
@@ -142,6 +144,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            webhookUrl = Just $ showBaseUrl nwAddress,
             basket = Nothing,
             paymentRules = Nothing
           }
@@ -423,12 +426,14 @@ createWalletTopupOrder ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     MonadFlow m,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   HighPrecMoney ->
   m (Payment.CreateOrderResp, Id DOrder.PaymentOrder)
 createWalletTopupOrder (driverId, merchantId, mocId) amount = do
+  nwAddress <- asks (.nwAddress)
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   merchantServiceUsageConfig <-
@@ -461,7 +466,8 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount = do
             splitSettlementDetails = Nothing,
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
-            paymentRules = Nothing
+            paymentRules = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress
           }
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

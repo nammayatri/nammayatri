@@ -52,7 +52,8 @@ executePaymentIntentJob ::
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Job 'ExecutePaymentIntent ->
   m ExecutionResult

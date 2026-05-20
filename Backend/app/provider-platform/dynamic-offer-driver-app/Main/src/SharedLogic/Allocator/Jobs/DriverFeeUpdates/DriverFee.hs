@@ -806,7 +806,8 @@ sendManualPaymentLink ::
     HasField "schedulerType" r SchedulerType,
     HasField "smsCfg" r SmsConfig,
     HasField "jobInfoMap" r (M.Map Text Bool),
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Job 'SendManualPaymentLink ->
   m ExecutionResult
@@ -836,7 +837,7 @@ sendManualPaymentLink Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
           ReSchedule <$> getRescheduledTime subscriptionConfigs.genericJobRescheduleTime
 
 processAndSendManualPaymentLink ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   [DPlan.DriverPlan] ->
   SubscriptionConfig ->
   Id Merchant ->

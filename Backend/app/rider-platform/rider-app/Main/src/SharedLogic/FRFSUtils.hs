@@ -834,7 +834,8 @@ createPaymentOrder ::
     EncFlow m r,
     ServiceFlow m r,
     FinanceBeamFlow.BeamFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
@@ -847,6 +848,7 @@ createPaymentOrder ::
   Bool ->
   m (Maybe DOrder.PaymentOrder)
 createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket isMockPayment = do
+  nwAddress <- asks (.nwAddress)
   logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
   logInfo $ "createPayments basket" <> show basket
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
@@ -881,6 +883,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = basket,
             paymentRules = Nothing
