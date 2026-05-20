@@ -363,3 +363,9 @@ data VehicleServiceTierOrderConfig = VehicleServiceTierOrderConfig
     vehicle :: ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)
+
+data SpecialZone = SpecialZone
+  { serviceTierNameForZone :: Text,
+    specialZoneId :: Text
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

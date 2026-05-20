@@ -16,7 +16,6 @@ import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import qualified Domain.Types.TransporterConfig as DTC
-import qualified Domain.Types.VehicleCategory as VC
 import Domain.Types.VehicleServiceTier as DVST
 import Domain.Types.VehicleVariant as DV
 import Domain.Utils
@@ -182,41 +181,16 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
       let softBlockedTiers = fromMaybe [] dpd.softBlockStiers
       let removeSoftBlockedTiers = filter (\stier -> stier `notElem` softBlockedTiers)
 
-      -- Service tier selection with AC usage restriction (replaces selectVehicleTierForDriverWithUsageRestriction)
-      let availableTiersWithUsageRestriction =
-            map (checkUsageRestriction dpd) $
-              filter (\vst -> dpd.variant `elem` vst.allowedVehicleVariant) cityServiceTiers
-      let ifUsageRestricted = any snd availableTiersWithUsageRestriction
-      let selectedDriverServiceTiers =
-            removeSoftBlockedTiers $
-              if ifUsageRestricted
-                then (.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction)
-                else DL.intersect dpd.selectedServiceTiers ((.serviceTierType) <$> (map fst $ filter (not . snd) availableTiersWithUsageRestriction))
+      let availableCityTiers = (.serviceTierType) <$> filter (\vst -> dpd.variant `elem` vst.allowedVehicleVariant) cityServiceTiers
+      let selectedDriverServiceTiers = removeSoftBlockedTiers $ DL.intersect dpd.selectedServiceTiers availableCityTiers
 
       let matchingTiers =
             if null serviceTiers
               then selectedDriverServiceTiers
               else filter (`elem` selectedDriverServiceTiers) serviceTiers
 
+      guard $ not $ null matchingTiers
       Just $ mapMaybe (mkResult dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination) matchingTiers
-
-    -- AC / luggage / rating usage restriction check per service tier (equivalent to selectVehicleTierForDriverWithUsageRestriction)
-    checkUsageRestriction :: DPD.DriverPoolData -> DVST.VehicleServiceTier -> (DVST.VehicleServiceTier, Bool)
-    checkUsageRestriction dpd vst =
-      let luggageCheck = compareNumber dpd.luggageCapacity vst.luggageCapacity
-          acCheck =
-            (vst.vehicleCategory == Just VC.AMBULANCE)
-              || ( compareNumber vst.airConditionedThreshold dpd.airConditionScore
-                     && (isNothing vst.airConditionedThreshold || dpd.airConditioned /= Just False)
-                 )
-          vehicleRatingCheck = compareNumber dpd.vehicleRating vst.vehicleRating
-          usageRestricted = not (luggageCheck && acCheck && vehicleRatingCheck)
-       in (vst, usageRestricted)
-
-    compareNumber :: Ord a => Maybe a -> Maybe a -> Bool
-    compareNumber mbX mbY = case (mbX, mbY) of
-      (Just x, Just y) -> x >= y
-      _ -> True
 
     mkResult dpd location dist mbDefaultServiceTierForDriver cityServiceTiersHashMap mbPrevDropLat mbPrevDropLon mbDistToDestination serviceTier = do
       serviceTierInfo <- HashMap.lookup serviceTier cityServiceTiersHashMap

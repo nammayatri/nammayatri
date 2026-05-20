@@ -156,7 +156,7 @@ clearAirportPerKmFareCacheForPolicy fpId = do
         Map.fromListWith (<>) [(cityId, [(tier, slId)]) | (cityId, tier, slId) <- pickupProducts]
   cacheKeys <-
     fmap concat . forM (Map.toList byCity) $ \(cityId, tierSlPairs) -> do
-      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
+      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing Nothing
       let variantsForTier tier =
             [ v
               | vst <- cityServiceTiers,
@@ -184,7 +184,7 @@ computeAirportPerKmFare ::
   DV.VehicleVariant ->
   m (Maybe HighPrecMoney)
 computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant = do
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
   let eligibleServiceTiers =
         [ vst.serviceTierType
           | vst <- cityServiceTiers,

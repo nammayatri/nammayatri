@@ -369,8 +369,8 @@ postDriverAcRestrictionUpdate merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
-  checkAndUpdateAirConditioned True req.isWorking personId cityVehicleServiceTiers req.downgradeReason
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
+  checkAndUpdateAirConditioned True req.isWorking personId merchantOpCityId cityVehicleServiceTiers req.downgradeReason True
   logTagInfo "dashboard -> updateACUsageRestriction : " (show personId)
   pure Success
 
@@ -862,10 +862,9 @@ postDriverUpdateVehicleVariant _merchantShortId _opCity _ req = do
 updateVehicleVariantAndServiceTier :: DV.VehicleVariant -> DVeh.Vehicle -> DVC.VehicleCategory -> Flow ()
 updateVehicleVariantAndServiceTier variant vehicle vehicleCategory = do
   driver <- B.runInReplica $ QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
-  driverInfo' <- QDriverInfo.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-  -- driverStats <- runInReplica $ QDriverStats.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
-  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId (Just [])
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo' vehicle vehicleServiceTiers
+  vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId (Just []) Nothing
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just vehicle) Nothing (Just vehicleServiceTiers) vehicle.driverId driver.merchantOperatingCityId
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> serviceTiers
   QVehicle.updateVariantAndServiceTiers variant availableServiceTiersForDriver (Just vehicleCategory) vehicle.driverId
 
 ---------------------------------------------------------------------
@@ -1437,7 +1436,7 @@ postDriverVehicleAppendSelectedServiceTiers merchantShortId opCity driverId req 
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   forM_ req.selected_service_tiers $ \serviceTier -> do
-    CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
+    CQVST.findByServiceTierTypeAndCityId serviceTier merchantOpCityId Nothing Nothing >>= fromMaybeM (VehicleServiceTierNotFound $ show serviceTier)
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
   let currentTiers = vehicle.selectedServiceTiers
       newTiers = nub $ currentTiers ++ req.selected_service_tiers
