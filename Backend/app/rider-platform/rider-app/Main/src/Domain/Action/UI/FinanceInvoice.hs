@@ -70,6 +70,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
               (Just personId.getId)
               Nothing
               Nothing
+              []
               statusFilter
               limitArg
               (mbOffset <|> Just 0)

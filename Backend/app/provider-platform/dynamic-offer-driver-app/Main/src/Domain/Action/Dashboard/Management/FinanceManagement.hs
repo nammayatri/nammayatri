@@ -34,7 +34,7 @@ import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..), ShortId (..), cast)
-import Kernel.Utils.Common (logError, secondsToNominalDiffTime)
+import Kernel.Utils.Common (logError, logWarning, secondsToNominalDiffTime)
 import Kernel.Utils.Error (fromMaybeM, throwError)
 import qualified Lib.Finance.Domain.Types.Account as Account
 import qualified Lib.Finance.Domain.Types.DirectTaxTransaction as DirectTax
@@ -348,6 +348,10 @@ getFinanceManagementSubscriptionPurchaseList merchantShortId opCity mbAmountMax 
           }
 
 -- | Fetch invoices using the shared filter logic for invoice list / pdf endpoints.
+-- When @mbIssuedToTypes@ is supplied and non-empty, it overrides the singular
+-- @mbIssuedToType@: the singular CUSTOMER default is skipped, the list is used
+-- as an IN-clause filter on issued_to_type, and the BAP-side statusIn auto-filter
+-- is not applied (caller can still pass ?status= explicitly).
 fetchInvoicesByFilters ::
   Id DMOC.MerchantOperatingCity ->
   Maybe Text -> -- fleetOwnerOrDriverId
@@ -356,15 +360,26 @@ fetchInvoicesByFilters ::
   Maybe Text -> -- invoiceNumber
   Maybe InvoiceType ->
   Maybe IssuedToType ->
+  Maybe [IssuedToType] -> -- issuedToTypes (multi-value IN filter)
   Int -> -- limit
   Int -> -- offset
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow [FinanceInvoice.Invoice]
-fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo = do
-  let issuedToType = fromMaybe CUSTOMER mbIssuedToType
+fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo = do
+  let issuedToTypeList = fromMaybe [] mbIssuedToTypes
+      useTypeList = not (null issuedToTypeList)
+      issuedToType = fromMaybe CUSTOMER mbIssuedToType
       isBapIssuedToType = issuedToType == RIDER || issuedToType == CUSTOMER
-      statusIn = if isBapIssuedToType then [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid] else []
+      statusIn =
+        if useTypeList
+          then []
+          else
+            if isBapIssuedToType
+              then [FinanceInvoice.Draft, FinanceInvoice.Issued, FinanceInvoice.Paid]
+              else []
+  when (isJust mbIssuedToType && useTypeList) $
+    logWarning "Both issuedToType and issuedToTypes supplied; issuedToType will be ignored"
   case mbInvoiceId of
     Just invoiceId ->
       QFinanceInvoice.findById (Id invoiceId) >>= \case
@@ -392,7 +407,8 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
           mbStatus
           mbIssuedToId
           mbSupplierId
-          (Just issuedToType)
+          (if useTypeList then Nothing else Just issuedToType)
+          issuedToTypeList
           statusIn
           (Just limit)
           (Just offset)
@@ -407,19 +423,20 @@ getFinanceManagementInvoiceList ::
   Maybe Text ->
   Maybe InvoiceType ->
   Maybe IssuedToType ->
+  Maybe [IssuedToType] ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.InvoiceListRes
-getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
 
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
 
   -- Default (no status filter): hide Voided/Cancelled. Caller can request
   -- explicitly via ?status=Voided / ?status=Cancelled.
@@ -536,6 +553,7 @@ getFinanceManagementFinanceInvoiceList ::
   Maybe Text ->
   Maybe InvoiceType ->
   Maybe IssuedToType ->
+  Maybe [IssuedToType] ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
@@ -1295,13 +1313,14 @@ getFinanceManagementFinanceInvoicePdf ::
   Maybe Text ->
   Maybe InvoiceType ->
   Maybe IssuedToType ->
+  Maybe [IssuedToType] ->
   Maybe KET.Language ->
   Maybe Int ->
   Maybe Int ->
   Maybe FinanceInvoice.InvoiceStatus ->
   Maybe UTCTime ->
   Flow API.FinanceInvoicePdfResp
-getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbLanguage mbLimit mbOffset mbStatus mbTo = do
+getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes mbLanguage mbLimit mbOffset mbStatus mbTo = do
   merchant <- SMerchant.findMerchantByShortId merchantShortId
   merchantOpCity <-
     CQMOC.findByMerchantIdAndCity merchant.id opCity
@@ -1310,7 +1329,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   let limit = mkPageLimit mbLimit
       offset = mkPageOffset mbOffset
 
-  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType limit offset mbStatus mbTo
+  invoicesAll <- fetchInvoicesByFilters merchantOpCity.id mbFleetOwnerOrDriverId mbFrom mbInvoiceId mbInvoiceNumber mbInvoiceType mbIssuedToType mbIssuedToTypes limit offset mbStatus mbTo
 
   -- When no explicit status filter is sent, exclude Voided/Cancelled rows so
   -- the PDF endpoint never renders a dead invoice. Caller can request these
