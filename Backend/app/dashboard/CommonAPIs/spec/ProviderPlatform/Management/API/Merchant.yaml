@@ -46,6 +46,8 @@ imports:
   Area: Lib.Types.SpecialLocation
   TimeBound: Kernel.Types.TimeBound
   TripCategory: Dashboard.Common
+  Months: Kernel.Types.Time
+  SpecialZone: Dashboard.Common
 
 module: Merchant
 
@@ -1097,6 +1099,9 @@ types:
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
+    - vehicleAgeThreshold: Maybe Months
+    - isAirportRideEnabled: Maybe Bool
+    - specialZone: Maybe SpecialZone
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -1124,6 +1129,9 @@ types:
     - scheduleBookingListEligibilityTags: Maybe [Text]
     - isEnabled: Maybe Bool
     - allowedAreas: Maybe [Area]
+    - specialZone: Maybe SpecialZone
+    - vehicleAgeThreshold: Maybe Months
+    - isAirportRideEnabled: Maybe Bool
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
@@ -1154,6 +1162,9 @@ types:
     - isEnabled: Bool
     - allowedAreas: Maybe [Area]
     - derive: "'HideSecrets"
+    - vehicleAgeThreshold: Maybe Months
+    - isAirportRideEnabled: Maybe Bool
+    - specialZone: Maybe SpecialZone
   VehicleServiceTierListRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]

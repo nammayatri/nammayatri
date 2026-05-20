@@ -403,3 +403,15 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN allowed_areas
 
 ------- SQL updates -------
 
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN vehicle_age_threshold int ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_airport_ride_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN special_zone json ;
