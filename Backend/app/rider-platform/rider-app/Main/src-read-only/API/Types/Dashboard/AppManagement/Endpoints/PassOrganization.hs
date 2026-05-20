@@ -28,7 +28,12 @@ data AssignDepotReq = AssignDepotReq {depotId :: Kernel.Prelude.Maybe Kernel.Pre
 instance Kernel.Types.HideSecrets.HideSecrets AssignDepotReq where
   hideSecrets = Kernel.Prelude.identity
 
-data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe Kernel.Prelude.Text, id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization, name :: Kernel.Prelude.Text}
+data GetOrganizationResp = GetOrganizationResp
+  { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
+    name :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

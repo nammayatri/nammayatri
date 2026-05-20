@@ -194,7 +194,8 @@ mkGetOrganizationResp org =
   PassOrganizationAPI.GetOrganizationResp
     { PassOrganizationAPI.id = org.id,
       PassOrganizationAPI.name = org.name,
-      PassOrganizationAPI.address = org.address
+      PassOrganizationAPI.address = org.address,
+      PassOrganizationAPI.depotId = org.depotId
     }
 
 getPassOrganizationPassDetailsDocument :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DMF.MediaFile -> Environment.Flow Kernel.Prelude.Text)
