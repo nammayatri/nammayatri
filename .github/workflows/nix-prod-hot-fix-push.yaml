@@ -130,7 +130,7 @@ jobs:
         run: |
           PATHS=$(jq -r '.[].outPaths[]' ./result)
           echo "Paths to push: $(echo "$PATHS" | wc -l)"
-          echo "$PATHS" | xargs du -sch 2>/dev/null
+          echo "$PATHS" | xargs -r du -sch 2>/dev/null
 
           # Try attic, fall back to cachix on any failure
           attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
