@@ -21,12 +21,16 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data AssignDepotReq = AssignDepotReq {depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, passOrganizationIds :: [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization]}
+data AssignDepotReq = AssignDepotReq {depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, depotPersonId :: Kernel.Types.Id.Id Domain.Types.Person.Person, passOrganizations :: [DepotAssign]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets AssignDepotReq where
   hideSecrets = Kernel.Prelude.identity
+
+data DepotAssign = DepotAssign {id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization, isAdd :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data GetOrganizationResp = GetOrganizationResp
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -135,12 +139,7 @@ type GetPassOrganizationPassDetailsDocument =
            Kernel.Prelude.Text
   )
 
-type PostPassOrganizationAssignDepot =
-  ( "assignDepot" :> Capture "depotPersonId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> ReqBody '[JSON] AssignDepotReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostPassOrganizationAssignDepot = ("assignDepot" :> ReqBody '[JSON] AssignDepotReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data PassOrganizationAPIs = PassOrganizationAPIs
   { getPassOrganizationGetPassOrganization :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient GetOrganizationResp,
@@ -149,7 +148,7 @@ data PassOrganizationAPIs = PassOrganizationAPIs
     postPassOrganizationUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> PassOrganizationUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient [GetOrganizationResp],
     getPassOrganizationPassDetailsDocument :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
-    postPassOrganizationAssignDepot :: Kernel.Types.Id.Id Domain.Types.Person.Person -> AssignDepotReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPassOrganizationAssignDepot :: AssignDepotReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 
 mkPassOrganizationAPIs :: (Client EulerHS.Types.EulerClient API -> PassOrganizationAPIs)

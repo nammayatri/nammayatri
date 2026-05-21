@@ -74,9 +74,14 @@ types:
     address: Maybe Text
     depotId: Maybe Text
 
+  DepotAssign:
+    id: Id PassOrganization
+    isAdd: Bool
+
   AssignDepotReq:
-    passOrganizationIds: "[Id PassOrganization]"
+    depotPersonId: Id Person
     depotId: Maybe Text
+    passOrganizations: "[DepotAssign]"
     derive: "'HideSecrets"
 
 apis:
@@ -132,10 +137,8 @@ apis:
       response:
         type: Text
   - POST:
-      endpoint: /assignDepot/{depotPersonId}
+      endpoint: /assignDepot
       auth: ApiAuthV2
-      params:
-        depotPersonId: Id Person
       request:
         type: AssignDepotReq
       response:
