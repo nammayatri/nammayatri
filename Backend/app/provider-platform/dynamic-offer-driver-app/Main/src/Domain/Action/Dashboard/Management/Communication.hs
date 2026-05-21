@@ -474,6 +474,7 @@ buildRecipientItem person = do
         name,
         role = personRoleToCommRole person.role,
         phone,
+        mobileCountryCode = person.mobileCountryCode,
         email = person.email,
         fleetOwnerName = Nothing,
         operatorName = Nothing
