@@ -40,6 +40,7 @@ data StclMembershipT f = StclMembershipT
     id :: B.C f Kernel.Prelude.Text,
     ifscCodeEncrypted :: B.C f Kernel.Prelude.Text,
     ifscCodeHash :: B.C f Kernel.External.Encryption.DbHash,
+    isAdditionalSharePurchase :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     lastName :: B.C f Kernel.Prelude.Text,
     memberCategory :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

@@ -81,6 +81,7 @@ updateByPrimaryKey (Domain.Types.StclMembership.StclMembership {..}) = do
       Se.Set Beam.fuelTypes fuelTypes,
       Se.Set Beam.ifscCodeEncrypted (unEncrypted . (.encrypted) $ ifscCode),
       Se.Set Beam.ifscCodeHash ((.hash) ifscCode),
+      Se.Set Beam.isAdditionalSharePurchase isAdditionalSharePurchase,
       Se.Set Beam.lastName lastName,
       Se.Set Beam.memberCategory memberCategory,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

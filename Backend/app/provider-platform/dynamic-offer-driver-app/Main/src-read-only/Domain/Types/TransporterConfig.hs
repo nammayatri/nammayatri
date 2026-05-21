@@ -273,6 +273,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     specialDrivers :: [Kernel.Prelude.Text],
     specialLocationTags :: [Kernel.Prelude.Text],
     specialZoneBookingOtpExpiry :: Kernel.Prelude.Int,
+    stclConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.StclConfig,
     stepFunctionToConvertCoins :: Kernel.Prelude.Int,
     subscription :: Kernel.Prelude.Bool,
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
@@ -418,6 +419,9 @@ data PayoutFeeConfig = PayoutFeeConfig {feeType :: Domain.Types.TransporterConfi
 data PayoutFeeType = PERCENTAGE | FIXED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data StclConfig = StclConfig {maxSharesPerDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int, pendingStaleMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int, pricePerShare :: Kernel.Prelude.Maybe Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data SubscriptionConfig = SubscriptionConfig
