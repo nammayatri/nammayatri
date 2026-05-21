@@ -51,6 +51,18 @@ findByDomainAndCityAndVehicleCategory domain city vehicleCategory platformType =
         ]
     ]
 
+findByDomainAndCityAndVehicleCategoryAnyPlatform ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+findByDomainAndCityAndVehicleCategoryAnyPlatform domain city vehicleCategory = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.city $ Se.Eq city,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory
+        ]
+    ]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 

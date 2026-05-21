@@ -147,3 +147,9 @@ CREATE INDEX CONCURRENTLY person_idx_operator_badge_token ON atlas_driver_offer_
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+DROP INDEX person_idx_operator_badge_token;

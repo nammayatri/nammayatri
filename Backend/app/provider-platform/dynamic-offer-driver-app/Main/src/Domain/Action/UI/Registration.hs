@@ -85,7 +85,7 @@ import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -203,16 +203,16 @@ auth ::
   Flow AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
   case fromMaybe SP.MOBILENUMBER req'.identifierType of
-    SP.EMAIL_PASSWORD -> do
-      email <- req'.email & fromMaybeM (InvalidRequest "Email is required for EMAIL_PASSWORD auth")
-      password <- req'.password & fromMaybeM (InvalidRequest "Password is required for EMAIL_PASSWORD auth")
+    SP.GIMS_EMAIL_PASSWORD -> do
+      email <- req'.email & fromMaybeM (InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth")
+      password <- req'.password & fromMaybeM (InvalidRequest "Password is required for GIMS_EMAIL_PASSWORD auth")
       smsCfg <- asks (.smsCfg)
       deploymentVersion <- asks (.version)
-      cloudType <- asks (.cloudType)
+      mbCloudType <- asks (.cloudType)
       let merchantId = Id req'.merchantId :: Id DO.Merchant
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
-      integratedBPPConfig <- findIntegratedBPPConfig Nothing merchantOpCityId (show BUS) DIBC.APPLICATION
+      integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
       baseUrl <- getGimsBaseUrl integratedBPPConfig
       let gtfsId = integratedBPPConfig.feedKey
       emailDbHash <- getDbHash email
@@ -230,9 +230,18 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
             }
       unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
       operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       person <-
-        QP.findByOperatorBadgeTokenAndMerchantId (Just operatorBadgeToken) merchant.id
-          >>= maybe (createConductorPerson req' operatorBadgeToken merchant merchantOpCityId) return
+        QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.CONDUCTOR
+          >>= maybe
+            ( do
+                basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just SP.CONDUCTOR)
+                let conductorPerson = basePerson {SP.identifier = Just operatorBadgeToken, SP.operatorBadgeToken = Just operatorBadgeToken}
+                void $ QP.create conductorPerson
+                createDriverDetails conductorPerson.id merchant.id merchantOpCityId transporterConfig
+                pure conductorPerson
+            )
+            return
       checkSlidingWindowLimit (authHitsCountKey person)
       let entityId = getId person.id
           useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
@@ -240,7 +249,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
           mkId = getId merchant.id
       token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
       _ <- QR.create token
-      void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId cloudType
+      void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId mbCloudType
       cleanCachedTokens person.id
       QR.deleteByPersonIdExceptNew person.id token.id
       _ <- QR.setVerified True token.id
@@ -295,7 +304,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
-      SP.EMAIL_PASSWORD -> throwError $ InvalidRequest "EMAIL_PASSWORD does not use OTP auth"
+      SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
 
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
@@ -483,7 +492,10 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
-      SP.EMAIL_PASSWORD -> throwError $ InvalidRequest "EMAIL_PASSWORD auth does not create a person via makePerson"
+      SP.GIMS_EMAIL_PASSWORD -> do
+        case req.email of
+          Just email -> pure (Just email, Nothing, Nothing)
+          Nothing -> throwError $ InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth"
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
@@ -880,68 +892,3 @@ signatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVers
   decPerson <- decrypt person
   let personAPIEntity = SP.makePersonAPIEntity decPerson
   return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
-
--- | Create a new conductor person from GIMS employee data.
-createConductorPerson ::
-  AuthReq ->
-  Text ->
-  DO.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Flow SP.Person
-createConductorPerson req operatorBadgeToken merchant merchantOpCityId = do
-  now <- getCurrentTime
-  personId <- generateGUID
-  let email = req.email
-      name = fromMaybe "Conductor" req.name
-  let person =
-        SP.Person
-          { id = personId,
-            firstName = name,
-            middleName = Nothing,
-            lastName = Nothing,
-            role = SP.CONDUCTOR,
-            gender = SP.UNKNOWN,
-            hometown = Nothing,
-            languagesSpoken = Nothing,
-            identifierType = SP.EMAIL_PASSWORD,
-            email = email,
-            mobileNumber = Nothing,
-            maskedMobileDigits = Nothing,
-            mobileCountryCode = Nothing,
-            passwordHash = Nothing,
-            identifier = Just operatorBadgeToken,
-            isNew = True,
-            onboardedFromDashboard = False,
-            merchantId = merchant.id,
-            deviceToken = Nothing,
-            whatsappNotificationEnrollStatus = Nothing,
-            language = Nothing,
-            description = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            alternateMobileNumber = Nothing,
-            faceImageId = Nothing,
-            qrImageId = Nothing,
-            merchantOperatingCityId = merchantOpCityId,
-            totalEarnedCoins = 0,
-            usedCoins = 0,
-            registrationLat = Nothing,
-            registrationLon = Nothing,
-            useFakeOtp = Nothing,
-            clientSdkVersion = Nothing,
-            reactBundleVersion = Nothing,
-            clientBundleVersion = Nothing,
-            clientConfigVersion = Nothing,
-            cloudType = Nothing,
-            clientDevice = Nothing,
-            backendConfigVersion = Nothing,
-            backendAppVersion = Nothing,
-            driverTag = Nothing,
-            clientId = Nothing,
-            nyClubConsent = Nothing,
-            operatorBadgeToken = Just operatorBadgeToken
-          }
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  QP.create person
-  createDriverDetails personId merchant.id merchantOpCityId transporterConfig
-  pure person

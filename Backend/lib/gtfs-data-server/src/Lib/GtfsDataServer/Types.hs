@@ -304,7 +304,7 @@ newtype GimsVerifyResp = GimsVerifyResp
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
--- | Employee login request for conductor EMAIL_PASSWORD auth (driver-app only).
+-- | Employee login request for conductor GIMS_EMAIL_PASSWORD auth (driver-app only).
 -- GIMS expects pre-hashed values: SHA256(hashSalt <> value).
 data GimsEmployeeLoginReq = GimsEmployeeLoginReq
   { auth_type :: Maybe Text,

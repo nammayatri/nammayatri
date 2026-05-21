@@ -28,7 +28,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
-      enum: "MOBILENUMBER, AADHAAR, EMAIL, EMAIL_PASSWORD"
+      enum: "MOBILENUMBER, AADHAAR, EMAIL, GIMS_EMAIL_PASSWORD"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     Gender:
@@ -260,10 +260,6 @@ Person:
       kvFunction: updateOneWithKV
       params: [nyClubConsent]
       where: id
-
-  extraIndexes:
-    - columns: [operatorBadgeToken]
-      unique: false
 
   extraOperations:
     - EXTRA_QUERY_FILE

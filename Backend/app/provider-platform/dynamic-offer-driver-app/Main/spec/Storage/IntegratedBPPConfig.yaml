@@ -95,6 +95,10 @@ IntegratedBPPConfig:
       kvFunction: findAllWithKV
       where:
         and: [domain, city, vehicleCategory, platformType]
+    findByDomainAndCityAndVehicleCategoryAnyPlatform:
+      kvFunction: findAllWithKV
+      where:
+        and: [domain, city, vehicleCategory]
     findAllByPlatformAndVehicleCategory:
       kvFunction: findAllWithKV
       where:
