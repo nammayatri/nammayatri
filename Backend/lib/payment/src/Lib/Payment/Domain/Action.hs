@@ -357,7 +357,7 @@ data CreatePaymentServiceReq = CreatePaymentServiceReq
     metadataExpiryInMins :: Maybe Int,
     basket :: Maybe [Payment.Basket],
     paymentRules :: Maybe Payment.PaymentRules,
-    webhookUrl :: Maybe Text,
+    webhookUrl :: Maybe BaseUrl,
     udf1 :: Maybe Text,
     -- Offer-specific
     offerId :: Maybe Text,
