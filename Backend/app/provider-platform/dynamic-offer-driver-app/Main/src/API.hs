@@ -36,6 +36,7 @@ import Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Payment.Juspay.Webhook as Juspay
 import qualified Kernel.External.Payout.Juspay.Webhook as JuspayPayout
+import qualified Kernel.External.Payout.Stripe.Webhook as Stripe
 import qualified Kernel.External.Verification.Interface.Idfy as Idfy
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -93,6 +94,17 @@ type MainAPI =
              :> "v2"
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> Stripe.PayoutStripeWebhookAPI
+         )
+    :<|> ( Capture "merchantId" (ShortId DM.Merchant)
+             :> QueryParam "city" Context.City
+             :> QueryParam "serviceName" Plan.ServiceNames
+             :> "test"
+             :> Stripe.PayoutStripeWebhookAPI
+         )
     :<|> Dashboard.API -- TODO :: Needs to be deprecated
     :<|> Dashboard.APIV2
     :<|> UnifiedDashboard.API
@@ -116,6 +128,8 @@ mainServer env =
     :<|> digiLockerCallbackHandler
     :<|> juspayPayoutWebhookHandler
     :<|> juspayPayoutWebhookHandlerV2
+    :<|> stripePayoutWebhookHandler
+    :<|> stripeTestPayoutWebhookHandler
     :<|> Dashboard.handler
     :<|> Dashboard.handlerV2
     :<|> UnifiedDashboard.handler
@@ -242,3 +256,23 @@ juspayPayoutWebhookHandlerV2 ::
   FlowHandler AckResponse
 juspayPayoutWebhookHandlerV2 merchantShortId mbOpCity mbServiceName secret value' =
   withFlowHandlerAPI $ Payout.juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName secret value'
+
+stripePayoutWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Plan.ServiceNames ->
+  Maybe Text ->
+  Stripe.RawByteString ->
+  FlowHandler AckResponse
+stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
+  withFlowHandlerAPI . Payout.stripePayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader
+
+stripeTestPayoutWebhookHandler ::
+  ShortId DM.Merchant ->
+  Maybe Context.City ->
+  Maybe Plan.ServiceNames ->
+  Maybe Text ->
+  Stripe.RawByteString ->
+  FlowHandler AckResponse
+stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader =
+  withFlowHandlerAPI . Payout.stripeTestPayoutWebhookHandler merchantShortId mbOpCity mbServiceName mbSigHeader

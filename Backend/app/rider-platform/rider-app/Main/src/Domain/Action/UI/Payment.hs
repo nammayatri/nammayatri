@@ -54,6 +54,7 @@ import Domain.Types.CancellationReason (CancellationReasonCode (..), Cancellatio
 -- import qualified Kernel.External.Payment.PaytmEDC.Checksum as PaytmEDCChecksum
 
 import Domain.Types.Extra.MerchantPaymentMethod ()
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
@@ -69,6 +70,7 @@ import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Stripe as Stripe
 import qualified Kernel.External.Payment.Interface.Types as Payment
+import qualified Kernel.External.Payment.Stripe.Types.Common as Stripe
 import Kernel.External.Payment.Stripe.Webhook (RawByteString (..))
 import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Wallet as Wallet
@@ -728,11 +730,11 @@ stripeWebhookHandler,
     Maybe Text ->
     RawByteString ->
     Flow AckResponse
-stripeWebhookHandler = stripeWebhookHandler' Payment.Stripe
-stripeTestWebhookHandler = stripeWebhookHandler' Payment.StripeTest
+stripeWebhookHandler = stripeWebhookHandler' DMPM.LIVE
+stripeTestWebhookHandler = stripeWebhookHandler' DMPM.TEST
 
 stripeWebhookHandler' ::
-  Payment.PaymentService ->
+  DMPM.PaymentMode ->
   ShortId DM.Merchant ->
   Maybe Context.City ->
   Maybe Payment.PaymentServiceType ->
@@ -740,10 +742,28 @@ stripeWebhookHandler' ::
   Maybe Text ->
   RawByteString ->
   Flow AckResponse
-stripeWebhookHandler' serviceName merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+stripeWebhookHandler' paymentMode merchantShortId mbCity mbServiceType mbPlaceId mbSigHeader rawBytes = do
+  let serviceName = case paymentMode of
+        DMPM.LIVE -> Payment.Stripe
+        DMPM.TEST -> Payment.StripeTest
   (paymentServiceConfig, merchantOperatingCity) <- fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId serviceName
-  let checkDuplicatedEvent _eventId = pure False -- FIXME
+  let checkDuplicatedEvent eventId =
+        isDuplicateStripeWebhookEvent
+          (stripePaymentWebhookEventDedupKey paymentMode eventId)
+          stripeWebhookEventDedupTtl7Days
   Stripe.serviceEventWebhook paymentServiceConfig checkDuplicatedEvent (stripeWebhookAction merchantOperatingCity.id) mbSigHeader rawBytes
+
+-- | TTL for Stripe webhook event deduplication (covers Stripe retry window with margin).
+stripeWebhookEventDedupTtl7Days :: Redis.ExpirationTime
+stripeWebhookEventDedupTtl7Days = 7 * 24 * 60 * 60
+
+stripePaymentWebhookEventDedupKey :: DMPM.PaymentMode -> Id Stripe.Event -> Text
+stripePaymentWebhookEventDedupKey paymentMode eventId = "Stripe:Payment:" <> show paymentMode <> ":Webhook:Event-" <> eventId.getId
+
+-- | Marks a Stripe webhook event as seen (SET NX + EX). Returns 'True' if this delivery is a duplicate.
+isDuplicateStripeWebhookEvent :: (Redis.HedisFlow m env, TryException m) => Text -> Redis.ExpirationTime -> m Bool
+isDuplicateStripeWebhookEvent key ttl =
+  not <$> Redis.setNxExpire key ttl True
 
 stripeWebhookAction ::
   Id DMOC.MerchantOperatingCity ->

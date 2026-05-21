@@ -22,6 +22,9 @@ module Lib.Payment.Domain.Action
     stripeWebhookService,
     mkStripeWebhookData,
     StripeWebhookData (..),
+    stripePayoutWebhookService,
+    mkPayoutStripeWebhookData,
+    PayoutStripeWebhookData (..),
     createNotificationService,
     createExecutionService,
     buildSDKPayload,
@@ -90,6 +93,8 @@ import qualified Kernel.External.Payment.Interface.Events.Types as PEInterface
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Interface as PT
+import qualified Kernel.External.Payout.Interface.Events.Types as PayoutEvents
+import qualified Kernel.External.Payout.Interface.Stripe as IPayoutStripe
 import qualified Kernel.External.Payout.Interface.Types as Payout
 import qualified Kernel.External.Payout.Juspay.Types as Juspay
 import qualified Kernel.External.Payout.Juspay.Types.Payout as JuspayPayout
@@ -1949,6 +1954,90 @@ stripeWebhookService merchantOpCityId resp respDump stripeWebhookData = do
     SkipWebhookData -> logInfo $ "Skip webhook event: " <> show resp.eventType <> "; eventId: " <> resp.id.getId
 
   pure Ack
+
+-- Stripe payout / transfer webhook (dedicated Stripe endpoint; separate signing secret) ----------
+
+data PayoutStripeWebhookData
+  = PayoutStripePayoutWebhookData PayoutEvents.Payout
+  | PayoutStripeTransferWebhookData PayoutEvents.Transfer
+  | SkipPayoutStripeWebhookData
+
+mkPayoutStripeWebhookData :: PayoutEvents.EventObject -> PayoutStripeWebhookData
+mkPayoutStripeWebhookData = \case
+  PayoutEvents.PayoutCanceledEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.PayoutCreatedEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.PayoutFailedEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.PayoutPaidEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.PayoutReconciliationCompletedEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.PayoutUpdatedEvent p -> PayoutStripePayoutWebhookData p
+  PayoutEvents.TransferCreatedEvent t -> PayoutStripeTransferWebhookData t
+  PayoutEvents.TransferReversedEvent t -> PayoutStripeTransferWebhookData t
+  PayoutEvents.TransferUpdatedEvent t -> PayoutStripeTransferWebhookData t
+  PayoutEvents.CustomEvent _ -> SkipPayoutStripeWebhookData
+
+stripePayoutWebhookService ::
+  ( EncFlow m r,
+    PaymentBeamFlow.BeamFlow m r
+  ) =>
+  Id MerchantOperatingCity ->
+  PayoutEvents.PayoutServiceEventResp ->
+  Text ->
+  PayoutStripeWebhookData ->
+  m AckResponse
+stripePayoutWebhookService merchantOperatingCityId resp respDump webhookData = do
+  logWarning $ "Stripe payout webhook dump: " <> respDump
+  logWarning $
+    "Stripe payout webhook (merchantOperatingCityId=" <> merchantOperatingCityId.getId <> "): " <> show resp
+
+  case webhookData of
+    PayoutStripePayoutWebhookData pObj ->
+      case pObj.orderId of
+        Nothing ->
+          throwError $
+            InvalidRequest $
+              "order_id not found in Stripe payout metadata for eventId: " <> resp.id.getId
+        Just orderId -> do
+          let statusResp = mkPayoutOrderStatusRespFromPayout orderId pObj
+          Redis.whenWithLockRedis (payoutStripeWebhookLockKey orderId) 60 $
+            payoutStatusUpdates orderId statusResp
+    PayoutStripeTransferWebhookData tObj ->
+      logInfo $
+        "Stripe transfer webhook (payout_order wiring pending): "
+          <> show tObj
+          <> "; eventId: "
+          <> resp.id.getId
+    SkipPayoutStripeWebhookData ->
+      logInfo $
+        "Skip Stripe payout webhook event: "
+          <> show resp.eventType
+          <> "; eventId: "
+          <> resp.id.getId
+
+  pure Ack
+
+payoutStripeWebhookLockKey :: Text -> Text
+payoutStripeWebhookLockKey orderId = "Payout:Stripe:Webhook:OrderId-" <> orderId
+
+mkPayoutOrderStatusRespFromPayout :: Text -> PayoutEvents.Payout -> PT.CreatePayoutOrderResp
+mkPayoutOrderStatusRespFromPayout orderId pObj =
+  PT.CreatePayoutOrderResp
+    { orderId = orderId,
+      status = IPayoutStripe.castPayoutStatus pObj.status,
+      transferStatus = Nothing,
+      orderType = pObj.orderType,
+      transferId = Nothing,
+      idAssignedByServiceProvider = Just $ IPayoutStripe.unPayoutId pObj.payoutId,
+      udf1 = Nothing,
+      udf2 = Nothing,
+      udf3 = Nothing,
+      udf4 = Nothing,
+      udf5 = Nothing,
+      amount = pObj.amount,
+      refunds = Nothing,
+      payments = Nothing,
+      fulfillments = Nothing,
+      customerId = pObj.customerId
+    }
 
 txnStripeProccessingKey :: Text -> Text
 txnStripeProccessingKey txnId = "Txn:Stripe:Processing:TxnId-" <> txnId
