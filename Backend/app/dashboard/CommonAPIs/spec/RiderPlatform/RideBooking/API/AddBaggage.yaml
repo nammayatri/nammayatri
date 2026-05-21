@@ -1,0 +1,27 @@
+imports:
+  Booking: Domain.Types.Booking
+  Person: Domain.Types.Person
+
+importPackageOverrides:
+  Domain.Types.Booking: "rider-app"
+  Domain.Types.Person: "rider-app"
+
+module: AddBaggage
+apiPrefix: "rideBooking"
+
+apis:
+  - POST:
+      endpoint: /addBaggage/{bookingId}/{customerId}/confirm
+      name: PostAddBaggageConfirm
+      auth: ApiAuthV2
+      params:
+        bookingId: Id Booking
+        customerId: Id Person
+      request:
+        type: AddBaggageConfirmReq
+      response:
+        type: APISuccess
+
+types:
+  AddBaggageConfirmReq:
+    numberOfLuggages: Int

@@ -189,6 +189,23 @@ updateSpecialZoneOtpCode bookingId specialZoneOtpCode = do
     [Se.Set BeamB.specialZoneOtpCode $ Just specialZoneOtpCode, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
+updateNumberOfLuggagesAndFare ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Booking ->
+  Maybe Int ->
+  Id DFP.FareParameters ->
+  HighPrecMoney ->
+  m ()
+updateNumberOfLuggagesAndFare bookingId mbNumberOfLuggages fareParamsId newEstimatedFare = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.numberOfLuggages mbNumberOfLuggages,
+      Se.Set BeamB.fareParametersId (getId fareParamsId),
+      Se.Set BeamB.estimatedFare newEstimatedFare,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
 findStuckBookings ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Merchant ->
