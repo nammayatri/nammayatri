@@ -1,0 +1,105 @@
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module API.Types.UI.FRFSFleetOperator where
+
+import Data.OpenApi (ToSchema)
+import qualified Data.Text
+import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Maps.Types
+import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.TimeBound
+import Servant
+import Tools.Auth
+
+data FRFSRouteAPI = FRFSRouteAPI
+  { code :: Data.Text.Text,
+    endPoint :: Kernel.External.Maps.Types.LatLong,
+    integratedBppConfigId :: Data.Text.Text,
+    longName :: Data.Text.Text,
+    shortName :: Data.Text.Text,
+    startPoint :: Kernel.External.Maps.Types.LatLong,
+    stops :: Kernel.Prelude.Maybe [FRFSStationAPI],
+    timeBounds :: Kernel.Prelude.Maybe Kernel.Types.TimeBound.TimeBound,
+    totalStops :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    waypoints :: Kernel.Prelude.Maybe [Kernel.External.Maps.Types.LatLong]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSStationAPI = FRFSStationAPI
+  { address :: Kernel.Prelude.Maybe Data.Text.Text,
+    code :: Data.Text.Text,
+    color :: Kernel.Prelude.Maybe Data.Text.Text,
+    distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    integratedBppConfigId :: Data.Text.Text,
+    lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    name :: Kernel.Prelude.Maybe Data.Text.Text,
+    parentStopCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    routeCodes :: Kernel.Prelude.Maybe [Data.Text.Text],
+    sequenceNum :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stationType :: Kernel.Prelude.Maybe Data.Text.Text,
+    timeTakenToTravelUpcomingStop :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    towards :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSTripPassengerManifestResp = FRFSTripPassengerManifestResp {manifest :: [PassengerStopManifest]}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq {personId :: Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
+  { conductorToken :: Kernel.Prelude.Maybe Data.Text.Text,
+    current :: Kernel.Prelude.Maybe OperatorTripInfo,
+    driverToken :: Kernel.Prelude.Maybe Data.Text.Text,
+    gtfsId :: Data.Text.Text,
+    history :: [OperatorTripInfo],
+    upcoming :: [OperatorTripInfo],
+    vehicleNumber :: Data.Text.Text,
+    waybillNo :: Data.Text.Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorTripAction
+  = TripStart
+  | TripEnd
+  | TripReset
+  | TripRollback
+  deriving stock (Eq, Show, Generic, Ord, Read)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorTripActionReq = FleetOperatorTripActionReq {action :: FleetOperatorTripAction, personId :: Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetOperatorTripActionResp = FleetOperatorTripActionResp {currentTripNumber :: Kernel.Prelude.Int, hasUpcomingTrips :: Kernel.Prelude.Bool}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data OperatorTripInfo = OperatorTripInfo
+  { dutyDate :: Kernel.Prelude.Maybe Data.Text.Text,
+    endTime :: Kernel.Prelude.Maybe Data.Text.Text,
+    isActiveTrip :: Kernel.Prelude.Bool,
+    routeId :: Data.Text.Text,
+    routeName :: Data.Text.Text,
+    routeNumber :: Data.Text.Text,
+    startTime :: Kernel.Prelude.Maybe Data.Text.Text,
+    tripNumber :: Kernel.Prelude.Int
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassengerInfo = PassengerInfo {bookingId :: Data.Text.Text, checkedIn :: Kernel.Prelude.Bool, name :: Data.Text.Text, personId :: Data.Text.Text, phone :: Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PassengerStopManifest = PassengerStopManifest {alightingPassengers :: [PassengerInfo], boardingPassengers :: [PassengerInfo], stopCode :: Data.Text.Text, stopName :: Kernel.Prelude.Maybe Data.Text.Text}
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

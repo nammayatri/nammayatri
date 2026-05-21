@@ -2064,3 +2064,21 @@ instance IsHTTPError AddBaggageError where
     AddBaggageFarePolicyNotFound _ -> E500
 
 instance IsAPIError AddBaggageError
+
+data IntegratedBPPConfigError
+  = IntegratedBPPConfigNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
+
+instance IsBaseError IntegratedBPPConfigError where
+  toMessage = \case
+    IntegratedBPPConfigNotFound -> Just "Integrated BPP Config not found"
+
+instance IsHTTPError IntegratedBPPConfigError where
+  toErrorCode = \case
+    IntegratedBPPConfigNotFound -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    IntegratedBPPConfigNotFound -> E404
+
+instance IsAPIError IntegratedBPPConfigError
