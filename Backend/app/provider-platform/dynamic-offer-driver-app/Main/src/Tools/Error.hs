@@ -1634,7 +1634,9 @@ instance IsHTTPError DeliveryErrors where
 
 instance IsAPIError DeliveryErrors
 
-data SpecialZoneErrors = DriverLocationOutOfRestictionBounds
+data SpecialZoneErrors
+  = DriverLocationOutOfRestictionBounds
+  | SpecialLocationNotModified
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
@@ -1642,12 +1644,15 @@ instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
 instance IsBaseError SpecialZoneErrors where
   toMessage = \case
     DriverLocationOutOfRestictionBounds -> Just "Driver location out of restriction bounds."
+    SpecialLocationNotModified -> Just "Special location list is not modified."
 
 instance IsHTTPError SpecialZoneErrors where
   toErrorCode = \case
     DriverLocationOutOfRestictionBounds -> "DRIVER_LOCATION_OUT_OF_RESTRICTION_BOUNDS"
+    SpecialLocationNotModified -> "SPECIAL_LOCATION_NOT_MODIFIED"
   toHttpCode = \case
     DriverLocationOutOfRestictionBounds -> E400
+    SpecialLocationNotModified -> E304
 
 instance IsAPIError SpecialZoneErrors
 
