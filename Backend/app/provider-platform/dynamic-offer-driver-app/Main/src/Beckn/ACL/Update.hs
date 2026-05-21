@@ -101,9 +101,15 @@ parseEvent merchantId reqMsg context = do
     parseEditLocationEvent bookingId fulfillment rideId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
       let originStop = Utils.getStartLocation fulfillmentStops
+          destinationStop = Utils.getDropLocation fulfillmentStops
+          intermediateStops = filter (\s -> s.stopType == Just (show Enums.INTERMEDIATE_STOP)) fulfillmentStops
       origin' <- traverse (Utils.buildLocation' merchantId) originStop
-      let destinationStop = Utils.getDropLocation fulfillmentStops
       destination' <- traverse (Utils.buildLocation' merchantId) destinationStop
+      stops' <- mapM (Utils.buildLocation' merchantId) intermediateStops
+      -- Tag presence signals "BAP wants to modify stops"; absence means "stops unchanged".
+      let preservedPrefixStops =
+            Utils.getTagV2 Tag.UPDATE_DETAILS Tag.PRESERVED_PREFIX_STOPS fulfillment.fulfillmentTags
+              >>= Kernel.Prelude.readMaybe . toString
       orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
       messageId <- Utils.getMessageId context
       status <- castOrderStatus orderStatus
@@ -115,6 +121,8 @@ parseEvent merchantId reqMsg context = do
               rideId,
               origin',
               destination',
+              stops',
+              preservedPrefixStops,
               status,
               bapBookingUpdateRequestId = messageId,
               transactionId

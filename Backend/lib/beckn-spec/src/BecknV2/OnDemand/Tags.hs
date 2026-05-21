@@ -581,6 +581,8 @@ data BecknTag
   | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
   | -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
+  | -- Edit-stops (unified edit-location) tags
+    PRESERVED_PREFIX_STOPS -- UPDATE_DETAILS: how many leading stops to preserve when applying a stops edit
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -831,6 +833,7 @@ instance CompleteTag BecknTag where
     TIP_OPTIONS -> INFO
     CONGESTION_CHARGE_PERCENTAGE -> FARE_POLICY
     UPDATED_ESTIMATED_DISTANCE -> UPDATE_DETAILS
+    PRESERVED_PREFIX_STOPS -> UPDATE_DETAILS
     LUGGAGE_CHARGE -> FARE_POLICY
     DRIVER_ALLOWANCE -> FARE_POLICY
     AIRPORT_CONVENIENCE_FEE -> FARE_POLICY

@@ -39,3 +39,9 @@ ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN get_route_r
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN snap_to_road_failed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN update_type text ;
+ALTER TABLE atlas_driver_offer_bpp.booking_update_request ADD COLUMN preserved_prefix_stops integer ;

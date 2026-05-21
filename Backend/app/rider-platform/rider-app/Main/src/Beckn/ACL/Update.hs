@@ -78,6 +78,7 @@ data EditLocationBuildReqDetails = EditLocationBuildReqDetails
     origin :: Maybe DLoc.Location,
     destination :: Maybe DLoc.Location,
     stops :: Maybe [DLoc.Location],
+    preservedPrefixStops :: Maybe Int,
     status :: UpdateStatus
   }
 
@@ -218,7 +219,7 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
                                       descriptorShortDesc = Nothing
                                     }
                             },
-                      fulfillmentTags = Nothing,
+                      fulfillmentTags = Tag.mkSingleTagGroup Tag.PRESERVED_PREFIX_STOPS details.preservedPrefixStops,
                       fulfillmentType = Nothing,
                       fulfillmentVehicle = Nothing
                     }

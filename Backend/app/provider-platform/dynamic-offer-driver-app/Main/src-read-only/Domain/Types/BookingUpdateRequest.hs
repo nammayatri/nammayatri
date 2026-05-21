@@ -35,11 +35,13 @@ data BookingUpdateRequest = BookingUpdateRequest
     oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
     oldFareParamsId :: Kernel.Types.Id.Id Domain.Types.FareParameters.FareParameters,
     oldMaxEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    preservedPrefixStops :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     snapToRoadFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    updateType :: Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequestUpdateType,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime
   }
@@ -47,6 +49,12 @@ data BookingUpdateRequest = BookingUpdateRequest
 
 data BookingUpdateRequestStatus = SOFT | DRIVER_ACCEPTED | DRIVER_REJECTED | USER_CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data BookingUpdateRequestUpdateType = STOPS | DESTINATION | STOPS_DESTINATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 
 $(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestUpdateType)
+
+$(mkHttpInstancesForEnum ''BookingUpdateRequestUpdateType)
