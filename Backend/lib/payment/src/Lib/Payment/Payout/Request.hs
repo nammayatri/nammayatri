@@ -53,6 +53,7 @@ data PayoutSubmission = PayoutSubmission
     currency :: Currency,
     payoutServiceFlow :: Payout.PayoutServiceFlow,
     payoutFee :: Maybe HighPrecMoney,
+    transferAmount :: Maybe HighPrecMoney, -- explicit merchant→driver transfer amount (Nothing = use amount)
     merchantId :: Text,
     merchantOpCityId :: Text,
     city :: Text,
@@ -214,7 +215,7 @@ submitPayoutRequest submission payoutCall = do
   logDebug $ "Created PayoutRequest " <> payoutRequest.id.getId <> " for " <> submission.beneficiaryId <> " | amount: " <> show submission.amount
 
   -- 2. Execute
-  mbPayoutOrder <- executePayoutRequestInternal submission.currency submission.payoutServiceFlow payoutRequest payoutCall
+  mbPayoutOrder <- executePayoutRequestInternal submission.transferAmount submission.currency submission.payoutServiceFlow payoutRequest payoutCall
   case mbPayoutOrder of
     Just po -> pure $ PayoutInitiated payoutRequest po
     Nothing -> pure $ PayoutFailed payoutRequest "Payout service call failed"
@@ -234,7 +235,7 @@ executePayoutRequest ::
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m Payout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequest = executePayoutRequestInternal
+executePayoutRequest = executePayoutRequestInternal Nothing
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers
@@ -246,19 +247,20 @@ executePayoutRequestInternal ::
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r
   ) =>
+  Maybe HighPrecMoney -> -- explicit transferAmount override (Nothing = use amount)
   Currency ->
   Payout.PayoutServiceFlow ->
   PayoutRequest ->
   (DPayment.CreatePayoutServiceReq -> m IPayout.CreatePayoutOrderResp) ->
   m (Maybe PayoutOrder.PayoutOrder)
-executePayoutRequestInternal currency payoutServiceFlow payoutRequest payoutCall = do
+executePayoutRequestInternal mbTransferAmount currency payoutServiceFlow payoutRequest payoutCall = do
   if not (isPayoutExecutable payoutRequest)
     then do
       logInfo $ "PayoutRequest " <> payoutRequest.id.getId <> " not executable (status: " <> show payoutRequest.status <> "), skipping"
       pure Nothing
     else do
       orderId <- generateGUID
-      createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow
+      createPayoutOrderReq <- buildCreatePayoutOrderReq orderId currency payoutRequest payoutServiceFlow mbTransferAmount
       let merchantId = Id payoutRequest.merchantId
           mbMocId = Just $ Id payoutRequest.merchantOperatingCityId
           personId = Id payoutRequest.beneficiaryId
@@ -281,8 +283,8 @@ executePayoutRequestInternal currency payoutServiceFlow payoutRequest payoutCall
 
 -- | Build a CreatePayoutOrderReq from the stored PayoutRequest fields.
 --   Throws if VPA is missing — VPA must be populated at PayoutRequest creation time.
-buildCreatePayoutOrderReq :: (MonadFlow m) => Text -> Currency -> PayoutRequest -> Payout.PayoutServiceFlow -> m DPayment.CreatePayoutServiceReq
-buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow = do
+buildCreatePayoutOrderReq :: (MonadFlow m) => Text -> Currency -> PayoutRequest -> Payout.PayoutServiceFlow -> Maybe HighPrecMoney -> m DPayment.CreatePayoutServiceReq
+buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount = do
   vpa <- case payoutServiceFlow of
     Payout.JuspayFlow -> Just <$> fromMaybeM (InvalidRequest $ "VPA is required for payout but missing in PayoutRequest " <> pr.id.getId) pr.customerVpa
     Payout.StripeFlow -> pure $ pr.customerVpa
@@ -300,6 +302,7 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow = do
       (fromMaybe "FULFILL_ONLY" pr.orderType)
       False
       payoutServiceFlow
+      mbTransferAmount
 
 -- | Build a PayoutRequest from a PayoutSubmission.
 buildPayoutRequest ::

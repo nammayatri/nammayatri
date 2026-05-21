@@ -241,15 +241,15 @@ processOneWalletPayout config transporterConfig merchantId merchantOpCityId pers
       let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
           cutOffDays = transporterConfig.driverWalletConfig.payoutCutOffDays
           cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-      (nonRedeemable, redeemableIds) <- case mbAccountId of
-        Nothing -> pure (0, [])
+      (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
+        Nothing -> pure (0, [], 0)
         Just accountId -> getPayoutEligibilityData accountId cutoff now
       let payoutableBalance = walletBalance - nonRedeemable
 
       when (payoutableBalance >= config.minimumPayoutAmount) $ do
         -- Skip manually-added VPAs
         unless isManuallyAdded $ do
-          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds)
+          initiateWalletPayout ctx payoutableBalance PR.SCHEDULED Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
   case result of
     Left (e :: SomeException) -> logError $ "ScheduledWalletPayout error for " <> personId.getId <> ": " <> show e
     Right _ -> pure ()

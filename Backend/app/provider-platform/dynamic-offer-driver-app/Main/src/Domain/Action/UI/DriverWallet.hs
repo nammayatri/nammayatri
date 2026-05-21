@@ -602,12 +602,12 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     let timeDiff = secondsToNominalDiffTime ctx.transporterConfig.timeDiffFromUtc
         cutOffDays = ctx.transporterConfig.driverWalletConfig.payoutCutOffDays
         cutoff = payoutCutoffTimeUTC timeDiff cutOffDays now
-    (nonRedeemable, redeemableIds) <- case mbAccountId of
-      Nothing -> pure (0, [])
+    (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
+      Nothing -> pure (0, [], 0)
       Just accountId -> getPayoutEligibilityData accountId cutoff now
     let payoutableBalance = walletBalance - nonRedeemable
     ensureMinimumPayoutAmount ctx payoutableBalance
-    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds)
+    initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
   pure APISuccess.Success
 
 -- | Compute the payout fee based on the PayoutFeeConfig.
@@ -637,8 +637,9 @@ initiateWalletPayout ::
   Maybe UTCTime -> -- coverageFrom
   Maybe UTCTime -> -- coverageTo
   [Text] -> -- redeemable entry IDs for settlement
+  HighPrecMoney -> -- merchant transfer amount (VAT input + discounts)
   m ()
-initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds = do
+initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo redeemableEntryIds merchantTransferAmount = do
   phoneNo <- mapM decrypt ctx.person.mobileNumber
   merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast ctx.person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound ctx.person.merchantOperatingCityId.getId)
   (payoutServiceFlow, payoutServiceName, mbPersonBankAccount) <- Payout.getCreatePayoutServiceFlow (Payout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService ctx.person.clientSdkVersion ctx.person.merchantOperatingCityId ctx.person.id
@@ -656,6 +657,7 @@ initiateWalletPayout ctx payoutableBalance payoutType coverageFrom coverageTo re
             amount = netAmount,
             currency = ctx.transporterConfig.currency,
             payoutFee = if fee > 0 then Just fee else Nothing,
+            transferAmount = Just merchantTransferAmount,
             merchantId = ctx.merchantId.getId,
             merchantOpCityId = ctx.mocId.getId,
             city = show merchantOperatingCity.city,

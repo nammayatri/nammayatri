@@ -529,7 +529,7 @@ rideAssignedReqHandler req = do
             { id = guid,
               entityId = booking.id.getId,
               entityType = DFareBreakup.BOOKING,
-              amount = mkPrice (Just booking.estimatedFare.currency) (-bookingDiscountAmount),
+              amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
               description = "OFFER_DISCOUNT"
             }
       -- Create payment intent for online payments, capture orderId for invoice creation
@@ -1112,7 +1112,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               { id = guid,
                 entityId = ride.id.getId,
                 entityType = DFareBreakup.RIDE,
-                amount = mkPrice (Just totalFare.currency) (-rideDiscountAmount),
+                amount = mkPrice (Just totalFare.currency) (- rideDiscountAmount),
                 description = "OFFER_DISCOUNT"
               }
           ]
@@ -1835,7 +1835,7 @@ customerReferralPayout ride currency isValidRide riderConfig person_ merchantId 
             uid <- generateGUID
             let entityName = entity
                 payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True payoutServiceFlow
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId payoutConfig.remark person.firstName (Just vpa) payoutConfig.orderType True payoutServiceFlow Nothing
             logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion merchantId merchantOperatingCityId (Just person.id.getId)
 
