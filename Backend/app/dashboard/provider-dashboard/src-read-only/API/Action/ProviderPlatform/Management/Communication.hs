@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("communication" :> (PostCommunicationCreate :<|> GetCommunicationList :<|> GetCommunicationInfo :<|> PostCommunicationSend :<|> PutCommunicationEdit :<|> DeleteCommunicationDelete :<|> GetCommunicationDeliveryStatus :<|> GetCommunicationRecipients :<|> PostCommunicationTemplate))
+type API = ("communication" :> (PostCommunicationCreate :<|> GetCommunicationList :<|> GetCommunicationInfo :<|> PostCommunicationSend :<|> PutCommunicationEdit :<|> DeleteCommunicationDelete :<|> GetCommunicationDeliveryStatus :<|> GetCommunicationRecipients :<|> GetCommunicationTemplate))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postCommunicationCreate merchantId city :<|> getCommunicationList merchantId city :<|> getCommunicationInfo merchantId city :<|> postCommunicationSend merchantId city :<|> putCommunicationEdit merchantId city :<|> deleteCommunicationDelete merchantId city :<|> getCommunicationDeliveryStatus merchantId city :<|> getCommunicationRecipients merchantId city :<|> postCommunicationTemplate merchantId city
+handler merchantId city = postCommunicationCreate merchantId city :<|> getCommunicationList merchantId city :<|> getCommunicationInfo merchantId city :<|> postCommunicationSend merchantId city :<|> putCommunicationEdit merchantId city :<|> deleteCommunicationDelete merchantId city :<|> getCommunicationDeliveryStatus merchantId city :<|> getCommunicationRecipients merchantId city :<|> getCommunicationTemplate merchantId city
 
 type PostCommunicationCreate =
   ( ApiAuth
@@ -92,12 +92,12 @@ type GetCommunicationRecipients =
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationRecipients
   )
 
-type PostCommunicationTemplate =
+type GetCommunicationTemplate =
   ( ApiAuth
       ('DRIVER_OFFER_BPP_MANAGEMENT)
       ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.POST_COMMUNICATION_TEMPLATE))
-      :> API.Types.ProviderPlatform.Management.Communication.PostCommunicationTemplate
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_TEMPLATE))
+      :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationTemplate
   )
 
 postCommunicationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> API.Types.ProviderPlatform.Management.Communication.CreateCommunicationRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CreateCommunicationResponse)
@@ -124,5 +124,5 @@ getCommunicationDeliveryStatus merchantShortId opCity apiTokenInfo communication
 getCommunicationRecipients :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationRoleType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.RecipientsResponse)
 getCommunicationRecipients merchantShortId opCity apiTokenInfo role fleetOwnerId operatorId search selectAll limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationRecipients merchantShortId opCity apiTokenInfo role fleetOwnerId operatorId search selectAll limit offset
 
-postCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Communication.GetTemplateRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)
-postCommunicationTemplate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.postCommunicationTemplate merchantShortId opCity apiTokenInfo req
+getCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)
+getCommunicationTemplate merchantShortId opCity apiTokenInfo domain channel = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationTemplate merchantShortId opCity apiTokenInfo domain channel

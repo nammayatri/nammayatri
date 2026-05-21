@@ -95,10 +95,11 @@ apis:
       response:
         type: RecipientsResponse
       userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT COMMUNICATION RECIPIENTS_COMMUNICATION
-  - POST:
+  - GET:
       endpoint: /template
-      request:
-        type: GetTemplateRequest
+      mandatoryQuery:
+        - domain: CommunicationDomainType
+        - channel: CommunicationChannelType
       auth: ApiAuthV2
       response:
         type: CommunicationTemplateResponse
@@ -246,14 +247,6 @@ types:
     - templateId: Text
     - messageBody: Text
     - templateName: Maybe Text
-    - recommendCustomMessage: Bool
-  MobileNumberReq:
-    - mobileCountryCode: Text
-    - mobileNumber: Text
-  GetTemplateRequest:
-    - mobileNumbers: [MobileNumberReq]
-    - domain: CommunicationDomainType
-    - channel: CommunicationChannelType
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

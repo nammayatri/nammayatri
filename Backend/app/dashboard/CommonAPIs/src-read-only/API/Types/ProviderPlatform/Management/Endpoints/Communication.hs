@@ -133,12 +133,7 @@ data CommunicationStatusType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data CommunicationTemplateResponse = CommunicationTemplateResponse
-  { templateId :: Kernel.Prelude.Text,
-    messageBody :: Kernel.Prelude.Text,
-    templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    recommendCustomMessage :: Kernel.Prelude.Bool
-  }
+data CommunicationTemplateResponse = CommunicationTemplateResponse {templateId :: Kernel.Prelude.Text, messageBody :: Kernel.Prelude.Text, templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -210,14 +205,6 @@ data EditCommunicationRequest = EditCommunicationRequest
 instance Kernel.Types.HideSecrets.HideSecrets EditCommunicationRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data GetTemplateRequest = GetTemplateRequest {mobileNumbers :: [MobileNumberReq], domain :: CommunicationDomainType, channel :: CommunicationChannelType}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data MobileNumberReq = MobileNumberReq {mobileCountryCode :: Kernel.Prelude.Text, mobileNumber :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data RecipientItem = RecipientItem
   { id :: Kernel.Prelude.Text,
     name :: Kernel.Prelude.Text,
@@ -248,7 +235,7 @@ data SendCommunicationRequest = SendCommunicationRequest
 instance Kernel.Types.HideSecrets.HideSecrets SendCommunicationRequest where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("communication" :> (PostCommunicationCreate :<|> GetCommunicationList :<|> GetCommunicationInfo :<|> PostCommunicationSend :<|> PutCommunicationEdit :<|> DeleteCommunicationDelete :<|> GetCommunicationDeliveryStatus :<|> GetCommunicationRecipients :<|> PostCommunicationTemplate))
+type API = ("communication" :> (PostCommunicationCreate :<|> GetCommunicationList :<|> GetCommunicationInfo :<|> PostCommunicationSend :<|> PutCommunicationEdit :<|> DeleteCommunicationDelete :<|> GetCommunicationDeliveryStatus :<|> GetCommunicationRecipients :<|> GetCommunicationTemplate))
 
 type PostCommunicationCreate =
   ( "create" :> MandatoryQueryParam "personId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> ReqBody ('[JSON]) CreateCommunicationRequest
@@ -326,7 +313,12 @@ type GetCommunicationRecipients =
            RecipientsResponse
   )
 
-type PostCommunicationTemplate = ("template" :> ReqBody ('[JSON]) GetTemplateRequest :> Post ('[JSON]) CommunicationTemplateResponse)
+type GetCommunicationTemplate =
+  ( "template" :> MandatoryQueryParam "domain" CommunicationDomainType :> MandatoryQueryParam "channel" CommunicationChannelType
+      :> Get
+           ('[JSON])
+           CommunicationTemplateResponse
+  )
 
 data CommunicationAPIs = CommunicationAPIs
   { postCommunicationCreate :: (Kernel.Types.Id.Id Dashboard.Common.Person -> CreateCommunicationRequest -> EulerHS.Types.EulerClient CreateCommunicationResponse),
@@ -337,13 +329,13 @@ data CommunicationAPIs = CommunicationAPIs
     deleteCommunicationDelete :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     getCommunicationDeliveryStatus :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe (CommunicationChannelType) -> Kernel.Prelude.Maybe (CommunicationDeliveryStatusType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient DeliveryStatusResponse),
     getCommunicationRecipients :: (Kernel.Prelude.Maybe (CommunicationRoleType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> EulerHS.Types.EulerClient RecipientsResponse),
-    postCommunicationTemplate :: (GetTemplateRequest -> EulerHS.Types.EulerClient CommunicationTemplateResponse)
+    getCommunicationTemplate :: (CommunicationDomainType -> CommunicationChannelType -> EulerHS.Types.EulerClient CommunicationTemplateResponse)
   }
 
 mkCommunicationAPIs :: (Client EulerHS.Types.EulerClient API -> CommunicationAPIs)
 mkCommunicationAPIs communicationClient = (CommunicationAPIs {..})
   where
-    postCommunicationCreate :<|> getCommunicationList :<|> getCommunicationInfo :<|> postCommunicationSend :<|> putCommunicationEdit :<|> deleteCommunicationDelete :<|> getCommunicationDeliveryStatus :<|> getCommunicationRecipients :<|> postCommunicationTemplate = communicationClient
+    postCommunicationCreate :<|> getCommunicationList :<|> getCommunicationInfo :<|> postCommunicationSend :<|> putCommunicationEdit :<|> deleteCommunicationDelete :<|> getCommunicationDeliveryStatus :<|> getCommunicationRecipients :<|> getCommunicationTemplate = communicationClient
 
 data CommunicationUserActionType
   = POST_COMMUNICATION_CREATE
@@ -354,7 +346,7 @@ data CommunicationUserActionType
   | DELETE_COMMUNICATION_DELETE
   | GET_COMMUNICATION_DELIVERY_STATUS
   | GET_COMMUNICATION_RECIPIENTS
-  | POST_COMMUNICATION_TEMPLATE
+  | GET_COMMUNICATION_TEMPLATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

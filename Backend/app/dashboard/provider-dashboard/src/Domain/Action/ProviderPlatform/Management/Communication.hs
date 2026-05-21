@@ -9,7 +9,7 @@ module Domain.Action.ProviderPlatform.Management.Communication
     deleteCommunicationDelete,
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
-    postCommunicationTemplate,
+    getCommunicationTemplate,
   )
 where
 
@@ -74,7 +74,7 @@ getCommunicationRecipients merchantShortId opCity apiTokenInfo role fleetOwnerId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.communicationDSL.getCommunicationRecipients) role fleetOwnerId operatorId search selectAll limit offset
 
-postCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Communication.GetTemplateRequest -> Environment.Flow API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)
-postCommunicationTemplate merchantShortId opCity apiTokenInfo req = do
+getCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Environment.Flow API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)
+getCommunicationTemplate merchantShortId opCity apiTokenInfo domain channel = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.communicationDSL.postCommunicationTemplate) req
+  API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.communicationDSL.getCommunicationTemplate) domain channel
