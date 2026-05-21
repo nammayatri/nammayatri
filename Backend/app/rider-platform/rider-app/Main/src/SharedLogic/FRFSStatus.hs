@@ -395,7 +395,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                webhookUrl = Just $ showBaseUrl nwAddress,
+                webhookUrl = Just nwAddress,
                 splitSettlementDetails = splitSettlementDetails,
                 basket = Nothing,
                 paymentRules = Nothing,
