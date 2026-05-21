@@ -208,17 +208,26 @@ getPassOrganizationPassDetailsDocument merchantShortId opCity documentId = do
 postPassOrganizationAssignDepot ::
   ( Id.ShortId DMerchant.Merchant ->
     Context.City ->
-    Id.Id DPerson.Person ->
     PassOrganizationAPI.AssignDepotReq ->
     Environment.Flow APISuccess.APISuccess
   )
-postPassOrganizationAssignDepot merchantShortId opCity depotPersonId req = do
+postPassOrganizationAssignDepot merchantShortId opCity req = do
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
-  depotPerson <- QPerson.findById depotPersonId >>= fromMaybeM (PersonNotFound depotPersonId.getId)
-  unless (depotPerson.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
-  when (null req.passOrganizationIds) $ Utils.throwError (InvalidRequest "passOrganizationIds must not be empty")
-  forM_ req.passOrganizationIds $ \pid -> do
-    org <- QPassOrganization.findById pid >>= fromMaybeM (PassOrganizationNotFound pid.getId)
+  when (null req.passOrganizations) $ Utils.throwError (InvalidRequest "passOrganizations must not be empty")
+  forM_ req.passOrganizations $ \pa -> do
+    org <- QPassOrganization.findById pa.id >>= fromMaybeM (PassOrganizationNotFound pa.id.getId)
     unless (org.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
-  QPassOrganization.updateDepotAssignment (Just depotPersonId) req.depotId req.passOrganizationIds
+    if pa.isAdd
+      then
+        unless (isNothing org.depotPersonId || org.depotPersonId == Just req.depotPersonId) $
+          Utils.throwError (InvalidRequest "Already assigned to another depot person")
+      else
+        unless (org.depotPersonId == Just req.depotPersonId) $
+          Utils.throwError (InvalidRequest "You don't own this assignment")
+  let addIds = [pa.id | pa <- req.passOrganizations, pa.isAdd]
+      removeIds = [pa.id | pa <- req.passOrganizations, not pa.isAdd]
+  unless (null addIds) $
+    QPassOrganization.updateDepotAssignment (Just req.depotPersonId) req.depotId addIds
+  unless (null removeIds) $
+    QPassOrganization.updateDepotAssignment Nothing Nothing removeIds
   pure APISuccess.Success

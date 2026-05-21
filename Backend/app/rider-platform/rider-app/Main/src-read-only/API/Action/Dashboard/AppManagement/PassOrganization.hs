@@ -44,5 +44,5 @@ getPassOrganizationGetOrganizations a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ 
 getPassOrganizationPassDetailsDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
 getPassOrganizationPassDetailsDocument a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.getPassOrganizationPassDetailsDocument a3 a2 a1
 
-postPassOrganizationAssignDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.PassOrganization.AssignDepotReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
-postPassOrganizationAssignDepot a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.postPassOrganizationAssignDepot a4 a3 a2 a1
+postPassOrganizationAssignDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.AppManagement.PassOrganization.AssignDepotReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPassOrganizationAssignDepot a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.postPassOrganizationAssignDepot a3 a2 a1
