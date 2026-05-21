@@ -167,12 +167,7 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
             mobileNumber <- mapM decrypt customer.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
             let countryCode = fromMaybe "+91" customer.mobileCountryCode
             let phoneNumber = countryCode <> mobileNumber
-            buildSmsReq <-
-              MessageBuilder.buildSendBookingOTPMessage merchantOperatingCityId $
-                MessageBuilder.BuildSendBookingOTPMessageReq
-                  { otp = show otp,
-                    amount = show (booking.estimatedTotalFare.amountInt)
-                  }
+            buildSmsReq <- MessageBuilder.buildBookingOtpSmsForCategory merchantOperatingCityId booking otp
             Sms.sendSMS booking.merchantId merchantOperatingCityId (buildSmsReq phoneNumber) >>= Sms.checkSmsResult
           else do
             logInfo "Merchant not configured to send dashboard sms"
