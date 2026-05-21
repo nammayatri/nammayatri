@@ -48,6 +48,7 @@ imports:
   Value: Data.Aeson
   SeatLayout: Domain.Types.SeatLayout
   Seat: Domain.Types.Seat
+  SeatSelectionType: Domain.Types.VehicleSeatLayoutMapping
 
 FRFSSearch:
   tableName: frfs_search
@@ -425,6 +426,9 @@ FRFSTicketBooking:
     finalBoardedVehicleServiceTierType: Maybe ServiceTierType
     conductorId: Maybe Text
     driverId: Maybe Text
+    driverName: Maybe Text
+    driverMobileNumber: Maybe Text
+    seatSelectionType: Maybe SeatSelectionType
     busLocationData: "[BusLocation]"
     vehicleNumber: Maybe Text
     isMockPayment: Maybe Bool

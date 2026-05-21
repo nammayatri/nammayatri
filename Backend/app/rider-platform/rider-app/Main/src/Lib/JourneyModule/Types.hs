@@ -37,6 +37,7 @@ import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
 import qualified Domain.Types.Station as DStation
+import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Environment
 import EulerHS.Prelude (safeHead)
 import Kernel.External.Encryption
@@ -469,7 +470,10 @@ data BusLegExtraInfo = BusLegExtraInfo
     busTagNumber :: Maybe Text,
     tripId :: Maybe Text,
     tripStartTime :: Maybe [UTCTime],
-    bookedStopETA :: Maybe [UTCTime]
+    bookedStopETA :: Maybe [UTCTime],
+    driverName :: Maybe Text,
+    driverMobileNumber :: Maybe Text,
+    seatSelectionType :: Maybe DVSLM.SeatSelectionType
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -958,6 +962,14 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           let fromStation = journeyLegDetail.originStop
           let toStation = journeyLegDetail.destinationStop
           let routeCode = journeyLegDetail.routeCode
+          let busDriverId =
+                maybe
+                  journeyLeg.busDriverId
+                  (\driverId ->
+                     if Text.null driverId
+                       then journeyLeg.busDriverId
+                       else Just driverId)
+                  booking.driverId
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
           quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
@@ -1004,7 +1016,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
                   busConductorId = journeyLeg.busConductorId,
-                  busDriverId = journeyLeg.busDriverId,
+                  busDriverId = busDriverId,
                   busTagNumber = journeyLeg.busTagNumber,
                   legStartTime = journeyRouteDetail.legStartTime,
                   legEndTime = journeyRouteDetail.legEndTime,
@@ -1023,7 +1035,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   categoryBookingDetails = Just categoryBookingDetails,
                   tripId = booking.tripId,
                   tripStartTime = fmap pure mTripStartTime,
-                  bookedStopETA = fmap pure mBookedStopETA
+                  bookedStopETA = fmap pure mBookedStopETA,
+                  driverName = booking.driverName,
+                  driverMobileNumber = booking.driverMobileNumber,
+                  seatSelectionType = booking.seatSelectionType
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1306,7 +1321,10 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
                   categoryBookingDetails = Nothing,
                   tripId = Nothing,
                   tripStartTime = Nothing,
-                  bookedStopETA = Nothing
+                  bookedStopETA = Nothing,
+                  driverName = Nothing,
+                  driverMobileNumber = Nothing,
+                  seatSelectionType = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote quoteCategories =<< mbQuote
