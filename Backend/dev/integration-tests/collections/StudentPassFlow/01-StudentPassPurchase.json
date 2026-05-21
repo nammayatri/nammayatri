@@ -297,6 +297,107 @@
       }
     },
     {
+      "name": "Dashboard Assign Depot to PassOrganization",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Assign depot OK', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('APISuccess shape', function () { pm.expect(d).to.have.property('result'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"passOrganizationIds\": [\"{{pass_organization_id}}\"], \"depotId\": \"depot-test-001\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot/{{admin_person_id}}",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "assignDepot",
+            "{{admin_person_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard List Organizations (passEnum + depotPersonId filter)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for KV drainer to flush the assignDepot update before reading by depotPersonId.",
+              "console.log('[busy-wait] start at', Date.now()); var start = Date.now(); while (Date.now() - start < 10000) {} console.log('[busy-wait] done at', Date.now(), 'elapsed=', Date.now()-start, 'ms');"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Got organizations list', function () { pm.response.to.have.status(200); pm.expect(d).to.be.an('array').that.is.not.empty; });",
+              "var found = d.find(function (o) { return o.id === pm.environment.get('pass_organization_id'); });",
+              "pm.test('Assigned org appears in depot-filtered list', function () { pm.expect(found).to.exist; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/getOrganizations/{{pass_enum}}?depotPersonId={{admin_person_id}}",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "getOrganizations",
+            "{{pass_enum}}"
+          ],
+          "query": [
+            {
+              "key": "depotPersonId",
+              "value": "{{admin_person_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "Dashboard Update PassOrganization (Update existing)",
       "event": [
         {
@@ -488,7 +589,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"passOrganizationId\": \"{{pass_organization_id}}\",\n    \"name\": \"Test Student\",\n    \"idCardPicture\": \"data:image/png;base64,idcard\",\n    \"address\": \"12 College Rd, Chennai\",\n    \"age\": 17,\n    \"gender\": \"MALE\",\n    \"pincode\": \"600020\",\n    \"selfImage\": \"data:image/png;base64,selfie\",\n    \"guardianName\": \"Test Guardian\",\n    \"studentClass\": \"12\",\n    \"routeDetails\": [\n        {\"srcStopName\": \"{{route1_src_name}}\", \"srcStopId\": \"{{route1_src_id}}\", \"destStopName\": \"{{route1_dest_name}}\", \"destStopId\": \"{{route1_dest_id}}\"},\n        {\"srcStopName\": \"{{route2_src_name}}\", \"srcStopId\": \"{{route2_src_id}}\", \"destStopName\": \"{{route2_dest_name}}\", \"destStopId\": \"{{route2_dest_id}}\"}\n    ],\n    \"registerNo\": \"REG12345\",\n    \"aadharNo\": \"123456789012\"\n}"
+          "raw": "{\n    \"passOrganizationId\": \"{{pass_organization_id}}\",\n    \"name\": \"Test Student\",\n    \"idCardPicture\": \"data:image/png;base64,idcard\",\n    \"address\": {\"latLng\": {\"latitude\": 13.0827, \"longitude\": 80.2707}, \"placeName\": \"12 College Rd, Chennai\"},\n    \"age\": 17,\n    \"gender\": \"MALE\",\n    \"pincode\": \"600020\",\n    \"selfImage\": \"data:image/png;base64,selfie\",\n    \"guardianName\": \"Test Guardian\",\n    \"guardianMobileNumber\": \"+919876543210\",\n    \"department\": \"Computer Science\",\n    \"year\": \"3\",\n    \"routeDetails\": [\n        {\"srcStopName\": \"{{route1_src_name}}\", \"srcStopId\": \"{{route1_src_id}}\", \"destStopName\": \"{{route1_dest_name}}\", \"destStopId\": \"{{route1_dest_id}}\"},\n        {\"srcStopName\": \"{{route2_src_name}}\", \"srcStopId\": \"{{route2_src_id}}\", \"destStopName\": \"{{route2_dest_name}}\", \"destStopId\": \"{{route2_dest_id}}\"}\n    ],\n    \"registerNo\": \"REG12345\",\n    \"aadharNo\": \"123456789012\",\n    \"academicYearStart\": \"2026-06-01\",\n    \"academicYearEnd\": \"2027-05-31\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/passDetails/{{pass_enum}}/update",
@@ -715,7 +816,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"CLG_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"College verified\"\n        }\n    ]\n}"
+          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"CLG_VERIFIED\",\n            \"academicYearStart\": \"2026-06-01\",\n            \"academicYearEnd\": \"2027-05-31\",\n            \"numberOfStages\": 14,\n            \"remark\": \"College verified\"\n        }\n    ]\n}"
         },
         "url": {
           "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",
@@ -804,7 +905,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"MTC_VERIFIED\",\n            \"graduationDate\": \"2027-05-31T00:00:00Z\",\n            \"numberOfStages\": 14,\n            \"remark\": \"MTC verified - eligible for student pass\"\n        }\n    ]\n}"
+          "raw": "{\n    \"verifications\": [\n        {\n            \"passDetailsId\": \"{{pass_details_id}}\",\n            \"verificationStatus\": \"MTC_VERIFIED\",\n            \"academicYearStart\": \"2026-06-01\",\n            \"academicYearEnd\": \"2027-05-31\",\n            \"numberOfStages\": 14,\n            \"remark\": \"MTC verified - eligible for student pass\"\n        }\n    ]\n}"
         },
         "url": {
           "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/verify",

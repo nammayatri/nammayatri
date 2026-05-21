@@ -88,6 +88,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False False
   staticCustomerId <- SLUtils.getStaticCustomerId person req.mobileNumber
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,
@@ -106,10 +107,12 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ Kernel.Prelude.showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonMerchantOperatingCityId = Kernel.Types.Id.cast @MerchantOperatingCity.MerchantOperatingCity @DPayment.MerchantOperatingCity person.merchantOperatingCityId
@@ -340,6 +343,7 @@ txnStatusToBBPSStatus = \case
   Payment.AUTO_REFUNDED -> DBBPS.REFUNDED
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DBBPS.FAILED
   Payment.CANCELLED -> DBBPS.FAILED
+  Payment.PARTIAL_CHARGED -> DBBPS.PENDING
 
 withBBPSLock :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id DBBPS.BBPS -> m () -> m ()
 withBBPSLock id func = Redis.whenWithLockRedis (bbpsLockKey id.getId) 60 func

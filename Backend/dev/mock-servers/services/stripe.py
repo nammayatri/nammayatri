@@ -322,9 +322,14 @@ def _mk_account(params):
     acc = {
         "id": acc_id,
         "object": "account",
+        "country": params.get("country", "FI"),
+        "business_type": params.get("business_type", "individual"),
         "charges_enabled": False,
         "details_submitted": False,
         "payouts_enabled": False,
+        "requirements": {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None},
+        "future_requirements": {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None},
+        "capabilities": {"card_payments": "active", "transfers": "active"},
     }
     accounts[acc_id] = acc
     return acc, 200
@@ -474,16 +479,53 @@ def handle(handler, path, body):
             resp, st = _mk_account(params)
             return handler._json(resp, st)
         if method == "GET" and len(parts) == 2:
-            acc = accounts.get(parts[1],
-                               {"id": parts[1], "object": "account", "charges_enabled": True, "details_submitted": True, "payouts_enabled": True})
+            acc = accounts.get(parts[1], {
+                "id": parts[1],
+                "object": "account",
+                "country": "FI",
+                "business_type": "individual",
+                "charges_enabled": True,
+                "details_submitted": True,
+                "payouts_enabled": True,
+                "requirements": {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None},
+                "future_requirements": {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None},
+                "capabilities": {"card_payments": "active", "transfers": "active"},
+            })
+            # Ensure requirements always present on retrieve (overrides via _get_override may
+            # have set charges_enabled etc. but not these nested objects)
+            acc.setdefault("requirements", {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None})
+            acc.setdefault("future_requirements", {"currently_due": [], "eventually_due": [], "past_due": [], "pending_verification": [], "disabled_reason": None})
             return handler._json(acc)
 
     # ── Account Links ──
     if resource == "account_links" and method == "POST":
         return handler._json({
             "object": "account_link",
-            "url": f"https://connect.stripe.com/setup/mock/{uuid.uuid4().hex[:8]}",
+            "url": f"http://localhost:8080/stripe/connect/mock/{uuid.uuid4().hex[:8]}",
             "expires_at": _now() + 3600,
+            "created": _now(),
+        })
+
+    # ── Transfers (ride payouts) ──
+    if resource == "transfers" and method == "POST":
+        return handler._json({
+            "id": _gen_id("tr"),
+            "object": "transfer",
+            "amount": int(params.get("amount", 0)),
+            "currency": params.get("currency", "eur"),
+            "destination": params.get("destination", ""),
+            "created": _now(),
+        })
+
+    # ── Payouts ──
+    if resource == "payouts" and method == "POST":
+        return handler._json({
+            "id": _gen_id("po"),
+            "object": "payout",
+            "amount": int(params.get("amount", 0)),
+            "currency": params.get("currency", "eur"),
+            "arrival_date": _now() + 86400,
+            "status": "paid",
             "created": _now(),
         })
 

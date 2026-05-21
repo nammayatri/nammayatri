@@ -1197,7 +1197,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
     case vehicleMB of
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
         let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers
         let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
         let mbDefaultServiceTierItem =
@@ -2519,7 +2519,7 @@ getDriverPayments (personId, _, merchantOpCityId) mbFrom mbTo mbStatus mbLimit m
       ]
 
 clearDriverDues ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m, HasKafkaProducer r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r, HasField "smsCfg" r SmsConfig, MonadFlow m, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   Maybe ClearManualSelectedDues ->
@@ -2987,9 +2987,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
               driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-              vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
-              let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
+              serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) Nothing Nothing Nothing personId cityId
+              let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
               let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags
@@ -3153,7 +3152,7 @@ acceptScheduledBooking (personId, merchantId, merchantOpCityId) clientId booking
   acceptScheduledBookingWithPreFetched merchant transporterConfig booking driver clientId (Just booking)
 
 clearDriverFeeWithCreate ::
-  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r) =>
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r, HasField "smsCfg" r SmsConfig, HasKafkaProducer r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
   (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   ServiceNames ->
   (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney) ->

@@ -429,7 +429,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",
@@ -995,7 +995,7 @@
           },
           {
             "key": "token",
-            "value": "{{driver_id}}"
+            "value": "{{driver_token}}"
           },
           {
             "key": "vt",
@@ -1205,9 +1205,25 @@
               "    var req = d.searchRequestsForDriver[0];",
               "    pm.environment.set('searchTryId', req.searchTryId);",
               "    console.log('Got request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
-              "}",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });"
+              "    pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "    pm.test('Has search requests', () => pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty);",
+              "    pm.collectionVariables.set('_nearby_attempt', '0');",
+              "} else {",
+              "    // Empty pool: driver-pool batch sizes are small (4); freshly-created test driver may not make first batch.",
+              "    // Pool fires successive batches every single_batch_process_time (~22s). Retry up to 8 times with 5s gaps",
+              "    // (~40s total) to catch a later batch that includes us.",
+              "    var attempt = parseInt(pm.collectionVariables.get('_nearby_attempt') || '0');",
+              "    if (attempt < 8) {",
+              "        console.log('Pool empty (attempt', attempt + 1, ') \u2014 retrying after busy-wait...');",
+              "        var t0 = Date.now(); while (Date.now() - t0 < 5000) {}",
+              "        pm.collectionVariables.set('_nearby_attempt', String(attempt + 1));",
+              "        pm.execution.setNextRequest(pm.info.requestName);",
+              "    } else {",
+              "        pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "        pm.test('Has search requests', () => pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty);",
+              "        pm.collectionVariables.set('_nearby_attempt', '0');",
+              "    }",
+              "}"
             ],
             "type": "text/javascript"
           }

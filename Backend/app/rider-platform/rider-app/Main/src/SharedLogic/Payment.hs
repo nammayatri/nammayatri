@@ -94,8 +94,12 @@ getLoyaltyInfo ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   m WalletTypes.LoyaltyInfoResponse
-getLoyaltyInfo customerId merchantId merchantOperatingCityId =
-  LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId -- need to write the storing logic
+getLoyaltyInfo customerId merchantId merchantOperatingCityId = do
+  resp <- LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId
+  mbProgramMap <- TPayment.loadLoyaltyProgramMap merchantId merchantOperatingCityId
+  let resolveProgramType pid = T.pack . show <$> (Map.lookup pid =<< mbProgramMap)
+      enrich p = p {WalletTypes.programType = resolveProgramType (p.id_)}
+  pure $ resp {WalletTypes.programs = fmap (map enrich) resp.programs}
 
 -- | Type alias for fulfillment status handler function
 -- This allows callers to pass the appropriate handler for their payment service type
@@ -122,6 +126,7 @@ fallbackOrderStatusHandler paymentStatusResp = do
         Payment.JUSPAY_DECLINED -> DPayment.FulfillmentPending
         Payment.AUTHORIZATION_FAILED -> DPayment.FulfillmentPending
         Payment.AUTHENTICATION_FAILED -> DPayment.FulfillmentPending
+        Payment.PARTIAL_CHARGED -> DPayment.FulfillmentPending
   pure (fulfillment, Nothing, Nothing)
 
 orderStatusHandler ::
@@ -774,7 +779,8 @@ type MakePaymentIntentConstraints m r c =
     ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
-    FinanceBeamFlow.BeamFlow m r
+    FinanceBeamFlow.BeamFlow m r,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   )
 
 makePaymentIntent ::
@@ -814,7 +820,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 }
           incrementAuthCall piId amount applicationFeeAmount =
             TPayment.updateAmountInPaymentIntent merchantId merchantOpCityId paymentMode piId amount applicationFeeAmount
-          serviceReq =
+      nwAddress <- asks (.nwAddress)
+      let serviceReq =
             DPayment.CreatePaymentServiceReq
               { amount = effectiveAmount,
                 currency = req.currency,
@@ -838,6 +845,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 metadataExpiryInMins = Nothing,
                 basket = Nothing,
                 paymentRules = Nothing,
+                webhookUrl = Just $ showBaseUrl nwAddress,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,

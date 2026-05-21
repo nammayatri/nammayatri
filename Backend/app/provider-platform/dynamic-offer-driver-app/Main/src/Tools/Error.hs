@@ -1337,7 +1337,10 @@ instance IsBaseError DriverOnboardingError where
     ImageValidationFailed -> Just "Validation of Image failed."
     ImageNotReadable -> Just "Image is not readable."
     ImageLowQuality -> Just "Image quality is not good"
-    ImageInvalidType provided actual -> Just $ "Provided image type \"" <> provided <> "\" doesn't match actual type \"" <> actual <> "\"."
+    ImageInvalidType provided actual ->
+      if actual == ""
+        then Just $ "We couldn't detect a valid " <> provided <> " in the uploaded image. Please ensure the document is clearly visible and try again."
+        else Just $ "The uploaded image appears to be a " <> actual <> " instead of a " <> provided <> ". Please upload a clear photo of your " <> provided <> "."
     ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."

@@ -161,6 +161,8 @@ def redis_cmd(*args):
 
 PORT = 7082
 
+VICTORIA_METRICS_URL = os.environ.get("VICTORIA_METRICS_URL", "")
+
 # ── Paths ──
 SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
@@ -198,8 +200,10 @@ DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
+# Keep in sync with config_transfer.py's DEFAULT_FETCH_VERSIONS. master is on v1
+# (older zip layout still uploaded); prod / prod_international are on v2.
 CONFIG_SYNC_BUNDLE_URLS = {
-    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v2",
+    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1",
     "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
     "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v2",
 }
@@ -2647,6 +2651,9 @@ class ContextHandler(BaseHTTPRequestHandler):
         elif path.startswith("/proxy/driver/"):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]
+        elif path.startswith("/proxy/juspay-payment/"):
+            target_base = os.environ.get("MOCK_SERVER_URL", "http://localhost:8091/")
+            target_path = path[len("/proxy/juspay-payment"):]
         else:
             return False
 
@@ -2667,18 +2674,32 @@ class ContextHandler(BaseHTTPRequestHandler):
         try:
             req = urllib.request.Request(
                 target_url, data=body, headers=fwd_headers, method=method)
+            _t0 = time.time()
             with urllib.request.urlopen(req, timeout=30) as resp:
                 resp_body = resp.read()
+                upstream_ms = int((time.time() - _t0) * 1000)
+                if resp.headers.get("Content-Encoding", "") == "gzip":
+                    import gzip as _gzip
+                    resp_body = _gzip.decompress(resp_body)
                 self.send_response(resp.status)
-                self.send_header(
-                    "Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
                 self._cors_headers()
                 self.end_headers()
                 self.wfile.write(resp_body)
         except urllib.error.HTTPError as e:
+            _t0 = time.time()
             resp_body = e.read()
+            upstream_ms = int((time.time() - _t0) * 1000)
+            if e.headers.get("Content-Encoding", "") == "gzip":
+                import gzip as _gzip
+                try:
+                    resp_body = _gzip.decompress(resp_body)
+                except Exception:
+                    pass
             self.send_response(e.code)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
+            self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
             self._cors_headers()
             self.end_headers()
             self.wfile.write(resp_body)
@@ -3894,8 +3915,9 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"cleared": True})
             return True
 
-        # GET API endpoints
-        if method != "GET" and not path.startswith("/proxy/"):
+        # GET API endpoints (POST also allowed for metrics/push and webhook)
+        _post_allowed = {"/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all"}
+        if method != "GET" and not path.startswith("/proxy/") and path not in _post_allowed:
             self._send_json({"error": "method not allowed"}, 405)
             return True
 
@@ -3981,6 +4003,55 @@ class ContextHandler(BaseHTTPRequestHandler):
             side = qs.get("side", ["bpp"])[0]
             schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
             self._send_json(get_finance_reference_types(schema))
+        # ── Metrics push (from dashboard after suite completes) ──────────────
+        elif method == "POST" and path in ("/api/metrics/push", "/metrics/push"):
+            body = self._read_json_body()
+            version_id = body.get("versionId", "unknown")
+            collection = body.get("collection", "unknown")
+            env = body.get("env", "Master")
+            suite = body.get("suite", "unknown")
+            steps = body.get("steps", [])
+            all_passed = body.get("allPassed", False)
+            result = push_suite_metrics(version_id, collection, env, suite, steps, all_passed)
+            push_ok = result[0] if result else False
+            push_msg = result[1] if result else "skipped"
+            suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
+            self._send_json({"ok": push_ok, "pushed": push_ok, "msg": push_msg, "suite": suite_label, "versionId": version_id})
+            return True
+
+        # ── Webhook: trigger run-all Master collections ───────────────────
+        elif method == "POST" and path in ("/api/webhook/run-all", "/webhook/run-all"):
+            body = self._read_json_body()
+            version_id = body.get("versionId", "unknown")
+            if not version_id or version_id == "unknown":
+                self._send_json({"error": "versionId is required"}, 400)
+                return True
+            import uuid as _uuid, time as _time
+            run_id = f"run-{int(_time.time())}-{str(_uuid.uuid4())[:8]}"
+            t = threading.Thread(
+                target=_run_all_master_webhook,
+                args=(run_id, version_id),
+                daemon=True
+            )
+            t.start()
+            self._send_json({"runId": run_id, "versionId": version_id, "status": "started"})
+            return True
+
+        elif method == "GET" and path in ("/api/webhook/run-all/status", "/webhook/run-all/status"):
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_id = qs.get("runId", [None])[0]
+            if not run_id:
+                self._send_json({"error": "runId required"}, 400)
+                return True
+            with _webhook_lock:
+                state = _webhook_runs.get(run_id)
+            if not state:
+                self._send_json({"error": "run not found"}, 404)
+                return True
+            self._send_json(state)
+            return True
+
         else:
             self._send_json({"error": "not found"}, 404)
         return True
@@ -3996,6 +4067,172 @@ class ContextHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         self._handle("DELETE")
+
+
+# ── Metrics / VictoriaMetrics ─────────────────────────────────────────────────
+
+def _push_metrics_to_vm(lines: list[str]) -> tuple[bool, str]:
+    if not VICTORIA_METRICS_URL:
+        return False, "VICTORIA_METRICS_URL not set — metrics disabled"
+    payload = "\n".join(lines) + "\n"
+    try:
+        req = urllib.request.Request(
+            VICTORIA_METRICS_URL,
+            data=payload.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            r.read()
+        return True, f"OK — {len(lines)} metrics sent to {VICTORIA_METRICS_URL}"
+    except Exception as e:
+        msg = str(e)
+        if "Name or service not known" in msg or "nodename nor servname" in msg:
+            msg = (f"VictoriaMetrics unreachable ({VICTORIA_METRICS_URL}) — "
+                   "this is expected when running locally outside K8s. "
+                   "Set VICTORIA_METRICS_URL to push from local.")
+        return False, msg
+
+
+def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
+                       steps: list[dict], all_passed: bool):
+    import time as _time
+    ts_ms = int(_time.time() * 1000)
+    suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
+    labels_base = f'version="{version_id}",suite="{suite_label}"'
+    if not all_passed:
+        print(f"  [metrics] skipped — suite={suite_label} FAIL (only push on full pass)")
+        return False, "skipped — suite did not fully pass"
+
+    lines = []
+
+    if all_passed:
+        total_ms = 0
+        for step in steps:
+            elapsed = step.get("elapsed_ms", 0)
+            total_ms += elapsed
+            api_name = f"{step.get('method','?')} {step.get('path','?')}".replace('"', "'")
+            lines.append(
+                f'integration_test_api_latency_ms{{{labels_base},api="{api_name}"}} '
+                f'{elapsed} {ts_ms}'
+            )
+        lines.append(
+            f'integration_test_suite_latency_ms{{{labels_base}}} '
+            f'{total_ms} {ts_ms}'
+        )
+
+    ok, msg = _push_metrics_to_vm(lines)
+    status = 'PASS' if all_passed else 'FAIL'
+    if ok:
+        print(f"  [metrics] ✓ suite={suite_label} status={status} version={version_id} — {msg}")
+    else:
+        print(f"  [metrics] ✗ suite={suite_label} status={status} version={version_id} — {msg}")
+    return ok, msg
+
+
+# ── Webhook: run all Master collections ───────────────────────────────────────
+
+_webhook_runs: dict = {}  # runId → { status, progress, errors }
+_webhook_lock = threading.Lock()
+
+
+def _run_all_master_webhook(run_id: str, version_id: str):
+    import subprocess as _sp, time as _time
+
+    with _webhook_lock:
+        _webhook_runs[run_id] = {"status": "running", "total": 0, "done": 0,
+                                  "passed": 0, "failed": 0, "errors": []}
+
+    results = []
+    for coll_dir in sorted(COLLECTIONS_DIR.iterdir()):
+        if not coll_dir.is_dir():
+            continue
+        master_dir = coll_dir / "Master"
+        if not master_dir.is_dir():
+            continue
+        env_files = sorted(master_dir.glob("Master_*.postman_environment.json"))
+        coll_files = [f for f in sorted(coll_dir.glob("*.json"))
+                      if not f.name.endswith(".postman_environment.json")]
+        for env_file in env_files:
+            city = env_file.stem.split("_", 1)[1] if "_" in env_file.stem else env_file.stem
+            for coll_file in coll_files:
+                with _webhook_lock:
+                    _webhook_runs[run_id]["total"] += 1
+
+    total = _webhook_runs[run_id]["total"]
+
+    for coll_dir in sorted(COLLECTIONS_DIR.iterdir()):
+        if not coll_dir.is_dir():
+            continue
+        master_dir = coll_dir / "Master"
+        if not master_dir.is_dir():
+            continue
+        env_files = sorted(master_dir.glob("Master_*.postman_environment.json"))
+        coll_files = [f for f in sorted(coll_dir.glob("*.json"))
+                      if not f.name.endswith(".postman_environment.json")]
+
+        for env_file in env_files:
+            city = env_file.stem.replace("Master_", "")
+            for coll_file in coll_files:
+                suite_name = coll_dir.name
+                flow_name = coll_file.stem
+                report_file = Path("/tmp") / f"ny_webhook_{run_id}_{suite_name}_{flow_name}_{city}.json"
+                try:
+                    proc = _sp.run(
+                        ["newman", "run", str(coll_file), "-e", str(env_file),
+                         "--bail", "--timeout-request", "60000",
+                         "--reporters", "json",
+                         "--reporter-json-export", str(report_file)],
+                        capture_output=True, text=True, timeout=300
+                    )
+                    passed = proc.returncode == 0
+                    steps = []
+                    if report_file.exists():
+                        try:
+                            rpt = json.loads(report_file.read_text())
+                            for ex in rpt.get("run", {}).get("executions", []):
+                                item = ex.get("item", {})
+                                resp = ex.get("response", {})
+                                url = resp.get("responseTime", 0)
+                                req = ex.get("request", {})
+                                req_url = req.get("url", {})
+                                raw = req_url.get("raw", "") if isinstance(req_url, dict) else str(req_url)
+                                # strip host, keep path
+                                try:
+                                    from urllib.parse import urlparse as _up
+                                    path = _up(raw).path or raw
+                                except Exception:
+                                    path = raw
+                                steps.append({
+                                    "name": item.get("name", "?"),
+                                    "method": req.get("method", "GET"),
+                                    "path": path,
+                                    "elapsed_ms": resp.get("responseTime", 0),
+                                })
+                            report_file.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                    push_suite_metrics(version_id, suite_name, "Master", flow_name,
+                                       steps, passed)
+                    with _webhook_lock:
+                        _webhook_runs[run_id]["done"] += 1
+                        if passed:
+                            _webhook_runs[run_id]["passed"] += 1
+                        else:
+                            _webhook_runs[run_id]["failed"] += 1
+                            _webhook_runs[run_id]["errors"].append(
+                                f"{suite_name}/{flow_name}/{city}")
+                except Exception as e:
+                    with _webhook_lock:
+                        _webhook_runs[run_id]["done"] += 1
+                        _webhook_runs[run_id]["failed"] += 1
+                        _webhook_runs[run_id]["errors"].append(
+                            f"{suite_name}/{flow_name}/{city}: {e}")
+
+    with _webhook_lock:
+        _webhook_runs[run_id]["status"] = "done"
+    print(f"  [webhook] run {run_id} complete: "
+          f"{_webhook_runs[run_id]['passed']}/{total} passed")
 
 
 def main():

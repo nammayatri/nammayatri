@@ -7,10 +7,31 @@ let
   commitHash = builtins.substring 0 6 (self.rev or "dev");
   tagPrefix = builtins.getEnv "DOCKER_TAG_PREFIX";
   imageTag = if tagPrefix != "" then "${tagPrefix}${commitHash}" else commitHash;
+  localBinariesPath = builtins.getEnv "LOCAL_BINARIES_PATH";
+  localBuild = localBinariesPath != "";
 in
 {
   config = {
-    perSystem = { self', pkgs, lib, ... }: {
+    perSystem = { self', pkgs, lib, config, ... }:
+      let
+        nammayatriBinaries = if localBuild
+          then pkgs.runCommand "nammayatri-local" {
+            nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
+            buildInputs =
+              config.haskellProjects.default.outputs.devShell.buildInputs
+              ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client ];
+            src = /. + localBinariesPath;
+          } ''
+            cp -r $src $out
+            chmod -R +w $out/bin
+            for exe in $out/bin/*; do
+              wrapProgram "$exe" \
+                --set LD_LIBRARY_PATH "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+            done
+          ''
+          else self'.packages.nammayatri;
+      in
+      {
       packages = lib.optionalAttrs pkgs.stdenv.isLinux {
         dockerImage = (pkgs.dockerTools.buildImage {
           name = imageName;
@@ -22,7 +43,7 @@ in
               awscli
               coreutils
               bash
-              self'.packages.nammayatri
+              nammayatriBinaries
               gdal
               postgis
               curl
@@ -45,7 +66,7 @@ in
               # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
               "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
             ];
-            Cmd = [ "${self'.packages.nammayatri}/bin/rider-app-exe" ];
+            Cmd = [ "${nammayatriBinaries}/bin/rider-app-exe" ];
           };
 
           # Test that the docker image contains contents we expected for

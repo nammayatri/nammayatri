@@ -155,19 +155,19 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
   mbStoredAuthData <- Redis.get redisKey
   storedAuthData :: AuthData <- case mbStoredAuthData of
     Just v -> pure v
-    Nothing -> throwError $ InvalidRequest "OTP_EXPIRED: OTP expired"
+    Nothing -> throwError $ InvalidRequest "OTP has expired. Please request a new one."
   reqOtpHash <- getDbHash req.otp
-  when ((storedAuthData.otp) /= reqOtpHash) $ throwError $ InvalidRequest "INVALID_OTP: Invalid OTP"
+  when ((storedAuthData.otp) /= reqOtpHash) $ throwError $ InvalidRequest "The OTP entered is incorrect. Please try again."
 
   void $ case identifierType of
     SP.MOBILENUMBER -> do
       storedMobileNumber <- case storedAuthData.mobileNumber of
         Just num -> pure num
-        _ -> throwError $ InvalidRequest "AUTH_MOBILE_NOT_FOUND: Mobile number not found in auth data"
+        _ -> throwError $ InvalidRequest "Mobile number not found. Please try again."
 
       storedCountryCode <- case storedAuthData.mobileNumberCountryCode of
         Just code -> pure code
-        _ -> throwError $ InvalidRequest "AUTH_COUNTRY_CODE_NOT_FOUND: Country code not found in auth data"
+        _ -> throwError $ InvalidRequest "Country code not found. Please try again."
       mobileNumberHash <- getDbHash storedMobileNumber
       mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole storedCountryCode mobileNumberHash merchantId SP.DRIVER
       whenJust mobileNumberExists $ \existing ->
@@ -177,7 +177,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
     SP.EMAIL -> do
       storedEmail <- case storedAuthData of
         AuthData {email = Just em} -> pure em
-        _ -> throwError $ InvalidRequest "AUTH_EMAIL_NOT_FOUND: Email not found in auth data"
+        _ -> throwError $ InvalidRequest "Email not found. Please try again."
       existingPerson <- QPersonExtra.findByEmailAndMerchantIdAndRole (Just storedEmail) merchantId SP.DRIVER
       whenJust existingPerson $ \existing ->
         when (existing.id /= personId) $ throwError $ InvalidRequest "Email already registered"

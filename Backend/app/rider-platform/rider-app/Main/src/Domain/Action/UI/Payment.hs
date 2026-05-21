@@ -135,6 +135,7 @@ createOrder (personId, merchantId) rideId = do
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing Payment.Normal
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] isPercentageSplitEnabled False
   staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -152,11 +153,13 @@ createOrder (personId, merchantId) rideId = do
             mandateEndDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
@@ -180,6 +183,7 @@ createRideBookingPaymentOrder booking = do
   isSplitEnabled <- Payment.getIsSplitEnabled booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit booking.merchantId merchantOperatingCityId Nothing DOrder.RideBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount [] isPercentageSplitEnabled False
+  nwAddress <- asks (.nwAddress)
 
   -- Check if dashboardAgentId exists and fetch EDC machine mapping
   mbPaytmTid <- case booking.dashboardAgentId of
@@ -213,10 +217,12 @@ createRideBookingPaymentOrder booking = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
+            webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant booking.merchantId
       commonPersonId = cast @DP.Person @DPayment.Person person.id
@@ -835,21 +841,18 @@ postWalletRecharge (personId, merchantId) req = do
   operationId <- generateShortId
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  let mbPaymentRules =
-        fmap
-          ( \pId ->
-              Payment.PaymentRules
-                { paymentFlows =
-                    Payment.PaymentFlows
-                      { loyaltyOsTopup =
-                          Payment.PaymentFlowStatus
-                            { status = "REQUIRED",
-                              info = Just $ Payment.PaymentFlowInfo {programId = pId}
-                            }
+  nwAddress <- asks (.nwAddress)
+  let paymentRules =
+        Payment.PaymentRules
+          { paymentFlows =
+              Payment.PaymentFlows
+                { loyaltyOsTopup =
+                    Payment.PaymentFlowStatus
+                      { status = "REQUIRED",
+                        info = Payment.PaymentFlowInfo {programId = req.programId}
                       }
                 }
-          )
-          req.programId
+          }
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -868,10 +871,12 @@ postWalletRecharge (personId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress,
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = mbPaymentRules,
-            autoRefundPostSuccess = Nothing
+            paymentRules = Just paymentRules,
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

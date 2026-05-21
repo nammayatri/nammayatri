@@ -14,6 +14,7 @@ import qualified "this" Domain.Types.PassOrganization
 import qualified "this" Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -23,7 +24,7 @@ import Servant
 import Tools.Auth
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.PassOrganization.API)
-handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city
+handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city :<|> getPassOrganizationPassDetailsDocument merchantId city :<|> postPassOrganizationAssignDepot merchantId city
 
 getPassOrganizationGetPassOrganization :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp)
 getPassOrganizationGetPassOrganization a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.getPassOrganizationGetPassOrganization a3 a2 a1
@@ -37,5 +38,11 @@ postPassOrganizationPassDetailsVerify a3 a2 a1 = withDashboardFlowHandlerAPI $ D
 postPassOrganizationUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.PassOrganization.PassOrganizationUpdateReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassOrganizationUpdate a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.postPassOrganizationUpdate a4 a3 a2 a1
 
-getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp])
-getPassOrganizationGetOrganizations a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.getPassOrganizationGetOrganizations a3 a2 a1
+getPassOrganizationGetOrganizations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Environment.FlowHandler [API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp])
+getPassOrganizationGetOrganizations a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.getPassOrganizationGetOrganizations a4 a3 a2 a1
+
+getPassOrganizationPassDetailsDocument :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
+getPassOrganizationPassDetailsDocument a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.getPassOrganizationPassDetailsDocument a3 a2 a1
+
+postPassOrganizationAssignDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.Person.Person -> API.Types.Dashboard.AppManagement.PassOrganization.AssignDepotReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postPassOrganizationAssignDepot a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.PassOrganization.postPassOrganizationAssignDepot a4 a3 a2 a1

@@ -17,9 +17,9 @@ module API.Dashboard.Fleet.Registration
     fleetOwnerLogin,
     fleetOwnerVerify,
     FleetOwnerRegisterAPI,
+    FleetOwnerUpdateLanguageAPI,
     handler,
     API,
-    FleetOwnerUpdateLanguageAPI,
   )
 where
 
@@ -69,6 +69,7 @@ type FleetOwnerRegisterHelperAPI =
 type FleetOwnerUpdateLanguageAPI =
   "profile"
     :> "language"
+    :> MandatoryQueryParam "requestorId" Text
     :> ReqBody '[JSON] DFleet.FleetOwnerUpdateLanguageReq
     :> Put '[JSON] APISuccess
 
@@ -88,5 +89,5 @@ fleetOwnerVerify = withDashboardFlowHandlerAPI . DFleet.fleetOwnerVerify
 fleetOwnerRegister :: Maybe Bool -> DFleet.FleetOwnerRegisterReq -> FlowHandler DFleet.FleetOwnerRegisterRes
 fleetOwnerRegister enabled req = withDashboardFlowHandlerAPI $ DFleet.fleetOwnerRegister req enabled
 
-fleetOwnerUpdateLanguage :: DFleet.FleetOwnerUpdateLanguageReq -> FlowHandler APISuccess
-fleetOwnerUpdateLanguage = withDashboardFlowHandlerAPI . DFleet.fleetOwnerUpdateLanguage
+fleetOwnerUpdateLanguage :: Text -> DFleet.FleetOwnerUpdateLanguageReq -> FlowHandler APISuccess
+fleetOwnerUpdateLanguage requestorId = withDashboardFlowHandlerAPI . DFleet.fleetOwnerUpdateLanguage requestorId

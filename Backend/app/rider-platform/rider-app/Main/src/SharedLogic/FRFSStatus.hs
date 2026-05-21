@@ -28,6 +28,7 @@ import qualified ExternalBPP.CallAPI.Status as CallExternalBPP
 import qualified ExternalBPP.CallAPI.Types as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.Payment.Interface
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
@@ -63,7 +64,6 @@ import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBookingPaymentCategory as QFRFSTicketBookingPaymentCategory
@@ -376,6 +376,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       let isSingleMode = fromMaybe False booking.isSingleMode
       splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
       staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+      nwAddress <- asks (.nwAddress)
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -394,10 +395,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+                webhookUrl = Just $ showBaseUrl nwAddress,
                 splitSettlementDetails = splitSettlementDetails,
                 basket = Nothing,
                 paymentRules = Nothing,
-                autoRefundPostSuccess = Nothing
+                autoRefundPostSuccess = Nothing,
+                paymentFilter = Nothing
               }
       mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity merchantId_ merchantOperatingCityId Nothing (getPaymentType isMultiModalBooking booking.vehicleType)
       isMetroTestTransaction <- asks (.isMetroTestTransaction)
@@ -417,8 +420,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
       let successTransactions = filter (\transaction -> transaction.status == Payment.CHARGED) transactions
       case successTransactions of
         [] -> throwError $ InvalidRequest "No successful transaction found"
-        [transaction] -> return transaction.id
-        _ -> throwError $ InvalidRequest "Multiple successful transactions found"
+        (transaction : _) -> return transaction.id
 
 getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
 getMerchantOperatingCityFromBooking tBooking = do
@@ -500,6 +502,7 @@ makeTicketBookingPaymentAPIStatus STARTED = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus AUTO_REFUNDED = FRFSTicketService.REFUNDED
 makeTicketBookingPaymentAPIStatus CLIENT_AUTH_TOKEN_EXPIRED = FRFSTicketService.FAILURE
 makeTicketBookingPaymentAPIStatus Payment.CANCELLED = FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus PARTIAL_CHARGED = FRFSTicketService.PENDING
 
 addPaymentoffersTags ::
   ( MonadFlow m,

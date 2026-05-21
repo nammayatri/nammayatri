@@ -13,6 +13,7 @@ import {
 } from '../services/context';
 import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '../services/postman-parser';
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
+import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { StepResult, LogEntry } from '../types';
 
@@ -132,6 +133,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [runningStepId, setRunningStepId] = useState<string | null>(null);
   const [runAllProgress, setRunAllProgress] = useState<{ current: number; total: number; currentSuite: string } | null>(null);
   const [runAllResults, setRunAllResults] = useState<Array<{ group: string; env: string; suite: string; passed: number; failed: number; total: number }>>([]);
+  const [manualMode, setManualMode] = useState(false);
+  const [versionId, setVersionId] = useState<string>('');
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
 
@@ -390,6 +393,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       // Run all steps
       let passed = 0;
       let failed = 0;
+      const suiteStepMetrics: Array<{ name: string; method: string; path: string; elapsed_ms: number }> = [];
       for (const step of parsed.steps) {
         if (abortRef.current) break;
 
@@ -405,6 +409,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
         if (stepFailed) failed++;
         else passed++;
+
+        // result.upstreamMs = measured on context-api side, excludes browser/nginx/proxy overhead
+        suiteStepMetrics.push({
+          name: step.name,
+          method: step.method,
+          path: result.resolvedUrl || step.pathTemplate,
+          elapsed_ms: result.upstreamMs,
+        });
 
         setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
 
@@ -436,13 +448,126 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       setRunAllResults(prev => [...prev, suiteResult]);
       const statusEmoji = failed > 0 ? 'FAIL' : 'PASS';
       onLog(failed > 0 ? 'error' : 'success', `  [${statusEmoji}] ${label}: ${passed}/${parsed.steps.length} passed`);
+
+      if (versionId && failed === 0) {
+        try {
+          const metricsResp = await fetch(`${PROXY_BASE}/api/metrics/push`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              versionId,
+              collection: group.directory,
+              env: env.envName,
+              suite: suite.name,
+              steps: suiteStepMetrics,
+              allPassed: true,
+            }),
+          });
+          const metricsBody = await metricsResp.json().catch(() => ({}));
+          if (metricsResp.ok && metricsBody.pushed) {
+            onLog('info', `  [metrics] ✓ pushed to Grafana — ${group.directory}-${env.envName}-${suite.name} version=${versionId}`);
+          } else {
+            const reason = metricsBody.msg || `HTTP ${metricsResp.status}`;
+            onLog('info', `  [metrics] ✗ push failed — ${reason}`);
+          }
+        } catch (e: any) {
+          onLog('info', `  [metrics] ✗ push error — ${e?.message || e}`);
+        }
+      }
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     setRunAllProgress(null);
     onLog('info', '== All collections complete ==');
-  }, [isRunning, groups, onLog]);
+  }, [isRunning, groups, onLog, versionId]);
+
+  // Initialise variable stores for manual mode (re-runs collection prereq once).
+  // Called the first time the user clicks a per-step Run in manual mode after
+  // toggling the mode on (or after suite change), so random vars match what a
+  // single Run-All click would have generated.
+  const manualStoresInitedRef = useRef<string | null>(null);
+  const ensureManualStoresInited = useCallback(async () => {
+    const sig = `${selectedDir}::${selectedSuite}::${selectedEnv}`;
+    if (manualStoresInitedRef.current === sig) return;
+    if (!currentEnv) return;
+    const freshStores: VariableStores = {
+      environment: { ...currentEnv.variables },
+      collection: {},
+    };
+    const raw = await fetchCollection(selectedDir, selectedSuite);
+    if (raw) {
+      const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+      freshStores.collection = { ...parsed.collectionVars };
+      if (raw.event) {
+        for (const ev of raw.event) {
+          if (ev.listen === 'prerequest' && ev.script?.exec) {
+            await executePrereqScript(ev.script.exec.join('\n'), freshStores);
+          }
+        }
+      }
+    }
+    storesRef.current = freshStores;
+    manualStoresInitedRef.current = sig;
+  }, [currentEnv, selectedDir, selectedSuite, selectedEnv]);
+
+  // Reset the init marker whenever selection changes so the next manual click reinitialises.
+  useEffect(() => { manualStoresInitedRef.current = null; }, [selectedDir, selectedSuite, selectedEnv]);
+
+  // Run a single step in manual mode — shares execute/log path with rerunStep
+  // but additionally lazy-inits the variable stores on the first click.
+  const runStepManual = useCallback(async (stepId: string) => {
+    if (isRunning) return;
+    const step = steps.find(s => s.id === stepId);
+    if (!step) return;
+    await ensureManualStoresInited();
+
+    setIsRunning(true);
+    setRunningStepId(stepId);
+    setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
+    onLog('req', `[Step ${visibleSteps.findIndex(s => s.id === stepId) + 1}] ${step.method} ${step.name}`);
+
+    const start = performance.now();
+    const result = await callPostmanStep(step, storesRef.current);
+    const durationMs = Math.round(performance.now() - start);
+
+    const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
+    const status = failed ? 'fail' : 'pass';
+
+    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs } }));
+
+    const logLevel = failed ? 'error' : 'success';
+    const assertSummary = result.assertions.length > 0
+      ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length} assertions]`
+      : '';
+    onLog(logLevel, `${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms, ${result.status})${assertSummary}`, {
+      request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
+      response: { status: result.status, body: result.data, headers: result.responseHeaders },
+      serviceLogs: result.serviceLogs,
+    });
+
+    for (const line of result.consoleLogs) {
+      onLog('info', `  [script] ${line}`);
+    }
+    if (failed) {
+      if (result.scriptError) onLog('error', `  Script error: ${result.scriptError}`);
+      for (const a of result.assertions.filter(a => !a.passed)) {
+        onLog('error', `  Assertion failed: ${a.name} — ${a.error}`);
+      }
+      setExpandedSteps(prev => new Set(prev).add(stepId));
+    }
+
+    setIsRunning(false);
+    setRunningStepId(null);
+  }, [isRunning, steps, visibleSteps, ensureManualStoresInited, onLog]);
+
+  // Mark a step as skipped without executing — unlocks the next step's gate.
+  const skipStepManual = useCallback((stepId: string) => {
+    if (isRunning) return;
+    setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip' } }));
+    const step = steps.find(s => s.id === stepId);
+    if (step) onLog('info', `SKIP ${step.name}`);
+  }, [isRunning, steps, onLog]);
 
   // Re-run a single step in isolation (uses current variable state)
   const rerunStep = useCallback(async (stepId: string) => {
@@ -540,10 +665,29 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <div className="cr-actions">
-          <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
-            {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+          {!manualMode && (
+            <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
+              {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+            </button>
+          )}
+          <button
+            className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
+            onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
+            disabled={isRunning || visibleSteps.length === 0}
+            title="Run each step individually with Run / Skip buttons"
+          >
+            {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
           </button>
-          <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0}>
+          <input
+            className="cr-version-input"
+            type="text"
+            placeholder="Version ID (e.g. v1.2.3)"
+            value={versionId}
+            onChange={e => setVersionId(e.target.value)}
+            disabled={isRunning}
+            title="Version ID tagged on metrics pushed to Grafana"
+          />
+          <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0 || manualMode}>
             {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
@@ -597,6 +741,13 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               const logsExpanded = expandedLogs.has(stepId);
               const logCount = state?.result?.serviceLogs ? Object.keys(state.result.serviceLogs).length : 0;
 
+              // Manual-mode gating: first step always enabled; later steps require prev step pass or skip.
+              const visibleIdx = visibleSteps.findIndex(s => s.id === stepId);
+              const prevVisibleId = visibleIdx > 0 ? visibleSteps[visibleIdx - 1].id : null;
+              const prevState = prevVisibleId ? stepStates[prevVisibleId] : null;
+              const gateOpen = visibleIdx === 0 || (prevState?.status === 'pass' || prevState?.status === 'skip');
+              const notYetRun = !state || state.status === 'pending';
+
               return (
                 <div key={stepId} className={`cr-step cr-step-${state?.status || 'pending'}`}>
                   <div className="cr-step-header" onClick={() => state && toggleStep(stepId)}>
@@ -610,6 +761,26 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                       <button className="cr-logs-badge" onClick={e => { e.stopPropagation(); toggleLogs(stepId); }}>
                         logs({logCount})
                       </button>
+                    )}
+                    {manualMode && notYetRun && (
+                      <>
+                        <button
+                          className="cr-step-run-btn"
+                          onClick={e => { e.stopPropagation(); runStepManual(stepId); }}
+                          disabled={isRunning || !gateOpen}
+                          title={gateOpen ? 'Run this step' : 'Previous step must pass or be skipped first'}
+                        >
+                          ▶ Run
+                        </button>
+                        <button
+                          className="cr-step-skip-btn"
+                          onClick={e => { e.stopPropagation(); skipStepManual(stepId); }}
+                          disabled={isRunning || !gateOpen}
+                          title="Skip this step (unlocks next)"
+                        >
+                          Skip
+                        </button>
+                      </>
                     )}
                     {state?.status === 'fail' && (
                       <button

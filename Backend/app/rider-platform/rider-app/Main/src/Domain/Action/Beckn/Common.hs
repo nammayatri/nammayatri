@@ -529,7 +529,7 @@ rideAssignedReqHandler req = do
             { id = guid,
               entityId = booking.id.getId,
               entityType = DFareBreakup.BOOKING,
-              amount = mkPrice (Just booking.estimatedFare.currency) (-bookingDiscountAmount),
+              amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
               description = "OFFER_DISCOUNT"
             }
       -- Create payment intent for online payments, capture orderId for invoice creation
@@ -958,7 +958,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   -- we should create job for collecting money from customer
   let onlinePayment = SPayment.isOnlinePayment mbMerchant booking
-      applicationFeeAmount' = fromMaybe 0 booking.commission
+      applicationFeeAmount' = fromMaybe 0 rideCommission
 
   if not onlinePayment
     then do
@@ -1112,7 +1112,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               { id = guid,
                 entityId = ride.id.getId,
                 entityType = DFareBreakup.RIDE,
-                amount = mkPrice (Just totalFare.currency) (-rideDiscountAmount),
+                amount = mkPrice (Just totalFare.currency) (- rideDiscountAmount),
                 description = "OFFER_DISCOUNT"
               }
           ]

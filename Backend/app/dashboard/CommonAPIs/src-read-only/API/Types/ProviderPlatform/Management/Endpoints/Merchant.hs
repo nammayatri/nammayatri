@@ -23,6 +23,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.TimeBound
 import qualified Kernel.Types.Value
 import Kernel.Utils.TH
@@ -737,7 +738,10 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     vehicleCategory :: Dashboard.Common.VehicleCategory,
     isEnabled :: Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -771,7 +775,10 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -806,7 +813,10 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1252,9 +1262,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantConfigDriverPoolCreate :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance -> Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit -> Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Common.Meters -> Lib.Types.SpecialLocation.Area -> DriverPoolConfigCreateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigDriverPoolUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertDriverPoolConfigCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+          Dashboard.Common.Merchant.UpsertDriverPoolConfigCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigDriverPoolList :: EulerHS.Types.EulerClient DriverPoolConfigListRes,
     getMerchantConfigDriverIntelligentPool :: EulerHS.Types.EulerClient DriverIntelligentPoolConfigRes,
     postMerchantConfigDriverIntelligentPoolUpdate :: DriverIntelligentPoolConfigUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -1280,9 +1290,9 @@ data MerchantAPIs = MerchantAPIs
     postMerchantUpdateOnboardingVehicleVariantMapping :: (Data.ByteString.Lazy.ByteString, UpdateOnboardingVehicleVariantMappingReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMerchantConfigSpecialLocationUpsert ::
       ( Data.ByteString.Lazy.ByteString,
-        Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
-      ) ->
-      EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
+          Dashboard.Common.Merchant.UpsertSpecialLocationCsvReq
+        ) ->
+        EulerHS.Types.EulerClient Dashboard.Common.Merchant.APISuccessWithUnprocessedEntities,
     getMerchantConfigSpecialLocationList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Lib.Types.SpecialLocation.SpecialLocationType -> Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.SpecialLocationType] -> EulerHS.Types.EulerClient SpecialLocationResp,
     getMerchantConfigGeometryList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient GeometryResp,
     putMerchantConfigGeometryUpdate :: (Data.ByteString.Lazy.ByteString, Dashboard.Common.Merchant.UpdateGeometryReq) -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

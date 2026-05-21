@@ -183,6 +183,56 @@ See `Rules.md` for full guidelines. Key rules:
 2. Add collection prerequest for random number generation
 3. Use mock server status/override APIs to control external service behavior
 
+### Helsinki E2E (Onboarding → Rides → Invoices)
+
+Multi-collection e2e for the **BRIDGE_FINLAND_PARTNER / Helsinki** environment,
+chained via `dev/integration-tests/run-helsinki-e2e.sh`. Unlike single-collection
+flows above, this exercises onboarding from scratch (fleet owner registration,
+doc verification, Stripe Connect, driver/vehicle add) feeding into ride combos
+feeding into invoice verification — env propagated via newman
+`--export-environment` between steps.
+
+Directories:
+- `collections/HelsinkiOnboarding/` — 5 collections (`01-FleetOwnerOnboarding`,
+  `02-StripeOnboarding`, `03-AddDriver_AdminPath`, `04-AddVehicle_AdminPath`,
+  + FLEET-role probes for 03/04 that are run non-gating). Outputs
+  `fleet_owner_id`, `driver_id`, `driver_token`, `vehicle_reg_no` for downstream.
+- `collections/InternationalRideBookingFlow/` — ride combos consumed as Phase B.
+  Matrix: Cash/Online × Cancel/Complete × NoDisc/Disc = **8/8 covered**. The
+  three cancel-with-discount / cash-cancel variants (09/10/11) are derived by
+  splicing the offer-setup items from 05/07 + the cash-select item from 06 onto
+  the cancellation spine of 02 (see commit history for the build script).
+- `collections/HelsinkiInvoices/` — `01-VerifyInvoices.json` runs after each
+  ride combo; checks Customer/Driver/FleetOwner/AggregatedCommission invoices
+  via `/financeManagement/financeInvoiceList`.
+
+Auth model: the dev `JUSPAY_ADMIN` (`local-testing-data/provider-dashboard.sql`
+seed, token `local-admin-token-bangalore-namma-yatri`) already has cross-merchant
++ cross-city access (via `merchant_access CROSS JOIN
+unnest(supported_operating_cities)`). No separate "Admin Fleet" persona — that
+role is the same JUSPAY_ADMIN scoped to BRIDGE_FINLAND_PARTNER via
+`/user/switchMerchantAndCity`, which every collection calls first.
+
+Run:
+```
+cd Backend/dev/integration-tests
+./run-helsinki-e2e.sh                  # full chain incl. config-sync
+./run-helsinki-e2e.sh --skip-sync      # skip config-sync if already done
+./run-helsinki-e2e.sh --only onboarding
+./run-helsinki-e2e.sh --dry-run
+```
+
+Reports land under `dev/integration-tests/reports/helsinki-e2e-<TS>/`, one
+`env-after-<step>.json` per step (debug-friendly — inspect what the run learned).
+
+Why this is separate from single-collection flows: ride collections (e.g.
+`InternationalRideBookingFlow/01-StripeRideFlow.json`) currently bootstrap a
+one-shot driver inline via OTP. The Helsinki E2E flow instead **chains** a
+fleet-owner-led onboarding into the ride collection, so the same driver is
+verified against `/fleet/addVehicle?fleetOwnerId=...` linkage and fleet-level
+finance assertions (Phase C). Per-collection details live in each directory's
+`Rules.md`.
+
 ---
 
 ## 3. Mock Servers (`dev/mock-servers/`)

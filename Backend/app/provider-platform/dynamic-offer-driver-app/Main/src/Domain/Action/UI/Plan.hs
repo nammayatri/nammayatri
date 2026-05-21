@@ -45,6 +45,7 @@ import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
+import Kernel.Prelude (showBaseUrl)
 import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -1037,6 +1038,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   orderId <- generateGUIDText
   orderShortId <- generateShortId
+  nwAddress <- asks (.nwAddress)
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       amount = plan.registrationAmount
       createOrderReq =
@@ -1055,12 +1057,14 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress,
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)

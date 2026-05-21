@@ -1,0 +1,1902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Full Stack Dev Box — Vision Deck</title>
+<style>
+/* ============================================================
+   Real dashboard styles, copied verbatim from
+   Backend/dev/test-tool/dashboard/src/**/*.css so slides
+   render the *actual* product components, not invented mocks.
+   ============================================================ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background: #0f1117; color: #e1e4e8;
+  height: 100%; overflow: hidden;
+}
+
+/* --- App shell (from App.css) ---------------------------------- */
+.app { display: flex; height: 100vh; }
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+.mode-tabs {
+  display: flex; gap: 0; background: #0d1117;
+  border-bottom: 1px solid #30363d; padding: 0 16px; align-items: center;
+  flex-shrink: 0;
+}
+.app-brand {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px 8px 0; margin-right: 8px;
+  border-right: 1px solid #30363d; user-select: none;
+}
+.app-brand-logo { width: 22px; height: 22px; display: block; }
+.app-brand-name { color: #c9d1d9; font-size: 13px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+.mode-tab {
+  padding: 8px 16px; font-size: 12px; font-family: inherit;
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: #8b949e; cursor: pointer;
+}
+.mode-tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+.mode-tabs-spacer { flex: 1; }
+.tool-link {
+  padding: 6px 12px; font-size: 11px; color: #8b949e; text-decoration: none;
+  border: 1px solid #30363d; border-radius: 4px; margin-left: 6px;
+}
+.content-wrapper { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+.content { flex: 1; overflow: hidden; padding: 0; min-width: 0; display: flex; flex-direction: column; }
+.content-logs { flex-shrink: 0; overflow: hidden; border-left: 1px solid #30363d; width: 380px; }
+
+/* --- Sidebar (Sidebar.css) ------------------------------------- */
+.sidebar { width: 240px; background: #161b22; border-right: 1px solid #30363d; overflow-y: auto; flex-shrink: 0; }
+.sidebar-logo { padding: 16px 16px 4px; font-size: 16px; font-weight: 700; color: #58a6ff; }
+.sidebar-subtitle { padding: 0 16px 12px; font-size: 11px; color: #484f58; border-bottom: 1px solid #30363d; }
+.flow-group { margin-bottom: 4px; }
+.flow-group-title {
+  padding: 12px 16px 4px; font-size: 11px; font-weight: 600;
+  color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.flow-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 16px 7px 24px; font-size: 13px; color: #c9d1d9;
+  border-left: 2px solid transparent;
+}
+.flow-item.active { background: #1c2128; border-left-color: #58a6ff; color: #58a6ff; }
+.flow-item-dot { font-size: 10px; margin-left: 8px; }
+.dot-pending { color: #484f58; }
+.dot-pass { color: #3fb950; }
+.dot-fail { color: #f85149; }
+.dot-running { color: #d29922; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* --- CollectionRunner (CollectionRunner.css) -------------------- */
+.collection-runner { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.cr-selector {
+  display: flex; gap: 12px; padding: 10px 16px; background: #161b22;
+  border-bottom: 1px solid #30363d; align-items: flex-end; flex-wrap: wrap;
+}
+.cr-selector label { display: flex; flex-direction: column; gap: 3px; font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.cr-selector select, .cr-selector .fake-select {
+  background-color: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 5px 28px 5px 8px; border-radius: 4px; font-size: 12px; min-width: 160px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8' fill='none' stroke='%238b949e' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'><path d='M1 1.5l5 5 5-5'/></svg>");
+  background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px;
+  line-height: 18px;
+}
+.cr-actions { display: flex; gap: 6px; margin-left: auto; }
+.cr-run-btn { background: #238636; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-size: 12px; }
+.cr-stop-btn { background: #da3633; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-size: 12px; }
+.cr-run-all-btn { background: #1f6feb; color: #fff; border: none; padding: 6px 14px; border-radius: 4px; font-size: 12px; }
+.cr-run-all-progress { padding: 8px 16px; background: #0d1117; border-bottom: 1px solid #30363d; }
+.cr-run-all-bar { height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
+.cr-run-all-fill { height: 100%; background: #1f6feb; border-radius: 2px; }
+.cr-run-all-label { font-size: 11px; color: #8b949e; }
+.cr-steps { overflow-y: auto; flex: 1; padding: 8px 16px; }
+.cr-node { margin-bottom: 8px; }
+.cr-node-header {
+  display: flex; align-items: center; gap: 8px; padding: 4px 0;
+  font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.cr-tag { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+.cr-tag-driver { background: #1f3d2e; color: #56d364; }
+.cr-tag-rider { background: #1c2d4f; color: #58a6ff; }
+.cr-tag-system { background: #2d2418; color: #d29922; }
+.cr-step { border-left: 2px solid #30363d; margin-left: 8px; padding-left: 12px; margin-bottom: 2px; }
+.cr-step-pass { border-left-color: #238636; }
+.cr-step-fail { border-left-color: #da3633; }
+.cr-step-running { border-left-color: #1f6feb; }
+.cr-step-header { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 12px; }
+.cr-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cr-dot-pending { background: #30363d; }
+.cr-dot-running { background: #1f6feb; animation: pulse 1s infinite; }
+.cr-dot-pass { background: #238636; }
+.cr-dot-fail { background: #da3633; }
+.cr-step-method { font-family: 'SF Mono', monospace; font-size: 10px; font-weight: 700; color: #8b949e; min-width: 36px; }
+.cr-step-name { color: #c9d1d9; }
+.cr-duration { color: #8b949e; font-size: 10px; margin-left: auto; }
+.cr-status-code { font-size: 10px; font-family: monospace; color: #56d364; }
+.cr-status-code.cr-status-error { color: #f85149; }
+.cr-logs-badge { font-size: 9px; background: #21262d; border: 1px solid #30363d; color: #8b949e; padding: 1px 6px; border-radius: 3px; }
+
+/* --- CoverageReport (CoverageReport.css) ------------------------ */
+.coverage-report { padding: 16px; height: 100%; overflow-y: auto; }
+.cov-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.cov-tabs { display: flex; gap: 4px; }
+.cov-tab { padding: 6px 14px; border: 1px solid #333; background: #1a1a2e; color: #aaa; border-radius: 4px; font-size: 13px; }
+.cov-tab.active { background: #2d2d4e; color: #fff; border-color: #5a5aff; }
+.cov-actions { display: flex; gap: 8px; }
+.cov-btn { padding: 6px 12px; background: #2d4a7a; color: #ddd; border: 1px solid #3a6aaa; border-radius: 4px; font-size: 12px; }
+.cov-btn-danger { background: #5a2a2a; border-color: #8a3a3a; color: #faa; }
+.cov-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.cov-stat-card { background: #1a1a2e; border: 1px solid #333; border-radius: 8px; padding: 14px; }
+.cov-stat-title { font-size: 12px; color: #888; margin-bottom: 4px; }
+.cov-stat-value { font-size: 22px; font-weight: 600; color: #eee; margin-bottom: 8px; }
+.cov-stat-bar { height: 4px; background: #333; border-radius: 2px; overflow: hidden; }
+.cov-stat-fill { height: 100%; border-radius: 2px; }
+.cov-stat-percent { font-size: 11px; color: #888; margin-top: 4px; }
+.cov-stat-blue .cov-stat-fill { background: #4a9eff; }
+.cov-stat-green .cov-stat-fill { background: #4acf8a; }
+.cov-stat-purple .cov-stat-fill { background: #9b59b6; }
+.cov-stat-orange .cov-stat-fill { background: #e67e22; }
+.cov-endpoint-list { display: flex; flex-direction: column; gap: 2px; }
+.cov-endpoint { background: #1a1a2e; border: 1px solid #252540; border-radius: 4px; overflow: hidden; }
+.cov-endpoint.cov-uncovered { border-left: 3px solid #e74c3c; }
+.cov-endpoint.cov-covered { border-left: 3px solid #2ecc71; }
+.cov-endpoint-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+.cov-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.cov-dot-pass { background: #2ecc71; }
+.cov-dot-fail { background: #e74c3c; }
+.cov-endpoint-key { font-size: 12px; font-family: monospace; color: #ddd; }
+.cov-hit-badge { font-size: 10px; background: #2d4a7a; color: #8ac; padding: 1px 5px; border-radius: 3px; }
+.cov-scenario-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+.cov-scenario-badge.full { background: #1a4a2a; color: #6f6; }
+.cov-scenario-badge.partial { background: #4a3a1a; color: #fa0; }
+.cov-scenario-badge.empty { background: #4a1a1a; color: #f66; }
+
+/* --- LogPanel (LogPanel.css) ----------------------------------- */
+.log-panel { display: flex; flex-direction: column; height: 100%; background: #0d1117; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; overflow: hidden; }
+.log-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; border-bottom: 1px solid #21262d; flex-shrink: 0; gap: 8px;
+}
+.log-panel-title { font-size: 11px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.log-panel-actions { display: flex; align-items: center; gap: 6px; }
+.log-search { width: 180px; padding: 3px 8px; background: #161b22; border: 1px solid #30363d; border-radius: 4px; color: #c9d1d9; font-size: 11px; font-family: inherit; }
+.log-clear-btn { padding: 3px 10px; background: transparent; border: 1px solid #30363d; border-radius: 4px; color: #8b949e; font-size: 10px; }
+.log-match-count { color: #d29922; font-weight: normal; text-transform: none; letter-spacing: 0; }
+.log-panel-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+.log-entry-header { display: flex; align-items: baseline; gap: 6px; padding: 3px 12px; line-height: 1.5; }
+.log-time { color: #484f58; flex-shrink: 0; }
+.log-msg { flex: 1; word-break: break-word; }
+.log-info { color: #58a6ff; }
+.log-success { color: #3fb950; }
+.log-error { color: #f85149; }
+.log-warn { color: #d29922; }
+.log-req { color: #bc8cff; }
+.log-toggle { color: #484f58; font-size: 9px; flex-shrink: 0; }
+
+/* --- ConfigBar / RideFlowTree minimal extras ------------------- */
+.config-bar { display: flex; flex-direction: column; gap: 6px; padding: 10px 16px; background: #161b22; border-bottom: 1px solid #30363d; }
+.config-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+.config-field { display: flex; flex-direction: column; gap: 3px; }
+.config-field label { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.config-field input, .config-field select {
+  background: #0d1117; border: 1px solid #30363d; color: #c9d1d9;
+  padding: 5px 8px; border-radius: 4px; font-size: 12px; min-width: 200px;
+}
+.ctx-badge { font-size: 9px; padding: 1px 5px; background: #2d2418; color: #d29922; border-radius: 3px; margin-left: 4px; }
+
+/* --- Client Applications / ToolsPanel (real ToolsPanel.css) ---- */
+.tools-panel-emb {
+  padding: 18px 22px; color: #e5e7ee;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  height: 100%; overflow-y: auto;
+  background:
+    radial-gradient(1200px 600px at 0% -10%, rgba(124, 156, 255, 0.06), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(167, 119, 255, 0.05), transparent 60%),
+    #0f1115;
+}
+.tools-panel-emb .tools-header { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid #262b39; }
+.tools-panel-emb h2.tools-h { margin: 0; flex: 1; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: #f5f6fb; }
+.tools-panel-emb .btn { background: #1c2030; border: 1px solid #313749; color: #e5e7ee; padding: 5px 12px; border-radius: 7px; font-size: 12px; font-family: inherit; }
+.tools-panel-emb .btn.btn-primary {
+  background: linear-gradient(180deg, #7c9cff 0%, #5a7df0 100%); border-color: #5a7df0;
+  color: #0c1020; font-weight: 600;
+}
+.tools-panel-emb .btn.btn-danger { background: rgba(239,107,107,0.12); border-color: rgba(239,107,107,0.4); color: #ffb1b1; }
+.tools-panel-emb .btn.btn-sm { padding: 3px 9px; font-size: 11px; }
+.tools-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;
+  margin-bottom: 14px;
+}
+.tool-card {
+  position: relative; background: linear-gradient(180deg, #161922 0%, #13161e 100%);
+  border: 1px solid #262b39; border-radius: 12px; padding: 14px 14px 12px; text-align: left;
+}
+.tool-card.selected { border-color: #7c9cff; box-shadow: 0 0 0 1px rgba(124,156,255,0.18), 0 8px 28px rgba(0,0,0,0.4); }
+.tool-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: #f5f6fb; }
+.tool-card-category { font-size: 10px; color: #6b7186; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-weight: 600; }
+.tool-card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.tool-card-tag { font-size: 10px; background: #1c2030; border: 1px solid #262b39; border-radius: 999px; padding: 2px 7px; color: #9aa0b4; }
+.tool-card-ports { display: flex; flex-wrap: wrap; gap: 5px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 10.5px; }
+.tool-card-port { color: #7c9cff; background: rgba(124,156,255,0.12); padding: 2px 7px; border-radius: 4px; }
+
+.tool-section {
+  margin-top: 12px;
+  background: linear-gradient(180deg, #161922 0%, #14171f 100%);
+  border: 1px solid #262b39; border-radius: 12px; padding: 14px 18px 16px;
+}
+.tool-section h3.tool-h3 {
+  margin: 0 0 10px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.14em;
+  color: #6b7186; font-weight: 700; display: flex; align-items: center; gap: 8px;
+}
+.tool-section h3.tool-h3::before {
+  content: ""; width: 3px; height: 12px; border-radius: 2px;
+  background: linear-gradient(180deg, #7c9cff, #5a7df0);
+}
+.tool-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.source-line { display: flex; align-items: center; gap: 8px; color: #9aa0b4; font-size: 12px; margin-bottom: 6px; }
+.source-line b { color: #6b7186; font-weight: 600; min-width: 60px; text-transform: lowercase; font-size: 11px; letter-spacing: 0.04em; }
+.source-line code { background: #0b0d12; border: 1px solid #262b39; padding: 2px 7px; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 11px; color: #7c9cff; }
+
+.input-row {
+  display: grid; grid-template-columns: 220px 1fr; gap: 14px; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 12px;
+}
+.input-row label { color: #9aa0b4; font-weight: 500; }
+.input-row label .req { color: #ef6b6b; margin-left: 2px; }
+.input-row.missing label { color: #f5b56b; }
+.input-row .field {
+  background: #0b0d12; border: 1px solid #262b39; color: #e5e7ee;
+  padding: 5px 9px; border-radius: 6px; font-family: inherit; font-size: 12px;
+  display: flex; align-items: center; gap: 6px; min-height: 26px;
+}
+.input-row .field.file { color: #9aa0b4; font-family: ui-monospace, monospace; font-size: 11px; }
+.input-row .field .filetag { background: #1c2030; padding: 2px 6px; border-radius: 4px; color: #34d399; font-size: 10.5px; }
+
+.workflow-item { display: inline-flex; align-items: center; gap: 6px; }
+.workflow-info { color: #9aa0b4; font-size: 14px; cursor: help; padding: 0 2px; }
+.workflow-steps {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 10.5px;
+  color: #9aa0b4; margin-left: 4px;
+}
+.workflow-steps b { color: #f5b56b; font-weight: 600; }
+
+.stages-table {
+  width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px;
+  background: #0b0d12; border-radius: 8px; overflow: hidden; border: 1px solid #262b39;
+}
+.stages-table th, .stages-table td { padding: 7px 12px; text-align: left; border-bottom: 1px solid #262b39; }
+.stages-table th { color: #6b7186; font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; background: #161922; }
+.stages-table tbody tr:last-child td { border-bottom: none; }
+.stages-table td code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #d3d9ee; background: rgba(255,255,255,0.03); padding: 2px 6px; border-radius: 4px; }
+.stage-row.state-running td:first-child { border-left: 2px solid #60a5fa; }
+.stage-row.state-ready   td:first-child { border-left: 2px solid #34d399; }
+.stage-row.state-failed  td:first-child { border-left: 2px solid #ef6b6b; }
+.stage-row.state-idle    td:first-child { border-left: 2px solid transparent; }
+.stage-state {
+  display: inline-block; font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.12em;
+  padding: 2px 8px; border-radius: 999px; font-weight: 700; border: 1px solid transparent;
+}
+.stage-state.state-idle    { background: rgba(255,255,255,0.04); color: #6b7186; border-color: #262b39; }
+.stage-state.state-running { background: rgba(96,165,250,0.15); color: #93c5fd; border-color: rgba(96,165,250,0.4); }
+.stage-state.state-ready   { background: rgba(52,211,153,0.15); color: #6ee7b7; border-color: rgba(52,211,153,0.4); }
+.stage-state.state-failed  { background: rgba(239,107,107,0.15); color: #fca5a5; border-color: rgba(239,107,107,0.4); }
+.stage-builtin { color: #6b7186; font-size: 10.5px; margin-left: 4px; }
+
+/* --- Remote stack panel (real RemoteStackPanel.css) ------------ */
+.rsp { padding: 16px 20px; color: #d4d4d4; display: flex; flex-direction: column; gap: 12px; }
+.rsp-sub2 { margin: 0; color: #9aa0a6; font-size: 12px; line-height: 1.5; }
+.rsp-sub2 code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-family: 'SF Mono', monospace; font-size: 11px; }
+.rsp-form2 { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 10px 14px; }
+.rsp-form2 label { display: flex; flex-direction: column; font-size: 12px; gap: 4px; }
+.rsp-form2 span { color: #9aa0a6; }
+.rsp-form2 input { background: #161b22; color: #8b949e; border: 1px solid #3a3a3a; padding: 6px 8px; border-radius: 4px; font-family: 'SF Mono', monospace; font-size: 11px; }
+.rsp-actions2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rsp-actions2 button { background: #2a64d8; color: white; border: 0; padding: 7px 12px; border-radius: 4px; font-size: 13px; }
+.rsp-actions2 button.primary { background: #238636; }
+.rsp-actions2 button.ghost { background: #3a3a3a; color: #c9d1d9; }
+.rsp-meta2 { font-size: 12px; color: #b0b0b0; display: flex; flex-direction: column; gap: 4px; }
+.rsp-mlabel { color: #9aa0a6; }
+.rsp-meta2 code { font-family: 'SF Mono', monospace; font-size: 11px; color: #c9d1d9; }
+.rsp-mtag { background: #6a4d20; color: #ffd49a; font-size: 11px; padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+.rsp-mok { color: #6a9955; }
+
+.rsp-procs { border: 1px solid #2a2a2a; border-radius: 4px; background: #161b22; overflow: hidden; }
+.rsp-procs-head, .rsp-procs-row {
+  display: grid; grid-template-columns: 60px 1.6fr 0.9fr 0.9fr 60px 70px 80px 60px 60px 60px;
+  gap: 6px; padding: 5px 10px; font-size: 11px; font-family: 'SF Mono', monospace;
+}
+.rsp-procs-head { background: #232323; color: #9aa0a6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+.rsp-procs-row { border-top: 1px solid #21262d; color: #c9d1d9; }
+.rsp-procs-row .ok { color: #3fb950; }
+.rsp-procs-row .warn { color: #d29922; }
+.rsp-procs-row .err { color: #f85149; }
+
+.rsp-term2 { background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 4px; }
+.rsp-term-title2 { background: #232323; color: #9aa0a6; padding: 4px 10px; font-size: 11px; border-bottom: 1px solid #2a2a2a; }
+.rsp-term-body { padding: 10px 12px; font-family: 'SF Mono', monospace; font-size: 11px; line-height: 1.6; color: #d4d4d4; }
+.rsp-term-body .c { color: #6e7681; }
+.rsp-term-body .ok { color: #6a9955; }
+
+/* --- Legacy remote stack (kept for any other slide referencing it) --- */
+.rsp-form { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 12px 16px; }
+.rsp-form label { display: flex; flex-direction: column; gap: 4px; font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.rsp-form input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 5px 8px; border-radius: 4px; font-size: 12px; }
+.rsp-actions { display: flex; gap: 8px; padding: 0 16px 12px; flex-wrap: wrap; }
+.rsp-actions button { background: #21262d; border: 1px solid #30363d; color: #c9d1d9; padding: 6px 12px; border-radius: 4px; font-size: 12px; }
+.rsp-actions button.primary { background: #238636; border-color: #238636; color: #fff; }
+.rsp-term { background: #1e1e1e; border: 1px solid #30363d; border-radius: 4px; margin: 0 16px 16px; padding: 10px 12px; font-family: 'SF Mono', monospace; font-size: 11px; color: #d4d4d4; line-height: 1.55; }
+.rsp-term .term-title { color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.rsp-term .p { color: #7ee787; }
+.rsp-term .c { color: #6e7681; font-style: italic; }
+.rsp-term .ok { color: #3fb950; }
+.rsp-term .warn { color: #d29922; }
+
+/* --- TopBarActions chips --------------------------------------- */
+.tb-status-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; font-size: 11px; color: #c9d1d9;
+  background: #21262d; border: 1px solid #30363d; border-radius: 999px;
+  font-family: 'SF Mono', monospace; margin-left: 6px;
+}
+.tb-status-chip .d { width: 6px; height: 6px; border-radius: 50%; }
+.tb-status-chip .d.g { background: #3fb950; box-shadow: 0 0 8px rgba(63,185,80,0.6); }
+.tb-status-chip .d.o { background: #d29922; }
+.tb-status-chip .d.r { background: #f85149; }
+.tb-floating-toggle {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  background: #21262d; border: 1px solid #30363d; border-radius: 4px;
+  color: #c9d1d9; font-size: 12px; margin-left: 6px;
+}
+
+/* ============================================================
+   Deck chrome — sits OUTSIDE the dashboard area
+   ============================================================ */
+.stage { position: fixed; inset: 0 0 28px 0; overflow: hidden; }
+.slide {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+.slide.active { opacity: 1; transform: none; pointer-events: auto; }
+
+/* a slide can be either a full-bleed dashboard view (.dash) or a narrative (.narr) */
+.dash { display: flex; flex-direction: column; height: 100%; }
+.narr { padding: 28px 48px; display: flex; flex-direction: column; gap: 12px; height: 100%; overflow-y: auto; }
+.narr h1 { font-size: 32px; line-height: 1.1; letter-spacing: -0.01em; max-width: 1100px; margin-bottom: 2px; }
+.narr p.lede { color: #c9d1d9; font-size: 14px; max-width: 1080px; line-height: 1.5; margin-bottom: 6px; }
+.narr .eyebrow { font-family: 'SF Mono', monospace; font-size: 11px; color: #58a6ff; text-transform: uppercase; letter-spacing: 0.18em; margin-bottom: 2px; }
+
+/* Slide caption overlay — small floating label so audience knows this is a slide */
+.slide-caption {
+  position: absolute; top: 56px; right: 24px; z-index: 5;
+  font-family: 'SF Mono', monospace; font-size: 10px;
+  background: rgba(13,17,23,0.85); border: 1px solid #30363d;
+  color: #58a6ff; padding: 4px 8px; border-radius: 4px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  backdrop-filter: blur(4px);
+}
+.slide-caption.vision { color: #d29922; border-color: #d29922; }
+.slide-caption.live { color: #3fb950; border-color: #2ea043; }
+
+/* Narrative typography */
+.narr .eyebrow { font-family: 'SF Mono', monospace; font-size: 11px; color: #58a6ff; text-transform: uppercase; letter-spacing: 0.18em; }
+.narr h1 { font-size: 34px; line-height: 1.1; letter-spacing: -0.01em; max-width: 1100px; }
+.narr h2 { font-size: 22px; font-weight: 600; }
+.narr p.lede { color: #c9d1d9; font-size: 15px; max-width: 980px; line-height: 1.55; }
+.narr .grid { display: grid; gap: 12px; align-content: start; }
+.narr .cols-2 { grid-template-columns: 1fr 1fr; }
+.narr .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.narr .cols-4 { grid-template-columns: repeat(4, 1fr); }
+.card {
+  background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.card .ctitle { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.card .cbody { font-size: 12.5px; color: #c9d1d9; line-height: 1.5; }
+.card .kpi-num { font-size: 26px; font-weight: 700; color: #e1e4e8; line-height: 1; }
+.card .kpi-delta { font-size: 11px; color: #3fb950; font-family: 'SF Mono', monospace; }
+.card .kpi-delta.bad { color: #f85149; }
+
+/* Pain cards on the Problem slide */
+.pain { gap: 6px; }
+.pain .stat { font-family: 'SF Mono', monospace; font-size: 11px; color: #f85149; }
+.pain .stat.warn { color: #d29922; }
+.pain .ex { font-size: 11.5px; color: #8b949e; font-style: italic; line-height: 1.45; padding: 6px 8px; background: #0d1117; border-left: 2px solid #30363d; border-radius: 0 4px 4px 0; }
+.pain .cmp { display: flex; gap: 6px; font-size: 11px; flex-wrap: wrap; }
+.pain .cmp .t { padding: 2px 6px; border-radius: 3px; font-family: 'SF Mono', monospace; }
+.pain .cmp .t.now { background: #2a1a1a; color: #f87171; border: 1px solid #4a2a2a; }
+.pain .cmp .t.fix { background: #0e2a18; color: #3fb950; border: 1px solid #1a3d28; }
+
+/* Dev day breakdown bar */
+.daybar { display: flex; height: 28px; border-radius: 4px; overflow: hidden; border: 1px solid #30363d; }
+.daybar > div { display: flex; align-items: center; justify-content: center; font-size: 10px; font-family: 'SF Mono', monospace; color: #fff; }
+.daylegend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 11px; color: #8b949e; font-family: 'SF Mono', monospace; }
+.daylegend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.g { background: #3fb950; } .dot.o { background: #d29922; } .dot.r { background: #f85149; } .dot.b { background: #58a6ff; }
+ul.ck { list-style: none; }
+ul.ck li { padding: 5px 0 5px 16px; font-size: 13px; color: #c9d1d9; position: relative; line-height: 1.5; }
+ul.ck li::before { content: ""; position: absolute; left: 0; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: #58a6ff; }
+ul.ck.g li::before { background: #3fb950; }
+ul.ck.o li::before { background: #d29922; }
+ul.ck.r li::before { background: #f85149; }
+.chip {
+  font-family: 'SF Mono', monospace; font-size: 11px;
+  padding: 2px 8px; border-radius: 999px;
+  border: 1px solid #30363d; color: #c9d1d9; background: rgba(255,255,255,0.02);
+}
+.chip.b { color: #58a6ff; border-color: rgba(88,166,255,0.4); }
+.chip.g { color: #3fb950; border-color: rgba(63,185,80,0.4); }
+.chip.o { color: #d29922; border-color: rgba(210,153,34,0.4); }
+.chip.r { color: #f85149; border-color: rgba(248,81,73,0.4); }
+.chip.vision { color: #d29922; border-color: #d29922; background: rgba(210,153,34,0.08); }
+pre.code {
+  margin: 0; background: #0d1117; border: 1px solid #21262d; border-radius: 6px;
+  padding: 12px 14px; font-family: 'SF Mono', monospace; font-size: 12px;
+  color: #c9d1d9; line-height: 1.6; overflow: auto;
+}
+pre.code .k { color: #58a6ff; }
+pre.code .s { color: #a5d6ff; }
+pre.code .c { color: #8b949e; font-style: italic; }
+pre.code .p { color: #d29922; }
+pre.code .ok { color: #3fb950; }
+
+/* Status bar */
+.statusbar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 28px;
+  background: #0d1117; border-top: 1px solid #30363d;
+  display: flex; align-items: center; padding: 0 14px;
+  font-family: 'SF Mono', monospace; font-size: 11px; color: #8b949e; gap: 14px; z-index: 60;
+}
+.progress { flex: 1; height: 3px; background: #21262d; border-radius: 2px; overflow: hidden; }
+.progress > i { display: block; height: 100%; background: #58a6ff; width: 0%; transition: width 220ms ease; }
+.hint { color: #484f58; }
+.counter { color: #c9d1d9; }
+
+/* Overview */
+.overview { position: fixed; inset: 0; background: rgba(13,17,23,0.97); padding: 24px; overflow: auto; display: none; z-index: 70; }
+.overview.show { display: block; }
+.ov-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; max-width: 1400px; margin: 0 auto; }
+.ov-card { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 10px 12px; min-height: 90px; }
+.ov-card:hover { border-color: #58a6ff; }
+.ov-card .ix { font-family: 'SF Mono', monospace; color: #8b949e; font-size: 11px; }
+.ov-card .ti { font-size: 13px; color: #e1e4e8; font-weight: 600; margin-top: 4px; }
+.ov-card .ta { font-size: 11px; color: #58a6ff; font-family: 'SF Mono', monospace; margin-top: 4px; }
+
+/* Title slide */
+.title-wrap { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 80px; gap: 16px; }
+.title-wrap .kicker { font-family: 'SF Mono', monospace; color: #58a6ff; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; }
+.title-wrap h1 { font-size: 60px; line-height: 1.05; letter-spacing: -0.02em; max-width: 1100px; }
+.title-wrap h1 em { color: #58a6ff; font-style: normal; }
+.title-wrap .sub { color: #8b949e; font-size: 17px; max-width: 820px; line-height: 1.55; }
+.title-wrap .meta { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.title-wrap .meta .chip { font-size: 12px; padding: 5px 10px; }
+
+/* Diagram nodes (vision UI) */
+.node {
+  background: #1c2128; border: 1px solid #30363d; border-radius: 6px;
+  padding: 10px 12px; font-size: 12px; color: #c9d1d9; text-align: center;
+}
+.node .sub { color: #8b949e; font-size: 10px; margin-top: 3px; font-family: 'SF Mono', monospace; }
+.node.accent { border-color: #58a6ff; color: #58a6ff; }
+.node.green { border-color: #238636; }
+.node.vision { border-style: dashed; border-color: #d29922; }
+.arrow { text-align: center; color: #484f58; font-size: 14px; padding: 4px 0; }
+
+/* Roadmap rows */
+.road { display: flex; flex-direction: column; gap: 8px; }
+.road .row { display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 14px; }
+.road .phase { font-family: 'SF Mono', monospace; font-size: 11px; color: #8b949e; border: 1px solid #30363d; border-radius: 4px; padding: 4px 8px; text-align: center; }
+.road .bar { height: 28px; background: #161b22; border: 1px solid #30363d; border-radius: 4px; position: relative; overflow: hidden; }
+.road .bar i { position: absolute; top: 0; bottom: 0; left: 0; background: linear-gradient(90deg, rgba(88,166,255,0.3), rgba(88,166,255,0.05)); border-right: 2px solid #58a6ff; }
+.road .bar span { position: absolute; inset: 0; display: flex; align-items: center; padding: 0 12px; font-size: 12px; color: #c9d1d9; }
+
+/* Workflow vision cards */
+.wf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.wf {
+  background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+  padding: 10px 12px; display: flex; align-items: center; gap: 10px;
+}
+.wf .ic { width: 32px; height: 32px; border-radius: 4px; background: #1c2128; display: flex; align-items: center; justify-content: center; color: #58a6ff; font-family: 'SF Mono', monospace; font-weight: 700; font-size: 11px; border: 1px solid #30363d; }
+.wf .nm { font-size: 12px; color: #e1e4e8; font-weight: 600; }
+.wf .ds { font-size: 10px; color: #8b949e; font-family: 'SF Mono', monospace; }
+.wf .meta { flex: 1; min-width: 0; }
+.wf .st { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Bars chart */
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 60px; }
+.bars .b { flex: 1; background: #58a6ff; border-radius: 2px 2px 0 0; opacity: 0.85; }
+.bars .b.g { background: #3fb950; }
+.bars .b.o { background: #d29922; }
+.bars .b.r { background: #f85149; }
+
+/* Mock RN frame for app launcher slide */
+.rn-frame { background: #1c2128; border: 1px solid #30363d; border-radius: 14px; padding: 8px; width: 200px; }
+.rn-screen { background: #0d1117; border-radius: 8px; height: 320px; padding: 12px; font-size: 11px; color: #c9d1d9; }
+.rn-screen .top { display: flex; justify-content: space-between; font-size: 9px; color: #8b949e; }
+.rn-screen h4 { margin: 16px 0 6px; font-size: 14px; }
+.rn-screen .pill { display: inline-block; background: #1f6feb; color: #fff; font-size: 10px; padding: 2px 8px; border-radius: 999px; }
+
+.spacer { flex: 1; }
+.tiny { font-size: 11px; color: #8b949e; font-family: 'SF Mono', monospace; }
+
+/* Make the embedded dashboard fill the slide */
+.dash .app { height: 100%; }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+
+<!-- =================================================================
+     SLIDE 1 · Title
+     ================================================================= -->
+<section class="slide active">
+  <div class="narr" style="justify-content: center;">
+    <div class="title-wrap">
+      <div class="kicker">Internal · Engineering · Q2 Vision · 2026-05-20</div>
+      <h1>AI made writing code 10× faster.<br/>Now <em>everything else</em> is the bottleneck.</h1>
+      <div class="sub">Full Stack Dev Box is the single product that removes those bottlenecks — integration tests, code coverage, versioned perf, config sync, mock observability, and one-click local workflows, all wired to a remote Dev Box per developer.</div>
+      <div class="meta">
+        <span class="chip b">presenter · khuzema</span>
+        <span class="chip">mobility · backend + apps</span>
+        <span class="chip g">live demo follows</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 2 · Problem (AI framing)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption">02 · The Problem</div>
+  <div class="narr">
+    <div class="eyebrow">Problem</div>
+    <h1>The work <i>around</i> the work.</h1>
+    <p class="lede">AI writes a feature in an afternoon — then we spend three days getting it to <i>run</i>. The dev loop didn't get faster, it got <i>louder</i>. Six structural bottlenecks, every sprint, every dev:</p>
+
+    <div class="grid cols-3">
+      <div class="card pain">
+        <div class="ctitle"><span class="dot r"></span> Shared QA bottlenecks</div>
+        <div class="stat">~3 PRs/week queued behind broken envs</div>
+        <div class="cbody">One bad seed on master, ten devs blocked. PR queues form behind environments, not reviewers.</div>
+        <div class="ex">"QA is down again — can someone re-seed? My PR has been sitting for 6 hours."</div>
+        <div class="cmp"><span class="t now">today: shared QA</span><span class="t fix">→ Dev Box per dev</span></div>
+      </div>
+      <div class="card pain">
+        <div class="ctitle"><span class="dot r"></span> Flaky local stack</div>
+        <div class="stat">~90 min/day on env setup</div>
+        <div class="cbody">Pg + Redis + Kafka + 4 services + 2 RN apps. Ports clash, containers die, RAM tops out.</div>
+        <div class="ex">"Why is 8013 already taken? I haven't started anything yet…"</div>
+        <div class="cmp"><span class="t now">today: , run-mobility-stack-dev</span><span class="t fix">→ pre-warmed Dev Box</span></div>
+      </div>
+      <div class="card pain">
+        <div class="ctitle"><span class="dot r"></span> No perf trendline</div>
+        <div class="stat">regressions caught in prod, not PR</div>
+        <div class="cbody">p95 creeps up over 10 commits. No one notices until Grafana lights up on Monday morning.</div>
+        <div class="ex">"Latency on /rideSearch has doubled this month — when did it start?"</div>
+        <div class="cmp"><span class="t now">today: Grafana, post-hoc</span><span class="t fix">→ perf gate per commit</span></div>
+      </div>
+      <div class="card pain">
+        <div class="ctitle"><span class="dot o"></span> Config drift</div>
+        <div class="stat">~1 hotfix/week from local ≠ prod</div>
+        <div class="cbody">Local seeds differ from master. Tests pass green here, red on staging, mystery in production.</div>
+        <div class="ex">"Works on my machine" — structural, not lazy.</div>
+        <div class="cmp"><span class="t now">today: hand-patched seeds</span><span class="t fix">→ one-click sync from master</span></div>
+      </div>
+      <div class="card pain">
+        <div class="ctitle"><span class="dot o"></span> Scattered launchers</div>
+        <div class="stat">6+ terminals open per dev</div>
+        <div class="cbody">CC in one tab, driver RN in another, allocator in a third, mocks in a fourth. No single status, no single log.</div>
+        <div class="ex">"Which terminal printed that stack trace? Where did rider-rn even crash?"</div>
+        <div class="cmp"><span class="t now">today: tmux + memory</span><span class="t fix">→ Workflows tab</span></div>
+      </div>
+      <div class="card pain">
+        <div class="ctitle"><span class="dot o"></span> Opaque mocks</div>
+        <div class="stat">~½ day lost per new integration</div>
+        <div class="cbody">Idfy / Juspay / OSRM — wire shapes live in tribal memory. Upstream changes break us silently.</div>
+        <div class="ex">"What's the response shape for verify_with_source? Who integrated it last?"</div>
+        <div class="cmp"><span class="t now">today: grep + slack archaeology</span><span class="t fix">→ captured + schema'd</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 12px;">
+      <div class="ctitle"><span class="dot b"></span> Where we're going · Dev Box sequence (local laptop ↔ remote Nix Dev Box on tailnet)</div>
+      <img src="devbox-sequence.png" alt="Dev Box sequence diagram" style="width:100%; display:block; border-radius:6px; background:#fff;" />
+      <div class="cbody" style="font-size: 12px; color: #8b949e;">
+        Local laptop runs <span class="chip b">run-local-test-dashboard</span> + the one backend / emulator / CC you're editing. The Nix Dev Box on tailnet hosts <span class="chip b">test-context-api</span>, <span class="chip b">Caddy reverse proxy</span>, and <span class="chip b">run-mobility-stack-dev</span> — ports resolved by <span class="chip o">ports.nix</span>. Dashboard pulls the service map via <code style="color:#58a6ff;font-family:monospace">GET /api/test-ctx/services</code>; client apps paste the base URL into Developer Mode and HTTPS-route through Caddy by URL prefix.
+      </div>
+    </div>
+
+    <p class="tiny" style="margin-top: 8px;">↳ AI removes the writing constraint. The bottlenecks left are <b style="color:#58a6ff">infrastructure</b>, <b style="color:#58a6ff">signal</b>, <b style="color:#58a6ff">orchestration</b>. The next 14 slides are about those three.</p>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 3 · The Product (real dashboard chrome)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption live">03 · Shipped Today</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand">
+            <svg class="app-brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+              <path fill="#FFB738" d="M8.81 5.88H4.47v11.73h4.34z"/>
+              <path fill="#268C6E" d="M35.58 22.39h-4.34v11.73h4.34z"/>
+              <path fill="#FFB738" d="M11.92 11.98c2.16-2.14 5.04-3.32 8.1-3.32s5.95 1.18 8.11 3.32c1.59 1.57 2.65 3.51 3.11 5.63h4.34c-.5-3.25-2.03-6.24-4.43-8.61C28.18 6.06 24.23 4.45 20.03 4.45c-4.21 0-8.16 1.61-11.13 4.55-2.4 2.37-3.92 5.36-4.43 8.61h4.34c.46-2.12 1.52-4.06 3.11-5.63z"/>
+              <path fill="#268C6E" d="M28.14 28.02c-2.17 2.14-5.05 3.32-8.11 3.32s-5.94-1.18-8.11-3.32c-1.59-1.57-2.65-3.51-3.11-5.63H4.47c.51 3.25 2.04 6.24 4.43 8.61 2.97 2.94 6.92 4.55 11.13 4.55 4.2 0 8.16-1.61 11.13-4.55 2.4-2.37 3.92-5.36 4.43-8.61h-4.34c-.46 2.12-1.52 4.06-3.11 5.63z"/>
+            </svg>
+            <span class="app-brand-name">Full Stack Dev Box</span>
+          </span>
+          <button class="mode-tab active">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d g"></span>rider :8013</span>
+          <span class="tb-status-chip"><span class="d g"></span>driver :8016</span>
+          <span class="tb-floating-toggle">🛠 Tools</span>
+        </div>
+        <div class="content-wrapper">
+          <div class="sidebar">
+            <div class="sidebar-logo">🧪 NY Test Dashboard</div>
+            <div class="sidebar-subtitle">E2E suite · local stack</div>
+            <div class="flow-group">
+              <div class="flow-group-title">Collections</div>
+              <div class="flow-item active"><span>NY · Onboard Auto Driver</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>NY · Onboard Cab Driver</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>NY · Rider First Ride</span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span>FRFS · Metro Booking</span><span class="flow-item-dot dot-pending">●</span></div>
+            </div>
+            <div class="flow-group">
+              <div class="flow-group-title">Custom Flows</div>
+              <div class="flow-item"><span>Ride Flow</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>Clear Dues</span><span class="flow-item-dot dot-pending">●</span></div>
+              <div class="flow-item"><span>Fleet Onboarding</span><span class="flow-item-dot dot-fail">●</span></div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="collection-runner">
+              <div class="cr-selector">
+                <label>Collection<div class="fake-select">NY / 01-NYOnboardAutoDriver</div></label>
+                <label>Env Type<div class="fake-select">Local</div></label>
+                <label>Suite<div class="fake-select">Default</div></label>
+                <div class="cr-actions">
+                  <button class="cr-run-btn">Run (15 steps)</button>
+                  <button class="cr-run-all-btn">Run All Collections</button>
+                </div>
+              </div>
+              <div class="cr-run-all-progress">
+                <div class="cr-run-all-bar"><div class="cr-run-all-fill" style="width: 62%"></div></div>
+                <div class="cr-run-all-label">9 / 14 collections · last: NY · Onboard Cab Driver · pass · 4.1s</div>
+              </div>
+              <div class="cr-steps">
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-rider">rider</span><span>Auth</span></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/auth</span><span class="cr-duration">84ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/auth/otp/verify</span><span class="cr-duration">31ms</span><span class="cr-status-code">200</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-driver">driver</span><span>Register + Documents</span></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/register</span><span class="cr-duration">142ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/documents/DL</span><span class="cr-duration">88ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/documents/RC</span><span class="cr-duration">96ms</span><span class="cr-status-code">200</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-system">system</span><span>Dashboard Approve</span></div>
+                  <div class="cr-step cr-step-running"><div class="cr-step-header"><span class="cr-dot cr-dot-running"></span><span class="cr-step-method">POST</span><span class="cr-step-name">dashboard/driver/documents/update</span><span class="cr-duration">…</span><span class="cr-logs-badge">logs</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-driver">driver</span><span>Go Online</span></div>
+                  <div class="cr-step"><div class="cr-step-header"><span class="cr-dot cr-dot-pending"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/setActive</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header">
+                <span class="log-panel-title">Logs <span class="log-match-count">(42 · 12 matches)</span></span>
+                <div class="log-panel-actions">
+                  <input class="log-search" placeholder="Search logs..." value="driver" />
+                  <button class="log-clear-btn">Clear</button>
+                </div>
+              </div>
+              <div class="log-panel-body">
+                <div class="log-entry-header"><span class="log-time">10:24:01</span><span class="log-msg log-info">[runner] ▶ NY/01-NYOnboardAutoDriver</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:02</span><span class="log-msg log-success">[auth] OTP 7777 verified · driver_id=dr_3f9…</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-success">[doc] DL accepted · status APPROVED</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-success">[doc] RC accepted · status APPROVED</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-warn">[mock] idfy.verify · response from cache (ttl 230s)</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-req">POST /driver/setActive · 200 · 88ms</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-success">[runner] PASS · 14 / 14 assertions · 4.2s</span><span class="log-toggle">▶</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-info">[coverage] +0.4% · Domain.Action.UI.Registration</span><span class="log-toggle">▶</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 4 · Integration tests (real CollectionRunner UI)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption live">04 · Integration Tests · LIVE</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand"><span class="app-brand-name" style="color:#58a6ff">Collections (Integration Tests)</span></span>
+          <button class="mode-tab active">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d g"></span>14 collections</span>
+          <span class="tb-status-chip"><span class="d g"></span>98.2% pass</span>
+        </div>
+        <div class="content-wrapper" style="flex:1;">
+          <div class="content">
+            <div class="collection-runner">
+              <div class="cr-selector">
+                <label>Collection<div class="fake-select">NY / 02-NYOnboardCabDriver</div></label>
+                <label>Env Type<div class="fake-select">Local · synced from master</div></label>
+                <label>Suite<div class="fake-select">SUV · Bangalore</div></label>
+                <div class="cr-actions">
+                  <button class="cr-run-btn">Run (18 steps)</button>
+                  <button class="cr-run-all-btn">Run All Collections</button>
+                </div>
+              </div>
+              <div class="cr-steps">
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-rider">rider</span><span>Auth</span></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/auth · phone 7777777702</span><span class="cr-duration">71ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/auth/otp/verify</span><span class="cr-duration">28ms</span><span class="cr-status-code">200</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-driver">driver</span><span>Onboarding</span></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/register · SUV</span><span class="cr-duration">156ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/documents/DL</span><span class="cr-duration">94ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/documents/RC</span><span class="cr-duration">102ms</span><span class="cr-status-code">200</span></div></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/documents/PAN</span><span class="cr-duration">78ms</span><span class="cr-status-code">200</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-system">system</span><span>Dashboard Approve · operator</span></div>
+                  <div class="cr-step cr-step-pass"><div class="cr-step-header"><span class="cr-dot cr-dot-pass"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/bpp/driver-offer/NAMMA_YATRI_PARTNER/Bangalore/driver/documents/update</span><span class="cr-duration">128ms</span><span class="cr-status-code">200</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-driver">driver</span><span>Go Online</span></div>
+                  <div class="cr-step cr-step-running"><div class="cr-step-header"><span class="cr-dot cr-dot-running"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/driver/setActive · GPS lock pending</span><span class="cr-duration">…</span><span class="cr-logs-badge">logs</span></div></div>
+                </div>
+                <div class="cr-node">
+                  <div class="cr-node-header"><span class="cr-tag cr-tag-rider">rider</span><span>Search · Match · Confirm</span></div>
+                  <div class="cr-step"><div class="cr-step-header"><span class="cr-dot cr-dot-pending"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/rideSearch · Indiranagar → MG Road</span></div></div>
+                  <div class="cr-step"><div class="cr-step-header"><span class="cr-dot cr-dot-pending"></span><span class="cr-step-method">POST</span><span class="cr-step-name">/rideConfirm</span></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">Service Logs</span><div class="log-panel-actions"><span class="log-match-count">rider-exe · driver-exe</span></div></div>
+              <div class="log-panel-body">
+                <div class="log-entry-header"><span class="log-time">10:31:14</span><span class="log-msg log-info">rider-exe · INFO · POST /auth → 200 (71ms)</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:14</span><span class="log-msg log-success">rider-exe · OK · OTP verified · user_id=cu_8b1…</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:15</span><span class="log-msg log-info">driver-exe · INFO · POST /driver/register → 200</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:15</span><span class="log-msg log-req">POST /driver/documents/DL · req_id=ny_8f31…</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:16</span><span class="log-msg log-warn">mock · idfy.verify · 1 new field detected</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:17</span><span class="log-msg log-success">dashboard-exe · approve documents · 3 docs</span></div>
+                <div class="log-entry-header"><span class="log-time">10:31:18</span><span class="log-msg log-info">driver-exe · setActive · waiting GPS</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 6 · Coverage (real CoverageReport UI)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption live">05 · Code Coverage · LIVE</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand"><span class="app-brand-name" style="color:#58a6ff">Code Coverage</span></span>
+          <button class="mode-tab">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab active">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d g"></span>last run: 2m ago</span>
+        </div>
+        <div class="content-wrapper" style="flex:1;">
+          <div class="content">
+            <div class="coverage-report">
+              <div class="cov-header">
+                <div class="cov-tabs">
+                  <button class="cov-tab active">Overview</button>
+                  <button class="cov-tab">Rider</button>
+                  <button class="cov-tab">Driver</button>
+                  <button class="cov-tab">Chains</button>
+                  <button class="cov-tab">Gaps</button>
+                </div>
+                <div class="cov-actions">
+                  <button class="cov-btn">Refresh</button>
+                  <button class="cov-btn cov-btn-danger">Clear Runs</button>
+                </div>
+              </div>
+              <div class="cov-stats-grid">
+                <div class="cov-stat-card cov-stat-blue"><div class="cov-stat-title">Rider Endpoints</div><div class="cov-stat-value">42 / 50</div><div class="cov-stat-bar"><div class="cov-stat-fill" style="width:84%"></div></div><div class="cov-stat-percent">84.0% covered</div></div>
+                <div class="cov-stat-card cov-stat-green"><div class="cov-stat-title">Driver Endpoints</div><div class="cov-stat-value">61 / 78</div><div class="cov-stat-bar"><div class="cov-stat-fill" style="width:78%"></div></div><div class="cov-stat-percent">78.2% covered</div></div>
+                <div class="cov-stat-card cov-stat-purple"><div class="cov-stat-title">Scenario Coverage</div><div class="cov-stat-value">312 / 504</div><div class="cov-stat-bar"><div class="cov-stat-fill" style="width:62%"></div></div><div class="cov-stat-percent">61.9% of scenario combos</div></div>
+                <div class="cov-stat-card cov-stat-orange"><div class="cov-stat-title">PR Delta</div><div class="cov-stat-value">+1.2%</div><div class="cov-stat-bar"><div class="cov-stat-fill" style="width:12%"></div></div><div class="cov-stat-percent">2 modules up</div></div>
+              </div>
+              <div class="cov-endpoint-list">
+                <div class="cov-endpoint cov-covered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-pass"></span><span class="cov-endpoint-key">POST /rideSearch</span><span class="cov-hit-badge">128×</span><span class="cov-scenario-badge full">100% scenarios</span></div></div>
+                <div class="cov-endpoint cov-covered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-pass"></span><span class="cov-endpoint-key">POST /rideConfirm</span><span class="cov-hit-badge">94×</span><span class="cov-scenario-badge full">100% scenarios</span></div></div>
+                <div class="cov-endpoint cov-covered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-pass"></span><span class="cov-endpoint-key">POST /driver/register</span><span class="cov-hit-badge">54×</span><span class="cov-scenario-badge partial">71% scenarios</span></div></div>
+                <div class="cov-endpoint cov-covered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-pass"></span><span class="cov-endpoint-key">POST /driver/documents/DL</span><span class="cov-hit-badge">48×</span><span class="cov-scenario-badge partial">60% scenarios</span></div></div>
+                <div class="cov-endpoint cov-uncovered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-fail"></span><span class="cov-endpoint-key">POST /frfs/metro/booking</span><span class="cov-hit-badge">0×</span><span class="cov-scenario-badge empty">no coverage</span></div></div>
+                <div class="cov-endpoint cov-uncovered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-fail"></span><span class="cov-endpoint-key">POST /driver/clearDues</span><span class="cov-hit-badge">0×</span><span class="cov-scenario-badge empty">no coverage</span></div></div>
+                <div class="cov-endpoint cov-covered"><div class="cov-endpoint-header"><span class="cov-dot cov-dot-pass"></span><span class="cov-endpoint-key">POST /payment/initiate</span><span class="cov-hit-badge">31×</span><span class="cov-scenario-badge partial">44% scenarios</span></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">Coverage Trend</span></div>
+              <div class="log-panel-body" style="padding: 14px;">
+                <div class="tiny" style="margin-bottom: 6px;">last 30 commits · overall</div>
+                <svg width="100%" height="80" viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <defs><linearGradient id="cg1" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#3fb950" stop-opacity="0.4"/><stop offset="100%" stop-color="#3fb950" stop-opacity="0"/></linearGradient></defs>
+                  <path d="M0,62 L10,60 L20,58 L30,59 L40,55 L50,53 L60,54 L70,50 L80,48 L90,47 L100,49 L110,46 L120,44 L130,42 L140,43 L150,41 L160,39 L170,40 L180,38 L190,36 L200,37 L210,35 L220,34 L230,32 L240,33 L250,31 L260,30 L270,31 L280,29 L290,28 L300,27 L300,80 L0,80 Z" fill="url(#cg1)"/>
+                  <path d="M0,62 L10,60 L20,58 L30,59 L40,55 L50,53 L60,54 L70,50 L80,48 L90,47 L100,49 L110,46 L120,44 L130,42 L140,43 L150,41 L160,39 L170,40 L180,38 L190,36 L200,37 L210,35 L220,34 L230,32 L240,33 L250,31 L260,30 L270,31 L280,29 L290,28 L300,27" stroke="#3fb950" stroke-width="1.5" fill="none"/>
+                </svg>
+                <div class="tiny" style="margin: 14px 0 6px;">per-collection contribution</div>
+                <div class="bars">
+                  <div class="b g" style="height:84%"></div>
+                  <div class="b g" style="height:78%"></div>
+                  <div class="b" style="height:62%"></div>
+                  <div class="b" style="height:54%"></div>
+                  <div class="b o" style="height:36%"></div>
+                  <div class="b o" style="height:30%"></div>
+                  <div class="b" style="height:50%"></div>
+                  <div class="b g" style="height:68%"></div>
+                  <div class="b" style="height:42%"></div>
+                  <div class="b o" style="height:26%"></div>
+                  <div class="b r" style="height:14%"></div>
+                </div>
+                <div class="tiny" style="margin-top: 14px; color: #c9d1d9;">▲ this PR: +1.2% · 2 modules up · 0 down</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 7 · Versioned Perf (vision)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption vision">06 · Versioned Perf · VISION</div>
+  <div class="narr">
+    <div class="eyebrow">Vision · Phase 1</div>
+    <h1>Every released commit gets a perf fingerprint.</h1>
+    <p class="lede">A new <span class="chip vision">Perf</span> tab in the dashboard. When a commit lands on a release branch, the perf agent runs a fixed scenario set against the synced stack and pins p50 / p95 / throughput / memory next to the SHA.</p>
+    <div class="grid cols-2" style="flex: 1;">
+      <div class="col" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="grid cols-2">
+          <div class="card"><div class="ctitle">p50 · /rideSearch</div><div class="kpi-num">42 <span style="font-size:13px;color:#8b949e">ms</span></div><div class="kpi-delta">▼ 3 ms vs v2026.05.0</div></div>
+          <div class="card"><div class="ctitle">p95 · /rideSearch</div><div class="kpi-num">218 <span style="font-size:13px;color:#8b949e">ms</span></div><div class="kpi-delta bad">▲ 14 ms ⚠ regression</div></div>
+          <div class="card"><div class="ctitle">Throughput</div><div class="kpi-num">1.4 <span style="font-size:13px;color:#8b949e">k rps</span></div><div class="kpi-delta">flat</div></div>
+          <div class="card"><div class="ctitle">Mem · driver-app</div><div class="kpi-num">612 <span style="font-size:13px;color:#8b949e">MB</span></div><div class="kpi-delta bad">▲ 38 MB</div></div>
+        </div>
+        <div class="card">
+          <div class="ctitle">Proposed release gates</div>
+          <ul class="ck">
+            <li>p95 cannot regress &gt; 10% vs last green release</li>
+            <li>Memory cannot grow &gt; 15% per service per release</li>
+            <li>Coverage cannot drop on modules touched by the PR</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card" style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
+          <div class="ctitle">p95 · last 20 release commits</div>
+          <svg width="100%" height="120" viewBox="0 0 300 120" preserveAspectRatio="none">
+            <path d="M0,80 L15,76 L30,82 L45,78 L60,74 L75,72 L90,80 L105,68 L120,66 L135,62 L150,70 L165,64 L180,56 L195,58 L210,52 L225,60 L240,46 L255,42 L270,50 L285,76 L300,98" stroke="#58a6ff" stroke-width="1.5" fill="none"/>
+            <circle cx="300" cy="98" r="4" fill="#f85149"/>
+            <line x1="0" y1="60" x2="300" y2="60" stroke="#30363d" stroke-dasharray="2 4" stroke-width="1"/>
+            <text x="4" y="56" fill="#8b949e" font-family="SF Mono" font-size="9">baseline (last green)</text>
+          </svg>
+          <div class="tiny">🔴 regression on <span class="chip o">7402a77</span> · "Launcher Workflows…" — auto-comment posted to PR</div>
+        </div>
+        <pre class="code"><span class="c"># perf snapshots stored per release commit</span>
+artifacts/perf/<span class="p">7402a77</span>/search.json
+artifacts/perf/<span class="p">7402a77</span>/confirm.json
+<span class="c"># dashboard diff view:</span>
+$ test-tool perf diff <span class="s">--against</span> <span class="p">v2026.05.0</span>
+<span class="ok">✓</span> /rideConfirm    flat
+<span class="ok">✓</span> /payment/init   <span class="ok">−5ms</span>
+<span style="color:#f85149">✗</span> /rideSearch     <span style="color:#f85149">+14ms (p95) — gate failed</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 8 · Config Sync (real Remote Stack panel + terminal)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption live">07 · Remote Stack · Devbox Deploy · LIVE</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand">
+            <svg class="app-brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+              <path fill="#FFB738" d="M8.81 5.88H4.47v11.73h4.34z"/>
+              <path fill="#268C6E" d="M35.58 22.39h-4.34v11.73h4.34z"/>
+              <path fill="#FFB738" d="M11.92 11.98c2.16-2.14 5.04-3.32 8.1-3.32s5.95 1.18 8.11 3.32c1.59 1.57 2.65 3.51 3.11 5.63h4.34c-.5-3.25-2.03-6.24-4.43-8.61C28.18 6.06 24.23 4.45 20.03 4.45c-4.21 0-8.16 1.61-11.13 4.55-2.4 2.37-3.92 5.36-4.43 8.61h4.34c.46-2.12 1.52-4.06 3.11-5.63z"/>
+              <path fill="#268C6E" d="M28.14 28.02c-2.17 2.14-5.05 3.32-8.11 3.32s-5.94-1.18-8.11-3.32c-1.59-1.57-2.65-3.51-3.11-5.63H4.47c.51 3.25 2.04 6.24 4.43 8.61 2.97 2.94 6.92 4.55 11.13 4.55 4.2 0 8.16-1.61 11.13-4.55 2.4-2.37 3.92-5.36 4.43-8.61h-4.34c-.46 2.12-1.52 4.06-3.11 5.63z"/>
+            </svg>
+            <span class="app-brand-name">Full Stack Dev Box</span>
+          </span>
+          <button class="mode-tab">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab">Client Applications</button>
+          <button class="mode-tab active">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-floating-toggle">🛠 Tools</span>
+        </div>
+        <div class="content-wrapper" style="flex: 1;">
+          <div class="content" style="overflow-y: auto;">
+            <div class="rsp">
+              <div class="rsp-header2">
+                <h2 style="margin:0 0 4px;font-size:18px;color:#e1e4e8;">Remote Stack</h2>
+                <p class="rsp-sub2">
+                  SSH into a host, rsync the repo, then launch <code>, run-mobility-stack-dev</code> (backend + test-context-api + mock-server). Streams the PTY back to this panel. For <code>localhost</code>, no SSH or rsync is used. Ports are resolved by <code>ports.nix</code> and fronted by Caddy.
+                </p>
+              </div>
+              <div class="rsp-form2">
+                <label><span>Host</span><input value="khuzema.devbox.ny.tailnet.ts.net" readonly /></label>
+                <label><span>User</span><input value="ubuntu" readonly /></label>
+                <label><span>Port</span><input value="22" readonly /></label>
+                <label><span>Identity file</span><input value="~/.ssh/id_ed25519" readonly /></label>
+                <label><span>Remote dir</span><input value="/tmp/nammayatri" readonly /></label>
+                <label><span>Copy mode</span><input value="rsync" readonly /></label>
+              </div>
+              <div class="rsp-actions2">
+                <button>Deploy (rsync)</button>
+                <button>Clear data</button>
+                <button class="primary">Start mobility-stack-dev</button>
+                <button>Stop</button>
+                <span style="flex:1;"></span>
+                <button>Use this context-api</button>
+                <button class="ghost">Reset</button>
+              </div>
+              <div class="rsp-meta2">
+                <div><span class="rsp-mlabel">local-api:</span> <code>http://localhost:7081</code></div>
+                <div><span class="rsp-mlabel">context-api:</span> <code>http://khuzema.devbox.ny.tailnet.ts.net:7082</code> <span class="rsp-mtag">override</span></div>
+                <div class="rsp-mok">mobility-stack-dev running on khuzema.devbox.ny.tailnet.ts.net · uptime 21m 14s · 14.4% mem</div>
+              </div>
+
+              <div class="rsp-procs">
+                <div class="rsp-procs-head">
+                  <div>PID(S)</div><div>NAME(S)</div><div>NAMESPACE(S)</div><div>STATUS(ES)</div><div>AGE(S)</div><div>HEALTHY</div><div>MEMORY</div><div>CPU%</div><div>RESTART(S)</div><div>EXIT</div>
+                </div>
+                <div class="rsp-procs-row"><div>59488</div><div>nix-shell</div><div>—</div><div class="ok">Running</div><div>20m</div><div>—</div><div>30.3 MiB</div><div>0.0%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>65615</div><div>caddy</div><div>—</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>148.1 MiB</div><div>0.1%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>86187</div><div>clickhouse</div><div>clickhouse</div><div class="ok">Running</div><div>14m</div><div>—</div><div>—</div><div>—</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83921</div><div>clickhouse-db-init</div><div>clickhouse</div><div class="ok">Completed</div><div>6s</div><div>—</div><div>—</div><div>—</div><div>0</div><div>0</div></div>
+                <div class="rsp-procs-row"><div>83876</div><div>cluster0</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>5.4 MiB</div><div>0.0%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83812</div><div>cluster0-cluster-create</div><div>cluster1</div><div class="ok">Completed</div><div>15s</div><div>—</div><div>—</div><div>—</div><div>0</div><div>0</div></div>
+                <div class="rsp-procs-row"><div>83679</div><div>cluster0-c0</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>5.1 MiB</div><div>0.0%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83503</div><div>cluster0-c1</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>5.1 MiB</div><div>0.0%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83504</div><div>cluster0-c2</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>4.7 MiB</div><div>0.2%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83505</div><div>cluster0-c3</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>5.6 MiB</div><div>0.1%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83506</div><div>cluster0-c4</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>4.8 MiB</div><div>0.1%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>83507</div><div>cluster0-c5</div><div>cluster1</div><div class="ok">Running</div><div>15m</div><div>Ready</div><div>6.0 MiB</div><div>0.1%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>91204</div><div>rider-exe</div><div>backend</div><div class="ok">Running</div><div>12m</div><div>Ready</div><div>612.4 MiB</div><div>1.8%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>91255</div><div>driver-offer-bpp-exe</div><div>backend</div><div class="ok">Running</div><div>12m</div><div>Ready</div><div>588.1 MiB</div><div>1.4%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>91290</div><div>allocator-exe</div><div>backend</div><div class="ok">Running</div><div>12m</div><div>Ready</div><div>184.3 MiB</div><div>0.4%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>91341</div><div>mock-server</div><div>backend</div><div class="ok">Running</div><div>12m</div><div>Ready</div><div>78.2 MiB</div><div>0.1%</div><div>0</div><div>—</div></div>
+                <div class="rsp-procs-row"><div>91402</div><div>test-context-api</div><div>backend</div><div class="ok">Running</div><div>12m</div><div>Ready</div><div>42.0 MiB</div><div>0.0%</div><div>0</div><div>—</div></div>
+              </div>
+
+              <div class="rsp-term2">
+                <div class="rsp-term-title2">mobility-stack-dev (khuzema.devbox)</div>
+                <div class="rsp-term-body">
+                  <div><span class="c">$</span> cd Backend && nix develop .#backend -c , run-mobility-stack-dev</div>
+                  <div><span class="ok">[server-startup]</span> Loaded http managers — {"src-signature": "1.78.2", "hostname": "2026-05-17 12:15:54.022286 UTC"}</div>
+                  <div><span class="ok">[server-startup]</span> Resolved ports from ports.nix → caddy:7080 ctx:7082 rider:7095 driver:7097 allocator:7099 mock:7101</div>
+                  <div><span class="ok">[caddy]</span> Routing /svc/rider-app/* → :7095 · /svc/driver-app/* → :7097 · /svc/allocator/* → :7099 · /svc/mock/* → :7101</div>
+                  <div><span class="ok">[server-startup]</span> Runtime created. Starting server at port 8013 — {"timestamp": "2026-05-17 12:15:54.060800 UTC"}</div>
+                  <div><span class="ok">[health]</span> all 12 services Ready · base URL → https://khuzema.devbox.ny.tailnet.ts.net</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">Caddy · reverse-proxy routes</span></div>
+              <div class="log-panel-body">
+                <div class="log-entry-header"><span class="log-time">/svc/rider-app</span><span class="log-msg log-success">→ localhost:7095 (rider-exe)</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/driver-app</span><span class="log-msg log-success">→ localhost:7097 (driver-offer-bpp)</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/allocator</span><span class="log-msg log-success">→ localhost:7099 (allocator-exe)</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/mock</span><span class="log-msg log-success">→ localhost:7101 (mock-server)</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/ctx-api</span><span class="log-msg log-success">→ localhost:7082 (test-context-api)</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/rider-dash</span><span class="log-msg log-success">→ localhost:8017</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/provider-dash</span><span class="log-msg log-success">→ localhost:8018</span></div>
+                <div class="log-entry-header"><span class="log-time">/svc/metabase</span><span class="log-msg log-info">→ localhost:3001</span></div>
+                <div class="log-entry-header"><span class="log-time">port pool</span><span class="log-msg log-warn">resolved by ports.nix · isolated per Dev Box</span></div>
+                <div class="log-entry-header"><span class="log-time">tls</span><span class="log-msg log-info">tailnet cert · auto-renewed by caddy</span></div>
+                <div class="log-entry-header"><span class="log-time">auth</span><span class="log-msg log-info">tailscale ACL · single edge check</span></div>
+                <div class="log-entry-header"><span class="log-time">ctx-api</span><span class="log-msg log-success">GET /api/test-ctx/services → 200 (12 entries)</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 9 · Dev Boxes vision
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption vision">08 · Dev Boxes · VISION</div>
+  <div class="narr">
+    <div class="eyebrow">Vision · Phase 2</div>
+    <h1>Your laptop is for UI. The backend lives in the cloud.</h1>
+    <p class="lede">A Dev Box is a per-developer container with the full backend stack pre-warmed. The dashboard + the one backend service you're <i>actively editing</i> run on the laptop; everything else lives in the box. Destroyed nightly, re-created in &lt; 60s.</p>
+    <div class="grid cols-2" style="flex: 1;">
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="ctitle"><span class="dot g"></span> On Your Laptop</div>
+        <ul class="ck g">
+          <li>Test Tool Dashboard (React · :5173)</li>
+          <li>One backend service you're editing — e.g. <span class="chip b">rider-app</span> w/ ghcid hot reload</li>
+          <li>RN apps in dev mode (rider · driver) attached to local metro</li>
+          <li>Editor / IDE</li>
+        </ul>
+        <div class="tiny" style="margin-top: auto;">~3 GB RAM · zero local Postgres / Redis / Kafka</div>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px; border-style: dashed; border-color: #d29922;">
+        <div class="ctitle" style="color: #d29922;"><span class="dot o"></span> In Your Dev Box (remote)</div>
+        <ul class="ck o">
+          <li>Postgres + Redis + Kafka pre-warmed with synced config</li>
+          <li>All other backend services: driver-offer, allocator, dashboards, providers</li>
+          <li>Mock registry · idfy · juspay · osrm · sms · fcm</li>
+          <li>Reverse proxy with a single public endpoint (next slide)</li>
+        </ul>
+        <div class="tiny" style="color: #d29922; margin-top: auto;">spec'd per merchant · pooled · ~$0.40 / dev / day</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Why now</div>
+      <div class="cbody">AI lets a single dev touch services across three repos in one sitting. Their laptop can't run all of those at once. Dev Boxes are the only way to give every engineer a production-shape stack without each of them owning a Mac Pro.</div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 10 · Reverse proxy topology
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption vision">09 · Dev Box Networking · VISION</div>
+  <div class="narr">
+    <div class="eyebrow">Vision · Phase 2</div>
+    <h1>Random ports inside. One stable URL outside.</h1>
+    <div class="grid cols-2" style="flex: 1;">
+      <div class="col" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="card">
+          <div class="ctitle">The pattern</div>
+          <div class="cbody">Every backend service inside the Dev Box starts on a <b>random available port</b> — no collisions, ever. A reverse proxy fronts them all on a single endpoint, routing by service-name prefix. Dashboard auto-discovers ports via a registry endpoint.</div>
+        </div>
+        <pre class="code">https://<span class="p">khuzema</span>.devbox.ny.internal
+   /svc/<span class="k">rider-app</span>/...        <span class="c"># → :41327</span>
+   /svc/<span class="k">driver-app</span>/...       <span class="c"># → :52109</span>
+   /svc/<span class="k">allocator</span>/...        <span class="c"># → :39214</span>
+   /svc/<span class="k">mock-registry</span>/...    <span class="c"># → :48820</span>
+   /svc/<span class="k">control-center</span>/...   <span class="c"># → :47011</span>
+   /svc/<span class="k">rider-dashboard</span>/...  <span class="c"># → :50942</span>
+   /svc/<span class="k">provider-dashboard</span>/.. <span class="c"># → :50943</span></pre>
+        <div class="card">
+          <div class="ctitle">Wins</div>
+          <ul class="ck">
+            <li>Zero port allocation drama · services pick what's free</li>
+            <li>Same URL pattern on every dev's box → shareable repros</li>
+            <li>One TLS cert · one auth check at the edge</li>
+            <li>Local dashboard binds to <span class="chip b">/svc/&lt;name&gt;</span> automatically</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="ctitle">Topology</div>
+        <div class="node accent">Dashboard (laptop)</div>
+        <div class="arrow">▼ https</div>
+        <div class="node vision">Reverse Proxy · caddy / envoy · :443</div>
+        <div class="arrow">▼ /svc/&lt;name&gt;</div>
+        <div class="grid cols-3" style="gap: 8px;">
+          <div class="node green">rider-app<div class="sub">:41327</div></div>
+          <div class="node green">driver-app<div class="sub">:52109</div></div>
+          <div class="node green">allocator<div class="sub">:39214</div></div>
+          <div class="node">mock-registry<div class="sub">:48820</div></div>
+          <div class="node">control-center<div class="sub">:47011</div></div>
+          <div class="node">dashboards<div class="sub">:50942-3</div></div>
+        </div>
+        <div class="arrow">▼</div>
+        <div class="grid cols-3" style="gap: 8px;">
+          <div class="node">Postgres<div class="sub">:5434</div></div>
+          <div class="node">Redis<div class="sub">:6379</div></div>
+          <div class="node">Kafka<div class="sub">:9092</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 11 · Local Workflows (real sidebar + new wf cards)
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption live">10 · Client Applications · LIVE</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand">
+            <svg class="app-brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+              <path fill="#FFB738" d="M8.81 5.88H4.47v11.73h4.34z"/>
+              <path fill="#268C6E" d="M35.58 22.39h-4.34v11.73h4.34z"/>
+              <path fill="#FFB738" d="M11.92 11.98c2.16-2.14 5.04-3.32 8.1-3.32s5.95 1.18 8.11 3.32c1.59 1.57 2.65 3.51 3.11 5.63h4.34c-.5-3.25-2.03-6.24-4.43-8.61C28.18 6.06 24.23 4.45 20.03 4.45c-4.21 0-8.16 1.61-11.13 4.55-2.4 2.37-3.92 5.36-4.43 8.61h4.34c.46-2.12 1.52-4.06 3.11-5.63z"/>
+              <path fill="#268C6E" d="M28.14 28.02c-2.17 2.14-5.05 3.32-8.11 3.32s-5.94-1.18-8.11-3.32c-1.59-1.57-2.65-3.51-3.11-5.63H4.47c.51 3.25 2.04 6.24 4.43 8.61 2.97 2.94 6.92 4.55 11.13 4.55 4.2 0 8.16-1.61 11.13-4.55 2.4-2.37 3.92-5.36 4.43-8.61h-4.34c-.46 2.12-1.52 4.06-3.11 5.63z"/>
+            </svg>
+            <span class="app-brand-name">Full Stack Dev Box</span>
+          </span>
+          <button class="mode-tab">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab active">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d g"></span>4 specs · specs/</span>
+        </div>
+        <div class="content-wrapper" style="flex: 1;">
+          <div class="content">
+            <div class="tools-panel-emb">
+
+              <div class="tools-header">
+                <h2 class="tools-h">Client Applications</h2>
+                <span class="chip b">spec-driven · Backend/dev/test-tool/specs/*.yaml</span>
+                <button class="btn">Refresh</button>
+              </div>
+
+              <!-- Tools grid: 4 real cards from specs/ -->
+              <div class="tools-grid">
+                <div class="tool-card selected">
+                  <div class="tool-card-title">NY Consumer App (Android)</div>
+                  <div class="tool-card-category">mobile</div>
+                  <div class="tool-card-tags">
+                    <span class="tool-card-tag">react-native</span>
+                    <span class="tool-card-tag">android</span>
+                    <span class="tool-card-tag">consumer</span>
+                  </div>
+                  <div class="tool-card-ports">
+                    <span class="tool-card-port">metro:8082</span>
+                    <span class="tool-card-port">backend:8013</span>
+                    <span class="tool-card-port">mock:8080</span>
+                  </div>
+                </div>
+                <div class="tool-card">
+                  <div class="tool-card-title">NY Driver App (Android)</div>
+                  <div class="tool-card-category">mobile</div>
+                  <div class="tool-card-tags">
+                    <span class="tool-card-tag">react-native</span>
+                    <span class="tool-card-tag">android</span>
+                    <span class="tool-card-tag">driver</span>
+                  </div>
+                  <div class="tool-card-ports">
+                    <span class="tool-card-port">metro:8083</span>
+                    <span class="tool-card-port">backend:8016</span>
+                    <span class="tool-card-port">grpc:50051</span>
+                    <span class="tool-card-port">mock:8080</span>
+                  </div>
+                </div>
+                <div class="tool-card">
+                  <div class="tool-card-title">Control Center — Frontend</div>
+                  <div class="tool-card-category">tool</div>
+                  <div class="tool-card-tags">
+                    <span class="tool-card-tag">node</span>
+                    <span class="tool-card-tag">vite</span>
+                    <span class="tool-card-tag">dashboard</span>
+                    <span class="tool-card-tag">frontend</span>
+                  </div>
+                  <div class="tool-card-ports">
+                    <span class="tool-card-port">frontend:4002</span>
+                    <span class="tool-card-port">server:4001</span>
+                  </div>
+                </div>
+                <div class="tool-card">
+                  <div class="tool-card-title">Control Center — Backend</div>
+                  <div class="tool-card-category">tool</div>
+                  <div class="tool-card-tags">
+                    <span class="tool-card-tag">node</span>
+                    <span class="tool-card-tag">dashboard</span>
+                    <span class="tool-card-tag">backend</span>
+                  </div>
+                  <div class="tool-card-ports">
+                    <span class="tool-card-port">server:4001</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Detail panel for selected NY Consumer App -->
+              <div class="tool-section">
+                <h3 class="tool-h3">Source</h3>
+                <div class="source-line"><b>URL:</b> <code>https://github.com/nammayatri/ny-react-native</code></div>
+                <div class="source-line"><b>ref:</b> <code>main</code> &nbsp; <b>destDir:</b> <code>data/ny-react-native</code></div>
+              </div>
+
+              <div class="tool-section">
+                <h3 class="tool-h3">Inputs</h3>
+                <div class="input-row">
+                  <label>Firebase google-services.json <span class="req">*</span></label>
+                  <div class="field file"><span class="filetag">file</span> google-services-debug.json · 4.1 KB</div>
+                </div>
+                <div class="input-row">
+                  <label>App variant <span class="req">*</span></label>
+                  <div class="field">Lynx <span style="color:#6b7186;font-size:11px;margin-left:auto;">[ Bridge · NammaYatri · Yatri · ManaYatri · YatriSathi · Lynx · BharatTaxi ]</span></div>
+                </div>
+                <div class="input-row">
+                  <label>Android package id <span class="req">*</span></label>
+                  <div class="field">in.mobility.international.debug</div>
+                </div>
+                <div class="input-row">
+                  <label>Client ID (local.properties) <span class="req">*</span></label>
+                  <div class="field">nammayatribap</div>
+                </div>
+                <div class="input-row">
+                  <label>Backend Merchant ID <span class="req">*</span></label>
+                  <div class="field">BRIDGE_FINLAND <span style="color:#6b7186;font-size:11px;margin-left:auto;">[ BRIDGE_FINLAND · NAMMA_YATRI · BHARAT_TAXI ]</span></div>
+                </div>
+                <div class="input-row">
+                  <label>Config URL <span class="req">*</span></label>
+                  <div class="field">http://localhost:8013/v2</div>
+                </div>
+                <div class="input-row missing">
+                  <label>Google Maps API key</label>
+                  <div class="field" style="color:#f5b56b;">GOOGLE_MAPS_API_KEY <span style="color:#6b7186;font-size:10px;margin-left:auto;">optional · using placeholder</span></div>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h3 class="tool-h3">Workflows</h3>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px;">
+                  <div class="workflow-item"><button class="btn btn-primary">▶ first-run</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">sync-source → materialize → install → re-watch → metro → build-android</span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn">▶ refresh-js</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">metro</span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn">▶ refresh-native</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">build-android → metro</span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn">▶ reinstall</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">install → re-watch → metro → build-android</span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn">▶ fresh-emulator</button><span class="workflow-info">ⓘ</span><span class="workflow-steps"><b>reset-emulator</b> → sync-source → materialize → install → re-watch → metro → build-android</span></div>
+                </div>
+
+                <div style="margin: 10px 0 6px; padding-top: 10px; border-top: 1px dashed #d29922; display:flex; align-items:center; gap:8px;">
+                  <span class="chip vision">vision · phase 3</span>
+                  <span style="font-size: 11px; color: #9aa0b4;">re-use existing build · attach to an already-running device · skip the 4-min Gradle wait</span>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px;">
+                  <div class="workflow-item"><button class="btn" style="border-style:dashed; border-color:#d29922; color:#f5b56b;">▶ use-existing-build</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">detect-device → reinstall-apk(in.mobility.international.debug) → metro → set-devhost <span style="color:#6b7186">· skips build-android, ~4 min faster</span></span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn" style="border-style:dashed; border-color:#d29922; color:#f5b56b;">▶ attach-device</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">detect-device → adb-reverse(metro, backend, mock) → set-devhost <span style="color:#6b7186">· keep current APK, just point it at this dashboard</span></span></div>
+                </div>
+                <div class="tool-row" style="gap: 14px; row-gap: 8px; margin-top: 4px;">
+                  <div class="workflow-item"><button class="btn" style="border-style:dashed; border-color:#d29922; color:#f5b56b;">▶ pick-device</button><span class="workflow-info">ⓘ</span><span class="workflow-steps">list-devices → choose-target → metro → set-devhost <span style="color:#6b7186">· pick between physical phone, emulator, or wireless adb</span></span></div>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h3 class="tool-h3">Connected Device <span class="chip vision" style="font-size:9px;margin-left:6px;">vision</span></h3>
+                <div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 10px;">
+                  <div style="background:#0b0d12; border:1px solid #262b39; border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span class="dot g" style="box-shadow: 0 0 8px rgba(63,185,80,0.6);"></span>
+                      <span style="font-weight:600; color:#f5f6fb; font-size:13px;">emulator-5554</span>
+                      <span class="tool-card-tag" style="font-size:10px;">selected</span>
+                    </div>
+                    <div style="font-family:'SF Mono',monospace; font-size:10.5px; color:#9aa0b4; line-height:1.6;">
+                      <div>AVD: <span style="color:#7c9cff">Pixel_7_API_34</span> · state <span style="color:#3fb950">device</span></div>
+                      <div>Android 14 (API 34) · 6 GB RAM · arm64-v8a</div>
+                      <div>uptime: 1h 22m · sys.boot_completed=1</div>
+                      <div>adb-reverse: <span style="color:#3fb950">8082, 8013, 8080</span> ✓</div>
+                    </div>
+                  </div>
+                  <div style="background:#0b0d12; border:1px solid #262b39; border-radius:8px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                      <span class="dot g"></span>
+                      <span style="font-weight:600; color:#f5f6fb; font-size:13px;">Pixel 8 Pro</span>
+                    </div>
+                    <div style="font-family:'SF Mono',monospace; font-size:10.5px; color:#9aa0b4; line-height:1.6;">
+                      <div>serial: <span style="color:#7c9cff">3A011JEHN15293</span></div>
+                      <div>state: <span style="color:#3fb950">device</span> · usb</div>
+                      <div>Android 15 · physical</div>
+                    </div>
+                  </div>
+                  <div style="background:#0b0d12; border:1px solid #262b39; border-radius:8px; padding:10px 12px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                      <span class="dot o"></span>
+                      <span style="font-weight:600; color:#f5f6fb; font-size:13px;">10.0.0.42:5555</span>
+                    </div>
+                    <div style="font-family:'SF Mono',monospace; font-size:10.5px; color:#9aa0b4; line-height:1.6;">
+                      <div>wireless adb</div>
+                      <div>state: <span style="color:#d29922">unauthorized</span></div>
+                      <div><button class="btn btn-sm" style="margin-top:4px;">Reconnect</button></div>
+                    </div>
+                  </div>
+                </div>
+                <div style="margin-top: 10px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  <span style="font-size: 11px; color:#6b7186; text-transform:uppercase; letter-spacing:0.1em;">Currently installed</span>
+                  <span class="tool-card-port">in.mobility.international.debug · v3.14.2 (Lynx-debug)</span>
+                  <span class="tool-card-port">build-id <span style="color:#9aa0b4">a8f31c0</span></span>
+                  <span class="tool-card-port" style="color:#3fb950; background: rgba(63,185,80,0.12);">matches current ref ✓</span>
+                </div>
+              </div>
+
+              <div class="tool-section">
+                <h3 class="tool-h3">Stages</h3>
+                <table class="stages-table">
+                  <thead><tr><th>Stage</th><th>State</th><th>Lifecycle</th><th>Last exit</th><th>Actions</th></tr></thead>
+                  <tbody>
+                    <tr class="stage-row state-ready"><td><span style="color:#9aa0b4;">▸</span> <code>reset-emulator</code></td><td><span class="stage-state state-ready">ready</span></td><td>one-shot</td><td>0</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                    <tr class="stage-row state-ready"><td><span style="color:#9aa0b4;">▸</span> <code>sync-source</code> <span class="stage-builtin">(builtin: source)</span></td><td><span class="stage-state state-ready">ready</span></td><td>one-shot</td><td>0</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                    <tr class="stage-row state-ready"><td><span style="color:#9aa0b4;">▸</span> <code>materialize</code></td><td><span class="stage-state state-ready">ready</span></td><td>one-shot</td><td>0</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                    <tr class="stage-row state-ready"><td><span style="color:#9aa0b4;">▸</span> <code>install</code></td><td><span class="stage-state state-ready">ready</span></td><td>one-shot</td><td>0</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                    <tr class="stage-row state-running"><td><span style="color:#9aa0b4;">▸</span> <code>re-watch</code></td><td><span class="stage-state state-running">running</span></td><td>long-running</td><td>—</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button> <button class="btn btn-sm btn-danger">Stop</button></td></tr>
+                    <tr class="stage-row state-running"><td><span style="color:#9aa0b4;">▸</span> <code>metro</code></td><td><span class="stage-state state-running">running</span></td><td>long-running</td><td>—</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button> <button class="btn btn-sm btn-danger">Stop</button></td></tr>
+                    <tr class="stage-row state-idle"><td><span style="color:#9aa0b4;">▸</span> <code>build-android</code></td><td><span class="stage-state state-idle">idle</span></td><td>one-shot</td><td>—</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                    <tr class="stage-row state-idle"><td><span style="color:#9aa0b4;">▸</span> <code>set-devhost</code></td><td><span class="stage-state state-idle">idle</span></td><td>one-shot</td><td>—</td><td><button class="btn btn-sm">Run</button> <button class="btn btn-sm">Force</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">spec yaml · ny-rn-consumer</span></div>
+              <div class="log-panel-body">
+                <pre style="margin:0; padding: 10px 12px; font-family:'SF Mono',monospace; font-size: 10.5px; line-height: 1.5; color: #c9d1d9; white-space: pre-wrap;"><span style="color:#bc8cff">name</span>: ny-rn-consumer
+<span style="color:#bc8cff">title</span>: NY Consumer App (Android)
+<span style="color:#bc8cff">category</span>: mobile
+<span style="color:#bc8cff">tags</span>: [react-native, android, consumer]
+<span style="color:#bc8cff">source</span>:
+  url: https://github.com/nammayatri/ny-react-native
+  ref: main
+  destDir: data/ny-react-native
+<span style="color:#bc8cff">ports</span>:
+  - {name: metro,   port: 8082, allowOverride: true}
+  - {name: backend, port: 8013, protocol: http}
+  - {name: mock,    port: 8080, protocol: http}
+<span style="color:#bc8cff">adbReverse</span>: [metro, backend, mock]
+<span style="color:#bc8cff">tools</span>: [node22, java17, yarn, adb, …]
+<span style="color:#bc8cff">inputs</span>:
+  - key: GOOGLE_SERVICES_JSON
+    type: <span style="color:#3fb950">file</span>  required: <span style="color:#3fb950">true</span>
+  - key: VARIANT
+    type: <span style="color:#3fb950">select</span>
+    options: [Bridge, NammaYatri, Yatri,
+      ManaYatri, YatriSathi, Lynx, BharatTaxi]
+    default: Lynx
+  - key: APP_ID …
+  - key: CLIENT_ID …
+  - key: MERCHANT_ID (select)
+  - key: CONFIG_URL …
+  - key: LOG_URL …
+  - key: GOOGLE_MAPS_API_KEY (optional)
+<span style="color:#bc8cff">stages</span>:
+  - reset-emulator (one-shot)
+  - sync-source    (builtin)
+  - materialize    (one-shot)
+  - install        (one-shot)
+  - re-watch       (long-running,
+                    readyProbe: "watching")
+  - metro          (long-running,
+                    readyProbe: "Welcome to Metro")
+  - build-android  (one-shot)
+  - set-devhost    (one-shot)
+<span style="color:#bc8cff">workflows</span>:
+  first-run:      [sync-source, materialize,
+                   install, re-watch, metro,
+                   build-android]
+  refresh-js:     [metro]
+  refresh-native: [build-android, metro]
+  reinstall:      [install, re-watch,
+                   metro, build-android]
+  fresh-emulator: [reset-emulator, …,
+                   build-android]
+<span style="color:#bc8cff">logs</span>:
+  - {name: logcat,
+     cmd: "adb logcat -s
+     ReactNativeJS:V ReactNative:V"}
+<span style="color:#bc8cff">hooks</span>:
+  preStart:
+    - cmd: "lsof -ti :${ports.metro}
+            | xargs -r kill -9"</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 12 · Mock Server Logging
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption vision">11 · Mock Observability · VISION</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand"><span class="app-brand-name" style="color:#58a6ff">Mocks</span></span>
+          <button class="mode-tab">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <button class="mode-tab active">Mocks</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d o"></span>vision</span>
+        </div>
+        <div class="content-wrapper" style="flex: 1;">
+          <div class="sidebar">
+            <div class="sidebar-logo">Mock Registry</div>
+            <div class="sidebar-subtitle">request / response history per upstream</div>
+            <div class="flow-group">
+              <div class="flow-group-title">Upstreams</div>
+              <div class="flow-item active"><span>idfy</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>juspay</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>osrm</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>sms-gateway</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>fcm</span><span class="flow-item-dot dot-pending">●</span></div>
+              <div class="flow-item"><span>beckn-registry</span><span class="flow-item-dot dot-pass">●</span></div>
+            </div>
+            <div class="flow-group">
+              <div class="flow-group-title">Schemas (inferred)</div>
+              <div class="flow-item"><span>idfy / verify · v2.3</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>juspay / txns · v1.8</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>juspay / refund · v1.0</span><span class="flow-item-dot dot-running">●</span></div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="cr-selector">
+              <label>Upstream<div class="fake-select">idfy</div></label>
+              <label>Endpoint<div class="fake-select">POST /v3/tasks/sync/verify_with_source/ind_driving_license</div></label>
+              <label>Range<div class="fake-select">last 24h · 312 captures</div></label>
+              <div class="cr-actions">
+                <button class="cr-run-btn">Pin as baseline</button>
+                <button class="cr-run-all-btn">Generate schema</button>
+              </div>
+            </div>
+            <div class="cr-steps">
+              <div class="cr-node">
+                <div class="cr-node-header"><span class="cr-tag cr-tag-system">capture</span><span>2026-05-19 10:24:04 · req_id=ny_8f31…</span></div>
+                <pre class="code" style="margin: 6px 0 0 14px;"><span class="c"># request</span>
+{
+  "task_id": "tsk_4e8c…",
+  "group_id": "grp_a1d2…",
+  "data": { "id_number": "KA01***", "dob": "1992-04-12" }
+}
+<span class="c"># response · 200 · 218ms</span>
+{
+  "status": "completed",
+  "result": { "source_output": { "status": "id_found", "name": "PRIYA R", "address": "Bangalore" } }
+}</pre>
+              </div>
+              <div class="cr-node">
+                <div class="cr-node-header"><span class="cr-tag cr-tag-system">schema diff</span><span>vs previous capture</span></div>
+                <div class="cov-endpoint cov-uncovered" style="margin: 6px 0 0 14px;">
+                  <div class="cov-endpoint-header"><span class="cov-dot cov-dot-fail"></span><span class="cov-endpoint-key">+ result.source_output.address (string · new)</span><span class="cov-scenario-badge partial">downstream parser may break</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">Mock I/O · Live</span></div>
+              <div class="log-panel-body">
+                <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-req">POST idfy/verify · 200 · 218ms</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-warn">schema · +1 new field</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-req">POST juspay/txns · 200 · 142ms</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:06</span><span class="log-msg log-req">POST osrm/route · 200 · 38ms</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:07</span><span class="log-msg log-error">POST fcm/send · 401 · invalid mock token</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:08</span><span class="log-msg log-success">capture stored · artifacts/mocks/…</span></div>
+                <div class="log-entry-header"><span class="log-time">10:24:09</span><span class="log-msg log-info">replay-as-baseline available</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 13 · Client Applications · Network & JS logs
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption vision">12 · Workflow Log Streams · LIVE + VISION</div>
+  <div class="dash">
+    <div class="app">
+      <div class="main">
+        <div class="mode-tabs">
+          <span class="app-brand">
+            <svg class="app-brand-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+              <path fill="#FFB738" d="M8.81 5.88H4.47v11.73h4.34z"/>
+              <path fill="#268C6E" d="M35.58 22.39h-4.34v11.73h4.34z"/>
+              <path fill="#FFB738" d="M11.92 11.98c2.16-2.14 5.04-3.32 8.1-3.32s5.95 1.18 8.11 3.32c1.59 1.57 2.65 3.51 3.11 5.63h4.34c-.5-3.25-2.03-6.24-4.43-8.61C28.18 6.06 24.23 4.45 20.03 4.45c-4.21 0-8.16 1.61-11.13 4.55-2.4 2.37-3.92 5.36-4.43 8.61h4.34c.46-2.12 1.52-4.06 3.11-5.63z"/>
+              <path fill="#268C6E" d="M28.14 28.02c-2.17 2.14-5.05 3.32-8.11 3.32s-5.94-1.18-8.11-3.32c-1.59-1.57-2.65-3.51-3.11-5.63H4.47c.51 3.25 2.04 6.24 4.43 8.61 2.97 2.94 6.92 4.55 11.13 4.55 4.2 0 8.16-1.61 11.13-4.55 2.4-2.37 3.92-5.36 4.43-8.61h-4.34c-.46 2.12-1.52 4.06-3.11 5.63z"/>
+            </svg>
+            <span class="app-brand-name">Full Stack Dev Box</span>
+          </span>
+          <button class="mode-tab">Collections (Integration Tests)</button>
+          <button class="mode-tab">Custom Flows</button>
+          <button class="mode-tab active">Client Applications</button>
+          <button class="mode-tab">Remote Stack</button>
+          <button class="mode-tab">Code Coverage</button>
+          <span class="mode-tabs-spacer"></span>
+          <span class="tb-status-chip"><span class="d g"></span>ny-rn-consumer · 4 streams</span>
+        </div>
+
+        <div class="content-wrapper" style="flex: 1;">
+          <div class="sidebar">
+            <div class="sidebar-logo">Log Streams</div>
+            <div class="sidebar-subtitle">from spec.logs · per workflow</div>
+
+            <div class="flow-group">
+              <div class="flow-group-title">App · ny-rn-consumer</div>
+              <div class="flow-item"><span><span style="color:#9aa0b4;font-family:'SF Mono',monospace;font-size:10px;">stage</span> &nbsp; re-watch</span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span><span style="color:#9aa0b4;font-family:'SF Mono',monospace;font-size:10px;">stage</span> &nbsp; metro</span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span><span style="color:#9aa0b4;font-family:'SF Mono',monospace;font-size:10px;">stage</span> &nbsp; build-android</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item active"><span><span style="color:#f5b56b;font-family:'SF Mono',monospace;font-size:10px;">cmd</span> &nbsp; logcat (native)</span><span class="flow-item-dot dot-running">●</span></div>
+            </div>
+
+            <div class="flow-group">
+              <div class="flow-group-title">App · control-center-frontend</div>
+              <div class="flow-item"><span><span style="color:#9aa0b4;font-family:'SF Mono',monospace;font-size:10px;">stage</span> &nbsp; vite-dev</span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span><span style="color:#d29922;font-family:'SF Mono',monospace;font-size:10px;">fetch</span> &nbsp; js-console <span class="chip vision" style="font-size:8px;padding:0 4px;">vision</span></span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span><span style="color:#d29922;font-family:'SF Mono',monospace;font-size:10px;">fetch</span> &nbsp; xhr-network <span class="chip vision" style="font-size:8px;padding:0 4px;">vision</span></span><span class="flow-item-dot dot-running">●</span></div>
+            </div>
+
+            <div class="flow-group">
+              <div class="flow-group-title">Filters</div>
+              <div class="flow-item"><span>level ≥ warn</span><span class="flow-item-dot dot-running">●</span></div>
+              <div class="flow-item"><span>req_id ny_8f31…</span><span class="flow-item-dot dot-pass">●</span></div>
+              <div class="flow-item"><span>status ≥ 400</span><span class="flow-item-dot dot-pending">●</span></div>
+            </div>
+          </div>
+
+          <div class="content" style="display:flex; flex-direction:column; overflow:hidden;">
+            <div style="padding: 8px 16px; background:#161b22; border-bottom: 1px solid #30363d; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+              <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;margin-right:6px;">Streams</span>
+              <button class="cr-svc-tab" style="padding:3px 10px;">build <span style="color:#3fb950;">●</span></button>
+              <button class="cr-svc-tab" style="padding:3px 10px;">metro (js bundler) <span style="color:#3fb950;">●</span></button>
+              <button class="cr-svc-tab" style="padding:3px 10px;">re-watch (rescript) <span style="color:#3fb950;">●</span></button>
+              <button class="cr-svc-tab active" style="padding:3px 10px;">logcat · native <span style="color:#3fb950;">●</span></button>
+              <button class="cr-svc-tab" style="padding:3px 10px;border-style:dashed;border-color:#d29922;color:#f5b56b;">js-console <span style="color:#d29922;">vision</span></button>
+              <button class="cr-svc-tab" style="padding:3px 10px;border-style:dashed;border-color:#d29922;color:#f5b56b;">network · xhr/fetch <span style="color:#d29922;">vision</span></button>
+              <button class="cr-svc-tab" style="padding:3px 10px;border-style:dashed;border-color:#d29922;color:#f5b56b;">stack-traces <span style="color:#d29922;">vision</span></button>
+              <span style="flex:1;"></span>
+              <input class="log-search" placeholder="search · level · req_id" style="width:200px;" />
+            </div>
+
+            <div style="flex:1; display:grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap:1px; background:#30363d; overflow:hidden;">
+
+              <div style="background:#0d1117; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="padding: 5px 10px; background:#161b22; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;">native · adb logcat</span>
+                  <span class="chip g" style="font-size:9px;padding:1px 6px;">live</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-family:'SF Mono',monospace;font-size:9px;color:#6e7681;">cmd: adb logcat -s ReactNativeJS:V ReactNative:V</span>
+                </div>
+                <div style="flex:1; overflow:hidden; padding: 4px 0; font-family:'SF Mono',monospace; font-size:10.5px; line-height:1.5;">
+                  <div class="log-entry-header"><span class="log-time">10:24:01</span><span class="log-msg"><span style="color:#bc8cff;">ReactNative</span> I MainActivity onResume · ny.lynx.debug</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:02</span><span class="log-msg"><span style="color:#bc8cff;">ReactNativeJS</span> <span class="log-info">[Bridge]</span> mount HomeScreen</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:02</span><span class="log-msg"><span style="color:#bc8cff;">ReactNative</span> D Network 'POST /driver/setActive' → 200 · 88ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg"><span style="color:#bc8cff;">LocationManager</span> <span class="log-warn">W</span> permission downgraded</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg"><span style="color:#bc8cff;">ReactNativeJS</span> <span class="log-error">E TypeError fareDetails undefined</span></span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg"><span style="color:#bc8cff;">art</span> GC_FOR_ALLOC freed 12MB · paused 4.2ms</span></div>
+                </div>
+              </div>
+
+              <div style="background:#0d1117; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="padding: 5px 10px; background:#161b22; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:10px;color:#8b949e;text-transform:uppercase;letter-spacing:0.5px;">js · metro bundler</span>
+                  <span class="chip g" style="font-size:9px;padding:1px 6px;">live</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-family:'SF Mono',monospace;font-size:9px;color:#6e7681;">kind: stage · stage: metro</span>
+                </div>
+                <div style="flex:1; overflow:hidden; padding: 4px 0; font-family:'SF Mono',monospace; font-size:10.5px; line-height:1.5;">
+                  <div class="log-entry-header"><span class="log-time">10:23:58</span><span class="log-msg log-info">Welcome to Metro v0.80</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:00</span><span class="log-msg log-success">Bundling: 99.2% (482/486)</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:01</span><span class="log-msg log-success">BUNDLE ./index.js · 4.2s · 2.1 MB</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:02</span><span class="log-msg">LOG  HomeScreen render · uid=dr_3f9…</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-warn">WARN  YellowBox · ViewPropTypes deprecated</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-error">ERROR  TypeError: fareDetails of undefined</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg" style="padding-left:30px; color:#6e7681;">at FareCard.tsx:84 → QuoteList.tsx:32</span></div>
+                </div>
+              </div>
+
+              <div style="background:#0d1117; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="padding: 5px 10px; background:#161b22; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:10px;color:#f5b56b;text-transform:uppercase;letter-spacing:0.5px;">network · xhr / fetch</span>
+                  <span class="chip vision" style="font-size:9px;padding:1px 6px;">vision · injected probe</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-family:'SF Mono',monospace;font-size:9px;color:#6e7681;">kind: fetch · proxy: caddy /svc/probe</span>
+                </div>
+                <div style="flex:1; overflow:hidden; padding: 4px 0; font-family:'SF Mono',monospace; font-size:10.5px; line-height:1.5;">
+                  <div class="log-entry-header"><span class="log-time">10:24:02</span><span class="log-msg log-req">POST /driver/setActive · req=ny_8f31… · 200 · 88ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-req">GET  /driver/rideRequests · 200 · 32ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-req">POST /rideSearch · req=ny_8f31… · 200 · 142ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-req">POST /payment/initiate · 200 · 78ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:06</span><span class="log-msg log-error">POST /fcm/send · 401 · invalid token</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:07</span><span class="log-msg log-req">GET  /rideQuotes · 200 · 56ms · response 1.2 KB</span></div>
+                </div>
+              </div>
+
+              <div style="background:#0d1117; display:flex; flex-direction:column; overflow:hidden;">
+                <div style="padding: 5px 10px; background:#161b22; border-bottom:1px solid #21262d; display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:10px;color:#f5b56b;text-transform:uppercase;letter-spacing:0.5px;">control-center web · js + xhr</span>
+                  <span class="chip vision" style="font-size:9px;padding:1px 6px;">vision · console hook</span>
+                  <span style="flex:1;"></span>
+                  <span style="font-family:'SF Mono',monospace;font-size:9px;color:#6e7681;">kind: fetch · ws://localhost:4002/__dev/logs</span>
+                </div>
+                <div style="flex:1; overflow:hidden; padding: 4px 0; font-family:'SF Mono',monospace; font-size:10.5px; line-height:1.5;">
+                  <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-info">[cc·js] approveDriverDoc(dr_3f9…, DL)</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:03</span><span class="log-msg log-req">[cc·xhr] POST /documents/update · 200 · 142ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg">[cc·js] queryClient invalidate('drivers')</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:04</span><span class="log-msg log-req">[cc·xhr] GET /drivers?status=PENDING · 200 · 67ms</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-warn">[cc·js] WARN react/no-array-index-key DriverList.tsx:42</span></div>
+                  <div class="log-entry-header"><span class="log-time">10:24:05</span><span class="log-msg log-success">[runner] step "approve-driver" linked · 2 ws frames · 1 xhr</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="content-logs">
+            <div class="log-panel">
+              <div class="log-panel-header"><span class="log-panel-title">spec.logs · how streams are declared</span></div>
+              <div class="log-panel-body">
+                <pre style="margin:0; padding: 10px 12px; font-family:'SF Mono',monospace; font-size: 10.5px; line-height: 1.55; color: #c9d1d9; white-space: pre-wrap;"><span style="color:#6e7681"># ny-rn-consumer.yaml — shipped today</span>
+<span style="color:#bc8cff">logs</span>:
+  - {name: re-watch, <span style="color:#7c9cff">kind: stage</span>, stage: re-watch}
+  - {name: metro,    <span style="color:#7c9cff">kind: stage</span>, stage: metro}
+  - {name: build,    <span style="color:#7c9cff">kind: stage</span>, stage: build-android}
+  - {name: logcat,   <span style="color:#7c9cff">kind: cmd</span>,
+     cmd: "adb logcat -s ReactNativeJS:V ReactNative:V"}
+
+<span style="color:#6e7681"># vision · new stream kinds</span>
+<span style="color:#bc8cff">logs</span>:
+  - {name: js-console,  <span style="color:#f5b56b">kind: fetch</span>,
+     url: "ws://localhost:${ports.metro}/message",
+     parse: <span style="color:#3fb950">react-native-message-bus</span>}
+
+  - {name: xhr-network, <span style="color:#f5b56b">kind: fetch</span>,
+     url: "http://localhost:${ports.probe}/xhr",
+     filter: "method,url,status,duration,reqId"}
+
+  - {name: stack,       <span style="color:#f5b56b">kind: cmd</span>,
+     cmd: "node scripts/symbolicate-stack.js
+            --bundle=${ports.metro}"}
+
+<span style="color:#6e7681"># control-center-frontend.yaml · web app</span>
+<span style="color:#bc8cff">logs</span>:
+  - {name: vite-dev,   kind: stage, stage: dev}
+  - {name: js-console, <span style="color:#f5b56b">kind: fetch</span>,
+     url: "ws://localhost:4002/__dev/logs",
+     <span style="color:#6e7681"># dev-only console hook
+     # captures console.* + thrown errors</span>}
+  - {name: xhr,        <span style="color:#f5b56b">kind: fetch</span>,
+     url: "ws://localhost:4002/__dev/xhr",
+     <span style="color:#6e7681"># window.fetch + XHR interceptor
+     # captures method/url/status/duration</span>}
+
+<span style="color:#6e7681"># adding a new stream = one yaml entry
+# UI auto-renders a tab + colorizes by level
+# all streams correlate by req_id across apps</span></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 14 · Roadmap
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption">13 · Roadmap</div>
+  <div class="narr">
+    <div class="eyebrow">Phased rollout</div>
+    <h1>Each phase ships value on its own.</h1>
+    <p class="lede">No "big bang." Every phase makes the dashboard immediately more useful while keeping the same UI, the same launch path, and the same single product story for the team.</p>
+    <div class="road" style="margin-top: 8px;">
+      <div class="row"><div class="phase">Now</div><div class="bar"><i style="width: 22%;"></i><span>Collections runner · Coverage Overview · Remote Stack · Tools panel — all shipped.</span></div></div>
+      <div class="row"><div class="phase">Phase 1</div><div class="bar"><i style="width: 42%;"></i><span>Coverage as PR signal · perf snapshot per release commit · trend views · regression gating.</span></div></div>
+      <div class="row"><div class="phase">Phase 2</div><div class="bar"><i style="width: 62%;"></i><span>Dev Box MVP · random ports · reverse proxy with /svc/&lt;name&gt; routing · auto-discovery.</span></div></div>
+      <div class="row"><div class="phase">Phase 3</div><div class="bar"><i style="width: 80%;"></i><span>Workflows tab · CC/RN/allocator launchers · cross-app log piping with req-id correlation.</span></div></div>
+      <div class="row"><div class="phase">Phase 4</div><div class="bar"><i style="width: 92%;"></i><span>Mock schema inference · contract diffs · replay-as-baseline · upstream change alerts.</span></div></div>
+      <div class="row"><div class="phase">Later</div><div class="bar"><i style="width: 100%;"></i><span>Release gating on perf + coverage · Dev Box pools · shareable repros via permalink.</span></div></div>
+    </div>
+    <div class="grid cols-3" style="margin-top: 14px;">
+      <div class="card"><div class="ctitle">Owners</div><div class="cbody">Dev-Experience squad · 2 backend · 1 frontend · part-time DevOps for Dev Box images.</div></div>
+      <div class="card"><div class="ctitle">Cost</div><div class="cbody">Small. Dashboard, orchestrator, mock registry, config sync — already shipped. Remaining pieces are isolated services.</div></div>
+      <div class="card"><div class="ctitle">Risk</div><div class="cbody">Mostly Dev Box ops cost &amp; security model. De-risked by per-dev quotas and nightly destroy.</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 15 · Impact
+     ================================================================= -->
+<section class="slide">
+  <div class="slide-caption">14 · Impact</div>
+  <div class="narr">
+    <div class="eyebrow">Outcomes</div>
+    <h1>What the team gets, week one.</h1>
+    <div class="grid cols-2" style="flex: 1;">
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="ctitle"><span class="dot g"></span> For developers</div>
+        <ul class="ck g">
+          <li><b>Onboard in hours, not days.</b> One UI explains the entire stack.</li>
+          <li><b>No more laptop fights.</b> Heavy services live in your Dev Box.</li>
+          <li><b>Repro any bug with a link.</b> Same URL pattern across all devs.</li>
+          <li><b>See perf + coverage in your PR.</b> Before review, not after release.</li>
+          <li><b>AI velocity, finally cashed in.</b> Code in minutes, run in seconds.</li>
+        </ul>
+      </div>
+      <div class="card" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="ctitle"><span class="dot b"></span> For the org</div>
+        <ul class="ck">
+          <li><b>Release gates on real signals.</b> Perf, coverage, integration pass-rate.</li>
+          <li><b>Config-driven determinism.</b> Local = synced master = staging.</li>
+          <li><b>Caught at the mock layer.</b> Upstream changes don't reach prod blind.</li>
+          <li><b>One UI to teach.</b> One product to invest in. One owner.</li>
+          <li><b>Linear cost.</b> Dev Boxes scale with the team, not with laptop generations.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ctitle">The thesis in one line</div>
+      <div class="cbody" style="font-size: 16px;">Models keep getting smarter. Pipes around the model are how we turn that into shipped product. The Full Stack Dev Box is those pipes.</div>
+    </div>
+  </div>
+</section>
+
+<!-- =================================================================
+     SLIDE 16 · Q&A
+     ================================================================= -->
+<section class="slide">
+  <div class="narr" style="justify-content: center; align-items: center; text-align: center; padding: 0 80px;">
+    <svg width="72" height="72" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40">
+      <path fill="#FFB738" d="M8.81 5.88H4.47v11.73h4.34z"/>
+      <path fill="#268C6E" d="M35.58 22.39h-4.34v11.73h4.34z"/>
+      <path fill="#FFB738" d="M11.92 11.98c2.16-2.14 5.04-3.32 8.1-3.32s5.95 1.18 8.11 3.32c1.59 1.57 2.65 3.51 3.11 5.63h4.34c-.5-3.25-2.03-6.24-4.43-8.61C28.18 6.06 24.23 4.45 20.03 4.45c-4.21 0-8.16 1.61-11.13 4.55-2.4 2.37-3.92 5.36-4.43 8.61h4.34c.46-2.12 1.52-4.06 3.11-5.63z"/>
+      <path fill="#268C6E" d="M28.14 28.02c-2.17 2.14-5.05 3.32-8.11 3.32s-5.94-1.18-8.11-3.32c-1.59-1.57-2.65-3.51-3.11-5.63H4.47c.51 3.25 2.04 6.24 4.43 8.61 2.97 2.94 6.92 4.55 11.13 4.55 4.2 0 8.16-1.61 11.13-4.55 2.4-2.37 3.92-5.36 4.43-8.61h-4.34c-.46 2.12-1.52 4.06-3.11 5.63z"/>
+    </svg>
+    <h1 style="font-size: 72px;">Questions?</h1>
+    <p class="lede" style="text-align: center;">Full Stack Dev Box · <span class="chip b">Backend/dev/test-tool/dashboard</span><br/>github.com/nammayatri/nammayatri</p>
+    <div style="display:flex; gap:8px; margin-top: 14px; flex-wrap: wrap; justify-content: center;">
+      <span class="chip b">khuzema</span>
+      <span class="chip g">slack · #dev-experience</span>
+      <span class="chip o">live demo →</span>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<!-- Overview -->
+<div class="overview" id="overview">
+  <div class="ov-grid" id="ovGrid"></div>
+</div>
+
+<!-- Status bar -->
+<div class="statusbar">
+  <span class="dot g"></span>
+  <span class="counter" id="counter">01 / 16</span>
+  <div class="progress"><i id="prog"></i></div>
+  <span class="hint">← →  Space · Esc overview · 1..9 jump</span>
+  <span id="slideTitle" style="color:#c9d1d9"></span>
+</div>
+
+<script>
+(function() {
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  const counter = document.getElementById('counter');
+  const prog = document.getElementById('prog');
+  const slideTitle = document.getElementById('slideTitle');
+  const overview = document.getElementById('overview');
+  const ovGrid = document.getElementById('ovGrid');
+  let i = 0;
+
+  const titles = slides.map(s => {
+    const h = s.querySelector('h1');
+    const cap = s.querySelector('.slide-caption');
+    return { title: h ? h.textContent.replace(/\s+/g,' ').trim() : '—', tag: cap ? cap.textContent.trim() : '' };
+  });
+
+  slides.forEach((s, ix) => {
+    const c = document.createElement('div');
+    c.className = 'ov-card';
+    c.innerHTML = `<div class="ix">${String(ix+1).padStart(2,'0')}</div><div class="ti">${titles[ix].title.slice(0,80)}</div><div class="ta">${titles[ix].tag}</div>`;
+    c.addEventListener('click', () => { go(ix); hideOverview(); });
+    ovGrid.appendChild(c);
+  });
+
+  function render() {
+    slides.forEach((s, ix) => s.classList.toggle('active', ix === i));
+    counter.textContent = String(i+1).padStart(2,'0') + ' / ' + String(total).padStart(2,'0');
+    prog.style.width = ((i)/(total-1)*100) + '%';
+    slideTitle.textContent = titles[i].title.slice(0, 90);
+  }
+  function go(n) { i = Math.max(0, Math.min(total-1, n)); render(); }
+  function next() { go(i+1); }
+  function prev() { go(i-1); }
+  function showOverview() { overview.classList.add('show'); }
+  function hideOverview() { overview.classList.remove('show'); }
+
+  document.addEventListener('keydown', (e) => {
+    if (overview.classList.contains('show')) {
+      if (e.key === 'Escape') { hideOverview(); e.preventDefault(); return; }
+    }
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { next(); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { prev(); e.preventDefault(); }
+    else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total-1); }
+    else if (e.key === 'Escape') { showOverview(); }
+    else if (/^[1-9]$/.test(e.key)) { go(parseInt(e.key,10)-1); }
+    else if (e.key === '0') { go(9); }
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

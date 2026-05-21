@@ -61,7 +61,7 @@ in
       #
       # Pinned URLs + hashes mean no first-run downloads and no cache leakage
       # into the repo (which is what `Backend/plugins/` was before).
-      metabaseDrivers = [];
+      metabaseDrivers = [ ];
       metabasePluginsDir = pkgs.linkFarm "metabase-plugins" (map
         (d: {
           name = "${d.name}.metabase-driver.jar";
@@ -240,7 +240,7 @@ in
           })
           cabalExecutables);
 
-      inBackend  = cfg.profile == "full" || cfg.profile == "backend";
+      inBackend = cfg.profile == "full" || cfg.profile == "backend";
       inTestDash = cfg.profile == "full" || cfg.profile == "testDashboard";
       backendProcs =
         cabalExecutables ++ [
@@ -268,7 +268,7 @@ in
       disableAll = names: lib.listToAttrs (map
         (n: lib.nameValuePair n {
           disabled = lib.mkForce true;
-          depends_on = lib.mkForce {};
+          depends_on = lib.mkForce { };
           command = lib.mkForce ":";
         })
         names);
@@ -280,7 +280,7 @@ in
         imports = [ haskellProcesses ];
 
         processes = lib.mkMerge [
-          (lib.mkIf (!inBackend)  (disableAll backendProcs))
+          (lib.mkIf (!inBackend) (disableAll backendProcs))
           (lib.mkIf (!inTestDash) (disableAll [ "test-local-api" "test-dashboard" ]))
           # When the backend slice is disabled, the test-dashboard / test-local-api
           # processes would otherwise wait on disabled backend processes
@@ -288,8 +288,8 @@ in
           # a hard failure rather than auto-satisfying. Clear those depends_on
           # entries so the dashboard slice runs standalone.
           (lib.mkIf (!inBackend) {
-            test-local-api.depends_on = lib.mkForce {};
-            test-dashboard.depends_on = lib.mkForce {};
+            test-local-api.depends_on = lib.mkForce { };
+            test-dashboard.depends_on = lib.mkForce { };
           })
           # kafka should start only after zookeeper is healthy
           (lib.mkIf inBackend { kafka.depends_on."zookeeper".condition = "process_healthy"; })
@@ -307,119 +307,119 @@ in
             });
           })
           {
-          # Rider producer: same binary as producer-exe, different env vars
-          rider-producer-exe = {
-            imports = [
-              common
-              (haskellProcessFor "producer-exe")
-            ];
-            environment.PRODUCER_TYPE = "Rider";
-            environment.GET_MY_SCHEMA = "atlas_app";
-            depends_on = {
-              "nammayatri-init".condition = "process_completed_successfully";
-              "rider-app-exe".condition = "process_healthy";
-              "dynamic-offer-driver-app-exe".condition = "process_healthy";
-              "mock-registry".condition = "process_healthy";
-            };
-            shutdown.signal = 9;
-          };
-
-          # Things to do before local Haskell processes are started
-          nammayatri-init = {
-            imports = [ common ];
-            depends_on = {
-              # Services
-              "db-primary".condition = "process_healthy";
-              "kafka".condition = "process_healthy";
-              "redis".condition = "process_healthy";
-              # "redis-cluster".condition = "process_healthy";
-              "nginx".condition = "process_healthy";
-              "osrm-server".condition = "process_started";
-              "passetto-service".condition = "process_started";
-            } // lib.optionalAttrs cfg.useCabal {
-              # Compile Haskell code
-              "cabal-build".condition = "process_completed_successfully";
-            };
-            command = pkgs.writeShellApplication {
-              name = "run-mobility-stack-init";
-              runtimeInputs = with pkgs; [
-                redis
+            # Rider producer: same binary as producer-exe, different env vars
+            rider-producer-exe = {
+              imports = [
+                common
+                (haskellProcessFor "producer-exe")
               ];
-              text = ''
-                set -x
-                pwd
-                rm -f ./*.log # Clean up the log files
-                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider myGroup_Rider  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                redis-cli -p 30001 -c XGROUP CREATE Available_Chakras myGroup_Chakras  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
-                redis-cli XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM
-                redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
-                redis-cli XGROUP CREATE Available_Chakras myGroup_Chakras 0 MKSTREAM
-              '';
+              environment.PRODUCER_TYPE = "Rider";
+              environment.GET_MY_SCHEMA = "atlas_app";
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+                "rider-app-exe".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+                "mock-registry".condition = "process_healthy";
+              };
+              shutdown.signal = 9;
             };
-          };
 
-          # Periodic log cleaner: truncates .log files exceeding 100MB
-          # Covers process-compose logs (./*.log) and dhall/app logs (/tmp/*.log)
-          log-cleaner = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "log-cleaner";
-              runtimeInputs = with pkgs; [ coreutils findutils procps ];
-              text = ''
-                # Stale-instance reaper. Each previous `run-mobility-stack-dev`
-                # leaves its log-cleaner alive across stack restarts (the
-                # outgoing process-compose doesn't always reap children, and
-                # the loop below has no signal handler that exits cleanly).
-                # Result: after a few launches you accumulate 3–5 stale
-                # cleaners running OLD nix-store versions of this script
-                # (different size thresholds, different sleep cadences) — we
-                # observed +1G/sleep 300 ghosts still active after the source
-                # had moved to +100M/sleep 5. They all race on truncate, but
-                # the older +1G ones win the "what's oversized" check and
-                # producer logs balloon to 1.5GB+ before any truncation.
-                #
-                # Match by argv[0] = "<store-path>/bin/log-cleaner" — that
-                # token is unique to this script and present in every prior
-                # nix build, regardless of the threshold/sleep values inside.
-                # Exclude our own pid so we don't kill ourselves.
-                self_pid=$$
-                stale=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
-                if [ -n "$stale" ]; then
-                  echo "log-cleaner: reaping stale instances: $stale"
-                  # shellcheck disable=SC2086
-                  kill -TERM $stale 2>/dev/null || true
-                  sleep 1
-                  # Anything still alive after SIGTERM gets SIGKILL — old
-                  # cleaners ignore SIGTERM if they're mid-`find` syscall.
-                  still=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
-                  if [ -n "$still" ]; then
+            # Things to do before local Haskell processes are started
+            nammayatri-init = {
+              imports = [ common ];
+              depends_on = {
+                # Services
+                "db-primary".condition = "process_healthy";
+                "kafka".condition = "process_healthy";
+                "redis".condition = "process_healthy";
+                # "redis-cluster".condition = "process_healthy";
+                "nginx".condition = "process_healthy";
+                "osrm-server".condition = "process_started";
+                "passetto-service".condition = "process_started";
+              } // lib.optionalAttrs cfg.useCabal {
+                # Compile Haskell code
+                "cabal-build".condition = "process_completed_successfully";
+              };
+              command = pkgs.writeShellApplication {
+                name = "run-mobility-stack-init";
+                runtimeInputs = with pkgs; [
+                  redis
+                ];
+                text = ''
+                  set -x
+                  pwd
+                  rm -f ./*.log # Clean up the log files
+                  redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider myGroup_Rider  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                  redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                  redis-cli -p 30001 -c XGROUP CREATE Available_Chakras myGroup_Chakras  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                  redis-cli XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM
+                  redis-cli XGROUP CREATE Available_Jobs myGroup 0 MKSTREAM
+                  redis-cli XGROUP CREATE Available_Chakras myGroup_Chakras 0 MKSTREAM
+                '';
+              };
+            };
+
+            # Periodic log cleaner: truncates .log files exceeding 100MB
+            # Covers process-compose logs (./*.log) and dhall/app logs (/tmp/*.log)
+            log-cleaner = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "log-cleaner";
+                runtimeInputs = with pkgs; [ coreutils findutils procps ];
+                text = ''
+                  # Stale-instance reaper. Each previous `run-mobility-stack-dev`
+                  # leaves its log-cleaner alive across stack restarts (the
+                  # outgoing process-compose doesn't always reap children, and
+                  # the loop below has no signal handler that exits cleanly).
+                  # Result: after a few launches you accumulate 3–5 stale
+                  # cleaners running OLD nix-store versions of this script
+                  # (different size thresholds, different sleep cadences) — we
+                  # observed +1G/sleep 300 ghosts still active after the source
+                  # had moved to +100M/sleep 5. They all race on truncate, but
+                  # the older +1G ones win the "what's oversized" check and
+                  # producer logs balloon to 1.5GB+ before any truncation.
+                  #
+                  # Match by argv[0] = "<store-path>/bin/log-cleaner" — that
+                  # token is unique to this script and present in every prior
+                  # nix build, regardless of the threshold/sleep values inside.
+                  # Exclude our own pid so we don't kill ourselves.
+                  self_pid=$$
+                  stale=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
+                  if [ -n "$stale" ]; then
+                    echo "log-cleaner: reaping stale instances: $stale"
                     # shellcheck disable=SC2086
-                    kill -KILL $still 2>/dev/null || true
+                    kill -TERM $stale 2>/dev/null || true
+                    sleep 1
+                    # Anything still alive after SIGTERM gets SIGKILL — old
+                    # cleaners ignore SIGTERM if they're mid-`find` syscall.
+                    still=$(pgrep -f '/log-cleaner/bin/log-cleaner' | grep -vx "$self_pid" || true)
+                    if [ -n "$still" ]; then
+                      # shellcheck disable=SC2086
+                      kill -KILL $still 2>/dev/null || true
+                    fi
                   fi
-                fi
-                while true; do
-                  find .. -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
-                  find /private/tmp -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
-                  sleep 1
-                done
-              '';
+                  while true; do
+                    find .. -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
+                    find /private/tmp -maxdepth 1 -name '*.log' -size +10M -exec truncate -s 0 {} \;
+                    sleep 1
+                  done
+                '';
+              };
+              shutdown.signal = 9;
             };
-            shutdown.signal = 9;
-          };
 
-          # Run 'cabal build' for all local Haskel processes
-          cabal-build = {
-            imports = [ common ];
-            disabled = !cfg.useCabal;
-            command = pkgs.writeShellApplication {
-              name = "cabal-build";
-              text = ''
-                set -x
-                cabal build ${builtins.concatStringsSep " " (accumulateProcessEnv "CABAL_TARGET" config.settings.processes)}
-              '';
+            # Run 'cabal build' for all local Haskel processes
+            cabal-build = {
+              imports = [ common ];
+              disabled = !cfg.useCabal;
+              command = pkgs.writeShellApplication {
+                name = "cabal-build";
+                text = ''
+                  set -x
+                  cabal build ${builtins.concatStringsSep " " (accumulateProcessEnv "CABAL_TARGET" config.settings.processes)}
+                '';
+              };
             };
-          };
 
           # Processes from other repos in nammayatri GitHub org
           beckn-gateway = {
@@ -462,7 +462,7 @@ in
             imports = [ common ];
             command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
             environment = {
-              DEV = "true";
+              BYPASS_LTS_S3_AND_GCP = "true";
             };
             availability = {
               restart = "on_failure";
@@ -484,636 +484,636 @@ in
             command = self'.packages.osrm-server;
           };
 
-          kafka-consumers-exe = {
-            environment = {
-              CONSUMER_TYPE = "LOCATION_UPDATE";
-            };
-          };
-
-          # Test tools — dashboard, mock servers, context API
-          # Unified mock server for Juspay, Stripe, PayTM, Acko, SOS, WhatsApp, CMRL, CRIS, etc.
-          mock-server = {
-            imports = [ common ];
-            command = "${pkgs.python3.withPackages (ps: [ ps.pynacl ps.psycopg2 ])}/bin/python3 dev/mock-servers/server.py --port 8080";
-            namespace = lib.mkForce "test";
-            depends_on."nammayatri-init".condition = "process_completed_successfully";
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 30;
-            };
-          };
-          test-context-api = {
-            imports = [ common ];
-            # Hosts the config-sync trigger (replaces the old `config-sync` process), so it needs
-            # the same python deps as config_transfer.py: psycopg2, requests, python-dotenv, rich, websockets.
-            command = "${pkgs.python3.withPackages (ps: with ps; [ psycopg2 requests python-dotenv rich websockets ])}/bin/python3 dev/test-tool/context-api/server.py --port 7082";
-            namespace = lib.mkForce "test";
-            # Start once infra is up. The startup config-sync runs in a background thread,
-            # so we DON'T block on dashboards — if a dashboard is still settling, the API
-            # is still serving and the config-sync will succeed against the DB regardless.
-            # The post-sync restart step targets rider-app-exe / dynamic-offer-driver-app-exe /
-            # mock-registry, which we wait on so those PIDs exist when we try to kill them.
-            depends_on = {
-              "db-primary".condition = "process_healthy";
-              "redis".condition = "process_healthy";
-              "kafka".condition = "process_healthy";
-              "passetto-service".condition = "process_started";
-              "rider-app-exe".condition = "process_healthy";
-              "rider-dashboard-exe".condition = "process_healthy";
-              "provider-dashboard-exe".condition = "process_healthy";
-              "dynamic-offer-driver-app-exe".condition = "process_healthy";
-              "mock-registry".condition = "process_healthy";
-            };
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 30;
-            };
-          };
-          test-local-api = {
-            imports = [ common ];
-            command = "${pkgs.python3.withPackages (ps: with ps; [ pyyaml ])}/bin/python3 dev/test-tool/local-api/server.py";
-            namespace = lib.mkForce "test";
-            depends_on."nammayatri-init".condition = "process_completed_successfully";
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 30;
-            };
-          };
-          test-dashboard = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "test-dashboard";
-              runtimeInputs = [ pkgs.nodejs ];
-              text = ''
-                cd dev/test-tool/dashboard
-                npm install
-                npm run build
-                npx serve -s build -l 7070 --no-clipboard
-              '';
-            };
-            namespace = lib.mkForce "test";
-            depends_on."rider-app-exe".condition = "process_healthy";
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 30;
-            };
-          };
-          metabase = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "metabase";
-              runtimeInputs = [ pkgs.metabase ];
-              text = ''
-                set -x
-                # Working_dir for this service is `Backend/` (set in `common`).
-                # `../data/metabase` resolves to <repo-root>/data/metabase,
-                # the same convention postgres/kafka/passetto use.
-                MB_WORK="$(mkdir -p ../data/metabase && cd ../data/metabase && pwd)"
-                MB_PLUGINS="$MB_WORK/plugins"
-                mkdir -p "$MB_PLUGINS"
-                # Seed the writable plugins dir from our pinned nix-store
-                # linkFarm. Metabase needs MB_PLUGINS_DIR to be writable
-                # because it extracts its built-in drivers there on first
-                # launch; the read-only store path alone won't work.
-                # `cp -fL` deref's the linkFarm symlinks so the JARs land
-                # as real files. With an empty driver list, the loop is
-                # a no-op and only built-in drivers are used.
-                for jar in ${metabasePluginsDir}/*.jar; do
-                  [ -e "$jar" ] || break
-                  cp -fL "$jar" "$MB_PLUGINS/"
-                done
-                export MB_DB_FILE="$MB_WORK/metabase.db"
-                export MB_JETTY_HOST=0.0.0.0
-                export MB_JETTY_PORT=3001
-                export MB_CONFIG_FILE_PATH=${metabaseConfigFile}
-                # Auto-complete the /setup wizard on first launch — see comment
-                # next to `metabaseUserDefaults` in nammayatri.nix.
-                export MB_USER_DEFAULTS=${lib.escapeShellArg metabaseUserDefaults}
-                export MB_PLUGINS_DIR="$MB_PLUGINS"
-                # Pin CWD to the data dir so any stray writes (e.g. the H2
-                # sample DB) stay there, not in the repo's Backend/ dir.
-                cd "$MB_WORK"
-                exec metabase
-              '';
-            };
-            namespace = lib.mkForce "tools";
-            depends_on."db-primary".condition = "process_healthy";
-            readiness_probe = {
-              # Metabase exposes /api/health as soon as the DB is migrated
-              # and Jetty is bound. metabase-setup waits on this.
-              http_get = {
-                host = "127.0.0.1";
-                port = 3001;
-                path = "/api/health";
-              };
-              initial_delay_seconds = 10;
-              period_seconds = 5;
-              failure_threshold = 60;
-              timeout_seconds = 3;
-            };
-            # Mirror readiness with a slower-cadence liveness so persistent
-            # failure of /api/health → kill+restart. Metabase first-boot
-            # migration can take ~30s; give it a 60s grace period before
-            # liveness starts checking.
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 3001;
-                path = "/api/health";
-              };
-              initial_delay_seconds = 60;
-              period_seconds = 15;
-              failure_threshold = 4;
-              timeout_seconds = 5;
-            };
-            availability = {
-              restart = "always";
-              backoff_seconds = 50;
-              max_restarts = 30;
-            };
-          };
-
-          metabase-setup = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "metabase-setup";
-              runtimeInputs = [ pkgs.curl pkgs.jq ];
-              text = ''
-                set -uo pipefail
-                MB="http://127.0.0.1:3001"
-                EMAIL="admin@nammayatri.local"
-                PASS="metabase123"
-
-                # 1. Try to log in. Success => setup-token clears automatically.
-                login_body=$(jq -n --arg u "$EMAIL" --arg p "$PASS" \
-                  '{username: $u, password: $p}')
-                login_code=$(curl -sS -o /tmp/mb-login.json -w "%{http_code}" \
-                  -X POST "$MB/api/session" \
-                  -H 'Content-Type: application/json' \
-                  -d "$login_body" || echo 000)
-                if [ "$login_code" = "200" ]; then
-                  echo "metabase: admin login OK — setup token cleared."
-                  exit 0
-                fi
-                echo "metabase: login returned $login_code, falling back to /api/setup"
-
-                # 2. Fall back to /api/setup with the current setup-token.
-                token=$(curl -fsS "$MB/api/session/properties" \
-                  | jq -r '."setup-token" // empty')
-                if [ -z "$token" ]; then
-                  # No token => already set up by something else; don't fail.
-                  echo "metabase: no setup-token — assuming already set up."
-                  exit 0
-                fi
-                payload=$(jq -n --arg token "$token" --arg email "$EMAIL" --arg pass "$PASS" '{
-                  token: $token,
-                  user: {
-                    first_name: "Admin",
-                    last_name: "Dev",
-                    email: $email,
-                    password: $pass,
-                    site_name: "Nammayatri"
-                  },
-                  prefs: {
-                    site_name: "Nammayatri",
-                    site_locale: "en",
-                    allow_tracking: false
-                  },
-                  database: {
-                    engine: "postgres",
-                    name: "atlas_dev",
-                    details: {
-                      host: "localhost",
-                      port: 5434,
-                      user: "atlas_superuser",
-                      password: "",
-                      dbname: "atlas_dev",
-                      ssl: false
-                    }
-                  }
-                }')
-                setup_code=$(curl -sS -o /tmp/mb-setup.json -w "%{http_code}" \
-                  -X POST "$MB/api/setup" \
-                  -H 'Content-Type: application/json' \
-                  -d "$payload" || echo 000)
-                if [ "$setup_code" = "200" ]; then
-                  echo "metabase: setup complete via /api/setup."
-                  exit 0
-                fi
-                echo "metabase: /api/setup returned $setup_code (response: $(cat /tmp/mb-setup.json 2>/dev/null || echo '?'))"
-                # Best-effort: exit 0 so the dev stack stays green even if setup
-                # is in some odd partial state. Worst case: visit /setup once.
-                exit 0
-              '';
-            };
-            namespace = lib.mkForce "tools";
-            depends_on."metabase".condition = "process_healthy";
-            availability = {
-              restart = "no";
-              max_restarts = 5;
-            };
-          };
-
-          redis-commander = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "redis-commander";
-              runtimeInputs = [ pkgs.nodejs ];
-              text = ''
-                set -x  # debug output
-                # Same convention as metabase: persist under <repo-root>/data/
-                # (gitignored) instead of ~/.cache. working_dir is `Backend/`.
-                RC_WORK="$(mkdir -p ../data/redis-commander && cd ../data/redis-commander && pwd)"
-                RC_PKG="$RC_WORK/node_modules/redis-commander"
-
-                # Install only if not already present
-                if [ ! -d "$RC_PKG" ]; then
-                  mkdir -p "$RC_WORK"
-                  cd "$RC_WORK"
-                  npm init -y
-                  npm install redis-commander@0.9.0
-                fi
-
-                # Always rewrite default.json with our connections (idempotent).
-                # redis-commander reads TOP-LEVEL config.connections — not config.redis.connections!
-                node <<NODE_SCRIPT
-                const fs = require('fs');
-                const p = '$RC_PKG/config/default.json';
-                const c = JSON.parse(fs.readFileSync(p, 'utf8'));
-                c.connections = [
-                  { label: 'standalone', host: '127.0.0.1', port: 6379, dbIndex: 0 },
-                  { label: 'cluster',    host: '127.0.0.1', port: 30001, dbIndex: 0, isCluster: true, clusterNoTlsValidation: true }
-                ];
-                c.server.address = '0.0.0.0';
-                c.server.port = 8431;
-                fs.writeFileSync(p, JSON.stringify(c, null, 2));
-                console.log('Patched default.json top-level connections:', c.connections.length);
-                NODE_SCRIPT
-
-                cd "$RC_PKG"
-                exec node bin/redis-commander.js --noauth
-              '';
-            };
-            namespace = lib.mkForce "tools";
-            depends_on = {
-              "redis".condition = "process_healthy";
-              "cluster1-cluster-create".condition = "process_completed_successfully";
-            };
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 50;
-              max_restarts = 50;
-            };
-          };
-
-          dynamic-offer-driver-app-exe = {
-            # Probes hit 8116 (the actual app port) so process_healthy
-            # reflects the app itself, not the driver-proxy on 8016.
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8116;
-                path = "/ui";
+            kafka-consumers-exe = {
+              environment = {
+                CONSUMER_TYPE = "LOCATION_UPDATE";
               };
             };
-            # Tightened: ~60s of consecutive failures past initial_delay → kill
-            # + restart (was ~210s). Haskell + migrations get a 90s startup
-            # window before liveness starts checking.
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8116;
-                path = "/ui";
+
+            # Test tools — dashboard, mock servers, context API
+            # Unified mock server for Juspay, Stripe, PayTM, Acko, SOS, WhatsApp, CMRL, CRIS, etc.
+            mock-server = {
+              imports = [ common ];
+              command = "${pkgs.python3.withPackages (ps: [ ps.pynacl ps.psycopg2 ])}/bin/python3 dev/mock-servers/server.py --port 8080";
+              namespace = lib.mkForce "test";
+              depends_on."nammayatri-init".condition = "process_completed_successfully";
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 30;
               };
-              initial_delay_seconds = 90;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
+            test-context-api = {
+              imports = [ common ];
+              # Hosts the config-sync trigger (replaces the old `config-sync` process), so it needs
+              # the same python deps as config_transfer.py: psycopg2, requests, python-dotenv, rich, websockets.
+              command = "${pkgs.python3.withPackages (ps: with ps; [ psycopg2 requests python-dotenv rich websockets ])}/bin/python3 dev/test-tool/context-api/server.py --port 7082";
+              namespace = lib.mkForce "test";
+              # Start once infra is up. The startup config-sync runs in a background thread,
+              # so we DON'T block on dashboards — if a dashboard is still settling, the API
+              # is still serving and the config-sync will succeed against the DB regardless.
+              # The post-sync restart step targets rider-app-exe / dynamic-offer-driver-app-exe /
+              # mock-registry, which we wait on so those PIDs exist when we try to kill them.
+              depends_on = {
+                "db-primary".condition = "process_healthy";
+                "redis".condition = "process_healthy";
+                "kafka".condition = "process_healthy";
+                "passetto-service".condition = "process_started";
+                "rider-app-exe".condition = "process_healthy";
+                "rider-dashboard-exe".condition = "process_healthy";
+                "provider-dashboard-exe".condition = "process_healthy";
+                "dynamic-offer-driver-app-exe".condition = "process_healthy";
+                "mock-registry".condition = "process_healthy";
+              };
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 30;
+              };
             };
-            # Driver-proxy must own port 8016 before the app starts so any
-            # consumer dialing localhost:8016 sees a working endpoint by the
-            # time dynamic-offer-driver-app-exe is healthy. Merges with the
-            # depends_on chain set by haskellProcesses (nammayatri-init,
-            # mock-registry, and the previous cabalExecutable in the chain).
-            depends_on."driver-proxy".condition = "process_healthy";
-          };
-
-          # Reverse proxy fronting the driver-app on its public port.
-          # Caddyfile is inlined here (no separate file) — routing is:
-          #   localhost:8016/ui/driver/location* -> localhost:8081 (LTS)
-          #   localhost:8016/<anything else>     -> localhost:8116 (driver-app)
-          #   localhost:8016/__driver_proxy_health -> 200 inline (probe)
-          # Starts BEFORE dynamic-offer-driver-app-exe so the public port is
-          # always reachable by the time the app is healthy.
-          driver-proxy = {
-            imports = [ common ];
-            command =
-              let
-                caddyfile = pkgs.writeText "driver-proxy.Caddyfile" ''
-                  {
-                  	auto_https off
-                  	admin off
-                  }
-
-                  http://:8016 {
-                  	# Port-only site address (no host), so this block matches
-                  	# any Host header — 127.0.0.1:8016, localhost:8016, the
-                  	# simulator's host alias, etc. With `http://127.0.0.1:8016`
-                  	# Caddy would only match Host=127.0.0.1:8016 and fall through
-                  	# to its default empty 200 response for Host=localhost
-                  	# requests (which is what the app sends).
-                  	bind 127.0.0.1 ::1
-
-                  	handle /__driver_proxy_health {
-                  		respond "ok" 200
-                  	}
-
-                  	handle /ui/driver/location* {
-                  		reverse_proxy 127.0.0.1:8081
-                  	}
-
-                  	handle {
-                  		reverse_proxy 127.0.0.1:8116
-                  	}
-
-                  	log {
-                  		output stderr
-                  		format console
-                  	}
-                  }
-                '';
-              in
-              pkgs.writeShellApplication {
-                name = "driver-proxy";
-                runtimeInputs = [ pkgs.caddy ];
+            test-local-api = {
+              imports = [ common ];
+              command = "${pkgs.python3.withPackages (ps: with ps; [ pyyaml ])}/bin/python3 dev/test-tool/local-api/server.py";
+              namespace = lib.mkForce "test";
+              depends_on."nammayatri-init".condition = "process_completed_successfully";
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 30;
+              };
+            };
+            test-dashboard = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "test-dashboard";
+                runtimeInputs = [ pkgs.nodejs ];
                 text = ''
-                  exec caddy run --config ${caddyfile} --adapter caddyfile
+                  cd dev/test-tool/dashboard
+                  npm install
+                  npm run build
+                  npx serve -s build -l 7070 --no-clipboard
                 '';
               };
-            depends_on = {
-              "nammayatri-init".condition = "process_completed_successfully";
-            };
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8016;
-                path = "/__driver_proxy_health";
+              namespace = lib.mkForce "test";
+              depends_on."rider-app-exe".condition = "process_healthy";
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 30;
               };
-              initial_delay_seconds = 1;
-              period_seconds = 2;
-              failure_threshold = 5;
-              timeout_seconds = 2;
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 5;
-              max_restarts = 50;
+            metabase = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "metabase";
+                runtimeInputs = [ pkgs.metabase ];
+                text = ''
+                  set -x
+                  # Working_dir for this service is `Backend/` (set in `common`).
+                  # `../data/metabase` resolves to <repo-root>/data/metabase,
+                  # the same convention postgres/kafka/passetto use.
+                  MB_WORK="$(mkdir -p ../data/metabase && cd ../data/metabase && pwd)"
+                  MB_PLUGINS="$MB_WORK/plugins"
+                  mkdir -p "$MB_PLUGINS"
+                  # Seed the writable plugins dir from our pinned nix-store
+                  # linkFarm. Metabase needs MB_PLUGINS_DIR to be writable
+                  # because it extracts its built-in drivers there on first
+                  # launch; the read-only store path alone won't work.
+                  # `cp -fL` deref's the linkFarm symlinks so the JARs land
+                  # as real files. With an empty driver list, the loop is
+                  # a no-op and only built-in drivers are used.
+                  for jar in ${metabasePluginsDir}/*.jar; do
+                    [ -e "$jar" ] || break
+                    cp -fL "$jar" "$MB_PLUGINS/"
+                  done
+                  export MB_DB_FILE="$MB_WORK/metabase.db"
+                  export MB_JETTY_HOST=0.0.0.0
+                  export MB_JETTY_PORT=3001
+                  export MB_CONFIG_FILE_PATH=${metabaseConfigFile}
+                  # Auto-complete the /setup wizard on first launch — see comment
+                  # next to `metabaseUserDefaults` in nammayatri.nix.
+                  export MB_USER_DEFAULTS=${lib.escapeShellArg metabaseUserDefaults}
+                  export MB_PLUGINS_DIR="$MB_PLUGINS"
+                  # Pin CWD to the data dir so any stray writes (e.g. the H2
+                  # sample DB) stay there, not in the repo's Backend/ dir.
+                  cd "$MB_WORK"
+                  exec metabase
+                '';
+              };
+              namespace = lib.mkForce "tools";
+              depends_on."db-primary".condition = "process_healthy";
+              readiness_probe = {
+                # Metabase exposes /api/health as soon as the DB is migrated
+                # and Jetty is bound. metabase-setup waits on this.
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 3001;
+                  path = "/api/health";
+                };
+                initial_delay_seconds = 10;
+                period_seconds = 5;
+                failure_threshold = 60;
+                timeout_seconds = 3;
+              };
+              # Mirror readiness with a slower-cadence liveness so persistent
+              # failure of /api/health → kill+restart. Metabase first-boot
+              # migration can take ~30s; give it a 60s grace period before
+              # liveness starts checking.
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 3001;
+                  path = "/api/health";
+                };
+                initial_delay_seconds = 60;
+                period_seconds = 15;
+                failure_threshold = 4;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 50;
+                max_restarts = 30;
+              };
             };
-            shutdown.signal = 9;
-          };
 
-          rider-app-exe = {
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8013;
-                path = "/v2";
-              };
-            };
-            # Same tightened liveness as dynamic-offer-driver-app-exe.
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8013;
-                path = "/v2";
-              };
-              initial_delay_seconds = 90;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
-            };
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
+            metabase-setup = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "metabase-setup";
+                runtimeInputs = [ pkgs.curl pkgs.jq ];
+                text = ''
+                  set -uo pipefail
+                  MB="http://127.0.0.1:3001"
+                  EMAIL="admin@nammayatri.local"
+                  PASS="metabase123"
 
-          rider-dashboard-exe = {
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8017;
-                path = "/";
-              };
-              initial_delay_seconds = 15;
-              period_seconds = 5;
-              failure_threshold = 30;
-              timeout_seconds = 3;
-            };
-            # Mirrors readiness so persistent failure → restart. Dashboards
-            # boot fast, so a short window is fine.
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8017;
-                path = "/";
-              };
-              initial_delay_seconds = 30;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
-            };
-            availability = {
-              restart = "always";
-              backoff_seconds = 15;
-              max_restarts = 50;
-            };
-          };
+                  # 1. Try to log in. Success => setup-token clears automatically.
+                  login_body=$(jq -n --arg u "$EMAIL" --arg p "$PASS" \
+                    '{username: $u, password: $p}')
+                  login_code=$(curl -sS -o /tmp/mb-login.json -w "%{http_code}" \
+                    -X POST "$MB/api/session" \
+                    -H 'Content-Type: application/json' \
+                    -d "$login_body" || echo 000)
+                  if [ "$login_code" = "200" ]; then
+                    echo "metabase: admin login OK — setup token cleared."
+                    exit 0
+                  fi
+                  echo "metabase: login returned $login_code, falling back to /api/setup"
 
-          provider-dashboard-exe = {
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8018;
-                path = "/";
+                  # 2. Fall back to /api/setup with the current setup-token.
+                  token=$(curl -fsS "$MB/api/session/properties" \
+                    | jq -r '."setup-token" // empty')
+                  if [ -z "$token" ]; then
+                    # No token => already set up by something else; don't fail.
+                    echo "metabase: no setup-token — assuming already set up."
+                    exit 0
+                  fi
+                  payload=$(jq -n --arg token "$token" --arg email "$EMAIL" --arg pass "$PASS" '{
+                    token: $token,
+                    user: {
+                      first_name: "Admin",
+                      last_name: "Dev",
+                      email: $email,
+                      password: $pass,
+                      site_name: "Nammayatri"
+                    },
+                    prefs: {
+                      site_name: "Nammayatri",
+                      site_locale: "en",
+                      allow_tracking: false
+                    },
+                    database: {
+                      engine: "postgres",
+                      name: "atlas_dev",
+                      details: {
+                        host: "localhost",
+                        port: 5434,
+                        user: "atlas_superuser",
+                        password: "",
+                        dbname: "atlas_dev",
+                        ssl: false
+                      }
+                    }
+                  }')
+                  setup_code=$(curl -sS -o /tmp/mb-setup.json -w "%{http_code}" \
+                    -X POST "$MB/api/setup" \
+                    -H 'Content-Type: application/json' \
+                    -d "$payload" || echo 000)
+                  if [ "$setup_code" = "200" ]; then
+                    echo "metabase: setup complete via /api/setup."
+                    exit 0
+                  fi
+                  echo "metabase: /api/setup returned $setup_code (response: $(cat /tmp/mb-setup.json 2>/dev/null || echo '?'))"
+                  # Best-effort: exit 0 so the dev stack stays green even if setup
+                  # is in some odd partial state. Worst case: visit /setup once.
+                  exit 0
+                '';
               };
-              initial_delay_seconds = 15;
-              period_seconds = 5;
-              failure_threshold = 30;
-              timeout_seconds = 3;
-            };
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8018;
-                path = "/";
+              namespace = lib.mkForce "tools";
+              depends_on."metabase".condition = "process_healthy";
+              availability = {
+                restart = "no";
+                max_restarts = 5;
               };
-              initial_delay_seconds = 30;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
 
-          rider-app-scheduler-exe = {
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
+            redis-commander = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "redis-commander";
+                runtimeInputs = [ pkgs.nodejs ];
+                text = ''
+                  set -x  # debug output
+                  # Same convention as metabase: persist under <repo-root>/data/
+                  # (gitignored) instead of ~/.cache. working_dir is `Backend/`.
+                  RC_WORK="$(mkdir -p ../data/redis-commander && cd ../data/redis-commander && pwd)"
+                  RC_PKG="$RC_WORK/node_modules/redis-commander"
 
-          driver-offer-allocator-exe = {
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
+                  # Install only if not already present
+                  if [ ! -d "$RC_PKG" ]; then
+                    mkdir -p "$RC_WORK"
+                    cd "$RC_WORK"
+                    npm init -y
+                    npm install redis-commander@0.9.0
+                  fi
+
+                  # Always rewrite default.json with our connections (idempotent).
+                  # redis-commander reads TOP-LEVEL config.connections — not config.redis.connections!
+                  node <<NODE_SCRIPT
+                  const fs = require('fs');
+                  const p = '$RC_PKG/config/default.json';
+                  const c = JSON.parse(fs.readFileSync(p, 'utf8'));
+                  c.connections = [
+                    { label: 'standalone', host: '127.0.0.1', port: 6379, dbIndex: 0 },
+                    { label: 'cluster',    host: '127.0.0.1', port: 30001, dbIndex: 0, isCluster: true, clusterNoTlsValidation: true }
+                  ];
+                  c.server.address = '0.0.0.0';
+                  c.server.port = 8431;
+                  fs.writeFileSync(p, JSON.stringify(c, null, 2));
+                  console.log('Patched default.json top-level connections:', c.connections.length);
+                  NODE_SCRIPT
+
+                  cd "$RC_PKG"
+                  exec node bin/redis-commander.js --noauth
+                '';
+              };
+              namespace = lib.mkForce "tools";
+              depends_on = {
+                "redis".condition = "process_healthy";
+                "cluster1-cluster-create".condition = "process_completed_successfully";
+              };
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 50;
+                max_restarts = 50;
+              };
             };
-          };
-        }
+
+            dynamic-offer-driver-app-exe = {
+              # Probes hit 8116 (the actual app port) so process_healthy
+              # reflects the app itself, not the driver-proxy on 8016.
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8116;
+                  path = "/ui";
+                };
+              };
+              # Tightened: ~60s of consecutive failures past initial_delay → kill
+              # + restart (was ~210s). Haskell + migrations get a 90s startup
+              # window before liveness starts checking.
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8116;
+                  path = "/ui";
+                };
+                initial_delay_seconds = 90;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
+              # Driver-proxy must own port 8016 before the app starts so any
+              # consumer dialing localhost:8016 sees a working endpoint by the
+              # time dynamic-offer-driver-app-exe is healthy. Merges with the
+              # depends_on chain set by haskellProcesses (nammayatri-init,
+              # mock-registry, and the previous cabalExecutable in the chain).
+              depends_on."driver-proxy".condition = "process_healthy";
+            };
+
+            # Reverse proxy fronting the driver-app on its public port.
+            # Caddyfile is inlined here (no separate file) — routing is:
+            #   localhost:8016/ui/driver/location* -> localhost:8081 (LTS)
+            #   localhost:8016/<anything else>     -> localhost:8116 (driver-app)
+            #   localhost:8016/__driver_proxy_health -> 200 inline (probe)
+            # Starts BEFORE dynamic-offer-driver-app-exe so the public port is
+            # always reachable by the time the app is healthy.
+            driver-proxy = {
+              imports = [ common ];
+              command =
+                let
+                  caddyfile = pkgs.writeText "driver-proxy.Caddyfile" ''
+                    {
+                    	auto_https off
+                    	admin off
+                    }
+
+                    http://:8016 {
+                    	# Port-only site address (no host), so this block matches
+                    	# any Host header — 127.0.0.1:8016, localhost:8016, the
+                    	# simulator's host alias, etc. With `http://127.0.0.1:8016`
+                    	# Caddy would only match Host=127.0.0.1:8016 and fall through
+                    	# to its default empty 200 response for Host=localhost
+                    	# requests (which is what the app sends).
+                    	bind 127.0.0.1 ::1
+
+                    	handle /__driver_proxy_health {
+                    		respond "ok" 200
+                    	}
+
+                    	handle /ui/driver/location* {
+                    		reverse_proxy 127.0.0.1:8081
+                    	}
+
+                    	handle {
+                    		reverse_proxy 127.0.0.1:8116
+                    	}
+
+                    	log {
+                    		output stderr
+                    		format console
+                    	}
+                    }
+                  '';
+                in
+                pkgs.writeShellApplication {
+                  name = "driver-proxy";
+                  runtimeInputs = [ pkgs.caddy ];
+                  text = ''
+                    exec caddy run --config ${caddyfile} --adapter caddyfile
+                  '';
+                };
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+              };
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8016;
+                  path = "/__driver_proxy_health";
+                };
+                initial_delay_seconds = 1;
+                period_seconds = 2;
+                failure_threshold = 5;
+                timeout_seconds = 2;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 5;
+                max_restarts = 50;
+              };
+              shutdown.signal = 9;
+            };
+
+            rider-app-exe = {
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8013;
+                  path = "/v2";
+                };
+              };
+              # Same tightened liveness as dynamic-offer-driver-app-exe.
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8013;
+                  path = "/v2";
+                };
+                initial_delay_seconds = 90;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
+            };
+
+            rider-dashboard-exe = {
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8017;
+                  path = "/";
+                };
+                initial_delay_seconds = 15;
+                period_seconds = 5;
+                failure_threshold = 30;
+                timeout_seconds = 3;
+              };
+              # Mirrors readiness so persistent failure → restart. Dashboards
+              # boot fast, so a short window is fine.
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8017;
+                  path = "/";
+                };
+                initial_delay_seconds = 30;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 15;
+                max_restarts = 50;
+              };
+            };
+
+            provider-dashboard-exe = {
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8018;
+                  path = "/";
+                };
+                initial_delay_seconds = 15;
+                period_seconds = 5;
+                failure_threshold = 30;
+                timeout_seconds = 3;
+              };
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8018;
+                  path = "/";
+                };
+                initial_delay_seconds = 30;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
+            };
+
+            rider-app-scheduler-exe = {
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
+            };
+
+            driver-offer-allocator-exe = {
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
+            };
+          }
         ];
       };
 
       # External services
       services = lib.mkMerge [
-      # When the backend slice is disabled, the infra services (db / redis /
-      # kafka / clickhouse / nginx / passetto) are expected to live on
-      # another host or terminal — turn them off here so this profile is a
-      # pure consumer.
-      (lib.mkIf (cfg.profile == "testDashboard") {
-        postgres-with-replica.db-primary.enable = lib.mkForce false;
-        redis."redis".enable                    = lib.mkForce false;
-        redis-cluster."cluster1".enable         = lib.mkForce false;
-        zookeeper."zookeeper".enable            = lib.mkForce false;
-        apache-kafka."kafka".enable             = lib.mkForce false;
-        nginx."nginx".enable                    = lib.mkForce false;
-        passetto.enable                         = lib.mkForce false;
-        clickhouse."clickhouse-db".enable       = lib.mkForce false;
-      })
-      {
-        postgres-with-replica.db-primary = {
-          enable = true;
-          extraMasterDBSettings = { name, ... }: {
-            # Unix socket length is supposed to be under 108 chars, see: https://linux.die.net/man/7/unix
-            socketDir = "$HOME/NY/socket/${name}";
-            extensions = extensions: [
-              extensions.postgis
-            ];
+        # When the backend slice is disabled, the infra services (db / redis /
+        # kafka / clickhouse / nginx / passetto) are expected to live on
+        # another host or terminal — turn them off here so this profile is a
+        # pure consumer.
+        (lib.mkIf (cfg.profile == "testDashboard") {
+          postgres-with-replica.db-primary.enable = lib.mkForce false;
+          redis."redis".enable = lib.mkForce false;
+          redis-cluster."cluster1".enable = lib.mkForce false;
+          zookeeper."zookeeper".enable = lib.mkForce false;
+          apache-kafka."kafka".enable = lib.mkForce false;
+          nginx."nginx".enable = lib.mkForce false;
+          passetto.enable = lib.mkForce false;
+          clickhouse."clickhouse-db".enable = lib.mkForce false;
+        })
+        {
+          postgres-with-replica.db-primary = {
+            enable = true;
+            extraMasterDBSettings = { name, ... }: {
+              # Unix socket length is supposed to be under 108 chars, see: https://linux.die.net/man/7/unix
+              socketDir = "$HOME/NY/socket/${name}";
+              extensions = extensions: [
+                extensions.postgis
+              ];
+              initialDatabases = [
+                {
+                  name = "atlas_dev";
+                  # Schema-only initialization. local-testing-data/*.sql is NOT loaded here
+                  # because dev/ddl-migrations and feature-migrations need to run on empty tables
+                  # (so SET NOT NULL / FK validations pass). After dev/ddl-migrations + feature-migrations
+                  # complete, test-context-api applies dev/local-testing-data/*.sql.
+                  schemas = [
+                    ../../dev/sql-seed/pre-init.sql
+                    ../../dev/sql-seed/rider-app-seed.sql
+                    ../../dev/sql-seed/public-transport-rider-platform-seed.sql
+                    ../../dev/sql-seed/mock-registry-seed.sql
+                    ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
+                    ../../dev/sql-seed/rider-dashboard-seed.sql
+                    ../../dev/sql-seed/provider-dashboard-seed.sql
+                    ../../dev/sql-seed/unified-dashboard-seed.sql
+                    ../../dev/sql-seed/safety-dashboard-seed.sql
+                    ../../dev/sql-seed/special-zone-seed.sql
+                    ../../dev/sql-seed/kaal-chakra-seed.sql
+                  ];
+                }
+              ];
+              initialScript.before = ''
+                CREATE USER repl_user replication;
+                CREATE USER atlas WITH PASSWORD 'atlas';
+              '';
+              port = 5434;
+            };
+            extraReplicaDBSettings = { name, ... }: {
+              socketDir = "$HOME/NY/socket/${name}";
+              port = 5435;
+            };
+          };
+
+          redis."redis".enable = true;
+
+          redis-cluster."cluster1".enable = true;
+
+          zookeeper."zookeeper".enable = true;
+
+          apache-kafka."kafka" = {
+            enable = true;
+            port = 29092;
+            settings = {
+              # Since the available brokers are only 1
+              "offsets.topic.replication.factor" = 1;
+              "zookeeper.connect" = [ "localhost:2181" ];
+            };
+          };
+
+
+          nginx."nginx" = {
+            enable = true;
+            port = 8085;
+          };
+
+          passetto = {
+            enable = true;
+            port = 8079;
+            extraDbSettings = { name, ... }: {
+              port = 5422;
+              socketDir = "$HOME/NY/socket/${name}";
+            };
+            package = inputs'.passetto.packages.passetto-service;
+          };
+
+          clickhouse."clickhouse-db" = {
+            enable = true;
+            port = 9000;
+            extraConfig.http_port = 8123;
             initialDatabases = [
               {
-                name = "atlas_dev";
-                # Schema-only initialization. local-testing-data/*.sql is NOT loaded here
-                # because dev/ddl-migrations and feature-migrations need to run on empty tables
-                # (so SET NOT NULL / FK validations pass). After dev/ddl-migrations + feature-migrations
-                # complete, test-context-api applies dev/local-testing-data/*.sql.
+                name = "atlas_kafka";
                 schemas = [
-                  ../../dev/sql-seed/pre-init.sql
-                  ../../dev/sql-seed/rider-app-seed.sql
-                  ../../dev/sql-seed/public-transport-rider-platform-seed.sql
-                  ../../dev/sql-seed/mock-registry-seed.sql
-                  ../../dev/sql-seed/dynamic-offer-driver-app-seed.sql
-                  ../../dev/sql-seed/rider-dashboard-seed.sql
-                  ../../dev/sql-seed/provider-dashboard-seed.sql
-                  ../../dev/sql-seed/unified-dashboard-seed.sql
-                  ../../dev/sql-seed/safety-dashboard-seed.sql
-                  ../../dev/sql-seed/special-zone-seed.sql
-                  ../../dev/sql-seed/kaal-chakra-seed.sql
+                  ../../dev/clickhouse/sql-seed/atlas-kafka-seed.sql
+                  ../../dev/clickhouse/local-testing-data/atlas-kafka.sql
+                ];
+              }
+              {
+                name = "atlas_driver_offer_bpp";
+                schemas = [
+                  ../../dev/clickhouse/sql-seed/atlas-driver-offer-bpp-seed.sql
+                  ../../dev/clickhouse/local-testing-data/atlas-driver-offer-bpp.sql
+                ];
+              }
+              {
+                name = "app_monitor";
+                schemas = [
+                  ../../dev/clickhouse/sql-seed/app-monitor-seed.sql
+                ];
+              }
+              {
+                name = "atlas_app";
+                schemas = [
+                  ../../dev/clickhouse/sql-seed/atlas-app-seed.sql
                 ];
               }
             ];
-            initialScript.before = ''
-              CREATE USER repl_user replication;
-              CREATE USER atlas WITH PASSWORD 'atlas';
-            '';
-            port = 5434;
           };
-          extraReplicaDBSettings = { name, ... }: {
-            socketDir = "$HOME/NY/socket/${name}";
-            port = 5435;
-          };
-        };
-
-        redis."redis".enable = true;
-
-        redis-cluster."cluster1".enable = true;
-
-        zookeeper."zookeeper".enable = true;
-
-        apache-kafka."kafka" = {
-          enable = true;
-          port = 29092;
-          settings = {
-            # Since the available brokers are only 1
-            "offsets.topic.replication.factor" = 1;
-            "zookeeper.connect" = [ "localhost:2181" ];
-          };
-        };
-
-
-        nginx."nginx" = {
-          enable = true;
-          port = 8085;
-        };
-
-        passetto = {
-          enable = true;
-          port = 8079;
-          extraDbSettings = { name, ... }: {
-            port = 5422;
-            socketDir = "$HOME/NY/socket/${name}";
-          };
-          package = inputs'.passetto.packages.passetto-service;
-        };
-
-        clickhouse."clickhouse-db" = {
-        enable = true;
-        port = 9000;
-        extraConfig.http_port = 8123;
-        initialDatabases = [
-          {
-            name = "atlas_kafka";
-            schemas = [
-              ../../dev/clickhouse/sql-seed/atlas-kafka-seed.sql
-              ../../dev/clickhouse/local-testing-data/atlas-kafka.sql
-            ];
-          }
-          {
-            name = "atlas_driver_offer_bpp";
-            schemas = [
-              ../../dev/clickhouse/sql-seed/atlas-driver-offer-bpp-seed.sql
-              ../../dev/clickhouse/local-testing-data/atlas-driver-offer-bpp.sql
-            ];
-          }
-          {
-            name = "app_monitor";
-            schemas = [
-              ../../dev/clickhouse/sql-seed/app-monitor-seed.sql
-            ];
-          }
-          {
-            name = "atlas_app";
-            schemas = [
-              ../../dev/clickhouse/sql-seed/atlas-app-seed.sql
-            ];
-          }
-        ];
-        };
-      }
+        }
       ];
     };
 }

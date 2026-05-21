@@ -8,6 +8,8 @@ import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Prelude
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -18,12 +20,15 @@ data GetOrganizationResp = GetOrganizationResp {address :: Kernel.Prelude.Maybe 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassDetailsDataResp = PassDetailsDataResp
-  { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
+    academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
+    address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
-    graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     name :: Kernel.Prelude.Text,
     passDetailsId :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
@@ -32,29 +37,32 @@ data PassDetailsDataResp = PassDetailsDataResp
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     remark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routePairs :: [Domain.Types.PassDetails.RoutePair],
-    selfImage :: Kernel.Prelude.Text,
-    studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
     validTill :: Data.Time.UTCTime,
-    verificationStatus :: Domain.Types.PassDetails.VerificationStatus
+    verificationStatus :: Domain.Types.PassDetails.VerificationStatus,
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PassDetailsUpdateReq = PassDetailsUpdateReq
   { aadharNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    academicYearEnd :: Kernel.Prelude.Maybe Data.Time.Day,
+    academicYearStart :: Kernel.Prelude.Maybe Data.Time.Day,
+    address :: Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress,
     age :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    department :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     gender :: Domain.Types.Person.Gender,
-    graduationDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    guardianMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     guardianName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    idCardPicture :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     name :: Kernel.Prelude.Text,
     passOrganizationId :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registerNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeDetails :: [RouteDetails],
-    selfImage :: Kernel.Prelude.Text,
-    studentClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    selfImage :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile,
+    year :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -64,5 +72,13 @@ data PassStatusResp = PassStatusResp {remark :: Kernel.Prelude.Maybe Kernel.Prel
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RouteDetails = RouteDetails {destStopId :: Kernel.Prelude.Text, destStopName :: Kernel.Prelude.Text, srcStopId :: Kernel.Prelude.Text, srcStopName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UploadDocumentReq = UploadDocumentReq {file :: EulerHS.Prelude.FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+newtype UploadDocumentResp = UploadDocumentResp {documentId :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

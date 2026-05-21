@@ -3,6 +3,7 @@
 
 module Domain.Types.VehicleServiceTier where
 
+import qualified Dashboard.Common
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.Merchant
@@ -12,6 +13,7 @@ import qualified Domain.Types.VehicleVariant
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Time
 import qualified Lib.Types.SpecialLocation
 import qualified Tools.Beam.UtilsTH
 
@@ -26,6 +28,7 @@ data VehicleServiceTier = VehicleServiceTier
     fareAdditionPerKmOverBaseServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleServiceTier.VehicleServiceTier,
     isAirConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isIntercityEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isRentalsEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -40,8 +43,10 @@ data VehicleServiceTier = VehicleServiceTier
     seatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     vehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

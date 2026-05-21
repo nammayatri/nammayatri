@@ -80,6 +80,7 @@ types:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
+    canSwitchToAirport: Maybe Bool
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
       isWorking: Bool

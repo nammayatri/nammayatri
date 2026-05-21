@@ -23,6 +23,7 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
 import qualified Kernel.External.Payment.Types as PaymentService
 import qualified Kernel.Prelude
+import Kernel.Prelude (showBaseUrl)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
@@ -113,6 +114,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
       Nothing -> pure Nothing
 
   -- Create PaymentTypes.CreateOrderReq
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         PaymentTypes.CreateOrderReq
           { orderId = orderId,
@@ -132,9 +134,11 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
+            webhookUrl = Just $ showBaseUrl nwAddress,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -200,6 +204,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.termsAccepted = req.declaration.termsAccepted,
             Domain.status = Domain.PENDING,
             Domain.paymentStatus = Nothing,
+            Domain.isAdditionalSharePurchase = Just False,
             Domain.applicationCount = Nothing,
             Domain.shareStartCount = Nothing,
             Domain.shareEndCount = Nothing,
@@ -270,6 +275,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
             pure $ PaymentInterface.getGatewayReferenceId paymentServiceConfig
           _ -> pure Nothing
         Nothing -> pure Nothing
+
     let paymentServiceType = fromMaybe DOrder.STCL req.paymentServiceType
 
     -- Resolve the requested amount up front so we can compare it against any in-flight order before deciding
@@ -299,6 +305,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
         -- Same intent as the in-flight order: re-issue the same CreateOrderResp (same Juspay orderId) so
         -- the frontend resumes the existing payment screen. createOrderService recognises the orderId and
         -- returns the stored payment links — see Lib.Payment.Domain.Action.createOrderService.
+        nwAddress <- asks (.nwAddress)
         let resumeReq =
               PaymentTypes.CreateOrderReq
                 { orderId = existing.id.getId,
@@ -318,9 +325,11 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
+                  webhookUrl = Just $ showBaseUrl nwAddress,
                   basket = Nothing,
                   paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
                 }
         SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
       Nothing -> do
@@ -344,6 +353,8 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
         let shortIdText = orderShortId.getShortId
         applicationId <- generateGUIDText
 
+        nwAddress <- asks (.nwAddress)
+
         let createOrderReq =
               PaymentTypes.CreateOrderReq
                 { orderId = orderId,
@@ -363,9 +374,11 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
+                  webhookUrl = Just $ showBaseUrl nwAddress,
                   basket = Nothing,
                   paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
                 }
 
         createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
@@ -381,6 +394,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   Domain.numberOfShares = req.numberOfShares,
                   Domain.status = Domain.PENDING,
                   Domain.paymentStatus = Nothing,
+                  Domain.isAdditionalSharePurchase = Just True,
                   Domain.applicationCount = Nothing,
                   Domain.shareStartCount = Nothing,
                   Domain.shareEndCount = Nothing,

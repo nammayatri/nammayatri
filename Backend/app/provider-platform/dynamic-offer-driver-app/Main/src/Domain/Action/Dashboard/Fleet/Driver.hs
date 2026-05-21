@@ -101,7 +101,7 @@ import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.Dr
 import Data.Char (isDigit)
 import Data.Coerce (coerce)
 import Data.Csv
-import Data.List (groupBy, nub, sortOn)
+import Data.List (groupBy, nub, sortOn, zip4)
 import Data.List.NonEmpty (fromList, toList)
 import qualified Data.List.NonEmpty as NE
 import Data.List.Split (chunksOf)
@@ -1604,8 +1604,11 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
   let (filteredFdaList, _, _) = filteredDrivers
       fleetOwnerIdsFromResponse = nub $ map (.fleetOwnerId) filteredFdaList
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
-  listItems <- createFleetDriverAssociationListItem fleetOwnerNameMap filteredDrivers
-  let summary = Common.Summary {totalCount = 10000, count = length listItems}
+  listItems <- createFleetDriverAssociationListItem merchant fleetOwnerNameMap filteredDrivers
+  let count = length listItems
+      onRideCount = length $ filter (\item -> fromMaybe False item.isDriverOnRide || fromMaybe False item.isDriverOnPickup) listItems
+      waitingCount = count - onRideCount
+      summary = DC.DriverSummary {totalCount = 10000, count = count, onRideCount = onRideCount, waitingCount = waitingCount}
   pure $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
@@ -1625,8 +1628,8 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
           filteredTriples = filter keepFunc (zip3 fdaList personList driverInfoList)
       pure $ unzip3 filteredTriples
 
-    createFleetDriverAssociationListItem :: Map.Map Text (Text, Maybe Text) -> ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Flow [Common.DriveVehicleAssociationListItemT]
-    createFleetDriverAssociationListItem fleetOwnerNameMap (fdaList, personList, driverInfoList) = do
+    createFleetDriverAssociationListItem :: DM.Merchant -> Map.Map Text (Text, Maybe Text) -> ([FleetDriverAssociation], [DP.Person], [DI.DriverInformation]) -> Flow [Common.DriveVehicleAssociationListItemT]
+    createFleetDriverAssociationListItem merchant fleetOwnerNameMap (fdaList, personList, driverInfoList) = do
       let driverListWithInfo = zip personList driverInfoList
       now <- getCurrentTime
       let defaultFrom = UTCTime (utctDay now) 0
@@ -1701,11 +1704,27 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
             driverDocsVerificationStatus = castDocsVerificationStatus <$> driverInfo'.docsVerificationStatus
             requestReason = fda.requestReason
             responseReason = fda.responseReason
+
+        profilePhotoImageId <- case driverId of
+          Nothing -> pure Nothing
+          Just driverIdText -> do
+            profilePhotos <- QImage.findImagesByPersonAndType Nothing Nothing merchant.id (Id @DP.Person driverIdText) DDoc.ProfilePhoto
+            pure $ listToMaybe profilePhotos >>= \photo -> Just photo.id.getId
+
+        vehicleIconURL <- case vehicleType of
+          Nothing -> pure Nothing
+          Just variant -> do
+            cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing Nothing
+            let mbServiceTierForIcon = find (\vst -> variant `elem` vst.allowedVehicleVariant) cityVehicleServiceTiers
+            pure $ mbServiceTierForIcon >>= (.vehicleIconUrl) >>= \url -> Just $ show url
+
         let ls =
               Common.DriveVehicleAssociationListItemT
                 { vehicleNo = vehicleNo,
                   rcId = rcId,
                   vehicleColor = vehicleColor,
+                  profilePhotoImageId = profilePhotoImageId,
+                  vehicleIconURL = vehicleIconURL,
                   vehicleMake = vehicleMake,
                   vehicleModel = vehicleModel,
                   vehicleYear = vehicleYear,
@@ -1804,8 +1823,12 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
   let fleetOwnerIdsFromResponse = nub $ mapMaybe (.fleetOwnerId) listOfAllVehicleFinal
   fleetOwnerNameMap <- buildFleetOwnerNameMap fleetOwnerNameMapFromRequest fleetOwnerIdsFromResponse
   let listOfAllVehicleWithFleetInfo = catMaybes $ map (\vrc -> vrc.fleetOwnerId >>= \fleetOwnerId -> let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap) in Just (vrc, fleetOwnerId, fleetOwnerName, fleetName)) listOfAllVehicleFinal
-  listItems <- createFleetVehicleAssociationListItem listOfAllVehicleWithFleetInfo
-  let summary = Common.Summary {totalCount = 10000, count = length listItems}
+  listItems <- createFleetVehicleAssociationListItem merchant listOfAllVehicleWithFleetInfo
+  let assignedItems = filter (isJust . (.driverId)) listItems
+      count = length listItems
+      onRideCount = length $ filter (\item -> fromMaybe False item.isDriverOnRide || fromMaybe False item.isDriverOnPickup) assignedItems
+      waitingCount = length assignedItems - onRideCount
+      summary = DC.DriverSummary {totalCount = 10000, count = count, onRideCount = onRideCount, waitingCount = waitingCount}
   pure $
     Common.DrivertoVehicleAssociationResT
       { fleetOwnerId = requestorId, -- Kept for Backward Compatibility, Don't use this Fleet Owner Id for Multiple Fleets
@@ -1813,10 +1836,49 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
         summary = summary
       }
   where
-    createFleetVehicleAssociationListItem :: [(DVRC.VehicleRegistrationCertificate, Text, Text, Maybe Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
-    createFleetVehicleAssociationListItem vrcListWithFleetInfo = do
+    createFleetVehicleAssociationListItem :: DM.Merchant -> [(DVRC.VehicleRegistrationCertificate, Text, Text, Maybe Text)] -> Flow [Common.DriveVehicleAssociationListItemT]
+    createFleetVehicleAssociationListItem merchant vrcListWithFleetInfo = do
       now <- getCurrentTime
-      forM vrcListWithFleetInfo $ \(vrc, fleetOwnerId, fleetOwnerName, fleetName) -> do
+
+      -- Pre-fetch all driver IDs to eliminate N+1 queries
+      let rcIds = map (\(vrc, _, _, _) -> vrc.id) vrcListWithFleetInfo
+      allActiveAssociations <- mapM (\rcId -> QRCAssociation.findActiveAssociationByRC rcId True) rcIds
+      allLatestAssociations <-
+        mapM
+          ( \(rcId, idx) -> case allActiveAssociations !! idx of
+              Nothing -> QRCAssociation.findLatestLinkedByRCId rcId now
+              _ -> pure Nothing
+          )
+          (zip rcIds [0 ..])
+
+      -- Collect all driver IDs from associations
+      let allDriverIds =
+            catMaybes $
+              [activeAssoc >>= \assoc -> Just assoc.driverId | activeAssoc <- allActiveAssociations]
+                ++ [latestAssoc >>= \assoc -> Just assoc.driverId | latestAssoc <- allLatestAssociations]
+
+      -- Batch fetch all vehicles and persons
+      allVehicles <- if null allDriverIds then pure [] else mapM QVehicle.findById allDriverIds
+      allPersons <- if null allDriverIds then pure [] else mapM QPerson.findById allDriverIds
+      let vehicleMap = Map.fromList [(vId, v) | (vId, mv) <- zip allDriverIds allVehicles, Just v <- [mv]]
+      let personMap = Map.fromList [(pId, p) | (pId, mp) <- zip allDriverIds allPersons, Just p <- [mp]]
+
+      -- Group persons by merchant operating city and batch fetch service tiers
+      let merchantOpCityIds = nub $ catMaybes [Map.lookup dId personMap >>= \p -> Just p.merchantOperatingCityId | dId <- allDriverIds]
+      serviceTiersByCity <-
+        if null merchantOpCityIds
+          then pure Map.empty
+          else Map.fromList <$> mapM (\cityId -> (cityId,) <$> CQVST.findAllByMerchantOpCityId cityId Nothing Nothing) merchantOpCityIds
+
+      -- Batch fetch profile photos for all drivers
+      allProfilePhotos <-
+        if null allDriverIds
+          then pure Map.empty
+          else do
+            photos <- mapM (\dId -> QImage.findImagesByPersonAndType Nothing Nothing merchant.id dId DDoc.ProfilePhoto) allDriverIds
+            pure $ Map.fromList [(dId, listToMaybe photo >>= \p -> Just p.id.getId) | (dId, photo) <- zip allDriverIds photos]
+
+      forM (zip4 vrcListWithFleetInfo allActiveAssociations allLatestAssociations ([0 ..] :: [Int])) $ \((vrc, fleetOwnerId, fleetOwnerName, fleetName), mbActiveAssoc, mbLatestAssoc, _) -> do
         decryptedVehicleRC <- decrypt vrc.certificateNumber
         let defaultFrom = UTCTime (utctDay now) 0
             from = fromMaybe defaultFrom mbFrom
@@ -1827,25 +1889,23 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
             earning <- CQRide.totalEarningsByFleetOwnerPerVehicle (Just fleetOwnerId) decryptedVehicleRC from to
             return (completedRides, earning)
           Nothing -> return (0, 0) ------------ when we are not including stats then we will return 0
-        rcActiveAssociation <- QRCAssociation.findActiveAssociationByRC vrc.id True
+        let rcActiveAssociation = mbActiveAssoc
         ((driverName, conductorName, driverId, driverPhoneNo, driverStatus, isDriverOnPickup, isDriverOnRide, routeCode, enabled, driverDocsVerificationStatus), mbAssociatedOn) <- case rcActiveAssociation of
           Just activeAssociation -> do
             driverInfo <- getFleetDriverInfo fleetOwnerId activeAssociation.driverId False
             return (driverInfo, Just activeAssociation.associatedOn)
           ------- when vehicle is in active state
           Nothing -> do
-            latestAssociation <- QRCAssociation.findLatestLinkedByRCId vrc.id now ------- when there is not any active association then i will find out the latest association  (vehicle is in inActive state)
-            case latestAssociation of
+            case mbLatestAssoc of
               Just latestAssoc -> do
                 driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
                 return (driverInfo, Just latestAssoc.associatedOn)
               Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
         (driverMobileCountryCodeValue, driverEmailValue) <- case driverId of
           Just driverIdText -> do
-            mbDriver <- QPerson.findById (Id @DP.Person driverIdText)
+            let mbDriver = Map.lookup (Id @DP.Person driverIdText) personMap
             case mbDriver of
-              Just driverPerson -> do
-                pure (driverPerson.mobileCountryCode, driverPerson.email)
+              Just driverPerson -> pure (driverPerson.mobileCountryCode, driverPerson.email)
               Nothing -> pure (Nothing, Nothing)
           Nothing -> pure (Nothing, Nothing)
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
@@ -1878,20 +1938,30 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   localResidenceProof = Nothing,
                   drivingSchoolCertificate = Nothing
                 }
-        selectedServiceTiers <- case driverId of
-          Nothing -> pure []
+
+        (selectedServiceTiers, vehicleIconURL) <- case driverId of
+          Nothing -> pure ([], Nothing)
           Just driverIdText -> do
-            mbVehicle <- QVehicle.findById (Id @DP.Person driverIdText)
-            mbPerson <- QPerson.findById (Id @DP.Person driverIdText)
+            let mbVehicle = Map.lookup (Id @DP.Person driverIdText) vehicleMap
+                mbPerson = Map.lookup (Id @DP.Person driverIdText) personMap
             case (mbVehicle, mbPerson) of
               (Just vehicle, Just person) -> do
-                cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
-                pure $ map (\st -> maybe (show st) (.name) (find (\vst -> vst.serviceTierType == st) cityVehicleServiceTiers)) vehicle.selectedServiceTiers
-              _ -> pure []
+                let cityVehicleServiceTiers = fromMaybe [] $ Map.lookup person.merchantOperatingCityId serviceTiersByCity
+                let serviceTiers = map (\st -> maybe (show st) (.name) (find (\vst -> vst.serviceTierType == st) cityVehicleServiceTiers)) vehicle.selectedServiceTiers
+                    mbServiceTier = find (\vst -> maybe False (`elem` vehicle.selectedServiceTiers) (Just vst.serviceTierType)) cityVehicleServiceTiers
+                    iconURL = mbServiceTier >>= (.vehicleIconUrl) >>= \url -> Just $ show url
+                pure (serviceTiers, iconURL)
+              _ -> pure ([], Nothing)
+
+        let profilePhotoImageId = case driverId of
+              Nothing -> Nothing
+              Just driverIdText -> join $ Map.lookup (Id @DP.Person driverIdText) allProfilePhotos
         let ls =
               Common.DriveVehicleAssociationListItemT
                 { vehicleNo = Just decryptedVehicleRC,
                   rcId = Just vrc.id.getId,
+                  profilePhotoImageId = profilePhotoImageId,
+                  vehicleIconURL = vehicleIconURL,
                   vehicleColor = vrc.vehicleColor,
                   vehicleMake = vrc.vehicleManufacturer,
                   vehicleModel = vrc.vehicleModel,
@@ -4625,7 +4695,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
               offset = fromMaybe 0 mbOffset
               possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-          cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+          cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
           let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
           -- Fleet sees all scheduled bookings; no location/reachability filter (unlike driver app listScheduledBookings)

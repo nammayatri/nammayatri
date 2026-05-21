@@ -18,10 +18,13 @@ PassOrganization:
     createdAt: UTCTime
     updatedAt: UTCTime
     passEnum: PassEnum
+    depotPersonId: Maybe (Id Person)
+    depotId: Maybe Text
 
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
+    depotPersonId: SecondaryKey
 
   sqlType:
     name: text
@@ -36,6 +39,10 @@ PassOrganization:
       kvFunction: findOneWithKV
       where: personId
 
+    findByDepotPersonId:
+      kvFunction: findAllWithKV
+      where: depotPersonId
+
     findByMerchantOperatingCityIdAndPassEnum:
       kvFunction: findAllWithKV
       where:
@@ -45,6 +52,12 @@ PassOrganization:
       kvFunction: updateWithKV
       params: [name, address, updatedAt]
       where: id
+
+    updateDepotAssignment:
+      kvFunction: updateWithKV
+      params: [depotPersonId, depotId, updatedAt]
+      where:
+        in: [id]
 
   extraIndexes:
     - columns: [merchantOperatingCityId, name, passEnum]

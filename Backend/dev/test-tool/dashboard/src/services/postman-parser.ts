@@ -50,7 +50,7 @@ export interface ParsedStep {
   index: number;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'internal';
+  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'juspay-payment' | 'internal';
   /** URL path with {{var}} placeholders, relative to proxy prefix */
   pathTemplate: string;
   /** Raw URL template before service resolution */
@@ -83,7 +83,12 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseURL_BPP_Dashboard_Internal': { service: 'provider-dashboard' },
   'dashboard_base_url': { service: 'provider-dashboard' },
   'bap_dashboard_url': { service: 'rider-dashboard' },
+  // baseUrl_dashboard points at the rider-app itself with a /dashboard path prefix
+  // (http://localhost:8013/dashboard), NOT the separate rider-dashboard service on :8017.
+  // Routing it through the rider proxy preserves the /dashboard prefix extracted from the env URL.
+  'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
+  'mock_server_url': { service: 'juspay-payment' },
 };
 
 // ── Parser ──

@@ -7,6 +7,9 @@ imports:
   BaseUrl: Kernel.Types.Common
   VehicleCategory : Domain.Types.VehicleCategory
   Area: Lib.Types.SpecialLocation
+  Months: Kernel.Types.Time
+  Value: Data.Aeson
+  SpecialZone: Dashboard.Common
 
 VehicleServiceTier:
   tableName: vehicle_service_tier
@@ -22,6 +25,7 @@ VehicleServiceTier:
     isAirConditioned: Maybe Bool
     isIntercityEnabled: Maybe Bool
     isRentalsEnabled: Maybe Bool
+    isAirportRideEnabled: Maybe Bool
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int
@@ -42,6 +46,8 @@ VehicleServiceTier:
     scheduleBookingListEligibilityTags: Maybe [Text]
     isEnabled: Maybe Bool
     allowedAreas: Maybe [Area]
+    vehicleAgeThreshold: Maybe Months
+    specialZone: Maybe SpecialZone
   sqlType:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
@@ -49,6 +55,8 @@ VehicleServiceTier:
     driverRating: double precision
     vehicleIconUrl: character varying(255)
     allowedAreas: text[]
+    vehicleAgeThreshold: int
+    specialZone: "json"
   default:
     priority: '0'
     isEnabled: 'true'
@@ -57,12 +65,16 @@ VehicleServiceTier:
   beamType:
     vehicleIconUrl: Maybe Text
     allowedAreas: Maybe [Text]
+    specialZone: Maybe Value
   fromTType:
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))|I
+    specialZone: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< specialZone|E
   toTType:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     allowedAreas: (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText))|I
+    specialZone: Kernel.Prelude.toJSON <$> specialZone|E
   constraints:
     id: PrimaryKey
   queries:

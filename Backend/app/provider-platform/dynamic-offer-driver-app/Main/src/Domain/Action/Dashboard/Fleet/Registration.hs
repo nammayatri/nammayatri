@@ -360,12 +360,11 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
 
 ---------------------------------------------------------------------
 data FleetOwnerUpdateLanguageReq = FleetOwnerUpdateLanguageReq
-  { personId :: Id DP.Person,
-    language :: KET.Language
+  { language :: KET.Language
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-fleetOwnerUpdateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => FleetOwnerUpdateLanguageReq -> m APISuccess
-fleetOwnerUpdateLanguage req = do
-  QPExtra.updateLanguage req.personId req.language
+fleetOwnerUpdateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> FleetOwnerUpdateLanguageReq -> m APISuccess
+fleetOwnerUpdateLanguage requestorId req = do
+  QPExtra.updateLanguage (Id requestorId :: Id DP.Person) req.language
   pure Success
