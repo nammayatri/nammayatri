@@ -1,0 +1,280 @@
+{
+  "info": {
+    "_postman_id": "frfs-fleet-operator-conductor-flow",
+    "name": "FRFS Fleet Operator - Conductor Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Conductor authentication and trip management flow: auth → currentOperation → tripStart → getRoute → getManifest → tripEnd"
+  },
+  "item": [
+    {
+      "name": "Conductor Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has token\", () => pm.expect(response.token).to.not.be.undefined);",
+              "",
+              "if (response.token) {",
+              "    pm.environment.set(\"conductor_token\", response.token);",
+              "    console.log(\"conductor_token saved:\", response.token);",
+              "}",
+              "if (response.person && response.person.id) {",
+              "    pm.environment.set(\"conductor_person_id\", response.person.id);",
+              "    console.log(\"conductor_person_id saved:\", response.person.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bpp_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\",\n    \"identifierType\": \"CONDUCTORTOKEN\",\n    \"email\": \"{{conductor_email}}\",\n    \"password\": \"{{conductor_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/auth",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "auth"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Current Operation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has waybillNo\", () => pm.expect(response.waybillNo).to.not.be.undefined);",
+              "",
+              "if (response.waybillNo) {",
+              "    pm.environment.set(\"waybill_no\", response.waybillNo);",
+              "    console.log(\"waybill_no saved:\", response.waybillNo);",
+              "}",
+              "if (response.current && response.current.tripNumber !== undefined) {",
+              "    pm.environment.set(\"trip_number\", response.current.tripNumber);",
+              "    console.log(\"trip_number saved:\", response.current.tripNumber);",
+              "}",
+              "if (response.current && response.current.routeId) {",
+              "    pm.environment.set(\"route_id\", response.current.routeId);",
+              "    console.log(\"route_id saved:\", response.current.routeId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{conductor_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"personId\": \"{{conductor_person_id}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/frfs/fleetOperator/currentOperation",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "frfs", "fleetOperator", "currentOperation"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Trip Start",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has currentTripNumber\", () => pm.expect(response.currentTripNumber).to.not.be.undefined);",
+              "",
+              "if (response.currentTripNumber !== undefined) {",
+              "    pm.environment.set(\"trip_number\", response.currentTripNumber);",
+              "    console.log(\"trip_number after start:\", response.currentTripNumber);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{conductor_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"action\": \"start\",\n    \"personId\": \"{{conductor_person_id}}\",\n    \"vehicleNumber\": \"{{vehicle_number}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/frfs/fleetOperator/tripAction",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "frfs", "fleetOperator", "tripAction"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Route Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has route code\", () => pm.expect(response.code).to.not.be.undefined);",
+              "",
+              "console.log(\"Route:\", response.longName, \"| Stops:\", response.totalStops);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{conductor_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/v2/frfs/route/{{route_id}}?city={{city}}&vehicleType=%22BUS%22",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "v2", "frfs", "route", "{{route_id}}"],
+          "query": [
+            { "key": "city", "value": "{{city}}" },
+            { "key": "vehicleType", "value": "%22BUS%22" }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Trip Manifest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has manifest array\", () => pm.expect(response.manifest).to.be.an('array'));",
+              "",
+              "console.log(\"Manifest stops:\", response.manifest ? response.manifest.length : 0);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{conductor_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/v2/frfs/trip/{{waybill_no}}-{{trip_number}}/route/{{manifest_route_id}}/manifest",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "v2", "frfs", "trip", "{{waybill_no}}-{{trip_number}}", "route", "{{manifest_route_id}}", "manifest"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Trip End",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "let response = pm.response.json();",
+              "",
+              "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Has currentTripNumber\", () => pm.expect(response.currentTripNumber).to.not.be.undefined);",
+              "",
+              "console.log(\"Trip ended. tripNumber:\", response.currentTripNumber, \"hasUpcoming:\", response.hasUpcomingTrips);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{conductor_token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"action\": \"end\",\n    \"personId\": \"{{conductor_person_id}}\",\n    \"vehicleNumber\": \"{{vehicle_number}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl_driver}}/ui/frfs/fleetOperator/tripAction",
+          "host": ["{{baseUrl_driver}}"],
+          "path": ["ui", "frfs", "fleetOperator", "tripAction"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
