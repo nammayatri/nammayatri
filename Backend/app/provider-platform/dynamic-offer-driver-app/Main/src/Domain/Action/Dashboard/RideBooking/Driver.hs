@@ -41,6 +41,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
@@ -357,7 +358,7 @@ getDriverInfo merchantShortId opCity fleetOwnerId mbFleet mbMobileNumber mbMobil
   when mbFleet $ do
     case (mbPersonId', mbVehicleNumber) of
       (Just personId, _) -> do
-        fda <- B.runInReplica $ QFleetDriver.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
+        fda <- B.runInReplica $ QDashboard.Common.findByDriverIdAndFleetOwnerId personId fleetOwnerId True
         when (isNothing fda) $ throwError $ InvalidRequest "Fleet Owner does not have an association with this driver"
       (_, Just vehicleNumber) -> do
         vehicleInfo <- RCQuery.findLastVehicleRCFleet' vehicleNumber fleetOwnerId
@@ -491,7 +492,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
   let isACAllowedForDriver = checkIfACAllowedForDriver info (catMaybes serviceTierACThresholds)
   let isVehicleACWorking = maybe False (\v -> v.airConditioned /= Just False) vehicle
   cancellationData <- SCR.getCancellationRateData person.merchantOperatingCityId person.id
-  mbActiveFda <- B.runInReplica $ QFleetDriver.findByDriverId person.id True
+  mbActiveFda <- B.runInReplica $ QDashboard.Common.findByDriverId person.id True
   activeFleetInfo <- case mbActiveFda of
     Nothing -> pure Nothing
     Just fda -> do
@@ -595,25 +596,35 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankIfsc = bankIfsc',
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
-        fleetOwnerId = fleetOwnerId'
+        fleetOwnerId = fleetOwnerId',
+        docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus
       }
   where
-    buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> Maybe Text -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe Text -> Flow Common.DriverAssociationInfo
     buildDriverAssociationInfoFromPerson p mbFleetName = do
       mob <- traverse decrypt p.mobileNumber
+      mbFoi <- QFOI.findByPrimaryKey p.id
       pure
         Common.DriverAssociationInfo
           { personId = cast @DP.Person @Dashboard.Common.Person p.id,
             name = Just $ p.firstName <> maybe "" (" " <>) p.lastName,
             mobileCountryCode = p.mobileCountryCode,
             mobileNumber = mob,
-            fleetName = mbFleetName
+            fleetName = mbFleetName,
+            verified = (.verified) <$> mbFoi,
+            docsVerificationStatus = mbFoi >>= (.docsVerificationStatus) <&> castDriverDocsVerificationStatus
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER
       DI.INDIVIDUAL -> Common.INDIVIDUAL
+
+castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
+castDriverDocsVerificationStatus = \case
+  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
+  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
+  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 buildAadhaarAssociationAPIEntity :: EncFlow m r => DriverInformation -> AadhaarCard -> m Common.AadhaarAssociationAPIEntity
 buildAadhaarAssociationAPIEntity driverInfo AadhaarCard {..} = do

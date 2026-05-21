@@ -41,6 +41,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
+import qualified Dashboard.Common
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Key as DAK
 import qualified Data.Aeson.KeyMap as DAKM
@@ -630,22 +631,30 @@ postDriverRegistrationDocumentsCommon merchantShortId opCity driverId Common.Com
         QCommonDriverOnboardingDocuments.create documentEntry
         pure $ Common.CommonDocumentCreateRes {result = "Success", documentId = cast documentId}
 
-  if documentType == Common.TDSCertificate
-    then do
-      -- Redis lock to prevent TOCTOU race on duplicate invoice check + create
-      let lockKey = "tds-dedup-lock:" <> driverPersonId.getId
-      Redis.withLockRedisAndReturnValue lockKey 10 $ do
-        -- Check for duplicate invoiceIds across existing TDS documents for this driver
-        tdsData' <- parseTDSCertificateData documentData
-        let newInvoiceIds' = map (.invoiceId) tdsData'.tdsCertificates
-        existingDocs <- QCommonDriverOnboardingDocuments.findByDriverIdAndDocumentType (Just driverPersonId) DVC.TDSCertificate
-        let activeDocs = filter (\d -> d.verificationStatus /= Documents.INVALID) existingDocs
-        let existingInvoiceIds = Kernel.Prelude.concatMap (extractInvoiceIds . (.documentData)) activeDocs
-            duplicateIds = filter (`elem` existingInvoiceIds) newInvoiceIds'
-        unless (Kernel.Prelude.null duplicateIds) $
-          throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
-        createDocumentEntry
-    else createDocumentEntry
+  res <-
+    if documentType == Common.TDSCertificate
+      then do
+        -- Redis lock to prevent TOCTOU race on duplicate invoice check + create
+        let lockKey = "tds-dedup-lock:" <> driverPersonId.getId
+        Redis.withLockRedisAndReturnValue lockKey 10 $ do
+          -- Check for duplicate invoiceIds across existing TDS documents for this driver
+          tdsData' <- parseTDSCertificateData documentData
+          let newInvoiceIds' = map (.invoiceId) tdsData'.tdsCertificates
+          existingDocs <- QCommonDriverOnboardingDocuments.findByDriverIdAndDocumentType (Just driverPersonId) DVC.TDSCertificate
+          let activeDocs = filter (\d -> d.verificationStatus /= Documents.INVALID) existingDocs
+          let existingInvoiceIds = Kernel.Prelude.concatMap (extractInvoiceIds . (.documentData)) activeDocs
+              duplicateIds = filter (`elem` existingInvoiceIds) newInvoiceIds'
+          unless (Kernel.Prelude.null duplicateIds) $
+            throwError $ InvalidRequest $ "Duplicate TDS invoiceIds already submitted: " <> T.intercalate ", " duplicateIds
+          createDocumentEntry
+      else createDocumentEntry
+  person <- QPerson.findById driverPersonId
+  runStatusEventSafely
+    "refreshDocsStatus:postDriverRegistrationDocumentsCommon"
+    person
+    Nothing
+    (SStatus.PersonDocChangedEvent driverPersonId)
+  pure res
 
 postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
@@ -909,8 +918,15 @@ castVehicleDocItem vd =
       documents = castDocStatusItem <$> vd.documents,
       dateOfUpload = vd.dateOfUpload,
       s3Path = vd.s3Path,
-      expiryDate = vd.documentExpiry
+      expiryDate = vd.documentExpiry,
+      docsVerificationStatus = castMgmtDocsVerificationStatus <$> vd.docsVerificationStatus
     }
+
+castMgmtDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
+castMgmtDocsVerificationStatus = \case
+  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
+  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
+  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 castMgmtResponseStatus :: SStatus.ResponseStatus -> Common.VerificationStatus
 castMgmtResponseStatus = \case
@@ -930,7 +946,17 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
   transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRc <- QRC.findByImageId imageId
-  case mbRc of
+  -- Fallback for re-upload-after-reject: the VRC row's documentImageId still
+  -- points at the prior (rejected) image, so findByImageId misses it. Look up
+  -- by certificate-number hash to recover the existing row and re-point it.
+  mbRcResolved <- case mbRc of
+    Just _ -> pure mbRc
+    Nothing -> case req.vehicleNumberPlate of
+      Just plate -> do
+        enc <- encrypt plate
+        QRC.findByCertificateNumberHash (enc & hash)
+      Nothing -> pure Nothing
+  case mbRcResolved of
     Just rc -> do
       certificateNumber <- mapM encrypt req.vehicleNumberPlate
       -- Check for duplicate vehicle number plate if being changed
@@ -941,8 +967,10 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
             throwError (InvalidRequest "RC with this vehicle number plate already exists")
       let udpatedRC =
             rc
-              { DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
+              { DRC.documentImageId = imageId,
+                DRC.vehicleVariant = req.vehicleVariant <|> rc.vehicleVariant,
                 DRC.verificationStatus = VALID,
+                DRC.rejectReason = Nothing,
                 DRC.certificateNumber = fromMaybe rc.certificateNumber certificateNumber,
                 DRC.vehicleManufacturer = req.vehicleManufacturer <|> rc.vehicleManufacturer,
                 DRC.vehicleModel = req.vehicleModel <|> rc.vehicleModel,
@@ -1315,7 +1343,15 @@ approveAndUpdateDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Common.
 approveAndUpdateDL merchantId merchantOpCityId req = do
   let imageId = Id req.documentImageId.getId
   mbDl <- QDL.findByImageId imageId
-  case mbDl of
+  -- Fallback for re-upload-after-reject: the DL row's documentImageId1 still
+  -- points at the prior (rejected) image, so findByImageId misses it. Look up
+  -- by DL number to recover the existing row and re-point it at the new image.
+  mbDlResolved <- case mbDl of
+    Just _ -> pure mbDl
+    Nothing -> case req.driverLicenseNumber of
+      Just dlNum -> QDL.findByDLNumber dlNum
+      Nothing -> pure Nothing
+  case mbDlResolved of
     Just dl -> do
       licenseNumber <- mapM encrypt req.driverLicenseNumber
       -- Check for duplicate DL number if being changed
@@ -1326,13 +1362,16 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
             throwError DLAlreadyLinked
       let updatedDL =
             dl
-              { DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
+              { DDL.documentImageId1 = imageId,
+                DDL.licenseNumber = fromMaybe dl.licenseNumber licenseNumber,
                 DDL.driverDob = req.driverDateOfBirth <|> dl.driverDob,
                 DDL.licenseExpiry = fromMaybe dl.licenseExpiry req.dateOfExpiry,
-                DDL.verificationStatus = VALID
+                DDL.verificationStatus = VALID,
+                DDL.rejectReason = Nothing
               }
       QDL.updateByPrimaryKey updatedDL
       void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (flip (QImage.updateVerificationStatusByIdAndType VALID) DVC.DriverLicense)) (Just dl.documentImageId1, dl.documentImageId2)
+      QImage.updateVerificationStatusByIdAndType VALID imageId DVC.DriverLicense
       -- Create reminders for DL when it's updated
       createReminder
         DVC.DriverLicense
@@ -1867,7 +1906,19 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           QDL.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
           void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (Just dl.documentImageId1, dl.documentImageId2)
         DVC.VehicleRegistrationCertificate -> do
-          QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason imageId
+          -- Fallback for re-upload-after-reject: the VRC row's documentImageId may
+          -- still point at a prior image, so updating WHERE document_image_id = imageId
+          -- would no-op. Resolve the RC via image.rc_id and key the update on the
+          -- RC's currently-stored documentImageId so it always finds the row.
+          mbRc <- QRC.findByImageId imageId
+          rejectKeyImageId <- case mbRc of
+            Just _ -> pure imageId
+            Nothing -> case image.rcId of
+              Just rcIdRaw -> do
+                mbRcByRcId <- QRC.findById (Id rcIdRaw)
+                pure $ maybe imageId (.documentImageId) mbRcByRcId
+              Nothing -> pure imageId
+          QRC.updateVerificationStatusAndRejectReason INVALID imageRejectReq.reason rejectKeyImageId
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         DVC.VehiclePermit -> do
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId

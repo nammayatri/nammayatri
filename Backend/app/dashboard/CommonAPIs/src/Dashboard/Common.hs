@@ -127,6 +127,10 @@ data VerificationStatus = PENDING | VALID | INVALID | MANUAL_VERIFICATION_REQUIR
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 
+data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 -- Allow parsing lists of driver IDs from query params (JSON-encoded list),
 -- similar to existing list instances for booking statuses, service tiers, etc.
 instance FromHttpApiData [Id.Id Driver] where
@@ -333,6 +337,8 @@ data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO | 
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ServiceNames)
+
+$(mkHttpInstancesForEnum ''DocsVerificationStatus)
 
 data WaiveOffMode = WITH_OFFER | WITHOUT_OFFER | NO_WAIVE_OFF
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)

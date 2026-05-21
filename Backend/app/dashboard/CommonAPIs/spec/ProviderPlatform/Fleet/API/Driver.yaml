@@ -6,6 +6,7 @@ imports:
   VehicleCategory: Dashboard.Common
   VehicleVariant: Dashboard.Common
   VerificationStatus: Dashboard.Common
+  DocsVerificationStatus: Dashboard.Common
   Currency: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
   HighPrecMoney: Kernel.Types.Common
@@ -1921,9 +1922,6 @@ types:
     - fleetOwnerId: Text
     - listItem: [DriveVehicleAssociationListItemT]
     - summary: DriverSummary
-  DocsVerificationStatus:
-    - enum: "ADMIN_PENDING, ADMIN_APPROVED, ADMIN_REJECTED"
-    - derive: "HttpInstance"
   RCStatusReq:
     - rcNo: Text
     - isActivate: Bool

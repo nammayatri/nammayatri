@@ -421,68 +421,68 @@ in
               };
             };
 
-          # Processes from other repos in nammayatri GitHub org
-          beckn-gateway = {
-            imports = [ common ];
-            command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-          };
-          mock-registry = {
-            imports = [ common ];
-            command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            depends_on."nammayatri-init".condition = "process_completed_successfully";
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8020;
-                path = "/";
+            # Processes from other repos in nammayatri GitHub org
+            beckn-gateway = {
+              imports = [ common ];
+              command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+            };
+            mock-registry = {
+              imports = [ common ];
+              command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+              depends_on."nammayatri-init".condition = "process_completed_successfully";
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8020;
+                  path = "/";
+                };
+              };
+              # Mirrors readiness_probe → if /:8020 stays unhealthy past the
+              # failure_threshold window, process-compose kills the proc and
+              # availability.restart brings it back. (Readiness alone never
+              # triggers a restart in process-compose.)
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = 8020;
+                  path = "/";
+                };
+                initial_delay_seconds = 30;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
               };
             };
-            # Mirrors readiness_probe → if /:8020 stays unhealthy past the
-            # failure_threshold window, process-compose kills the proc and
-            # availability.restart brings it back. (Readiness alone never
-            # triggers a restart in process-compose.)
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = 8020;
-                path = "/";
+            location-tracking-service = {
+              imports = [ common ];
+              command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+              environment = {
+                BYPASS_LTS_S3_AND_GCP = "true";
               };
-              initial_delay_seconds = 30;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
+            notification-service = {
+              imports = [ common ];
+              command = ny.inputs.notification-service.packages.${pkgs.system}.default;
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
             };
-          };
-          location-tracking-service = {
-            imports = [ common ];
-            command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
-            environment = {
-              BYPASS_LTS_S3_AND_GCP = "true";
+            osrm-server = {
+              imports = [ common ];
+              command = self'.packages.osrm-server;
             };
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
-          notification-service = {
-            imports = [ common ];
-            command = ny.inputs.notification-service.packages.${pkgs.system}.default;
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
-          osrm-server = {
-            imports = [ common ];
-            command = self'.packages.osrm-server;
-          };
 
             kafka-consumers-exe = {
               environment = {

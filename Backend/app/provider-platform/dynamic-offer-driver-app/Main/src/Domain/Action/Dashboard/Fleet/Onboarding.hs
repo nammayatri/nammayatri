@@ -20,6 +20,7 @@ import qualified Domain.Action.UI.DriverOnboarding.PanVerification as DPV
 import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboarding.UdyamVerification as UDYAM
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
@@ -129,8 +130,9 @@ getOnboardingRegisterStatus ::
   Maybe DVC.VehicleCategory ->
   Maybe Bool ->
   Maybe Bool ->
+  Maybe Dashboard.Common.DocsVerificationStatus ->
   Environment.Flow CommonOnboarding.StatusRes
-getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs = do
+getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeSelfieAadhaarPanMandatory onboardingVehicleCategory prefillData onlyMandatoryDocs mbDocsVerificationStatusFilter = do
   let personId = fromMaybe fleetOwnerId ((.getId) <$> mbPersonId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -143,7 +145,8 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
-  castStatusRes <$> SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  res <- castStatusRes <$> SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
+  pure $ applyVehicleDocsFilter mbDocsVerificationStatusFilter res
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
@@ -206,8 +209,20 @@ castVehicleDocumentItem SStatus.VehicleDocumentItem {..} =
   CommonOnboarding.VehicleDocumentItem
     { documents = castDocumentStatusItem <$> documents,
       expiryDate = documentExpiry,
+      docsVerificationStatus = castDocsVerificationStatus <$> docsVerificationStatus,
       ..
     }
+
+castDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
+castDocsVerificationStatus = \case
+  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
+  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
+  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
+
+applyVehicleDocsFilter :: Maybe Dashboard.Common.DocsVerificationStatus -> CommonOnboarding.StatusRes -> CommonOnboarding.StatusRes
+applyVehicleDocsFilter Nothing res = res
+applyVehicleDocsFilter (Just target) res =
+  res {CommonOnboarding.vehicleDocuments = filter (\v -> CommonOnboarding.docsVerificationStatus v == Just target) (CommonOnboarding.vehicleDocuments res)}
 
 castResponseStatus :: SStatus.ResponseStatus -> CommonOnboarding.ResponseStatus
 castResponseStatus = \case

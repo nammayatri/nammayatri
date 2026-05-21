@@ -99,7 +99,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
-import qualified Lib.Types.SpecialLocation as SL
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
@@ -117,6 +116,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP

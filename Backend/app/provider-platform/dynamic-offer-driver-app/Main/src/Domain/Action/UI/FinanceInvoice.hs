@@ -12,18 +12,18 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Types (Language (ENGLISH))
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
-import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
