@@ -16,6 +16,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Payment.Interface.Types
+import qualified Kernel.External.Payment.Stripe.Types
 import qualified Kernel.External.Verification.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -185,6 +186,20 @@ data FarePolicyHour
   | NonPeak
   | Night
   deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetInfo = FleetInfo
+  { address :: Kernel.Prelude.Maybe Kernel.External.Payment.Stripe.Types.Address,
+    chargesEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    createdAt :: Kernel.Prelude.UTCTime,
+    fleetName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    id :: Kernel.Prelude.Text,
+    ownerName :: Kernel.Prelude.Text,
+    phoneNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    responseReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 newtype FleetRCListRes = FleetRCListRes {rcs :: [Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate.LinkedRC]}

@@ -25,8 +25,9 @@ getSpecialLocationList (_, _, merchantOperatingCityId) isOrigin mbIfNoneMatch = 
   let mocId = merchantOperatingCityId.getId
   mbCachedETag <- getFullSpecialLocationHash mocId
   case (mbIfNoneMatch, mbCachedETag) of
-    (Just clientETag, Just cachedETag) | clientETag == cachedETag ->
-      throwError SpecialLocationNotModified
+    (Just clientETag, Just cachedETag)
+      | clientETag == cachedETag ->
+        throwError SpecialLocationNotModified
     _ -> do
       specialLocationsWithAllGates <- notNullGateGeoJson <$> findFullSpecialLocationsByMerchantOperatingCityId mocId
       let isOrigin' = fromMaybe True isOrigin

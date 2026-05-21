@@ -76,9 +76,9 @@ data ApproveDetails
   | OdometerImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | LocalResidenceProofImg (Kernel.Types.Id.Id Dashboard.Common.Image)
   | PoliceVerificationCertificateImg (Kernel.Types.Id.Id Dashboard.Common.Image)
-  | GSTApprove GSTApproveDetails
   | UDYAMApprove UDYAMApproveDetails
   | LDCApprove LDCApproveDetails
+  | GSTApprove GSTApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -582,7 +582,8 @@ data VehicleDocumentItem = VehicleDocumentItem
     documents :: [DocumentStatusItem],
     dateOfUpload :: Kernel.Prelude.UTCTime,
     s3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

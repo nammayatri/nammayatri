@@ -140,6 +140,7 @@ data StatusRes = StatusRes
 
 data VehicleDocumentItem = VehicleDocumentItem
   { dateOfUpload :: Kernel.Prelude.UTCTime,
+    docsVerificationStatus :: Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus,
     documents :: [DocumentStatusItem],
     expiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     imageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -209,6 +210,9 @@ type GetOnboardingRegisterStatus =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "docsVerificationStatus"
+           Dashboard.Common.DocsVerificationStatus
       :> Get
            '[JSON]
            StatusRes
@@ -229,6 +233,9 @@ type GetOnboardingRegisterStatusHelper =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "docsVerificationStatus"
+           Dashboard.Common.DocsVerificationStatus
       :> Get
            '[JSON]
            StatusRes
@@ -259,7 +266,7 @@ type GetOnboardingGetReferralDetailsHelper =
 
 data OnboardingAPIs = OnboardingAPIs
   { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
-    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
+    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Dashboard.Common.DocsVerificationStatus -> EulerHS.Types.EulerClient StatusRes,
     postOnboardingVerify :: VerifyType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> VerifyReq -> EulerHS.Types.EulerClient VerifyDocumentRes,
     getOnboardingGetReferralDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes
   }

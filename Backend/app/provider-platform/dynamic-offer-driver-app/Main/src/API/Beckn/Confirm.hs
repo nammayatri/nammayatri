@@ -36,8 +36,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
-import Servant hiding (throwError)
 import qualified Lib.Types.SpecialLocation as SL
+import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.CallBAP as BP
 import qualified SharedLogic.FarePolicy as SFP

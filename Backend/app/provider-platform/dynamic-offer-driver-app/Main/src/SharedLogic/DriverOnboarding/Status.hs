@@ -169,7 +169,8 @@ data VehicleDocumentItem = VehicleDocumentItem
     dateOfUpload :: UTCTime,
     s3Path :: Maybe Text,
     imageId :: Maybe Text,
-    documentExpiry :: Maybe UTCTime
+    documentExpiry :: Maybe UTCTime,
+    docsVerificationStatus :: Maybe DDVS.DocsVerificationStatus
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -292,7 +293,7 @@ refreshVehicleDocsVerificationStatusForRC ::
   Id RC.VehicleRegistrationCertificate ->
   Flow ()
 refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
-  rc <- runInReplica $ RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id " <> rcId.getId)
+  rc <- RCQuery.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id " <> rcId.getId)
   merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
   transporterConfig <-
     maybe
@@ -513,7 +514,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           let vehicleCategory = fromMaybe DVC.CAR $ onboardingVehicleCategory <|> listToMaybe possibleVehicleCategories
               allDriverDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
           when allDriverDocsVerified $ do
-            driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+            driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let driverInspectionNotRequired = transporterConfig.requiresDriverOnboardingInspection /= Just True || driverInfo.approved == Just True
                 -- Allow first-time auto-enable even when dontAutoEnableDriver=true (enabledAt=Nothing means never enabled before)
                 autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
@@ -528,7 +529,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
         whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
           let allDriverDocsVerified = checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
           when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
-            driverInfo <- runInReplica $ DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+            driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
             when autoEnableAllowed $ do
               enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
@@ -910,7 +911,8 @@ fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationCon
           dateOfUpload,
           s3Path = rcS3Path,
           imageId = rcImageId,
-          documentExpiry = rcExpiry
+          documentExpiry = rcExpiry,
+          docsVerificationStatus = Just $ computeAdminDocsVerificationStatus documents
         }
 
 fetchProcessedVehicleDocumentsWithoutRC ::
@@ -952,7 +954,8 @@ fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerification
                   dateOfUpload = vehicle.createdAt,
                   s3Path = Nothing,
                   imageId = Nothing,
-                  documentExpiry = Nothing
+                  documentExpiry = Nothing,
+                  docsVerificationStatus = Nothing
                 }
             ]
     Nothing -> return []
@@ -1034,7 +1037,8 @@ fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs 
                           dateOfUpload = verificationReqRecord.createdAt,
                           s3Path = rcS3Path,
                           imageId = rcImageId,
-                          documentExpiry = Nothing
+                          documentExpiry = Nothing,
+                          docsVerificationStatus = Nothing
                         }
                     ]
     Nothing -> return []
@@ -1062,12 +1066,12 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
   if isFleetRole role
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
-      unless fleetOwnerInfo.enabled $ do
-        QFOI.updateFleetOwnerEnabledStatus True personId
+      unless (fleetOwnerInfo.enabled && fleetOwnerInfo.verified) $ do
+        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True, DFOI.verified = True}
         cascadeFleetEnableToDrivers personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-      unless driverInfo.enabled $ do
+      unless (driverInfo.enabled && driverInfo.verified) $ do
         SDO.enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId True
         whenJust driverName $ \name -> QPerson.updateName name personId
         sendEnablementSms merchantOpCityId personId transporterConfig merchantId
@@ -1136,7 +1140,7 @@ persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
 
   if isFleetRole person.role
     then do
-      fleetOwnerInfo <- runInReplica $ QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+      fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
       let newStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
           docSummary =
             T.intercalate
@@ -1155,7 +1159,7 @@ persistDocsVerificationStatuses person driverDocuments vehicleDocuments = do
         QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.docsVerificationStatus = newStatus}
       persistVehicleDocsVerificationStatuses person.id mandatoryVehicleDocuments "fleet"
     else do
-      driverInfo <- runInReplica $ DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
+      driverInfo <- DIQuery.findById (cast person.id) >>= fromMaybeM (PersonNotFound person.id.getId)
       let newDriverStatus = Just $ computeAdminDocsVerificationStatus mandatoryDriverDocuments
           driverDocSummary =
             T.intercalate
@@ -1607,7 +1611,7 @@ getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerific
     DVC.InspectionHub -> do
       mbRegistrationNo <- case mbRcImagesInfo of
         Just rcImagesInfo -> do
-          mbRc <- runInReplica $ RCQuery.findById rcImagesInfo.rcId
+          mbRc <- RCQuery.findById rcImagesInfo.rcId
           case mbRc of
             Just rc -> Just <$> decrypt rc.certificateNumber
             Nothing -> return Nothing

@@ -14,74 +14,77 @@ in
   config = {
     perSystem = { self', pkgs, lib, config, ... }:
       let
-        nammayatriBinaries = if localBuild
-          then pkgs.runCommand "nammayatri-local" {
-            nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
-            buildInputs =
-              config.haskellProjects.default.outputs.devShell.buildInputs
-              ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client ];
-            src = /. + localBinariesPath;
-          } ''
-            cp -r $src $out
-            chmod -R +w $out/bin
-            for exe in $out/bin/*; do
-              wrapProgram "$exe" \
-                --set LD_LIBRARY_PATH "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
-            done
-          ''
+        nammayatriBinaries =
+          if localBuild
+          then
+            pkgs.runCommand "nammayatri-local"
+              {
+                nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
+                buildInputs =
+                  config.haskellProjects.default.outputs.devShell.buildInputs
+                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client ];
+                src = /. + localBinariesPath;
+              } ''
+              cp -r $src $out
+              chmod -R +w $out/bin
+              for exe in $out/bin/*; do
+                wrapProgram "$exe" \
+                  --set LD_LIBRARY_PATH "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+              done
+            ''
           else self'.packages.nammayatri;
       in
       {
-      packages = lib.optionalAttrs pkgs.stdenv.isLinux {
-        dockerImage = (pkgs.dockerTools.buildImage {
-          name = imageName;
-          created = "now";
-          tag = imageTag;
-          copyToRoot = pkgs.buildEnv {
-            paths = with pkgs; [
-              cacert
-              awscli
-              coreutils
-              bash
-              nammayatriBinaries
-              gdal
-              postgis
-              curl
-              htop
-              wget
-              zbar
-              wkhtmltopdf-bin
-              openssh # For SFTP CLI support
-              sshpass # For password-based SFTP authentication
-            ];
-            name = "beckn-root";
-            pathsToLink = [
-              "/bin"
-              "/opt"
-            ];
-          };
-          config = {
-            Env = [
-              "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-              # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
-              "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-            ];
-            Cmd = [ "${nammayatriBinaries}/bin/rider-app-exe" ];
-          };
+        packages = lib.optionalAttrs pkgs.stdenv.isLinux {
+          dockerImage = (pkgs.dockerTools.buildImage {
+            name = imageName;
+            created = "now";
+            tag = imageTag;
+            copyToRoot = pkgs.buildEnv {
+              paths = with pkgs; [
+                cacert
+                awscli
+                coreutils
+                bash
+                nammayatriBinaries
+                gdal
+                postgis
+                curl
+                htop
+                wget
+                zbar
+                wkhtmltopdf-bin
+                openssh # For SFTP CLI support
+                sshpass # For password-based SFTP authentication
+              ];
+              name = "beckn-root";
+              pathsToLink = [
+                "/bin"
+                "/opt"
+              ];
+            };
+            config = {
+              Env = [
+                "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+                # Ref: https://hackage.haskell.org/package/x509-system-1.6.7/docs/src/System.X509.Unix.html#getSystemCertificateStore
+                "SYSTEM_CERTIFICATE_PATH=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
+              ];
+              Cmd = [ "${nammayatriBinaries}/bin/rider-app-exe" ];
+            };
 
-          # Test that the docker image contains contents we expected for
-          # production.
-          extraCommands = ''
-            # Executables are under /opt/app
-            ls opt/app/rider-app-exe
-            # Swagger configs are copied over
-            ls opt/app/swagger
-          '';
-        }).overrideAttrs (lib.addMetaAttrs {
-          description = "Docker image for nammayatri backend";
-          homepage = "https://github.com/nammayatri/nammayatri/pkgs/container/nammayatri";
-        });
+            # Test that the docker image contains contents we expected for
+            # production.
+            extraCommands = ''
+              # Executables are under /opt/app
+              ls opt/app/rider-app-exe
+              # Swagger configs are copied over
+              ls opt/app/swagger
+            '';
+          }).overrideAttrs (lib.addMetaAttrs {
+            description = "Docker image for nammayatri backend";
+            homepage = "https://github.com/nammayatri/nammayatri/pkgs/container/nammayatri";
+          });
+        };
       };
-    };
   };
 }
