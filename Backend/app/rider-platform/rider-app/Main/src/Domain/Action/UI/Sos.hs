@@ -588,9 +588,8 @@ callUpdateTicket :: Person.Person -> SafetyDSos.Sos -> Maybe Text -> Flow APISuc
 callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
-      let ticketStatus = sosStatusToTicketStatus sosDetails.status
       fork "update ticket request" $
-        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = ticketStatus, rideDescription = Nothing, issueDetails = Nothing}
+        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
 
