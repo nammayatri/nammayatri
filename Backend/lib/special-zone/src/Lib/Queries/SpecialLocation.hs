@@ -14,6 +14,10 @@
 
 module Lib.Queries.SpecialLocation where
 
+import qualified Crypto.Hash as Hash
+import Data.Aeson (encode)
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
@@ -132,6 +136,19 @@ buildSpecialLocationWithGates specialLocation = do
 
 fullSpecialLocationRedisKey :: Text -> Text
 fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
+
+fullSpecialLocationHashRedisKey :: Text -> Text
+fullSpecialLocationHashRedisKey city = "SpecialLocation:Full:Hash:" <> city
+
+computeSpecialLocationListETag :: [SpecialLocationFull] -> Text
+computeSpecialLocationListETag locs =
+  T.cons '"' (T.pack (show (Hash.hash @Hash.SHA256 (BS.toStrict (encode locs))))) `T.snoc` '"'
+
+getFullSpecialLocationHash :: (CacheFlow m r) => Text -> m (Maybe Text)
+getFullSpecialLocationHash mocId = Hedis.safeGet (fullSpecialLocationHashRedisKey mocId)
+
+setFullSpecialLocationHash :: (CacheFlow m r) => Text -> Text -> m ()
+setFullSpecialLocationHash mocId eTag = Hedis.set (fullSpecialLocationHashRedisKey mocId) eTag
 
 specialLocationWarriorRedisKey :: Text -> Text -> Text
 specialLocationWarriorRedisKey category mocId = "SpecialLocation:Warrior:" <> category <> ":" <> mocId
