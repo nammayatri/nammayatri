@@ -10,9 +10,12 @@ import EulerHS.Prelude hiding (id)
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.External.Types (Language (ENGLISH))
 import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Invoice.RenderTemplate as FRT
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
@@ -78,17 +81,12 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
   when (null invoices) $
     throwError $ InvalidRequest "No invoices found for the given criteria"
 
-  let locale = languageToLocale person.language
+  let lang = fromMaybe ENGLISH person.language
       tz = maybe DT.utc (\rc -> DT.minutesToTimeZone (fromIntegral rc.timeDiffFromUtc `div` 60)) mbRiderConfig
-      cfg =
-        InvoicePdfConfig
-          { locale,
-            timezone = tz,
-            logoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
-            -- AggregatedCommission isn't rendered for riders — these BPP-side fields aren't on RiderConfig.
-            sellerTradeName = Nothing,
-            appName = Nothing
-          }
+      tmplLogoUrl = mbRiderConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl
+      -- AggregatedCommission isn't rendered for riders — these BPP-side fields aren't on RiderConfig.
+      tmplSellerTradeName = Nothing :: Maybe Text
+      tmplAppName = Nothing :: Maybe Text
 
   -- Per-invoice isolation: parseLineItems throws on legacy/unmigrated rows;
   -- skip those individually so one bad row doesn't kill the whole list response.
@@ -117,8 +115,27 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
   -- match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      html = renderInvoiceHtml cfg chosenPdfData
-
+      ctx =
+        FRT.buildInvoiceContext
+          FRT.BuildInvoiceContextInput
+            { language = lang,
+              logoUrl = tmplLogoUrl,
+              sellerTradeName = tmplSellerTradeName,
+              appName = tmplAppName,
+              invoice = chosenInv,
+              lineItems = chosenPdfData.parsedLineItems,
+              mbTaxTxn = chosenPdfData.mbTaxTxn,
+              mbPaymentMode = chosenPdfData.mbPaymentMethodType,
+              mbCardBrand = chosenPdfData.mbCardBrand,
+              mbCardLastFour = chosenPdfData.mbCardLastFour,
+              mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
+              mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+            }
+      mbInvType = case chosenInv.invoiceType of
+        AggregatedCommission -> Just AggregatedCommission
+        _ -> Nothing
+  html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
   pdfBase64 <- generateFinanceInvoicePdf chosenInv.invoiceNumber html
 
   pure $

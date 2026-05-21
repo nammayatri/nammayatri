@@ -541,6 +541,7 @@ library
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.Pricing
       SharedLogic.Reminder.Helper
+      SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
@@ -628,6 +629,7 @@ library
       Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
       Storage.CachedQueries.GoHomeConfig
       Storage.CachedQueries.InterCityTravelCities
+      Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.KioskLocation
       Storage.CachedQueries.KioskLocationTranslation
       Storage.CachedQueries.LLMPrompt.LLMPrompt
