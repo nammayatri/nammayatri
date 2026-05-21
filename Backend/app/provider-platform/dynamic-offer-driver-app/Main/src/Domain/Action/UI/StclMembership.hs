@@ -23,7 +23,6 @@ import qualified Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payment.Interface.Types as PaymentTypes
 import qualified Kernel.External.Payment.Types as PaymentService
 import qualified Kernel.Prelude
-import Kernel.Prelude (showBaseUrl)
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common (Money (..), toHighPrecMoney)
@@ -134,7 +133,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
@@ -325,7 +324,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
-                  webhookUrl = Just $ showBaseUrl nwAddress,
+                  webhookUrl = Just nwAddress,
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,
@@ -374,7 +373,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   splitSettlementDetails = Nothing,
-                  webhookUrl = Just $ showBaseUrl nwAddress,
+                  webhookUrl = Just nwAddress,
                   basket = Nothing,
                   paymentRules = Nothing,
                   autoRefundPostSuccess = Nothing,

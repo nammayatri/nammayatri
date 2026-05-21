@@ -393,7 +393,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,  --- assigned in shared kernel
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,

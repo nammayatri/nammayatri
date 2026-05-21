@@ -162,7 +162,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
@@ -489,7 +489,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             paymentFilter = Nothing
           }
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId mocId paymentServiceName (Just driver.id.getId)

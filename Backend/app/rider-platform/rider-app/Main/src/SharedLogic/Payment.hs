@@ -845,7 +845,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 metadataExpiryInMins = Nothing,
                 basket = Nothing,
                 paymentRules = Nothing,
-                webhookUrl = Just $ showBaseUrl nwAddress,
+                webhookUrl = Just nwAddress,
                 offerId = req.offerId <&> (.getId),
                 discountAmount = Just req.discountAmount,
                 payoutAmount = Nothing,
