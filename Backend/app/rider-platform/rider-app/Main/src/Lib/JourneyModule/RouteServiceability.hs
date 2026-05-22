@@ -2,9 +2,12 @@ module Lib.JourneyModule.RouteServiceability where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Map.Strict as Map
+import Data.List (nub)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
+import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
@@ -17,7 +20,11 @@ import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
+import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Kernel.Storage.Hedis as Hedis
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 
@@ -34,6 +41,25 @@ buildRouteWithLiveVehicle ::
   Int ->
   Flow (Maybe API.Types.UI.MultimodalConfirm.RouteWithLiveVehicle)
 buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromStopCode toStopCode frfsTierMap mbSourceStopLatLong maxLiveVehicles = do
+  let vehicleNos = nub $ map (.vehicle_no) busScheduleDetails <> map (.vehicleNumber) routeInfo.buses
+  seatLayoutMappings <-
+    mapM
+      ( \vehicleNo ->
+          JMU.measureLatency
+            (CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached vehicleNo integratedBPPConfig.feedKey)
+            ("buildRouteWithLiveVehicle: findByVehicleNoAndGtfsIdCached vehicle=" <> vehicleNo)
+      )
+      vehicleNos
+  let seatLayoutMappingByVehicleNo = Map.fromList (zip vehicleNos seatLayoutMappings)
+      shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
+
+  when shouldRunSeatHoldReaper $ do
+    mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
+    let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
+    shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
+    when shouldRun $
+      fork "frfs-seat-hold-reaper" SeatHold.seatHoldReaperImpl
+
   route <-
     JMU.measureLatency
       ( OTPRest.getRouteByRouteId integratedBPPConfig routeInfo.routeId
@@ -43,10 +69,10 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       ("buildRouteWithLiveVehicle: getRouteByRouteId routeId=" <> routeInfo.routeId)
   schedulesFork <-
     awaitableFork "getBusScheduleInfo" $
-      getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap
+      getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
-      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles
+      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo
   schedules <-
     L.await Nothing schedulesFork >>= \case
       Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
@@ -77,7 +103,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               routeShortName = route.shortName
             }
   where
-    getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' = do
+    getBusScheduleInfo busScheduleDetails' integratedBPPConfig' routeId' fromStopCode' toStopCode' frfsTierMap' seatLayoutMappingByVehicleNo' = do
       -- Batch-fetch all live info in one Redis HMGET instead of N individual calls
       let vehicleNos = map (.vehicle_no) busScheduleDetails'
       liveInfoResults <-
@@ -110,11 +136,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                         waybill <- detail.waybill_no
                         tNum <- detail.trip_number
                         return $ waybill <> "-" <> show tNum
-                  mbSeatLayoutMapping <-
-                    JMU.measureLatency
-                      ( CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached detail.vehicle_no integratedBPPConfig.feedKey
-                      )
-                      ("getBusScheduleInfo: findByVehicleNoAndGtfsIdCached vehicle=" <> detail.vehicle_no)
+                  let mbSeatLayoutMapping = join (Map.lookup detail.vehicle_no seatLayoutMappingByVehicleNo')
                   let mbSeatLayoutId = (.seatLayoutId) <$> mbSeatLayoutMapping
                       seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                   (isAvailable, availableSeatsCount) <- case mbSeatLayoutId of
@@ -154,7 +176,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           )
           busScheduleDetails'
 
-    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount = do
+    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' = do
       allVehicles <-
         catMaybes
           <$> mapM
@@ -179,8 +201,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                               ("getLiveVehicles: enrichBusStopETA stopCode=" <> etaBus.stopCode)
                         )
                         (fromMaybe [] bus.busData.eta_data)
-                    mbSeatLayoutMapping <-
-                      CQVehicleSeatLayoutMapping.findByVehicleNoAndGtfsIdCached bus.vehicleNumber integratedBPPConfig'.feedKey
+                    let mbSeatLayoutMapping = join (Map.lookup bus.vehicleNumber seatLayoutMappingByVehicleNo')
                     let seatSelType = mbSeatLayoutMapping >>= (.seatSelectionType)
                     return . Just $
                       API.Types.UI.MultimodalConfirm.LiveVehicleInfo

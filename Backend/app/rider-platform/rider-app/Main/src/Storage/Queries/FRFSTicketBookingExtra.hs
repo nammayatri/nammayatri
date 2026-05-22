@@ -25,6 +25,8 @@ updateFRFSTicketBookingVehicleDataBySearchId ::
   Maybe Spec.ServiceTierType ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Text ->
   m ()
 updateFRFSTicketBookingVehicleDataBySearchId
@@ -36,6 +38,8 @@ updateFRFSTicketBookingVehicleDataBySearchId
   finalBoardedVehicleServiceTierType
   conductorId
   driverId
+  driverName
+  driverMobileNumber
   searchId = do
     now <- getCurrentTime
     updateOneWithKV
@@ -47,6 +51,8 @@ updateFRFSTicketBookingVehicleDataBySearchId
         Se.Set Beam.finalBoardedVehicleServiceTierType finalBoardedVehicleServiceTierType,
         Se.Set Beam.conductorId conductorId,
         Se.Set Beam.driverId driverId,
+        Se.Set Beam.driverName driverName,
+        Se.Set Beam.driverMobileNumber driverMobileNumber,
         Se.Set Beam.updatedAt now
       ]
       [Se.Is Beam.searchId $ Se.Eq searchId]
