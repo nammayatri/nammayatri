@@ -342,7 +342,8 @@ buildJuspayWebhookPayload
                           effectAmount,
                       offers = offers,
                       txn_detail = Nothing,
-                      loyalty_info = Nothing
+                      loyalty_info = Nothing,
+                      txn_list = Nothing
                     },
               mandate = Nothing,
               notification = Nothing,
@@ -432,7 +433,8 @@ buildJuspayOrderData order mTxn refunds offers = do
           fmap (realToFrac . getHighPrecMoney) orderEffectAmount,
         offers = Just $ map domainOfferToJuspay offers,
         txn_detail = Nothing,
-        loyalty_info = Nothing
+        loyalty_info = Nothing,
+        txn_list = Nothing
       }
   where
     totalRefundedAmount =
