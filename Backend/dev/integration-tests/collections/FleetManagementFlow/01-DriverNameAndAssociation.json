@@ -352,7 +352,7 @@
       }
     },
     {
-      "name": "10 - Update Name (Clear middleName and lastName)",
+      "name": "10 - Update Name (Null preserves existing middleName and lastName)",
       "event": [
         {
           "listen": "test",
@@ -384,7 +384,7 @@
       }
     },
     {
-      "name": "11 - Get Driver Association (Verify Name Fields Cleared)",
+      "name": "11 - Get Driver Association (Verify Null Preserves Fields)",
       "event": [
         {
           "listen": "test",
@@ -397,9 +397,9 @@
               "if (driver) {",
               "  pm.test('driverName is OnlyFirst', function () { pm.expect(driver.driverName).to.eql('OnlyFirst'); });",
               "  pm.test('firstName is OnlyFirst', function () { pm.expect(driver.firstName).to.eql('OnlyFirst'); });",
-              "  pm.test('middleName is null after clearing', function () { pm.expect(driver.middleName).to.be.null; });",
-              "  pm.test('lastName is null after clearing', function () { pm.expect(driver.lastName).to.be.null; });",
-              "  pm.test('conductorName is null after clearing', function () { pm.expect(driver.conductorName).to.be.null; });",
+              "  pm.test('middleName preserved as TestMiddle', function () { pm.expect(driver.middleName).to.eql('TestMiddle'); });",
+              "  pm.test('lastName preserved as TestLast', function () { pm.expect(driver.lastName).to.eql('TestLast'); });",
+              "  pm.test('conductorName preserved as TestLast', function () { pm.expect(driver.conductorName).to.eql('TestLast'); });",
               "}"
             ],
             "type": "text/javascript"
@@ -427,7 +427,7 @@
       }
     },
     {
-      "name": "12 - Update Name (Restore with middleName and lastName)",
+      "name": "12 - Update Name (Clear middleName via empty string, update lastName)",
       "event": [
         {
           "listen": "test",
@@ -449,7 +449,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"firstName\": \"Restored\", \"middleName\": \"Mid\", \"lastName\": \"Last\"}"
+          "raw": "{\"firstName\": \"Restored\", \"middleName\": \"\", \"lastName\": \"NewLast\"}"
         },
         "url": {
           "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/updateName",
@@ -459,7 +459,7 @@
       }
     },
     {
-      "name": "13 - Get Driver Association (Verify Name Restored)",
+      "name": "13 - Get Driver Association (Verify middleName Cleared, lastName Updated)",
       "event": [
         {
           "listen": "test",
@@ -470,9 +470,11 @@
               "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
               "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
               "if (driver) {",
+              "  pm.test('driverName is Restored', function () { pm.expect(driver.driverName).to.eql('Restored'); });",
               "  pm.test('firstName is Restored', function () { pm.expect(driver.firstName).to.eql('Restored'); });",
-              "  pm.test('middleName is Mid after restore', function () { pm.expect(driver.middleName).to.eql('Mid'); });",
-              "  pm.test('lastName is Last after restore', function () { pm.expect(driver.lastName).to.eql('Last'); });",
+              "  pm.test('middleName is null after clearing via empty string', function () { pm.expect(driver.middleName).to.be.null; });",
+              "  pm.test('lastName is NewLast', function () { pm.expect(driver.lastName).to.eql('NewLast'); });",
+              "  pm.test('conductorName is NewLast', function () { pm.expect(driver.conductorName).to.eql('NewLast'); });",
               "}"
             ],
             "type": "text/javascript"
