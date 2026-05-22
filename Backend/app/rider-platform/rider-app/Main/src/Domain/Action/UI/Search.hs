@@ -72,6 +72,7 @@ import Lib.SessionizerMetrics.Types.Event
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.PersonBlock
 import qualified SharedLogic.Referral as Referral
 import SharedLogic.Search
 import qualified SharedLogic.Search as SLS
@@ -654,11 +655,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           updateForSpecialLocation person.merchantId origin isSpecialLocation mbHotSpotConfig
 
     fraudCheck :: SearchRequestFlow m r => DPerson.Person -> DMOC.MerchantOperatingCity -> SearchRequest.SearchRequest -> m ()
-    fraudCheck person merchantOperatingCity searchRequest = do
-      merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
-      SMC.updateSearchFraudCounters person.id merchantConfigs
-      mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
-      whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)
+    fraudCheck person merchantOperatingCity searchRequest =
+      unless (SharedLogic.PersonBlock.isNoBlockUser person) $ do
+        merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+        SMC.updateSearchFraudCounters person.id merchantConfigs
+        mFraudDetected <- SMC.anyFraudDetected person.id merchantOperatingCity.id merchantConfigs (Just searchRequest)
+        whenJust mFraudDetected $ \mc -> SMC.blockCustomer person.id (Just mc.id)
 
 buildSearchRequest ::
   SearchRequestFlow m r =>

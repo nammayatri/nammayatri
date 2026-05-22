@@ -112,6 +112,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.OTP as SOTP
 import qualified SharedLogic.PassRestore as PassRestore
 import qualified SharedLogic.Person as SLP
+import qualified SharedLogic.PersonBlock
 import Storage.Beam.Sos ()
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -358,14 +359,15 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
   let merchantOperatingCityId = person.merchantOperatingCityId
   riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOperatingCityId.getId)
   merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
-  fork "Fraud Auth Check Processing" $ do
-    when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
-    whenJust mbClientIP $ \clientIP -> do
-      SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
-      (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
-      when isFraudDetected $ do
-        whenJust mbMerchantConfigId $ \mcId ->
-          SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
+  fork "Fraud Auth Check Processing" $
+    unless (SharedLogic.PersonBlock.isNoBlockUser person) $ do
+      when (fromMaybe False person.authBlocked || maybe False (now >) person.blockedUntil) $ Person.updatingAuthEnabledAndBlockedState person.id Nothing (Just False) Nothing
+      whenJust mbClientIP $ \clientIP -> do
+        SMC.updateCustomerAuthCountersByIP clientIP merchantConfigs
+        (isFraudDetected, mbMerchantConfigId) <- SMC.checkAuthFraudByIP merchantConfigs clientIP
+        when isFraudDetected $ do
+          whenJust mbMerchantConfigId $ \mcId ->
+            SMC.blockCustomerByIP clientIP (Just mcId) riderConfig.blockedUntilInMins
 
   checkSlidingWindowLimit (authHitsCountKey person)
   smsCfg <- asks (.smsCfg)

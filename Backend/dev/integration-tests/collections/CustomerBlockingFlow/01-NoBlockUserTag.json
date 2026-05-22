@@ -1,0 +1,408 @@
+{
+  "info": {
+    "name": "NY NO_BLOCK_USER Tag Flow",
+    "description": "Verifies the NO_BLOCK_USER whitelist tag end-to-end (storage-guard design):\n\n1. Fresh rider signs up (NAMMA_YATRI riders default to the Chennai operating city at signup)\n2. Add NO_BLOCK_USER tag while the rider is unblocked\n3. Dashboard block on the tagged rider returns 200 but is a silent no-op (the storage-level guard in PersonExtra refuses every block write for tagged riders)\n4. Re-auth confirms isPersonBlocked=false (the block did not take effect)\n5. Remove the tag\n6. Dashboard block on the now-untagged rider succeeds (baseline — guards against a vacuous pass)\n7. Re-auth confirms isPersonBlocked=true\n8. Cleanup: dashboard unblock restores the rider\n\nNote: the tag prevents future blocks; it does NOT auto-unblock a rider who was already blocked before tagging (per review feedback, blocking is gated at the write layer rather than reacted to on every read path).\n\nBlock-state is verified via the /auth response's isPersonBlocked flag (reads the person fresh through the KV-consistent auth path) rather than the dashboard customer-list, whose personId filter does not reliably surface a just-created rider.\n\nNote: the dashboard path city is Chennai because /auth assigns NAMMA_YATRI riders to Chennai by default. The dashboard token is the rider-app's server token (config: dashboardToken), not the dashboard-service login token.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    console.log('Test rider mobile:', rNum);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Got authId', function () { pm.expect(d.authId).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{rider_merchant_short_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.environment.set('rider_id', d.person.id);",
+              "console.log('Rider id:', d.person.id);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Got token', function () { pm.expect(d.token).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device-blocking\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add NO_BLOCK_USER Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Tag added', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"tag\": \"NO_BLOCK_USER\",\n    \"isAddingTag\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{rider_merchant_short_id}}/{{city}}/nammaTag/{{rider_id}}/updateCustomerTag",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{rider_merchant_short_id}}",
+            "{{city}}",
+            "nammaTag",
+            "{{rider_id}}",
+            "updateCustomerTag"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Dashboard Block (Tagged, Expect No-Op 200)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Block call returns 200 (storage guard makes it a silent no-op)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{rider_merchant_short_id}}/{{city}}/customer/{{rider_id}}/block",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{rider_merchant_short_id}}",
+            "{{city}}",
+            "customer",
+            "{{rider_id}}",
+            "block"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Tagged Rider NOT Blocked (re-auth)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('isPersonBlocked == false (storage guard refused the block for tagged rider)', function () { pm.expect(d.isPersonBlocked).to.equal(false); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{rider_merchant_short_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Remove NO_BLOCK_USER Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Tag removed', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"tag\": \"NO_BLOCK_USER\",\n    \"isAddingTag\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{rider_merchant_short_id}}/{{city}}/nammaTag/{{rider_id}}/updateCustomerTag",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{rider_merchant_short_id}}",
+            "{{city}}",
+            "nammaTag",
+            "{{rider_id}}",
+            "updateCustomerTag"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Dashboard Block (Untagged Baseline)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Block succeeds for untagged rider', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{rider_merchant_short_id}}/{{city}}/customer/{{rider_id}}/block",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{rider_merchant_short_id}}",
+            "{{city}}",
+            "customer",
+            "{{rider_id}}",
+            "block"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Untagged Rider IS Blocked (re-auth)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('isPersonBlocked == true', function () { pm.expect(d.isPersonBlocked).to.equal(true); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{rider_merchant_short_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Cleanup: Dashboard Unblock",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Unblock succeeds (restores rider)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{rider_merchant_short_id}}/{{city}}/customer/{{rider_id}}/unblock",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{rider_merchant_short_id}}",
+            "{{city}}",
+            "customer",
+            "{{rider_id}}",
+            "unblock"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

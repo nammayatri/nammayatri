@@ -29,6 +29,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified SharedLogic.JobScheduler as RJS
+import qualified SharedLogic.PersonBlock
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
@@ -175,7 +176,9 @@ nudgeOrBlockCustomer ::
   RC.RiderConfig ->
   DP.Person ->
   m ()
-nudgeOrBlockCustomer riderConfig customer = do
+nudgeOrBlockCustomer riderConfig customer
+  | SharedLogic.PersonBlock.isNoBlockUser customer = pure ()
+  | otherwise = do
   unless (riderConfig.enableCustomerCancellationRateBlocking == Just True) $ do
     logDebug $ "Customer cancellation rate blocking is disabled for city: " <> customer.merchantOperatingCityId.getId
     return ()

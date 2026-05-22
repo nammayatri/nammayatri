@@ -55,7 +55,7 @@ generateAadhaarOtp ::
   Flow AadhaarVerification.AadhaarVerificationResp
 generateAadhaarOtp isDashboard mbMerchant personId req = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  when person.blocked $ throwError (InternalError "Person Account is Blocked")
+  when (person.blocked) $ throwError (InternalError "Person Account is Blocked")
   when (person.aadhaarVerified) $ throwError AadhaarAlreadyVerified
   aadhaarHash <- getDbHash req.aadhaarNumber
   checkForDuplicacy aadhaarHash
