@@ -20,6 +20,9 @@ packages:
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy
+  app/rider-platform/public-transport-rider-platform/Main
+  app/rider-platform/public-transport-rider-platform/search-consumer
+  app/mocks/public-transport-provider-platform
   app/mocks/google
   app/utils/route-extractor
   app/utils/image-api-helper
