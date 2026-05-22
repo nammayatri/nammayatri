@@ -148,6 +148,7 @@
           example-service.custom = cacConfig;
           mock-fcm.custom = cacConfig;
           mock-google.custom = cacConfig;
+          mock-public-transport-provider-platform.custom = cacConfig;
           mock-rider-platform.custom = cacConfig;
           mock-sms.custom = cacConfig;
           mock-payment.custom = cacConfig;
