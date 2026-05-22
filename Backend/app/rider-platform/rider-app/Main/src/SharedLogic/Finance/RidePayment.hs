@@ -114,6 +114,7 @@ module SharedLogic.Finance.RidePayment
     markCashbackEntriesAsPaidOut,
     voidRidePaymentLedger,
     createTipLedger,
+    regenerateRideTipInvoice,
     createCancellationFeeLedger,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
@@ -135,10 +136,12 @@ module SharedLogic.Finance.RidePayment
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as Aeson
+import Data.Foldable.Extra (findM)
 import qualified Data.List as List
 import qualified Domain.Types.Booking as DRB
-import Domain.Types.Invoice (InvoiceType (..))
-import qualified Domain.Types.Invoice as InvType
+import Domain.Types.Invoice (InvoiceType (Ride, RideCancellation))
+import qualified Domain.Types.Invoice as DInvType
 import qualified Domain.Types.Person
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
@@ -731,7 +734,7 @@ buildRidePaymentInvoiceConfig ::
 buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount =
   InvoiceConfig
     { invoiceType = Ride,
-      issuedToType = InvType.RIDER,
+      issuedToType = DInvType.RIDER,
       issuedToId = ctx.counterpartyId,
       issuedToName = ctx.issuedToName,
       issuedToAddress = ctx.fromLocationAddress,
@@ -887,7 +890,7 @@ createCancellationFeeLedger ctx cancellationFee cancellationGST = do
     invoice
       InvoiceConfig
         { invoiceType = RideCancellation,
-          issuedToType = InvType.RIDER,
+          issuedToType = DInvType.RIDER,
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = ctx.fromLocationAddress,
@@ -948,7 +951,7 @@ createPendingCancellationFeeLedger ctx cancellationFee cancellationGST = do
     invoice
       InvoiceConfig
         { invoiceType = RideCancellation,
-          issuedToType = InvType.RIDER,
+          issuedToType = DInvType.RIDER,
           issuedToId = ctx.counterpartyId,
           issuedToName = Nothing,
           issuedToAddress = Nothing,
@@ -1083,3 +1086,107 @@ isRidePaymentSettled rideId = do
   rideEntries <- getEntriesByReference ridePaymentRefRideFare rideId
   let settledEntries = filter (\e -> e.status == LE.SETTLED) rideEntries
   pure $ not (null settledEntries)
+
+-- ---------------------------------------------------------------------------
+-- 6. Ride+Tip invoice regeneration (both tip cases)
+-- ---------------------------------------------------------------------------
+
+-- | Void the existing Ride invoice and mint a new RideTip invoice that
+--   includes all original line items plus a Tip line item.
+--   Called after chargePaymentIntent succeeds when tip was folded into the
+--   existing PI (paymentStatus was not Completed when tip was added).
+regenerateRideTipInvoice ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  HighPrecMoney -> -- tipAmount
+  m ()
+regenerateRideTipInvoice rideId tipAmount = do
+  rideEntries <- findRidePaymentEntries rideId
+  let rideFareEntries = List.filter (\e -> e.referenceType == ridePaymentRefRideFare) rideEntries
+  -- Find the RideFare entry linked to an active (Paid/Issued/Draft) invoice.
+  -- There may be stale entries from earlier recreate attempts linked to Voided invoices.
+  mbActiveEntry <- findM
+    ( \entry -> do
+        mbInv <- FInvoiceService.getInvoiceForEntry entry.id
+        pure $ case mbInv of
+          Nothing -> False
+          Just inv -> inv.status `elem` [FInvoice.Paid, FInvoice.Issued, FInvoice.Draft]
+    )
+    rideFareEntries
+  case mbActiveEntry of
+    Nothing -> logInfo $ "regenerateRideTipInvoice: no active RideFare invoice found for ride " <> rideId
+    Just entry -> do
+      mbInv <- FInvoiceService.getInvoiceForEntry entry.id
+      case mbInv of
+        Nothing -> logInfo $ "regenerateRideTipInvoice: no invoice linked to RideFare entry for ride " <> rideId
+        Just priorInv -> do
+          -- Step 1: collect all entries linked to the prior invoice
+          allEntries <- FInvoiceService.getEntriesForInvoice priorInv.id
+          -- Step 2: find tip entry IDs
+          tipEntries <- getEntriesByReference ridePaymentRefTip rideId
+          let priorEntryIds = map (.id) $ List.filter (\e -> e.referenceType /= ridePaymentRefTip) allEntries
+              tipEntryIds = map (.id) tipEntries
+          -- Step 3: parse existing line items, drop any prior Tip rows, append new one
+          let priorLineItems = case Aeson.fromJSON priorInv.lineItems of
+                Aeson.Success xs -> List.filter (\li -> li.descriptionType /= Just Tip) xs
+                Aeson.Error _ -> []
+              tipLineItem =
+                InvoiceLineItem
+                  { description = "Tip",
+                    descriptionType = Just Tip,
+                    quantity = 1,
+                    unitPrice = tipAmount,
+                    lineTotal = tipAmount,
+                    isExternalCharge = False,
+                    groupId = Nothing,
+                    itemType = Just Adjustment
+                  }
+              newLineItems = priorLineItems <> [tipLineItem]
+          -- Step 4: create the new invoice first — only void old one after success
+          createRes <- FInvoiceService.createInvoice
+            InvoiceInput
+              { invoiceType = priorInv.invoiceType,
+                paymentOrderId = priorInv.paymentOrderId,
+                issuedToType = priorInv.issuedToType,
+                issuedToId = priorInv.issuedToId,
+                issuedToName = priorInv.issuedToName,
+                issuedToAddress = priorInv.issuedToAddress,
+                issuedByType = priorInv.issuedByType,
+                issuedById = priorInv.issuedById,
+                issuedByName = priorInv.issuedByName,
+                issuedByAddress = priorInv.issuedByAddress,
+                supplierName = priorInv.supplierName,
+                supplierAddress = priorInv.supplierAddress,
+                supplierGSTIN = priorInv.supplierGSTIN,
+                supplierTaxNo = priorInv.supplierTaxNo,
+                supplierId = priorInv.supplierId,
+                merchantGstin = priorInv.merchantGstin,
+                referenceId = priorInv.referenceId,
+                gstinOfParty = Nothing,
+                panOfParty = Nothing,
+                panType = Nothing,
+                counterpartyId = priorInv.issuedToId,
+                tdsRateReason = Nothing,
+                tanOfDeductee = Nothing,
+                lineItems = newLineItems,
+                gstBreakdown = Nothing,
+                currency = priorInv.currency,
+                dueAt = priorInv.dueAt,
+                merchantId = priorInv.merchantId,
+                merchantOperatingCityId = priorInv.merchantOperatingCityId,
+                merchantShortId = priorInv.merchantId,
+                isVat = False,
+                issuedToTaxNo = Nothing,
+                issuedByTaxNo = Nothing,
+                paymentMode = priorInv.paymentMode,
+                periodStart = priorInv.periodStart,
+                periodEnd = priorInv.periodEnd
+              }
+            (priorEntryIds <> tipEntryIds)
+          case createRes of
+            Left err -> logError $ "regenerateRideTipInvoice: failed to create RideTip invoice for ride " <> rideId <> ": " <> show err
+            Right newInv -> do
+              -- Step 5: void old invoice only after new one is persisted
+              FInvoiceService.updateInvoiceStatus priorInv.id FInvoice.Voided
+              FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
+              logInfo $ "regenerateRideTipInvoice: created RideTip invoice " <> newInv.id.getId <> " (replacing " <> priorInv.id.getId <> ") for ride " <> rideId
