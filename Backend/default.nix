@@ -264,13 +264,15 @@
         ];
         shellHook = ''
           export DYLD_LIBRARY_PATH="${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
-          # macOS default stack limit (8 MB) is too small for linking rider-app-exe
+          # Default stack limit (8 MB) is too small for linking rider-app-exe
           # and dynamic-offer-driver-app-exe — ld recurses the symbol table and
           # segfaults. Bump soft stack to the hard max so the exe link succeeds
-          # reliably. Hard max varies by macOS version (~65520 KB typical), so
-          # read it dynamically instead of hardcoding.
+          # reliably. On macOS the hard max is ~65520 KB; on Linux it is
+          # "unlimited", in which case we set soft to unlimited too.
           _ny_hard_stack=$(ulimit -Hs 2>/dev/null)
-          if [ -n "$_ny_hard_stack" ] && [ "$_ny_hard_stack" != "unlimited" ]; then
+          if [ "$_ny_hard_stack" = "unlimited" ]; then
+            ulimit -s unlimited 2>/dev/null || true
+          elif [ -n "$_ny_hard_stack" ]; then
             ulimit -s "$_ny_hard_stack" 2>/dev/null || true
             ulimit -n "$_ny_hard_stack" 2>/dev/null || true
           fi
