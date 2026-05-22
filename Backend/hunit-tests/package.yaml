@@ -93,6 +93,7 @@ library:
     - AddVehicleUnitTests
     - DriverOperationHubUnitTests
     - CreateRequestUnitTests
+    - EmailOtpUnitTests
 
 executables:
   hunit-tests:

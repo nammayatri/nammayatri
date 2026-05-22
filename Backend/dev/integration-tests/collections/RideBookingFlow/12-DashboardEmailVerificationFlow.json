@@ -1,0 +1,552 @@
+{
+  "info": {
+    "name": "Dashboard Email Verification Flow",
+    "description": "Shared dashboard email verification: login -> send OTP -> verify OTP (any dashboard user), plus negative cases (invalid email, wrong OTP, wrong length OTP, expired/missing OTP, no auth)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random test values ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_dashboard_number')) {",
+          "    var fNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var fNum2 = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var emailPrefix = 'dashtest' + Math.floor(1000 + Math.random() * 8999);",
+          "    pm.collectionVariables.set('_test_dashboard_number', fNum);",
+          "    pm.collectionVariables.set('_test_dashboard_number2', fNum2);",
+          "    pm.collectionVariables.set('_test_dashboard_email', emailPrefix + '@nammayatri.in');",
+          "    console.log('Test user1:', fNum, 'user2:', fNum2, 'email:', emailPrefix + '@nammayatri.in');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Dashboard User Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var body = pm.response.text(); console.log('Login resp [' + pm.response.code + ']:', body.substring(0, 500));",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_dashboard_number}}\",\n  \"mobileCountryCode\": \"+91\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"],
+          "query": [{ "key": "enabled", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "Dashboard User Verify Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log('Verify response:', pm.response.code, pm.response.text());",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_test_user_auth_token', d.authToken);",
+              "console.log('User authToken:', d.authToken);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_dashboard_number}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP (Valid)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Send OTP response:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP (Valid)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Verify OTP response:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\",\n  \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP (Invalid Email - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (validation failure)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"not-an-email\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP (Empty Email - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (validation failure)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP Again (For Wrong OTP Test)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP (Wrong OTP - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (invalid OTP)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\",\n  \"otp\": \"0000\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP (Wrong Length - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (validation failure)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\",\n  \"otp\": \"123\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP (Non-Numeric OTP - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (validation failure)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\",\n  \"otp\": \"abcd\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP (No OTP Sent - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (OTP expired or not found)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"never-sent-otp@nammayatri.in\",\n  \"otp\": \"1234\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP Without Auth (Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400/401 (unauthorized)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Register Second User (Login OTP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_dashboard_number2}}\",\n  \"mobileCountryCode\": \"+91\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"],
+          "query": [{ "key": "enabled", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "Verify Second User Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.collectionVariables.set('_test_user2_auth_token', d.authToken);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_dashboard_number2}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "Send Email OTP for Second User (Same Email)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user2_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/sendOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "sendOtp"]
+        }
+      }
+    },
+    {
+      "name": "Verify Email OTP for Second User (Duplicate Email - Should Fail)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 (email already registered)', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+              "});",
+              "pm.test('Error message mentions email already registered', function () {",
+              "  var body = pm.response.text();",
+              "  pm.expect(body.toLowerCase()).to.include('already registered');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{_test_user2_auth_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{_test_dashboard_email}}\",\n  \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/email/verifyOtp",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "email", "verifyOtp"]
+        }
+      }
+    }
+  ]
+}

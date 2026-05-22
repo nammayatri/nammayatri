@@ -76,11 +76,13 @@ library
       API.Internal.ReportACIssue
       API.Internal.ReportIssue
       API.Internal.Ride
+      API.Internal.SendEmailOTP
       API.Internal.SendSMS
       API.Internal.SpecialLocationList
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.SyncSearch
+      API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Types.UI.TicketKapture
       API.UI
@@ -249,9 +251,11 @@ library
       Domain.Action.Internal.ReportACIssue
       Domain.Action.Internal.ReportIssue
       Domain.Action.Internal.Ride
+      Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
+      Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
       Domain.Action.UI.Cac
