@@ -62,6 +62,7 @@ searchServices ::
   Maybe Bool ->
   Maybe Bool ->
   Maybe [Spec.ServiceTierType] ->
+  Maybe Bool ->
   ClientM AppBESearch.SearchResp
 searchServices = client (Proxy :: Proxy AppBESearch.SearchAPI)
 
