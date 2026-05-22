@@ -181,6 +181,7 @@ getServiceName msc = case msc.serviceConfig of
     Payment.PaytmEDCConfig _ -> MembershipPaymentService Payment.PaytmEDC
   IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> IssueTicketService Ticket.Kapture
+    Ticket.ZendeskConfig _ -> IssueTicketService Ticket.Zendesk
   IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig _ -> IncidentReportService IncidentReport.ERSS
   TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of

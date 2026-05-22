@@ -99,6 +99,7 @@ getConfigJSON = \case
     Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
+    Ticket.ZendeskConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig cfg -> toJSON cfg
     Notification.PayTMConfig cfg -> toJSON cfg
@@ -182,6 +183,7 @@ getServiceName = \case
   Domain.MembershipPaymentServiceConfig paymentCfg -> Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
+    Ticket.ZendeskConfig _ -> Domain.IssueTicketService Ticket.Zendesk
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig _ -> Domain.NotificationService Notification.FCM
     Notification.PayTMConfig _ -> Domain.NotificationService Notification.PayTM
@@ -275,6 +277,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CautioPaymentService paymentServiceName -> Domain.CautioPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
+  Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON
