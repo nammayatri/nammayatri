@@ -41,13 +41,12 @@ if (window.JOS.self != "in.mobility.core") {
 
 const blackListFunctions = new Set(["getFromSharedPrefs", "getKeysInSharedPref", "setInSharedPrefs", "requestPendingLogs", "sessioniseLogs", "setKeysInSharedPrefs", "getLayoutBounds", "addToLogList"])
 
-if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){  
-  Object.getOwnPropertyNames(window.JBridge).filter((fnName) => {
-    return !blackListFunctions.has(fnName);
-  }).forEach(fnName => {
-      window.JBridgeProxy = window.JBridgeProxy || {};
-      window.JBridgeProxy[fnName] = window.JBridge[fnName];
-      window.JBridge[fnName] = function () {
+if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS") {
+  try {
+    const _jbridge = window.JBridge;
+
+    const loggedFn = function (fnName) {
+      return function () {
         let params = Object.values(arguments).join(", ");
         if (fnName === "callAPI") {
           params = arguments[1].split("/").splice(6).join("/");
@@ -57,18 +56,71 @@ if (window.JBridge.firebaseLogEventWithParams && window.__OS != "IOS"){
           shouldLog = window.decodeAppConfig.logFunctionCalls ? window.decodeAppConfig.logFunctionCalls : shouldLog;
         }
         if (shouldLog) {
-          window.JBridgeProxy.firebaseLogEventWithParams("ny_fn_" + fnName,"params",JSON.stringify(params));
+          _jbridge.firebaseLogEventWithParams("ny_fn_" + fnName, "params", JSON.stringify(params));
         }
-        try{
-        const result = window.JBridgeProxy[fnName](...arguments);
-        return result;
-        }
-        catch(e){
+        try {
+          return _jbridge[fnName](...arguments);
+        } catch (e) {
           console.error("Error in index.js " + e + " fnName " + fnName);
-          return;
         }
       };
-    });
+    };
+
+    function removeDuplicates(arr) {
+      return arr.filter((item, index) => arr.indexOf(item) === index);
+    }
+
+    if (typeof Proxy == "function") {
+      let keys;
+      window.JBridge = new Proxy({}, {
+        get(target, key) {
+          let fn = target[key];
+          if (fn) return fn;
+          const original = _jbridge[key];
+          if (typeof original === "undefined") return undefined;
+          fn = (typeof original !== "function" || blackListFunctions.has(key)) ? original : loggedFn(key);
+          target[key] = fn;
+          return fn;
+        },
+        has(target, key) {
+          return target.hasOwnProperty(key) || (_jbridge.hasOwnProperty(key) && typeof _jbridge[key] !== "undefined");
+        },
+        ownKeys(target) {
+          keys = keys || removeDuplicates(Object.keys(target).concat(Object.keys(_jbridge).filter(k => typeof _jbridge[k] !== "undefined")));
+          return keys;
+        },
+        defineProperty(target, key, descriptor) {
+          descriptor.writable = true;
+          descriptor.configurable = true;
+          Object.defineProperty(target, key, descriptor);
+          return true;
+        },
+        getOwnPropertyDescriptor(target, key) {
+          if (this.has(target, key)) {
+            return {
+              enumerable: true,
+              configurable: true,
+              writable: true
+            };
+          }
+        }
+      });
+    } else {
+      const jbridgeHolder = {};
+      for (const fnName in _jbridge) {
+        const original = _jbridge[fnName];
+        if (typeof original === "undefined") continue;
+        if (typeof original !== "function" || blackListFunctions.has(fnName)) {
+          jbridgeHolder[fnName] = original;
+          continue;
+        }
+        jbridgeHolder[fnName] = loggedFn(fnName);
+      }
+      window.JBridge = jbridgeHolder;
+    }
+  } catch (err) {
+    console.error("Error wrapping JBridge with Firebase logging proxy:", err);
+  }
 }
 
 function guid() {
