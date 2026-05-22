@@ -326,7 +326,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
-                  webhookUrl = Just $ showBaseUrl nwAddress,
+                  webhookUrl = Just nwAddress,
                   splitSettlementDetails,
                   basket = Nothing,
                   paymentRules = Nothing

@@ -883,7 +883,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = basket,
             paymentRules = Nothing
