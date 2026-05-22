@@ -18,3 +18,4 @@ ALTER TABLE atlas_app.finance_account ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.finance_account ADD COLUMN description text ;
+ALTER TABLE atlas_app.finance_account ADD COLUMN sub_ledger text ;

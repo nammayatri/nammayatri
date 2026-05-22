@@ -662,9 +662,15 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             referenceId = latestPurchase.id.getId
             isFleetOwner = DCommon.checkFleetOwnerRole person.role
             counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
-        -- Check if there are other ACTIVE purchases with expiry already set (deferred FIFO)
+            vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+            mbVehicleCategory =
+              if vehicleCategoryScopedPrepaidEnabled
+                then latestPurchase.vehicleCategory
+                else Nothing
+        -- Check if there are other ACTIVE purchases with expiry already set (deferred FIFO),
+        -- scoped to the same category when isolation is enabled.
         let ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
-        existingActive <- QSPE.findAllActiveByOwnerAndServiceName person.id.getId ownerType DP.PREPAID_SUBSCRIPTION
+        existingActive <- QSPE.findAllActiveByOwnerAndServiceName person.id.getId ownerType DP.PREPAID_SUBSCRIPTION mbVehicleCategory
         let hasActiveWithExpiry = any (\p -> isJust p.expiryDate) existingActive
             -- Only set expiry if no other active purchase has one (this is the first/only active plan)
             expiryDate =
@@ -742,6 +748,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
             Nothing
             (Just invoiceParams)
             mbPanCard
+            mbVehicleCategory
             >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
         let updatedPurchase =
               latestPurchase
@@ -801,6 +808,8 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           (Just $ show merchant.city)
           (Just $ show merchantOperatingCity.city)
           totalGst
+  let vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+      mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just driverFee.vehicleCategory else Nothing
   if DCommon.checkFleetOwnerRole person.role
     then do
       newBalance <-
@@ -818,6 +827,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           Nothing
           Nothing
           mbPanCard
+          mbVehicleCategory
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       pure (fst newBalance, Just person.id)
     else do
@@ -836,6 +846,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
           Nothing
           Nothing
           mbPanCard
+          mbVehicleCategory
           >>= fromEitherM (\err -> InternalError ("Failed to credit prepaid balance: " <> show err))
       logInfo $ "Prepaid recharge completed " <> show person.id.getId
       let prepaidRechargeMessage =
@@ -867,7 +878,7 @@ updatePaymentStatus driverId merchantOpCityId serviceName = do
     DP.PREPAID_SUBSCRIPTION -> do
       person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
       let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName
+      mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType serviceName Nothing
       pure $ ADPlan.mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?
   plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing (mbDriverPlan >>= (.vehicleCategory))

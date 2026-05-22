@@ -97,7 +97,8 @@ data NearestDriversReq = NearestDriversReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
-    paymentMode :: Maybe MP.PaymentMode
+    paymentMode :: Maybe MP.PaymentMode,
+    vehicleCategoryScopedPrepaidEnabled :: Bool
   }
 
 getNearestDrivers ::
@@ -288,7 +289,8 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
           (Just fare, Just threshold) ->
             filterM
               ( \r -> do
-                  mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyDriver r.driverId.getId
+                  let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
+                  mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyDriver r.driverId.getId mbVehicleCategory
                   pure $ maybe False (>= (fare + threshold)) mbBalance
               )
               results

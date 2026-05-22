@@ -6,6 +6,7 @@ import qualified Data.Set as Set
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
@@ -46,21 +47,24 @@ findActiveDistinctOwnersByOwnerIds ownerIds ownerType = do
           [Se.And [Se.Is Beam.ownerId $ Se.In ownerIds, Se.Is Beam.ownerType $ Se.Eq ownerType, Se.Is Beam.status $ Se.Eq ACTIVE]]
       pure $ Set.size $ Set.fromList $ map (.ownerId) subs
 
--- | Find all ACTIVE subscriptions for an owner, sorted by purchaseTimestamp ASC (FIFO order)
+-- | Find all ACTIVE subscriptions for an owner, sorted by purchaseTimestamp ASC (FIFO order).
+-- When mbVehicleCategory is Just, restricts results to that category only (wallet isolation).
 findAllActiveByOwnerAndServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Text ->
   SubscriptionOwnerType ->
   ServiceNames ->
+  Maybe DVC.VehicleCategory ->
   m [SubscriptionPurchase]
-findAllActiveByOwnerAndServiceName ownerId ownerType serviceName =
+findAllActiveByOwnerAndServiceName ownerId ownerType serviceName mbVehicleCategory =
   findAllWithOptionsKV
-    [ Se.And
+    [ Se.And $
         [ Se.Is Beam.ownerId $ Se.Eq ownerId,
           Se.Is Beam.ownerType $ Se.Eq ownerType,
           Se.Is Beam.status $ Se.Eq ACTIVE,
           Se.Is Beam.serviceName $ Se.Eq serviceName
         ]
+          <> [Se.Is Beam.vehicleCategory $ Se.Eq (Just vc) | Just vc <- [mbVehicleCategory]]
     ]
     (Se.Asc Beam.purchaseTimestamp)
     Nothing
@@ -74,10 +78,11 @@ findLatestActiveByOwnerAndServiceName ::
   Text ->
   SubscriptionOwnerType ->
   ServiceNames ->
+  Maybe DVC.VehicleCategory ->
   m (Maybe SubscriptionPurchase)
-findLatestActiveByOwnerAndServiceName handleExpiry ownerId ownerType serviceName = do
+findLatestActiveByOwnerAndServiceName handleExpiry ownerId ownerType serviceName mbVehicleCategory = do
   now <- getCurrentTime
-  allActive <- findAllActiveByOwnerAndServiceName ownerId ownerType serviceName
+  allActive <- findAllActiveByOwnerAndServiceName ownerId ownerType serviceName mbVehicleCategory
   -- Partition into expired and still-valid
   let (expired, valid) = partition (isExpired now) allActive
   -- Handle expired subscriptions (fallback for failed scheduler jobs)

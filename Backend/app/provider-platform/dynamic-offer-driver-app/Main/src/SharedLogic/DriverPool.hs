@@ -749,6 +749,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
             prepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold,
             fleetPrepaidSubscriptionThreshold = transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold,
+            vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled,
             minWalletAmountForCashRides = transporterConfig.driverWalletConfig.minWalletAmountForCashRides,
             paymentInstrument,
             rideFare,

@@ -41,6 +41,20 @@ findByCounterpartyAndType counterpartyType counterpartyId accountType currency =
         ]
     ]
 
+findByCounterpartyAndTypeAndSubLedger ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Finance.Domain.Types.Account.AccountType -> Kernel.Types.Common.Currency -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
+findByCounterpartyAndTypeAndSubLedger counterpartyType counterpartyId accountType currency subLedger = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.counterpartyType $ Se.Eq counterpartyType,
+          Se.Is Beam.counterpartyId $ Se.Eq counterpartyId,
+          Se.Is Beam.accountType $ Se.Eq accountType,
+          Se.Is Beam.currency $ Se.Eq currency,
+          Se.Is Beam.subLedger $ Se.Eq subLedger
+        ]
+    ]
+
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Account.Account -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -66,6 +80,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Account.Account {..}) = do
       Se.Set Beam.merchantId merchantId,
       Se.Set Beam.merchantOperatingCityId merchantOperatingCityId,
       Se.Set Beam.status status,
+      Se.Set Beam.subLedger subLedger,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -86,6 +101,7 @@ instance FromTType' Beam.Account Lib.Finance.Domain.Types.Account.Account where
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId,
             status = status,
+            subLedger = subLedger,
             updatedAt = updatedAt
           }
 
@@ -103,5 +119,6 @@ instance ToTType' Beam.Account Lib.Finance.Domain.Types.Account.Account where
         Beam.merchantId = merchantId,
         Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.status = status,
+        Beam.subLedger = subLedger,
         Beam.updatedAt = updatedAt
       }

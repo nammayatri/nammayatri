@@ -23,6 +23,7 @@ data AccountT f = AccountT
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     status :: (B.C f Lib.Finance.Domain.Types.Account.AccountStatus),
+    subLedger :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)

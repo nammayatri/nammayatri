@@ -44,7 +44,7 @@ expireSubscriptionPurchase Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> j
       handleSubscriptionExpiry purchase
       -- After expiry, activate the next queued purchase's expiry timer (deferred FIFO)
       when (purchase.status == DSP.ACTIVE) $ do
-        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType
+        mbActivated <- activateNextQueuedPurchaseExpiry purchase.ownerId purchase.ownerType purchase.vehicleCategory
         whenJust mbActivated $ \(nextPurchaseId, expiry) -> do
           now <- getCurrentTime
           let delay = diffUTCTime expiry now

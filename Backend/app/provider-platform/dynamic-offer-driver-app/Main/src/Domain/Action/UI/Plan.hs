@@ -398,7 +398,7 @@ instance Subscription ServiceNames where
       YATRI_SUBSCRIPTION -> getSubsriptionConfigAndPlanSubscription YATRI_SUBSCRIPTION (driverId, merchantId, opCity) mbDPlan
       YATRI_RENTAL -> getSubsriptionConfigAndPlanGeneric YATRI_RENTAL (driverId, merchantId, opCity) mbDPlan
       DASHCAM_RENTAL _ -> getSubsriptionConfigAndPlanGeneric serviceName (driverId, merchantId, opCity) mbDPlan
-      PREPAID_SUBSCRIPTION -> getSubsriptionConfigAndPlanGeneric PREPAID_SUBSCRIPTION (driverId, merchantId, opCity) mbDPlan
+      PREPAID_SUBSCRIPTION -> getSubsriptionConfigAndPlanPrepaid PREPAID_SUBSCRIPTION (driverId, merchantId, opCity) mbDPlan
 
 ---------------------------------------------------------------------------------------------------------
 --------------------------------------------- Controllers -----------------------------------------------
@@ -433,8 +433,16 @@ getSubcriptionStatusWithPlanPrepaid ::
   m (Maybe DI.DriverAutoPayStatus, Maybe DriverPlan)
 getSubcriptionStatusWithPlanPrepaid driverId = do
   person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
-  let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
+  let isFleetOwner = DCommon.checkFleetOwnerRole person.role
+      (ownerType, ownerId) = if isFleetOwner then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+  mbVehicleCategory <- if isolationEnabled
+    then do
+      subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId (show PREPAID_SUBSCRIPTION))
+      Just <$> getVehicleCategory (cast driverId) subscriptionConfig
+    else pure Nothing
+  mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
 updateSubscriptionStatusGeneric ::
@@ -500,6 +508,39 @@ getSubsriptionConfigAndPlanGeneric serviceName (personId, _, merchantOpCityId) m
   plans <- if subscriptionConfig.showManualPlansInUI == Just True then QPDE.findByMerchantOpCityIdAndServiceName merchantOpCityId serviceName (Just False) mbIsFleetOwnerPlan else QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False) mbIsFleetOwnerPlan
   return (subscriptionConfig, plans)
 
+
+filterPlansByFleetOwnerFlag :: Maybe Bool -> [Plan] -> [Plan]
+filterPlansByFleetOwnerFlag (Just True) = filter (\p -> p.isFleetOwnerPlan == Just True)
+filterPlansByFleetOwnerFlag _ = filter (\p -> p.isFleetOwnerPlan /= Just True)
+
+-- | Prepaid plan listing.
+-- When vehicleCategoryScopedPrepaidEnabled is True (e.g. Bharat Taxi), plans are filtered
+-- by the driver's registered vehicle category so a CAR driver only sees CAB plans.
+-- When False (e.g. MSIL pooled wallet), all plans are returned without category filter.
+getSubsriptionConfigAndPlanPrepaid ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  ServiceNames ->
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Maybe DriverPlan ->
+  m (SubscriptionConfig, [Plan])
+getSubsriptionConfigAndPlanPrepaid serviceName (personId, _, merchantOpCityId) mbDPlan = do
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  person <- QPerson.findById (cast personId) >>= fromMaybeM (InvalidRequest ("Person id " <> personId.getId <> " is not found"))
+  let mbIsFleetOwnerPlan = if DCommon.checkFleetOwnerRole person.role then Just True else Nothing
+      isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+  if isolationEnabled
+    then do
+      vehicleCategory <- getVehicleCategory (cast personId) subscriptionConfig
+      allPlans <- QPD.findByCityServiceAndVehicle merchantOpCityId serviceName vehicleCategory False
+      return (subscriptionConfig, filterPlansByFleetOwnerFlag mbIsFleetOwnerPlan allPlans)
+    else do
+      plans <-
+        if subscriptionConfig.showManualPlansInUI == Just True
+          then QPDE.findByMerchantOpCityIdAndServiceName merchantOpCityId serviceName (Just False) mbIsFleetOwnerPlan
+          else QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe MANUAL (.planType) mbDPlan) serviceName (Just False) mbIsFleetOwnerPlan
+      return (subscriptionConfig, plans)
+
 getSubsriptionConfigAndPlanSubscription ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   ServiceNames ->
@@ -532,13 +573,21 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
           DI.findById (cast personId)
             >>= fromMaybeM (PersonNotFound personId.getId)
         pure (driverInfo.autoPayStatus == Just DI.ACTIVE)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
   mDriverPlan <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
-      let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
-      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION
+      let isFleetOwner = DCommon.checkFleetOwnerRole person.role
+          (ownerType, ownerId) = if isFleetOwner then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+      -- When isolation is enabled, use getVehicleCategory so a driver with no vehicle record
+      mbVehicleCategory <- if isolationEnabled
+        then do
+          subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show PREPAID_SUBSCRIPTION))
+          Just <$> getVehicleCategory (cast personId) subscriptionConfig
+        else pure Nothing
+      mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   (_, plans) <- getSubscriptionConfigAndPlan serviceName (personId, merchantId, merchantOpCityId) mDriverPlan
   now <- getCurrentTime
   let mandateSetupDate = fromMaybe now ((.mandateSetupDate) =<< mDriverPlan)
@@ -573,10 +622,20 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   mandateDetailsEntity <- mkMandateDetailEntity (join (mDriverPlan <&> (.mandateId)))
   let isEligibleForCharge = mDriverPlan <&> (.enableServiceUsageCharge)
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
+  -- For PREPAID_SUBSCRIPTION, vehicle category scoping only applies when isolation is enabled
+  -- (Bharat Taxi). MSIL uses a pooled wallet so purchases must not be filtered by category.
+  prepaidIsolationEnabled <- case serviceName of
+    PREPAID_SUBSCRIPTION -> do
+      tc <- SCTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+      pure $ fromMaybe False tc.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+    _ -> pure False
   latestManualPaymentDate <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
       purchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.ACTIVE
-      pure $ listToMaybe (sortOn (Down . (.updatedAt)) purchases) <&> (.updatedAt)
+      let scopedPurchases = if prepaidIsolationEnabled
+            then maybe purchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) purchases) (mDriverPlan >>= (.vehicleCategory))
+            else purchases
+      pure $ listToMaybe (sortOn (Down . (.updatedAt)) scopedPurchases) <&> (.updatedAt)
     _ -> do
       latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
       pure $ latestManualPayment <&> (.updatedAt)
@@ -592,7 +651,10 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
     case serviceName of
       PREPAID_SUBSCRIPTION -> do
         pendingPurchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.PENDING
-        let mbPendingPurchase = listToMaybe $ sortOn (Down . (.purchaseTimestamp)) pendingPurchases
+        let scopedPending = if prepaidIsolationEnabled
+              then maybe pendingPurchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) pendingPurchases) (mDriverPlan >>= (.vehicleCategory))
+              else pendingPurchases
+            mbPendingPurchase = listToMaybe $ sortOn (Down . (.purchaseTimestamp)) scopedPending
         case mbPendingPurchase of
           Just purchase -> do
             mbOrder <- SOrder.findById (cast purchase.paymentOrderId)
@@ -1494,7 +1556,9 @@ minMaybe a b = a <|> b
 getVehicleCategory :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> SubscriptionConfig -> m DVC.VehicleCategory
 getVehicleCategory personId subscriptionConfig = do
   mVehicle <- QVehicle.findById personId
-  return $ fromMaybe subscriptionConfig.defaultCityVehicleCategory ((.category) =<< mVehicle)
+  return $ case mVehicle of
+    Nothing -> subscriptionConfig.defaultCityVehicleCategory
+    Just vehicle -> fromMaybe (Vehicle.castVehicleVariantToVehicleCategory vehicle.variant) vehicle.category
 
 isOnFreeTrial :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SP.Person -> SubscriptionConfig -> Int -> Maybe DriverPlan -> m (Bool, Maybe Int)
 isOnFreeTrial driverId subscriptionConfig freeTrialDaysLeft mbDriverPlan = do

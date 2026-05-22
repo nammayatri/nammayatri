@@ -46,6 +46,7 @@ createAccount input = do
           { id = Id accountId,
             counterpartyType = input.counterpartyType,
             counterpartyId = input.counterpartyId,
+            subLedger = input.subLedger,
             accountType = input.accountType,
             currency = input.currency,
             balance = 0, -- Accounts always start at 0
@@ -74,14 +75,24 @@ getOrCreateAccount ::
   AccountInput ->
   m (Either FinanceError Account)
 getOrCreateAccount input = do
-  let lockKey = "finance:getOrCreateAccount:" <> show input.counterpartyType <> ":" <> fromMaybe "" input.counterpartyId <> ":" <> show input.accountType <> ":" <> show input.currency
+  let lockKey =
+        "finance:getOrCreateAccount:"
+          <> show input.counterpartyType
+          <> ":"
+          <> fromMaybe "" input.counterpartyId
+          <> ":"
+          <> show input.accountType
+          <> ":"
+          <> show input.currency
+          <> maybe "" (":" <>) input.subLedger
   Redis.withWaitAndLockRedis lockKey 10 200 $ do
     mbExisting <-
-      QAccount.findByCounterpartyAndType
+      QAccount.findByCounterpartyAndTypeAndSubLedger
         input.counterpartyType
         input.counterpartyId
         input.accountType
         input.currency
+        input.subLedger
 
     case mbExisting of
       Just existing -> pure $ Right existing
@@ -130,5 +141,6 @@ findAccountByCounterpartyAndType ::
   Maybe Text -> -- Counterparty ID
   AccountType ->
   Currency ->
+  Maybe Text -> -- Sub-ledger
   m (Maybe Account)
-findAccountByCounterpartyAndType = QAccount.findByCounterpartyAndType
+findAccountByCounterpartyAndType = QAccount.findByCounterpartyAndTypeAndSubLedger

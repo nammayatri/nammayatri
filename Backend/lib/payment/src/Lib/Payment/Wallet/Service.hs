@@ -90,6 +90,7 @@ getOrCreateWalletForPerson personId programType programId currency merchantId mb
               { accountType = FAccount.Liability,
                 counterpartyType = Just programType,
                 counterpartyId = Just personId,
+                subLedger = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = fromMaybe "" mbMerchantOperatingCityId
