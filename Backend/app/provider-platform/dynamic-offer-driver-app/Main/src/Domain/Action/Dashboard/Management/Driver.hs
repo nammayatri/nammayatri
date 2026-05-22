@@ -68,7 +68,7 @@ module Domain.Action.Dashboard.Management.Driver
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
-
+import Control.Applicative ((<|>))
 import qualified "dashboard-helper-api" Dashboard.Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -671,10 +671,11 @@ postDriverUpdateName merchantShortId opCity reqDriverId req = do
 
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  -- empty string in request condsidered as Nothing in db, Nothing in request is not affect db value
   let updDriver =
         driver{firstName = req.firstName,
-               middleName = req.middleName,
-               lastName = req.lastName
+               middleName = if req.middleName == Just "" then Nothing else req.middleName <|> driver.middleName,
+               lastName = if req.lastName == Just "" then Nothing else req.lastName <|> driver.lastName
               }
 
   QPerson.updatePersonRec personId updDriver

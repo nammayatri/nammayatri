@@ -1918,13 +1918,13 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                 driverInfo <- getFleetDriverInfo fleetOwnerId latestAssoc.driverId False
                 return (driverInfo, Just latestAssoc.associatedOn)
               Nothing -> pure ((Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Just False, Just False, Nothing, Nothing, Nothing), Nothing) -------- when vehicle is unAssigned
-        (driverMobileCountryCodeValue, driverEmailValue) <- case driverId of
+        (driverMobileCountryCodeValue, driverEmailValue, firstName, lastName) <- case driverId of
           Just driverIdText -> do
             let mbDriver = Map.lookup (Id @DP.Person driverIdText) personMap
             case mbDriver of
-              Just driverPerson -> pure (driverPerson.mobileCountryCode, driverPerson.email)
-              Nothing -> pure (Nothing, Nothing)
-          Nothing -> pure (Nothing, Nothing)
+              Just driverPerson -> pure (driverPerson.mobileCountryCode, driverPerson.email, Just driverPerson.firstName, driverPerson.lastName)
+              Nothing -> pure (Nothing, Nothing, Nothing, Nothing)
+          Nothing -> pure (Nothing, Nothing, Nothing, Nothing)
         let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
         let isDriverActive = isJust driverName -- Check if there is a current active driver
         let isRcAssociated = isJust rcActiveAssociation
@@ -2003,9 +2003,9 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   enabled = enabled,
                   driverId = driverId,
                   driverName = driverName,
-                  firstName = driverName,
+                  firstName = firstName,
                   middleName = middleName,
-                  lastName = conductorName,
+                  lastName = lastName,
                   conductorName = conductorName,
                   driverPhoneNo = driverPhoneNo,
                   isRcAssociated = isRcAssociated,
