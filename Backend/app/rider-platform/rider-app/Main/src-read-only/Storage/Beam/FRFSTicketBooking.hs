@@ -11,6 +11,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.JourneyLeg
+import qualified Domain.Types.VehicleSeatLayoutMapping
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -37,6 +38,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     customerCancelled :: B.C f Kernel.Prelude.Bool,
     discountedTickets :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverMobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    driverName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     eventDiscountAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     failureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedDepotNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -83,6 +86,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     routeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeStationsJson :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchId :: B.C f Kernel.Prelude.Text,
+    seatSelectionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType),
     serviceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,

@@ -16,6 +16,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.VehicleSeatLayoutMapping
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -42,6 +43,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     customerCancelled :: Kernel.Prelude.Bool,
     discountedTickets :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     failureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -87,6 +90,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     routeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
+    seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     serviceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
@@ -104,8 +108,8 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
