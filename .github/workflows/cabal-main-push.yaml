@@ -80,14 +80,22 @@ jobs:
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-            cd Backend
-            cabal install all:exes -f+Local --installdir=$STAGING/bin --overwrite-policy=always
-          "
+          # cabal build all already compiled and linked the executables into
+          # dist-newstyle. Re-running cabal install triggers a shared-library
+          # link of shared-services that fails because the .so files for
+          # special-zone, scheduler, and location-updates are not produced by
+          # the static-library build above. Collect the already-linked
+          # executables directly; autoPatchelfHook in docker.nix fixes RPATHs.
+          find Backend/dist-newstyle/build -type f | while read -r f; do
+            fname=$(basename "$f")
+            parent=$(basename "$(dirname "$f")")
+            if [[ "$fname" == "$parent" ]] && [[ -x "$f" ]]; then
+              cp -f "$f" "$STAGING/bin/$fname"
+            fi
+          done
 
-          for f in $STAGING/bin/*; do
-            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
+          for f in "$STAGING/bin/"*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
           done
 
           cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
@@ -221,14 +229,16 @@ jobs:
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-            cd Backend
-            cabal install all:exes -f-Local --installdir=$STAGING/bin --overwrite-policy=always
-          "
+          find Backend/dist-newstyle/build -type f | while read -r f; do
+            fname=$(basename "$f")
+            parent=$(basename "$(dirname "$f")")
+            if [[ "$fname" == "$parent" ]] && [[ -x "$f" ]]; then
+              cp -f "$f" "$STAGING/bin/$fname"
+            fi
+          done
 
-          for f in $STAGING/bin/*; do
-            ln -sf "$f" "$STAGING/opt/app/$(basename $f)"
+          for f in "$STAGING/bin/"*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
           done
 
           cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
