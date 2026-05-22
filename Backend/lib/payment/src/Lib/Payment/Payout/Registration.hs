@@ -107,7 +107,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress
+            webhookUrl = Just nwAddress
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount
