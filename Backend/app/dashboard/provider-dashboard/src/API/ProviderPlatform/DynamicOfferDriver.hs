@@ -23,6 +23,7 @@ module API.ProviderPlatform.DynamicOfferDriver
 where
 
 import qualified API.Action.ProviderPlatform.AppManagement as AppManagementDSL
+import qualified API.Action.ProviderPlatform.Conductor as ConductorDSL
 import qualified API.Action.ProviderPlatform.Fleet as FleetDSL
 import qualified API.Action.ProviderPlatform.IssueManagement as IssueManagementDSL
 import qualified API.Action.ProviderPlatform.Management as ManagementDSL
@@ -61,6 +62,7 @@ type API' =
     :<|> IssueManagementDSL.API
     :<|> RideBookingDSL.API
     :<|> OperatorDSL.API
+    :<|> ConductorDSL.API
 
 -- TODO: Deprecated, Remove after successful deployment
 handler :: FlowServer API
@@ -72,6 +74,7 @@ handler merchantId = do
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> OperatorDSL.handler merchantId city
+    :<|> ConductorDSL.handler merchantId city
   where
     getCity = \case
       "NAMMA_YATRI_PARTNER" -> City.City "Bangalore"
@@ -87,6 +90,7 @@ handlerV2 merchantId city =
     :<|> IssueManagementDSL.handler merchantId city
     :<|> RideBookingDSL.handler merchantId city
     :<|> OperatorDSL.handler merchantId city
+    :<|> ConductorDSL.handler merchantId city
 
 handlerV3 :: FlowServer InternalAPI
 handlerV3 =

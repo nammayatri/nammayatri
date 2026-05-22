@@ -1,0 +1,56 @@
+imports: {}
+
+module: Registration
+apiPrefix: conductor
+
+apis:
+  - POST:
+      endpoint: /register
+      auth: ApiAuthV2
+      name: postConductorRegister
+      request:
+        type: ConductorRegisterReq
+      response:
+        type: ConductorRegisterResp
+
+  - POST:
+      endpoint: /bulkRegister
+      auth: ApiAuthV2
+      name: postConductorBulkRegister
+      request:
+        type: ConductorBulkRegisterReq
+      response:
+        type: ConductorBulkRegisterResp
+
+types:
+  ConductorRegisterReq:
+    - operatorBadgeToken: Text
+    - firstName: Text
+    - email: Text
+    - password: Text
+
+  ConductorRegisterTReq: # hide secrets — password omitted
+    - operatorBadgeToken: Text
+    - firstName: Text
+    - email: Text
+
+  ConductorRegisterResp:
+    - success: Bool
+    - operatorBadgeToken: Text
+
+  ConductorBulkRegisterReq:
+    - conductors: "[ConductorRegisterReq]"
+
+  ConductorBulkRegisterTReq: # hide secrets — conductors use TReq
+    - conductors: "[ConductorRegisterTReq]"
+
+  ConductorBulkRegisterResult:
+    - operatorBadgeToken: Text
+    - success: Bool
+    - errorMessage: Maybe Text
+
+  ConductorBulkRegisterResp:
+    - results: "[ConductorBulkRegisterResult]"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE

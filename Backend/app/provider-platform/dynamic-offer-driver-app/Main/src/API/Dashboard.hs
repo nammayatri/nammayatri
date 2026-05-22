@@ -15,6 +15,7 @@
 module API.Dashboard where
 
 import qualified API.Action.Dashboard.AppManagement as AppManagementDSL
+import qualified API.Action.Dashboard.Conductor as ConductorDSL
 import qualified API.Action.Dashboard.Fleet as FleetDSL
 import qualified API.Action.Dashboard.IssueManagement as IssueManagementDSL
 import qualified API.Action.Dashboard.Management as ManagementDSL
@@ -40,6 +41,7 @@ type API =
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
+           :<|> ConductorDSLAPI
        )
     :<|> Exotel.API
 
@@ -54,6 +56,7 @@ type APIV2 =
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
+           :<|> ConductorDSLAPI
        )
     :<|> Exotel.API
 
@@ -69,6 +72,8 @@ type FleetDSLAPI = DashboardTokenAuth :> FleetDSL.API
 
 type OperatorDSLAPI = DashboardTokenAuth :> OperatorDSL.API -- Add handler also Todo
 
+type ConductorDSLAPI = DashboardTokenAuth :> ConductorDSL.API
+
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
@@ -81,6 +86,7 @@ handler =
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
+        :<|> conductorDSLHandler merchantId city
   )
     :<|> Exotel.handler
   where
@@ -102,6 +108,7 @@ handlerV2 =
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
+        :<|> conductorDSLHandler merchantId city
   )
     :<|> Exotel.handler
 
@@ -122,3 +129,6 @@ fleetDSLHandler merchantId city _auth = FleetDSL.handler merchantId city
 
 operatorDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperatorDSLAPI
 operatorDSLHandler merchantId city _auth = OperatorDSL.handler merchantId city
+
+conductorDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer ConductorDSLAPI
+conductorDSLHandler merchantId city _auth = ConductorDSL.handler merchantId city

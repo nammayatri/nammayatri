@@ -34,6 +34,11 @@ type OperatorEmployeeLoginAPI =
     :> ReqBody '[JSON] GimsEmployeeLoginReq
     :> Post '[JSON] GimsEmployeeLoginResp
 
+type OperatorEmployeeRegisterAPI =
+  "internal" :> "fleet-operator" :> Capture "gtfs_id" Text :> "employee" :> "register"
+    :> ReqBody '[JSON] GimsEmployeeRegisterReq
+    :> Post '[JSON] GimsEmployeeRegisterResp
+
 type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
 
 type StopCodeAPI = "stop-code" :> Capture "gtfs_id" Text :> Capture "provider_stop_code" Text :> Get '[JSON] StopCodeResponse
@@ -67,6 +72,9 @@ operatorCurrentTripDetailsAPI = Proxy
 operatorEmployeeLoginAPI :: Proxy OperatorEmployeeLoginAPI
 operatorEmployeeLoginAPI = Proxy
 
+operatorEmployeeRegisterAPI :: Proxy OperatorEmployeeRegisterAPI
+operatorEmployeeRegisterAPI = Proxy
+
 stopChildrenAPI :: Proxy StopChildrenAPI
 stopChildrenAPI = Proxy
 
@@ -99,6 +107,9 @@ postOperatorCurrentTripDetails = ET.client operatorCurrentTripDetailsAPI
 
 postOperatorEmployeeLogin :: Text -> GimsEmployeeLoginReq -> ET.EulerClient GimsEmployeeLoginResp
 postOperatorEmployeeLogin = ET.client operatorEmployeeLoginAPI
+
+postOperatorEmployeeRegister :: Text -> GimsEmployeeRegisterReq -> ET.EulerClient GimsEmployeeRegisterResp
+postOperatorEmployeeRegister = ET.client operatorEmployeeRegisterAPI
 
 getNandiStopChildren :: Text -> Text -> ET.EulerClient [Text]
 getNandiStopChildren = ET.client stopChildrenAPI

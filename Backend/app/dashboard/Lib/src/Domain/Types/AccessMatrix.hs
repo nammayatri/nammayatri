@@ -21,6 +21,7 @@ import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement as
 import qualified "rider-app" API.Types.Dashboard.AppManagement as RiderAppManagement
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.RideBooking as ProviderRideBooking
 import qualified "rider-app" API.Types.Dashboard.RideBooking as RiderRideBooking
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Conductor as ProviderConductor
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet as ProviderFleet
 import qualified "shared-services" API.Types.ProviderPlatform.IssueManagement as ProviderIssueManagement
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management as ProviderManagement
@@ -55,6 +56,7 @@ newtype UserActionTypeWrapper = UserActionTypeWrapper {getUserActionType :: User
 
 instance Text.Show.Show UserActionTypeWrapper where
   show (UserActionTypeWrapper uat) = case uat of
+    PROVIDER_CONDUCTOR uat1 -> "PROVIDER_CONDUCTOR/" <> show uat1
     PROVIDER_FLEET uat1 -> "PROVIDER_FLEET/" <> show uat1
     PROVIDER_OPERATOR uat1 -> "PROVIDER_OPERATOR/" <> show uat1
     PROVIDER_MANAGEMENT uat1 -> "PROVIDER_MANAGEMENT/" <> show uat1
@@ -72,10 +74,14 @@ instance Text.Read.Read UserActionTypeWrapper where
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [ (UserActionTypeWrapper $ PROVIDER_FLEET v1, r2)
-            | r1 <- stripPrefix "PROVIDER_FLEET/" r,
+          [ (UserActionTypeWrapper $ PROVIDER_CONDUCTOR v1, r2)
+            | r1 <- stripPrefix "PROVIDER_CONDUCTOR/" r,
               (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
           ]
+            ++ [ (UserActionTypeWrapper $ PROVIDER_FLEET v1, r2)
+                 | r1 <- stripPrefix "PROVIDER_FLEET/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ (UserActionTypeWrapper $ PROVIDER_OPERATOR v1, r2)
                  | r1 <- stripPrefix "PROVIDER_OPERATOR/" r,
                    (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
@@ -399,6 +405,7 @@ data UserActionType
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
   | WHITELIST_MERCHANT_OPERATING_CITY
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
+  | PROVIDER_CONDUCTOR ProviderConductor.ConductorUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType
   | PROVIDER_APP_MANAGEMENT ProviderAppManagement.AppManagementUserActionType
