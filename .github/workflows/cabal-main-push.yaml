@@ -69,7 +69,7 @@ jobs:
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
-            cabal build all --enable-optimization=0 --ghc-options='-funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively' -f+Local 2>&1
+            cabal build all -f+Local 2>&1
           " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee master-build-log.txt
@@ -83,7 +83,7 @@ jobs:
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
             cd Backend
-            cabal install all:exes --enable-optimization=0 --ghc-options='-funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively' -f+Local --installdir=$STAGING/bin --overwrite-policy=always
+            cabal install all:exes -f+Local --installdir=$STAGING/bin --overwrite-policy=always
           "
 
           for f in $STAGING/bin/*; do
