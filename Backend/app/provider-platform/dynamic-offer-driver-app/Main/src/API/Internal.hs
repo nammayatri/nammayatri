@@ -33,12 +33,14 @@ import qualified API.Internal.QuoteRespond as QuoteRespond
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
+import qualified API.Internal.SendEmailOTP as SendEmailOTP
 import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
 import qualified API.Internal.TollList as TollList
 import qualified API.Internal.TollUpsert as TollUpsert
+import qualified API.Internal.VerifyEmailUpdate as VerifyEmailUpdate
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant
@@ -80,6 +82,8 @@ type API =
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
+           :<|> SendEmailOTP.API
+           :<|> VerifyEmailUpdate.API
            :<|> InMemManagement.API
            :<|> MasterCloudForward.API
        )
@@ -120,5 +124,7 @@ handler env =
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler
+    :<|> SendEmailOTP.handler
+    :<|> VerifyEmailUpdate.handler
     :<|> InMemManagement.handler
     :<|> MasterCloudForward.handler env
