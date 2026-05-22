@@ -36,6 +36,7 @@ import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
+import Domain.Types.VehicleVariant (castServiceTierToVehicleCategory)
 import Domain.Utils
 import Environment
 import Kernel.External.Encryption (decrypt)
@@ -104,10 +105,22 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, driver.id.getId)
-    mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+        vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+        mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
+    mbAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
+    -- if prepaid wallet isolation is enabled and there is no account, throw an error. It will prevent the ride from being created.
+    when (isPrepaidSubscriptionAndWalletEnabled && isNothing mbAccount) $ do
+      logError $
+        "Prepaid scoped RideCredit account missing at accept"
+          <> " | counterpartyType=" <> show counterpartyType
+          <> " | ownerId=" <> ownerId
+          <> " | vehicleCategory=" <> show mbVehicleCategory
+          <> " | bookingId=" <> booking.id.getId
+      throwError $
+        InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
     whenJust mbAccount $ \_ -> do
       Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
-        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId
+        mbAvailableBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
         let gstAmount = fromMaybe 0 booking.fareParams.govtCharges
             tollAmount = fromMaybe 0 booking.fareParams.tollCharges
             parkingAmount = fromMaybe 0 booking.fareParams.parkingCharge
@@ -127,6 +140,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
             booking.merchantOperatingCityId.getId
             booking.id.getId
             Nothing
+            mbVehicleCategory
             >>= fromEitherM (\err -> InternalError ("Failed to create prepaid hold: " <> show err))
         pure ()
   otpCode <-
@@ -216,12 +230,16 @@ releaseLien booking ride = do
     let (counterpartyType, ownerId) = case ride.fleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, ride.driverId.getId)
+    mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+    let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
+        mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
       voidPrepaidHold
         counterpartyType
         ownerId
         booking.id.getId
         "Ride cancelled"
+        mbVehicleCategory
   case result of
     Left (e :: SomeException) ->
       logTagError ("releaseLien failed for rideId " <> getId ride.id) (show e)

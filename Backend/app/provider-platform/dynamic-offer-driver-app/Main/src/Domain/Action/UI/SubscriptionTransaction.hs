@@ -27,6 +27,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.VehicleVariant as Vehicle
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -35,9 +36,12 @@ import Kernel.Utils.Common
 import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.Finance.Prepaid
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.BookingExtra as QBookingE
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
+import qualified Storage.Queries.Vehicle as QVehicle
+import Utils.Common.Cac.KeyNameConstants
 
 getSubscriptionTransactions ::
   (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -53,7 +57,7 @@ getSubscriptionTransactions ::
   Maybe EntryStatus ->
   Maybe UTCTime ->
   m SubscriptionTransactionResponse
-getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinAmount mbOffset mbStatus mbTo = do
+getSubscriptionTransactions (mbDriverId, _, merchantOperatingCityId) mbFrom mbLimit mbMaxAmount mbMinAmount mbOffset mbStatus mbTo = do
   driverId' <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   driver <- QP.findById driverId' >>= fromMaybeM (PersonNotFound driverId'.getId)
   now <- getCurrentTime
@@ -64,8 +68,16 @@ getSubscriptionTransactions (mbDriverId, _, _) mbFrom mbLimit mbMaxAmount mbMinA
       isFleetOwner = DCommon.checkFleetOwnerRole driver.role
       counterpartyType = if isFleetOwner then counterpartyFleetOwner else counterpartyDriver
       ownerType = if isFleetOwner then DSP.FLEET_OWNER else DSP.DRIVER
-  mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId
-  activeSubscriptions <- QSPE.findAllActiveByOwnerAndServiceName driverId'.getId ownerType DP.PREPAID_SUBSCRIPTION
+  tc <- SCTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId'))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  let isolationEnabled = fromMaybe False tc.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+  mbVehicleCategory <-
+    if isolationEnabled
+      then do
+        mVehicle <- QVehicle.findById (cast driverId')
+        pure $ fmap (\v -> fromMaybe (Vehicle.castVehicleVariantToVehicleCategory v.variant) v.category) mVehicle
+      else pure Nothing
+  mbAccount <- getPrepaidAccountByOwner counterpartyType driverId'.getId mbVehicleCategory
+  activeSubscriptions <- QSPE.findAllActiveByOwnerAndServiceName driverId'.getId ownerType DP.PREPAID_SUBSCRIPTION mbVehicleCategory
   let currentBalance = sum $ map (.planRideCredit) activeSubscriptions
   case mbAccount of
     Nothing -> pure (emptyResponse currentBalance)

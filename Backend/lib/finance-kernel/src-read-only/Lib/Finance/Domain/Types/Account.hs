@@ -21,6 +21,7 @@ data Account = Account
     merchantId :: Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Text,
     status :: Lib.Finance.Domain.Types.Account.AccountStatus,
+    subLedger :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)

@@ -9,6 +9,7 @@ module SharedLogic.Finance.Prepaid
     subscriptionRideReferenceType,
     expiryRevenueRecognitionReferenceType,
     expiryCreditTransferReferenceType,
+    prepaidSubLedger,
     getPrepaidAccountByOwner,
     getPrepaidBalanceByOwner,
     getPrepaidPendingHoldByOwner,
@@ -30,6 +31,7 @@ import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.Extra.Plan (ServiceNames (..))
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType)
 import qualified Domain.Types.SubscriptionPurchase as DSP
+import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.External.Encryption (EncFlow, decrypt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -93,31 +95,58 @@ expiryCreditTransferReferenceType = "ExpiryCreditTransfer"
 tdsReimbursementReferenceType :: Text
 tdsReimbursementReferenceType = "TDSReimbursement"
 
+encodePrepaidSubLedger :: DVC.VehicleCategory -> Text
+encodePrepaidSubLedger = \case
+  DVC.CAR -> "CAR"
+  DVC.MOTORCYCLE -> "MOTORCYCLE"
+  DVC.TRAIN -> "TRAIN"
+  DVC.BUS -> "BUS"
+  DVC.FLIGHT -> "FLIGHT"
+  DVC.AUTO_CATEGORY -> "AUTO_CATEGORY"
+  DVC.AMBULANCE -> "AMBULANCE"
+  DVC.TRUCK -> "TRUCK"
+  DVC.BOAT -> "BOAT"
+  DVC.TOTO -> "TOTO"
+
+-- | Convert an optional vehicle category to a sub-ledger key.
+-- When wallet isolation is enabled, each vehicle category has its own
+-- RideCredit account. Nothing produces the pooled (non-isolated) account.
+prepaidSubLedger :: Maybe DVC.VehicleCategory -> Maybe Text
+prepaidSubLedger = fmap encodePrepaidSubLedger
+
 getPrepaidAccountByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text -> -- Owner ID
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Maybe Account)
-getPrepaidAccountByOwner counterpartyType ownerId = do
+getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory = do
+  let subLedger = prepaidSubLedger mbVehicleCategory
   accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ find (\acc -> acc.accountType == RideCredit) accounts
+  pure $
+    case subLedger of
+      -- Pooled wallet (mbVehicleCategory = Nothing): one RideCredit row per owner today.
+      Nothing -> listToMaybe accounts
+      Just _ -> find (\acc -> acc.subLedger == subLedger) accounts
 
 getPrepaidBalanceByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text ->
+  Maybe DVC.VehicleCategory ->
   m (Maybe HighPrecMoney)
-getPrepaidBalanceByOwner counterpartyType ownerId = do
-  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId
+getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory = do
+  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
   pure $ mbAcc <&> (.balance)
 
 getPrepaidPendingHoldByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text ->
+  Maybe DVC.VehicleCategory ->
   m HighPrecMoney
-getPrepaidPendingHoldByOwner counterpartyType ownerId = do
-  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId
+getPrepaidPendingHoldByOwner counterpartyType ownerId mbVehicleCategory = do
+  mbAcc <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
   case mbAcc of
     Nothing -> pure 0
     Just acc -> do
@@ -128,10 +157,11 @@ getPrepaidAvailableBalanceByOwner ::
   (BeamFlow m r) =>
   CounterpartyType ->
   Text ->
+  Maybe DVC.VehicleCategory ->
   m (Maybe HighPrecMoney)
-getPrepaidAvailableBalanceByOwner counterpartyType ownerId = do
-  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
-  pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId
+getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory = do
+  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
+  pendingHold <- getPrepaidPendingHoldByOwner counterpartyType ownerId mbVehicleCategory
   pure $ (\balance -> balance - pendingHold) <$> mbBalance
 
 getOrCreatePrepaidAccount ::
@@ -141,13 +171,15 @@ getOrCreatePrepaidAccount ::
   Currency ->
   Text -> -- Merchant ID
   Text -> -- Merchant operating city ID
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError Account)
-getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId = do
+getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory = do
   let input =
         AccountInput
           { accountType = RideCredit,
             counterpartyType = Just counterpartyType,
             counterpartyId = Just ownerId,
+            subLedger = prepaidSubLedger mbVehicleCategory,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -166,6 +198,7 @@ getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId = do
           { accountType = Asset,
             counterpartyType = Just SELLER,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -184,6 +217,7 @@ getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId = 
           { accountType = Liability,
             counterpartyType = Just SELLER,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -202,6 +236,7 @@ getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityI
           { accountType = Liability,
             counterpartyType = Just GOVERNMENT_INDIRECT,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -220,6 +255,7 @@ getOrCreateGovtDirectAssetAccount currency merchantId merchantOperatingCityId = 
           { accountType = Asset,
             counterpartyType = Just GOVERNMENT_DIRECT,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -238,6 +274,7 @@ getOrCreateGovtDirectExpenseAccount currency merchantId merchantOperatingCityId 
           { accountType = Expense,
             counterpartyType = Just GOVERNMENT_DIRECT,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -256,6 +293,7 @@ getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId =
           { accountType = RideCredit,
             counterpartyType = Just SELLER,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -274,6 +312,7 @@ getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId = do
           { accountType = Revenue,
             counterpartyType = Just SELLER,
             counterpartyId = Just merchantId,
+            subLedger = Nothing,
             currency = currency,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOperatingCityId
@@ -290,9 +329,10 @@ createPrepaidHold ::
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID
   Maybe Value ->
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError ())
-createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata = do
-  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+createPrepaidHold counterpartyType ownerId amount currency merchantId merchantOperatingCityId referenceId metadata mbVehicleCategory = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerRideCredit) of
     (Right ownerAccount, Right sellerRideCredit) -> do
@@ -339,9 +379,10 @@ voidPrepaidHold ::
   Text -> -- Owner ID
   Text -> -- Reference ID
   Text -> -- Reason
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m ()
-voidPrepaidHold counterpartyType ownerId referenceId reason = do
-  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+voidPrepaidHold counterpartyType ownerId referenceId reason mbVehicleCategory = do
+  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
   case mbOwnerAccount of
     Nothing -> pure ()
     Just ownerAccount -> do
@@ -358,9 +399,10 @@ settlePrepaidHoldByReference ::
   Text ->
   Text ->
   HighPrecMoney -> -- Final amount to settle at (may differ from hold amount)
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError ())
-settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount = do
-  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId
+settlePrepaidHoldByReference counterpartyType ownerId referenceId finalAmount mbVehicleCategory = do
+  mbOwnerAccount <- getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory
   case mbOwnerAccount of
     Nothing -> pure $ Right ()
     Just ownerAccount -> do
@@ -409,12 +451,13 @@ creditPrepaidBalance ::
   Maybe Value ->
   Maybe InvoiceCreationParams -> -- Optional invoice creation params
   Maybe DPanCard.DriverPanCard -> -- Optional PAN card data
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError (HighPrecMoney, Maybe (Id FInvoice.Invoice)))
-creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams mbPanCard = do
+creditPrepaidBalance counterpartyType ownerId creditAmount paidAmount mbTdsRate mbGstBreakdown currency merchantId merchantOperatingCityId referenceId metadata mbInvoiceParams mbPanCard mbVehicleCategory = do
   let gstAmount = case mbGstBreakdown of
         Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
         Nothing -> 0
-  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerAsset <- getOrCreateSellerAssetAccount currency merchantId merchantOperatingCityId
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbGovernmentLiability <- getOrCreateGovernmentLiabilityAccount currency merchantId merchantOperatingCityId
@@ -681,14 +724,15 @@ debitPrepaidBalance ::
   Text -> -- Merchant operating city ID
   Text -> -- Reference ID (booking ID)
   Maybe Value ->
+  Maybe DVC.VehicleCategory -> -- Sub-ledger scope (Nothing = pooled)
   m (Either FinanceError HighPrecMoney)
-debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata = do
-  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+debitPrepaidBalance counterpartyType ownerId finalFare revenueAmount currency merchantId merchantOperatingCityId referenceId _metadata mbVehicleCategory = do
+  mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId mbVehicleCategory
   mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
   mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
   case (mbOwnerAccount, mbSellerLiability, mbSellerRevenue) of
     (Right ownerAccount, Right sellerLiability, Right sellerRevenue) -> do
-      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare
+      holdRes <- settlePrepaidHoldByReference counterpartyType ownerId referenceId finalFare mbVehicleCategory
       case holdRes of
         Left err -> pure $ Left err
         Right _ -> do
@@ -740,13 +784,13 @@ handleSubscriptionExpiry purchase = do
         merchantOperatingCityId = purchase.merchantOperatingCityId.getId
         referenceId = purchase.id.getId
 
-    -- Fetch all other ACTIVE subscriptions (excluding the one being expired)
-    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION
+    -- Fetch all other ACTIVE subscriptions in the same category scope (excluding the one being expired)
+    allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId purchase.ownerType PREPAID_SUBSCRIPTION purchase.vehicleCategory
     let otherActive = filter (\p -> p.id /= purchase.id) allActive
         otherActiveCredits = sum $ map (.planRideCredit) otherActive
 
-    -- Get current unified balance
-    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
+    -- Get current balance scoped to the same sub-ledger as the expiring purchase
+    mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId purchase.vehicleCategory
     let currentBalance = fromMaybe 0 mbBalance
         -- Credits attributable to the expiring subscription
         expiredCredits = max 0 (currentBalance - otherActiveCredits)
@@ -759,7 +803,7 @@ handleSubscriptionExpiry purchase = do
               then (expiredCredits / totalPlanCredit) * purchase.planFee
               else 0
 
-      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId
+      mbOwnerAccount <- getOrCreatePrepaidAccount counterpartyType ownerId currency merchantId merchantOperatingCityId purchase.vehicleCategory
       mbSellerLiability <- getOrCreateSellerLiabilityAccount currency merchantId merchantOperatingCityId
       mbSellerRevenue <- getOrCreateSellerRevenueAccount currency merchantId merchantOperatingCityId
       mbSellerRideCredit <- getOrCreateSellerRideCreditAccount currency merchantId merchantOperatingCityId
@@ -822,6 +866,8 @@ handleSubscriptionExpiry purchase = do
 -- | After a ride debit, check if the oldest ACTIVE subscription should be marked EXHAUSTED.
 -- FIFO logic: if the current balance is at or below the sum of newer subscriptions' credits,
 -- the oldest subscription's credits are fully used up.
+-- When mbVehicleCategory is set, FIFO scope is restricted to that category's purchases only,
+-- ensuring CAB exhaustion does not affect AUTO or BIKE queues.
 -- Returns (contributing purchase IDs, whether any were exhausted).
 -- If any were exhausted, the caller should call activateNextQueuedPurchaseExpiry
 -- and schedule follow-up jobs.
@@ -830,10 +876,11 @@ checkAndMarkExhaustedSubscriptions ::
   CounterpartyType ->
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
+  Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
   m ([Id DSP.SubscriptionPurchase], Bool)
-checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
-  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
-  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId
+checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType mbVehicleCategory = do
+  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbBalance <- getPrepaidBalanceByOwner counterpartyType ownerId mbVehicleCategory
   let currentBalance = fromMaybe 0 mbBalance
       -- Sort by purchaseTimestamp ASC (already from query), process FIFO
       sorted = DL.sortOn (.purchaseTimestamp) allActive
@@ -855,15 +902,18 @@ checkAndMarkExhaustedSubscriptions counterpartyType ownerId ownerType = do
 -- | Activate the expiry timer for the next queued subscription purchase.
 -- A queued purchase is ACTIVE but has expiryDate = Nothing (its timer hasn't started).
 -- Called after an exhaustion or expiry event to cascade to the next FIFO purchase.
+-- When mbVehicleCategory is set, only purchases of that category are considered,
+-- ensuring that exhausting a CAB purchase triggers the next CAB purchase's timer.
 -- Returns Just (purchaseId, expiryDate) if a purchase was activated, Nothing otherwise.
 -- The caller is responsible for scheduling the ExpireSubscriptionPurchase job.
 activateNextQueuedPurchaseExpiry ::
   (BeamFlow m r) =>
   Text -> -- Owner ID
   DSP.SubscriptionOwnerType ->
+  Maybe DVC.VehicleCategory -> -- Category scope for FIFO isolation (Nothing = pooled)
   m (Maybe (Id DSP.SubscriptionPurchase, UTCTime))
-activateNextQueuedPurchaseExpiry ownerId ownerType = do
-  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION
+activateNextQueuedPurchaseExpiry ownerId ownerType mbVehicleCategory = do
+  allActive <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   let sorted = DL.sortOn (.purchaseTimestamp) allActive
       -- Find first ACTIVE purchase with no expiryDate (queued)
       queued = filter (\p -> isNothing p.expiryDate) sorted

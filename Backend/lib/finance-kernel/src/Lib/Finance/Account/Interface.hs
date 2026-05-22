@@ -20,6 +20,9 @@ data AccountInput = AccountInput
   { accountType :: AccountType,
     counterpartyType :: Maybe CounterpartyType,
     counterpartyId :: Maybe Text,
+    -- | Partitions one counterparty's account into logical sub-ledgers
+    -- (e.g. vehicle category for per-category wallet isolation).
+    subLedger :: Maybe Text,
     currency :: Currency,
     merchantId :: Text,
     merchantOperatingCityId :: Text

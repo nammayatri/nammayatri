@@ -84,6 +84,7 @@ createNearestDriverReq nearestRadius now =
           },
       minWalletAmountForCashRides = Nothing,
       currentRideTripCategoryValidForForwardBatching = [],
+      vehicleCategoryScopedPrepaidEnabled = False,
       ..
     }
 

@@ -577,6 +577,7 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
               { accountType = Liability,
                 counterpartyType = Just counterpartyType,
                 counterpartyId = Just ownerId,
+                subLedger = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOperatingCityId
@@ -586,6 +587,7 @@ createWalletEntryDelta counterpartyType ownerId delta currency merchantId mercha
               { accountType = Asset,
                 counterpartyType = Just SELLER,
                 counterpartyId = Just merchantId,
+                subLedger = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOperatingCityId
