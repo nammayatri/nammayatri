@@ -279,7 +279,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
           twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
           totpStepSize = baseMerchant.totpStepSize,
-          totpClockSkew = baseMerchant.totpClockSkew
+          totpClockSkew = baseMerchant.totpClockSkew,
+          emailOtpTTLInSecs = baseMerchant.emailOtpTTLInSecs,
+          emailMaxOtpVerifyAttempts = baseMerchant.emailMaxOtpVerifyAttempts
         }
 
 getMerchantConfigSpecialLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe SL.SpecialLocationType -> Kernel.Prelude.Maybe [SL.SpecialLocationType] -> Environment.Flow Common.SpecialLocationResp)

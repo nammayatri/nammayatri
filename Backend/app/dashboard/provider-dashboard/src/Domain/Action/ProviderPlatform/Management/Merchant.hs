@@ -504,7 +504,9 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           twoFaOtpTTLInSecs = baseMerchant.twoFaOtpTTLInSecs,
           twoFaMaxOtpVerifyAttempts = baseMerchant.twoFaMaxOtpVerifyAttempts,
           totpStepSize = baseMerchant.totpStepSize,
-          totpClockSkew = baseMerchant.totpClockSkew
+          totpClockSkew = baseMerchant.totpClockSkew,
+          emailOtpTTLInSecs = baseMerchant.emailOtpTTLInSecs,
+          emailMaxOtpVerifyAttempts = baseMerchant.emailMaxOtpVerifyAttempts
         }
 
 postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes

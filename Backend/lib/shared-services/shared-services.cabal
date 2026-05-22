@@ -30,6 +30,8 @@ library
       ConfigPilotFrontend.Common
       ConfigPilotFrontend.Flow
       ConfigPilotFrontend.Types
+      Email.OTP.API
+      Email.OTP.Types
       IssueManagement.API.Beckn.Issue
       IssueManagement.API.UI.Issue
       IssueManagement.Beckn.ACL.IGM.Utils

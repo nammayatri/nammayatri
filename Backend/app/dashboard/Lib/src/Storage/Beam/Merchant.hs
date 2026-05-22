@@ -45,7 +45,9 @@ data MerchantT f = MerchantT
     isStrongNameCheckRequired :: B.C f (Maybe Bool),
     singleActiveSessionOnly :: B.C f (Maybe Bool),
     trackLoginLogoutForRoles :: B.C f [Text],
-    twoFactorMandatoryForRoles :: B.C f [Text]
+    twoFactorMandatoryForRoles :: B.C f [Text],
+    emailOtpTTLInSecs :: B.C f (Maybe Int),
+    emailMaxOtpVerifyAttempts :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 

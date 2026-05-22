@@ -45,7 +45,9 @@ data MerchantE e = Merchant
     isStrongNameCheckRequired :: Maybe Bool,
     singleActiveSessionOnly :: Maybe Bool,
     trackLoginLogoutForRoles :: [DRole.DashboardAccessType],
-    twoFactorMandatoryForRoles :: [DRole.DashboardAccessType]
+    twoFactorMandatoryForRoles :: [DRole.DashboardAccessType],
+    emailOtpTTLInSecs :: Maybe Int,
+    emailMaxOtpVerifyAttempts :: Maybe Int
   }
   deriving (Generic)
 

@@ -152,7 +152,9 @@ buildMerchant req = do
         twoFaOtpTTLInSecs = Nothing,
         twoFaMaxOtpVerifyAttempts = Nothing,
         totpStepSize = Nothing,
-        totpClockSkew = Nothing
+        totpClockSkew = Nothing,
+        emailOtpTTLInSecs = Nothing,
+        emailMaxOtpVerifyAttempts = Nothing
       }
 
 changeMerchantEnableState ::

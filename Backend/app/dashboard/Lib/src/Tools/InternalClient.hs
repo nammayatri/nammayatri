@@ -12,13 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.InternalClient (SendSMSReq (..), SendSMSRes (..), callBPPInternalSendSMS, callBAPInternalSendSMS) where
+module Tools.InternalClient
+  ( SendSMSReq (..),
+    SendSMSRes (..),
+    callBPPInternalSendSMS,
+    callBAPInternalSendSMS,
+    SendEmailOTPReq (..),
+    SendEmailOTPRes (..),
+    callBPPInternalSendEmailOTP,
+    callBAPInternalSendEmailOTP,
+    VerifyEmailUpdateReq (..),
+    callBPPInternalVerifyEmailUpdate,
+    callBAPInternalVerifyEmailUpdate,
+  )
+where
 
 import qualified Data.HashMap.Strict as HM
 import Data.Map.Strict (Map)
 import qualified Domain.Types.ServerName as DSN
 import qualified EulerHS.Types as Euler
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Utils.Common hiding (Error, callAPI, throwError)
 import Kernel.Utils.Error.Throwing (throwError)
@@ -84,3 +98,112 @@ callBAPInternalSendSMS merchantShortId city req = do
   dataServer <- maybe (throwError $ InternalError "APP_BACKEND data server not found") pure mbDataServer
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendSMSClient merchantShortId city (Just dataServer.token) req) "callBAPInternalSendSMS" (Proxy :: Proxy Raw)
+
+-- Email OTP
+
+newtype SendEmailOTPReq = SendEmailOTPReq
+  { email :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+newtype SendEmailOTPRes = SendEmailOTPRes
+  { otp :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type SendEmailOTPAPI =
+  "internal"
+    :> "sendEmailOTP"
+    :> Capture "merchantShortId" Text
+    :> Capture "city" City.City
+    :> Header "api-key" Text
+    :> ReqBody '[JSON] SendEmailOTPReq
+    :> Post '[JSON] SendEmailOTPRes
+
+sendEmailOTPClient :: Text -> City.City -> Maybe Text -> SendEmailOTPReq -> Euler.EulerClient SendEmailOTPRes
+sendEmailOTPClient = Euler.client (Proxy @SendEmailOTPAPI)
+
+callBPPInternalSendEmailOTP ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  City.City ->
+  SendEmailOTPReq ->
+  m SendEmailOTPRes
+callBPPInternalSendEmailOTP merchantShortId city req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers
+  dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendEmailOTPClient merchantShortId city (Just dataServer.token) req) "callBPPInternalSendEmailOTP" (Proxy :: Proxy Raw)
+
+callBAPInternalSendEmailOTP ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  City.City ->
+  SendEmailOTPReq ->
+  m SendEmailOTPRes
+callBAPInternalSendEmailOTP merchantShortId city req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.APP_BACKEND) dataServers
+  dataServer <- maybe (throwError $ InternalError "APP_BACKEND data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (sendEmailOTPClient merchantShortId city (Just dataServer.token) req) "callBAPInternalSendEmailOTP" (Proxy :: Proxy Raw)
+
+-- Verify Email Update
+
+data VerifyEmailUpdateReq = VerifyEmailUpdateReq
+  { email :: Text,
+    personId :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+type VerifyEmailUpdateAPI =
+  "internal"
+    :> "verifyEmailUpdate"
+    :> Capture "merchantShortId" Text
+    :> Header "api-key" Text
+    :> ReqBody '[JSON] VerifyEmailUpdateReq
+    :> Post '[JSON] APISuccess
+
+verifyEmailUpdateClient :: Text -> Maybe Text -> VerifyEmailUpdateReq -> Euler.EulerClient APISuccess
+verifyEmailUpdateClient = Euler.client (Proxy @VerifyEmailUpdateAPI)
+
+callBPPInternalVerifyEmailUpdate ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  VerifyEmailUpdateReq ->
+  m APISuccess
+callBPPInternalVerifyEmailUpdate merchantShortId req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.DRIVER_OFFER_BPP) dataServers
+  dataServer <- maybe (throwError $ InternalError "DRIVER_OFFER_BPP data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (verifyEmailUpdateClient merchantShortId (Just dataServer.token) req) "callBPPInternalVerifyEmailUpdate" (Proxy :: Proxy Raw)
+
+callBAPInternalVerifyEmailUpdate ::
+  ( CoreMetrics m,
+    HasFlowEnv m r '["dataServers" ::: [DSN.DataServer]],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  VerifyEmailUpdateReq ->
+  m APISuccess
+callBAPInternalVerifyEmailUpdate merchantShortId req = do
+  dataServers <- asks (.dataServers)
+  let mbDataServer = find (\s -> s.name == DSN.APP_BACKEND) dataServers
+  dataServer <- maybe (throwError $ InternalError "APP_BACKEND data server not found") pure mbDataServer
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  callApiUnwrappingApiError (identity @Error) Nothing Nothing (Just internalEndPointHashMap) dataServer.url (verifyEmailUpdateClient merchantShortId (Just dataServer.token) req) "callBAPInternalVerifyEmailUpdate" (Proxy :: Proxy Raw)

@@ -65,10 +65,12 @@ library
       API.Internal.OfferDiscount
       API.Internal.Rating
       API.Internal.RideSearchExpired
+      API.Internal.SendEmailOTP
       API.Internal.SendSMS
       API.Internal.Sos
       API.Internal.StopEvents
       API.Internal.UpdateCancellationFeeStatus
+      API.Internal.VerifyEmailUpdate
       API.Internal.ViolationDetection
       API.Internal.XyneWebhook
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
@@ -238,10 +240,12 @@ library
       Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
+      Domain.Action.Internal.SendEmailOTP
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.Sos
       Domain.Action.Internal.StopEvents
       Domain.Action.Internal.UpdateCancellationFeeStatus
+      Domain.Action.Internal.VerifyEmailUpdate
       Domain.Action.Internal.ViolationDetection
       Domain.Action.Rewards.Consumer
       Domain.Action.Rewards.Coupon
