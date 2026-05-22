@@ -1,0 +1,102 @@
+# Triggers NammaDSL code generation for:
+#   src-read-only/API/Types/UI/RiderPreferences.hs      -- wire request/response types
+#   src-read-only/API/Action/UI/RiderPreferences.hs     -- Servant route type + handler glue
+# Business logic stub generated at:
+#   src/Domain/Action/UI/RiderPreferences.hs
+
+imports:
+  RiderPreferences: Domain.Types.RiderPreferences
+  PreferenceType: Domain.Types.Extra.RiderPreferences
+  APISuccess: Kernel.Types.APISuccess
+
+module: RiderPreferences
+
+types:
+  # ---------- POST request ----------
+  # Frontend sends raw lat/lon; backend computes sourceGeohash from them.
+  # sourceAddress/pickupAddress are optional display strings stored for UI rendering.
+  LocationPickupReqData:
+    sourceLat: Double
+    sourceLon: Double
+    sourceAddress: Maybe Text
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Maybe Text
+    pickupAddressSubtitle: Maybe Text
+
+  # Top-level POST body — preferenceType tells us which optional data block to read.
+  # Only locationData is relevant right now; other blocks can be added later.
+  RiderPreferenceReq:
+    preferenceType: PreferenceType
+    locationData: Maybe LocationPickupReqData
+
+  # ---------- GET response ----------
+  # One entry per saved pickup location (one per source geohash).
+  # id is included so the DELETE endpoint can target a specific row.
+  LocationPickupRespData:
+    id: Id RiderPreferences
+    sourceGeohash: Text
+    sourceLat: Double
+    sourceLon: Double
+    sourceAddress: Maybe Text
+    pickupLat: Double
+    pickupLon: Double
+    pickupAddress: Maybe Text
+    pickupAddressSubtitle: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  # Full GET response — grouped by preference type so the frontend can consume
+  # each category independently. locationPickups will have at most one entry per
+  # source geohash (upsert semantics on POST).
+  RiderPreferencesResp:
+    locationPickups: "[LocationPickupRespData]"
+
+  # GET ALL response — all preferences for the rider, grouped by type.
+  # locationPickups contains all saved pickup locations (not filtered by geohash).
+  AllRiderPreferencesResp:
+    locationPickups: "[LocationPickupRespData]"
+
+apis:
+  # Save or update a preference.
+  # For LOCATION_PICKUP: upserts on (riderId, LOCATION_PICKUP, sourceGeohash).
+  # Re-saving at the same source location overwrites the previous pickup point.
+  - POST:
+      endpoint: /riderPreference
+      auth: TokenAuth
+      request:
+        type: RiderPreferenceReq
+      response:
+        type: APISuccess
+
+  # Fetch all preferences for the logged-in rider.
+  # sourceLat + sourceLon are the current source location — always required.
+  # Backend computes the geohash and returns the matching LOCATION_PICKUP entry.
+  # Result is Redis-cached by riderId; cache is invalidated on POST and DELETE.
+  - GET:
+      endpoint: /riderPreference
+      auth: TokenAuth
+      query:
+        - sourceLat: Double
+        - sourceLon: Double
+      response:
+        type: RiderPreferencesResp
+
+  # Fetch all preferences for the logged-in rider regardless of location.
+  # Used for settings/profile screens to show everything the user has saved.
+  # Result is Redis-cached by riderId; cache is invalidated on POST and DELETE.
+  - GET:
+      endpoint: /riderPreference/all
+      auth: TokenAuth
+      response:
+        type: AllRiderPreferencesResp
+
+  # Delete a specific preference by its DB id.
+  # Ownership is verified: the preference's riderId must match the auth token.
+  - DELETE:
+      endpoint: /riderPreference/{preferenceId}
+      auth: TokenAuth
+      params:
+        preferenceId: Id RiderPreferences
+      response:
+        type: APISuccess
