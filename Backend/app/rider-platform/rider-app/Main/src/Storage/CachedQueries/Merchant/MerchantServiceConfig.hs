@@ -136,6 +136,7 @@ getServiceName msc = case msc.serviceConfig of
     Whatsapp.GupShupConfig _ -> WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> WhatsappService Whatsapp.TataCommunications
     Whatsapp.KarixConfig _ -> WhatsappService Whatsapp.Karix
+    Whatsapp.TwilioConfig _ -> WhatsappService Whatsapp.Twilio
   AadhaarVerificationServiceConfig aadhaarVerifictaionCfg -> case aadhaarVerifictaionCfg of
     AadhaarVerification.GridlineConfig _ -> AadhaarVerificationService AadhaarVerification.Gridline
   CallServiceConfig callCfg -> case callCfg of
