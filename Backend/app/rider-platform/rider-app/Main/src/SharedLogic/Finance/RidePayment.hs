@@ -751,7 +751,7 @@ buildRidePaymentInvoiceConfig ctx rideFare gstAmount tollFare tollVatAmount plat
       isVat = gstAmount > 0 || tollVatAmount > 0,
       issuedToTaxNo = Nothing,
       issuedByTaxNo = Nothing,
-      paymentMode = Just "ONLINE",
+      paymentMode = Just $ if ctx.isOnline then "ONLINE" else "CASH",
       periodStart = Nothing,
       periodEnd = Nothing
     }
