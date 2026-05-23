@@ -103,8 +103,8 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "cabal-master-"
-          LOCAL_BINARIES_PATH: $HOME/ny-staging/${{ github.run_id }}
         run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
@@ -240,8 +240,8 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "cabal-prod-"
-          LOCAL_BINARIES_PATH: $HOME/ny-staging/${{ github.run_id }}
         run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
