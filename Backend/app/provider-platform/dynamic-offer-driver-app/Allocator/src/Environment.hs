@@ -160,7 +160,7 @@ buildHandlerEnv HandlerCfg {..} = do
   kafkaProducerTools <- buildKafkaProducerTools appCfg.kafkaProducerCfg appCfg.secondaryKafkaProducerCfg
   passettoContext <- uncurry mkPassettoContextAuto encTools.service
   hedisEnv <- connectHedis appCfg.hedisCfg ("dynamic-offer-driver-app:" <>)
-  ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg identity
+  ltsHedisEnv <- connectHedis appCfg.ltsRedisCfg ("dynamic-offer-driver-app-lts:" <>)
   secondaryLTSHedisEnv <- case appCfg.secondaryLTSRedisCfg of
     Nothing -> pure Nothing
     Just cfg ->
