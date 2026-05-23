@@ -22,11 +22,14 @@ module Domain.Action.Dashboard.Fleet.Registration
     FleetOwnerVerifyHandle (..),
     FleetOwnerVerifyRes (..),
     fleetOwnerVerifyHandler,
+    FleetOwnerUpdateLanguageReq (..),
+    fleetOwnerUpdateLanguage,
   )
 where
 
 import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Data.OpenApi (ToSchema)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import Domain.Action.Dashboard.Fleet.Referral
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
@@ -44,6 +47,7 @@ import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (encrypt, getDbHash)
+import qualified Kernel.External.Types as KET
 import Kernel.Sms.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -66,6 +70,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -258,9 +263,9 @@ fleetOwnerLogin req = do
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
   mobileNumberHash <- getDbHash mobileNumber
   person <-
-    QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+    QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
       >>= fromMaybeM (PersonNotFound mobileNumber)
-  when (person.role == DP.FLEET_OWNER) $ do
+  when (DCommon.checkFleetOwnerRole person.role) $ do
     fleetOwnerInfo <- QFOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
     unless fleetOwnerInfo.enabled (throwError $ InvalidRequest "fleetOwner is not enabled")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just req.city)
@@ -301,7 +306,8 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       email = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      password = Nothing
     }
 
 fleetOwnerVerify ::
@@ -331,9 +337,9 @@ fleetOwnerVerifyHandler h req = do
             QMerchant.findByShortId merchantId
               >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
           mobileNumberHash <- getDbHash req.mobileNumber
-          person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
+          person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
           -- currently we don't create fleetOwnerInfo for operator
-          when (person.role == DP.FLEET_OWNER) $
+          when (DCommon.checkFleetOwnerRole person.role) $
             void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
           pure Success
         Nothing -> throwError InvalidAuthData
@@ -351,3 +357,14 @@ validateInitiateLoginReq FleetOwnerLoginReq {..} =
     [ validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
+
+---------------------------------------------------------------------
+data FleetOwnerUpdateLanguageReq = FleetOwnerUpdateLanguageReq
+  { language :: KET.Language
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
+fleetOwnerUpdateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> FleetOwnerUpdateLanguageReq -> m APISuccess
+fleetOwnerUpdateLanguage requestorId req = do
+  QPExtra.updateLanguage (Id requestorId :: Id DP.Person) req.language
+  pure Success

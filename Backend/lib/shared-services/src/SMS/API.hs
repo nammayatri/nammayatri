@@ -15,8 +15,8 @@
 module SMS.API where
 
 import EulerHS.Prelude
-import SMS.Types
 import qualified Kernel.Types.Beckn.Context as Context
+import SMS.Types
 import Servant
 
 type API =

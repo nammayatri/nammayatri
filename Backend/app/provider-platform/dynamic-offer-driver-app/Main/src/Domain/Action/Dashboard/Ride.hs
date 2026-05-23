@@ -37,6 +37,7 @@ import Data.Coerce (coerce)
 import Data.Either.Extra (mapLeft)
 import qualified Data.Text as T
 import qualified Data.Time as Time
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
@@ -300,7 +301,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
       Nothing -> pure False
       Just requestorId -> do
         mbRequestor <- runInReplica $ QP.findById (Id requestorId)
-        pure $ maybe False (\r -> r.role == DP.FLEET_OWNER || r.role == DP.OPERATOR) mbRequestor
+        pure $ maybe False (\r -> DCommon.checkFleetOwnerRole r.role || r.role == DP.OPERATOR) mbRequestor
 
     -- When no fleetOwnerId in request: fleet owner => their fleet only, no customer info; operator => must pass fleetOwnerId; other roles => no fleet filter, show customer info.
     resolveRoleAndEffectiveFleet :: Flow (Bool, Maybe Text)

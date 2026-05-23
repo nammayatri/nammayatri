@@ -3,8 +3,7 @@ import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-
-const PROXY_BASE = 'http://localhost:7082';
+import { LOCAL_API_BASE as PROXY_BASE } from '../config';
 
 export interface NyRnStatus {
   running: boolean;

@@ -2,15 +2,19 @@ import React, { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { ConfigBar } from './components/ConfigBar';
 import { RideFlowTree } from './components/RideFlowTree';
 import { CollectionRunner } from './components/CollectionRunner';
+import { ToolsPanel } from './components/ToolsPanel';
+import { RemoteStackPanel } from './components/RemoteStackPanel';
 import { FinanceViewer } from './components/FinanceViewer';
+import { CoverageReportPanel } from './components/CoverageReport';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import { DialogHost } from './components/Dialogs';
 import axios from 'axios';
-import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog } from './services/api';
+import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog, startNewCoverageRun } from './services/api';
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
+import { PROXY_BASE } from './config';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -542,7 +546,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'finance'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote' | 'coverage'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -611,7 +615,7 @@ function App() {
       return;
     }
     setPaymentMethodsLoading(true);
-    axios.get('http://localhost:7082/proxy/rider/payment/methods', {
+    axios.get(`${PROXY_BASE}/proxy/rider/payment/methods`, {
       headers: { token: config.token, 'Content-Type': 'application/json' },
       timeout: 5000,
     }).then(resp => {
@@ -851,6 +855,8 @@ function App() {
   const runAll = useCallback(async () => {
     if (isRunning) return;
     abortRef.current = false;
+    // Start a new coverage recording run
+    startNewCoverageRun(`${activeFlowId}-${Date.now()}`);
     // Full reset for Run All — start fresh
     ctxRef.current = {};
     initCtx();
@@ -972,20 +978,33 @@ function App() {
           <button className={`mode-tab ${appMode === 'custom' ? 'active' : ''}`} onClick={() => setAppMode('custom')}>
             Custom Flows
           </button>
-          <button className={`mode-tab ${appMode === 'finance' ? 'active' : ''}`} onClick={() => setAppMode('finance')}>
-            Finance Visualization
+          <button className={`mode-tab ${appMode === 'tools' ? 'active' : ''}`} onClick={() => setAppMode('tools')}>
+            Client Applications
+          </button>
+          <button className={`mode-tab ${appMode === 'remote' ? 'active' : ''}`} onClick={() => setAppMode('remote')}>
+            Remote Stack
+          </button>
+          <button className={`mode-tab ${appMode === 'coverage' ? 'active' : ''}`} onClick={() => setAppMode('coverage')}>
+            Code Coverage
           </button>
           <span className="mode-tabs-spacer" />
           <TopBarActions />
         </div>
         <div className="content-wrapper">
           <div className="content">
-            {appMode === 'collections' ? (
+            <div style={{ display: appMode === 'collections' ? 'contents' : 'none' }}>
               <CollectionRunner onLog={log} />
-            ) : appMode === 'finance' ? (
-              <FinanceViewer />
-            ) : (
-            <>
+            </div>
+            <div style={{ display: appMode === 'tools' ? 'contents' : 'none' }}>
+              <ToolsPanel title="Client Applications" />
+            </div>
+            <div style={{ display: appMode === 'remote' ? 'contents' : 'none' }}>
+              <RemoteStackPanel />
+            </div>
+            <div style={{ display: appMode === 'coverage' ? 'contents' : 'none' }}>
+              <CoverageReportPanel />
+            </div>
+            <div style={{ display: appMode === 'custom' ? 'contents' : 'none' }}>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
               onCityChange={setSelectedCity} onDriverChange={(token, variant, merchantId, personId) => { setSelectedDriverToken(token); setSelectedDriverVariant(variant || ''); setSelectedDriverMerchantId(merchantId || ''); setSelectedDriverPersonId(personId || ''); }}
               onMerchantShortIdChange={setMerchantShortId}
@@ -1044,13 +1063,16 @@ function App() {
               adminPassword={adminPassword}
               onAdminPasswordChange={setAdminPassword}
             />
+            </div>
+          </div>
+          {appMode !== 'remote' && appMode !== 'tools' && (
+            <>
+              <div className="log-resize-handle" onMouseDown={onResizeStart} />
+              <div className="content-logs" style={{ width: logWidth }}>
+                <LogPanel logs={logs} onClear={clearLogs} />
+              </div>
             </>
-            )}
-          </div>
-          <div className="log-resize-handle" onMouseDown={onResizeStart} />
-          <div className="content-logs" style={{ width: logWidth }}>
-            <LogPanel logs={logs} onClear={clearLogs} />
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -43,6 +43,8 @@ module SharedLogic.FareCalculator
     clampDiscountToDiscountable,
     ComponentMap,
     entryFeeForGateId,
+    parseCodeValue,
+    ParsedCodeValue (..),
   )
 where
 
@@ -887,8 +889,8 @@ countFullFareOfParamsDetails :: DFParams.FareParametersDetails -> (HighPrecMoney
 countFullFareOfParamsDetails = \case
   DFParams.ProgressiveDetails det -> (fromMaybe 0.0 det.extraKmFare, det.deadKmFare + fromMaybe 0.0 det.rideDurationFare, 0.0) -- (partOfNightShiftCharge, notPartOfNightShiftCharge)
   DFParams.SlabDetails det -> (0.0, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
-  DFParams.RentalDetails det -> (0.0, det.distBasedFare + det.timeBasedFare + det.deadKmFare, 0.0)
-  DFParams.InterCityDetails det -> (0.0, det.pickupCharge + det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
+  DFParams.RentalDetails det -> (det.distBasedFare + det.timeBasedFare, det.deadKmFare, 0.0)
+  DFParams.InterCityDetails det -> (det.distanceFare + det.timeFare + det.extraDistanceFare + det.extraTimeFare, det.pickupCharge + fromMaybe 0.0 det.stateEntryPermitCharges, 0.0)
   DFParams.AmbulanceDetails det -> (det.distBasedFare, 0.0, fromMaybe 0.0 det.platformFee + fromMaybe 0.0 det.sgst + fromMaybe 0.0 det.cgst)
 
 addMaybes :: Num a => Maybe a -> Maybe a -> Maybe a
@@ -1435,7 +1437,6 @@ discountApplicableComponents =
     PriorityChargeComponent,
     NightShiftChargeComponent,
     StopChargeComponent,
-    CustomerExtraFeeComponent,
     DeadKmFareComponent,
     ExtraKmFareComponent,
     RideDurationFareComponent,

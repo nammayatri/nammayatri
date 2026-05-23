@@ -69,9 +69,11 @@ runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantConfig <-
     getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  logDebug $ "runWithServiceConfig: issueTicketService=" <> show merchantConfig.issueTicketService <> " mocId=" <> merchantOperatingCityId.getId
   merchantIssueTicketServiceConfig <-
     getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.IssueTicketService merchantConfig.issueTicketService)})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
+  logDebug $ "runWithServiceConfig: serviceConfig resolved, calling provider"
   case merchantIssueTicketServiceConfig.serviceConfig of
     DMSC.IssueTicketServiceConfig msc -> func msc req
     _ -> throwError $ InternalError "Unknown Service Config"

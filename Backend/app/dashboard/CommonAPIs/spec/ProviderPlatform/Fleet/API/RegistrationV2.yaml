@@ -4,6 +4,7 @@ imports:
   BaseUrl: Kernel.Prelude
   PaymentMode: Domain.Types.PaymentMode
   RequirementsInfo: Kernel.External.Payment.Interface.Types
+  Language: Kernel.External.Types
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -102,6 +103,40 @@ apis:
             response:
               type: FleetBankAccountResp
 
+  - PUT:
+      endpoint: /profile/language
+      name: putRegistrationV2ProfileLanguage
+      auth: ApiAuthV2
+      request:
+        type: FleetOwnerUpdateLanguageReq
+      response:
+        type: APISuccess
+      helperApi:
+        - PUT:
+            endpoint: /profile/language
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            request:
+              type: FleetOwnerUpdateLanguageReq
+            response:
+              type: APISuccess
+
+  - GET:
+      endpoint: /profile/language
+      name: getRegistrationV2ProfileLanguage
+      auth: ApiAuthV2
+      response:
+        type: FleetOwnerLanguageRes
+      helperApi:
+        - GET:
+            endpoint: /profile/language
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: FleetOwnerLanguageRes
+
 types:
   FleetOwnerLoginReqV2:
     - mobileNumber: Text
@@ -128,6 +163,7 @@ types:
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
     - setIsEnabled: Maybe Bool
+    - fleetName: Maybe Text
   FleetOwnerRegisterTReqV2: # hide secrets
     - firstName: Text
     - lastName: Text
@@ -156,6 +192,11 @@ types:
     - paymentMode: PaymentMode
     - requirements: Maybe RequirementsInfo
     - futureRequirements: Maybe RequirementsInfo
+  FleetOwnerUpdateLanguageReq:
+    - language: Language
+    - derive: "'HideSecrets"
+  FleetOwnerLanguageRes:
+    - language: Maybe Language
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

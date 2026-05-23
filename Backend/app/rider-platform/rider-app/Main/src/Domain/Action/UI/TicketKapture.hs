@@ -70,7 +70,7 @@ postKaptureCloseTicket ::
 postKaptureCloseTicket (mbPersonId, _) ticketId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  _ <- updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "", ticketId = ticketId, subStatus = TIT.RS, rideDescription = Nothing, issueDetails = Nothing}
+  _ <- updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "", ticketId = ticketId, status = TIT.Solved, rideDescription = Nothing, issueDetails = Nothing}
   pure API.Success
 
 getGetAllActiveTickets ::

@@ -389,16 +389,17 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
         (wallet, _acc) <-
           getOrCreateWalletForPerson personId programType earn.programId currency merchantId mbMerchantOperatingCityId
         let kind = if isTopup then DWP.TOPUP else DWP.CASHBACK
-            buckets =
-              if null earn.campaigns
+            baseBucket =
+              if null earn.campaigns || isTopup
                 then [(Nothing, earn.points, earn.reversedPoints)]
+                else []
+            campaignBuckets =
+              if null earn.campaigns
+                then []
                 else map (\c -> (c.campaignId, c.points, c.reversedPoints)) earn.campaigns
-            mbBenefit = case kind of
-              DWP.TOPUP -> Just (max 0 (earn.points - order.amount))
-              DWP.CASHBACK -> Nothing
-              DWP.BURN -> Nothing
+            buckets = baseBucket ++ campaignBuckets
         forM_ buckets $ \(mbCampaignId, pts, mbBucketReversed) ->
-          void $ upsertWalletHistory wp wallet programType kind mbCampaignId pts mbBucketReversed mbBenefit domainEntityId
+          void $ upsertWalletHistory wp wallet programType kind mbCampaignId pts mbBucketReversed Nothing domainEntityId
         processProgramLedger wallet kind earn.points domainEntityId isOrderCharged earn.reversedPoints
 
   forM_ loyalty.burnDetails $ \burn -> do

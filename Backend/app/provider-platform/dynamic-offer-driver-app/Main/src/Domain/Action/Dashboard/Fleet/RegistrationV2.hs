@@ -15,6 +15,8 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     checkRequestorAccessToFleet,
     castFleetType,
     sendFleetOnboardingSms,
+    putRegistrationV2ProfileLanguage,
+    getRegistrationV2ProfileLanguage,
   )
 where
 
@@ -70,6 +72,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PersonExtra as QPExtra
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -409,7 +412,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
   smsCfg <- asks (.smsCfg)
   let merchantOpCityId = merchantOpCity.id
   mobileNumberHash <- getDbHash mobileNumber
-  mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.OPERATOR]
+  mbPerson <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR]
   personId <- case mbPerson of
     Just person -> pure person.id
     Nothing -> do
@@ -456,7 +459,8 @@ buildFleetOwnerAuthReq merchantId' opCity Common.FleetOwnerLoginReqV2 {..} =
       email = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      password = Nothing
     }
 
 updateFleetOwnerInfo ::
@@ -469,7 +473,8 @@ updateFleetOwnerInfo fleetOwnerInfo Common.FleetOwnerRegisterReqV2 {..} = do
       updFleetOwnerInfo =
         fleetOwnerInfo
           { FOI.fleetType = newFleetType,
-            FOI.registeredAt = Just now
+            FOI.registeredAt = Just now,
+            FOI.fleetName = fleetName
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo -- this update will backfill encrypted docs numbers
   -- Keep person.role in sync with fleet_type so role-based config lookups don't drift.
@@ -557,3 +562,22 @@ checkRequestorAccessToFleet mbFleetOwnerId requestorId = do
         unless (fleetOwnerId == requestorId) $ throwError AccessDenied
       pure requestor
     _ -> throwError AccessDenied
+
+putRegistrationV2ProfileLanguage ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Text ->
+  Common.FleetOwnerUpdateLanguageReq ->
+  Flow APISuccess
+putRegistrationV2ProfileLanguage _merchantShortId _opCity requestorId req = do
+  QPExtra.updateLanguage (Id requestorId) req.language
+  pure Success
+
+getRegistrationV2ProfileLanguage ::
+  ShortId DMerchant.Merchant ->
+  City.City ->
+  Text ->
+  Flow Common.FleetOwnerLanguageRes
+getRegistrationV2ProfileLanguage _merchantShortId _opCity requestorId = do
+  mbPerson <- QP.findById (Id requestorId)
+  pure $ Common.FleetOwnerLanguageRes {language = mbPerson >>= (.language)}

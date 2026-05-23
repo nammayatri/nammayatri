@@ -172,6 +172,7 @@ purchasePassWithPayment ::
     EncFlow m r,
     EventStreamFlow m r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     EsqDBReplicaFlow m r,
     HasField "isMetroTestTransaction" r Bool
   ) =>
@@ -312,6 +313,7 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId person.merchantOperatingCityId Nothing TPayment.FRFSPassPurchase
         splitSettlementDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled pass.amount vendorSplitList isPercentageSplitEnabled False
         staticCustomerId <- SLUtils.getStaticCustomerId person customerPhone
+        nwAddress <- asks (.nwAddress)
         let createOrderReq =
               Payment.CreateOrderReq
                 { orderId = paymentOrderId.getId,
@@ -330,10 +332,12 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
                   optionsGetUpiDeepLinks = Nothing,
                   metadataExpiryInMins = Nothing,
                   metadataGatewayReferenceId = Nothing,
+                  webhookUrl = Just nwAddress,
                   splitSettlementDetails,
                   basket = Nothing,
                   paymentRules = Nothing,
-                  autoRefundPostSuccess = Nothing
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
                 }
 
         let commonMerchantId = Id.cast @DM.Merchant @DPayment.Merchant merchantId
@@ -438,6 +442,21 @@ calculatePassEndDate startDate mbMaxValidDays =
 mkPassMessageKey :: Id.Id DPass.Pass -> Text -> Text
 mkPassMessageKey passId name = passId.getId <> "-" <> name
 
+findFloorTier :: Int -> AKeyMap.KeyMap A.Value -> Maybe A.Value
+findFloorTier targetStages tiersObj =
+  let parsedPairs :: [(Int, A.Value)]
+      parsedPairs =
+        mapMaybe
+          ( \(k, v) -> case readMaybe (T.unpack (AKey.toText k)) of
+              Just n | n <= targetStages -> Just (n, v)
+              _ -> Nothing
+          )
+          (AKeyMap.toList tiersObj)
+      sortedDesc = EHS.sortBy (\(a, _) (b, _) -> compare b a) parsedPairs
+   in case sortedDesc of
+        ((_, v) : _) -> Just v
+        [] -> AKeyMap.lookup (AKey.fromText "default") tiersObj
+
 buildPassCategoryAPIEntity :: DPassCategory.PassCategory -> PassAPI.PassCategoryAPIEntity
 buildPassCategoryAPIEntity category =
   PassAPI.PassCategoryAPIEntity
@@ -498,7 +517,7 @@ buildPassAPIEntity mbLanguage person pass = do
         tiers <- pass.pricingTiers
         case tiers of
           A.Object obj -> do
-            val <- AKeyMap.lookup (AKey.fromText . T.pack $ show stages) obj <|> AKeyMap.lookup (AKey.fromText "default") obj
+            val <- findFloorTier stages obj
             case val of
               A.Number n -> Just . HighPrecMoney $ toRational n
               _ -> Nothing
@@ -937,6 +956,20 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
   istTime <- getLocalCurrentTime (19800 :: Seconds)
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
+
+  mbPassType <- CQPassType.findById purchasedPass.passTypeId
+  let mbPassEnum = mbPassType >>= (.passEnum)
+  mbStudentPassDetails <- case mbPassEnum of
+    Just DPassType.StudentPass -> QPassDetails.findByPersonId purchasedPass.personId DPassType.StudentPass
+    _ -> pure Nothing
+  let isStudentPass = mbPassEnum == Just DPassType.StudentPass
+  when isStudentPass $
+    reserveStudentPassActivationSlot purchasedPass mbStudentPassDetails istTime
+  let throwAndReleaseSlot :: PassError -> Environment.Flow a
+      throwAndReleaseSlot err = do
+        when isStudentPass $ rollbackStudentPassActivation purchasedPass
+        throwError err
+
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
 
   -- If autoActivated is requested, find the nearest fleet (vehicle number) from user location
@@ -947,11 +980,11 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
           (Just lat, Just lon) -> do
             riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
-              [] -> throwError (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
+              [] -> throwAndReleaseSlot (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
                 buses <- FRFSJourneyUtils.getNearbyBusesFRFS (LatLong lat lon) riderConfig nearbyConfig
                 let busesWithVehicle = filter (isJust . (.vehicle_number)) buses
-                when (null busesWithVehicle) $ throwError (PassNoBusesNearby purchasedPassId.getId)
+                when (null busesWithVehicle) $ throwAndReleaseSlot (PassNoBusesNearby purchasedPassId.getId)
 
                 -- Filter by purchased pass applicable service tiers
                 let applicableTiers = purchasedPass.applicableVehicleServiceTiers
@@ -973,19 +1006,21 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
                         )
                         busesWithVehicle
 
-                when (null busesFilteredByTier) $ throwError (PassNoBusesNearby purchasedPassId.getId)
+                when (null busesFilteredByTier) $ throwAndReleaseSlot (PassNoBusesNearby purchasedPassId.getId)
 
                 let nearest = minimumBy (EHS.comparing (\b -> distanceBetweenInMeters (LatLong lat lon) (LatLong b.latitude b.longitude))) busesFilteredByTier
                 case nearest.vehicle_number of
                   Just v -> return v
-                  Nothing -> throwError (PassNoBusesNearby purchasedPassId.getId)
-          _ -> throwError (PassVerificationFailed purchasedPassId.getId "Location is required for auto activation")
+                  Nothing -> throwAndReleaseSlot (PassNoBusesNearby purchasedPassId.getId)
+          _ -> throwAndReleaseSlot (PassVerificationFailed purchasedPassId.getId "Location is required for auto activation")
       else return passVerifyReq.vehicleNumber
 
-  (integratedBPPConfig, vehicleInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumberToUse (Just True) >>= fromMaybeM (PassInvalidVehicle purchasedPassId.getId vehicleNumberToUse)
+  (integratedBPPConfig, vehicleInfo) <-
+    JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumberToUse (Just True)
+      >>= maybe (throwAndReleaseSlot (PassInvalidVehicle purchasedPassId.getId vehicleNumberToUse)) pure
   when (fromMaybe True vehicleInfo.isActuallyValid) $ do
     unless (vehicleInfo.serviceType `elem` purchasedPass.applicableVehicleServiceTiers) $
-      throwError $ PassVerificationFailed purchasedPassId.getId ("This pass is only valid for " <> purchasedPass.benefitDescription)
+      throwAndReleaseSlot $ PassVerificationFailed purchasedPassId.getId ("This pass is only valid for " <> purchasedPass.benefitDescription)
   routeStopMapping <-
     case vehicleInfo.routeCode of
       Just routeCode ->
@@ -997,13 +1032,6 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
             Right rsm -> return rsm
       Nothing -> return []
 
-  -- StudentPass-specific verification: route-id match → proximity fallback → reject.
-  -- Result is captured on the PassVerifyTransaction record for analytics regardless of outcome.
-  mbPassType <- CQPassType.findById purchasedPass.passTypeId
-  let mbPassEnum = mbPassType >>= (.passEnum)
-  mbStudentPassDetails <- case mbPassEnum of
-    Just DPassType.StudentPass -> QPassDetails.findByPersonId purchasedPass.personId DPassType.StudentPass
-    _ -> pure Nothing
   mbVerifyStatus <- case mbPassEnum of
     Just DPassType.StudentPass ->
       case mbStudentPassDetails of
@@ -1039,11 +1067,10 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
           }
   QPassVerifyTransaction.create passVerifyTransaction
 
-  -- Reject failed StudentPass verifications; bump daily counter for successful ones.
   case mbVerifyStatus of
     Just DPassVerifyTransaction.NOT_VERIFIED ->
-      throwError $ PassVerificationFailed purchasedPassId.getId "This pass is not valid for this bus route"
-    Just _ -> enforceAndBumpStudentPassActivationCounter purchasedPass mbStudentPassDetails istTime
+      throwAndReleaseSlot $ PassVerificationFailed purchasedPassId.getId "This pass is not valid for this bus route"
+    Just _ -> pure ()
     Nothing -> pure ()
 
   return APISuccess.Success
@@ -1072,11 +1099,6 @@ mkPassRouteActivationCountKey :: Id.Id DP.Person -> Id.Id DPassType.PassType -> 
 mkPassRouteActivationCountKey personId passTypeId =
   "PassRouteActivation:PersonId:" <> personId.getId <> ":PassTypeId:" <> passTypeId.getId
 
--- | Decide a StudentPass verification outcome for the scanned bus.
--- Primary: bus's routeCode matches one of the user's applicableRouteIds → FULLY_VERIFIED.
--- Fallback: count bus stops within configured threshold of any user RoutePair stop;
--- if matchingStopCount >= configured minMatchingStops → PARTIALLY_VERIFIED. Else NOT_VERIFIED.
--- Defaults: 2000m threshold, 1 minimum matching stop.
 verifyStudentPass ::
   DPassDetails.PassDetails ->
   Maybe Text ->
@@ -1103,28 +1125,36 @@ verifyStudentPass passDetails mbBusRouteCode routeStopMapping riderConfig =
                 then DPassVerifyTransaction.PARTIALLY_VERIFIED
                 else DPassVerifyTransaction.NOT_VERIFIED
 
--- | Enforce the daily activation cap for a StudentPass holder; throws if at limit, else bumps the counter
--- with a TTL set to expire at next midnight IST. Limit = number of declared route pairs (with fallback 6).
-enforceAndBumpStudentPassActivationCounter ::
+studentPassActivationLimit :: Maybe DPassDetails.PassDetails -> Int
+studentPassActivationLimit mbPassDetails =
+  let routePairCount = maybe 0 (length . (.routePairs)) mbPassDetails
+   in if routePairCount > 0 then routePairCount else 6
+
+reserveStudentPassActivationSlot ::
   DPurchasedPass.PurchasedPass ->
   Maybe DPassDetails.PassDetails ->
   DT.UTCTime ->
   Environment.Flow ()
-enforceAndBumpStudentPassActivationCounter purchasedPass mbPassDetails istTime = do
-  let routePairCount = maybe 0 (length . (.routePairs)) mbPassDetails
-      activationLimit = if routePairCount > 0 then routePairCount else 6
-      countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
-  count <- fromMaybe (0 :: Integer) <$> Hedis.safeGet countKey
-  when (count >= fromIntegral activationLimit) $
-    throwError (InvalidRequest "Pass activation limit reached for this pass type")
-  void $ Hedis.incr countKey
-  -- Reset at midnight IST (offset 19800s).
+reserveStudentPassActivationSlot purchasedPass mbPassDetails istTime = do
+  let countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
+      activationLimit = studentPassActivationLimit mbPassDetails
+  newCount <- Hedis.incr countKey
   let istOffset = 19800 :: NominalDiffTime
       tomorrowMidnightIST = DT.UTCTime (DT.addDays 1 (DT.utctDay istTime)) 0
       tomorrowMidnightUTC = DT.addUTCTime (negate istOffset) tomorrowMidnightIST
   now <- getCurrentTime
   let secsUntilMidnight = max 1 (round (DT.diffUTCTime tomorrowMidnightUTC now) :: Int)
   void $ Hedis.expire countKey secsUntilMidnight
+  when (newCount > fromIntegral activationLimit) $ do
+    void $ Hedis.decr countKey
+    throwError (InvalidRequest "Pass activation limit reached for this pass type")
+
+rollbackStudentPassActivation ::
+  DPurchasedPass.PurchasedPass ->
+  Environment.Flow ()
+rollbackStudentPassActivation purchasedPass = do
+  let countKey = mkPassRouteActivationCountKey purchasedPass.personId purchasedPass.passTypeId
+  void $ Hedis.decr countKey
 
 postMultimodalPassSwitchDeviceId ::
   ( ( Maybe (Id.Id DP.Person),
@@ -1144,8 +1174,8 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
 
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
     when (purchasedPass.deviceId /= deviceId) $ do
-      -- Check if there are other passes with the same passTypeId that already have this deviceId
-      duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+      -- Check if there are other passes with the same passTypeId that already have this deviceId.
+      duplicatePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId purchasedPass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked, DPurchasedPass.Pending, DPurchasedPass.PhotoPending]
       let otherDevicePasses = filter (\p -> p.id /= purchasedPass.id && p.deviceId == deviceId) duplicatePasses
 
       case otherDevicePasses of

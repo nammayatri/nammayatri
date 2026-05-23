@@ -191,6 +191,7 @@ type SearchAPI =
     :> Header "is-dashboard-request" Bool
     :> QueryParam "filterServiceAndJrnyType" Bool
     :> QueryParam "newServiceTiers" [Spec.ServiceTierType]
+    :> QueryParam "enableSyncSearch" Bool
     :> Post '[JSON] SearchResp
 
 handler :: FlowServer API
@@ -221,11 +222,11 @@ getDoMultimodalSearch = \case
   DSearch.PTSearch DSearch.PublicTransportSearchReq {doMultimodalSearch} -> doMultimodalSearch
   DSearch.FixedRouteSearch DSearch.FixedRouteSearchReq {doMultimodalSearch} -> doMultimodalSearch
 
-search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> FlowHandler SearchResp
-search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType mbNewServiceTiers = withFlowHandlerAPIPersonId personId . search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbFilterServiceAndJrnyType mbNewServiceTiers
+search :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> FlowHandler SearchResp
+search (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withFlowHandlerAPIPersonId personId $ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch
 
-search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Flow SearchResp
-search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers = withPersonIdLogTag personId $ do
+search' :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe [Spec.ServiceTierType] -> Maybe Bool -> Flow SearchResp
+search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbFilterServiceAndJrnyType mbNewServiceTiers mbEnableSyncSearch = withPersonIdLogTag personId $ do
   let isDashboardRequest = fromMaybe False mbIsDashboardRequest
   unless isDashboardRequest $ checkSearchRateLimit personId
   fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -251,10 +252,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
   dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice isDashboardRequest False Nothing
-  becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
-  let generatedJson = encode becknTaxiReqV2
-  logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-  inlineResults <- dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2
+  inlineResults <- dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch
   fork "Multimodal Search" $ do
     riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let mbDoMultimodalSearch = getDoMultimodalSearch req
@@ -280,16 +278,30 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
 syncSearchTimeoutMicros :: ET.Microseconds
 syncSearchTimeoutMicros = ET.Microseconds 5000000 -- 5 seconds
 
-dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
-dispatchSearchToBpp merchantId req dSearchRes becknTaxiReqV2 = do
-  fork "search cabs" . withShortRetry $
-    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId})
-  let mbSyncCfg = mbRiderConfig >>= (.syncSearchDispatchConfig)
-      mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
-  if SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
-    then awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
-    else pure Nothing
+dispatchSearchToBpp :: Id Merchant.Merchant -> DSearch.SearchReq -> DSearch.SearchRes -> Maybe Bool -> Flow (Maybe DQuote.GetQuotesRes)
+dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
+  shouldSync <-
+    if fromMaybe False mbEnableSyncSearch
+      then do
+        mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = dSearchRes.searchRequest.merchantOperatingCityId.getId})
+        let mbSyncCfg = mbRiderConfig >>= (.syncSearchDispatchConfig)
+            mbFromSpecialLocId = Id <$> dSearchRes.searchRequest.fromSpecialLocationId
+        pure $ SSD.shouldDispatchSync mbSyncCfg req mbFromSpecialLocId
+      else pure False
+  if shouldSync
+    then do
+      becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+      logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
+      fork "search cabs" . withShortRetry $
+        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+      awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
+    else do
+      fork "search cabs" . withShortRetry $ do
+        becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+        let generatedJson = encode becknTaxiReqV2
+        logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+        void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+      pure Nothing
 
 awaitSyncSearchWithTimeout :: DSearch.SearchRes -> BecknSearchAPI.SearchReqV2 -> Flow (Maybe DQuote.GetQuotesRes)
 awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2 = do

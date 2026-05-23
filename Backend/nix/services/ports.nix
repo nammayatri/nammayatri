@@ -70,8 +70,7 @@
   rider-producer-metrics = 9990;
 
   # Dev tools
-  context-api = 7082;
-  test-dashboard = 3000;
+  test-context-api = 7082;
   metabase = 3001;
   redis-commander = 8431;
 }

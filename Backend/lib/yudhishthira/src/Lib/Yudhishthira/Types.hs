@@ -18,6 +18,7 @@ module Lib.Yudhishthira.Types
     VerifyNammaTagRequest (..),
     VerifyNammaTagResponse (..),
     LogicDomain (..),
+    InvoiceTemplateScope (..),
     AppDynamicLogicReq (..),
     UpdateKaalBasedTagsJobReq (..),
     AppDynamicLogicResp (..),
@@ -90,6 +91,7 @@ import Data.Aeson
 import Data.Map.Strict (Map)
 import Data.OpenApi as OpenApi hiding (TagName, description, name, schema, tags, version)
 import qualified Data.Text as T
+import Domain.Types.Invoice (InvoiceType (..))
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
@@ -270,6 +272,25 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
   deriving stock (Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data InvoiceTemplateScope
+  = InvoiceTypeGeneric
+  | InvoiceTypeSpecific InvoiceType
+  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+
+-- Hand-rolled (dashed) so the string is whitespace-free for DB column + Redis key use.
+instance Show InvoiceTemplateScope where
+  show InvoiceTypeGeneric = "InvoiceTypeGeneric"
+  show (InvoiceTypeSpecific it) = "InvoiceTypeSpecific-" ++ show it
+
+instance Read InvoiceTemplateScope where
+  readsPrec _ s = case break (== '-') s of
+    ("InvoiceTypeGeneric", "") -> [(InvoiceTypeGeneric, "")]
+    ("InvoiceTypeSpecific", '-' : itStr) ->
+      case readMaybe itStr of
+        Just it -> [(InvoiceTypeSpecific it, "")]
+        Nothing -> []
+    _ -> []
+
 data LogicDomain
   = POOLING
   | CANCELLATION_COIN_POLICY
@@ -299,6 +320,7 @@ data LogicDomain
   | RIDER_CONFIG_OVERRIDES ConfigType
   | UI_DRIVER DeviceType PlatformType
   | UI_RIDER DeviceType PlatformType
+  | INVOICE_TEMPLATE InvoiceTemplateScope
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -332,6 +354,8 @@ instance Enumerable LogicDomain where
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
       ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
       ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
+      ++ [INVOICE_TEMPLATE InvoiceTypeGeneric]
+      ++ map (INVOICE_TEMPLATE . InvoiceTypeSpecific) [SubscriptionPurchase, Ride, RideCancellation, Commission, AggregatedCommission]
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
@@ -366,10 +390,13 @@ generateLogicDomainShowInstances =
     ++ [show BEHAVIOR_COMMUNICATION]
     ++ [show BEHAVIOR_RESOLUTION]
     ++ [show CANCELLATION_REASONS]
+    ++ [show (INVOICE_TEMPLATE InvoiceTypeGeneric)]
+    ++ [show (INVOICE_TEMPLATE (InvoiceTypeSpecific it)) | it <- invoiceTypes]
   where
     configTypes = [minBound .. maxBound]
     a' = [minBound .. maxBound]
     b' = [minBound .. maxBound]
+    invoiceTypes = [SubscriptionPurchase, Ride, RideCancellation, Commission, AggregatedCommission]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -408,6 +435,7 @@ instance Show LogicDomain where
   show BEHAVIOR_COMMUNICATION = "BEHAVIOR-COMMUNICATION"
   show BEHAVIOR_RESOLUTION = "BEHAVIOR-RESOLUTION"
   show CANCELLATION_REASONS = "CANCELLATION-REASONS"
+  show (INVOICE_TEMPLATE scope) = "INVOICE-TEMPLATE_" ++ show scope
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -495,6 +523,11 @@ instance Read LogicDomain where
                      in case readMaybe configType''' of
                           Just configType -> [(UI_RIDER configType'' configType, rest2)]
                           Nothing -> []
+                  Nothing -> []
+          "INVOICE-TEMPLATE" ->
+            let (scope', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe scope' of
+                  Just scope -> [(INVOICE_TEMPLATE scope, rest1)]
                   Nothing -> []
           _ -> []
 

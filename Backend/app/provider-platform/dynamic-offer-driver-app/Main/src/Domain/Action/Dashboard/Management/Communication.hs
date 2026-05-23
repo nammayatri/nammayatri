@@ -356,7 +356,7 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
             pure filtered
       -- Admin or no operator: all fleet owners in merchant+city.
       Just CommAPI.ROLE_FLEET_OWNER ->
-        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER] limit offset
+        B.runInReplica $ QPerson.findAllByMerchantIdAndOpCityAndRoles merchant merchantOpCity [DP.FLEET_OWNER, DP.FLEET_BUSINESS] limit offset
       -- No operator-to-operator: operator cannot list other operators.
       Just CommAPI.ROLE_OPERATOR
         | Just _ <- mbOperatorId ->
@@ -459,6 +459,7 @@ personRoleToCommRole DP.FLEET_OWNER = CommAPI.ROLE_FLEET_OWNER
 personRoleToCommRole DP.OPERATOR = CommAPI.ROLE_OPERATOR
 personRoleToCommRole DP.ADMIN = CommAPI.ROLE_ADMIN
 personRoleToCommRole DP.FLEET_BUSINESS = CommAPI.ROLE_FLEET_OWNER
+personRoleToCommRole DP.CONDUCTOR = CommAPI.ROLE_DRIVER
 
 buildRecipientItem ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
@@ -473,6 +474,7 @@ buildRecipientItem person = do
         name,
         role = personRoleToCommRole person.role,
         phone,
+        mobileCountryCode = person.mobileCountryCode,
         email = person.email,
         fleetOwnerName = Nothing,
         operatorName = Nothing

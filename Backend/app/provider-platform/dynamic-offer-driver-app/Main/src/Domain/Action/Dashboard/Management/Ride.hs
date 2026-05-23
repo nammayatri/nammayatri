@@ -80,7 +80,7 @@ getRideList ::
   Maybe UTCTime ->
   Maybe HighPrecMoney ->
   Flow Common.RideListRes
-getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerPhone mbCustomerCountryCode mbDriverPhone mbDriverId mbDriverCountryCode mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
+getRideList merchantShortId opCity requestorId mbBookingStatus mbCurrency mbCustomerCountryCode mbCustomerPhone mbDriverCountryCode mbDriverId mbDriverPhone mbFleetOwnerId mbfrom mbFromAmount mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbToAmount = do
   logInfo $ "Ride list requested by: " <> requestorId
   DRide.getRideList merchantShortId opCity mbBookingStatus mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbPaymentMode mbRideId mbReqShortRideId mbto mbFleetOwnerId mbFromAmount mbToAmount (getId <$> mbDriverId) mbCustomerCountryCode mbDriverCountryCode requestorId
 
@@ -201,8 +201,10 @@ postRideWaiverRideCancellationPenalty _merchantShortId _opCity rideId req = do
     cancellationPenaltyLockKey :: Text -> Text
     cancellationPenaltyLockKey id = "Driver:Cancellation:Penalty:DriverFeeId-" <> id
 
-getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
-getRideFlowDebug merchantShortId opCity mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
+-- After codegen, param order is alphabetical: bapBookingId, bapRideId, bapRideShortId, bapSearchRequestId, bookingId, rideId, rideShortId, searchRequestId
+-- BAP IDs are resolved at dashboard level; driver-app ignores them
+getRideFlowDebug :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe (Id Common.Ride) -> Maybe (ShortId Common.Ride) -> Maybe Text -> Flow Common.RideFlowDebugRes
+getRideFlowDebug merchantShortId opCity _mbBapBookingId _mbBapRideId _mbBapRideShortId _mbBapSearchRequestId mbBookingId mbRideId mbRideShortId mbSearchRequestId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   RideFlowDebug.getRideFlowDebug merchantShortId merchantOpCityId mbRideId mbBookingId mbSearchRequestId mbRideShortId

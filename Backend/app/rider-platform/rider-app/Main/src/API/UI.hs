@@ -36,6 +36,7 @@ import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
 import qualified API.Action.UI.RiderLocation as RiderLocation
+import qualified API.Action.UI.RiderPreferences as RiderPreferences
 import qualified API.Action.UI.SVP as SVP
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
@@ -44,6 +45,7 @@ import qualified API.Action.UI.TicketService as TicketService
 import qualified API.Action.UI.TrackRoute as TrackRoute
 import qualified API.Action.UI.TriggerFCM as TriggerFCM
 import qualified API.UI.AadhaarVerification as AadhaarVerification
+import qualified API.UI.AddBaggage as AddBaggage
 import qualified API.UI.AppInstalls as AppInstalls
 import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
@@ -152,6 +154,7 @@ type API =
            :<|> Insurance.API
            :<|> Metrics.API
            :<|> PickupInstructions.API
+           :<|> RiderPreferences.API
            :<|> NYRegular.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
@@ -163,6 +166,7 @@ type API =
            :<|> PassDetails.API
            :<|> SVP.API
            :<|> ChangeServiceTier.API
+           :<|> AddBaggage.API
        )
 
 handler :: FlowServer API
@@ -233,6 +237,7 @@ handler =
     :<|> Insurance.handler
     :<|> Metrics.handler
     :<|> PickupInstructions.handler
+    :<|> RiderPreferences.handler
     :<|> NYRegular.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
@@ -244,3 +249,4 @@ handler =
     :<|> PassDetails.handler
     :<|> SVP.handler
     :<|> ChangeServiceTier.handler
+    :<|> AddBaggage.handler

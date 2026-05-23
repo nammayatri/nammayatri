@@ -21,14 +21,14 @@ where
 
 import qualified Data.Text as T
 import Environment
-import qualified SMS.Domain as Shared
-import qualified SMS.Types as Shared
 import Kernel.Prelude
 import Kernel.Sms.Config (useFakeSms)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SMS.Domain as Shared
+import qualified SMS.Types as Shared
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -42,8 +42,9 @@ sendSMS ::
   Flow Shared.SendSMSRes
 sendSMS apiKey merchantShortIdText city req = do
   merchant <- findMerchantByShortId (ShortId merchantShortIdText)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError (AuthBlocked "Invalid BPP internal api key")
+  dashboardToken <- asks (.dashboardToken)
+  unless (Just dashboardToken == apiKey) $
+    throwError (AuthBlocked "Invalid BPP dashboard token")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   smsCfg <- asks (.smsCfg)
 

@@ -141,6 +141,7 @@ in  { hedisCfg
     , hedisNonCriticalCfg = hedisCfg
     , hedisNonCriticalClusterCfg = hedisClusterCfg
     , ltsRedisCfg = hedisCfg
+    , secondaryLTSRedisCfg = Some hedisCfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
     , esqDBCfg

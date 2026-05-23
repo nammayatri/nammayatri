@@ -29,6 +29,7 @@ library
   exposed-modules:
       API
       API.Beckn
+      API.Beckn.FRFS.Forwarding
       API.Beckn.FRFS.OnCancel
       API.Beckn.FRFS.OnConfirm
       API.Beckn.FRFS.OnInit
@@ -76,6 +77,7 @@ library
       API.Types.UI.Payment
       API.UI
       API.UI.AadhaarVerification
+      API.UI.AddBaggage
       API.UI.AppInstalls
       API.UI.Booking
       API.UI.Call
@@ -184,6 +186,7 @@ library
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.Handlers
       Domain.Action.Dashboard.AppManagement.MerchantOnboarding.TicketHandlers
       Domain.Action.Dashboard.AppManagement.Pass
+      Domain.Action.Dashboard.AppManagement.Passetto
       Domain.Action.Dashboard.AppManagement.PassOrganization
       Domain.Action.Dashboard.AppManagement.Payment
       Domain.Action.Dashboard.AppManagement.TicketDashboard
@@ -203,6 +206,7 @@ library
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Offer
       Domain.Action.Dashboard.Ride
+      Domain.Action.Dashboard.RideBooking.AddBaggage
       Domain.Action.Dashboard.RideBooking.Booking
       Domain.Action.Dashboard.RideBooking.Cancel
       Domain.Action.Dashboard.RideBooking.ChangeServiceTier
@@ -238,6 +242,7 @@ library
       Domain.Action.Internal.UpdateCancellationFeeStatus
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.AadhaarVerification
+      Domain.Action.UI.AddBaggage
       Domain.Action.UI.AlertWebhook
       Domain.Action.UI.AppInstalls
       Domain.Action.UI.AttractionRecommend
@@ -313,6 +318,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
+      Domain.Action.UI.RiderPreferences
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
       Domain.Action.UI.Search
@@ -359,6 +365,7 @@ library
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
+      Domain.Types.Extra.RiderPreferences
       Domain.Types.Extra.TicketBooking
       Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
@@ -509,6 +516,7 @@ library
       SharedLogic.PublicTransport
       SharedLogic.Quote
       SharedLogic.Referral
+      SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -570,6 +578,7 @@ library
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.IntegratedBPPConfig
+      Storage.CachedQueries.InvoiceTemplate
       Storage.CachedQueries.JourneyLeg
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -699,6 +708,7 @@ library
       Storage.Queries.RefundRequestExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
+      Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SavedReqLocationExtra
@@ -779,6 +789,7 @@ library
       API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
       API.Action.Dashboard.AppManagement.Pass
+      API.Action.Dashboard.AppManagement.Passetto
       API.Action.Dashboard.AppManagement.PassOrganization
       API.Action.Dashboard.AppManagement.Payment
       API.Action.Dashboard.AppManagement.TicketDashboard
@@ -804,6 +815,7 @@ library
       API.Action.Dashboard.Management.SosMedia
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.RideBooking
+      API.Action.Dashboard.RideBooking.AddBaggage
       API.Action.Dashboard.RideBooking.Booking
       API.Action.Dashboard.RideBooking.Cancel
       API.Action.Dashboard.RideBooking.ChangeServiceTier
@@ -854,6 +866,7 @@ library
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
       API.Action.UI.RiderLocation
+      API.Action.UI.RiderPreferences
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.SVP
@@ -872,6 +885,7 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Endpoints.Pass
+      API.Types.Dashboard.AppManagement.Endpoints.Passetto
       API.Types.Dashboard.AppManagement.Endpoints.PassOrganization
       API.Types.Dashboard.AppManagement.Endpoints.Payment
       API.Types.Dashboard.AppManagement.Endpoints.TicketDashboard
@@ -882,6 +896,7 @@ library
       API.Types.Dashboard.AppManagement.FRFSTicketService
       API.Types.Dashboard.AppManagement.MerchantOnboarding
       API.Types.Dashboard.AppManagement.Pass
+      API.Types.Dashboard.AppManagement.Passetto
       API.Types.Dashboard.AppManagement.PassOrganization
       API.Types.Dashboard.AppManagement.Payment
       API.Types.Dashboard.AppManagement.TicketDashboard
@@ -889,10 +904,12 @@ library
       API.Types.Dashboard.AppManagement.TransitOperator
       API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping
       API.Types.Dashboard.RideBooking
+      API.Types.Dashboard.RideBooking.AddBaggage
       API.Types.Dashboard.RideBooking.Booking
       API.Types.Dashboard.RideBooking.Cancel
       API.Types.Dashboard.RideBooking.ChangeServiceTier
       API.Types.Dashboard.RideBooking.Confirm
+      API.Types.Dashboard.RideBooking.Endpoints.AddBaggage
       API.Types.Dashboard.RideBooking.Endpoints.Booking
       API.Types.Dashboard.RideBooking.Endpoints.Cancel
       API.Types.Dashboard.RideBooking.Endpoints.ChangeServiceTier
@@ -949,6 +966,7 @@ library
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
       API.Types.UI.RiderLocation
+      API.Types.UI.RiderPreferences
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.SVP
@@ -1089,6 +1107,7 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
+      Domain.Types.RiderPreferences
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
@@ -1252,6 +1271,7 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
+      Storage.Beam.RiderPreferences
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
@@ -1437,6 +1457,7 @@ library
       Storage.Queries.OrphanInstances.RefundRequest
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RiderPreferences
       Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SavedReqLocation
@@ -1489,6 +1510,7 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
+      Storage.Queries.RiderPreferences
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender

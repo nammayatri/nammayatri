@@ -5,12 +5,14 @@
 module Storage.Queries.PassDetails (module Storage.Queries.PassDetails, module ReExport) where
 
 import qualified Data.Time
+import qualified Data.Time.Calendar
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PassDetails
 import qualified Domain.Types.PassOrganization
 import qualified Domain.Types.PassType
 import qualified Domain.Types.Person
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -66,19 +68,21 @@ findByPersonId personId passEnum = do findOneWithKV [Se.And [Se.Is Beam.personId
 
 updatePassDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m ())
-updatePassDetails name passOrganizationId idCardPicture address age guardianName studentClass routePairs graduationDate verificationStatus numberOfStages applicableRouteIds personId passEnum = do
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Prelude.Maybe Domain.Types.PassDetails.PassDetailAddress -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Domain.Types.PassDetails.RoutePair] -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Domain.Types.PassDetails.VerificationStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.PassType.PassEnum -> m ())
+updatePassDetails name passOrganizationId idCardPicture address age guardianName department year routePairs academicYearStart academicYearEnd verificationStatus numberOfStages applicableRouteIds personId passEnum = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.name name,
       Se.Set Beam.passOrganizationId (Kernel.Types.Id.getId passOrganizationId),
-      Se.Set Beam.idCardPicture idCardPicture,
-      Se.Set Beam.address address,
+      Se.Set Beam.idCardPicture (Kernel.Types.Id.getId <$> idCardPicture),
+      Se.Set Beam.address (Kernel.Prelude.toJSON <$> address),
       Se.Set Beam.age age,
       Se.Set Beam.guardianName guardianName,
-      Se.Set Beam.studentClass studentClass,
+      Se.Set Beam.department department,
+      Se.Set Beam.year year,
       Se.Set Beam.routePairs (Just (Kernel.Prelude.toJSON routePairs)),
-      Se.Set Beam.graduationDate graduationDate,
+      Se.Set Beam.academicYearStart academicYearStart,
+      Se.Set Beam.academicYearEnd academicYearEnd,
       Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.numberOfStages numberOfStages,
       Se.Set Beam.applicableRouteIds applicableRouteIds,
@@ -92,15 +96,16 @@ updatePassDetails name passOrganizationId idCardPicture address age guardianName
 
 updateVerificationStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.PassDetails.VerificationStatus -> Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> [Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails] -> m ())
-updateVerificationStatus verificationStatus validTill remark graduationDate numberOfStages id = do
+  (Domain.Types.PassDetails.VerificationStatus -> Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> [Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails] -> m ())
+updateVerificationStatus verificationStatus validTill remark numberOfStages academicYearStart academicYearEnd id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.verificationStatus verificationStatus,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.remark remark,
-      Se.Set Beam.graduationDate graduationDate,
       Se.Set Beam.numberOfStages numberOfStages,
+      Se.Set Beam.academicYearStart academicYearStart,
+      Se.Set Beam.academicYearEnd academicYearEnd,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
@@ -114,13 +119,17 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
   updateWithKV
     [ Se.Set Beam.aadharNoEncrypted (aadharNo <&> unEncrypted . (.encrypted)),
       Se.Set Beam.aadharNoHash (aadharNo <&> (.hash)),
-      Se.Set Beam.address address,
+      Se.Set Beam.academicYearEnd academicYearEnd,
+      Se.Set Beam.academicYearStart academicYearStart,
+      Se.Set Beam.address (Kernel.Prelude.toJSON <$> address),
       Se.Set Beam.age age,
       Se.Set Beam.applicableRouteIds applicableRouteIds,
+      Se.Set Beam.department department,
       Se.Set Beam.gender gender,
-      Se.Set Beam.graduationDate graduationDate,
+      Se.Set Beam.guardianMobileNumberEncrypted (guardianMobileNumber <&> unEncrypted . (.encrypted)),
+      Se.Set Beam.guardianMobileNumberHash (guardianMobileNumber <&> (.hash)),
       Se.Set Beam.guardianName guardianName,
-      Se.Set Beam.idCardPicture idCardPicture,
+      Se.Set Beam.idCardPicture (Kernel.Types.Id.getId <$> idCardPicture),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
@@ -133,10 +142,10 @@ updateByPrimaryKey (Domain.Types.PassDetails.PassDetails {..}) = do
       Se.Set Beam.registerNo registerNo,
       Se.Set Beam.remark remark,
       Se.Set Beam.routePairs (Just (Kernel.Prelude.toJSON routePairs)),
-      Se.Set Beam.selfImage selfImage,
-      Se.Set Beam.studentClass studentClass,
+      Se.Set Beam.selfImage (Kernel.Types.Id.getId selfImage),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
-      Se.Set Beam.verificationStatus verificationStatus
+      Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.year year
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

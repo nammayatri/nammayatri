@@ -105,6 +105,10 @@ type API =
       :> ( "profile"
              :> DashboardAuth 'DASHBOARD_USER
              :> Get '[JSON] DP.PersonAPIEntity
+             :<|> "updateProfile"
+               :> DashboardAuth 'DASHBOARD_USER
+               :> ReqBody '[JSON] DPerson.UpdateProfileReq
+               :> Put '[JSON] APISuccess
              :<|> "getCurrentMerchant"
                :> DashboardAuth 'DASHBOARD_USER
                :> Get '[JSON] DPerson.MerchantAccessRes
@@ -154,6 +158,7 @@ handler =
       :<|> changeMobileByAdmin
   )
     :<|> ( profile
+             :<|> updateProfile
              :<|> getCurrentMerchant
              :<|> changePassword
              :<|> getAccessMatrix
@@ -196,6 +201,10 @@ resetMerchantCityAccess tokenInfo personId =
 profile :: BeamFlow' => TokenInfo -> FlowHandler DP.PersonAPIEntity
 profile =
   withFlowHandlerAPI' . DPerson.profile
+
+updateProfile :: BeamFlow' => TokenInfo -> DPerson.UpdateProfileReq -> FlowHandler APISuccess
+updateProfile tokenInfo =
+  withFlowHandlerAPI' . DPerson.updateProfile tokenInfo
 
 getCurrentMerchant :: BeamFlow' => TokenInfo -> FlowHandler DPerson.MerchantAccessRes
 getCurrentMerchant =

@@ -4,14 +4,85 @@ import { ApiDef } from '../api-catalog/types';
 import { ParsedStep } from './postman-parser';
 import { resolveVariables, executeTestScript, executePrereqScript, VariableStores, PostmanRuntimeResult } from './postman-runtime';
 import { startLogCapture, stopLogCapture } from './context';
-
-const PROXY_BASE = 'http://localhost:7082';
+import { PROXY_BASE } from '../config';
 
 export interface ApiResult {
   ok: boolean;
   status: number;
   data: any;
   elapsed: number;
+}
+
+// ── Coverage Auto-Recording ──
+
+let _coverageRunId: string = `run-${Date.now()}`;
+let _coverageBatch: any[] = [];
+let _coverageFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+export function startNewCoverageRun(id?: string) {
+  _coverageRunId = id || `run-${Date.now()}`;
+  _coverageBatch = [];
+}
+
+function _extractFingerprint(body: any): Record<string, any> {
+  if (!body || typeof body !== 'object') return {};
+  const fp: Record<string, any> = {};
+
+  const interesting = (val: any): boolean => {
+    if (val === null || val === undefined) return true;
+    if (typeof val === 'boolean') return true;
+    if (typeof val === 'string' && val === val.toUpperCase() && val.length > 1 && !val.includes(' ')) return true; // enum-like
+    return false;
+  };
+
+  for (const [key, val] of Object.entries(body)) {
+    if (interesting(val)) {
+      fp[key] = val;
+    } else if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+      // One level deep for nested objects (e.g. paymentInstrument.instrumentType)
+      for (const [subKey, subVal] of Object.entries(val)) {
+        if (interesting(subVal)) {
+          fp[`${key}.${subKey}`] = subVal;
+        }
+      }
+    }
+  }
+  return fp;
+}
+
+function _normalizePath(path: string): string {
+  // Replace UUIDs and IDs with placeholders for grouping
+  return path.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '{id}')
+             .replace(/\/[0-9a-f]{24,}/gi, '/{id}');
+}
+
+function _recordCoverageHit(service: string, method: string, path: string, body?: any) {
+  const hit = {
+    runId: _coverageRunId,
+    service,
+    method,
+    path: _normalizePath(path),
+    fingerprint: _extractFingerprint(body),
+    timestamp: Date.now() / 1000,
+  };
+  _coverageBatch.push(hit);
+
+  // Flush in batches (debounced 2s)
+  if (_coverageFlushTimer) clearTimeout(_coverageFlushTimer);
+  _coverageFlushTimer = setTimeout(_flushCoverageBatch, 2000);
+}
+
+function _flushCoverageBatch() {
+  if (_coverageBatch.length === 0) return;
+  const batch = [..._coverageBatch];
+  _coverageBatch = [];
+  // Fire and forget
+  axios.post(`${PROXY_BASE}/api/coverage/record`, batch, { timeout: 5000 }).catch(() => {});
+}
+
+// Flush on page unload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', _flushCoverageBatch);
 }
 
 // --- Driver location pinger: keeps LTS geo bucket alive ---
@@ -168,9 +239,14 @@ export async function callStep(
       catalogApi.extractFromResponse(resp.data, ctx);
     }
 
+    // Auto-record coverage
+    _recordCoverageHit(step.service, step.method, path, body);
+
     return { ok: true, status: resp.status, data: resp.data, elapsed };
   } catch (err: any) {
     const elapsed = Math.round(performance.now() - start);
+    // Still record the hit (even failures are coverage)
+    _recordCoverageHit(step.service, step.method, path, body);
     if (err.response) {
       return { ok: false, status: err.response.status, data: err.response.data, elapsed };
     }
@@ -198,6 +274,7 @@ const SERVICE_PROXY_MAP: Record<string, string> = {
   'rider-dashboard': '/proxy/rider-dashboard',
   'mock-idfy': '/proxy/mock-idfy',
   'mock-server': '/proxy/mock-server',
+  'juspay-payment': '/proxy/juspay-payment',
 };
 
 export interface PostmanStepResult extends ApiResult {
@@ -213,6 +290,8 @@ export interface PostmanStepResult extends ApiResult {
   resolvedHeaders?: Record<string, string>;
   /** Response headers (lower-cased keys, as returned by axios) */
   responseHeaders?: Record<string, string>;
+  /** Upstream latency in ms — measured on context-api side (excludes browser/nginx/proxy overhead) */
+  upstreamMs: number;
 }
 
 /**
@@ -278,6 +357,12 @@ export async function callPostmanStep(
   }
 
   const elapsed = Math.round(performance.now() - start);
+  // X-Upstream-Latency-Ms = time measured on context-api side for the upstream
+  // HTTP call only (excludes browser, nginx, proxy overhead)
+  const upstreamMs = parseInt(responseHeaders['x-upstream-latency-ms'] || '0', 10) || elapsed;
+
+  // Auto-record coverage for Postman steps
+  _recordCoverageHit(step.service, step.method, resolvedPath, body);
 
   // 8. Execute test script FIRST (may include delays for async callbacks like FRFS on_search)
   let assertions: PostmanRuntimeResult['assertions'] = [];
@@ -298,7 +383,7 @@ export async function callPostmanStep(
   //    the wait for async service activity (beckn callbacks, allocator) lives.
   const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
 
-  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
 function normalizeHeaders(h: any): Record<string, string> {

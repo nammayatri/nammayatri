@@ -72,6 +72,35 @@ DEFAULT_CLOUDFRONT_URL = os.getenv(
     "",
 )
 
+# Per-direction default fetch URLs. Used when neither --fetch-url nor
+# CONFIG_SYNC_CLOUDFRONT_URL is provided. master is on v1 (older zip layout);
+# prod / prod_international are on v2. Override per-direction with
+# CONFIG_SYNC_FETCH_URL_<DIRECTION_UPPER> env var if needed.
+DEFAULT_S3_PUBLIC_BUCKET = os.getenv(
+    "CONFIG_SYNC_PUBLIC_BUCKET_URL",
+    "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com",
+)
+DEFAULT_FETCH_VERSIONS = {
+    "master_to_local": "v1",
+    "prod_to_local": "v2",
+    "prod_international_to_local": "v2",
+}
+
+
+def default_fetch_url_for(direction: str) -> str:
+    """Construct the per-direction default S3 prefix for pre-patched config zips.
+
+    Returns "" if the direction has no known default — caller should fall back
+    to --fetch-url / CONFIG_SYNC_CLOUDFRONT_URL or error out.
+    """
+    env_override = os.getenv(f"CONFIG_SYNC_FETCH_URL_{direction.upper()}")
+    if env_override:
+        return env_override.rstrip("/")
+    version = DEFAULT_FETCH_VERSIONS.get(direction)
+    if not version:
+        return ""
+    return f"{DEFAULT_S3_PUBLIC_BUCKET.rstrip('/')}/{direction}/{version}"
+
 # Cap each export-side query (precheck SELECT, COPY, etc.) at 2 minutes so a
 # slow query / flaky link aborts cleanly instead of hanging the whole export.
 # Override with $CONFIG_SYNC_EXPORT_STATEMENT_TIMEOUT_MS (in milliseconds).
@@ -1609,15 +1638,23 @@ def cmd_import(args):
 
     schemas = args.schemas or list(config_tables.keys())
 
-    # Read from patched data directory
+    # Read from patched data directory. --force-fetch wipes any existing
+    # patched copy so we always re-download from CloudFront.
     patched_base = DATA_DIR / direction
+    if getattr(args, "force_fetch", False) and patched_base.exists():
+        print(f"--force-fetch: removing existing patched data at {patched_base}")
+        shutil.rmtree(patched_base)
     if not patched_base.exists():
-        if getattr(args, "fetch", False):
-            fetch_url = args.fetch_url or DEFAULT_CLOUDFRONT_URL
+        if getattr(args, "fetch", False) or getattr(args, "force_fetch", False):
+            # Resolution order: explicit --fetch-url, then CONFIG_SYNC_CLOUDFRONT_URL,
+            # then per-direction baked-in default (master→v1, prod/prod_international→v2).
+            fetch_url = args.fetch_url or DEFAULT_CLOUDFRONT_URL or default_fetch_url_for(direction)
             if not fetch_url:
                 sys.exit(
-                    "--fetch was requested but no CloudFront URL configured. "
-                    "Pass --fetch-url or set CONFIG_SYNC_CLOUDFRONT_URL."
+                    "--fetch was requested but no CloudFront URL configured "
+                    f"and no per-direction default exists for '{direction}'. "
+                    "Pass --fetch-url, set CONFIG_SYNC_CLOUDFRONT_URL, or set "
+                    f"CONFIG_SYNC_FETCH_URL_{direction.upper()}."
                 )
             print(f"Patched data missing locally; fetching from {fetch_url}")
             fetch_patch_zip_from_cloudfront(direction, fetch_url, patched_base)
@@ -2086,8 +2123,12 @@ Examples:
     p_imp.add_argument("--local-dir", help="Read from custom dir instead of patched data")
     p_imp.add_argument("--fetch", action="store_true",
                        help="If the patched directory is missing locally, download <from>_to_<to>.zip from the public CloudFront URL and extract it")
+    p_imp.add_argument("--force-fetch", action="store_true",
+                       help="Always re-download from CloudFront, wiping any existing patched data. Implies --fetch.")
     p_imp.add_argument("--fetch-url", default=None,
-                       help=f"CloudFront base URL for --fetch (default: $CONFIG_SYNC_CLOUDFRONT_URL = {DEFAULT_CLOUDFRONT_URL!r})")
+                       help=("Base URL for --fetch. Resolution order: this flag, then "
+                             f"$CONFIG_SYNC_CLOUDFRONT_URL (={DEFAULT_CLOUDFRONT_URL!r}), then per-direction defaults: "
+                             + ", ".join(f"{d}={DEFAULT_S3_PUBLIC_BUCKET.rstrip('/')}/{d}/{v}" for d, v in DEFAULT_FETCH_VERSIONS.items())))
     p_imp.add_argument("--skip-feature-migrations", action="store_true",
                        help="Skip running dev/feature-migrations/*.sql at the end of import (caller will run them separately)")
     p_imp.add_argument("--only-feature-migrations", action="store_true",

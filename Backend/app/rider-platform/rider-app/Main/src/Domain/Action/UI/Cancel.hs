@@ -19,6 +19,7 @@ module Domain.Action.UI.Cancel
     CancelRes (..),
     CancelSearch (..),
     CancellationDuesDetailsRes (..),
+    CancellationDueBreakup (..),
     CancellationReasonInput (..),
     computeCancellationReasons,
     mkDomainCancelSearch,
@@ -73,6 +74,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps
 
@@ -116,7 +118,17 @@ data CancellationDuesDetailsRes = CancellationDuesDetailsRes
     cancellationDuesPaid :: HighPrecMoney,
     noOfTimesCancellationDuesPaid :: Int,
     waivedOffAmount :: HighPrecMoney,
-    noOfTimesWaiveOffUsed :: Int
+    noOfTimesWaiveOffUsed :: Int,
+    duesBreakup :: Maybe [CancellationDueBreakup]
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+-- rideId here is the BAP rideId — translated from the BPP wire response
+-- so the dashboard waive-off endpoint (which expects a BAP rideId) accepts it.
+data CancellationDueBreakup = CancellationDueBreakup
+  { rideId :: Id Ride.Ride,
+    dueAmount :: PriceAPIEntity,
+    dueStatus :: CallBPPInternal.CancellationDuesPaymentStatus
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -311,8 +323,8 @@ driverDistanceToPickup booking merchantOperatingCityId tripStartPos tripEndPos =
         }
   return distRes.distance
 
-getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Flow CancellationDuesDetailsRes
-getCancellationDuesDetails (personId, merchantId) = do
+getCancellationDuesDetails :: (Id Person.Person, Id Merchant.Merchant) -> Bool -> Flow CancellationDuesDetailsRes
+getCancellationDuesDetails (personId, merchantId) includeBreakup = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId) >>= decrypt
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mobileNumber <- person.mobileNumber & fromMaybeM (PersonMobileNumberIsNULL person.id.getId)
@@ -324,14 +336,35 @@ getCancellationDuesDetails (personId, merchantId) = do
       merchant.driverOfferMerchantId
       mobileHash
       person.currentCity
+      includeBreakup
+  translatedBreakup <- traverse (fmap catMaybes . traverse translateBreakup) res.duesBreakup
   return $
     CancellationDuesDetailsRes
       { cancellationDues = res.cancellationDues,
         cancellationDuesPaid = res.cancellationDuesPaid,
         noOfTimesCancellationDuesPaid = res.noOfTimesCancellationDuesPaid,
         waivedOffAmount = res.waivedOffAmount,
-        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed
+        noOfTimesWaiveOffUsed = res.noOfTimesWaiveOffUsed,
+        duesBreakup = translatedBreakup
       }
+  where
+    -- Maps a BPP-side breakup row to a BAP-side one by looking up the BAP
+    -- ride keyed by bppRideId. Rows with no BAP match are dropped (the
+    -- aggregate cancellationDues still reflects them).
+    translateBreakup b = do
+      mbRide <- QRide.findByBPPRideId b.rideId
+      case mbRide of
+        Nothing -> do
+          logWarning $ "getCancellationDuesDetails: no BAP ride for BPP rideId " <> b.rideId.getId
+          pure Nothing
+        Just ride ->
+          pure $
+            Just
+              CancellationDueBreakup
+                { rideId = ride.id,
+                  dueAmount = b.dueAmount,
+                  dueStatus = b.dueStatus
+                }
 
 makeCustomerBlockingKey :: Text -> Text
 makeCustomerBlockingKey bid = "CCRBlock:" <> bid

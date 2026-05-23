@@ -118,9 +118,11 @@ generateEInvoiceForInvoice invoice = do
                   <> fromMaybe "<none>" eInvResp.ackNo
                   <> " ackDt="
                   <> fromMaybe "<none>" eInvResp.ackDt
+                  <> "SignesQRCode ="
+                  <> fromMaybe "<none>" eInvResp.signedQRCode
                   <> ctx
               logError $ "GSTEInvoice: IRN generated: " <> fromMaybe "<no IRN in response>" eInvResp.irn
-              QFInvoice.updateIrnByInvoiceId eInvResp.irn invoice.id
+              QFInvoice.updateIrnAndSignedQRByInvoiceId eInvResp.irn eInvResp.signedQRCode invoice.id
               logInfo $ "GSTEInvoice: invoice row updated with IRN." <> ctx
           case eResult of
             Right _ -> logInfo $ "GSTEInvoice: e-invoice flow completed successfully." <> ctx

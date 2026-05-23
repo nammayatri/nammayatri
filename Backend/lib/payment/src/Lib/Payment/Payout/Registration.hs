@@ -55,7 +55,8 @@ initiateRegistration ::
   ( EncFlow m r,
     PaymentBeamFlow.BeamFlow m r,
     FinanceBeamFlow.BeamFlow m r,
-    MonadFlow m
+    MonadFlow m,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Id DCommon.Merchant ->
   Maybe (Id DCommon.MerchantOperatingCity) ->
@@ -86,6 +87,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
                 }
       else pure Nothing
 
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         PInterface.CreateOrderReq
           { orderId = orderId,
@@ -107,7 +109,19 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             metadataGatewayReferenceId = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing
+            autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing,
+            webhookUrl = Just nwAddress,
+            paymentFilter =
+              Just
+                PInterface.PaymentFilter
+                  { allowDefaultOptions = False,
+                    options =
+                      [ PInterface.PaymentFilterOption
+                          { paymentMethodType = "UPI",
+                            enable = True
+                          }
+                      ]
+                  }
           }
 
   logInfo $ "Initiating payout registration for person " <> personId.getId <> " | orderId: " <> orderId <> " | amount: " <> show registrationAmount

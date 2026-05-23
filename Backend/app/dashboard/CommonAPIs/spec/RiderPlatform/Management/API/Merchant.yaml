@@ -344,7 +344,7 @@ types:
     - geom: Maybe Text
     - platform: Platform
   JobName:
-    - enum: "NyRegularMasterTrigger, PartnerInvoiceDataExportTrigger, DailyPassStatusUpdateTrigger"
+    - enum: "NyRegularMasterTrigger, PartnerInvoiceDataExportTrigger, DailyPassStatusUpdateTrigger, PassExpiryReminderMasterTrigger"
   RiderConfigEstimatesOrderRes:
     - userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
     - defaultServiceTierOrderConfig: "[ServiceTierType]"

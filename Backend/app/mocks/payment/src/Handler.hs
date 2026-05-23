@@ -342,7 +342,8 @@ buildJuspayWebhookPayload
                           effectAmount,
                       offers = offers,
                       txn_detail = Nothing,
-                      loyalty_info = Nothing
+                      loyalty_info = Nothing,
+                      txn_list = Nothing
                     },
               mandate = Nothing,
               notification = Nothing,
@@ -432,7 +433,8 @@ buildJuspayOrderData order mTxn refunds offers = do
           fmap (realToFrac . getHighPrecMoney) orderEffectAmount,
         offers = Just $ map domainOfferToJuspay offers,
         txn_detail = Nothing,
-        loyalty_info = Nothing
+        loyalty_info = Nothing,
+        txn_list = Nothing
       }
   where
     totalRefundedAmount =
@@ -492,6 +494,7 @@ statusToId = \case
   Payment.AUTO_REFUNDED -> 28
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> 29
   Payment.CANCELLED -> 30
+  Payment.PARTIAL_CHARGED -> 31
 
 toJuspayRefundStatus :: Payment.RefundStatus -> Juspay.RefundStatus
 toJuspayRefundStatus = \case

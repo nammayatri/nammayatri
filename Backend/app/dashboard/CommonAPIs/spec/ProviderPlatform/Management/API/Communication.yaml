@@ -239,6 +239,7 @@ types:
     - name: Text
     - role: CommunicationRoleType
     - phone: Maybe Text
+    - mobileCountryCode: Maybe Text
     - email: Maybe Text
     - fleetOwnerName: Maybe Text
     - operatorName: Maybe Text

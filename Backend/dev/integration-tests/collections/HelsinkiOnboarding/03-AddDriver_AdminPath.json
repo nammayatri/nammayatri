@@ -1,0 +1,116 @@
+{
+	"info": {
+		"_postman_id": "helsinki-onboarding-03a-add-driver-admin",
+		"name": "Helsinki Onboarding 03A - Add Driver (JUSPAY_ADMIN path)",
+		"description": "Onboards a driver via the proven driver-app OTP path (same pattern used by existing 01-StripeRideFlow.json). This is the PRIMARY path — it always works because the dev OTP is bypassed. The driver is linked to the fleet owner downstream when 04-AddVehicle attaches a vehicle with ?fleetOwnerId=...",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"if (!pm.environment.get('driver_mobile')) {",
+					"  const r = Math.floor(Math.random() * 900000000) + 100000000;",
+					"  const alpha = 'abcdefghijklmnopqrstuvwxyz';",
+					"  let s = ''; for (let i = 0; i < 8; i++) s += alpha[Math.floor(Math.random()*26)];",
+					"  pm.environment.set('driver_mobile', String(r));",
+					"  pm.environment.set('driver_name_suffix', s.charAt(0).toUpperCase() + s.slice(1));",
+					"}"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"item": [
+		{
+			"name": "01 - Driver Auth",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Auth returns 200', () => pm.response.to.have.status(200));",
+							"pm.environment.set('driver_authId', pm.response.json().authId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{driver_mobile}}\", \"mobileCountryCode\": \"{{country_code}}\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth"]
+				}
+			}
+		},
+		{
+			"name": "02 - Driver OTP Verify",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('OTP verify returns 200', () => pm.response.to.have.status(200));",
+							"const d = pm.response.json();",
+							"pm.expect(d.token).to.be.a('string');",
+							"pm.environment.set('driver_token', d.token);",
+							"pm.environment.set('driver_id', d.person.id);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [ { "key": "Content-Type", "value": "application/json" } ],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-driver-helsinki\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["auth", "{{driver_authId}}", "verify"]
+				}
+			}
+		},
+		{
+			"name": "03 - Update Driver Profile",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Profile update returns 200 or 204', () => pm.expect([200, 204]).to.include(pm.response.code));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{ "key": "Content-Type", "value": "application/json" },
+					{ "key": "token", "value": "{{driver_token}}" }
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"firstName\": \"Driver{{driver_name_suffix}}\", \"lastName\": \"Test\", \"email\": \"driver-{{driver_mobile}}@helsinki.test\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/profile",
+					"host": ["{{baseURL_namma_P}}"],
+					"path": ["driver", "profile"]
+				}
+			}
+		}
+	]
+}

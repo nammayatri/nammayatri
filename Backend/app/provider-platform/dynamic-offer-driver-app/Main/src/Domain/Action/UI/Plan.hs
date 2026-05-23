@@ -1037,6 +1037,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   orderId <- generateGUIDText
   orderShortId <- generateShortId
+  nwAddress <- asks (.nwAddress)
   let driverEmail = fromMaybe "test@juspay.in" driver.email
       amount = plan.registrationAmount
       createOrderReq =
@@ -1055,12 +1056,14 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
             metadataGatewayReferenceId = Nothing,
+            webhookUrl = Just nwAddress,
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   paymentServiceName <- Payment.decidePaymentService subscriptionConfig.paymentServiceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- Payment.createOrder merchantId merchantOpCityId paymentServiceName (Just driver.id.getId)

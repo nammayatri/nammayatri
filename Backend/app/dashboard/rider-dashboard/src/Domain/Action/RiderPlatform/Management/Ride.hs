@@ -121,7 +121,8 @@ cancellationChargesWaiveOff merchantShortId opCity apiTokenInfo rideId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.cancellationChargesWaiveOff) rideId
 
-getRideFlowDebugBap :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug)
-getRideFlowDebugBap merchantShortId opCity apiTokenInfo bapBookingId bppBookingId transactionId = do
+-- After codegen, param order is alphabetical: bapBookingId, bapRideId, bapRideShortId, bapSearchRequestId, bppBookingId, transactionId
+getRideFlowDebugBap :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug)
+getRideFlowDebugBap merchantShortId opCity apiTokenInfo bapBookingId bapRideId bapRideShortId bapSearchRequestId bppBookingId transactionId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFlowDebugBap) bapBookingId bppBookingId transactionId
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideFlowDebugBap) bapBookingId bapRideId bapRideShortId bapSearchRequestId bppBookingId transactionId

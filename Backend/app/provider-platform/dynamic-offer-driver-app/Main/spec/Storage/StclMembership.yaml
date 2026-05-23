@@ -46,6 +46,7 @@ StclMembership:
     termsAccepted: Bool
     status: ApplicationStatus
     paymentStatus: Maybe Text
+    isAdditionalSharePurchase: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime

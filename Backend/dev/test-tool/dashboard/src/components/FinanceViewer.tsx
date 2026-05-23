@@ -5,8 +5,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import './FinanceViewer.css';
-
-const API = 'http://localhost:7082';
+import { PROXY_BASE as API } from '../config';
 type Side = 'bap' | 'bpp' | 'earnings';
 
 async function fetchJson(url: string) {

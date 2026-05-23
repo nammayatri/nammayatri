@@ -171,6 +171,7 @@ data DriverVehicleServiceTier = DriverVehicleServiceTier
 
 data DriverVehicleServiceTiers = DriverVehicleServiceTiers
   { airConditioned :: Kernel.Prelude.Maybe AirConditionedTier,
+    canSwitchToAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

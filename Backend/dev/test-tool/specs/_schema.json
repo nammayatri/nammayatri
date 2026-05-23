@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LauncherSpec",
+  "type": "object",
+  "required": ["name", "title", "stages"],
+  "additionalProperties": false,
+  "properties": {
+    "name":     { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "title":    { "type": "string" },
+    "icon":     { "type": "string" },
+    "category": { "type": "string", "enum": ["backend", "tool", "mobile", "infra", "other"] },
+    "tags":     { "type": "array", "items": { "type": "string" } },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "url":     { "type": "string" },
+        "ref":     { "type": "string" },
+        "destDir": { "type": "string" }
+      }
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "port"],
+        "additionalProperties": false,
+        "properties": {
+          "name":          { "type": "string" },
+          "port":          { "type": "integer" },
+          "protocol":      { "type": "string", "enum": ["http", "tcp", "udp"] },
+          "allowOverride": { "type": "boolean" },
+          "openInBrowser": { "type": "boolean" }
+        }
+      }
+    },
+    "adbReverse": { "type": "array", "items": { "type": "string" } },
+    "tools":      { "type": "array", "items": { "type": "string" } },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "url"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "url":  { "type": "string" }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "label", "type"],
+        "additionalProperties": false,
+        "properties": {
+          "key":     { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "label":   { "type": "string" },
+          "type":    { "type": "string", "enum": ["file", "select", "text", "secret-text", "number", "boolean"] },
+          "accept":  { "type": "array", "items": { "type": "string" } },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "default": {},
+          "storeAs": { "type": "string", "enum": ["path", "env-inline", "value"] },
+          "required":{ "type": "boolean" }
+        }
+      }
+    },
+    "env": { "type": "object", "additionalProperties": { "type": "string" } },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": false,
+        "properties": {
+          "id":             { "type": "string" },
+          "builtin":        { "type": "string", "enum": ["source"] },
+          "needs":          { "type": "array", "items": { "type": "string" } },
+          "cwd":            { "type": "string" },
+          "run":            { "type": "string" },
+          "lifecycle":      { "type": "string", "enum": ["one-shot", "long-running"] },
+          "invalidatedBy":  { "type": "array", "items": { "type": "string" } },
+          "readyProbe": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind":    { "type": "string", "enum": ["log", "http", "tcp"] },
+              "pattern": { "type": "string" },
+              "url":     { "type": "string" },
+              "port":    { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "workflows": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "array", "items": { "type": "string" } },
+          {
+            "type": "object",
+            "required": ["stages"],
+            "additionalProperties": false,
+            "properties": {
+              "stages":      { "type": "array", "items": { "type": "string" } },
+              "description": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "logs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name":   { "type": "string" },
+          "kind":   { "type": "string", "enum": ["stage", "file", "cmd", "http"] },
+          "stage":  { "type": "string" },
+          "path":   { "type": "string" },
+          "follow": { "type": "boolean" },
+          "cmd":    { "type": "string" },
+          "url":    { "type": "string" }
+        }
+      }
+    },
+    "hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preStart": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "type": "string" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["cmd"],
+                "properties": {
+                  "cmd": { "type": "string" },
+                  "stages": { "type": "array", "items": { "type": "string" } }
+                }
+              }
+            ]
+          }
+        },
+        "postStop": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -29,6 +29,12 @@ findAllBySTId (Id searchTryId) =
     ]
     Nothing
 
+findAllBySTIdIgnoringStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m [Domain.DriverQuote]
+findAllBySTIdIgnoringStatus (Id searchTryId) =
+  findAllWithKVAndConditionalDB
+    [Se.Is BeamDQ.searchTryId $ Se.Eq searchTryId]
+    Nothing
+
 countAllBySTId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DST.SearchTry -> m Int
 countAllBySTId searchTId =
   findAllWithKVAndConditionalDB

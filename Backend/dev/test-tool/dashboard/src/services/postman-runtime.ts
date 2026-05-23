@@ -6,6 +6,7 @@
  */
 
 import axios from 'axios';
+import { PROXY_BASE, MOCK_SERVER_URL, RIDER_URL, DRIVER_URL, PROVIDER_DASHBOARD_URL } from '../config';
 
 export interface PostmanRuntimeResult {
   assertions: Array<{ name: string; passed: boolean; error?: string }>;
@@ -18,13 +19,12 @@ export interface VariableStores {
   collection: Record<string, string>;
 }
 
-// Browser → mock-server / rider / driver direct calls fail CORS — route through the local proxy at :7082.
-const PROXY_BASE = 'http://localhost:7082';
+// Browser → mock-server / rider / driver direct calls fail CORS — route through the local proxy.
 const SERVICE_URL_REWRITES: Array<[string, string]> = [
-  ['http://localhost:8080', PROXY_BASE + '/proxy/mock-server'],
-  ['http://localhost:8013', PROXY_BASE + '/proxy/rider-raw'],
-  ['http://localhost:8016', PROXY_BASE + '/proxy/driver-raw'],
-  ['http://localhost:8018', PROXY_BASE + '/proxy/provider-dashboard'],
+  [MOCK_SERVER_URL, PROXY_BASE + '/proxy/mock-server'],
+  [RIDER_URL, PROXY_BASE + '/proxy/rider-raw'],
+  [DRIVER_URL, PROXY_BASE + '/proxy/driver-raw'],
+  [PROVIDER_DASHBOARD_URL, PROXY_BASE + '/proxy/provider-dashboard'],
 ];
 
 function rewriteUrl(url: string): string {
@@ -255,6 +255,14 @@ function buildPmObject(
       get: (key: string) => stores.collection[key] ?? stores.environment[key] ?? '',
       has: (key: string) => key in stores.collection || key in stores.environment,
     },
+    execution: {
+      // Newman-native primitive. The dashboard runtime hides mock-only steps
+      // at the UI layer, so this is a no-op here; we keep it defined so
+      // collection-level prerequest scripts that call it don't throw.
+      skipRequest: () => {},
+    },
+    info: { requestName: '' },
+    request: { url: { toString: () => '' } },
     test: (name: string, fn: () => void) => {
       try {
         fn();

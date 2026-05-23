@@ -230,11 +230,11 @@ postSosCreate (mbPersonId, _merchantId) req = do
         if riderConfig.enableSupportForSafety
           && ( case req.triggerApiList of
                  Nothing -> True
-                 Just triggers -> List.null triggers || List.elem KAPTURE triggers
+                 Just triggers -> List.null triggers || List.elem KAPTURE triggers || List.elem SUPPORT_TICKET triggers
              )
           && isNothing mbTrigTicketId
           && isNothing sosDetails.ticketId
-          then createNonRideKaptureTicket "createTicket:sosTrigger:nonRide" req.flow person (cast sosDetails.id) riderConfig
+          then createNonRideSupportTicket "createTicket:sosTrigger:nonRide" req.flow person (cast sosDetails.id) riderConfig
           else pure Nothing
       let finalTicketId = mbTrigTicketId <|> mbNonRideTicketId <|> sosDetails.ticketId
       whenJust finalTicketId $ \tId -> void $ SafetySos.updateSosTicketId sosDetails (Just tId)
@@ -302,34 +302,39 @@ postSosCreate (mbPersonId, _merchantId) req = do
     SosRes
       { sosId = sosId,
         externalSOSSuccess = externalApiCalledStatus,
-        kaptureTicketId = mbFinalTicketId
+        ticketId = mbFinalTicketId,
+        kaptureTicketId = mbFinalTicketId -- DEPRECATED: mirrors ticketId for backward compat; remove once frontend stable
       }
   where
     triggerShareRideAndNotifyContacts safetySettings = (fromMaybe safetySettings.notifySosWithEmergencyContacts req.notifyAllContacts) && req.flow == SafetyDSos.SafetyFlow
 
     dispatchSosTriggers :: Maybe [TriggerApi] -> Maybe Text -> Person.Person -> DRC.RiderConfig -> SosReq -> Id Person.Person -> Maybe (DRide.Ride, DRC.RiderConfig) -> Flow (Maybe Text, Maybe Text, Maybe (Id SafetyDSos.Sos), Maybe SOSInterface.SOSServiceConfig, Maybe Bool)
     dispatchSosTriggers triggerApiList existingExternalReferenceId riderPerson riderPlatformConfig sosRequest riderPersonId mbRideFlowConfig = do
-      let triggerList = if List.null (fromMaybe [] triggerApiList) then [KAPTURE] else fromMaybe [] triggerApiList
+      let triggerList = if List.null (fromMaybe [] triggerApiList) then [SUPPORT_TICKET] else fromMaybe [] triggerApiList
       Foldable.foldlM (processTrigger riderPlatformConfig) (existingExternalReferenceId, Nothing, Nothing, Nothing, Nothing) triggerList
       where
         processTrigger :: DRC.RiderConfig -> (Maybe Text, Maybe Text, Maybe (Id SafetyDSos.Sos), Maybe SOSInterface.SOSServiceConfig, Maybe Bool) -> TriggerApi -> Flow (Maybe Text, Maybe Text, Maybe (Id SafetyDSos.Sos), Maybe SOSInterface.SOSServiceConfig, Maybe Bool)
-        processTrigger riderPlatformConfig' (externalReferenceId, kaptureTicketId, dbSosId, sosServiceConfig, externalApiStatus) trigger = case trigger of
-          POLICE -> do
-            (finalExternalReferenceId, finalSosServiceConfig, finalExternalApiStatus) <- case (externalReferenceId, riderPlatformConfig'.externalSOSConfig) of
-              (Just existing, _) -> pure (Just existing, Nothing, Just True)
-              (Nothing, Just sosConfig)
-                | sosConfig.triggerSource == DRC.FRONTEND -> do
-                  (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
-                  pure (trackingId, specificConfig, Just True)
-              _ -> pure (externalReferenceId, sosServiceConfig, externalApiStatus)
-            pure (finalExternalReferenceId, kaptureTicketId, dbSosId, finalSosServiceConfig <|> sosServiceConfig, finalExternalApiStatus)
-          KAPTURE -> do
-            (finalDbSosId, finalKaptureTicketId) <- case mbRideFlowConfig of
-              Just (ride, riderConfig') -> do
-                (sId, tId) <- createTicketForNewSos riderPerson ride riderConfig' riderPerson.merchantId riderPerson.merchantOperatingCityId externalReferenceId sosRequest True
-                pure (Just sId, tId)
-              _ -> pure (dbSosId, kaptureTicketId)
-            pure (externalReferenceId, finalKaptureTicketId <|> kaptureTicketId, finalDbSosId <|> dbSosId, sosServiceConfig, externalApiStatus)
+        processTrigger riderPlatformConfig' (externalReferenceId, mbTicketId, dbSosId, sosServiceConfig, externalApiStatus) trigger = do
+          let createSupportTicket = do
+                (finalDbSosId, finalTicketId) <- case mbRideFlowConfig of
+                  Just (ride, riderConfig') -> do
+                    (sId, tId) <- createTicketForNewSos riderPerson ride riderConfig' riderPerson.merchantId riderPerson.merchantOperatingCityId externalReferenceId sosRequest True
+                    pure (Just sId, tId)
+                  _ -> pure (dbSosId, mbTicketId)
+                pure (externalReferenceId, finalTicketId <|> mbTicketId, finalDbSosId <|> dbSosId, sosServiceConfig, externalApiStatus)
+          case trigger of
+            POLICE -> do
+              (finalExternalReferenceId, finalSosServiceConfig, finalExternalApiStatus) <- case (externalReferenceId, riderPlatformConfig'.externalSOSConfig) of
+                (Just existing, _) -> pure (Just existing, Nothing, Just True)
+                (Nothing, Just sosConfig)
+                  | sosConfig.triggerSource == DRC.FRONTEND -> do
+                    (trackingId, specificConfig) <- handleExternalSOS riderPerson sosConfig sosRequest riderPersonId riderPlatformConfig'
+                    pure (trackingId, specificConfig, Just True)
+                _ -> pure (externalReferenceId, sosServiceConfig, externalApiStatus)
+              pure (finalExternalReferenceId, mbTicketId, dbSosId, finalSosServiceConfig <|> sosServiceConfig, finalExternalApiStatus)
+            -- KAPTURE kept for backward compatibility; SUPPORT_TICKET is the canonical name.
+            SUPPORT_TICKET -> createSupportTicket
+            KAPTURE -> createSupportTicket
     shouldNotifyContacts = bool True (req.sendPNOnPostRideSOS == Just True) (req.isRideEnded == Just True)
 
 enableFollowRideInSos :: [DPDEN.PersonDefaultEmergencyNumberAPIEntity] -> Flow ()
@@ -383,8 +388,9 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
       QRide.updateSosId (Just $ cast result.sosId) ride.id
       return (cast result.sosId, ticketId)
 
-createNonRideKaptureTicket :: Text -> SafetyDSos.SosType -> Person.Person -> Id SafetyDSos.Sos -> DRC.RiderConfig -> Flow (Maybe Text)
-createNonRideKaptureTicket logTag flow person sosId' riderConfig = do
+createNonRideSupportTicket :: Text -> SafetyDSos.SosType -> Person.Person -> Id SafetyDSos.Sos -> DRC.RiderConfig -> Flow (Maybe Text)
+createNonRideSupportTicket logTag flow person sosId' riderConfig = do
+  logInfo $ logTag <> ": creating non-ride ticket for sosId=" <> sosId'.getId <> " personId=" <> person.id.getId
   phoneNumber <- mapM decrypt person.mobileNumber
   (merchantShortId, cityCode) <- fetchDashboardLinkContext person.merchantId person.merchantOperatingCityId
   let dashboardSosUrl =
@@ -399,7 +405,13 @@ createNonRideKaptureTicket logTag flow person sosId' riderConfig = do
     withTryCatch logTag $
       Ticket.createTicket person.merchantId person.merchantOperatingCityId $
         SIVR.mkTicket person phoneNumber dashboardSosUrl Nothing flow riderConfig.kaptureConfig.disposition kaptureQueue
-  pure $ either (const Nothing) (Just . (.ticketId)) ticketResponse
+  case ticketResponse of
+    Right resp -> do
+      logInfo $ logTag <> ": ticket created successfully ticketId=" <> resp.ticketId
+      pure $ Just resp.ticketId
+    Left err -> do
+      logError $ logTag <> ": ticket creation failed err=" <> show err
+      pure Nothing
 
 postSosStatus :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Id SafetyDSos.Sos -> SosUpdateReq -> Flow APISuccess.APISuccess
 postSosStatus (mbPersonId, _) sosId req = do
@@ -542,7 +554,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
+                    Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $
@@ -577,9 +589,16 @@ callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
       fork "update ticket request" $
-        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Nothing}
+        void $ Ticket.updateTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
       pure APISuccess.Success
     Nothing -> pure APISuccess.Success
+
+sosStatusToTicketStatus :: SafetyDSos.SosStatus -> Ticket.TicketStatus
+sosStatusToTicketStatus SafetyDSos.Resolved = Ticket.Solved
+sosStatusToTicketStatus SafetyDSos.NotResolved = Ticket.Pending
+sosStatusToTicketStatus SafetyDSos.Pending = Ticket.Pending
+sosStatusToTicketStatus SafetyDSos.MockPending = Ticket.Pending
+sosStatusToTicketStatus SafetyDSos.MockResolved = Ticket.Solved
 
 getSosIvrOutcome :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow APISuccess.APISuccess
 getSosIvrOutcome mbCallFrom mbCallSid mbCallStatus mbDigitPressed = do
@@ -966,7 +985,7 @@ postSosUpdateState (mbPersonId, _) sosId UpdateStateReq {..} = do
           -- Create Kapture ticket if not already present and support for safety is enabled
           mbNewTicketId <-
             if riderConfig.enableSupportForSafety && isNothing sosDetails.ticketId
-              then createNonRideKaptureTicket "createTicket:sosUpdateState" sosDetails.flow person sosId riderConfig
+              then createNonRideSupportTicket "createTicket:sosUpdateState" sosDetails.flow person sosId riderConfig
               else pure Nothing
 
           -- Single DB write: state + ticketId + expiry together
@@ -1049,7 +1068,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
         void $
           withTryCatch "updateTicket:sosUpdateToRide" $
             Ticket.updateTicket person.merchantId person.merchantOperatingCityId
-              Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, subStatus = Ticket.IN, rideDescription = Just rideInfo, issueDetails = Nothing}
+              Ticket.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = Ticket.Pending, rideDescription = Just rideInfo, issueDetails = Nothing}
       Nothing -> do
         -- No existing ticket: create fresh ticket and notify emergency contacts
         ticketResponse <-
@@ -1198,22 +1217,39 @@ buildDashboardMediaUrls :: Maybe Text -> Maybe Text -> Maybe Text -> Text -> Tex
 buildDashboardMediaUrls mbPattern mbRideId mbSosId merchantShortId cityCode =
   case (mbPattern, mbRideId, mbSosId) of
     (Just patternS, Just rideId, _) ->
-      [ patternS
-          & T.replace "<RIDES_OR_SOS>" "rides"
-          & T.replace "<ID>" rideId
-          & T.replace "<RIDE_ID>" rideId
-          & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
-          & T.replace "<CITY_CODE>" cityCode
-      ]
+      maybeToList $
+        mkValidatedDashboardMediaUrl $
+          patternS
+            & T.replace "<RIDES_OR_SOS>" "rides"
+            & T.replace "<ID>" rideId
+            & T.replace "<RIDE_ID>" rideId
+            & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
+            & T.replace "<CITY_CODE>" cityCode
     (Just patternS, Nothing, Just sosId) ->
-      [ patternS
-          & T.replace "<RIDES_OR_SOS>" "sos"
-          & T.replace "<ID>" sosId
-          & T.replace "<RIDE_ID>" sosId
-          & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
-          & T.replace "<CITY_CODE>" cityCode
-      ]
+      maybeToList $
+        mkValidatedDashboardMediaUrl $
+          patternS
+            & T.replace "<RIDES_OR_SOS>" "sos"
+            & T.replace "<ID>" sosId
+            & T.replace "<RIDE_ID>" sosId
+            & T.replace "<MERCHANT_SHORT_ID>" merchantShortId
+            & T.replace "<CITY_CODE>" cityCode
     _ -> []
+
+mkValidatedDashboardMediaUrl :: Text -> Maybe Text
+mkValidatedDashboardMediaUrl url
+  | T.null (T.strip url) = Nothing
+  | List.any (`T.isInfixOf` url) unresolvedPlaceholders = Nothing
+  | otherwise = Just url
+  where
+    unresolvedPlaceholders =
+      [ "<FILE_PATH>",
+        "<RIDES_OR_SOS>",
+        "<ID>",
+        "<RIDE_ID>",
+        "<MERCHANT_SHORT_ID>",
+        "<CITY_CODE>"
+      ]
 
 fetchDashboardLinkContext :: Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (Text, Text)
 fetchDashboardLinkContext merchantId merchantOperatingCityId = do

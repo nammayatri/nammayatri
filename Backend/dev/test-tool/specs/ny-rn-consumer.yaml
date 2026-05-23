@@ -1,0 +1,424 @@
+# yaml-language-server: $schema=./_schema.json
+name: ny-rn-consumer
+title: NY Consumer App (Android)
+icon: assets/icons/mobile.svg
+category: mobile
+tags: [react-native, android, consumer]
+
+source:
+  url: https://github.com/nammayatri/ny-react-native
+  ref: main
+  destDir: data/ny-react-native
+
+ports:
+  - { name: metro,   port: 8082, protocol: tcp,  allowOverride: true }
+  - { name: backend, port: 8013, protocol: http }
+  - { name: mock,    port: 8080, protocol: http }
+
+adbReverse: [metro, backend, mock]
+
+tools: [node22, java17, yarn, adb, coreutils, gawk]
+
+env:
+  ANDROID_HOME: "${env.ANDROID_HOME}"
+
+inputs:
+  - key: GOOGLE_SERVICES_JSON
+    label: Firebase google-services.json
+    type: file
+    accept: [".json"]
+    storeAs: path
+    required: true
+  - key: VARIANT
+    label: App variant
+    type: select
+    options: [Bridge, NammaYatri, Yatri, ManaYatri, YatriSathi, Lynx, BharatTaxi]
+    default: Lynx
+    required: true
+  - key: APP_ID
+    label: Android package id
+    type: text
+    default: "in.mobility.international.debug"
+    required: true
+  - key: CLIENT_ID
+    label: Client ID (local.properties)
+    type: text
+    default: "nammayatribap"
+    required: true
+  - key: GOOGLE_AD_MOB_ID
+    label: Google AD Mob ID (local.properties)
+    type: text
+    default: "ca-app-pub-3940256099942544~3347511713"
+    required: true
+  - key: MERCHANT_ID
+    label: Backend Merchant ID
+    type: select
+    options: [BRIDGE_FINLAND, NAMMA_YATRI, BHARAT_TAXI]
+    default: BRIDGE_FINLAND
+    required: true
+  - key: CONFIG_URL
+    label: Config URL
+    type: text
+    default: "http://localhost:8013/v2"
+    required: true
+  - key: LOG_URL
+    label: Log URL
+    type: text
+    default: "https://appmonitor.integ.moving.tech"
+    required: true
+  - key: GOOGLE_MAPS_API_KEY
+    label: Google Maps API key
+    type: text
+    default: "GOOGLE_MAPS_API_KEY"
+    required: false
+
+stages:
+  - id: reset-emulator
+    run: |
+      set -euo pipefail
+
+      export PATH="${ANDROID_HOME}/emulator:${ANDROID_HOME}/platform-tools:${PATH}"
+      EMULATOR_BIN="${ANDROID_HOME}/emulator/emulator"
+      echo "ANDROID_HOME: ${ANDROID_HOME}"
+      echo "emulator:     ${EMULATOR_BIN}"
+      echo "adb:          $(command -v adb)"
+
+      sanitize() { printf '%s' "$1" | tr -d '\r' | awk '{$1=$1; print}'; }
+
+      AVD_NAME="$(sanitize "${EMULATOR_AVD:-}")"
+      if [ -z "${AVD_NAME}" ]; then
+        AVD_NAME="$(sanitize "$("${EMULATOR_BIN}" -list-avds | head -n1)")"
+      fi
+      if [ -z "${AVD_NAME}" ]; then
+        echo "ERROR: no AVD found. Create one in Android Studio or set EMULATOR_AVD." >&2
+        exit 1
+      fi
+      echo "AVD: ${AVD_NAME}"
+
+      EMU_LOG="/tmp/emulator-${AVD_NAME}.log"
+      AVD_DIR="${HOME}/.android/avd/${AVD_NAME}.avd"
+
+      for serial in $(adb devices | awk '/^emulator-[0-9]+/ {print $1}'); do
+        echo "killing adb-visible emulator: ${serial}"
+        adb -s "${serial}" emu kill >/dev/null 2>&1 || true
+      done
+
+      ORPHANS="$(pgrep -f "qemu-system.*${AVD_NAME}|emulator.*-avd[[:space:]]+${AVD_NAME}" || true)"
+      if [ -n "${ORPHANS}" ]; then
+        echo "killing orphan emulator processes for ${AVD_NAME}: ${ORPHANS}"
+        kill ${ORPHANS} 2>/dev/null || true
+        sleep 2
+        ORPHANS="$(pgrep -f "qemu-system.*${AVD_NAME}|emulator.*-avd[[:space:]]+${AVD_NAME}" || true)"
+        [ -n "${ORPHANS}" ] && kill -9 ${ORPHANS} 2>/dev/null || true
+      fi
+
+      for _ in $(seq 1 30); do
+        if ! ls "${AVD_DIR}"/*.lock >/dev/null 2>&1; then break; fi
+        sleep 1
+      done
+      rm -f "${AVD_DIR}"/*.lock 2>/dev/null || true
+
+      : > "${EMU_LOG}"
+      echo "cold-booting ${AVD_NAME} with -wipe-data (logs: ${EMU_LOG})"
+
+      # Fully detach the emulator from this stage's PTY/session via a
+      # double-fork + setsid. nohup+&+disown is not enough on macOS: the
+      # emulator inherits this bash's pgid, and when the one-shot stage
+      # ends and the PTY tears down, signal delivery can still reach it
+      # and the emulator dies a few stages later (manifests as
+      # "adb state=unknown" at build-android start).
+      EMU_PID=$(/usr/bin/env python3 - "${EMU_LOG}" \
+          "${EMULATOR_BIN}" -avd "${AVD_NAME}" \
+          -wipe-data -no-snapshot-load -no-boot-anim <<'PY'
+      import os, sys
+      log_path, *argv = sys.argv[1:]
+      r, w = os.pipe()
+      if os.fork():
+          os.close(w)
+          os.wait()
+          sys.stdout.write(os.read(r, 64).decode())
+      else:
+          os.close(r)
+          os.setsid()
+          pid = os.fork()
+          if pid:
+              os.write(w, str(pid).encode())
+              os._exit(0)
+          fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+          os.dup2(fd, 1); os.dup2(fd, 2)
+          dn = os.open('/dev/null', os.O_RDONLY)
+          os.dup2(dn, 0)
+          os.execvp(argv[0], argv)
+      PY
+      )
+      echo "emulator pid: ${EMU_PID}"
+
+      sleep 4
+      if ! kill -0 "${EMU_PID}" 2>/dev/null; then
+        echo "ERROR: emulator died on launch. Last 80 log lines:" >&2
+        tail -n 80 "${EMU_LOG}" >&2 || true
+        exit 1
+      fi
+
+      DEADLINE=$(( $(date +%s) + 420 ))
+
+      probe() { adb shell "$@" 2>/dev/null | tr -d '\r'; }
+      alive() { kill -0 "${EMU_PID}" 2>/dev/null; }
+      timed_out() { [ "$(date +%s)" -ge "${DEADLINE}" ]; }
+      bail() {
+        echo "ERROR: $*" >&2
+        echo "--- adb devices ---" >&2; adb devices >&2 || true
+        echo "--- emulator log tail ---" >&2; tail -n 80 "${EMU_LOG}" >&2 || true
+        exit 1
+      }
+
+      echo "waiting for adb to see a device in state=device"
+      until adb devices | grep -E '^emulator-[0-9]+[[:space:]]+device$' >/dev/null; do
+        alive       || bail "emulator process died before adb saw it"
+        timed_out   && bail "no online device after 7 min"
+        sleep 2
+      done
+      SERIAL="$(adb devices | awk '/^emulator-[0-9]+[[:space:]]+device$/ {print $1; exit}')"
+      echo "device online: ${SERIAL}"
+
+      echo "waiting for sys.boot_completed=1"
+      until [ "$(probe getprop sys.boot_completed)" = "1" ]; do
+        alive     || bail "emulator died during boot"
+        timed_out && bail "sys.boot_completed never became 1"
+        sleep 3
+      done
+
+      echo "waiting for PackageManager"
+      until probe pm path android >/dev/null && [ -n "$(probe pm path android)" ]; do
+        alive     || bail "emulator died waiting for PackageManager"
+        timed_out && bail "PackageManager not ready"
+        sleep 2
+      done
+
+      echo "stabilising adb (5 consecutive successful shell calls)"
+      STABLE=0
+      until [ "${STABLE}" -ge 5 ]; do
+        if [ "$(adb get-state 2>/dev/null || echo none)" = "device" ] \
+           && adb shell true >/dev/null 2>&1; then
+          STABLE=$((STABLE + 1))
+        else
+          STABLE=0
+        fi
+        alive     || bail "emulator died during adb stabilisation"
+        timed_out && bail "adb never stabilised"
+        sleep 1
+      done
+
+      echo "unlocking screen, disabling sleep, zeroing animation scales"
+      adb shell input keyevent 224 >/dev/null 2>&1 || true
+      adb shell input keyevent 82  >/dev/null 2>&1 || true
+      adb shell svc power stayon true             >/dev/null 2>&1 || true
+      adb shell settings put global window_animation_scale     0 >/dev/null 2>&1 || true
+      adb shell settings put global transition_animation_scale 0 >/dev/null 2>&1 || true
+      adb shell settings put global animator_duration_scale    0 >/dev/null 2>&1 || true
+
+      sleep 2
+      echo "OK: emulator ${AVD_NAME} (${SERIAL}) ready"
+    lifecycle: one-shot
+
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: materialize
+    needs: [sync-source]
+    run: |
+      set -e
+      variant_dir=$(printf '%s' "${inputs.VARIANT}" | tr '[:upper:]' '[:lower:]')
+      target="consumer/android/app/$variant_dir"
+      mkdir -p "$target"
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "$target/google-services.json"
+      echo "google-services.json → $target/google-services.json"
+
+      mkdir -p consumer/env
+      env_file="consumer/env/.env.development"
+      touch "$env_file"
+      upsert_env() {
+        local key="$1" value="$2" tmp
+        tmp=$(mktemp)
+        grep -v "^$key=" "$env_file" > "$tmp" || true
+        printf '%s=%s\n' "$key" "$value" >> "$tmp"
+        mv "$tmp" "$env_file"
+      }
+      upsert_env BASE_URL       "\"http://localhost:${ports.backend}/v2\""
+      upsert_env CAC_CONFIG_URL "\"http://localhost:${ports.mock}/cac/consumer\""
+      echo "BASE_URL + CAC_CONFIG_URL upserted in $env_file (other keys preserved)"
+
+      props="consumer/android/local.properties"
+      touch "$props"
+      upsert_prop() {
+        local key="$1" value="$2" tmp
+        tmp=$(mktemp)
+        grep -v "^${key}=" "$props" > "$tmp" || true
+        printf '%s=%s\n' "$key" "$value" >> "$tmp"
+        mv "$tmp" "$props"
+      }
+      upsert_prop CLIENT_ID           "${inputs.CLIENT_ID}"
+      upsert_prop GOOGLE_AD_MOB_ID    "${inputs.GOOGLE_AD_MOB_ID}"
+      upsert_prop google.maps.api.key "${inputs.GOOGLE_MAPS_API_KEY}"
+      upsert_prop MERCHANT_ID         "\"${inputs.MERCHANT_ID}\""
+      upsert_prop CONFIG_URL          "\"${inputs.CONFIG_URL}\""
+      upsert_prop LOG_URL             "\"${inputs.LOG_URL}\""
+      echo "CLIENT_ID, GOOGLE_AD_MOB_ID, google.maps.api.key, MERCHANT_ID, CONFIG_URL, LOG_URL → local.properties"
+    lifecycle: one-shot
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.CLIENT_ID, inputs.GOOGLE_AD_MOB_ID, inputs.GOOGLE_MAPS_API_KEY, inputs.MERCHANT_ID, inputs.CONFIG_URL, inputs.LOG_URL, ports.backend, ports.mock]
+
+  - id: install
+    needs: [sync-source]
+    cwd: consumer
+    run: "yarn install"
+    lifecycle: one-shot
+    invalidatedBy: [consumer/package.json, consumer/yarn.lock]
+
+  - id: re-watch
+    needs: [install]
+    cwd: consumer
+    run: "yarn re:start"
+    lifecycle: long-running
+    readyProbe: { kind: log, pattern: "watching" }
+
+  - id: metro
+    needs: [install]
+    cwd: consumer
+    run: "yarn start --port ${ports.metro}"
+    lifecycle: long-running
+    readyProbe: { kind: log, pattern: "Welcome to Metro" }
+
+  - id: build-android
+    needs: [install, materialize]
+    cwd: consumer
+    run: |
+      set -euo pipefail
+
+      # Self-heal adb if the device flipped to "offline" between stages.
+      ensure_online() {
+        local i state
+        for i in $(seq 1 30); do
+          state="$(adb get-state 2>/dev/null || echo unknown)"
+          if [ "$state" = "device" ] && adb shell true >/dev/null 2>&1; then
+            return 0
+          fi
+          if [ "$i" = "1" ] || [ "$i" = "10" ] || [ "$i" = "20" ]; then
+            echo "adb state=$state, retrying… ($i/30)"
+          fi
+          sleep 2
+        done
+        return 1
+      }
+
+      if ! ensure_online; then
+        echo "adb still not online — bouncing adb server and retrying once"
+        adb kill-server >/dev/null 2>&1 || true
+        sleep 2
+        adb start-server >/dev/null 2>&1 || true
+        if ! ensure_online; then
+          echo "✗ no online device after recovery. Current adb devices:" >&2
+          adb devices >&2 || true
+          exit 1
+        fi
+      fi
+
+      yarn android:variant ${inputs.VARIANT}DevDebug --appId ${inputs.APP_ID} --port ${ports.metro}
+    lifecycle: one-shot
+    invalidatedBy: ["consumer/android/**", "*.gradle"]
+
+  - id: set-devhost
+    needs: [metro]
+    run: |
+      set -euo pipefail
+      PKG="${inputs.APP_ID}"
+      HOSTPORT="localhost:${ports.metro}"
+      PREF_PATH="shared_prefs/${PKG}_preferences.xml"
+
+      echo "waiting for an adb device to come online (up to 5 min)…"
+      deadline=$(( $(date +%s) + 300 ))
+      while :; do
+        if adb get-state 1>/dev/null 2>&1; then
+          echo "device online: $(adb devices | sed -n '2p')"
+          break
+        fi
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+          echo "✗ no adb device after 5 min — is an emulator/phone connected?" >&2
+          exit 1
+        fi
+        sleep 2
+      done
+      adb wait-for-device
+      # Ensure the app is actually installed before we try to run-as it.
+      until adb shell pm path "$PKG" 1>/dev/null 2>&1; do
+        echo "waiting for $PKG to be installed on device…"
+        sleep 2
+        if [ "$(date +%s)" -ge "$deadline" ]; then
+          echo "✗ $PKG not installed on device — run build-android first" >&2
+          exit 1
+        fi
+      done
+
+      EXISTING=$(adb shell run-as "$PKG" cat "$PREF_PATH" 2>/dev/null || true)
+      if [ -z "$EXISTING" ] || ! echo "$EXISTING" | grep -q "<map>"; then
+        EXISTING=$'<?xml version=\'1.0\' encoding=\'utf-8\' standalone=\'yes\' ?>\n<map>\n</map>'
+      fi
+      UPDATED=$(printf '%s\n' "$EXISTING" \
+        | sed -E "/<string name=\"debug_http_host\">[^<]*<\/string>/d" \
+        | sed -E "s|</map>|    <string name=\"debug_http_host\">${HOSTPORT}</string>\n</map>|")
+
+      TMP=$(mktemp)
+      printf '%s\n' "$UPDATED" > "$TMP"
+      adb shell am force-stop "$PKG"
+      adb shell run-as "$PKG" sh -c "'cat > ${PREF_PATH}'" < "$TMP"
+      adb shell run-as "$PKG" cat "$PREF_PATH"
+      adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
+      rm -f "$TMP"
+      echo "✓ $PKG → $HOSTPORT (launched)"
+    lifecycle: one-shot
+
+workflows:
+  first-run:
+    description: >-
+      End-to-end bring-up: clone/update the repo, materialize env + local.properties,
+      install JS deps, start ReScript watcher + Metro, then build & install the
+      selected Android variant on the running emulator/device.
+    stages: [sync-source, materialize, install, re-watch, metro, build-android]
+
+  refresh-js:
+    description: >-
+      Restart only Metro (JS bundler). Use this when you've edited JS/TS code
+      and want to reload the bundle without rebuilding native code.
+    stages: [metro]
+
+  refresh-native:
+    description: >-
+      Rebuild + reinstall the Android APK and (re)start Metro. Use this after
+      editing native Android sources, gradle config, or adding new native deps.
+    stages: [build-android, metro]
+
+  reinstall:
+    description: >-
+      Reinstall JS deps, restart watchers, and rebuild the APK. Use after
+      package.json/yarn.lock changes or when node_modules looks broken.
+    stages: [install, re-watch, metro, build-android]
+
+  fresh-emulator:
+    description: >-
+      Cold-boot the Android emulator with -wipe-data (frees internal storage,
+      resets all user data + installed apps), then runs the full first-run
+      pipeline. Use this when installs fail with "not enough space" or when you
+      need a pristine device. AVD is auto-selected (override via EMULATOR_AVD env var).
+    stages: [reset-emulator, sync-source, materialize, install, re-watch, metro, build-android]
+
+logs:
+  - { name: re-watch, kind: stage, stage: re-watch }
+  - { name: metro,    kind: stage, stage: metro }
+  - { name: build,    kind: stage, stage: build-android }
+  - { name: logcat,   kind: cmd,   cmd: "adb logcat -s ReactNativeJS:V ReactNative:V" }
+
+hooks:
+  preStart:
+    - cmd: "lsof -ti :${ports.metro} | xargs -r kill -9"
+      stages: [metro]

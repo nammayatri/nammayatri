@@ -16,6 +16,8 @@ import qualified Tools.Beam.UtilsTH
 data PassOrganization = PassOrganization
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Data.Time.UTCTime,
+    depotId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    depotPersonId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     id :: Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

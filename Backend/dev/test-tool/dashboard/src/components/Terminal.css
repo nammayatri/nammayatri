@@ -1,0 +1,39 @@
+.tb-term-root {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #1e1e1e;
+  padding: 6px 10px 10px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tb-term-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.tb-term-host .xterm {
+  height: 100%;
+  width: 100%;
+}
+
+.tb-term-host .xterm-viewport {
+  background-color: #1e1e1e !important;
+}
+
+.tb-modal-terminal {
+  width: min(96vw, 1400px) !important;
+  height: 82vh !important;
+  max-height: 82vh !important;
+}
+
+.tb-modal-terminal .tb-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e;
+}

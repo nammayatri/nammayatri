@@ -240,5 +240,6 @@ buildPersonCreateReq req role = do
         dashboardType = fromMaybe SP.DEFAULT_DASHBOARD req.dashboardType,
         passwordUpdatedAt = Just now,
         approvedBy = Nothing,
-        rejectedBy = Nothing
+        rejectedBy = Nothing,
+        language = Nothing
       }

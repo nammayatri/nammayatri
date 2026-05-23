@@ -43,6 +43,9 @@ METRO_DIR="$SCRIPT_DIR/collections/MetroTicketBookingFlow"
 SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
+STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
+INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
+RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -97,7 +100,7 @@ enable_all_drivers() {
 list_suites() {
     echo "=== Ride Booking Flow ==="
     for env_name in "${RIDE_ENVS[@]}"; do
-        local env_file="$RIDE_DIR/Local_${env_name}.postman_environment.json"
+        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
         if [ -f "$env_file" ]; then
             echo "  $env_name:"
             for f in "$RIDE_DIR"/*.json; do
@@ -112,7 +115,7 @@ list_suites() {
         echo ""
         echo "=== $label Ticket Booking Flow ==="
         [ -d "$dir" ] || continue
-        for env_file in "$dir"/Local_*.postman_environment.json; do
+        for env_file in "$dir"/Local/Local_*.postman_environment.json; do
             [ -f "$env_file" ] || continue
             local env_name
             env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
@@ -261,7 +264,7 @@ run_rides() {
             continue
         fi
 
-        local env_file="$RIDE_DIR/Local_${env_name}.postman_environment.json"
+        local env_file="$RIDE_DIR/Local/Local_${env_name}.postman_environment.json"
         if [ ! -f "$env_file" ]; then
             echo "WARNING: Environment not found: $env_file, skipping $env_name"
             continue
@@ -336,7 +339,7 @@ run_frfs() {
     local failed_suites=""
 
     # Iterate over environment files
-    for env_file in "$flow_dir"/Local_*.postman_environment.json; do
+    for env_file in "$flow_dir"/Local/Local_*.postman_environment.json; do
         [ -f "$env_file" ] || continue
         local env_name
         env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
@@ -397,7 +400,7 @@ run_scheduler() {
     local filter_suite="${2:-}"
     local passed=0 failed=0 failed_suites=""
 
-    for env_file in "$SCHEDULER_DIR"/Local_*.postman_environment.json; do
+    for env_file in "$SCHEDULER_DIR"/Local/Local_*.postman_environment.json; do
         [ -f "$env_file" ] || continue
         local env_name
         env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
@@ -440,6 +443,9 @@ run_scheduler() {
 }
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
+run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
+run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
+run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -459,6 +465,9 @@ show_help() {
     echo "  offline-offers      Run offline ride cashback offer suites"
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
+    echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
+    echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
+    echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -482,6 +491,14 @@ show_help() {
     echo "  ./run-tests.sh loyalty                            # All loyalty wallet suites"
     echo "  ./run-tests.sh loyalty FRFS_Chennai               # Loyalty suites for Chennai"
     echo "  ./run-tests.sh loyalty FRFS_Chennai 01-WalletRechargeTopup  # Specific suite"
+    echo "  ./run-tests.sh stcl                               # All STCL membership suites"
+    echo "  ./run-tests.sh stcl NY_Bangalore                  # STCL suites for Bangalore"
+    echo "  ./run-tests.sh stcl NY_Bangalore 01-StclMembershipPartialPurchaseFlow  # Specific suite"
+    echo "  ./run-tests.sh intercity                          # All intercity suites, all cities"
+    echo "  ./run-tests.sh intercity NY_Bangalore             # Intercity suites for Bangalore"
+    echo "  ./run-tests.sh intercity NY_Bangalore 01-IntercityRideFlow  # Specific intercity suite"
+    echo "  ./run-tests.sh rental                             # All rental suites, all cities"
+    echo "  ./run-tests.sh rental NY_Bangalore 01-RentalRideFlow        # Specific rental suite"
     echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
     echo "  ./run-tests.sh online BF_Helsinki -vp             # Pretty-print full JSON request/response"
     echo "  ./run-tests.sh online BF_Helsinki -d              # Debug: per-API service logs for all APIs"
@@ -529,6 +546,15 @@ case "${1:-}" in
         ;;
     loyalty|wallet)
         run_loyalty "${2:-}" "${3:-}"
+        ;;
+    stcl|stcl-membership)
+        run_stcl "${2:-}" "${3:-}"
+        ;;
+    intercity)
+        run_intercity "${2:-}" "${3:-}"
+        ;;
+    rental)
+        run_rental "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

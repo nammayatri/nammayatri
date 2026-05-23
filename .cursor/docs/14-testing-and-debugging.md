@@ -11,7 +11,15 @@ For local development and testing, mock services simulate external dependencies:
 | FCM | `app/mocks/fcm/src/` | Push notifications |
 | SMS | `app/mocks/sms/src/` | SMS gateway |
 
-Start all mocks with: `, run-mobility-stack-dev`
+Start the per-language mocks (FCM/SMS/Google/Idfy) as part of the backend with
+`, run-mobility-stack-dev`. The unified `mock-server` (Juspay/Stripe/Acko/etc.,
+port 8080) is started separately by `, run-test-context-server` — pair the two
+commands when running integration tests.
+
+Full architecture of the test stack — including the SSH **Remote Stack** runner
+that lets you spawn `, run-test-context-server` on another machine and stream
+its PTY back into the dashboard — is documented in
+`Backend/dev/test-tool/README.md`.
 
 ## Debugging Patterns
 

@@ -366,11 +366,20 @@ type GetRideKaptureList =
   )
 
 type GetRideFlowDebugBap =
-  ( "flowDebug" :> "bap" :> QueryParam "bapBookingId" Kernel.Prelude.Text :> QueryParam "bppBookingId" Kernel.Prelude.Text
+  ( "flowDebug" :> "bap" :> QueryParam "bapBookingId" Kernel.Prelude.Text :> QueryParam "bapRideId" Kernel.Prelude.Text
+      :> QueryParam
+           "bapRideShortId"
+           Kernel.Prelude.Text
+      :> QueryParam "bapSearchRequestId" Kernel.Prelude.Text
+      :> QueryParam
+           "bppBookingId"
+           Kernel.Prelude.Text
       :> QueryParam
            "transactionId"
            Kernel.Prelude.Text
-      :> Get '[JSON] API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
+      :> Get
+           '[JSON]
+           API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
   )
 
 data RideAPIs = RideAPIs
@@ -384,7 +393,7 @@ data RideAPIs = RideAPIs
     postRideSyncMultiple :: MultipleRideSyncReq -> EulerHS.Types.EulerClient Dashboard.Common.Ride.MultipleRideSyncResp,
     postRideCancelMultiple :: MultipleRideCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRideKaptureList :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient TicketRideListRes,
-    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
+    getRideFlowDebugBap :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.ProviderPlatform.Management.Endpoints.Ride.BAPSideDebug
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)

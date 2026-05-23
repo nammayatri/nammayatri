@@ -20,6 +20,7 @@ type API =
     :> Capture "merchantCity" Context.City
     :> "getCancellationDuesDetails"
     :> Header "token" Text
+    :> QueryParam "includeBreakup" Bool
     :> ReqBody '[JSON] Domain.CancellationDuesReq
     :> Get '[JSON] Domain.CancellationDuesDetailsRes
     :<|> Capture "merchantId" (Id Merchant)
@@ -34,8 +35,8 @@ handler =
   getCancellationDuesDetails
     :<|> customerCancellationDuesSync
 
-getCancellationDuesDetails :: Id Merchant -> Context.City -> Maybe Text -> Domain.CancellationDuesReq -> FlowHandler Domain.CancellationDuesDetailsRes
-getCancellationDuesDetails merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.getCancellationDuesDetails merchantId merchantCity apiKey
+getCancellationDuesDetails :: Id Merchant -> Context.City -> Maybe Text -> Maybe Bool -> Domain.CancellationDuesReq -> FlowHandler Domain.CancellationDuesDetailsRes
+getCancellationDuesDetails merchantId merchantCity apiKey mbIncludeBreakup = withFlowHandlerAPI . Domain.getCancellationDuesDetails merchantId merchantCity apiKey mbIncludeBreakup
 
 customerCancellationDuesSync :: Id Merchant -> Context.City -> Maybe Text -> Domain.CustomerCancellationDuesSyncReq -> FlowHandler APISuccess
 customerCancellationDuesSync merchantId merchantCity apiKey = withFlowHandlerAPI . Domain.customerCancellationDuesSync merchantId merchantCity apiKey

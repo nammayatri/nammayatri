@@ -9,8 +9,7 @@ _:
       # Shell snippet that SIGKILLs any process holding one of the service ports.
       # Shared between the standalone `kill-svc-ports` script and the
       # pre-flight inside `run-mobility-stack-dev`/`run-mobility-stack-nix`.
-      killSvcPortsScript =
-        let ports = import ./services/ports.nix; in
+      killPortsSnippet = portList:
         lib.concatMapStrings
           (port: ''
             set +e
@@ -24,7 +23,13 @@ _:
               echo "No processes found on port ${builtins.toString port}"
             fi
           '')
-          (lib.attrValues ports);
+          portList;
+      killSvcPortsScript =
+        let ports = import ./services/ports.nix; in
+        killPortsSnippet (lib.attrValues ports);
+      # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api).
+      localTestDashboardPorts = [ 7070 7083 ];
+      killLocalTestDashboardPortsScript = killPortsSnippet localTestDashboardPorts;
     in
     {
       mission-control.scripts = {
@@ -196,9 +201,7 @@ _:
         run-mobility-stack-nix = {
           category = "Backend";
           description = ''
-            Run the nammayatri backend components via Nix.
-
-            NOTE: This is slower, due to doing full nix build.
+            Run the nammayatri backend components via Nix (This is slower, due to doing full nix build).
           '';
           exec = ''
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
@@ -216,15 +219,14 @@ _:
 
         run-mobility-stack-dev = {
           category = "Backend";
-          description = ''
-            Run the nammayatri backend components via "cabal run".
-          '';
+          description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
-            export DEV=1
             # Free up service ports first so a stale process from a prior run
             # doesn't hold the port and crash a fresh service start.
             echo "── Pre-flight: freeing service ports ──"
             ${killSvcPortsScript}
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.
@@ -238,6 +240,38 @@ _:
           '';
         };
 
+        run-mobility-stack-full = {
+          category = "Backend";
+          description = "Run the FULL nammayatri stack in one terminal: backend + test-context-api + mock-server + test-local-api + test-dashboard.";
+          exec = ''
+            echo "── Pre-flight: freeing service ports ──"
+            ${killSvcPortsScript}
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
+            _hard=$(ulimit -Hs 2>/dev/null || true)
+            if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+              ulimit -s "$_hard" 2>/dev/null || true
+              ulimit -n "$_hard" 2>/dev/null || true
+            fi
+            nix run .#run-mobility-stack-full -- -S NAME "$@"
+          '';
+        };
+
+        run-local-test-dashboard = {
+          category = "Backend";
+          description = "Run only the test-dashboard (port 7070, React) + test-local-api (port 7083).";
+          exec = ''
+            echo "── Pre-flight: freeing dashboard ports ──"
+            ${killLocalTestDashboardPortsScript}
+            _hard=$(ulimit -Hs 2>/dev/null || true)
+            if [ -n "$_hard" ] && [ "$_hard" != "unlimited" ]; then
+              ulimit -s "$_hard" 2>/dev/null || true
+              ulimit -n "$_hard" 2>/dev/null || true
+            fi
+            nix run .#run-local-test-dashboard -- -S NAME "$@"
+          '';
+        };
+
         kill-svc-ports = {
           category = "Backend";
           description = ''
@@ -248,14 +282,7 @@ _:
 
         clear-data = {
           category = "Backend";
-          description = ''
-            Wipe runtime state under <repo-root>/data/ (postgres, kafka,
-            zookeeper, metabase, redis-commander, etc.) but PRESERVE
-            ny-react-native/ and control-center/ — those are expensive to
-            re-clone + re-install. Asks for confirmation before deleting.
-            Stop services first with ", kill-svc-ports" if they are still
-            running.
-          '';
+          description = "Wipe runtime state under <repo-root>/data/ (preserves ny-react-native/ and control-center/); asks for confirmation.";
           exec = ''
             set -euo pipefail
             DATA_DIR="''${FLAKE_ROOT}/data"
@@ -351,11 +378,7 @@ _:
 
         run-mobility-stack-test = {
           category = "Backend";
-          description = ''
-            Start the full mobility stack, import config from master, run integration tests, then stop everything.
-            Usage: , run-mobility-stack-test [test-args]
-            Example: , run-mobility-stack-test rides NY_Bangalore
-          '';
+          description = "Start the full mobility stack, import config from master, run integration tests, then stop everything.";
           exec =
             let
               # All ports that run-mobility-stack-dev uses
@@ -464,7 +487,6 @@ _:
               echo "  Step 2: Starting mobility stack..."
               echo "═══════════════════════════════════════"
 
-              export DEV=1
               nix run .#run-mobility-stack-dev &
               STACK_PID=$!
 

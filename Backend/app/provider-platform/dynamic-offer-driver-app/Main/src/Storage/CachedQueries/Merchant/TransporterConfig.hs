@@ -33,6 +33,7 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.TransporterConfig
 import Kernel.Prelude as KP
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.SystemConfigs ()
@@ -43,9 +44,11 @@ create = Queries.create
 
 getTransporterConfigFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe TransporterConfig)
 getTransporterConfigFromDB id = do
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantOpCityIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
-    Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
+  let key = makeMerchantOpCityIdKey id
+  IM.withInMemCache [key] 3600 $ do
+    Hedis.withCrossAppRedis (Hedis.safeGet key) >>= \case
+      Just a -> return . Just $ coerce @(TransporterConfigD 'Unsafe) @TransporterConfig a
+      Nothing -> flip whenJust cacheTransporterConfig /=<< Queries.findByMerchantOpCityId id
 
 cacheTransporterConfig :: (CacheFlow m r) => TransporterConfig -> m ()
 cacheTransporterConfig cfg = do
@@ -57,8 +60,10 @@ makeMerchantOpCityIdKey :: Id MerchantOperatingCity -> Text
 makeMerchantOpCityIdKey id = "driver-offer:CachedQueries:TransporterConfig:MerchantOperatingCityId-" <> id.getId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
-clearCache id = Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ makeMerchantOpCityIdKey id
+clearCache :: (MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> m ()
+clearCache id = do
+  IM.refreshInMem (makeMerchantOpCityIdKey id)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.withCrossAppRedis $ Hedis.del $ makeMerchantOpCityIdKey id
 
 updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()
 updateFCMConfig = Queries.updateFCMConfig

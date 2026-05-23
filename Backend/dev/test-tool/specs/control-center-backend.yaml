@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=./_schema.json
+name: control-center-backend
+title: Control Center — Backend
+icon: assets/icons/control-center.svg
+category: tool
+tags: [node, dashboard, backend]
+
+source:
+  url: https://github.com/nammayatri/control-center
+  ref: main
+  destDir: data/control-center
+
+ports:
+  - { name: server, port: 4001, protocol: http, allowOverride: true }
+
+tools: [node22]
+
+domains:
+  - { name: api, url: "http://localhost:4001" }
+
+inputs:
+  - key: GOOGLE_PLAY_SERVICE_ACCOUNT_KEY
+    label: Google Play service account
+    type: file
+    accept: [".json"]
+    storeAs: env-inline
+    required: false
+  - key: APP_STORE_CONNECT_ACCOUNTS
+    label: App Store Connect accounts
+    type: file
+    accept: [".json"]
+    storeAs: env-inline
+    required: false
+  - key: OPENROUTER_API_KEY
+    label: OpenRouter API key
+    type: secret-text
+    required: false
+  - key: CLAUDE_WEB_PASSWORD
+    label: Claude Web password
+    type: secret-text
+    required: false
+
+env:
+  PORT:                            "${ports.server}"
+  GOOGLE_PLAY_SERVICE_ACCOUNT_KEY: "${inputs.GOOGLE_PLAY_SERVICE_ACCOUNT_KEY}"
+  APP_STORE_CONNECT_ACCOUNTS:      "${inputs.APP_STORE_CONNECT_ACCOUNTS}"
+  OPENROUTER_API_KEY:              "${inputs.OPENROUTER_API_KEY}"
+  CLAUDE_WEB_PASSWORD:             "${inputs.CLAUDE_WEB_PASSWORD}"
+
+stages:
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: server-install
+    needs: [sync-source]
+    cwd: server
+    run: "npm install"
+    lifecycle: one-shot
+    invalidatedBy: [server/package.json, server/package-lock.json]
+
+  - id: server
+    needs: [server-install]
+    cwd: server
+    run: "npm run dev"
+    lifecycle: long-running
+    readyProbe: { kind: http, url: "http://localhost:${ports.server}" }
+
+workflows:
+  first-run:
+    description: >-
+      End-to-end bring-up: clone/update the repo, install server deps, then
+      start the control-center backend server. Use this the first time you
+      launch this service or after pulling a clean clone.
+    stages: [sync-source, server-install, server]
+
+  refresh:
+    description: >-
+      Restart only the backend server. Use this after editing source code when
+      deps haven't changed and the existing node_modules are still valid.
+    stages: [server]
+
+  reinstall:
+    description: >-
+      Reinstall server dependencies and restart the server. Use after
+      package.json/lockfile changes or when node_modules looks broken.
+    stages: [server-install, server]
+
+hooks:
+  preStart:
+    - "lsof -ti :${ports.server} | xargs -r kill -9"

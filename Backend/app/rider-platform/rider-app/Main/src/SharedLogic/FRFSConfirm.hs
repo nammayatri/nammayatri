@@ -35,11 +35,11 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.External.Maps.Interface.Types
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.External.MultiModal.Interface.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
@@ -155,7 +155,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       then FRFSUtils.updateQuoteCategoriesWithSelections mbHoldId quoteCategorySelections quoteCategories
       else return quoteCategories
   let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories updatedQuoteCategories)
-  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId
+  (rider, dConfirmRes) <- confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll mbTripId seatSelectionType
   whenJust mbHoldCtxForAll $ \(holdId, _, _) -> do
     logInfo $ "FRFSConfirm:confirmAndUpsertBooking tracking hold bookingId=" <> dConfirmRes.id.getId <> " holdId=" <> holdId
     SeatBooking.trackHoldForBooking dConfirmRes.id.getId holdId (fromMaybe 600 riderConfig.seatBookingTtl)
@@ -264,14 +264,14 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
       let orderedSeatIds = map (\s -> s.seat.id) orderedCandidates
       pure orderedSeatIds
 
-    confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId = do
+    confirm :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Bool -> FRFSUtils.FRFSFareParameters -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    confirm isMultiInitAllowed fareParameters mbBooking mbHoldCtxForAll firstTripId mbSeatSelectionType = do
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       unless (personId == quote.riderId) $ throwError AccessDenied
       maybeM
-        (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId)
+        (buildAndCreateBooking rider quote fareParameters mbIsMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType)
         ( \booking -> do
             updatedBooking <-
               if isMultiInitAllowed
@@ -297,8 +297,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
             then Right ()
             else Left (InvalidRequest "One or more selected seats are reserved for longer journeys.")
 
-    buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId = do
+    buildAndCreateBooking :: (CallExternalBPP.FRFSConfirmFlow m r c, HasField "cloudType" r (Maybe CloudType)) => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> FRFSUtils.FRFSFareParameters -> Maybe Bool -> Maybe (Text, Int, Int) -> Maybe Text -> Maybe DVSLM.SeatSelectionType -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    buildAndCreateBooking rider quote'@DFRFSQuote.FRFSQuote {..} fareParameters mbMockPayment mbHoldCtxForAll firstTripId mbSeatSelectionType = do
       uuid <- generateGUID
       now <- getCurrentTime
       mbSearch <- QFRFSSearch.findById searchId
@@ -352,6 +352,9 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 finalBoardedWaybillId = Nothing,
                 conductorId = Nothing,
                 driverId = Nothing,
+                driverName = Nothing,
+                driverMobileNumber = Nothing,
+                seatSelectionType = mbSeatSelectionType,
                 routeCode = mbRouteCode,
                 routeName = mbRouteName,
                 serviceTierType = mbServiceTierType,
@@ -704,7 +707,24 @@ buildJourneyAndLeg booking fareParameters = do
     QJourney.create journey
     QJourneyLeg.create journeyLeg
     -- Sync journey leg data to frfs_ticket_booking for analytics
-    fork "FRFS Analytics: sync vehicle data to ticket booking" $
+    fork "FRFS Analytics: sync vehicle data to ticket booking" $ do
+      -- Enrich driver/conductor from waybill metadata when live tracking lacks them
+      mbWaybillMeta <-
+        case booking.tripId of
+          Nothing -> pure Nothing
+          Just tripId -> do
+            let (waybillNo, _) = JourneyUtils.getWaybillNoAndTripNoFromTripId tripId
+            meta <- withTryCatch "buildJourneyAndLeg:getWaybillMetadata" (OTPRest.getWaybillMetadata waybillNo integratedBppConfig)
+            case meta of
+              Left err -> do
+                logWarning $ "Failed to fetch waybill metadata for waybillNo=" <> waybillNo <> ": " <> show err
+                pure Nothing
+              Right m -> pure $ Just m
+
+      let effectiveDriverId = (mbWaybillMeta >>= (.driver_id)) <|> journeyLeg.busDriverId
+          effectiveDriverName = mbWaybillMeta >>= (.driverName)
+          effectiveDriverMobileNumber = mbWaybillMeta >>= (.driverMobileNumber)
+
       QFRFSTicketBooking.updateFRFSTicketBookingVehicleDataBySearchId
         journeyLeg.finalBoardedBusNumber
         journeyLeg.finalBoardedBusNumberSource
@@ -713,7 +733,9 @@ buildJourneyAndLeg booking fareParameters = do
         journeyLeg.finalBoardedDepotNo
         journeyLeg.finalBoardedBusServiceTierType
         journeyLeg.busConductorId
-        journeyLeg.busDriverId
+        effectiveDriverId
+        effectiveDriverName
+        effectiveDriverMobileNumber
         booking.searchId.getId
   where
     mkBookingJourneyCreateKey = "booking:journey:create:bookingId-" <> booking.id.getId

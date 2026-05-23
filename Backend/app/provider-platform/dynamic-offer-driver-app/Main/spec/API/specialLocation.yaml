@@ -9,8 +9,12 @@ apis:
   # GET /specialLocation/list
   - GET:
       endpoint: /specialLocation/list
+      headers:
+        If-None-Match: Text
       query:
         isOrigin: Bool
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: "[SpecialLocationFull]"
+      responseHeaders:
+        - ETag: Text

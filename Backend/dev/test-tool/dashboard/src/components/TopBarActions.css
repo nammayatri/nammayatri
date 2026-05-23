@@ -261,6 +261,11 @@
   color: #58a6ff; border-color: #58a6ff;
 }
 .tb-modal-form-field select:disabled { opacity: 0.55; cursor: not-allowed; }
+.tb-modal-form-hint {
+  color: #6e7681;
+  font-size: 11px;
+  line-height: 1.4;
+}
 .tb-modal-form-actions {
   display: flex; align-items: end; gap: 8px;
   /* Sit in the same grid row as the selectors. Bottom-aligned so the

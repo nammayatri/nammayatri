@@ -231,6 +231,10 @@ apis:
         bookingId: Text
         searchRequestId: Text
         rideShortId: ShortId Ride
+        bapBookingId: Text
+        bapRideId: Text
+        bapSearchRequestId: Text
+        bapRideShortId: Text
       response:
         type: RideFlowDebugRes
 

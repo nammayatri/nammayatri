@@ -23,6 +23,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.FareParameters as DFParams
 import qualified Domain.Types.Location as DL
 import Kernel.External.Maps.Types as Maps
 import Kernel.Prelude
@@ -50,6 +51,7 @@ data OnUpdateBuildReq
   | RideEstimatedEndTimeRangeBuildReq DRideEstimatedEndTimeRangeReq
   | ParcelImageUploadedBuildReq DParcelImageUploadedReq
   | ChangeServiceTierBuildReq DChangeServiceTierReq
+  | AddBaggageBuildReq DAddBaggageReq
 
 data DErrorObject = DErrorObject
   { errorCode :: Text,
@@ -111,6 +113,13 @@ data DChangeServiceTierReq = DChangeServiceTierReq
     newVehicleServiceTier :: DVST.ServiceTierType,
     newEstimatedFare :: HighPrecMoney,
     bppQuoteId :: Text
+  }
+
+data DAddBaggageReq = DAddBaggageReq
+  { bookingId :: Id DRB.Booking,
+    numberOfLuggages :: Int,
+    newEstimatedFare :: HighPrecMoney,
+    fareParams :: DFParams.FareParameters
   }
 
 data UpdateType = SOFT_UPDATE | CONFIRM_UPDATE

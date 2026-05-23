@@ -374,6 +374,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
   isPercentageSplitEnabled <- Payment.getIsPercentageSplit (cast paymentOrder.merchantId) merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled isSingleMode
   staticCustomerId <- SLUtils.getStaticCustomerId person personPhone
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrder.id.getId,
@@ -391,11 +392,13 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing,  --- assigned in shared kernel
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
   mbPaymentOrderValidTill <- Payment.getPaymentOrderValidity (cast paymentOrder.merchantId) merchantOperatingCityId Nothing paymentServiceType
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
@@ -2594,7 +2597,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       vehicleLiveRouteInfo.depot
       (Just vehicleLiveRouteInfo.serviceType)
       journeyLeg.busConductorId
-      journeyLeg.busDriverId
+      (maybe journeyLeg.busDriverId (\driverId -> if T.null driverId then journeyLeg.busDriverId else Just driverId) booking.driverId)
+      booking.driverName
+      booking.driverMobileNumber
       legSearchId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs

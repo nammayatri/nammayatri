@@ -27,6 +27,7 @@ import IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -462,6 +463,15 @@ updatePersonRec (Id personId) person = do
         LTSSync.clientDevice = LTSSync.Set person.clientDevice
       }
 
+updateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> KET.Language -> m ()
+updateLanguage personId lang = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.language $ Just lang,
+      Se.Set BeamP.updatedAt now
+    ]
+    [Se.Is BeamP.id $ Se.Eq $ getId personId]
+
 updatePersonVersionsAndMerchantOperatingCity ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
   Person ->
@@ -720,3 +730,16 @@ updateDriverTag driverTag personId = do
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
+
+findByOperatorBadgeTokenAndMerchantId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Text ->
+  Id Merchant ->
+  m (Maybe Person)
+findByOperatorBadgeTokenAndMerchantId operatorBadgeToken (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.operatorBadgeToken $ Se.Eq operatorBadgeToken,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]

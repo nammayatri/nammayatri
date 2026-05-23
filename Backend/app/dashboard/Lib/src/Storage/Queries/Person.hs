@@ -29,6 +29,7 @@ import Domain.Types.Role as Role
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
@@ -344,6 +345,16 @@ updatePerson personId person = do
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
 
+updateLanguage :: BeamFlow m r => Id Person -> KET.Language -> m ()
+updateLanguage personId lang = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.language $ Just lang,
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
 deletePerson :: BeamFlow m r => Id Person -> m ()
 deletePerson personId = deleteWithKV [Se.Is BeamP.id $ Se.Eq $ getId personId]
 
@@ -388,6 +399,7 @@ instance FromTType' BeamP.Person Person.Person where
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
             rejectedBy = rejectedBy <&> Id,
+            language = language,
             ..
           }
 
@@ -403,6 +415,7 @@ instance ToTType' BeamP.Person Person.Person where
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
         rejectedBy = rejectedBy <&> getId,
+        language = language,
         ..
       }
 

@@ -41,10 +41,13 @@ getBAPFlowDebug ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow Common.BAPSideDebug
-getBAPFlowDebug _merchantShortId mbTransactionId mbBapBookingId mbBppBookingId = do
+getBAPFlowDebug _merchantShortId mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId = do
   -- Step 1: Resolve the chain from whatever ID we have
-  (mbSearchReq, mbBooking, mbRide) <- resolveBAP mbTransactionId mbBapBookingId mbBppBookingId
+  (mbSearchReq, mbBooking, mbRide) <- resolveBAP mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId
 
   -- Step 2: Find all estimates and quotes for the search request
   estimates <- case mbSearchReq of
@@ -73,20 +76,36 @@ resolveBAP ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Flow (Maybe DSR.SearchRequest, Maybe DBooking.Booking, Maybe DRide.Ride)
-resolveBAP mbTransactionId mbBapBookingId mbBppBookingId = do
-  -- Try to find booking
-  mbBooking <- case mbBapBookingId of
-    Just bookingId -> B.runInReplica $ QBooking.findById (Id bookingId)
-    Nothing -> case mbBppBookingId of
-      Just bppBId -> B.runInReplica $ QBooking.findByBPPBookingId (Id bppBId)
+resolveBAP mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId = do
+  -- Try to find ride by ID or shortId first
+  mbRideFromId <- case mbBapRideId of
+    Just rideId -> B.runInReplica $ QRide.findById (Id rideId)
+    Nothing -> case mbBapRideShortId of
+      Just shortId -> B.runInReplica $ QRide.findRideByRideShortId (ShortId shortId)
       Nothing -> pure Nothing
 
+  -- Try to find booking
+  mbBooking <- case mbRideFromId of
+    Just ride -> B.runInReplica $ QBooking.findById ride.bookingId
+    Nothing -> case mbBapBookingId of
+      Just bookingId -> B.runInReplica $ QBooking.findById (Id bookingId)
+      Nothing -> case mbBppBookingId of
+        Just bppBId -> B.runInReplica $ QBooking.findByBPPBookingId (Id bppBId)
+        Nothing -> pure Nothing
+
   -- Find search request:
-  -- On BAP side, the BPP's transactionId = BAP SearchRequest ID
+  -- bapSearchRequestId is a direct lookup
+  -- transactionId on BPP side = BAP SearchRequest ID
   -- Or resolve from booking → bppEstimateId → Estimate → SearchRequest
-  mbSearchReq <- case mbTransactionId of
-    Just txnId -> B.runInReplica $ QSR.findById (Id txnId)
+  let mbSrId = case mbBapSearchRequestId of
+        Just x -> Just x
+        Nothing -> mbTransactionId
+  mbSearchReq <- case mbSrId of
+    Just srId -> B.runInReplica $ QSR.findById (Id srId)
     Nothing -> case mbBooking of
       Just booking -> do
         mbEst <- B.runInReplica $ QEstimate.findByBPPEstimateId (Id booking.bppEstimateId)
@@ -95,10 +114,12 @@ resolveBAP mbTransactionId mbBapBookingId mbBppBookingId = do
           Nothing -> pure Nothing
       Nothing -> pure Nothing
 
-  -- Find ride from booking
-  mbRide <- case mbBooking of
-    Just booking -> B.runInReplica $ QRide.findActiveByRBId booking.id
-    Nothing -> pure Nothing
+  -- Find ride from booking (or use the one from shortId)
+  mbRide <- case mbRideFromId of
+    Just r -> pure (Just r)
+    Nothing -> case mbBooking of
+      Just booking -> B.runInReplica $ QRide.findActiveByRBId booking.id
+      Nothing -> pure Nothing
 
   pure (mbSearchReq, mbBooking, mbRide)
 

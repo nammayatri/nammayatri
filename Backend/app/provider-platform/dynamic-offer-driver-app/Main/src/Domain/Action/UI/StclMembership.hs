@@ -3,7 +3,7 @@
 module Domain.Action.UI.StclMembership (postSubmitApplication, postBuyAdditionalShares, putUpdateApplication, getMembership, stclMemberShipOrderStatusHandler) where
 
 import qualified API.Types.UI.StclMembership as APITypes
-import Data.List (sortOn)
+import Data.List (partition, sortOn)
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant as DM
@@ -37,18 +37,31 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
+import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Auth
+import qualified Utils.Common.Cac.KeyNameConstants as CCK
+
+-- Fallback defaults used when the per-MOC TransporterConfig leaves the corresponding field unset.
+-- The handler reads these via TransporterConfig and only falls back here if the column is NULL,
+-- so changing them in DB does not require a redeploy.
 
 -- Maximum total shares a single driver may hold across all SUBMITTED applications.
-maxSharesPerDriver :: Int
-maxSharesPerDriver = 5
+defaultMaxSharesPerDriver :: Int
+defaultMaxSharesPerDriver = 5
 
 -- Per-share price (rupees) used to compute the order amount when the client omits it.
-pricePerShare :: Int
-pricePerShare = 100
+defaultPricePerShare :: Int
+defaultPricePerShare = 100
+
+-- Stale window for PENDING top-up rows. A PENDING row older than this is treated as an
+-- abandoned payment (driver closed the payment app and never came back) and retired as
+-- REJECTED, so the driver can start a fresh top-up. Fresh PENDING rows still block new
+-- requests so an in-flight payment can complete without races / double-spend.
+defaultPendingStaleMinutes :: Int
+defaultPendingStaleMinutes = 15
 
 postSubmitApplication ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
@@ -100,6 +113,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
       Nothing -> pure Nothing
 
   -- Create PaymentTypes.CreateOrderReq
+  nwAddress <- asks (.nwAddress)
   let createOrderReq =
         PaymentTypes.CreateOrderReq
           { orderId = orderId,
@@ -119,9 +133,11 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             splitSettlementDetails = Nothing,
+            webhookUrl = Just nwAddress,
             basket = Nothing,
             paymentRules = Nothing,
-            autoRefundPostSuccess = Nothing
+            autoRefundPostSuccess = Nothing,
+            paymentFilter = Nothing
           }
 
   -- PaymentServiceType for createOrderService (STCL)
@@ -187,6 +203,7 @@ postSubmitApplication (mbDriverId, merchantId, merchantOperatingCityId) req = do
             Domain.termsAccepted = req.declaration.termsAccepted,
             Domain.status = Domain.PENDING,
             Domain.paymentStatus = Nothing,
+            Domain.isAdditionalSharePurchase = Just False,
             Domain.applicationCount = Nothing,
             Domain.shareStartCount = Nothing,
             Domain.shareEndCount = Nothing,
@@ -216,48 +233,38 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
   when (req.numberOfShares <= 0) $
     throwError $ InvalidRequest "numberOfShares must be greater than 0"
 
-  -- Per-driver Redis lock so concurrent top-ups for the same driver can't both pass the cap /
-  -- no-PENDING checks. The lock spans validation, payment-order creation, and PENDING row insert
-  -- so a second request enters with the new row already visible via findByDriverId.
+  -- Per-MOC tunables, with module-level defaults if stclConfig (or any inner field) is unset.
+  transporterConfig <-
+    SCT.findByMerchantOpCityId merchantOperatingCityId (Just (CCK.DriverId (cast driverId)))
+      >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  let stclCfg = transporterConfig.stclConfig
+      maxSharesPerDriver = fromMaybe defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))
+      pricePerShare = fromMaybe defaultPricePerShare (stclCfg >>= (.pricePerShare))
+      pendingStaleMinutes = fromMaybe defaultPendingStaleMinutes (stclCfg >>= (.pendingStaleMinutes))
+
+  -- Per-driver Redis lock so concurrent top-ups for the same driver can't both pass the cap
+  -- check or both see "no PENDING" and create racing payment orders. The lock spans validation,
+  -- resume-or-create decision, payment-order creation, and PENDING row insert so a second
+  -- request enters with the new/resumed row already visible via findByDriverId.
   Redis.withLockRedisAndReturnValue (QStclMembership.stclMembershipDriverLockKey driverId.getId) 60 $ do
     existingApplications <- QStclMembership.findByDriverId driverId
     let submittedApps = filter (\a -> a.status == Domain.SUBMITTED) existingApplications
-        hasPending = any (\a -> a.status == Domain.PENDING) existingApplications
+        pendingApps = filter (\a -> a.status == Domain.PENDING) existingApplications
 
     -- Top-up requires an existing SUBMITTED application as the source of KYC/address/bank/etc.
     when (null submittedApps) $
       throwError $ InvalidRequest "No existing membership found for this driver. Submit a new application first."
 
-    when hasPending $
-      throwError $ InvalidRequest "A pending membership application already exists for this driver"
-
-    let existingShares = sum (map Domain.numberOfShares submittedApps)
-    when (existingShares + req.numberOfShares > maxSharesPerDriver) $
-      throwError $
-        InvalidRequest $
-          "Total shares for driver cannot exceed " <> T.pack (show maxSharesPerDriver)
-            <> ". Existing shares: "
-            <> T.pack (show existingShares)
-            <> ", requested: "
-            <> T.pack (show req.numberOfShares)
-
-    latest <- case sortOn (Down . Domain.createdAt) submittedApps of
-      (m : _) -> pure m
-      [] -> throwError $ InvalidRequest "No existing membership found for this driver."
+    now <- getCurrentTime
+    let staleThreshold = fromIntegral (pendingStaleMinutes * 60) :: Kernel.Prelude.NominalDiffTime
+        (stalePending, freshPending) =
+          partition (\m -> diffUTCTime now m.createdAt > staleThreshold) pendingApps
+    -- Abandoned PENDING (driver closed the payment app and never came back): retire so it stops blocking.
+    forM_ stalePending $ \m -> QStclMembership.updateStatus Domain.REJECTED m.id
 
     person <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
     mbMobileNumber <- person.mobileNumber & fromMaybeM (InvalidRequest "Mobile number not found")
     decryptedMobile <- decrypt mbMobileNumber
-
-    -- Resolve amount: trust the client when provided, otherwise compute from the configured per-share price.
-    let resolvedAmount = fromMaybe (Money (req.numberOfShares * pricePerShare)) req.amount
-        highPrecAmount = toHighPrecMoney resolvedAmount
-
-    orderId <- generateGUIDText
-    orderShortId <- generateShortId
-    let shortIdText = orderShortId.getShortId
-    applicationId <- generateGUIDText
-    now <- getCurrentTime
 
     mbGatewayReferenceId <- do
       mbServiceConfig <- CQMSC.findByServiceAndCity (DMSC.MembershipPaymentService PaymentService.Juspay) merchantOperatingCityId
@@ -268,53 +275,134 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
           _ -> pure Nothing
         Nothing -> pure Nothing
 
-    let createOrderReq =
-          PaymentTypes.CreateOrderReq
-            { orderId = orderId,
-              orderShortId = shortIdText,
-              amount = highPrecAmount,
-              customerId = driverId.getId,
-              customerEmail = latest.emailId,
-              customerPhone = decryptedMobile,
-              customerFirstName = Just latest.firstName,
-              customerLastName = Just latest.lastName,
-              createMandate = Nothing,
-              mandateMaxAmount = Nothing,
-              mandateFrequency = Nothing,
-              mandateStartDate = Nothing,
-              mandateEndDate = Nothing,
-              metadataGatewayReferenceId = mbGatewayReferenceId,
-              optionsGetUpiDeepLinks = Nothing,
-              metadataExpiryInMins = Nothing,
-              splitSettlementDetails = Nothing,
-              basket = Nothing,
-              paymentRules = Nothing,
-              autoRefundPostSuccess = Nothing
-            }
-
     let paymentServiceType = fromMaybe DOrder.STCL req.paymentServiceType
-    createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
 
-    -- New PENDING row inherits KYC/address/bank/vehicle/nominee/declaration from the latest SUBMITTED row.
-    -- The share-allocation fields are left Nothing and will be populated by stclMemberShipOrderStatusHandler
-    -- on payment success.
-    let newMembership =
-          latest
-            { Domain.id = Kernel.Types.Id.Id orderId,
-              Domain.applicationId = applicationId,
-              Domain.shortId = Just shortIdText,
-              Domain.numberOfShares = req.numberOfShares,
-              Domain.status = Domain.PENDING,
-              Domain.paymentStatus = Nothing,
-              Domain.applicationCount = Nothing,
-              Domain.shareStartCount = Nothing,
-              Domain.shareEndCount = Nothing,
-              Domain.createdAt = now,
-              Domain.updatedAt = now
-            }
-    QStclMembership.create newMembership
+    -- Resolve the requested amount up front so we can compare it against any in-flight order before deciding
+    -- whether to resume that order or create a fresh one for the new intent.
+    let resolvedReqAmount = toHighPrecMoney $ fromMaybe (Money (req.numberOfShares * pricePerShare)) req.amount
 
-    return createOrderResp
+    -- Decide whether a fresh PENDING is actually resumable. We only resume if the new request matches the
+    -- in-flight order on both numberOfShares and amount — otherwise the driver's intent has changed
+    -- (e.g., they originally requested 1 share by mistake and now want 2) and silently replaying the old
+    -- payment link would charge them for the wrong quantity. Mismatched / orphan PENDING is retired so the
+    -- new-order flow below can proceed.
+    mbResumable <- case freshPending of
+      [] -> pure Nothing
+      (existing : _) -> do
+        mbOrder <- QOrder.findById (Kernel.Types.Id.Id existing.id.getId)
+        case mbOrder of
+          Just o
+            | existing.numberOfShares == req.numberOfShares,
+              o.amount == resolvedReqAmount ->
+              pure (Just (existing, o))
+          _ -> do
+            QStclMembership.updateStatus Domain.REJECTED existing.id
+            pure Nothing
+
+    case mbResumable of
+      Just (existing, existingOrder) -> do
+        -- Same intent as the in-flight order: re-issue the same CreateOrderResp (same Juspay orderId) so
+        -- the frontend resumes the existing payment screen. createOrderService recognises the orderId and
+        -- returns the stored payment links — see Lib.Payment.Domain.Action.createOrderService.
+        nwAddress <- asks (.nwAddress)
+        let resumeReq =
+              PaymentTypes.CreateOrderReq
+                { orderId = existing.id.getId,
+                  orderShortId = existingOrder.shortId.getShortId,
+                  amount = existingOrder.amount,
+                  customerId = driverId.getId,
+                  customerEmail = existing.emailId,
+                  customerPhone = decryptedMobile,
+                  customerFirstName = Just existing.firstName,
+                  customerLastName = Just existing.lastName,
+                  createMandate = Nothing,
+                  mandateMaxAmount = Nothing,
+                  mandateFrequency = Nothing,
+                  mandateStartDate = Nothing,
+                  mandateEndDate = Nothing,
+                  metadataGatewayReferenceId = mbGatewayReferenceId,
+                  optionsGetUpiDeepLinks = Nothing,
+                  metadataExpiryInMins = Nothing,
+                  splitSettlementDetails = Nothing,
+                  webhookUrl = Just nwAddress,
+                  basket = Nothing,
+                  paymentRules = Nothing,
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
+                }
+        SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) resumeReq (Just paymentServiceType)
+      Nothing -> do
+        -- No PENDING (or the in-flight one was mismatched and just retired above): create a new top-up.
+        let existingShares = sum (map Domain.numberOfShares submittedApps)
+        when (existingShares + req.numberOfShares > maxSharesPerDriver) $
+          throwError $
+            InvalidRequest $
+              "Total shares for driver cannot exceed " <> T.pack (show maxSharesPerDriver)
+                <> ". Existing shares: "
+                <> T.pack (show existingShares)
+                <> ", requested: "
+                <> T.pack (show req.numberOfShares)
+
+        latest <- case sortOn (Down . Domain.createdAt) submittedApps of
+          (m : _) -> pure m
+          [] -> throwError $ InvalidRequest "No existing membership found for this driver."
+
+        orderId <- generateGUIDText
+        orderShortId <- generateShortId
+        let shortIdText = orderShortId.getShortId
+        applicationId <- generateGUIDText
+
+        nwAddress <- asks (.nwAddress)
+
+        let createOrderReq =
+              PaymentTypes.CreateOrderReq
+                { orderId = orderId,
+                  orderShortId = shortIdText,
+                  amount = resolvedReqAmount,
+                  customerId = driverId.getId,
+                  customerEmail = latest.emailId,
+                  customerPhone = decryptedMobile,
+                  customerFirstName = Just latest.firstName,
+                  customerLastName = Just latest.lastName,
+                  createMandate = Nothing,
+                  mandateMaxAmount = Nothing,
+                  mandateFrequency = Nothing,
+                  mandateStartDate = Nothing,
+                  mandateEndDate = Nothing,
+                  metadataGatewayReferenceId = mbGatewayReferenceId,
+                  optionsGetUpiDeepLinks = Nothing,
+                  metadataExpiryInMins = Nothing,
+                  splitSettlementDetails = Nothing,
+                  webhookUrl = Just nwAddress,
+                  basket = Nothing,
+                  paymentRules = Nothing,
+                  autoRefundPostSuccess = Nothing,
+                  paymentFilter = Nothing
+                }
+
+        createOrderResp <- SharedLogic.Payment.createOrderV2 (driverId, merchantId, merchantOperatingCityId) createOrderReq (Just paymentServiceType)
+
+        -- New PENDING row inherits KYC/address/bank/vehicle/nominee/declaration from the latest SUBMITTED row.
+        -- The share-allocation fields are left Nothing and will be populated by stclMemberShipOrderStatusHandler
+        -- on payment success.
+        let newMembership =
+              latest
+                { Domain.id = Kernel.Types.Id.Id orderId,
+                  Domain.applicationId = applicationId,
+                  Domain.shortId = Just shortIdText,
+                  Domain.numberOfShares = req.numberOfShares,
+                  Domain.status = Domain.PENDING,
+                  Domain.paymentStatus = Nothing,
+                  Domain.isAdditionalSharePurchase = Just True,
+                  Domain.applicationCount = Nothing,
+                  Domain.shareStartCount = Nothing,
+                  Domain.shareEndCount = Nothing,
+                  Domain.createdAt = now,
+                  Domain.updatedAt = now
+                }
+        QStclMembership.create newMembership
+
+        return createOrderResp
 
 putUpdateApplication ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Person.Person),
@@ -372,6 +460,8 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
         Just APITypes.FourWheeler -> "4Wheeler"
 
   let newNomineeName = fromMaybe latest.nomineeName req.nomineeName
+  let newAddressProofType = req.addressProofType <|> latest.addressProofType
+  let newAddressProofImageId = req.addressProofImageId <|> latest.addressProofImageId
 
   now <- getCurrentTime
   forM_ editableRows $ \m ->
@@ -385,6 +475,8 @@ putUpdateApplication (mbDriverId, _merchantId, _merchantOperatingCityId) req = d
           Domain.addressCity = newCity,
           Domain.addressState = newState,
           Domain.addressPostalCode = newPostal,
+          Domain.addressProofType = newAddressProofType,
+          Domain.addressProofImageId = newAddressProofImageId,
           Domain.vehicleType = newVehicleType,
           Domain.nomineeName = newNomineeName,
           Domain.updatedAt = now

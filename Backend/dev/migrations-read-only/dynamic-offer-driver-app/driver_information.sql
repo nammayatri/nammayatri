@@ -342,3 +342,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN docs_verificati
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN disabled_reason_flag text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_airport boolean  default true;

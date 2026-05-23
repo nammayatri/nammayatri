@@ -6,7 +6,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.PayoutAccount as Common
 import qualified "dashboard-helper-api" Dashboard.Common as DC
-import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as RegV2
+import qualified Domain.Action.Dashboard.Fleet.Access as FleetAccess
 import qualified Domain.Action.Dashboard.Management.DriverRegistration as MDR
 import qualified Domain.Action.UI.DriverOnboarding.BankAccountVerification as BankAccountVerification
 import qualified Domain.Types.FleetOwnerInformation as DFOI
@@ -29,7 +29,8 @@ postPayoutAccount ::
   Common.PayoutAccountReq ->
   Flow Common.PayoutAccountResp
 postPayoutAccount merchantShortId opCity requestorId req = do
-  fleetOwner <- RegV2.checkRequestorAccessToFleet req.fleetOwnerId requestorId
+  let fleetOwnerId = fromMaybe requestorId req.fleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = fleetOwner.id
@@ -62,7 +63,8 @@ postPayoutAccountStatus ::
   Common.PayoutAccountStatusReq ->
   Flow Common.PayoutAccountStatusResp
 postPayoutAccountStatus merchantShortId opCity requestorId req = do
-  fleetOwner <- RegV2.checkRequestorAccessToFleet req.fleetOwnerId requestorId
+  let fleetOwnerId = fromMaybe requestorId req.fleetOwnerId
+  FleetAccess.FleetOwnerInfo {fleetOwner} <- FleetAccess.checkRequestorAccessToFleet False (Just requestorId) fleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = fleetOwner.id

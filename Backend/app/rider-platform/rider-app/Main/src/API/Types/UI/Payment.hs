@@ -8,7 +8,7 @@ import Servant
 
 data WalletRechargeReq = WalletRechargeReq
   { pointsAmount :: Int,
-    programId :: Maybe Text
+    programId :: Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

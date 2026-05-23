@@ -1,0 +1,296 @@
+name: Nix CI (Cabal Push Main)
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+    steps:
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+  master-build:
+    name: ${{ matrix.name }}
+    needs: [check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux-ny-push-main
+            arch: amd64
+            name: Master Local Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Build (incremental cabal)
+        run: |
+          set -o pipefail
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal build all -f+Local 2>&1
+          " | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee master-build-log.txt
+
+      - name: Collect binaries to staging
+        run: |
+          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          for f in "$STAGING/bin/"*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+
+      - name: Upload master build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-build-log
+          path: master-build-log.txt
+          retention-days: 1
+
+      - name: Build And Push Docker image (Master Local mode)
+        id: docker
+        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "cabal-master-"
+        run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
+  
+  analyze-master-build-times:
+    name: Analyze Master Build Times
+    needs: [master-build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux-ny-push-main
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download master build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: master-build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../master-build-logs/master-build-log/master-build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  prod-build:
+    name: ${{ matrix.name }}
+    needs: [master-build, check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux-ny-push-main
+            arch: amd64
+            name: Prod Release Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compute cache key
+        id: cache-key
+        run: |
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
+
+      - name: Restore cabal cache
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
+
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+
+      - name: Build (incremental cabal)
+        run: |
+          set -o pipefail
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal build all -f-Local 2>&1
+          " | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee prod-build-log.txt
+
+      - name: Collect binaries to staging
+        run: |
+          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          for f in "$STAGING/bin/"*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+
+      - name: Upload build log
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-build-log
+          path: prod-build-log.txt
+          retention-days: 1
+
+      - name: Build And Push Docker image
+        id: docker
+        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
+        env:
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "cabal-prod-"
+        run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
+
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
+
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
+
+  analyze-prod-build-times:
+    name: Analyze Prod Build Times
+    needs: [prod-build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux-ny-push-main
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: prod-build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../prod-build-logs/prod-build-log/prod-build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

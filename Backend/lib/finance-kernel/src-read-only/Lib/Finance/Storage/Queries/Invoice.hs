@@ -36,8 +36,12 @@ findByNumber invoiceNumber = do findOneWithKV [Se.Is Beam.invoiceNumber $ Se.Eq 
 findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Invoice.Invoice]))
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
-updateIrnByInvoiceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
-updateIrnByInvoiceId irn id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.irn irn, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateIrnAndSignedQRByInvoiceId ::
+  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
+updateIrnAndSignedQRByInvoiceId irn signedQRCode id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.irn irn, Se.Set Beam.signedQRCode signedQRCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Finance.Domain.Types.Invoice.InvoiceStatus -> Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -72,6 +76,7 @@ updateByPrimaryKey (Lib.Finance.Domain.Types.Invoice.Invoice {..}) = do
       Se.Set Beam.periodEnd periodEnd,
       Se.Set Beam.periodStart periodStart,
       Se.Set Beam.referenceId referenceId,
+      Se.Set Beam.signedQRCode signedQRCode,
       Se.Set Beam.status status,
       Se.Set Beam.subtotal subtotal,
       Se.Set Beam.supplierAddress supplierAddress,

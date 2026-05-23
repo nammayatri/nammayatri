@@ -47,7 +47,7 @@ checkForDriverAssociationOverwrite merchant driverId = do
 
     existingDOAssociations <- QDOA.findAllByDriverId driverId True
     unless (null existingDOAssociations) $ do
-      throwError (InvalidRequest "Driver is already associated with a fleet")
+      throwError (InvalidRequest "Driver is already associated with an operator")
 
 endDriverAssociationsIfAllowed ::
   DM.Merchant ->

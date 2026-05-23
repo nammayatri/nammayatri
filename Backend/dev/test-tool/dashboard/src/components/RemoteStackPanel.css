@@ -1,0 +1,77 @@
+.remote-stack-panel {
+  padding: 16px 20px;
+  color: #d4d4d4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow: auto;
+}
+.rsp-header h2 { margin: 0 0 4px; font-size: 18px; }
+.rsp-sub { margin: 0; color: #9aa0a6; font-size: 13px; }
+.rsp-sub code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; }
+
+.rsp-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px 14px;
+}
+.rsp-form label { display: flex; flex-direction: column; font-size: 12px; gap: 4px; }
+.rsp-form label.rsp-wide { grid-column: 1 / -1; }
+.rsp-form span { color: #9aa0a6; }
+.rsp-form input, .rsp-form select {
+  background: #1e1e1e; border: 1px solid #3a3a3a; color: #d4d4d4;
+  padding: 6px 8px; border-radius: 4px; font: inherit;
+}
+.rsp-form input:disabled, .rsp-form select:disabled { opacity: 0.55; }
+.rsp-form input[readonly] {
+  background: #161b22;
+  color: #8b949e;
+  cursor: default;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.rsp-actions { display: flex; gap: 8px; align-items: center; }
+.rsp-actions button {
+  background: #2a64d8; color: white; border: 0; padding: 7px 12px;
+  border-radius: 4px; font-size: 13px; cursor: pointer;
+}
+.rsp-actions button:disabled { background: #3a3a3a; color: #8a8a8a; cursor: not-allowed; }
+.rsp-spacer { flex: 1; }
+
+.rsp-meta { font-size: 12px; color: #b0b0b0; display: flex; flex-direction: column; gap: 4px; }
+.rsp-label { color: #9aa0a6; }
+.rsp-tag {
+  background: #6a4d20; color: #ffd49a; font-size: 11px;
+  padding: 1px 6px; border-radius: 3px; margin-left: 6px;
+}
+.rsp-status { color: #6a9955; }
+.rsp-error { color: #f44747; }
+
+.rsp-terminals {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.rsp-terminal {
+  border: 1px solid #2a2a2a;
+  border-radius: 4px;
+  background: #1e1e1e;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 520px;
+}
+.rsp-term-title {
+  background: #232323; color: #9aa0a6; padding: 4px 10px;
+  font-size: 11px; border-bottom: 1px solid #2a2a2a;
+}
+.rsp-empty {
+  color: #6a6a6a; font-size: 13px; padding: 24px;
+  border: 1px dashed #2a2a2a; border-radius: 4px;
+  text-align: center;
+}

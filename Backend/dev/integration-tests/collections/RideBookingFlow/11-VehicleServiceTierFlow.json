@@ -1,0 +1,1687 @@
+{
+  "info": {
+    "name": "NY Vehicle Service Tier Flow",
+    "description": "End-to-end tests for vehicle service tier management and all usageRestriction\nchecks in selectVehicleTierForDriverWithUsageRestriction.\n\nDrivers onboarded:\n  A   — fresh SEDAN, no special restrictions (baseline + main test driver)\n  B   — SEDAN with mYManufacturing=2005-01-01 (~20 years, tests mfcCheck)\n  C   — SEDAN with airConditioned=false (tests airConditionedCheck at onboarding)\n  AUTO— AUTO_RICKSHAW (tests variant-based filterVehicleTier)\n\nTest phases:\n  2. Structure & canSwitchToAirport field validation (new field)\n  3. Ineligibility: AUTO driver has no CAB tiers (filterVehicleTier)\n  4a. mfcCheck: old vehicle (2005) restricts vehicleAgeThreshold-gated tiers\n  4b. airConditionedCheck: AC=false at onboarding restricts AC-gated tiers\n  5. Tier selection: driver can select non-restricted tiers;\n     defaultForVehicleVariant tier is always kept selected\n  6. vehicleRatingCheck: dashboard updateVehicleRating(1.0)→restricted, (5.0)→unrestricted\n  7. airConditionedCheck (dashboard path): acRestriction/update(isWorking=false)\n     restricts AC-gated tiers AND auto-deselects them (shouldUpdateServiceTiers=true)\n  8. airConditionedCheck (driver path): updateAirCondition(false) same behaviour\n  9. canSwitchToAirport toggle via updateServiceTiers\n\nNot covered (no API to set values directly):\n  luggageCapacityCheck — luggageCapacity not exposed in addVehicle or any dashboard API\n  driverRatingCheck    — DriverStats.rating computed from actual rides only\n\nPrerequisites: local stack running, SEDAN + AUTO service tiers configured for the city.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var rnd = function () { return '9' + Math.floor(100000000 + Math.random() * 899999999); };",
+          "    var reg = function () {",
+          "        return 'KA' + String(Math.floor(10 + Math.random() * 89))",
+          "             + String.fromCharCode(65 + Math.floor(Math.random() * 26))",
+          "             + String.fromCharCode(65 + Math.floor(Math.random() * 26))",
+          "             + String(Math.floor(1000 + Math.random() * 8999));",
+          "    };",
+          "    pm.collectionVariables.set('_test_driver_number',  rnd());",
+          "    pm.collectionVariables.set('_test_driver2_number', rnd());",
+          "    pm.collectionVariables.set('_test_driver3_number', rnd());",
+          "    pm.collectionVariables.set('_test_driver4_number', rnd());",
+          "    pm.collectionVariables.set('_test_reg_no',  reg());",
+          "    pm.collectionVariables.set('_test_reg_no2', reg());",
+          "    pm.collectionVariables.set('_test_reg_no3', reg());",
+          "    pm.collectionVariables.set('_test_reg_no4', reg());",
+          "    console.log('A:', pm.collectionVariables.get('_test_driver_number'),'reg:',pm.collectionVariables.get('_test_reg_no'));",
+          "    console.log('B(old):', pm.collectionVariables.get('_test_driver2_number'),'reg:',pm.collectionVariables.get('_test_reg_no2'));",
+          "    console.log('C(ac=off):', pm.collectionVariables.get('_test_driver3_number'),'reg:',pm.collectionVariables.get('_test_reg_no3'));",
+          "    console.log('AUTO:', pm.collectionVariables.get('_test_driver4_number'),'reg:',pm.collectionVariables.get('_test_reg_no4'));",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth (Driver A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver_authId',d.authId); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\":\"{{_test_driver_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
+        }
+      }
+    },
+    {
+      "name": "OTP (Driver A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver_token',d.token); pm.environment.set('driver_id',d.person.id); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-drivera\"}"
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Driver A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('AddVehicle Driver A:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\"}"
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Driver A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver A)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Auth (Driver B (old vehicle))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver2_authId',d.authId); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\":\"{{_test_driver2_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
+        }
+      }
+    },
+    {
+      "name": "OTP (Driver B (old vehicle))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver2_token',d.token); pm.environment.set('driver2_id',d.person.id); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver2_authId}}/verify"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverb(oldvehicle)\"}"
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Driver B (old vehicle))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('AddVehicle Driver B (old vehicle):',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/addVehicle"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no2}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\", \"mYManufacturing\":\"2005-01-01\"}"
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Driver B (old vehicle))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver2_id}}/enable"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver B (old vehicle))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver2_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Auth (Driver C (AC off))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver3_authId',d.authId); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\":\"{{_test_driver3_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
+        }
+      }
+    },
+    {
+      "name": "OTP (Driver C (AC off))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver3_token',d.token); pm.environment.set('driver3_id',d.person.id); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver3_authId}}/verify"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverc(acoff)\"}"
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Driver C (AC off))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('AddVehicle Driver C (AC off):',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/addVehicle"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no3}}\",\"vehicleClass\":\"{{vehicle_class}}\",\"colour\":\"White\",\"model\":\"{{vehicle_model}}\",\"make\":\"{{vehicle_make}}\",\"vehicleCategory\":\"{{vehicle_category}}\",\"variant\":\"{{vehicle_variant}}\", \"airConditioned\":false}"
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Driver C (AC off))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver3_id}}/enable"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver C (AC off))",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver3_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Auth (Driver AUTO)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver4_authId',d.authId); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\":\"{{_test_driver4_number}}\",\"mobileCountryCode\":\"+91\",\"merchantId\":\"{{driver_merchant_id}}\",\"merchantOperatingCity\":\"{{city}}\"}"
+        }
+      }
+    },
+    {
+      "name": "OTP (Driver AUTO)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d=pm.response.json(); pm.environment.set('driver4_token',d.token); pm.environment.set('driver4_id',d.person.id); pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver4_authId}}/verify"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\":\"{{login_otp}}\",\"deviceToken\":\"test-driverauto\"}"
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Driver AUTO)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('AddVehicle AUTO:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/addVehicle"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no4}}\",\"vehicleClass\":\"3w\",\"colour\":\"Green\",\"model\":\"AUTO RICKSHAW\",\"make\":\"Bajaj\",\"vehicleCategory\":\"AUTO_CATEGORY\"}"
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Driver AUTO)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver4_id}}/enable"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan (Driver AUTO)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver4_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    },
+    {
+      "name": "GET Tiers (A) — Structure, canSwitchToAirport, Save Baseline",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// Driver A was onboarded with a SEDAN — must have at least one eligible tier",
+              "pm.test('tiers array is non-empty', function () {",
+              "    pm.expect(d.tiers).to.be.an('array').with.length.above(0);",
+              "});",
+              "",
+              "// canSwitchToAirport is null when no tier has isAirportRideEnabled=true,",
+              "// or a boolean (driverInfo.canSwitchToAirport) when at least one non-restricted tier does.",
+              "// New field added in the service_tier changes commit — verify it exists.",
+              "pm.test('canSwitchToAirport field present in response (new field)', function () {",
+              "    pm.expect(d).to.have.property('canSwitchToAirport');",
+              "});",
+              "",
+              "// isUsageRestricted — set by mapUsageRestriction; tells UI which quality thresholds failed.",
+              "// isSelected        — true if this tier is in vehicle.selectedServiceTiers.",
+              "// isDefault         — true if vehicle.variant is in tier.defaultForVehicleVariant.",
+              "pm.test('each tier has isUsageRestricted / isSelected / isDefault', function () {",
+              "    d.tiers.forEach(function (t) {",
+              "        pm.expect(t, t.serviceTierType).to.include.all.keys('isUsageRestricted','isSelected','isDefault','serviceTierType');",
+              "    });",
+              "});",
+              "",
+              "// Save for diff-based assertions in later steps",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));",
+              "var nonRestr = d.tiers.find(function(t){return !t.isUsageRestricted;});",
+              "var dflt     = d.tiers.find(function(t){return t.isDefault;});",
+              "pm.environment.set('_vst_nonrestr_type', nonRestr ? nonRestr.serviceTierType : '');",
+              "pm.environment.set('_vst_default_type',  dflt ? dflt.serviceTierType : '');",
+              "console.log('A tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+',D='+t.isDefault+')';}).join(', '));",
+              "console.log('canSwitchToAirport:', d.canSwitchToAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "GET /driver/vehicleServiceTiers — response shape validation.\n\nChecks:\n  • tiers[] non-empty (driver has at least one eligible tier)\n  • canSwitchToAirport field present — new field from service_tier commit;\n    computed as: if any non-restricted tier has isAirportRideEnabled\n    then Just driverInfo.canSwitchToAirport else Nothing\n  • Every tier has isUsageRestricted / isSelected / isDefault\n\nSaves full response as _vst_baseline for diff-based assertions in later steps."
+    },
+    {
+      "name": "GET Tiers (AUTO) — Ineligible CAB Tiers Absent (Variant Filtering)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// filterVehicleTier: vehicle.variant `elem` tier.allowedVehicleVariant",
+              "// AUTO_RICKSHAW is NOT in allowedVehicleVariant of CAB-category tiers,",
+              "// so SEDAN/SUV/HATCHBACK/TAXI must not appear in the response at all.",
+              "// This is different from isUsageRestricted=true: the tier doesn't exist for this driver.",
+              "var CAB = ['SEDAN','SUV','HATCHBACK','TAXI','SUV_PLUS','PREMIUM_SEDAN'];",
+              "var cabFound = d.tiers.filter(function(t){ return CAB.indexOf(t.serviceTierType) !== -1; });",
+              "pm.test('AUTO driver: no CAB tiers in response (filterVehicleTier works)', function () {",
+              "    pm.expect(cabFound.length).to.equal(0,",
+              "        'Unexpected CAB tiers for AUTO_RICKSHAW driver: ' + cabFound.map(function(t){return t.serviceTierType;}).join(','));",
+              "});",
+              "console.log('AUTO driver tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+')';}).join(', '));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver4_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "GET /driver/vehicleServiceTiers for Driver AUTO (AUTO_RICKSHAW).\n\nTests filterVehicleTier in selectVehicleTierForDriverWithUsageRestriction:\n  filterVehicleTier tier = vehicle.variant `elem` tier.allowedVehicleVariant\n\nAUTO_RICKSHAW is not in allowedVehicleVariant of any CAB tier, so\nSEDAN / SUV / HATCHBACK / TAXI must be completely absent — not just restricted.\nThis is ineligibility: the tier is filtered out, not marked with isUsageRestricted."
+    },
+    {
+      "name": "GET Tiers (B) — mfcCheck: Old Vehicle (2005) Restricts vehicleAgeThreshold-Gated Tiers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// mfcCheck: vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now",
+              "//   mfcCheck = case (Just (Months age), Just (Months threshold)) -> age < threshold",
+              "// Driver B: mYManufacturing=2005-01-01 → age ≈ 240 months.",
+              "// Tiers with vehicleAgeThreshold < 240 → mfcCheck=False → isUsageRestricted=True.",
+              "// We detect these by diffing against Driver A (no mYManufacturing → mfcCheck always True).",
+              "var baseA = JSON.parse(pm.environment.get('_vst_baseline_tiers') || '[]');",
+              "var ageRestr = d.tiers.filter(function(bt) {",
+              "    if (!bt.isUsageRestricted) return false;",
+              "    var at = baseA.find(function(t){ return t.serviceTierType === bt.serviceTierType; });",
+              "    return at && !at.isUsageRestricted; // restricted for B but not A → mfcCheck caused it",
+              "});",
+              "if (ageRestr.length > 0) {",
+              "    pm.test('mfcCheck: 2005 vehicle restricts vehicleAgeThreshold-gated tiers (fresh vehicle not restricted)', function () {",
+              "        pm.expect(ageRestr.length).to.be.above(0);",
+              "    });",
+              "} else {",
+              "    console.log('[info] No vehicleAgeThreshold-gated tiers in city config — mfcCheck N/A');",
+              "}",
+              "console.log('Driver B tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+')';}).join(', '));",
+              "if (ageRestr.length > 0) console.log('Age-restricted (B not A):', ageRestr.map(function(t){return t.serviceTierType;}).join(','));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver2_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "GET /driver/vehicleServiceTiers for Driver B (mYManufacturing=2005-01-01).\n\nTests mfcCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now\n  mfcCheck = case (vehicleAgeInMonths, tier.vehicleAgeThreshold) of\n    (Just (Months age), Just (Months threshold)) -> age < threshold\n    _ -> True\n\n2005-01-01 → age ≈ 240 months. Any tier with vehicleAgeThreshold < 240\nhas mfcCheck=False → isUsageRestricted=True.\n\nCompares against Driver A baseline (no mYManufacturing → age=Nothing → mfcCheck=True always).\nConditional: passes gracefully if no tier has vehicleAgeThreshold configured."
+    },
+    {
+      "name": "GET Tiers (C) — airConditionedCheck: AC=false at Onboarding Restricts AC-Gated Tiers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200', function () { pm.response.to.have.status(200); });",
+              "",
+              "// airConditionedCheck:",
+              "//   (isNothing tier.airConditionedThreshold || vehicle.airConditioned /= Just False)",
+              "// Driver C: vehicle.airConditioned = Just False → condition fails for any AC-gated tier.",
+              "// We identify AC-gated tiers by the airConditioned field in the response (non-null = has threshold).",
+              "var acGated = d.tiers.filter(function(t){ return t.airConditioned !== null && t.airConditioned !== undefined; });",
+              "if (acGated.length > 0) {",
+              "    var notRestr = acGated.filter(function(t){ return !t.isUsageRestricted; });",
+              "    pm.test('airConditionedCheck: vehicle.airConditioned=false restricts all AC-gated tiers', function () {",
+              "        pm.expect(notRestr.length).to.equal(0,",
+              "            'Expected restricted (vehicle.airConditioned=Just False), but found unrestricted: ' + notRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "    // Cross-check: same tiers must be unrestricted for Driver A.",
+              "    // Driver A: airConditioned not passed in addVehicle → vehicle.airConditioned=Nothing.",
+              "    // isNothing Nothing = True → short-circuits the check → not restricted.",
+              "    var baseA = JSON.parse(pm.environment.get('_vst_baseline_tiers') || '[]');",
+              "    var unrestrictedInA = acGated.filter(function(ct){",
+              "        var at = baseA.find(function(t){ return t.serviceTierType === ct.serviceTierType; });",
+              "        return at && !at.isUsageRestricted;",
+              "    });",
+              "    pm.test('Same AC-gated tiers are unrestricted for Driver A (airConditioned=Nothing)', function () {",
+              "        pm.expect(unrestrictedInA.length).to.equal(acGated.length,",
+              "            'Expected Driver A unrestricted for: ' + acGated.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else {",
+              "    console.log('[info] No AC-gated tiers in city config — airConditionedCheck N/A');",
+              "}",
+              "console.log('Driver C (AC=false) tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',AC='+t.airConditioned+')';}).join(', '));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver3_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "GET /driver/vehicleServiceTiers for Driver C (addVehicle with airConditioned=false).\n\nTests airConditionedCheck in selectVehicleTierForDriverWithUsageRestriction:\n  airConditionedCheck =\n    (tier.vehicleCategory == Just AMBULANCE)\n    || (compareNumber tier.airConditionedThreshold driverInfo.airConditionScore\n        && (isNothing tier.airConditionedThreshold || vehicle.airConditioned /= Just False))\n\nvehicle.airConditioned = Just False → the second condition fails for any tier\nwith an airConditionedThreshold → isUsageRestricted=True.\n\nAlso cross-checks: same tiers are unrestricted for Driver A (airConditioned=Nothing\n→ isNothing Nothing = True → check short-circuits to True → not restricted)."
+    },
+    {
+      "name": "POST Update Service Tiers (A) — Select One Non-Restricted Tier",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Build request body: select exactly one non-restricted tier, deselect all others.",
+              "// Backend honours the isSelected field from the request body when a matching tier exists:",
+              "//   let isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest",
+              "var base   = JSON.parse(pm.environment.get('_vst_baseline') || '{\"tiers\":[]}');",
+              "var target = pm.environment.get('_vst_nonrestr_type');",
+              "if (!target) { console.log('[skip] no non-restricted tier found'); pm.execution.skipRequest(); return; }",
+              "var tiers = base.tiers.map(function(t){ return Object.assign({},t,{isSelected: t.serviceTierType===target}); });",
+              "var body  = Object.assign({},base,{tiers:tiers});",
+              "pm.environment.set('_vst_update_body',   JSON.stringify(body));",
+              "pm.environment.set('_vst_selected_type', target);",
+              "console.log('Selecting tier:', target);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{_vst_update_body}}"
+        }
+      },
+      "description": "POST /driver/updateServiceTiers — driver explicitly selects a tier.\n\nPrerequest builds the body from _vst_baseline, setting isSelected=true\nfor one non-restricted tier.\n\nBackend in postDriverUpdateServiceTiers reads:\n  let isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest\n  if isSelected || (isDefault && vehicle.category /= AMBULANCE)\n    then return (Just tier)"
+    },
+    {
+      "name": "GET Tiers (A) — Verify Selected Tier isSelected=true",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// QVehicle.updateSelectedServiceTiers persists the new list — verify it worked.",
+              "var sel = pm.environment.get('_vst_selected_type');",
+              "if (sel) {",
+              "    var t = d.tiers.find(function(t){return t.serviceTierType===sel;});",
+              "    pm.test('Tier selection persisted: isSelected=true for ' + sel, function(){",
+              "        pm.expect(t).to.exist;",
+              "        pm.expect(t.isSelected).to.be.true;",
+              "    });",
+              "    console.log('Tier', sel, 'isSelected:', t ? t.isSelected : 'NOT FOUND');",
+              "}",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies the tier selection from the previous POST persisted.\n\nQVehicle.updateSelectedServiceTiers is called at the end of postDriverUpdateServiceTiers,\nso the next GET must reflect isSelected=true for the tier we sent."
+    },
+    {
+      "name": "POST Update Service Tiers (A) — Deselect All (Default Tier Protected)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Send all tiers as isSelected=false.",
+              "// Backend logic: if isSelected || (isDefault && vehicle.category /= AMBULANCE)",
+              "//   then return (Just tier)   -- kept in selectedServiceTiers",
+              "//   else return Nothing       -- removed",
+              "// Default tiers (vehicle.variant in tier.defaultForVehicleVariant) survive this.",
+              "var base = JSON.parse(pm.environment.get('_vst_baseline') || '{\"tiers\":[]}');",
+              "if (!base.tiers || !base.tiers.length) { pm.execution.skipRequest(); return; }",
+              "var tiers = base.tiers.map(function(t){ return Object.assign({},t,{isSelected:false}); });",
+              "var body  = Object.assign({},base,{tiers:tiers});",
+              "pm.environment.set('_vst_update_body',           JSON.stringify(body));",
+              "pm.environment.set('_vst_deselect_default_check', pm.environment.get('_vst_default_type'));",
+              "console.log('Sending all isSelected=false. Default expected to survive:', pm.environment.get('_vst_default_type'));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{_vst_update_body}}"
+        }
+      },
+      "description": "POST /driver/updateServiceTiers with all tiers as isSelected=false.\n\nTests default-tier protection in postDriverUpdateServiceTiers:\n  if isSelected || (isDefault && vehicle.category /= AMBULANCE)\n    then return (Just tier)   -- kept\n\nWhere isDefault = vehicle.variant `elem` tier.defaultForVehicleVariant.\nBackend ignores isSelected=false for default tiers — they stay selected."
+    },
+    {
+      "name": "GET Tiers (A) — Default Tier Cannot Be Deselected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// Verify: tier where vehicle.variant ∈ tier.defaultForVehicleVariant",
+              "// must remain isSelected=true even though we sent isSelected=false.",
+              "var dflt = pm.environment.get('_vst_deselect_default_check');",
+              "if (dflt) {",
+              "    var t = d.tiers.find(function(t){return t.serviceTierType===dflt;});",
+              "    pm.test('defaultForVehicleVariant tier stays selected despite deselect-all request', function(){",
+              "        pm.expect(t).to.exist;",
+              "        pm.expect(t.isSelected).to.be.true;",
+              "    });",
+              "    console.log('Default tier', dflt, 'isSelected:', t ? t.isSelected : 'NOT FOUND');",
+              "} else { console.log('[info] No default tier found in baseline — skipped'); }",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies the default-tier protection from the previous step.\n\nThe tier where vehicle.variant ∈ tier.defaultForVehicleVariant must still\nhave isSelected=true, because the backend's isDefault check overrides isSelected=false."
+    },
+    {
+      "name": "POST Vehicle Rating (Dashboard, A) — Set Low Rating 1.0",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Rating→1.0:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"rating\":1.0,\"remark\":\"integration-test-low-rating\"}"
+        }
+      },
+      "description": "Dashboard POST /driverVehicleQuality/updateVehicleRating.\n\nSets vehicle.vehicleRating=1.0 via updateVehicleRatingAndRemark,\nwriting to both the vehicle table and the RC.\nUsed to trigger vehicleRatingCheck restriction in the next GET."
+    },
+    {
+      "name": "GET Tiers (A) — vehicleRatingCheck: Low Rating Restricts Threshold-Gated Tiers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// vehicleRatingCheck: compareNumber vehicle.vehicleRating tier.vehicleRating",
+              "//   = compareNumber (Just 1.0) (Just threshold) = 1.0 >= threshold",
+              "// Tiers with threshold > 1.0 → vehicleRatingCheck=False → restricted.",
+              "// Detect by diffing against baseline (before we set the low rating).",
+              "var baseA = JSON.parse(pm.environment.get('_vst_baseline_tiers') || '[]');",
+              "var newlyRestr = d.tiers.filter(function(t){",
+              "    if (!t.isUsageRestricted) return false;",
+              "    var b = baseA.find(function(b){return b.serviceTierType===t.serviceTierType;});",
+              "    return b && !b.isUsageRestricted; // was unrestricted, now restricted after rating=1.0",
+              "});",
+              "if (newlyRestr.length > 0) {",
+              "    pm.test('vehicleRatingCheck: vehicleRating=1.0 restricts tiers with higher threshold', function(){",
+              "        pm.expect(newlyRestr.length).to.be.above(0);",
+              "    });",
+              "    pm.environment.set('_vst_rating_restr_types', newlyRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "    console.log('Newly restricted after rating=1.0:', newlyRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "} else {",
+              "    pm.environment.set('_vst_rating_restr_types', '');",
+              "    console.log('[info] No vehicleRating-gated tiers in city config, or threshold ≤ 1.0');",
+              "}",
+              "pm.environment.set('_vst_low_rating_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Tests vehicleRatingCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleRatingCheck = compareNumber vehicle.vehicleRating tier.vehicleRating\n  compareNumber (Just 1.0) (Just threshold) = 1.0 >= threshold\n\nAny tier with vehicleRating threshold > 1.0 → vehicleRatingCheck=False → restricted.\nDetected by diffing against _vst_baseline_tiers.\nConditional: passes gracefully if no tier has a vehicleRating threshold."
+    },
+    {
+      "name": "POST Vehicle Rating (Dashboard, A) — Restore High Rating 5.0",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Rating→5.0:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driverVehicleQuality/updateVehicleRating"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"registrationNo\":\"{{_test_reg_no}}\",\"rating\":5.0,\"remark\":\"integration-test-high-rating\"}"
+        }
+      },
+      "description": "Restores vehicle.vehicleRating=5.0. compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold passes for all realistic thresholds."
+    },
+    {
+      "name": "GET Tiers (A) — vehicleRatingCheck: High Rating Restores Tiers to Unrestricted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold → True for any reasonable threshold.",
+              "var restrTypes = (pm.environment.get('_vst_rating_restr_types') || '').split(',').filter(Boolean);",
+              "if (restrTypes.length > 0) {",
+              "    var stillRestr = d.tiers.filter(function(t){",
+              "        return restrTypes.indexOf(t.serviceTierType) !== -1 && t.isUsageRestricted;",
+              "    });",
+              "    pm.test('vehicleRatingCheck: rating=5.0 restores all previously restricted tiers', function(){",
+              "        pm.expect(stillRestr.length).to.equal(0,",
+              "            'Still restricted after rating=5.0: '+stillRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else { console.log('[info] No vehicleRating-gated tiers were found — N/A'); }",
+              "// Refresh baseline for the AC phases below",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies vehicleRatingCheck recovery:\n  compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold → True\n→ vehicleRatingCheck=True → tiers that were restricted with 1.0 are now unrestricted."
+    },
+    {
+      "name": "POST AC Restriction (Dashboard, A) — isWorking=false",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Dashboard AC→false:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"isWorking\":false,\"downgradeReason\":\"integration-test-ac-restriction\"}"
+        }
+      },
+      "description": "Dashboard POST /driver/{id}/acRestriction/update {isWorking:false}.\n\nCalls checkAndUpdateAirConditioned(isDashboard=True, isAirConditioned=False,\n  shouldUpdateServiceTiers=True).\n\nTwo effects:\n  1. vehicle.airConditioned = Just False\n  2. incrementDriverAcUsageRestrictionCount → increases driverInfo.airConditionScore\n\nBoth contribute to airConditionedCheck failing for AC-gated tiers."
+    },
+    {
+      "name": "GET Tiers (A) — Dashboard AC Restricted: AC-Gated Tiers Restricted & Auto-Deselected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// airConditionedCheck fails: vehicle.airConditioned=Just False",
+              "//   → (isNothing threshold || vehicle.airConditioned /= Just False) evaluates to False",
+              "//   → airConditionedCheck=False → isUsageRestricted=True for AC-gated tiers.",
+              "var acGated = d.tiers.filter(function(t){ return t.airConditioned !== null && t.airConditioned !== undefined; });",
+              "if (acGated.length > 0) {",
+              "    var acRestr = acGated.filter(function(t){ return t.isUsageRestricted; });",
+              "    pm.test('airConditionedCheck: dashboard acRestriction(isWorking=false) restricts all AC-gated tiers', function(){",
+              "        pm.expect(acRestr.length).to.equal(acGated.length,",
+              "            'Not all AC-gated restricted: '+acGated.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+')';}).join(','));",
+              "    });",
+              "    // shouldUpdateServiceTiers=True triggers the auto-deselect path:",
+              "    //   fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)",
+              "    //   → uses autoSelectedVehicleVariant filter",
+              "    //   → restricted tiers excluded → QVehicle.updateSelectedServiceTiers(newTiers)",
+              "    // So AC-restricted tiers must NOT appear as isSelected=true.",
+              "    var acRestrSelected = acRestr.filter(function(t){ return t.isSelected; });",
+              "    pm.test('Auto-deselect (shouldUpdateServiceTiers=true): AC-restricted tiers removed from selectedServiceTiers', function(){",
+              "        pm.expect(acRestrSelected.length).to.equal(0,",
+              "            'Still selected despite restriction: '+acRestrSelected.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else { console.log('[info] No AC-gated tiers in city config — N/A'); }",
+              "console.log('After dashboard AC=false, tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+',AC='+t.airConditioned+')';}).join(', '));",
+              "pm.environment.set('_vst_baseline', JSON.stringify(d));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies both effects of dashboard acRestriction/update(isWorking=false):\n\n1. airConditionedCheck fails → isUsageRestricted=true:\n     vehicle.airConditioned=Just False → (vehicle.airConditioned /= Just False) = False\n\n2. shouldUpdateServiceTiers=True → auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     uses autoSelectedVehicleVariant (not allowedVehicleVariant)\n     restricted tiers excluded → QVehicle.updateSelectedServiceTiers called\n     → AC-restricted tiers must not be isSelected=true"
+    },
+    {
+      "name": "POST AC Restriction (Dashboard, A) — isWorking=true (Restore)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Dashboard AC→true:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/acRestriction/update"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"isWorking\":true}"
+        }
+      },
+      "description": "Dashboard POST /driver/{id}/acRestriction/update {isWorking:true}.\n\nSets vehicle.airConditioned=Just True. airConditionScore is NOT reset — only\nincremented by isWorking=false. For a fresh driver, one increment is still below\nthreshold so the score-based part of airConditionedCheck still passes."
+    },
+    {
+      "name": "GET Tiers (A) — Dashboard AC Restored: AC-Gated Tiers Unrestricted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// vehicle.airConditioned=Just True now.",
+              "// airConditionedCheck: (isNothing threshold || Just True /= Just False) = True → passes.",
+              "// airConditionScore was incremented, but one increment for a fresh driver is still below threshold.",
+              "var acGated = d.tiers.filter(function(t){ return t.airConditioned !== null && t.airConditioned !== undefined; });",
+              "if (acGated.length > 0) {",
+              "    var stillRestr = acGated.filter(function(t){ return t.isUsageRestricted; });",
+              "    pm.test('AC-gated tiers unrestricted after dashboard acRestriction(isWorking=true)', function(){",
+              "        pm.expect(stillRestr.length).to.equal(0,",
+              "            'Still restricted: '+stillRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else { console.log('[info] No AC-gated tiers — N/A'); }",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies recovery after dashboard acRestriction/update(isWorking=true).\n\nvehicle.airConditioned=Just True → (isNothing threshold || Just True /= Just False) = True\n→ airConditionedCheck passes → isUsageRestricted=False."
+    },
+    {
+      "name": "POST Update Air Condition (Driver A) — isAirConditioned=false",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Driver AC→false:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/updateAirCondition"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"isAirConditioned\":false}"
+        }
+      },
+      "description": "Driver-facing POST /driver/updateAirCondition {isAirConditioned:false}.\n\nCalls checkAndUpdateAirConditioned(isDashboard=False, isAirConditioned=False,\n  shouldUpdateServiceTiers=True).\n\nDifference from dashboard path:\n  • Sets vehicle.airConditioned=Just False (same)\n  • Does NOT call incrementDriverAcUsageRestrictionCount (airConditionScore unchanged)\n  • shouldUpdateServiceTiers=True still fires the auto-deselect"
+    },
+    {
+      "name": "GET Tiers (A) — Driver AC Off: AC-Gated Tiers Restricted & selectedServiceTiers Auto-Updated",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// Same airConditionedCheck failure as dashboard path:",
+              "//   vehicle.airConditioned=Just False → condition fails → isUsageRestricted=True.",
+              "// Key difference: airConditionScore is NOT incremented (no incrementDriverAcUsageRestrictionCount).",
+              "// But shouldUpdateServiceTiers=True still triggers the auto-deselect.",
+              "var acGated = d.tiers.filter(function(t){ return t.airConditioned !== null && t.airConditioned !== undefined; });",
+              "if (acGated.length > 0) {",
+              "    var acRestr = acGated.filter(function(t){ return t.isUsageRestricted; });",
+              "    pm.test('airConditionedCheck: driver updateAirCondition(false) restricts AC-gated tiers', function(){",
+              "        pm.expect(acRestr.length).to.equal(acGated.length,",
+              "            'Not all AC-gated restricted: '+acGated.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+')';}).join(','));",
+              "    });",
+              "    // shouldUpdateServiceTiers=True: fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)",
+              "    //   uses autoSelectedVehicleVariant (not allowedVehicleVariant)",
+              "    //   → restricted tiers excluded from new selectedServiceTiers list",
+              "    var acRestrSelected = acRestr.filter(function(t){ return t.isSelected; });",
+              "    pm.test('Auto-update: AC-restricted tiers removed from selectedServiceTiers (driver-side)', function(){",
+              "        pm.expect(acRestrSelected.length).to.equal(0,",
+              "            'Still selected: '+acRestrSelected.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else { console.log('[info] No AC-gated tiers in city config — N/A'); }",
+              "console.log('After driver AC=false, tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+',AC='+t.airConditioned+')';}).join(', '));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies driver-side updateAirCondition(false) path:\n\n1. Same airConditionedCheck failure: vehicle.airConditioned=Just False → restricted.\n\n2. shouldUpdateServiceTiers=True auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     → uses autoSelectedVehicleVariant\n     → restricted tiers excluded from new selectedServiceTiers"
+    },
+    {
+      "name": "POST Update Air Condition (Driver A) — isAirConditioned=true (Restore)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);}); console.log('Driver AC→true:',pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/updateAirCondition"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"isAirConditioned\":true}"
+        }
+      },
+      "description": "Restores via driver-side updateAirCondition(true). Sets vehicle.airConditioned=Just True without touching airConditionScore."
+    },
+    {
+      "name": "GET Tiers (A) — Driver AC Restored: AC-Gated Tiers Unrestricted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// vehicle.airConditioned=Just True → (isNothing threshold || Just True /= Just False) = True → check passes.",
+              "var acGated = d.tiers.filter(function(t){ return t.airConditioned !== null && t.airConditioned !== undefined; });",
+              "if (acGated.length > 0) {",
+              "    var stillRestr = acGated.filter(function(t){ return t.isUsageRestricted; });",
+              "    pm.test('AC-gated tiers unrestricted after driver updateAirCondition(true)', function(){",
+              "        pm.expect(stillRestr.length).to.equal(0,",
+              "            'Still restricted: '+stillRestr.map(function(t){return t.serviceTierType;}).join(','));",
+              "    });",
+              "} else { console.log('[info] No AC-gated tiers — N/A'); }",
+              "pm.environment.set('_vst_baseline',       JSON.stringify(d));",
+              "pm.environment.set('_vst_baseline_tiers', JSON.stringify(d.tiers));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Same recovery as dashboard path: vehicle.airConditioned=Just True → airConditionedCheck passes → tiers unrestricted."
+    },
+    {
+      "name": "POST Update Service Tiers (A) — Toggle canSwitchToAirport",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// canSwitchToAirport is null when no tier has isAirportRideEnabled=true.",
+              "// Skip: there's nothing to toggle and QDI.updateAirportSwitch won't be meaningful.",
+              "var base = JSON.parse(pm.environment.get('_vst_baseline') || '{\"tiers\":[]}');",
+              "if (base.canSwitchToAirport === null || base.canSwitchToAirport === undefined) {",
+              "    console.log('[skip] canSwitchToAirport is null (no isAirportRideEnabled tier in city config)');",
+              "    pm.execution.skipRequest(); return;",
+              "}",
+              "// Toggle the value — backend propagates it via QDI.updateAirportSwitch.",
+              "// canSwitchToAirport' = any non-restricted tier with isAirportRideEnabled",
+              "//   && (fromMaybe driverInfo.canSwitchToAirport req.canSwitchToAirport)",
+              "var toggled = !base.canSwitchToAirport;",
+              "pm.environment.set('_vst_airport_toggled_to', String(toggled));",
+              "pm.environment.set('_vst_update_body', JSON.stringify(Object.assign({},base,{canSwitchToAirport:toggled})));",
+              "console.log('Toggling canSwitchToAirport:', base.canSwitchToAirport, '→', toggled);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200',function(){pm.response.to.have.status(200);});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/updateServiceTiers"
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{{_vst_update_body}}"
+        }
+      },
+      "description": "POST /driver/updateServiceTiers with canSwitchToAirport flipped.\n\nBackend in postDriverUpdateServiceTiers:\n  canSwitchToAirport' = foldl (\\acc (tier, isRestricted) ->\n    if isRestricted then acc\n    else acc || (fromMaybe driverInfo.canSwitchToAirport req.canSwitchToAirport\n                 && fromMaybe True tier.isAirportRideEnabled)) False tiers\n  QDI.updateAirportSwitch canSwitchToAirport' personId\n\nSkips gracefully if canSwitchToAirport is null (no isAirportRideEnabled tier in config)."
+    },
+    {
+      "name": "GET Tiers (A) — canSwitchToAirport Reflects Toggle",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('200',function(){pm.response.to.have.status(200);});",
+              "",
+              "// In getDriverVehicleServiceTiers:",
+              "//   canSwitchToAirport' = any non-restricted tier has isAirportRideEnabled=True",
+              "//   response.canSwitchToAirport =",
+              "//     if canSwitchToAirport' then Just driverInfo.canSwitchToAirport else Nothing",
+              "// So only assert if canSwitchToAirport is non-null (means airport tiers exist in city config).",
+              "var toggled = pm.environment.get('_vst_airport_toggled_to');",
+              "if (toggled !== null && toggled !== '' && toggled !== undefined) {",
+              "    toggled = (toggled === 'true');",
+              "    if (d.canSwitchToAirport !== null && d.canSwitchToAirport !== undefined) {",
+              "        pm.test('canSwitchToAirport persisted and reflected via updateServiceTiers', function(){",
+              "            pm.expect(d.canSwitchToAirport).to.equal(toggled);",
+              "        });",
+              "    }",
+              "    console.log('canSwitchToAirport after toggle:', d.canSwitchToAirport, '(expected:', toggled+')');",
+              "} else { console.log('[info] canSwitchToAirport toggle skipped (no airport tiers in city config)'); }",
+              "",
+              "// ── Summary ──",
+              "console.log('');",
+              "console.log('=== Vehicle Service Tier Flow — Complete ===');",
+              "console.log('Final Driver A tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+')';}).join(', '));",
+              "console.log('canSwitchToAirport:', d.canSwitchToAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
+        }
+      },
+      "description": "Verifies canSwitchToAirport was persisted and reflected in GET.\n\nIn getDriverVehicleServiceTiers:\n  canSwitchToAirport' = any non-restricted tier has isAirportRideEnabled=True\n  response.canSwitchToAirport =\n    if canSwitchToAirport' then Just driverInfo.canSwitchToAirport else Nothing\n\nSo if no tier has isAirportRideEnabled, the field is always null regardless of toggle.\nAssertion skipped in that case."
+    }
+  ]
+}

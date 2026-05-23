@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "Airport Taxi Flow",
+    "description": "Delhi BHARAT_TAXI Airport Taxi booth flow test including Ride Search, Quotes, Rider Registration, Profile Update, Booking Confirmation, and Booking Details verification.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "BAP - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('bap_dashboard_token', d.authToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/login",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "BAP - Switch Merchant And City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.authToken) {",
+              "    pm.environment.set('bap_dashboard_token', d.authToken);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Ride Search",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('searchId is returned', function () { pm.expect(d.searchId).to.be.a('string'); });",
+              "pm.environment.set('searchId', d.searchId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fareProductType\": \"ONE_WAY\",\n  \"contents\": {\n    \"origin\": {\n      \"address\": {\n        \"area\": \"T1: IGI Airport\",\n        \"areaCode\": \"\",\n        \"building\": \"\",\n        \"city\": \"\",\n        \"country\": \"India\",\n        \"state\": \"\",\n        \"street\": \"\",\n        \"ward\": \"\"\n      },\n      \"gps\": {\n        \"lat\": 28.551335292,\n        \"lon\": 77.11669564249999\n      }\n    },\n    \"destination\": {\n      \"address\": {\n        \"area\": \"ncdc\",\n        \"areaCode\": \"\",\n        \"building\": \"\",\n        \"city\": \"\",\n        \"country\": \"India\",\n        \"state\": \"\",\n        \"street\": \"\",\n        \"ward\": \"\"\n      },\n      \"gps\": {\n        \"lat\": 28.552335292000002,\n        \"lon\": 77.1176956425\n      }\n    },\n    \"numberOfLuggages\": 1,\n    \"isReallocationEnabled\": true\n  }\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/search/{{customerId}}/rideSearch",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "search",
+            "{{customerId}}",
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Quotes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var hasQuotes = d.quotes && d.quotes.length > 0;",
+              "",
+              "if (hasQuotes) {",
+              "    var quote = d.quotes[0];",
+              "    var quoteId = (quote.onDemandCab && quote.onDemandCab.id) || (quote.onRentalCab && quote.onRentalCab.id);",
+              "    pm.environment.set('quoteId', quoteId);",
+              "    pm.test('Quotes found', function () { pm.expect(quoteId).to.be.a('string'); });",
+              "} else {",
+              "    var attempt = 1;",
+              "    var maxAttempts = 6;",
+              "    var pollInterval = 2000;",
+              "    var bapUrl = pm.environment.get('bap_dashboard_url');",
+              "    var token = pm.environment.get('bap_dashboard_token');",
+              "    var searchId = pm.environment.get('searchId');",
+              "    var customerId = pm.environment.get('customerId');",
+              "    var merchantId = pm.environment.get('bap_short_id');",
+              "    var city = pm.environment.get('city');",
+              "    ",
+              "    function poll() {",
+              "        attempt++;",
+              "        console.log('Polling quotes attempt ' + attempt);",
+              "        pm.sendRequest({",
+              "            url: bapUrl + '/bap/' + merchantId + '/' + city + '/rideBooking/quote/' + searchId + '/' + customerId + '/result',",
+              "            method: 'GET',",
+              "            header: {",
+              "                'Accept': 'application/json, text/plain, */*',",
+              "                'token': token",
+              "            }",
+              "        }, function (err, res) {",
+              "            if (err) {",
+              "                console.log('Error polling quotes:', err);",
+              "            } else {",
+              "                var resData = res.json() || {};",
+              "                var quotes = resData.quotes || [];",
+              "                if (quotes.length > 0) {",
+              "                    var quote = quotes[0];",
+              "                    var quoteId = (quote.onDemandCab && quote.onDemandCab.id) || (quote.onRentalCab && quote.onRentalCab.id);",
+              "                    pm.environment.set('quoteId', quoteId);",
+              "                    console.log('Found quotes on attempt ' + attempt + ', quoteId: ' + quoteId);",
+              "                    pm.test('Quotes found after polling', function () { pm.expect(quoteId).to.be.a('string'); });",
+              "                    return;",
+              "                }",
+              "            }",
+              "            if (attempt >= maxAttempts) {",
+              "                pm.test('Failed to fetch quotes after ' + maxAttempts + ' attempts', function () {",
+              "                    throw new Error('Quotes empty after ' + maxAttempts + ' attempts');",
+              "                });",
+              "            } else {",
+              "                setTimeout(poll, pollInterval);",
+              "            }",
+              "        });",
+              "    }",
+              "    ",
+              "    setTimeout(poll, pollInterval);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/quote/{{searchId}}/{{customerId}}/result",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "quote",
+            "{{searchId}}",
+            "{{customerId}}",
+            "result"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Registration Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId is present', function () { pm.expect(d.authId).to.be.a('string'); });",
+              "pm.environment.set('authId', d.authId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileCountryCode\": \"+91\",\n    \"mobileNumber\": \"{{test_mobile_number}}\",\n    \"otpChannel\": \"SMS\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/registration/auth",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "registration",
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Registration Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('person is present', function () { pm.expect(d.person).to.be.an('object'); });",
+              "pm.test('person id is present', function () { pm.expect(d.person.id).to.be.a('string'); });",
+              "pm.environment.set('riderId', d.person.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"deviceToken\": \"booth-device-token\",\n    \"otp\": \"{{login_otp}}\",\n    \"whatsappNotificationEnroll\": \"OPT_IN\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/registration/{{authId}}/verify",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "registration",
+            "{{authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Update Rider Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"firstName\": \"{{firstName}}\",\n    \"middleName\": \"{{middleName}}\",\n    \"lastName\": \"{{lastName}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/profile/update/{{riderId}}",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "profile",
+            "update",
+            "{{riderId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Confirm Booking",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('bookingId is present', function () { pm.expect(d.bookingId).to.be.a('string'); });",
+              "pm.environment.set('bookingId', d.bookingId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/confirm/rideSearch/{{riderId}}/quotes/{{quoteId}}/confirm?paymentInstrument=Cash",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "confirm",
+            "rideSearch",
+            "{{riderId}}",
+            "quotes",
+            "{{quoteId}}",
+            "confirm"
+          ],
+          "query": [
+            {
+              "key": "paymentInstrument",
+              "value": "Cash"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Booking Details",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "var hasOtp = d.bookingDetails && d.bookingDetails.contents && d.bookingDetails.contents.otpCode;",
+              "",
+              "if (hasOtp) {",
+              "    var otpCode = d.bookingDetails.contents.otpCode;",
+              "    pm.environment.set('bookingOtpCode', otpCode);",
+              "    console.log('Booking OTP Code:', otpCode);",
+              "    pm.test('Booking OTP Code found', function () { pm.expect(otpCode).to.be.a('string'); });",
+              "} else {",
+              "    var attempt = 1;",
+              "    var maxAttempts = 6;",
+              "    var pollInterval = 2000;",
+              "    var bapUrl = pm.environment.get('bap_dashboard_url');",
+              "    var token = pm.environment.get('bap_dashboard_token');",
+              "    var bookingId = pm.environment.get('bookingId');",
+              "    var riderId = pm.environment.get('riderId');",
+              "    var merchantId = pm.environment.get('bap_short_id');",
+              "    var city = pm.environment.get('city');",
+              "    ",
+              "    function poll() {",
+              "        attempt++;",
+              "        console.log('Polling booking details attempt ' + attempt);",
+              "        pm.sendRequest({",
+              "            url: bapUrl + '/bap/' + merchantId + '/' + city + '/rideBooking/booking/ridebooking/' + bookingId + '/' + riderId,",
+              "            method: 'POST',",
+              "            header: {",
+              "                'Accept': 'application/json, text/plain, */*',",
+              "                'token': token,",
+              "                'Content-Length': '0'",
+              "            }",
+              "        }, function (err, res) {",
+              "            if (err) {",
+              "                console.log('Error polling booking details:', err);",
+              "            } else {",
+              "                var resData = res.json() || {};",
+              "                var otp = resData.bookingDetails && resData.bookingDetails.contents && resData.bookingDetails.contents.otpCode;",
+              "                if (otp) {",
+              "                    pm.environment.set('bookingOtpCode', otp);",
+              "                    console.log('Found OTP Code on attempt ' + attempt + ': ' + otp);",
+              "                    pm.test('Booking OTP Code found after polling', function () { pm.expect(otp).to.be.a('string'); });",
+              "                    return;",
+              "                }",
+              "            }",
+              "            if (attempt >= maxAttempts) {",
+              "                pm.test('Failed to fetch OTP Code after ' + maxAttempts + ' attempts', function () {",
+              "                    throw new Error('OTP Code empty after ' + maxAttempts + ' attempts');",
+              "                });",
+              "            } else {",
+              "                setTimeout(poll, pollInterval);",
+              "            }",
+              "        });",
+              "    }",
+              "    ",
+              "    setTimeout(poll, pollInterval);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/rideBooking/booking/ridebooking/{{bookingId}}/{{riderId}}",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "rideBooking",
+            "booking",
+            "ridebooking",
+            "{{bookingId}}",
+            "{{riderId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

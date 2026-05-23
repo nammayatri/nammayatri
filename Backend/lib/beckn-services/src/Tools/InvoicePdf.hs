@@ -21,7 +21,7 @@ generateFinanceInvoicePdf ::
   (MonadFlow m) =>
   -- | unique key for temp file naming (e.g. invoiceNumber)
   Text ->
-  -- | rendered HTML from Lib.Finance.Invoice.PdfService.renderInvoiceHtml
+  -- | rendered HTML from SharedLogic.RenderInvoiceFromTemplate.renderHtml
   Text ->
   m Text
 generateFinanceInvoicePdf _key html = do

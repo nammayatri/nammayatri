@@ -955,12 +955,24 @@ type GetRideNearby = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Dr
 type GetRideCallCount = (Capture "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride) :> "callCount" :> Get '[JSON] RideCallCountRes)
 
 type GetRideFlowDebug =
-  ( "flowDebug" :> QueryParam "bookingId" Kernel.Prelude.Text :> QueryParam "rideId" (Kernel.Types.Id.Id Dashboard.Common.Ride)
+  ( "flowDebug" :> QueryParam "bapBookingId" Kernel.Prelude.Text :> QueryParam "bapRideId" Kernel.Prelude.Text
+      :> QueryParam
+           "bapRideShortId"
+           Kernel.Prelude.Text
+      :> QueryParam "bapSearchRequestId" Kernel.Prelude.Text
+      :> QueryParam "bookingId" Kernel.Prelude.Text
+      :> QueryParam
+           "rideId"
+           (Kernel.Types.Id.Id Dashboard.Common.Ride)
       :> QueryParam
            "rideShortId"
            (Kernel.Types.Id.ShortId Dashboard.Common.Ride)
-      :> QueryParam "searchRequestId" Kernel.Prelude.Text
-      :> Get '[JSON] RideFlowDebugRes
+      :> QueryParam
+           "searchRequestId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           RideFlowDebugRes
   )
 
 data RideAPIs = RideAPIs
@@ -978,7 +990,7 @@ data RideAPIs = RideAPIs
     postRideWaiverRideCancellationPenalty :: Kernel.Types.Id.Id Dashboard.Common.Ride -> WaiverRideCancellationPenaltyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getRideNearby :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient NearbyResp,
     getRideCallCount :: Kernel.Types.Id.Id Dashboard.Common.Ride -> EulerHS.Types.EulerClient RideCallCountRes,
-    getRideFlowDebug :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideFlowDebugRes
+    getRideFlowDebug :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Ride) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Dashboard.Common.Ride) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient RideFlowDebugRes
   }
 
 mkRideAPIs :: (Client EulerHS.Types.EulerClient API -> RideAPIs)

@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=./_schema.json
+name: control-center-frontend
+title: Control Center — Frontend
+icon: assets/icons/control-center.svg
+category: tool
+tags: [node, vite, dashboard, frontend]
+
+source:
+  url: https://github.com/nammayatri/control-center
+  ref: main
+  destDir: data/control-center
+
+ports:
+  - { name: frontend, port: 4002, protocol: http, allowOverride: true, openInBrowser: true }
+  - { name: server,   port: 4001, protocol: http, allowOverride: true }
+
+tools: [node22]
+
+domains:
+  - { name: ui, url: "http://localhost:4002" }
+  - { name: fleet, url: "http://fleet.localhost:4002" }
+
+env:
+  PORT:               "${ports.frontend}"
+  VITE_API_URL:       "http://localhost:8017"
+  VITE_BAP_URL:       "http://localhost:8017"
+  VITE_BPP_URL:       "http://localhost:8018"
+  VITE_RIDER_APP_URL: "http://localhost:8013"
+  VITE_BACKEND_URL:   "http://localhost:${ports.server}"
+
+stages:
+  - id: sync-source
+    builtin: source
+    lifecycle: one-shot
+    invalidatedBy: [source.ref]
+
+  - id: frontend-install
+    needs: [sync-source]
+    run: "npm install"
+    lifecycle: one-shot
+    invalidatedBy: [package.json, package-lock.json]
+
+  - id: frontend
+    needs: [frontend-install]
+    run: "npm run dev -- --port ${ports.frontend} --strictPort --host"
+    lifecycle: long-running
+    readyProbe: { kind: http, url: "http://localhost:${ports.frontend}" }
+
+workflows:
+  first-run:
+    description: >-
+      End-to-end bring-up: clone/update the repo, install JS deps, then start
+      the Vite dev server for the control-center frontend. Use this the first
+      time you launch this service or after pulling a clean clone.
+    stages: [sync-source, frontend-install, frontend]
+
+  refresh:
+    description: >-
+      Restart only the Vite dev server. Use after editing source when deps
+      haven't changed — HMR usually handles it, but a hard restart helps if
+      Vite gets into a bad state.
+    stages: [frontend]
+
+  reinstall:
+    description: >-
+      Reinstall frontend deps and restart the dev server. Use after
+      package.json/lockfile changes or when node_modules looks broken.
+    stages: [frontend-install, frontend]
+
+hooks:
+  preStart:
+    - "lsof -ti :${ports.frontend} | xargs -r kill -9"

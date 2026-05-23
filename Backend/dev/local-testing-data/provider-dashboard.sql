@@ -16,11 +16,50 @@ FROM atlas_bpp_dashboard.merchant m
 WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
 ON CONFLICT DO NOTHING;
 
+-- unencrypted: email: fleet@dashboard.com, password: fleet
+INSERT INTO atlas_bpp_dashboard.person (id, first_name, last_name, role_id, email_encrypted, email_hash, mobile_number_encrypted, mobile_number_hash, mobile_country_code, password_hash, created_at, updated_at) VALUES
+	('f1eef1ee-f1ee-f1ee-f1ee-f1eef1eef1ee', 'fleet', 'admin', 'e5a69a26-d165-455a-a711-33a41e0d4812', '0.1.0|0|FmlWDEUp8Ya8cKLaAFVOcynY2DOa+evTh51LvGcot0vVuFSDcG4NfiIUH8rGDi3ZS8BWIl83heEUhatu3d8yXXmc0+ARWQ==', '\x4d383194f7abb5422eed9d10feb4b30ac2ba06f88ff0e0aa35262d487db86d4a', '0.1.0|1|pxBx5cEmeWjlvXC9tbqoZLzcHMyQ4uQuVMXenbfVljWalGKeBsJKzcu8XFbi3BvdxX/moxwToQ7IhN9owA==', '\x0e0369d00c4209c0bdffeb830cbee1c56d57b3ad2794c5616c585e650de2653a', '+91', '\xec75c6cc9bee0b826ae77393d7e91558cc71ac943b7b37656bf057172eb791c5', '2022-09-06 11:25:42.609155+00', '2022-09-06 11:25:42.609155+00')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
+SELECT
+    'local-fleet-token-blr-id-00000000000',
+    'local-fleet-token-bangalore-namma-yatri',
+    'f1eef1ee-f1ee-f1ee-f1ee-f1eef1eef1ee',
+    m.id,
+    'Bangalore',
+    true,
+    now()
+FROM atlas_bpp_dashboard.merchant m
+WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
+ON CONFLICT DO NOTHING;
+
+-- Grant the FLEET dev token cross-merchant + cross-city dashboard access.
+DO $$
+DECLARE
+    fleet_person_id TEXT := 'f1eef1ee-f1ee-f1ee-f1ee-f1eef1eef1ee';
+BEGIN
+    INSERT INTO atlas_bpp_dashboard.merchant_access
+        (id, person_id, merchant_id, merchant_short_id, operating_city, secret_key, is2fa_enabled, created_at)
+    SELECT gen_random_uuid()::text,
+           fleet_person_id,
+           m.id,
+           m.short_id,
+           c.city,
+           '',
+           false,
+           now()
+    FROM atlas_bpp_dashboard.merchant m
+    CROSS JOIN LATERAL unnest(m.supported_operating_cities) AS c(city)
+    WHERE NOT EXISTS (
+        SELECT 1 FROM atlas_bpp_dashboard.merchant_access ma
+        WHERE ma.person_id   = fleet_person_id
+          AND ma.merchant_id = m.id
+          AND ma.operating_city::text = c.city
+    );
+END $$;
+
 -- Grant the JUSPAY_ADMIN dev token cross-merchant + cross-city dashboard access.
--- Cities are sourced from each merchant's own `supported_operating_cities`
--- column (populated by config-sync), so adding a new merchant or city upstream
--- automatically extends access on the next seed re-apply. Idempotent via
--- NOT EXISTS — test-context-api re-runs this file on every restart.
 DO $$
 DECLARE
     admin_person_id TEXT := '3680f4b5-dce4-4d03-aa8c-5405690e87bd';

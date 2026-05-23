@@ -5,6 +5,7 @@ module Storage.Beam.PassDetails where
 
 import qualified Data.Aeson
 import qualified Data.Time
+import qualified Data.Time.Calendar
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.PassDetails
@@ -19,12 +20,16 @@ import Tools.Beam.UtilsTH
 data PassDetailsT f = PassDetailsT
   { aadharNoEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     aadharNoHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
-    address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    academicYearEnd :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    academicYearStart :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
+    address :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     age :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     applicableRouteIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     createdAt :: B.C f Data.Time.UTCTime,
+    department :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     gender :: B.C f Domain.Types.Person.Gender,
-    graduationDate :: B.C f (Kernel.Prelude.Maybe Data.Time.UTCTime),
+    guardianMobileNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    guardianMobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     guardianName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     idCardPicture :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -41,10 +46,10 @@ data PassDetailsT f = PassDetailsT
     remark :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routePairs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     selfImage :: B.C f Kernel.Prelude.Text,
-    studentClass :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Data.Time.UTCTime,
     validTill :: B.C f Data.Time.UTCTime,
-    verificationStatus :: B.C f Domain.Types.PassDetails.VerificationStatus
+    verificationStatus :: B.C f Domain.Types.PassDetails.VerificationStatus,
+    year :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 

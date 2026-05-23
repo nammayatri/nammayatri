@@ -16,3 +16,10 @@ CREATE INDEX pass_organization_idx_person_id ON atlas_app.pass_organization USIN
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.pass_organization ADD CONSTRAINT pass_organization_unique_idx_merchant_operating_city_id_name_pass_enum UNIQUE (merchant_operating_city_id, name, pass_enum);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.pass_organization ADD COLUMN depot_person_id character varying(36) ;
+ALTER TABLE atlas_app.pass_organization ADD COLUMN depot_id text ;
+CREATE INDEX CONCURRENTLY pass_organization_idx_depot_person_id ON atlas_app.pass_organization USING btree (depot_person_id);

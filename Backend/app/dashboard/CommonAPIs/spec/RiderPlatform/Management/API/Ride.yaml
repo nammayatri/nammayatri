@@ -139,6 +139,9 @@ apis:
         transactionId: Text
         bapBookingId: Text
         bppBookingId: Text
+        bapSearchRequestId: Text
+        bapRideShortId: Text
+        bapRideId: Text
       response:
         type: BAPSideDebug
 

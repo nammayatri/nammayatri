@@ -20,6 +20,7 @@ import qualified Domain.Types.Person.Type as DPT
 import qualified Domain.Types.Role as DRole
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption (DbHash)
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude
 
 data PersonT f = PersonT
@@ -43,7 +44,8 @@ data PersonT f = PersonT
     rejectedAt :: B.C f (Maybe Time.UTCTime),
     passwordUpdatedAt :: B.C f (Maybe Time.UTCTime),
     approvedBy :: B.C f (Maybe Text),
-    rejectedBy :: B.C f (Maybe Text)
+    rejectedBy :: B.C f (Maybe Text),
+    language :: B.C f (Maybe KET.Language)
   }
   deriving (Generic, B.Beamable)
 

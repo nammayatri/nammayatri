@@ -51,6 +51,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.Karix -> Domain.WhatsappServiceConfig . Whatsapp.KarixConfig <$> valueToMaybe configJSON
+    Domain.WhatsappService Whatsapp.Twilio -> Domain.WhatsappServiceConfig . Whatsapp.TwilioConfig <$> valueToMaybe configJSON
     Domain.CallService Call.Exotel -> Domain.CallServiceConfig . Call.ExotelConfig <$> valueToMaybe configJSON
     Domain.CallService Call.TwillioCall -> Domain.CallServiceConfig . Call.TwillioCallConfig <$> valueToMaybe configJSON
     Domain.CallService Call.TataClickToCall -> Domain.CallServiceConfig . Call.TataClickToCallConfig <$> valueToMaybe configJSON
@@ -69,6 +70,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.ParkingPaymentService paymentServiceName -> Domain.ParkingPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
     Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> valueToMaybe configJSON
+    Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> valueToMaybe configJSON
@@ -127,6 +129,7 @@ getServiceNameConfigJson = \case
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
     Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
     Whatsapp.KarixConfig cfg -> (Domain.WhatsappService Whatsapp.Karix, toJSON cfg)
+    Whatsapp.TwilioConfig cfg -> (Domain.WhatsappService Whatsapp.Twilio, toJSON cfg)
   Domain.CallServiceConfig callCfg -> case callCfg of
     Call.ExotelConfig cfg -> (Domain.CallService Call.Exotel, toJSON cfg)
     Call.TwillioCallConfig cfg -> (Domain.CallService Call.TwillioCall, toJSON cfg)
@@ -154,6 +157,7 @@ getServiceNameConfigJson = \case
   Domain.MembershipPaymentServiceConfig paymentCfg -> first Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> (Domain.IssueTicketService Ticket.Kapture, toJSON cfg)
+    Ticket.ZendeskConfig cfg -> (Domain.IssueTicketService Ticket.Zendesk, toJSON cfg)
   Domain.TokenizationServiceConfig tokenizationCfg -> case tokenizationCfg of
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)

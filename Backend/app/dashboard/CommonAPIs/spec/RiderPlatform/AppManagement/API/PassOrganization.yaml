@@ -3,8 +3,11 @@ imports:
   PassOrganization: Domain.Types.PassOrganization
   VerificationStatus: Domain.Types.PassDetails
   RoutePair: Domain.Types.PassDetails
+  PassDetailAddress: Domain.Types.PassDetails
   Person: Domain.Types.Person
+  MediaFile: IssueManagement.Domain.Types.MediaFile
   UTCTime: Data.Time
+  Day: Data.Time
   APISuccess: Kernel.Types.APISuccess
   PassEnum: Domain.Types.PassType
   Gender: Domain.Types.Person
@@ -22,18 +25,21 @@ types:
     passDetailsId: Id PassDetails
     personId: Id Person
     name: Text
-    idCardPicture: Maybe Text
+    idCardPicture: "Maybe (Id MediaFile)"
     verificationStatus: VerificationStatus
     validTill: UTCTime
-    address: Maybe Text
+    address: "Maybe PassDetailAddress"
     gender: Gender
     pincode: Maybe Text
-    selfImage: Text
+    selfImage: Id MediaFile
     routePairs: "[RoutePair]"
     age: Maybe Int
     guardianName: Maybe Text
-    studentClass: Maybe Text
-    graduationDate: Maybe UTCTime
+    guardianMobileNumber: Maybe Text
+    department: Maybe Text
+    year: Maybe Text
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     remark: Maybe Text
     createdAt: UTCTime
@@ -46,7 +52,8 @@ types:
 
   PassDetailsVerification:
     passDetailsId: Id PassDetails
-    graduationDate: Maybe UTCTime
+    academicYearStart: Maybe Day
+    academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     verificationStatus: VerificationStatus
     remark: Maybe Text
@@ -65,6 +72,17 @@ types:
     id: Id PassOrganization
     name: Text
     address: Maybe Text
+    depotId: Maybe Text
+
+  DepotAssign:
+    id: Id PassOrganization
+    isAdd: Bool
+
+  AssignDepotReq:
+    depotPersonId: Id Person
+    depotId: Maybe Text
+    passOrganizations: "[DepotAssign]"
+    derive: "'HideSecrets"
 
 apis:
   - GET:
@@ -107,5 +125,21 @@ apis:
       auth: ApiAuthV2
       params:
         passEnum: Text
+      query:
+        - depotPersonId: Id Person
       response:
         type: "[GetOrganizationResp]"
+  - GET:
+      endpoint: /passDetails/document/{documentId}
+      auth: ApiAuthV2
+      params:
+        documentId: Id MediaFile
+      response:
+        type: Text
+  - POST:
+      endpoint: /assignDepot
+      auth: ApiAuthV2
+      request:
+        type: AssignDepotReq
+      response:
+        type: APISuccess

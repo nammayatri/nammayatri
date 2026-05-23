@@ -841,6 +841,15 @@ updateRentalInterCityAndIntraCitySwitch canSwitchToRental canSwitchToInterCity c
         LTSSync.canSwitchToIntraCity = LTSSync.Set canSwitchToIntraCity
       }
 
+updateAirportSwitch :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Bool -> Id Person.Person -> m ()
+updateAirportSwitch canSwitchToAirport driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.canSwitchToAirport (Just canSwitchToAirport),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
 updateForwardBatchingEnabled :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 updateForwardBatchingEnabled forwardBatchingEnabled driverId = do
   now <- getCurrentTime

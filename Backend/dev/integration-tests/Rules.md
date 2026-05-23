@@ -61,10 +61,25 @@ For overriding responses by matching a field in the incoming request:
 
 ## Adding a New City
 
-1. Create a new environment file: `Local_<PREFIX>_<City>.postman_environment.json`
+1. Create a new environment file under the suite's `Local/` subfolder: `Local/Local_<PREFIX>_<City>.postman_environment.json` (use `Master/Master_<PREFIX>_<City>.postman_environment.json` for the master env type)
 2. Set city-specific values (merchant IDs, coordinates, merchant short IDs)
-3. Collections are shared across cities — no city-specific logic in collections
-4. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/feature-migrations/0001-dashboard-access-setup.sql`)
+3. Set the `envType` variable: `"Local"` in `Local/*.postman_environment.json`, `"Master"` in `Master/*.postman_environment.json` — this drives the mock-server auto-skip behavior described below.
+4. Collections are shared across cities — no city-specific logic in collections
+5. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/feature-migrations/0001-dashboard-access-setup.sql`)
+
+## Environment Types & Mock-Server Auto-Skip
+
+Each suite has two environment-type subfolders:
+
+- `Local/` — points at the local dev stack. Mock servers (`mockServerUrl`, `mock_fcm_url`, …) are running here.
+- `Master/` — points at any non-local stack (cloud / staging). Mock servers are **not** running.
+
+Requests that hit mock endpoints are skipped automatically on non-Local envs:
+
+- **In Newman / `run-tests.sh`**: every collection has a collection-level prerequest that reads `envType` from the environment and calls `pm.execution.skipRequest()` for requests whose URL contains `mockServerUrl` or `mock_fcm_url`. Newman 6+ reports these as `skipped` (not failures).
+- **In the test dashboard**: the same predicate is evaluated at render time and mock-only steps are hidden from the step list when the selected env type is not `Local`. The Run button shows the visible step count with a "N hidden" suffix.
+
+Authors: do not gate mock requests with manual `if (envType ...)` blocks inside each request — the collection-level prerequest already handles it. Just ensure mock requests are addressed via the `{{mockServerUrl}}` / `{{mock_fcm_url}}` variables (which is the existing convention).
 
 ## Adding a New Flow
 

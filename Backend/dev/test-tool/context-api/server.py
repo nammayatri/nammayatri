@@ -31,13 +31,115 @@ import os
 import subprocess
 import threading
 import time
+import base64
+import uuid
+import errno
+import fcntl
+import struct
+import select as _select
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
 import re
 import signal
 import urllib.request
 import urllib.error
+
+try:
+    import pty as _pty
+    import termios as _termios
+except Exception:
+    _pty = None
+    _termios = None
+
+
+_terminal_sessions: dict = {}
+_terminal_lock = threading.Lock()
+
+
+def _terminal_spawn(cols: int, rows: int, cwd: str, shell: str):
+    """Fork a PTY-backed child running `shell`. Returns (session_id, pid, fd)."""
+    if _pty is None or _termios is None:
+        raise RuntimeError("pty/termios not available on this platform")
+    pid, fd = _pty.fork()
+    if pid == 0:
+        try:
+            try:
+                os.setsid()
+            except Exception:
+                pass
+            try:
+                fcntl.ioctl(0, _termios.TIOCSWINSZ,
+                            struct.pack("HHHH", rows, cols, 0, 0))
+            except Exception:
+                pass
+            try:
+                os.chdir(cwd)
+            except Exception:
+                pass
+            env = os.environ.copy()
+            env["TERM"] = "xterm-256color"
+            env.setdefault("LANG", env.get("LANG", "en_US.UTF-8"))
+            os.execvpe(shell, [shell, "-l"], env)
+        except Exception as e:
+            sys.stderr.write(f"pty exec failed: {e}\n")
+            os._exit(127)
+    fcntl.fcntl(fd, fcntl.F_SETFL, fcntl.fcntl(fd, fcntl.F_GETFL) | os.O_NONBLOCK)
+    sid = uuid.uuid4().hex
+    with _terminal_lock:
+        _terminal_sessions[sid] = {
+            "fd": fd,
+            "pid": pid,
+            "cwd": cwd,
+            "shell": shell,
+            "lock": threading.Lock(),
+            "closed": False,
+        }
+    return sid, pid, fd
+
+
+def _terminal_close(sid: str):
+    with _terminal_lock:
+        sess = _terminal_sessions.pop(sid, None)
+    if not sess:
+        return None
+    sess["closed"] = True
+    fd = sess["fd"]
+    pid = sess["pid"]
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGTERM)
+    except Exception:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            pass
+    deadline = time.time() + 1.0
+    while time.time() < deadline:
+        try:
+            wpid, _st = os.waitpid(pid, os.WNOHANG)
+            if wpid == pid:
+                break
+        except ChildProcessError:
+            break
+        except Exception:
+            break
+        time.sleep(0.05)
+    try:
+        os.killpg(os.getpgid(pid), signal.SIGKILL)
+    except Exception:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except Exception:
+            pass
+    try:
+        os.close(fd)
+    except Exception:
+        pass
+    try:
+        os.waitpid(pid, os.WNOHANG)
+    except Exception:
+        pass
+    return sess
 
 # Flush print() to the process-compose log file in real time (not at exit).
 sys.stdout.reconfigure(line_buffering=True)
@@ -58,6 +160,8 @@ def redis_cmd(*args):
 
 
 PORT = 7082
+
+VICTORIA_METRICS_URL = os.environ.get("VICTORIA_METRICS_URL", "")
 
 # ── Paths ──
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -96,8 +200,10 @@ DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
+# Keep in sync with config_transfer.py's DEFAULT_FETCH_VERSIONS. master is on v1
+# (older zip layout still uploaded); prod / prod_international are on v2.
 CONFIG_SYNC_BUNDLE_URLS = {
-    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v2",
+    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1",
     "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
     "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v2",
 }
@@ -175,9 +281,12 @@ def _restart_haskell_services():
     time.sleep(3)
 
 
-def run_config_sync(from_env: str, restart_services: bool = True):
+def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False):
     """Run `config_transfer.py import --from <env> --to local --fetch --fetch-url <URL>`.
-    Streams stdout into _config_sync_state['log']. Restarts haskell services on success."""
+    Streams stdout into _config_sync_state['log']. Restarts haskell services on success.
+
+    force_fetch=True passes `--force-fetch` so the importer ignores any
+    previously-patched local bundle and re-downloads from S3."""
     if from_env not in CONFIG_SYNC_BUNDLE_URLS:
         msg = f"unknown env '{from_env}'. Available: {list(CONFIG_SYNC_BUNDLE_URLS)}"
         with _config_sync_lock:
@@ -230,11 +339,14 @@ def run_config_sync(from_env: str, restart_services: bool = True):
             return p.returncode
 
         # Step 1: prod import (no feature-migrations yet).
-        rc = _run("import", [
+        import_args = [
             "import", "--from", from_env, "--to", "local",
             "--fetch", "--fetch-url", url,
             "--skip-feature-migrations",
-        ])
+        ]
+        if force_fetch:
+            import_args.append("--force-fetch")
+        rc = _run("import", import_args)
         with _config_sync_lock:
             _config_sync_state["exit_code"] = rc
         if rc != 0:
@@ -272,12 +384,16 @@ def run_config_sync(from_env: str, restart_services: bool = True):
             _config_sync_state["finished_at"] = time.time()
 
 
-def trigger_config_sync(from_env: str):
+def trigger_config_sync(from_env: str, force_fetch: bool = False):
     """Kick off a config-sync in a daemon thread. Returns True if accepted, False if one is already running."""
     with _config_sync_lock:
         if _config_sync_state["running"]:
             return False
-    threading.Thread(target=run_config_sync, args=(from_env,), daemon=True).start()
+    threading.Thread(
+        target=run_config_sync,
+        kwargs={"from_env": from_env, "force_fetch": force_fetch},
+        daemon=True,
+    ).start()
     return True
 
 
@@ -1462,6 +1578,33 @@ def get_admin_credentials():
 
 # ── Collection Scanner ──
 
+ENV_TYPES = ("Local", "Master")
+
+
+def _read_env_file(f, env_type):
+    try:
+        env_data = json.loads(f.read_text())
+        vals = {v["key"]: v["value"] for v in env_data.get(
+            "values", []) if v.get("enabled", True)}
+        env_name = f.name.replace("Local_", "").replace("Master_", "").replace(
+            ".postman_environment.json", "")
+        return {
+            "filename": f.name,
+            "envType": env_type,
+            "envName": env_name,
+            "name": env_data.get("name", env_name),
+            "city": vals.get("city", ""),
+            "state": vals.get("state", ""),
+            "merchant": vals.get("dashboard_merchant_id", ""),
+            "bapShortId": vals.get("bap_short_id", ""),
+            "origin": {"lat": float(vals.get("origin_lat", 0)), "lon": float(vals.get("origin_lon", 0))},
+            "destination": {"lat": float(vals.get("dest_lat", 0)), "lon": float(vals.get("dest_lon", 0))},
+            "variables": vals,
+        }
+    except Exception:
+        return None
+
+
 def scan_collections():
     """Walk integration-tests/collections/ and return metadata for each collection group."""
     result = []
@@ -1470,43 +1613,38 @@ def scan_collections():
     for subdir in sorted(COLLECTIONS_DIR.iterdir()):
         if not subdir.is_dir():
             continue
-        group = {"directory": subdir.name, "environments": [], "suites": []}
-        for f in sorted(subdir.iterdir()):
-            if not f.suffix == ".json":
+        group = {
+            "directory": subdir.name,
+            "envTypes": list(ENV_TYPES),
+            "environments": [],
+            "suites": [],
+        }
+        for env_type in ENV_TYPES:
+            env_dir = subdir / env_type
+            if not env_dir.is_dir():
                 continue
-            if f.name.startswith("Local_") and f.name.endswith(".postman_environment.json"):
-                try:
-                    env_data = json.loads(f.read_text())
-                    vals = {v["key"]: v["value"] for v in env_data.get(
-                        "values", []) if v.get("enabled", True)}
-                    env_name = f.name.replace("Local_", "").replace(
-                        ".postman_environment.json", "")
-                    group["environments"].append({
-                        "filename": f.name,
-                        "envName": env_name,
-                        "name": env_data.get("name", env_name),
-                        "city": vals.get("city", ""),
-                        "state": vals.get("state", ""),
-                        "merchant": vals.get("dashboard_merchant_id", ""),
-                        "bapShortId": vals.get("bap_short_id", ""),
-                        "origin": {"lat": float(vals.get("origin_lat", 0)), "lon": float(vals.get("origin_lon", 0))},
-                        "destination": {"lat": float(vals.get("dest_lat", 0)), "lon": float(vals.get("dest_lon", 0))},
-                        "variables": vals,
-                    })
-                except Exception:
-                    pass
-            elif not f.name.startswith("Local_"):
-                try:
-                    col_data = json.loads(f.read_text())
-                    info = col_data.get("info", {})
-                    group["suites"].append({
-                        "filename": f.name,
-                        "name": info.get("name", f.stem),
-                        "description": info.get("description", ""),
-                        "itemCount": len(col_data.get("item", [])),
-                    })
-                except Exception:
-                    pass
+            for f in sorted(env_dir.iterdir()):
+                if not (f.suffix == ".json" and f.name.endswith(".postman_environment.json")):
+                    continue
+                env = _read_env_file(f, env_type)
+                if env is not None:
+                    group["environments"].append(env)
+        for f in sorted(subdir.iterdir()):
+            if not f.is_file() or f.suffix != ".json":
+                continue
+            if f.name.endswith(".postman_environment.json"):
+                continue
+            try:
+                col_data = json.loads(f.read_text())
+                info = col_data.get("info", {})
+                group["suites"].append({
+                    "filename": f.name,
+                    "name": info.get("name", f.stem),
+                    "description": info.get("description", ""),
+                    "itemCount": len(col_data.get("item", [])),
+                })
+            except Exception:
+                pass
         if group["environments"] or group["suites"]:
             result.append(group)
     return result
@@ -1964,6 +2102,480 @@ def clear_finance_data(schema):
         return {"error": str(e)}
 
 
+# ── Code Coverage Tracking ──────────────────────────────────────────────
+# Fetches OpenAPI specs from rider/driver, extracts endpoints + enum schemas,
+# records test fingerprints, generates coverage reports.
+
+COVERAGE_DATA_DIR = SCRIPT_DIR / "coverage-data"
+COVERAGE_DATA_DIR.mkdir(exist_ok=True)
+COVERAGE_SPEC_CACHE = COVERAGE_DATA_DIR / "spec-cache.json"
+COVERAGE_RUNS_FILE = COVERAGE_DATA_DIR / "runs.json"
+_coverage_lock = threading.Lock()
+
+
+def _fetch_openapi_spec(service_url: str) -> dict | None:
+    """Fetch /openapi JSON from a running service."""
+    try:
+        req = urllib.request.Request(f"{service_url}/openapi", method="GET")
+        req.add_header("Accept", "application/json")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        print(f"  \033[91m[Coverage]\033[0m Failed to fetch openapi from {service_url}: {e}")
+        return None
+
+
+def _extract_enum_fields_from_schema(schema: dict, components: dict, depth: int = 0) -> dict:
+    """Recursively extract enum fields from an OpenAPI schema object.
+    Returns {fieldName: [enumValues]} for all enum properties.
+    Merges enum values across oneOf/anyOf variants (e.g. fareProductType across SearchReq variants)."""
+    if depth > 8:
+        return {}
+    enums = {}
+
+    def _merge_enum(field: str, values: list):
+        if field in enums:
+            existing = set(str(v) for v in enums[field])
+            for v in values:
+                if str(v) not in existing:
+                    enums[field].append(v)
+                    existing.add(str(v))
+        else:
+            enums[field] = list(values)
+
+    # Resolve $ref
+    if "$ref" in schema:
+        ref_path = schema["$ref"].replace("#/components/schemas/", "")
+        schema = components.get("schemas", {}).get(ref_path, {})
+
+    # Handle allOf/oneOf/anyOf — merge enum values across variants
+    for combiner in ("allOf", "oneOf", "anyOf"):
+        if combiner in schema:
+            for sub in schema[combiner]:
+                sub_enums = _extract_enum_fields_from_schema(sub, components, depth + 1)
+                for field, values in sub_enums.items():
+                    _merge_enum(field, values)
+
+    properties = schema.get("properties", {})
+    for field_name, field_schema in properties.items():
+        # Resolve field $ref
+        resolved = field_schema
+        if "$ref" in field_schema:
+            ref_path = field_schema["$ref"].replace("#/components/schemas/", "")
+            resolved = components.get("schemas", {}).get(ref_path, {})
+
+        if "enum" in resolved:
+            _merge_enum(field_name, resolved["enum"])
+        elif resolved.get("type") == "boolean":
+            _merge_enum(field_name, [True, False])
+        # Recurse into nested objects to find deeper enums
+        elif resolved.get("type") == "object" or "properties" in resolved or "$ref" in resolved:
+            sub_enums = _extract_enum_fields_from_schema(resolved, components, depth + 1)
+            for sub_field, sub_values in sub_enums.items():
+                _merge_enum(f"{field_name}.{sub_field}", sub_values)
+
+    return enums
+
+
+def _normalize_path_params(path: str) -> str:
+    """Normalize path parameters: {anyName} -> {id}, strip query strings."""
+    # Strip query string
+    path = path.split("?")[0]
+    # Replace named path params with generic {id}
+    path = re.sub(r'\{[^}]+\}', '{id}', path)
+    return path
+
+
+def _extract_coverage_spec(openapi: dict, service_name: str) -> dict:
+    """Extract endpoints and their scenario-defining enum fields from an OpenAPI spec."""
+    components = openapi.get("components", {})
+    paths = openapi.get("paths", {})
+    endpoints = {}
+
+    for path, methods in paths.items():
+        for method, operation in methods.items():
+            if method in ("parameters", "summary", "description"):
+                continue
+            method_upper = method.upper()
+            normalized = _normalize_path_params(path)
+            key = f"{method_upper} {normalized}"
+            # Multiple OpenAPI paths may normalize to the same key — merge enum fields
+            if key in endpoints:
+                existing = endpoints[key]["enumFields"]
+                for f, vals in enum_fields.items():
+                    if f in existing:
+                        existing[f] = list(set(existing[f] + vals))
+                    else:
+                        existing[f] = vals
+                endpoints[key]["scenarios"] = [f"{f}:{v}" for f, vals in existing.items() for v in vals]
+                continue
+
+            # Extract enum fields from request body schema
+            enum_fields = {}
+            request_body = operation.get("requestBody", {})
+            content = request_body.get("content", {})
+            # Match any JSON content type (application/json, application/json;charset=utf-8, etc.)
+            json_content = {}
+            for ct_key, ct_val in content.items():
+                if ct_key.startswith("application/json"):
+                    json_content = ct_val
+                    break
+            body_schema = json_content.get("schema", {})
+            if body_schema:
+                enum_fields = _extract_enum_fields_from_schema(body_schema, components)
+
+            # Extract enum fields from query/path parameters
+            for param in operation.get("parameters", []):
+                param_schema = param.get("schema", {})
+                if "$ref" in param_schema:
+                    ref_path = param_schema["$ref"].replace("#/components/schemas/", "")
+                    param_schema = components.get("schemas", {}).get(ref_path, {})
+                if "enum" in param_schema:
+                    enum_fields[param.get("name", "")] = param_schema["enum"]
+
+            # Generate scenario axes from enum fields
+            scenarios = []
+            for field, values in enum_fields.items():
+                for val in values:
+                    scenarios.append(f"{field}:{val}")
+
+            endpoints[key] = {
+                "method": method_upper,
+                "path": path,
+                "service": service_name,
+                "enumFields": enum_fields,
+                "scenarios": scenarios,
+                "operationId": operation.get("operationId", ""),
+                "summary": operation.get("summary", ""),
+                "tags": operation.get("tags", []),
+            }
+
+    return endpoints
+
+
+def get_coverage_spec(force_refresh: bool = False) -> dict:
+    """Get the full coverage spec (all endpoints + enums) for rider + driver.
+    Caches to disk; pass force_refresh=True to re-fetch from live services."""
+    with _coverage_lock:
+        if not force_refresh and COVERAGE_SPEC_CACHE.is_file():
+            try:
+                cached = json.loads(COVERAGE_SPEC_CACHE.read_text())
+                # Cache is valid for 1 hour
+                if time.time() - cached.get("_cached_at", 0) < 3600:
+                    return cached
+            except Exception:
+                pass
+
+        spec = {"rider": {}, "driver": {}, "_cached_at": time.time()}
+
+        rider_openapi = _fetch_openapi_spec(RIDER_URL)
+        if rider_openapi:
+            spec["rider"] = _extract_coverage_spec(rider_openapi, "rider")
+
+        driver_openapi = _fetch_openapi_spec(DRIVER_URL)
+        if driver_openapi:
+            spec["driver"] = _extract_coverage_spec(driver_openapi, "driver")
+
+        spec["summary"] = {
+            "rider_endpoints": len(spec["rider"]),
+            "driver_endpoints": len(spec["driver"]),
+            "total_endpoints": len(spec["rider"]) + len(spec["driver"]),
+            "rider_scenarios": sum(len(e["scenarios"]) for e in spec["rider"].values()),
+            "driver_scenarios": sum(len(e["scenarios"]) for e in spec["driver"].values()),
+        }
+
+        try:
+            COVERAGE_SPEC_CACHE.write_text(json.dumps(spec, default=str))
+        except Exception:
+            pass
+
+        return spec
+
+
+def _load_coverage_runs() -> dict:
+    """Load all recorded coverage runs from disk."""
+    if COVERAGE_RUNS_FILE.is_file():
+        try:
+            return json.loads(COVERAGE_RUNS_FILE.read_text())
+        except Exception:
+            pass
+    return {"runs": []}
+
+
+def _save_coverage_runs(data: dict):
+    """Save coverage runs to disk."""
+    try:
+        COVERAGE_RUNS_FILE.write_text(json.dumps(data, default=str))
+    except Exception as e:
+        print(f"  \033[91m[Coverage]\033[0m Failed to save runs: {e}")
+
+
+def record_coverage_hit(hit: dict):
+    """Record a single API call fingerprint.
+    hit: {runId, service, method, path, fingerprint: {field: value, ...}, timestamp}
+    """
+    with _coverage_lock:
+        data = _load_coverage_runs()
+
+        run_id = hit.get("runId", "default")
+        # Find or create run
+        run = None
+        for r in data["runs"]:
+            if r["id"] == run_id:
+                run = r
+                break
+        if not run:
+            run = {
+                "id": run_id,
+                "startedAt": hit.get("timestamp", time.time()),
+                "hits": [],
+            }
+            data["runs"].append(run)
+
+        run["hits"].append({
+            "service": hit.get("service", ""),
+            "method": hit.get("method", ""),
+            "path": hit.get("path", ""),
+            "fingerprint": hit.get("fingerprint", {}),
+            "timestamp": hit.get("timestamp", time.time()),
+        })
+        run["lastHitAt"] = hit.get("timestamp", time.time())
+
+        # Keep only last 50 runs
+        if len(data["runs"]) > 50:
+            data["runs"] = data["runs"][-50:]
+
+        _save_coverage_runs(data)
+
+
+def record_coverage_batch(hits: list):
+    """Record multiple coverage hits at once."""
+    with _coverage_lock:
+        data = _load_coverage_runs()
+
+        for hit in hits:
+            run_id = hit.get("runId", "default")
+            run = None
+            for r in data["runs"]:
+                if r["id"] == run_id:
+                    run = r
+                    break
+            if not run:
+                run = {
+                    "id": run_id,
+                    "startedAt": hit.get("timestamp", time.time()),
+                    "hits": [],
+                }
+                data["runs"].append(run)
+
+            run["hits"].append({
+                "service": hit.get("service", ""),
+                "method": hit.get("method", ""),
+                "path": hit.get("path", ""),
+                "fingerprint": hit.get("fingerprint", {}),
+                "timestamp": hit.get("timestamp", time.time()),
+            })
+            run["lastHitAt"] = hit.get("timestamp", time.time())
+
+        if len(data["runs"]) > 50:
+            data["runs"] = data["runs"][-50:]
+
+        _save_coverage_runs(data)
+
+
+def get_coverage_report(run_ids: list | None = None) -> dict:
+    """Generate a coverage report comparing recorded hits against the spec.
+    If run_ids is None, uses all runs combined."""
+    spec = get_coverage_spec()
+    runs_data = _load_coverage_runs()
+
+    # Collect all hits (optionally filtered by run_ids)
+    all_hits = []
+    selected_runs = []
+    for run in runs_data.get("runs", []):
+        if run_ids is None or run["id"] in run_ids:
+            all_hits.extend(run["hits"])
+            selected_runs.append({"id": run["id"], "startedAt": run.get("startedAt"), "hitCount": len(run["hits"])})
+
+    # Build hit index: {service: {"METHOD /path": count}}
+    hit_index = {"rider": {}, "driver": {}}
+    fingerprint_index = {"rider": {}, "driver": {}}
+
+    # Map hit service names to spec service names
+    SERVICE_MAP = {
+        "rider": "rider",
+        "driver": "driver",
+        "lts": "driver",           # LTS endpoints are in driver OpenAPI
+        "provider-dashboard": None, # Dashboard endpoints are separate
+        "rider-dashboard": None,
+        "mock-idfy": None,
+        "mock-server": None,
+        "internal": None,
+    }
+
+    for hit in all_hits:
+        raw_service = hit.get("service", "")
+        service = SERVICE_MAP.get(raw_service, raw_service)
+        if service not in hit_index:
+            continue
+        # Normalize hit path: strip query string, normalize params
+        hit_path = _normalize_path_params(hit["path"])
+        key = f"{hit['method']} {hit_path}"
+        if key not in hit_index[service]:
+            hit_index[service][key] = 0
+            fingerprint_index[service][key] = []
+        hit_index[service][key] += 1
+        if hit.get("fingerprint"):
+            fingerprint_index[service][key].append(hit["fingerprint"])
+
+    # Compare against spec
+    report = {"rider": {}, "driver": {}}
+    totals = {"rider": {"total": 0, "covered": 0, "scenarios_total": 0, "scenarios_covered": 0},
+              "driver": {"total": 0, "covered": 0, "scenarios_total": 0, "scenarios_covered": 0}}
+
+    for service in ("rider", "driver"):
+        for endpoint_key, endpoint_spec in spec.get(service, {}).items():
+            totals[service]["total"] += 1
+            hit_count = hit_index[service].get(endpoint_key, 0)
+            is_covered = hit_count > 0
+            if is_covered:
+                totals[service]["covered"] += 1
+
+            # Scenario coverage: check which enum values were actually sent
+            scenario_coverage = {}
+            fingerprints = fingerprint_index[service].get(endpoint_key, [])
+            for field, possible_values in endpoint_spec.get("enumFields", {}).items():
+                totals[service]["scenarios_total"] += len(possible_values)
+                tested_values = set()
+                for fp in fingerprints:
+                    if field in fp:
+                        tested_values.add(str(fp[field]))
+                covered_count = len(tested_values.intersection(set(str(v) for v in possible_values)))
+                totals[service]["scenarios_covered"] += covered_count
+                scenario_coverage[field] = {
+                    "possible": possible_values,
+                    "tested": list(tested_values),
+                    "coverage": covered_count / len(possible_values) if possible_values else 1.0,
+                }
+
+            report[service][endpoint_key] = {
+                "covered": is_covered,
+                "hitCount": hit_count,
+                "scenarioCoverage": scenario_coverage,
+                "operationId": endpoint_spec.get("operationId", ""),
+                "tags": endpoint_spec.get("tags", []),
+            }
+
+    # Overall percentages
+    for service in ("rider", "driver"):
+        t = totals[service]
+        t["endpointCoverage"] = (t["covered"] / t["total"] * 100) if t["total"] > 0 else 0
+        t["scenarioCoverage"] = (t["scenarios_covered"] / t["scenarios_total"] * 100) if t["scenarios_total"] > 0 else 0
+
+    return {
+        "totals": totals,
+        "report": report,
+        "runs": selected_runs,
+        "totalHits": len(all_hits),
+    }
+
+
+def get_coverage_chains(run_id: str | None = None, time_window_s: float = 5.0) -> dict:
+    """Parse service logs to detect internal API chains triggered during a test run.
+    Groups internal requests by time proximity to identify call chains."""
+    runs_data = _load_coverage_runs()
+
+    # Get time bounds for the run
+    target_run = None
+    if run_id:
+        for r in runs_data.get("runs", []):
+            if r["id"] == run_id:
+                target_run = r
+                break
+
+    # Parse logs for Request&Response entries
+    log_pattern = re.compile(
+        r'Request&Response\] \|> Request: RequestInfo \{requestMethod = "(\w+)", '
+        r'rawPathInfo = "([^"]+)"'
+    )
+    timestamp_pattern = re.compile(r'"timestamp":"([^"]+)"')
+
+    chains = []
+    service_hits = {}  # {service: [{method, path, timestamp_str}]}
+
+    for service_name, log_path in SERVICE_LOGS.items():
+        if not log_path.is_file():
+            continue
+        # Only read rider-app and driver-app logs for chain detection
+        if service_name not in ("rider-app", "driver-app"):
+            continue
+
+        service_hits[service_name] = []
+        try:
+            # Read last 500KB of the log for recent entries
+            file_size = log_path.stat().st_size
+            read_start = max(0, file_size - 512 * 1024)
+            with open(log_path, "r") as f:
+                if read_start > 0:
+                    f.seek(read_start)
+                    f.readline()  # skip partial line
+                for line in f:
+                    m = log_pattern.search(line)
+                    ts_m = timestamp_pattern.search(line)
+                    if m and ts_m:
+                        method = m.group(1)
+                        path = m.group(2)
+                        ts = ts_m.group(1)
+                        # Skip health checks
+                        if path in ("/v2", "/ui", "/healthcheck"):
+                            continue
+                        service_hits[service_name].append({
+                            "method": method,
+                            "path": path,
+                            "timestamp": ts,
+                        })
+        except Exception as e:
+            print(f"  \033[91m[Coverage]\033[0m Error reading {log_path}: {e}")
+
+    # Group into chains by time proximity
+    # A chain is: a user-facing hit on one service triggers hits on other services within time_window_s
+    all_entries = []
+    for svc, hits in service_hits.items():
+        for h in hits:
+            all_entries.append({**h, "service": svc})
+
+    # Sort by timestamp
+    all_entries.sort(key=lambda x: x["timestamp"])
+
+    # Simple chain grouping: consecutive entries within time_window_s of each other
+    if all_entries:
+        current_chain = [all_entries[0]]
+        for entry in all_entries[1:]:
+            # Simple heuristic: if entries are close in time, they're part of the same chain
+            current_chain.append(entry)
+            if len(current_chain) > 20:
+                chains.append(current_chain)
+                current_chain = []
+        if current_chain:
+            chains.append(current_chain)
+
+    # Summarize: for each user-facing endpoint, what internal endpoints were triggered
+    chain_summary = []
+    for chain in chains[-50:]:  # Last 50 chains
+        if len(chain) < 2:
+            continue
+        chain_summary.append({
+            "trigger": {"service": chain[0]["service"], "method": chain[0]["method"], "path": chain[0]["path"]},
+            "internal": [{"service": e["service"], "method": e["method"], "path": e["path"]} for e in chain[1:]],
+            "timestamp": chain[0]["timestamp"],
+        })
+
+    return {
+        "chains": chain_summary,
+        "serviceHitCounts": {svc: len(hits) for svc, hits in service_hits.items()},
+    }
+
+
 class ContextHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         print(f"  \033[93m[Context API]\033[0m {args[0]}")
@@ -2039,6 +2651,9 @@ class ContextHandler(BaseHTTPRequestHandler):
         elif path.startswith("/proxy/driver/"):
             target_base = DRIVER_URL
             target_path = "/ui" + path[len("/proxy/driver"):]
+        elif path.startswith("/proxy/juspay-payment/"):
+            target_base = os.environ.get("MOCK_SERVER_URL", "http://localhost:8091/")
+            target_path = path[len("/proxy/juspay-payment"):]
         else:
             return False
 
@@ -2059,18 +2674,32 @@ class ContextHandler(BaseHTTPRequestHandler):
         try:
             req = urllib.request.Request(
                 target_url, data=body, headers=fwd_headers, method=method)
+            _t0 = time.time()
             with urllib.request.urlopen(req, timeout=30) as resp:
                 resp_body = resp.read()
+                upstream_ms = int((time.time() - _t0) * 1000)
+                if resp.headers.get("Content-Encoding", "") == "gzip":
+                    import gzip as _gzip
+                    resp_body = _gzip.decompress(resp_body)
                 self.send_response(resp.status)
-                self.send_header(
-                    "Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
+                self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
                 self._cors_headers()
                 self.end_headers()
                 self.wfile.write(resp_body)
         except urllib.error.HTTPError as e:
+            _t0 = time.time()
             resp_body = e.read()
+            upstream_ms = int((time.time() - _t0) * 1000)
+            if e.headers.get("Content-Encoding", "") == "gzip":
+                import gzip as _gzip
+                try:
+                    resp_body = _gzip.decompress(resp_body)
+                except Exception:
+                    pass
             self.send_response(e.code)
-            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
+            self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
             self._cors_headers()
             self.end_headers()
             self.wfile.write(resp_body)
@@ -2104,6 +2733,167 @@ class ContextHandler(BaseHTTPRequestHandler):
             token = body.get("token", "")
             logs = stop_log_tails(token)
             self._send_json({"logs": logs})
+            return True
+
+        if method == "POST" and path == "/api/terminal/start":
+            body = self._read_json_body() or {}
+            cols = int(body.get("cols") or 80)
+            rows = int(body.get("rows") or 24)
+            cwd = body.get("cwd") or str(PROJECT_ROOT)
+            shell = body.get("shell") or os.environ.get("SHELL", "/bin/bash")
+            try:
+                sid, pid, _fd = _terminal_spawn(cols, rows, cwd, shell)
+                self._send_json({"session": sid, "pid": pid})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "GET" and path == "/api/terminal/stream":
+            qs = parse_qs(parsed.query)
+            sid = (qs.get("session") or [""])[0]
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 404)
+                return True
+            try:
+                self.send_response(200)
+                self.send_header("Content-Type", "text/event-stream")
+                self.send_header("Cache-Control", "no-cache")
+                self.send_header("X-Accel-Buffering", "no")
+                self.send_header("Connection", "keep-alive")
+                self._cors_headers()
+                self.end_headers()
+            except Exception:
+                return True
+            fd = sess["fd"]
+            pid = sess["pid"]
+            exit_code = None
+            try:
+                while True:
+                    if sess.get("closed"):
+                        break
+                    try:
+                        r, _w, _x = _select.select([fd], [], [], 0.5)
+                    except (OSError, ValueError):
+                        break
+                    if r:
+                        try:
+                            chunk = os.read(fd, 4096)
+                        except OSError as e:
+                            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                                continue
+                            chunk = b""
+                        if not chunk:
+                            try:
+                                _wpid, status = os.waitpid(pid, os.WNOHANG)
+                                if _wpid == pid:
+                                    exit_code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
+                            except Exception:
+                                pass
+                            break
+                        try:
+                            payload = json.dumps({"b64": base64.b64encode(chunk).decode("ascii")})
+                            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            return True
+                    else:
+                        try:
+                            wpid, status = os.waitpid(pid, os.WNOHANG)
+                            if wpid == pid:
+                                exit_code = os.WEXITSTATUS(status) if os.WIFEXITED(status) else -1
+                                try:
+                                    chunk = os.read(fd, 65536)
+                                    if chunk:
+                                        payload = json.dumps({"b64": base64.b64encode(chunk).decode("ascii")})
+                                        self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                                        self.wfile.flush()
+                                except Exception:
+                                    pass
+                                break
+                        except ChildProcessError:
+                            break
+                        try:
+                            self.wfile.write(b": ping\n\n")
+                            self.wfile.flush()
+                        except (BrokenPipeError, ConnectionResetError):
+                            return True
+            finally:
+                try:
+                    end_payload = json.dumps({"exit": exit_code})
+                    self.wfile.write(f"event: end\ndata: {end_payload}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                except Exception:
+                    pass
+                with _terminal_lock:
+                    s = _terminal_sessions.pop(sid, None)
+                if s:
+                    try:
+                        os.close(s["fd"])
+                    except Exception:
+                        pass
+                    try:
+                        os.waitpid(s["pid"], os.WNOHANG)
+                    except Exception:
+                        pass
+            return True
+
+        if method == "POST" and path == "/api/terminal/input":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            try:
+                data = base64.b64decode(body.get("data", "") or "")
+            except Exception as e:
+                self._send_json({"error": f"bad base64: {e}"}, 400)
+                return True
+            try:
+                with sess["lock"]:
+                    written = 0
+                    while written < len(data):
+                        try:
+                            n = os.write(sess["fd"], data[written:])
+                            if n <= 0:
+                                break
+                            written += n
+                        except BlockingIOError:
+                            _select.select([], [sess["fd"]], [], 1.0)
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "POST" and path == "/api/terminal/resize":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            cols = int(body.get("cols") or 80)
+            rows = int(body.get("rows") or 24)
+            with _terminal_lock:
+                sess = _terminal_sessions.get(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            try:
+                fcntl.ioctl(sess["fd"], _termios.TIOCSWINSZ,
+                            struct.pack("HHHH", rows, cols, 0, 0))
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
+            return True
+
+        if method == "POST" and path == "/api/terminal/kill":
+            body = self._read_json_body() or {}
+            sid = body.get("session", "")
+            sess = _terminal_close(sid)
+            if not sess:
+                self._send_json({"error": "unknown session"}, 400)
+                return True
+            self._send_json({"ok": True})
             return True
 
         if method == "GET" and path == "/api/config-sync/envs":
@@ -2153,14 +2943,15 @@ class ContextHandler(BaseHTTPRequestHandler):
         if method == "POST" and path == "/api/config-sync/import":
             body = self._read_json_body()
             from_env = body.get("from", CONFIG_SYNC_DEFAULT_FROM)
+            force_fetch = bool(body.get("forceFetch", False))
             if from_env not in CONFIG_SYNC_BUNDLE_URLS:
                 self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_BUNDLE_URLS)}, 400)
                 return True
-            accepted = trigger_config_sync(from_env)
+            accepted = trigger_config_sync(from_env, force_fetch=force_fetch)
             if not accepted:
                 self._send_json({"error": "another config-sync is already running"}, 409)
                 return True
-            self._send_json({"started": True, "from": from_env})
+            self._send_json({"started": True, "from": from_env, "forceFetch": force_fetch})
             return True
 
         if method == "GET" and path == "/api/control-center/status":
@@ -3073,8 +3864,60 @@ class ContextHandler(BaseHTTPRequestHandler):
                 self._send_json({"error": str(e)}, 500)
             return True
 
-        # GET API endpoints
-        if method != "GET" and not path.startswith("/proxy/"):
+        # ── Coverage API ──
+        if method == "GET" and path == "/api/coverage/spec":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            force = qs.get("refresh", ["0"])[0] == "1"
+            self._send_json(get_coverage_spec(force_refresh=force))
+            return True
+
+        if method == "POST" and path == "/api/coverage/record":
+            body = self._read_json_body()
+            if isinstance(body, list):
+                record_coverage_batch(body)
+            else:
+                record_coverage_hit(body)
+            self._send_json({"recorded": True})
+            return True
+
+        if method == "GET" and path == "/api/coverage/report":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_ids = qs.get("runId", None)
+            self._send_json(get_coverage_report(run_ids))
+            return True
+
+        if method == "GET" and path == "/api/coverage/chains":
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_id = qs.get("runId", [None])[0]
+            self._send_json(get_coverage_chains(run_id))
+            return True
+
+        if method == "GET" and path == "/api/coverage/runs":
+            data = _load_coverage_runs()
+            # Return run summaries without full hit data
+            runs = []
+            for r in data.get("runs", []):
+                runs.append({
+                    "id": r["id"],
+                    "startedAt": r.get("startedAt"),
+                    "lastHitAt": r.get("lastHitAt"),
+                    "hitCount": len(r.get("hits", [])),
+                })
+            self._send_json({"runs": runs})
+            return True
+
+        if method == "DELETE" and path == "/api/coverage/runs":
+            with _coverage_lock:
+                _save_coverage_runs({"runs": []})
+            self._send_json({"cleared": True})
+            return True
+
+        # GET API endpoints (POST also allowed for metrics/push and webhook)
+        _post_allowed = {"/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all"}
+        if method != "GET" and not path.startswith("/proxy/") and path not in _post_allowed:
             self._send_json({"error": "method not allowed"}, 405)
             return True
 
@@ -3160,6 +4003,55 @@ class ContextHandler(BaseHTTPRequestHandler):
             side = qs.get("side", ["bpp"])[0]
             schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
             self._send_json(get_finance_reference_types(schema))
+        # ── Metrics push (from dashboard after suite completes) ──────────────
+        elif method == "POST" and path in ("/api/metrics/push", "/metrics/push"):
+            body = self._read_json_body()
+            version_id = body.get("versionId", "unknown")
+            collection = body.get("collection", "unknown")
+            env = body.get("env", "Master")
+            suite = body.get("suite", "unknown")
+            steps = body.get("steps", [])
+            all_passed = body.get("allPassed", False)
+            result = push_suite_metrics(version_id, collection, env, suite, steps, all_passed)
+            push_ok = result[0] if result else False
+            push_msg = result[1] if result else "skipped"
+            suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
+            self._send_json({"ok": push_ok, "pushed": push_ok, "msg": push_msg, "suite": suite_label, "versionId": version_id})
+            return True
+
+        # ── Webhook: trigger run-all Master collections ───────────────────
+        elif method == "POST" and path in ("/api/webhook/run-all", "/webhook/run-all"):
+            body = self._read_json_body()
+            version_id = body.get("versionId", "unknown")
+            if not version_id or version_id == "unknown":
+                self._send_json({"error": "versionId is required"}, 400)
+                return True
+            import uuid as _uuid, time as _time
+            run_id = f"run-{int(_time.time())}-{str(_uuid.uuid4())[:8]}"
+            t = threading.Thread(
+                target=_run_all_master_webhook,
+                args=(run_id, version_id),
+                daemon=True
+            )
+            t.start()
+            self._send_json({"runId": run_id, "versionId": version_id, "status": "started"})
+            return True
+
+        elif method == "GET" and path in ("/api/webhook/run-all/status", "/webhook/run-all/status"):
+            from urllib.parse import parse_qs
+            qs = parse_qs(parsed.query)
+            run_id = qs.get("runId", [None])[0]
+            if not run_id:
+                self._send_json({"error": "runId required"}, 400)
+                return True
+            with _webhook_lock:
+                state = _webhook_runs.get(run_id)
+            if not state:
+                self._send_json({"error": "run not found"}, 404)
+                return True
+            self._send_json(state)
+            return True
+
         else:
             self._send_json({"error": "not found"}, 404)
         return True
@@ -3175,6 +4067,172 @@ class ContextHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self):
         self._handle("DELETE")
+
+
+# ── Metrics / VictoriaMetrics ─────────────────────────────────────────────────
+
+def _push_metrics_to_vm(lines: list[str]) -> tuple[bool, str]:
+    if not VICTORIA_METRICS_URL:
+        return False, "VICTORIA_METRICS_URL not set — metrics disabled"
+    payload = "\n".join(lines) + "\n"
+    try:
+        req = urllib.request.Request(
+            VICTORIA_METRICS_URL,
+            data=payload.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as r:
+            r.read()
+        return True, f"OK — {len(lines)} metrics sent to {VICTORIA_METRICS_URL}"
+    except Exception as e:
+        msg = str(e)
+        if "Name or service not known" in msg or "nodename nor servname" in msg:
+            msg = (f"VictoriaMetrics unreachable ({VICTORIA_METRICS_URL}) — "
+                   "this is expected when running locally outside K8s. "
+                   "Set VICTORIA_METRICS_URL to push from local.")
+        return False, msg
+
+
+def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
+                       steps: list[dict], all_passed: bool):
+    import time as _time
+    ts_ms = int(_time.time() * 1000)
+    suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
+    labels_base = f'version="{version_id}",suite="{suite_label}"'
+    if not all_passed:
+        print(f"  [metrics] skipped — suite={suite_label} FAIL (only push on full pass)")
+        return False, "skipped — suite did not fully pass"
+
+    lines = []
+
+    if all_passed:
+        total_ms = 0
+        for step in steps:
+            elapsed = step.get("elapsed_ms", 0)
+            total_ms += elapsed
+            api_name = f"{step.get('method','?')} {step.get('path','?')}".replace('"', "'")
+            lines.append(
+                f'integration_test_api_latency_ms{{{labels_base},api="{api_name}"}} '
+                f'{elapsed} {ts_ms}'
+            )
+        lines.append(
+            f'integration_test_suite_latency_ms{{{labels_base}}} '
+            f'{total_ms} {ts_ms}'
+        )
+
+    ok, msg = _push_metrics_to_vm(lines)
+    status = 'PASS' if all_passed else 'FAIL'
+    if ok:
+        print(f"  [metrics] ✓ suite={suite_label} status={status} version={version_id} — {msg}")
+    else:
+        print(f"  [metrics] ✗ suite={suite_label} status={status} version={version_id} — {msg}")
+    return ok, msg
+
+
+# ── Webhook: run all Master collections ───────────────────────────────────────
+
+_webhook_runs: dict = {}  # runId → { status, progress, errors }
+_webhook_lock = threading.Lock()
+
+
+def _run_all_master_webhook(run_id: str, version_id: str):
+    import subprocess as _sp, time as _time
+
+    with _webhook_lock:
+        _webhook_runs[run_id] = {"status": "running", "total": 0, "done": 0,
+                                  "passed": 0, "failed": 0, "errors": []}
+
+    results = []
+    for coll_dir in sorted(COLLECTIONS_DIR.iterdir()):
+        if not coll_dir.is_dir():
+            continue
+        master_dir = coll_dir / "Master"
+        if not master_dir.is_dir():
+            continue
+        env_files = sorted(master_dir.glob("Master_*.postman_environment.json"))
+        coll_files = [f for f in sorted(coll_dir.glob("*.json"))
+                      if not f.name.endswith(".postman_environment.json")]
+        for env_file in env_files:
+            city = env_file.stem.split("_", 1)[1] if "_" in env_file.stem else env_file.stem
+            for coll_file in coll_files:
+                with _webhook_lock:
+                    _webhook_runs[run_id]["total"] += 1
+
+    total = _webhook_runs[run_id]["total"]
+
+    for coll_dir in sorted(COLLECTIONS_DIR.iterdir()):
+        if not coll_dir.is_dir():
+            continue
+        master_dir = coll_dir / "Master"
+        if not master_dir.is_dir():
+            continue
+        env_files = sorted(master_dir.glob("Master_*.postman_environment.json"))
+        coll_files = [f for f in sorted(coll_dir.glob("*.json"))
+                      if not f.name.endswith(".postman_environment.json")]
+
+        for env_file in env_files:
+            city = env_file.stem.replace("Master_", "")
+            for coll_file in coll_files:
+                suite_name = coll_dir.name
+                flow_name = coll_file.stem
+                report_file = Path("/tmp") / f"ny_webhook_{run_id}_{suite_name}_{flow_name}_{city}.json"
+                try:
+                    proc = _sp.run(
+                        ["newman", "run", str(coll_file), "-e", str(env_file),
+                         "--bail", "--timeout-request", "60000",
+                         "--reporters", "json",
+                         "--reporter-json-export", str(report_file)],
+                        capture_output=True, text=True, timeout=300
+                    )
+                    passed = proc.returncode == 0
+                    steps = []
+                    if report_file.exists():
+                        try:
+                            rpt = json.loads(report_file.read_text())
+                            for ex in rpt.get("run", {}).get("executions", []):
+                                item = ex.get("item", {})
+                                resp = ex.get("response", {})
+                                url = resp.get("responseTime", 0)
+                                req = ex.get("request", {})
+                                req_url = req.get("url", {})
+                                raw = req_url.get("raw", "") if isinstance(req_url, dict) else str(req_url)
+                                # strip host, keep path
+                                try:
+                                    from urllib.parse import urlparse as _up
+                                    path = _up(raw).path or raw
+                                except Exception:
+                                    path = raw
+                                steps.append({
+                                    "name": item.get("name", "?"),
+                                    "method": req.get("method", "GET"),
+                                    "path": path,
+                                    "elapsed_ms": resp.get("responseTime", 0),
+                                })
+                            report_file.unlink(missing_ok=True)
+                        except Exception:
+                            pass
+                    push_suite_metrics(version_id, suite_name, "Master", flow_name,
+                                       steps, passed)
+                    with _webhook_lock:
+                        _webhook_runs[run_id]["done"] += 1
+                        if passed:
+                            _webhook_runs[run_id]["passed"] += 1
+                        else:
+                            _webhook_runs[run_id]["failed"] += 1
+                            _webhook_runs[run_id]["errors"].append(
+                                f"{suite_name}/{flow_name}/{city}")
+                except Exception as e:
+                    with _webhook_lock:
+                        _webhook_runs[run_id]["done"] += 1
+                        _webhook_runs[run_id]["failed"] += 1
+                        _webhook_runs[run_id]["errors"].append(
+                            f"{suite_name}/{flow_name}/{city}: {e}")
+
+    with _webhook_lock:
+        _webhook_runs[run_id]["status"] = "done"
+    print(f"  [webhook] run {run_id} complete: "
+          f"{_webhook_runs[run_id]['passed']}/{total} passed")
 
 
 def main():

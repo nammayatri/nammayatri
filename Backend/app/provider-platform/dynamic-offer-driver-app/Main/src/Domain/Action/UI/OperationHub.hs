@@ -20,6 +20,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 getOperationGetAllHubs :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> Flow [OperationHub]
@@ -85,9 +86,13 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
-      defaultFrom = UTCTime (utctDay now) 0
-      from = fromMaybe defaultFrom mbFrom
       to = fromMaybe now mbTo
+  from <- case (mbFrom, mbDriverId) of
+    (Just f, _) -> pure f
+    (Nothing, Just dId) -> do
+      person <- QPerson.findById dId >>= fromMaybeM (PersonNotFound dId.getId)
+      pure $ UTCTime (utctDay person.createdAt) 0
+    (Nothing, Nothing) -> pure $ UTCTime (utctDay now) 0
   -- At least one of mbRcNo or mbDriverId must be provided
   unless (isJust mbRcNo || isJust mbDriverId) $
     throwError $ InvalidRequest "Either rcNo or driverId must be provided"

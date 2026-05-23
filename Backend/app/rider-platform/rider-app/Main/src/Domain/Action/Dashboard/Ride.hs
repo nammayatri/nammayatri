@@ -34,13 +34,13 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as ProviderCommon
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
 import qualified Beckn.ACL.Common as Common
-import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import Beckn.ACL.Status
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Dashboard.Common
 import Data.Coerce (coerce)
 import qualified Data.List as DL
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.RideFlowDebug as RideFlowDebug
 import Domain.Action.Dashboard.Route (mkGetLocation)
 import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
@@ -664,6 +664,7 @@ cancellationChargesWaiveOffCore merchant booking ride = do
       logInfo $ "CancellationChargesWaiveOff: No non-zero cancellation charges found for bookingId: " <> booking.id.getId
       pure (Nothing, False)
 
-getRideFlowDebugBap :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ProviderCommon.BAPSideDebug
-getRideFlowDebugBap merchantShortId _opCity mbBapBookingId mbBppBookingId mbTransactionId =
-  RideFlowDebug.getBAPFlowDebug merchantShortId mbTransactionId mbBapBookingId mbBppBookingId
+-- After codegen, param order is alphabetical: bapBookingId, bapRideId, bapRideShortId, bapSearchRequestId, bppBookingId, transactionId
+getRideFlowDebugBap :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ProviderCommon.BAPSideDebug
+getRideFlowDebugBap merchantShortId _opCity mbBapBookingId mbBapRideId mbBapRideShortId mbBapSearchRequestId mbBppBookingId mbTransactionId =
+  RideFlowDebug.getBAPFlowDebug merchantShortId mbTransactionId mbBapBookingId mbBppBookingId mbBapSearchRequestId mbBapRideShortId mbBapRideId

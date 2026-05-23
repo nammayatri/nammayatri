@@ -245,7 +245,8 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.verified verified,
           Se.Set Beam.docsVerificationStatus docsVerificationStatus,
           Se.Set Beam.createdAt createdAt,
-          Se.Set Beam.updatedAt _now
+          Se.Set Beam.updatedAt _now,
+          Se.Set Beam.fleetName fleetName
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
 

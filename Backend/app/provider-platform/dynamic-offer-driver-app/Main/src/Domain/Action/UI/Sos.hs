@@ -243,7 +243,7 @@ callUpdateTicket person sosDetails mbComment = do
           TicketTools.updateTicket
             person.merchantId
             person.merchantOperatingCityId
-            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Nothing}
+            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
       pure Kernel.Types.APISuccess.Success
     Nothing -> pure Kernel.Types.APISuccess.Success
 
@@ -379,7 +379,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "updateTicket:sendSosTracking" $
                   withShortRetry $
-                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
+                    TicketTools.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = "Audio recording/shared media uploaded.", ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Just Ticket.UpdateIssueDetails {mediaFiles = Just mediaLinks, issueDescription = Nothing, issueId = Nothing, subCategory = Nothing, vehicleCategory = Nothing, category = Nothing}}
             Nothing -> do
               -- Fallback: create a separate ticket only when SOS has no ticketId (e.g. ticket creation failed earlier)
               void $

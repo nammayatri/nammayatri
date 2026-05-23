@@ -987,6 +987,14 @@ TransporterConfig:
       smsBodyLimit: Maybe Int
       whatsappBodyLimit: Maybe Int
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    StclConfig:
+      # Cap on total shares a single driver may hold across all SUBMITTED rows.
+      maxSharesPerDriver: Maybe Int
+      # Per-share price in rupees, used to compute amount when the client omits it in /buyAdditionalShares.
+      pricePerShare: Maybe Int
+      # PENDING top-up older than this is treated as abandoned and retired as REJECTED.
+      pendingStaleMinutes: Maybe Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff",
       "automatic_r_c_activation_cut_off")]
@@ -1278,6 +1286,7 @@ TransporterConfig:
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
+    stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
 
   beamType:
     currency: Maybe Currency
@@ -1346,6 +1355,7 @@ TransporterConfig:
     sameRiderDriverRideCountLookbackDays: Maybe Int
     sameRiderDriverRideCountThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
+    stclConfig: Maybe Value
 
   beamFields:
     fcmConfig:
@@ -1445,6 +1455,7 @@ TransporterConfig:
     sameRiderDriverRideCountLookbackDays: Just sameRiderDriverRideCountLookbackDays|E
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
+    stclConfig: Data.Aeson.toJSON <$> stclConfig|E
 
   intermediateTransformers:
     fromTType:
@@ -1561,6 +1572,8 @@ TransporterConfig:
     communicationChannelCharLimits: (\val -> case Data.Aeson.fromJSON val of
       Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<<
       communicationChannelCharLimits|E
+    stclConfig: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1635,6 +1648,7 @@ TransporterConfig:
     allowFarePolicyUpdateBelowMinBaseFare: boolean
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
+    stclConfig: json
 
   default:
     mediaFileUrlPattern: |-
