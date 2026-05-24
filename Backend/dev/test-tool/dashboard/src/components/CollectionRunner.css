@@ -476,3 +476,53 @@
 .jv-collapsed { color: #484f58; cursor: pointer; font-size: 11px; }
 .jv-collapsed:hover { color: #8b949e; }
 .jv-highlight { background: #4c3a10; border-radius: 2px; padding: 0 2px; }
+
+/* Mock-calls panel — outbound mock-server hits captured during a step (Local env only) */
+.cr-mock-badge {
+  font-size: 11px;
+  color: #d2a8ff;
+  background: #2b224a;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 6px;
+}
+.cr-mock-hits {
+  margin-top: 12px;
+  border-top: 1px solid #30363d;
+  padding-top: 10px;
+}
+.cr-mock-hits-header {
+  font-size: 12px;
+  color: #d2a8ff;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.cr-mock-hit {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.cr-mock-hit-err { border-color: #f85149; }
+.cr-mock-hit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+}
+.cr-mock-hit-header:hover { background: #1c2128; }
+.cr-mock-hit-chev { color: #8b949e; width: 12px; }
+.cr-mock-hit-method { color: #79c0ff; font-weight: 600; min-width: 48px; }
+.cr-mock-hit-path { color: #c9d1d9; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-mock-hit-svc { color: #d2a8ff; font-size: 10px; padding: 1px 6px; background: #2b224a; border-radius: 8px; }
+.cr-mock-hit-duration { color: #8b949e; }
+.cr-mock-hit-status { color: #56d364; }
+.cr-mock-hit-status.cr-status-error { color: #f85149; }
+.cr-mock-hit-detail { padding: 6px 12px 10px; background: #0d1117; border-top: 1px solid #30363d; }
+.cr-mock-hit-row { margin-bottom: 8px; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; }
+.cr-mock-hit-row b { display: block; color: #8b949e; font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; font-weight: 500; }
+.cr-mock-hit-row code { color: #a5d6ff; word-break: break-all; }
+.cr-mock-hit-row pre { background: #161b22; border: 1px solid #30363d; padding: 6px 10px; border-radius: 3px; margin: 0; font-size: 11px; max-height: 240px; overflow: auto; color: #c9d1d9; }

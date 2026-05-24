@@ -9,13 +9,169 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './CollectionRunner.css';
 import {
   CollectionGroup, CollectionEnvironment, CollectionSuite,
-  fetchCollections, fetchCollection
+  fetchCollections, fetchCollection,
+  fetchConfigSyncStatus, triggerConfigSync,
+  mockServerBase, MockHit,
+  startLogCapture, stopLogCapture
 } from '../services/context';
 import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '../services/postman-parser';
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
 import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { StepResult, LogEntry } from '../types';
+
+// Cities whose backing data lives in the EU prod cluster. Any environment
+// matching one of these (by city or envName, case-insensitive) defaults its
+// Sync-From options to ['prod_international', 'master'] instead of the
+// India-default ['prod', 'master']. Append new entries here as more
+// international cities come online.
+const INTERNATIONAL_CITIES = ['Helsinki', 'Amsterdam'];
+
+// Unified post-step grace. Logs and mock-hits captures start together before
+// the step runs and close together after `done()` + this many milliseconds.
+// Long enough to catch BPP-side async fan-out (confirm → juspay session,
+// allocator scheduling, rider-app forks); short enough not to dominate step
+// latency.
+const STEP_CAPTURE_GRACE_MS = 1000;
+
+interface StepCaptureResult {
+  mockHits: MockHit[];
+  serviceLogs: Record<string, string>;
+}
+
+// Safety timeout for waiting on EventSource.open — if mock-server doesn't
+// respond in this long we proceed anyway with `mockEs` already nulled.
+const MOCK_HITS_HANDSHAKE_TIMEOUT_MS = 500;
+
+// Default inter-step wait. Even with per-step capture grace, fast steps can
+// finish before the backend's async fan-out (beckn callbacks, allocator,
+// juspay session creation triggered by confirm) settles. This wait gives the
+// previous step's tail / SSE one extra beat to drain before the next step
+// tears the tail down. Visible in collection logs as `[wait] 2s …`.
+const INTER_STEP_WAIT_MS = 2000;
+
+async function interStepWait(abortRef: React.MutableRefObject<boolean>): Promise<void> {
+  const deadline = Date.now() + INTER_STEP_WAIT_MS;
+  while (Date.now() < deadline) {
+    if (abortRef.current) return;
+    await new Promise(r => setTimeout(r, Math.min(100, deadline - Date.now())));
+  }
+}
+
+// Open both the service-log tail (HTTP /api/logs/start) and the mock-hits
+// SSE stream BEFORE the step's HTTP call, AND await each subscription's
+// confirmation so the step doesn't fire before the tail subprocess is
+// running / the SSE subscriber queue is registered. Without awaiting, fast
+// Local steps complete before either capture is active and the per-step
+// panels come back empty. Caller invokes `done()` once the postman step has
+// fully returned (HTTP + test script). After STEP_CAPTURE_GRACE_MS, both are
+// closed in parallel; `result` resolves with whatever each captured during
+// that window. UI keeps logs / mock-hits in separate panels — they just
+// share a lifecycle.
+async function startStepCapture(envType: string): Promise<{
+  done: () => void;
+  result: Promise<StepCaptureResult>;
+}> {
+  // ── Logs side ── Await the HTTP round-trip so the `tail -n 0 -f` is
+  // actually spawned before the step's HTTP call fires. `-n 0` skips
+  // backfill, so anything written before tail starts is lost.
+  const logToken: string | null = await startLogCapture().catch(() => null);
+
+  // ── Mock-hits side ── Open the SSE and wait for `open` (handshake done →
+  // server-side subscriber queue is registered) or `error` (mock-server
+  // unreachable → give up cleanly). Either way we're past the handshake race
+  // before the step fires its first request.
+  let mockHits: MockHit[] = [];
+  let mockEs: EventSource | null = null;
+  if (envType === 'Local') {
+    const es = new EventSource(`${mockServerBase()}/mock/hits/stream`);
+    es.addEventListener('message', e => {
+      try { mockHits.push(JSON.parse((e as MessageEvent).data) as MockHit); }
+      catch { /* ignore malformed frame */ }
+    });
+    await new Promise<void>(resolve => {
+      const safety = setTimeout(resolve, MOCK_HITS_HANDSHAKE_TIMEOUT_MS);
+      es.addEventListener('open', () => { clearTimeout(safety); resolve(); }, { once: true });
+      es.addEventListener('error', () => {
+        // Mock-server down / endpoint missing — null `mockEs` so close() is a
+        // no-op. Don't resolveHits here; close() still resolves the outer
+        // promise with whatever we have (empty array).
+        clearTimeout(safety);
+        try { es.close(); } catch { /* noop */ }
+        mockEs = null;
+        resolve();
+      }, { once: true });
+    });
+    // If the error handler already nulled mockEs above, leave it null.
+    if (mockEs !== null || es.readyState !== EventSource.CLOSED) {
+      mockEs = es;
+    }
+  }
+
+  let doneCalled = false;
+  let resolveResult!: (r: StepCaptureResult) => void;
+  const result = new Promise<StepCaptureResult>(res => { resolveResult = res; });
+
+  const close = async () => {
+    const [serviceLogs] = await Promise.all([
+      logToken ? stopLogCapture(logToken).catch(() => ({})) : Promise.resolve({}),
+      Promise.resolve().then(() => { try { mockEs?.close(); } catch { /* noop */ } }),
+    ]);
+    resolveResult({ mockHits, serviceLogs });
+  };
+
+  return {
+    done: () => {
+      if (doneCalled) return;
+      doneCalled = true;
+      setTimeout(close, STEP_CAPTURE_GRACE_MS);
+    },
+    result,
+  };
+}
+
+
+interface ServicesReady {
+  ready: boolean;
+  services: { name: string; port: number; path: string; up: boolean; status: number | null; error?: string }[];
+}
+
+// Poll context-api's /api/services-ready until rider/driver/mock-registry health
+// endpoints all return 2xx. Used after a config import — services restart and
+// their DB pools spend a while draining locks, during which /v2 returns 408.
+async function waitForServicesReady(
+  onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void,
+  timeoutMs = 10 * 60 * 1000,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  onLog('info', '[services] waiting for rider-app, driver-app, mock-registry to be healthy…');
+  let lastSummary = '';
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(`${PROXY_BASE}/api/services-ready`);
+      if (r.ok) {
+        const j: ServicesReady = await r.json();
+        if (j.ready) {
+          onLog('success', '[services] all healthy');
+          return true;
+        }
+        const summary = j.services
+          .filter(s => !s.up)
+          .map(s => `${s.name} (${s.error || `HTTP ${s.status ?? '?'}`})`)
+          .join(', ');
+        if (summary && summary !== lastSummary) {
+          onLog('info', `[services] still waiting: ${summary}`);
+          lastSummary = summary;
+        }
+      }
+    } catch {
+      // context-api itself may be momentarily flapping during stack restart
+    }
+    await new Promise(res => setTimeout(res, 2000));
+  }
+  onLog('error', `[services] timed out after ${Math.round(timeoutMs / 1000)}s — services never became healthy`);
+  return false;
+}
 
 interface Props {
   onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void;
@@ -25,6 +181,7 @@ interface StepState {
   status: 'pending' | 'running' | 'pass' | 'fail' | 'skip';
   result?: PostmanStepResult;
   durationMs?: number;
+  mockHits?: MockHit[];
 }
 
 // ── JSON Viewer Modal ──────────────────────────────────────────────
@@ -120,6 +277,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
   const [selectedDir, setSelectedDir] = useState('');
   const [selectedEnvType, setSelectedEnvType] = useState('Local');
+  const [selectedSyncEnv, setSelectedSyncEnv] = useState<string>('master');
   const [selectedEnv, setSelectedEnv] = useState('');
   const [selectedSuite, setSelectedSuite] = useState('');
 
@@ -158,6 +316,25 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const filteredEnvs = (currentGroup?.environments ?? []).filter(e => e.envType === selectedEnvType);
   const currentEnv = filteredEnvs.find(e => e.envName === selectedEnv);
   const currentSuite = currentGroup?.suites.find(s => s.filename === selectedSuite);
+  // Default Sync-From options: India envs run against `prod`+`master`; cities
+  // in INTERNATIONAL_CITIES route to the EU cluster instead, so they get
+  // `prod_international`+`master`. Extend the list as new international
+  // deployments come online.
+  // Server-side compatibleEnvs (if ever populated) still wins.
+  const _isInternational = INTERNATIONAL_CITIES.some(c => {
+    const re = new RegExp(c, 'i');
+    return re.test(currentEnv?.city ?? '') || re.test(currentEnv?.envName ?? '');
+  });
+  const _defaultSyncEnvs = _isInternational
+    ? ['prod_international', 'master']
+    : ['prod', 'master'];
+  const syncEnvOptions =
+    (currentEnv?.compatibleEnvs && currentEnv.compatibleEnvs.length > 0
+      ? currentEnv.compatibleEnvs
+      : currentGroup?.compatibleEnvs && currentGroup.compatibleEnvs.length > 0
+        ? currentGroup.compatibleEnvs
+        : _defaultSyncEnvs);
+  const syncEnvDisabled = selectedEnvType !== 'Local';
 
   // Mock-server steps are only meaningful on Local env. On any other env type
   // (e.g. Master) the local mock processes aren't running, so we hide those
@@ -187,6 +364,13 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       }
     }
   }, [selectedDir, selectedEnvType, currentGroup]);
+
+  // Keep selectedSyncEnv valid for the current env/group's compatibleEnvs.
+  useEffect(() => {
+    if (syncEnvOptions.length > 0 && !syncEnvOptions.includes(selectedSyncEnv)) {
+      setSelectedSyncEnv(syncEnvOptions[0]);
+    }
+  }, [syncEnvOptions, selectedSyncEnv]);
 
   // Load and parse collection when suite changes
   useEffect(() => {
@@ -249,9 +433,47 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     });
   }, [currentEnv, selectedDir, selectedSuite]);
 
+  // Ensure local DB config is synced from the chosen upstream environment.
+  // Returns true to proceed, false if the user should abort.
+  const ensureSyncedFrom = useCallback(async (targetEnv: string): Promise<boolean> => {
+    if (selectedEnvType !== 'Local') return true;
+    const status = await fetchConfigSyncStatus();
+    if (status?.last_synced?.from === targetEnv && !status?.running) {
+      onLog('info', `[config-sync] local already synced from '${targetEnv}' — skipping sync`);
+      return true;
+    }
+    if (status?.running) {
+      onLog('info', `[config-sync] sync already running (from '${status.from}') — waiting for it to finish`);
+    } else {
+      onLog('info', `[config-sync] local is ${status?.last_synced?.from ? `synced from '${status.last_synced.from}'` : 'not yet synced'} — starting sync from '${targetEnv}'`);
+      const trig = await triggerConfigSync(targetEnv, false);
+      if (!trig.started) {
+        onLog('error', `[config-sync] failed to start: ${trig.error ?? 'unknown error'}`);
+        return false;
+      }
+    }
+    // Poll until done
+    for (;;) {
+      await new Promise(r => setTimeout(r, 2000));
+      const st = await fetchConfigSyncStatus();
+      if (!st) continue;
+      if (!st.running) {
+        if (st.exit_code === 0 && !st.error) {
+          onLog('success', `[config-sync] done — synced from '${targetEnv}'`);
+          const healthy = await waitForServicesReady(onLog);
+          return healthy;
+        }
+        onLog('error', `[config-sync] failed (exit=${st.exit_code}, error=${st.error ?? 'n/a'})`);
+        return false;
+      }
+    }
+  }, [selectedEnvType, onLog]);
+
   // Run all steps sequentially
   const runAll = useCallback(async () => {
     if (isRunning || visibleSteps.length === 0) return;
+    const synced = await ensureSyncedFrom(selectedSyncEnv);
+    if (!synced) return;
     abortRef.current = false;
     setIsRunning(true);
     setStepStates({});
@@ -279,21 +501,30 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) [${selectedEnvType}] --`);
     startNewCoverageRun(`collection-${selectedDir}-${selectedSuite}-${Date.now()}`);
 
-    for (const step of visibleSteps) {
+    for (let stepIdx = 0; stepIdx < visibleSteps.length; stepIdx++) {
       if (abortRef.current) break;
+      const step = visibleSteps[stepIdx];
 
       setRunningStepId(step.id);
       setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
       onLog('req', `${step.method} ${step.name}`);
 
       const start = performance.now();
+      // Open service-log tail + mock-hits stream together BEFORE the step so
+      // they capture async fan-out (beckn callbacks, BPP juspay session,
+      // rider-app forks) that lands after the HTTP response.
+      const capture = await startStepCapture(selectedEnvType);
       const result = await callPostmanStep(step, storesRef.current);
-      const durationMs = Math.round(performance.now() - start);
+      capture.done();
+      // Latency excludes pre/post-request script time — only the upstream HTTP call.
+      const durationMs = result.upstreamMs;
+      const { mockHits, serviceLogs } = await capture.result;
+      result.serviceLogs = serviceLogs;
 
       const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
       const status = failed ? 'fail' : 'pass';
 
-      setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
+      setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs, mockHits } }));
 
       // Log result
       const logLevel = failed ? 'error' : 'success';
@@ -321,12 +552,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         break; // bail on first failure
       }
 
+      if (stepIdx < visibleSteps.length - 1) {
+        await interStepWait(abortRef);
+      }
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, onLog]);
+  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -394,15 +628,21 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       let passed = 0;
       let failed = 0;
       const suiteStepMetrics: Array<{ name: string; method: string; path: string; elapsed_ms: number }> = [];
-      for (const step of parsed.steps) {
+      for (let stepIdx = 0; stepIdx < parsed.steps.length; stepIdx++) {
         if (abortRef.current) break;
+        const step = parsed.steps[stepIdx];
 
         setRunningStepId(step.id);
         setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
 
         const start = performance.now();
+        const capture = await startStepCapture(env.envType);
         const result = await callPostmanStep(step, stores);
-        const durationMs = Math.round(performance.now() - start);
+        capture.done();
+        // Latency excludes pre/post-request script time — only the upstream HTTP call.
+        const durationMs = result.upstreamMs;
+        const { mockHits, serviceLogs } = await capture.result;
+        result.serviceLogs = serviceLogs;
 
         const stepFailed = result.assertions.some(a => !a.passed) || !!result.scriptError;
         const status = stepFailed ? 'fail' : 'pass';
@@ -418,7 +658,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           elapsed_ms: result.upstreamMs,
         });
 
-        setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
+        setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs, mockHits } }));
 
         const logLevel = stepFailed ? 'error' : 'success';
         const assertSummary = result.assertions.length > 0
@@ -441,6 +681,10 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           }
           setExpandedSteps(prev => new Set(prev).add(step.id));
           break; // bail on first failure within a suite
+        }
+
+        if (stepIdx < parsed.steps.length - 1) {
+          await interStepWait(abortRef);
         }
       }
 
@@ -581,13 +825,18 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('req', `[Re-run] ${step.method} ${step.name}`);
 
     const start = performance.now();
+    const capture = await startStepCapture(selectedEnvType);
     const result = await callPostmanStep(step, storesRef.current);
-    const durationMs = Math.round(performance.now() - start);
+    capture.done();
+    // Latency excludes pre/post-request script time — only the upstream HTTP call.
+    const durationMs = result.upstreamMs;
+    const { mockHits, serviceLogs } = await capture.result;
+    result.serviceLogs = serviceLogs;
 
     const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
     const status = failed ? 'fail' : 'pass';
 
-    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs } }));
+    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs, mockHits } }));
 
     const logLevel = failed ? 'error' : 'success';
     const assertSummary = result.assertions.length > 0
@@ -644,6 +893,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           <span>Env Type</span>
           <select value={selectedEnvType} onChange={e => setSelectedEnvType(e.target.value)}>
             {envTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
+        <label title={syncEnvDisabled ? 'Config-sync only applies to the Local stack' : 'Upstream config bundle to sync into the local DB before running'}>
+          <span>Sync From</span>
+          <select
+            className="config-sync-env"
+            value={selectedSyncEnv}
+            onChange={e => setSelectedSyncEnv(e.target.value)}
+            disabled={syncEnvDisabled}
+          >
+            {syncEnvOptions.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
         <label>
@@ -740,6 +1000,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               const isExpanded = expandedSteps.has(stepId);
               const logsExpanded = expandedLogs.has(stepId);
               const logCount = state?.result?.serviceLogs ? Object.keys(state.result.serviceLogs).length : 0;
+              const mockHitCount = state?.mockHits?.length ?? 0;
 
               // Manual-mode gating: first step always enabled; later steps require prev step pass or skip.
               const visibleIdx = visibleSteps.findIndex(s => s.id === stepId);
@@ -782,6 +1043,11 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                         </button>
                       </>
                     )}
+                    {mockHitCount > 0 && (
+                      <span className="cr-mock-badge" title={`${mockHitCount} outbound mock call${mockHitCount === 1 ? '' : 's'} during this step`}>
+                        🟣 {mockHitCount} mock
+                      </span>
+                    )}
                     {state?.status === 'fail' && (
                       <button
                         className="cr-rerun-btn"
@@ -816,6 +1082,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                         </button>
                       </div>
                       <pre className="cr-response-body">{JSON.stringify(state.result.data, null, 2)}</pre>
+                      {mockHitCount > 0 && <MockHitsPanel hits={state.mockHits!} />}
                     </div>
                   )}
                   {logsExpanded && state?.result?.serviceLogs && (
@@ -837,6 +1104,55 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     </div>
   );
 };
+
+function MockHitsPanel({ hits }: { hits: MockHit[] }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggle = (id: number) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  return (
+    <div className="cr-mock-hits">
+      <div className="cr-mock-hits-header">🟣 Mock calls ({hits.length})</div>
+      {hits.map(h => {
+        const open = expanded.has(h.id);
+        const errored = h.status >= 400;
+        return (
+          <div key={h.id} className={`cr-mock-hit ${errored ? 'cr-mock-hit-err' : ''}`}>
+            <div className="cr-mock-hit-header" onClick={() => toggle(h.id)}>
+              <span className="cr-mock-hit-chev">{open ? '▼' : '▸'}</span>
+              <span className="cr-mock-hit-method">{h.method}</span>
+              <span className="cr-mock-hit-path" title={h.url}>{h.path}{h.query ? `?${h.query}` : ''}</span>
+              {h.service && <span className="cr-mock-hit-svc">{h.service}</span>}
+              <span className="cr-mock-hit-duration">{h.duration_ms}ms</span>
+              <span className={`cr-mock-hit-status ${errored ? 'cr-status-error' : ''}`}>{h.status}</span>
+            </div>
+            {open && (
+              <div className="cr-mock-hit-detail">
+                <div className="cr-mock-hit-row"><b>Full URL</b><code>http://localhost:8080{h.url}</code></div>
+                <div className="cr-mock-hit-row"><b>Request headers</b>
+                  <pre>{JSON.stringify(h.request_headers, null, 2)}</pre>
+                </div>
+                {h.request_body !== null && h.request_body !== undefined && (
+                  <div className="cr-mock-hit-row"><b>Request body</b>
+                    <pre>{typeof h.request_body === 'string' ? h.request_body : JSON.stringify(h.request_body, null, 2)}</pre>
+                  </div>
+                )}
+                <div className="cr-mock-hit-row"><b>Response headers</b>
+                  <pre>{JSON.stringify(h.response_headers, null, 2)}</pre>
+                </div>
+                <div className="cr-mock-hit-row"><b>Response body</b>
+                  <pre>{typeof h.response_body === 'string' ? h.response_body : JSON.stringify(h.response_body, null, 2)}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ServiceLogsTabs({ logs }: { logs: Record<string, string> }) {
   const [active, setActive] = useState(Object.keys(logs)[0] || '');

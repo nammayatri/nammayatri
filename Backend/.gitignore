@@ -63,3 +63,4 @@ dev/config-sync/assets/master_to_local_sql/
 dev/config-sync/master_to_local_sql/
 dev/config-sync/prod_to_local_sql/
 dev/config-sync/prod_international_to_local_sql/
+dev/config-sync/passetto-server.log

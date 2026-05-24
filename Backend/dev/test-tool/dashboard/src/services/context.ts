@@ -110,6 +110,7 @@ export interface CollectionEnvironment {
   bapShortId: string;
   origin: { lat: number; lon: number };
   destination: { lat: number; lon: number };
+  compatibleEnvs: string[];
   variables: Record<string, string>;
 }
 
@@ -124,7 +125,59 @@ export interface CollectionGroup {
   directory: string;
   envTypes: string[];
   environments: CollectionEnvironment[];
+  compatibleEnvs: string[];
   suites: CollectionSuite[];
+}
+
+export interface ConfigSyncStatus {
+  running: boolean;
+  from: string | null;
+  started_at: number | null;
+  finished_at: number | null;
+  exit_code: number | null;
+  error: string | null;
+  log: string[];
+  last_synced: { from: string; finished_at: number } | null;
+}
+
+export async function fetchConfigSyncStatus(): Promise<ConfigSyncStatus | null> {
+  try {
+    const resp = await axios.get(`${CONTEXT_API}/api/config-sync/status`, { timeout: 5000 });
+    return resp.data as ConfigSyncStatus;
+  } catch {
+    return null;
+  }
+}
+
+export interface MockHit {
+  id: number;
+  timestamp: number;
+  duration_ms: number;
+  service: string | null;
+  method: string;
+  path: string;
+  query: string;
+  url: string;
+  request_headers: Record<string, string>;
+  request_body: any;
+  status: number;
+  response_headers: Record<string, string>;
+  response_body: any;
+  run_id: string | null;
+  admin: boolean;
+}
+
+const MOCK_SERVER_BASE = (process.env.REACT_APP_MOCK_SERVER_BASE || 'http://localhost:8080').replace(/\/+$/, '');
+
+export function mockServerBase(): string { return MOCK_SERVER_BASE; }
+
+export async function triggerConfigSync(fromEnv: string, forceFetch = false): Promise<{ started: boolean; error?: string }> {
+  try {
+    const resp = await axios.post(`${CONTEXT_API}/api/config-sync/import`, { from: fromEnv, forceFetch }, { timeout: 10000 });
+    return { started: !!resp.data?.started };
+  } catch (e: any) {
+    return { started: false, error: e?.response?.data?.error ?? String(e) };
+  }
 }
 
 export async function fetchCollections(): Promise<CollectionGroup[]> {

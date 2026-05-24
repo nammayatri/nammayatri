@@ -235,20 +235,20 @@
               "pm.test('Snapshot OK', function () { pm.response.to.have.status(200); });",
               "var rows = pm.response.json().rows || [];",
               "var row = rows.length > 0 ? rows[0] : {};",
-              "var prev = row.pass_expiry_reminder_days;",
+              "var prev = row.passExpiryReminderDays;",
               "pm.collectionVariables.set('_orig_reminder_days', prev === null || prev === undefined ? '' : String(prev));",
-              "// time_diff_from_utc (Seconds) is needed for endDate math: handler uses todayLocal = (now + timeDiffFromUtc).utctDay",
-              "var tz = row.time_diff_from_utc;",
+              "// timeDiffFromUtc (Seconds) is needed for endDate math: handler uses todayLocal = (now + timeDiffFromUtc).utctDay",
+              "var tz = row.timeDiffFromUtc;",
               "pm.collectionVariables.set('_time_diff_from_utc', tz === null || tz === undefined ? '0' : String(tz));",
-              "console.log('Original pass_expiry_reminder_days:', prev, '| time_diff_from_utc:', tz);",
-              "// Snapshot remind_everyday_until_pass_expiry so Phase B.1-B.4 (daily mode) can flip it and restore",
-              "var prevDaily = row.remind_everyday_until_pass_expiry;",
+              "console.log('Original passExpiryReminderDays:', prev, '| timeDiffFromUtc:', tz);",
+              "// Snapshot remindEverydayUntilPassExpiry so Phase B.1-B.4 (daily mode) can flip it and restore",
+              "var prevDaily = row.remindEverydayUntilPassExpiry;",
               "pm.collectionVariables.set('_orig_remind_daily', prevDaily === null || prevDaily === undefined ? '' : String(prevDaily));",
-              "console.log('Original remind_everyday_until_pass_expiry:', prevDaily);",
-              "// Snapshot pass_expiry_reminder_batch_size so Phase C (pagination) can pin it to 4 and restore",
-              "var prevBatch = row.pass_expiry_reminder_batch_size;",
+              "console.log('Original remindEverydayUntilPassExpiry:', prevDaily);",
+              "// Snapshot passExpiryReminderBatchSize so Phase C (pagination) can pin it to 4 and restore",
+              "var prevBatch = row.passExpiryReminderBatchSize;",
               "pm.collectionVariables.set('_orig_batch_size', prevBatch === null || prevBatch === undefined ? '' : String(prevBatch));",
-              "console.log('Original pass_expiry_reminder_batch_size:', prevBatch);"
+              "console.log('Original passExpiryReminderBatchSize:', prevBatch);"
             ],
             "type": "text/javascript"
           }
@@ -264,16 +264,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"select\": [\"pass_expiry_reminder_days\", \"time_diff_from_utc\", \"remind_everyday_until_pass_expiry\", \"pass_expiry_reminder_batch_size\"], \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"table\": \"riderConfig\", \"primaryKey\": {\"column\": \"merchantOperatingCityId\", \"value\": \"{{bap_merchant_operating_city_id}}\"}, \"columns\": [\"passExpiryReminderDays\", \"timeDiffFromUtc\", \"remindEverydayUntilPassExpiry\", \"passExpiryReminderBatchSize\"]}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "raw": "{{contextApiUrl}}/api/db/select",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "select"
           ]
         }
@@ -303,16 +303,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"pass_expiry_reminder_days\": 3, \"remind_everyday_until_pass_expiry\": true, \"pass_expiry_reminder_batch_size\": 4}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"table\": \"riderConfig\", \"primaryKey\": {\"column\": \"merchantOperatingCityId\", \"value\": \"{{bap_merchant_operating_city_id}}\"}, \"set\": {\"passExpiryReminderDays\": 3, \"remindEverydayUntilPassExpiry\": true, \"passExpiryReminderBatchSize\": 4}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }
@@ -3168,18 +3168,17 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Restore remind_everyday_until_pass_expiry to its snapshot value (NULL if never set in this MOC).",
+              "// Restore remindEverydayUntilPassExpiry to its snapshot value (NULL if never set in this MOC).",
               "var prev = pm.collectionVariables.get('_orig_remind_daily');",
               "var setVal = (prev === '' || prev === undefined || prev === null) ? null : (String(prev).toLowerCase() === 'true');",
               "var mocId = pm.environment.get('bap_merchant_operating_city_id');",
               "var payload = {",
-              "  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
-              "  set: { remind_everyday_until_pass_expiry: setVal },",
-              "  touch_updated_at: true,",
-              "  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+              "  table: 'riderConfig',",
+              "  primaryKey: { column: 'merchantOperatingCityId', value: mocId },",
+              "  set: { remindEverydayUntilPassExpiry: setVal }",
               "};",
               "pm.collectionVariables.set('_restore_daily_payload', JSON.stringify(payload));",
-              "console.log('Restoring remind_everyday_until_pass_expiry to:', setVal);"
+              "console.log('Restoring remindEverydayUntilPassExpiry to:', setVal);"
             ],
             "type": "text/javascript"
           }
@@ -3207,13 +3206,13 @@
           "raw": "{{_restore_daily_payload}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }
@@ -3226,18 +3225,17 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Restore pass_expiry_reminder_batch_size to its snapshot value (NULL if never set in this MOC).",
+              "// Restore passExpiryReminderBatchSize to its snapshot value (NULL if never set in this MOC).",
               "var prev = pm.collectionVariables.get('_orig_batch_size');",
               "var setVal = (prev === '' || prev === undefined || prev === null) ? null : parseInt(prev, 10);",
               "var mocId = pm.environment.get('bap_merchant_operating_city_id');",
               "var payload = {",
-              "  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
-              "  set: { pass_expiry_reminder_batch_size: setVal },",
-              "  touch_updated_at: true,",
-              "  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+              "  table: 'riderConfig',",
+              "  primaryKey: { column: 'merchantOperatingCityId', value: mocId },",
+              "  set: { passExpiryReminderBatchSize: setVal }",
               "};",
               "pm.collectionVariables.set('_restore_batch_payload', JSON.stringify(payload));",
-              "console.log('Restoring pass_expiry_reminder_batch_size to:', setVal);"
+              "console.log('Restoring passExpiryReminderBatchSize to:', setVal);"
             ],
             "type": "text/javascript"
           }
@@ -3265,13 +3263,13 @@
           "raw": "{{_restore_batch_payload}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }
@@ -3288,13 +3286,12 @@
               "var setVal = (prev === '' || prev === undefined || prev === null) ? null : parseInt(prev, 10);",
               "var mocId = pm.environment.get('bap_merchant_operating_city_id');",
               "var payload = {",
-              "  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
-              "  set: { pass_expiry_reminder_days: setVal },",
-              "  touch_updated_at: true,",
-              "  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+              "  table: 'riderConfig',",
+              "  primaryKey: { column: 'merchantOperatingCityId', value: mocId },",
+              "  set: { passExpiryReminderDays: setVal }",
               "};",
               "pm.collectionVariables.set('_restore_payload', JSON.stringify(payload));",
-              "console.log('Restoring pass_expiry_reminder_days to:', setVal);"
+              "console.log('Restoring passExpiryReminderDays to:', setVal);"
             ],
             "type": "text/javascript"
           }
@@ -3322,13 +3319,13 @@
           "raw": "{{_restore_payload}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }

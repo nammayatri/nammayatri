@@ -27,8 +27,9 @@ _:
       killSvcPortsScript =
         let ports = import ./services/ports.nix; in
         killPortsSnippet (lib.attrValues ports);
-      # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api).
-      localTestDashboardPorts = [ 7070 7083 ];
+      # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api
+      # + config-sync-server).
+      localTestDashboardPorts = [ 7070 7083 8090 ];
       killLocalTestDashboardPortsScript = killPortsSnippet localTestDashboardPorts;
     in
     {
@@ -225,8 +226,6 @@ _:
             # doesn't hold the port and crash a fresh service start.
             echo "── Pre-flight: freeing service ports ──"
             ${killSvcPortsScript}
-            echo "── Pre-flight: freeing dashboard ports ──"
-            ${killLocalTestDashboardPortsScript}
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.

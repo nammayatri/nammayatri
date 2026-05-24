@@ -55,6 +55,12 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = SCRIPT_DIR / "assets"
 DATA_DIR = ASSETS_DIR / "data"
 TMP_DIR = DATA_DIR / "tmp"
+# Repo root: Backend/dev/config-sync/ → up 3 levels.
+# The sync marker (data/config-sync/metadata.json) is written by
+# context-api's run_config_sync after a successful local import — *not* here,
+# since the export+patch+publish flow doesn't change local state.
+REPO_ROOT = SCRIPT_DIR.parents[2]
+MARKER_PATH = REPO_ROOT / "data" / "config-sync" / "metadata.json"
 
 _RE_ENCRYPT = re.compile(r'0\.1\.0\|[0-9]+\|[A-Za-z0-9+/=]{16,}')
 
@@ -887,6 +893,12 @@ def _reencrypt_foreign_values(text):
 
 _encrypt_cache = {}
 
+# Points to the passetto-server the patch step should talk to.
+# Set by _start_temp_passetto() when the patch command spawns a throwaway
+# instance against the `test_dashboard` DB; otherwise defaults to the
+# mobility-stack passetto (which uses local dev keys).
+_PASSETTO_URL = "http://localhost:8079"
+
 def _encrypt_via_obj(plaintext):
     """Encrypt using passetto /encrypt with S"value" format.
 
@@ -902,7 +914,7 @@ def _encrypt_via_obj(plaintext):
     import requests
     try:
         s_val = f'S"{plaintext}"'
-        resp = requests.post("http://localhost:8079/encrypt", json={"value": s_val, "keyId": 1}, timeout=5)
+        resp = requests.post(f"{_PASSETTO_URL}/encrypt", json={"value": s_val, "keyId": 1}, timeout=5)
         val = resp.json()["value"]
         _encrypt_cache[plaintext] = val
         return val
@@ -1274,19 +1286,173 @@ def cmd_export(args):
     if any(r["status"] != "ok" for r in results.values()):
         sys.exit(1)
 
+# ── Temp passetto-server (per --to direction) ──────────────────────────────
+#
+# The patch step re-encrypts foreign Passetto blobs into values the target
+# environment can decrypt. To do that we need a passetto-server running with
+# the *target's* keys, not the keys of whichever mobility stack is running
+# locally. Convention: a pre-seeded database `test_dashboard_<to>` lives on
+# the same Postgres cluster as the `--from` env (creds come from that env's
+# `default` block in environments.json), with a `"Passetto"` schema holding
+# the per-environment Master/Keys rows. `_start_temp_passetto` boots a
+# throwaway passetto-server against it; `_stop_temp_passetto` tears it down.
+
+_TEMP_PASSETTO_PROC = None
+_TEMP_PASSETTO_DEFAULT_PORT = 8089
+
+
+def _kill_port_holders(port):
+    """SIGKILL anything listening on `port` (best-effort). Used to clear an
+    orphan passetto-server before binding our own. lsof is on PATH inside
+    the Backend nix shell and on most Linux base images."""
+    import shutil as _sh, subprocess as _sp
+    if not _sh.which("lsof"):
+        return
+    try:
+        out = _sp.run(["lsof", "-ti", f":{port}"],
+                      capture_output=True, text=True, timeout=5)
+    except Exception:
+        return
+    pids = [p for p in out.stdout.split() if p.strip()]
+    for pid in pids:
+        try:
+            os.kill(int(pid), 9)
+            print(f"  Killed orphan PID {pid} holding port {port}")
+        except Exception:
+            pass
+
+def _start_temp_passetto(from_env, to_env, env_config):
+    """Spawn passetto-server pointed at <from_env>.test_dashboard_<to_env>.
+
+    Sets the module-level `_PASSETTO_URL` so `_encrypt_via_obj` talks to this
+    instance instead of the mobility-stack one on 8079. Returns the subprocess
+    handle; caller is responsible for calling `_stop_temp_passetto()` on exit
+    (we wire that via try/finally in cmd_patch).
+    """
+    global _TEMP_PASSETTO_PROC, _PASSETTO_URL
+    import subprocess, time, requests
+
+    src_env = env_config.get(from_env)
+    if not src_env:
+        sys.exit(f"Environment '{from_env}' not in environments.json")
+    src = src_env.get("default", {})
+    if "_execPod" in src or src_env.get("execPod"):
+        sys.exit(
+            f"`patch --from {from_env}` needs direct DB access to spawn the "
+            f"temp passetto-server. kubectl-exec-only envs are not supported "
+            f"for the patch step. Run patch on a host with direct access."
+        )
+
+    db_name = f"test_dashboard_{to_env}"
+    port = int(os.environ.get("CONFIG_SYNC_PASSETTO_PORT", _TEMP_PASSETTO_DEFAULT_PORT))
+    conn_str = (
+        f"host={src['host']} port={src.get('port', 5432)} "
+        f"dbname={db_name} user={src['user']} password='{src.get('password', '')}'"
+    )
+
+    # Reap any orphan passetto-server holding the port from a previous run
+    # (process died before `_stop_temp_passetto` ran, e.g. SIGKILL on the
+    # parent). Without this the new server can't bind.
+    _kill_port_holders(port)
+
+    print(f"  Starting temp passetto-server on :{port} -> {src['host']}:{src.get('port', 5432)}/{db_name}")
+
+    env = os.environ.copy()
+    env["PASSETTO_PG_BACKEND_CONN_STRING"] = conn_str
+    env["MASTER_PASSWORD"] = env.get("MASTER_PASSWORD", "1")
+    env["PORT"] = str(port)
+
+    # Prefer an arch-specific binary bundled under bin/ (arm64/aarch64 binary
+    # for Apple Silicon dev, x86_64 binary for Linux containers). Fall back to
+    # the unsuffixed bundle path and then to PATH so the same code keeps
+    # working inside a nix devshell where passetto-server is already on PATH.
+    import platform
+    arch = platform.machine().lower()
+    if arch in ("arm64", "aarch64"):
+        arch_key = "aarch64"
+    elif arch in ("x86_64", "amd64"):
+        arch_key = "x86_64"
+    else:
+        arch_key = arch
+    candidates = [
+        SCRIPT_DIR / "bin" / f"passetto-server-{arch_key}",
+        SCRIPT_DIR / "passetto-server",
+    ]
+    exe = next((str(p) for p in candidates if p.exists()), "passetto-server")
+
+    log_path = SCRIPT_DIR / "passetto-server.log"
+    log = open(log_path, "w")
+    try:
+        _TEMP_PASSETTO_PROC = subprocess.Popen(
+            [exe], env=env, stdout=log, stderr=subprocess.STDOUT,
+        )
+    except FileNotFoundError:
+        sys.exit(
+            f"passetto-server not found at {candidates[0]}, {candidates[1]}, or on PATH. "
+            f"Drop a binary for arch={arch_key} into {SCRIPT_DIR}/bin/, "
+            f"or run config_transfer.py from inside the Backend nix shell."
+        )
+
+    url = f"http://localhost:{port}"
+    deadline = time.time() + 30
+    while time.time() < deadline:
+        if _TEMP_PASSETTO_PROC.poll() is not None:
+            sys.exit(
+                f"passetto-server exited (code {_TEMP_PASSETTO_PROC.returncode}). "
+                f"Check {log_path}. Common causes: MASTER_PASSWORD wrong for the "
+                f"seeded Master row, or `{db_name}` not seeded on {src['host']}."
+            )
+        try:
+            r = requests.post(f"{url}/encrypt",
+                              json={"value": 'S"ping"', "keyId": 1}, timeout=2)
+            if r.status_code == 200:
+                _PASSETTO_URL = url
+                print(f"  passetto-server ready on {url} (db={db_name})")
+                return
+        except Exception:
+            pass
+        time.sleep(0.5)
+    _stop_temp_passetto()
+    sys.exit(f"passetto-server did not become ready within 30s. See {log_path}.")
+
+
+def _stop_temp_passetto():
+    global _TEMP_PASSETTO_PROC
+    if _TEMP_PASSETTO_PROC is None:
+        return
+    if _TEMP_PASSETTO_PROC.poll() is None:
+        _TEMP_PASSETTO_PROC.terminate()
+        try:
+            _TEMP_PASSETTO_PROC.wait(timeout=5)
+        except Exception:
+            _TEMP_PASSETTO_PROC.kill()
+    _TEMP_PASSETTO_PROC = None
+
+
 def cmd_patch(args):
     """Patch: read raw export, apply all overrides, write patched dump.
 
     Reads from: assets/data/<from_env>/
     Writes to:  assets/data/<from>_to_<to>/
-    Applies: global replacements, re-encryption via passetto /encrypt/obj, merge_json
-    Starts passetto automatically if not running (uses seed DB on port 5422).
+    Applies: global replacements, re-encryption via passetto /encrypt/obj, merge_json.
+    Spawns a temp passetto-server against <from_env>.test_dashboard_<to_env>
+    so re-encryption uses the target env's keys; tears it down on exit.
     """
     from_env = args.source_env
     to_env = args.target_env
     direction = f"{from_env}_to_{to_env}"
 
     print(f"Patching: {from_env} -> {to_env}\n")
+
+    env_config = load_environments()
+    _start_temp_passetto(from_env, to_env, env_config)
+    try:
+        _cmd_patch_inner(args, from_env, to_env, direction)
+    finally:
+        _stop_temp_passetto()
+
+
+def _cmd_patch_inner(args, from_env, to_env, direction):
 
     config_tables = load_config_tables()
     patch_config = load_patches().get(direction, {})

@@ -1,27 +1,29 @@
 """Juspay payment gateway mock — orders, offers, payouts, mandates.
 
-The `data` dict from POST /mock/status is deep-merged into responses.
+The `response` dict from POST /mock/override is deep-merged into responses.
 This lets test collections override any response field:
 
-  POST /mock/status {
+  POST /mock/override {
     "service": "juspay",
-    "id": ["order-123"],
-    "status": "CHARGED",
-    "data": {
+    "extract": "path.2",
+    "value": "order-123",
+    "match": "/orders",
+    "response": {
+      "status": "CHARGED",
       "amount": 150.0,
       "refunds": [{"id": "re_1", "amount": 50, "status": "succeeded"}],
       "offers": [{"offer_id": "FLAT50", "offer_code": "FLAT50", "status": "ELIGIBLE"}]
     }
   }
 
-Fields in `data` are merged into the default response — overriding status, adding
-refunds/offers blocks, or changing any field the test needs.
+Fields in `response` are merged into the default response — overriding status,
+adding refunds/offers blocks, or changing any field the test needs.
 """
 
 import json
 import uuid
 from datetime import datetime, timezone
-from status_store import deep_merge
+from status_store import add_override, deep_merge
 
 
 def handle(handler, path, body):
@@ -60,11 +62,8 @@ def handle(handler, path, body):
 
     # ── Create order / session: POST ──
     if handler.command == "POST" and ("order" in path_lower or "session" in path_lower):
-        from status_store import set_status
         oid = order_id_from_body or f"mock-order-{uuid.uuid4().hex[:8]}"
         short_id = order_short_id_from_body or f"mock-short-{uuid.uuid4().hex[:6]}"
-        ids = list({oid, short_id})
-        set_status("juspay", ids, "NEW")
         return _create_order(handler, oid, short_id)
 
     # ── Payout / fulfillment ──
@@ -86,14 +85,16 @@ def handle(handler, path, body):
 
 def _refund(handler, order_id, body):
     """Handle POST /orders/{orderId}/refunds.
-    Auto-updates the order's status store to include refund data with REFUND_PENDING.
-    Subsequent GET /orders/{orderId} will return the refund in the response.
-    Returns AutoRefundResp.
-    """
-    from status_store import set_status, get_status
-    from urllib.parse import unquote_plus
 
-    # Parse form-urlencoded body (Juspay SDK sends form data)
+    Installs a /mock/override rule keyed on path.2 == order_id so that subsequent
+    GET /juspay/orders/{order_id} returns the refund in the response. Returns
+    AutoRefundResp. Multiple refunds for the same order accumulate because each
+    override entry remains in the rule list and check_overrides deep-merges all
+    matches; the latest refunds array wins.
+    """
+    from urllib.parse import unquote_plus
+    from status_store import list_overrides
+
     params = {}
     if body:
         text = body.decode("utf-8") if isinstance(body, bytes) else body
@@ -108,9 +109,17 @@ def _refund(handler, order_id, body):
     amount = float(params.get("amount", 0))
     unique_request_id = params.get("unique_request_id", f"ref-{uuid.uuid4().hex[:8]}")
 
-    # Update the existing order entry to include refund data
-    existing = get_status("juspay", order_id)
-    existing_data = existing.get("data", {}) if existing else {}
+    # Pull any previously-installed refunds for this order from active overrides
+    refunds = []
+    existing_status = "CHARGED"
+    for o in list_overrides():
+        if (o["service"] == "juspay" and o["extract"] == "path.2"
+                and o["value"] == str(order_id)):
+            resp = o.get("response") or {}
+            if resp.get("refunds"):
+                refunds = list(resp["refunds"])
+            if resp.get("status"):
+                existing_status = resp["status"]
 
     refund_entry = {
         "id": f"rfnd-{uuid.uuid4().hex[:12]}",
@@ -122,22 +131,25 @@ def _refund(handler, order_id, body):
         "unique_request_id": unique_request_id,
         "arn": None,
     }
-
-    # Merge refund into existing data
-    refunds = existing_data.get("refunds", []) or []
     refunds.append(refund_entry)
-    existing_data["refunds"] = refunds
-    existing_data["amount_refunded"] = sum(r.get("amount", 0) for r in refunds)
+    amount_refunded = sum(r.get("amount", 0) for r in refunds)
 
-    set_status("juspay", order_id, existing.get("status", "CHARGED") if existing else "CHARGED", existing_data)
+    add_override(
+        "juspay", "path.2", order_id,
+        {
+            "status": existing_status,
+            "refunds": refunds,
+            "amount_refunded": amount_refunded,
+        },
+        match="/orders",
+    )
 
-    # Return AutoRefundResp
     handler._json({
         "order_id": order_id,
         "merchant_id": "nammayatri",
         "customer_id": "mock-customer",
         "currency": "INR",
-        "amount_refunded": existing_data["amount_refunded"],
+        "amount_refunded": amount_refunded,
         "refunds": refunds,
     })
 

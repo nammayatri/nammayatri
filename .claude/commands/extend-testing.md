@@ -15,8 +15,7 @@ You are extending the NammaYatri testing framework. Read `Backend/.cursor/docs/1
 3. All dynamic identifiers (mobile numbers, vehicle registrations) MUST be random — generate in collection prerequest script using `pm.collectionVariables.set('_test_*', ...)`
 4. City/merchant config goes in environment files (`Local_<PREFIX>_<City>.postman_environment.json`), never hardcoded in collections
 5. For dashboard API access, use the Switch City pattern: call `POST {{dashboard_base_url}}/user/switchMerchantAndCity` to get a city-specific token
-6. Use `POST {{mockServerUrl}}/mock/status` to control payment states by order ID
-7. Use `POST {{mockServerUrl}}/mock/override` to control responses by request field matching (e.g., `body.mob` for encrypted CRIS requests)
+6. Use `POST {{mockServerUrl}}/mock/override` to control responses by request field matching. For payment states, use `extract: path.2, match: /orders, value: {{payment_order_id}}, response: {status: CHARGED, ...}`. For breaking encrypted external BPP APIs, use `extract: body.mob, value: <rider mobile>, response: {...}`
 8. Always `DELETE /mock/override` with specific `{service, extract, value}` after use — never clear all overrides (concurrent safety)
 
 ## When adding a new mock service

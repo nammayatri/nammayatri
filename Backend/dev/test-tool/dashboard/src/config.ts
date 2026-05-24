@@ -33,3 +33,30 @@ export const MOCK_SERVER_URL = process.env.REACT_APP_MOCK_SERVER_URL || 'http://
 export const RIDER_URL = process.env.REACT_APP_RIDER_URL || 'http://localhost:8013';
 export const DRIVER_URL = process.env.REACT_APP_DRIVER_URL || 'http://localhost:8016';
 export const PROVIDER_DASHBOARD_URL = process.env.REACT_APP_PROVIDER_DASHBOARD_URL || 'http://localhost:8018';
+// Default URL when no per-env entry exists.
+export const CONFIG_SYNC_BASE = process.env.REACT_APP_CONFIG_SYNC_BASE || 'http://localhost:8090';
+
+// Per-source-env URL map. Same config-sync server can live in different
+// k8s clusters depending on which `--from` env it talks to (each env's
+// cluster runs its own copy so it has direct DB access). Override at build
+// time via REACT_APP_CONFIG_SYNC_URLS (JSON object), e.g.:
+//
+//   REACT_APP_CONFIG_SYNC_URLS='{"master":"https://config-sync.master.internal",
+//                                "prod":"https://config-sync.prod.internal"}'
+//
+// Anything missing falls back to CONFIG_SYNC_BASE.
+const _parseUrlMap = (): Record<string, string> => {
+  const raw = process.env.REACT_APP_CONFIG_SYNC_URLS;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  } catch { /* fall through */ }
+  return {};
+};
+export const CONFIG_SYNC_URLS: Record<string, string> = _parseUrlMap();
+
+export function configSyncBaseFor(env: string | null | undefined): string {
+  if (env && CONFIG_SYNC_URLS[env]) return CONFIG_SYNC_URLS[env];
+  return CONFIG_SYNC_BASE;
+}

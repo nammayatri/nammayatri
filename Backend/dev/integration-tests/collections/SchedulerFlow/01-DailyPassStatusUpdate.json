@@ -261,6 +261,21 @@
       "name": "Mock Juspay CHARGED (Pass A)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('_pass_a_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
@@ -280,16 +295,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_a_order_id}}\", \"{{_pass_a_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_a_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }
@@ -381,6 +396,21 @@
       "name": "Mock Juspay CHARGED (Pass B)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('_pass_b_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
@@ -400,16 +430,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"id\": [\"{{_pass_b_order_id}}\", \"{{_pass_b_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{_pass_b_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }
@@ -473,16 +503,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"purchased_pass\", \"set\": {\"status\": \"PreBooked\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{_pass_b_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"table\": \"purchasedPass\", \"primaryKey\": {\"column\": \"id\", \"value\": \"{{_pass_b_id}}\"}, \"set\": {\"status\": \"PreBooked\"}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }
@@ -497,8 +527,8 @@
             "exec": [
               "pm.test('Got config row', function () { pm.response.to.have.status(200); });",
               "var row = (pm.response.json().rows || [])[0] || {};",
-              "pm.collectionVariables.set('_prev_batch_size', row.pass_status_update_batch_size === null || row.pass_status_update_batch_size === undefined ? '' : String(row.pass_status_update_batch_size));",
-              "console.log('Previous pass_status_update_batch_size:', pm.collectionVariables.get('_prev_batch_size'));"
+              "pm.collectionVariables.set('_prev_batch_size', row.passStatusUpdateBatchSize === null || row.passStatusUpdateBatchSize === undefined ? '' : String(row.passStatusUpdateBatchSize));",
+              "console.log('Previous passStatusUpdateBatchSize:', pm.collectionVariables.get('_prev_batch_size'));"
             ],
             "type": "text/javascript"
           }
@@ -514,16 +544,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"select\": [\"pass_status_update_batch_size\"], \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"table\": \"riderConfig\", \"primaryKey\": {\"column\": \"merchantOperatingCityId\", \"value\": \"{{bap_merchant_operating_city_id}}\"}, \"columns\": [\"passStatusUpdateBatchSize\"]}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "raw": "{{contextApiUrl}}/api/db/select",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "select"
           ]
         }
@@ -552,16 +582,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"rider_config\", \"set\": {\"pass_status_update_batch_size\": 1}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"merchant_operating_city_id\", \"val\": \"{{bap_merchant_operating_city_id}}\", \"op\": \"=\"}]}"
+          "raw": "{\"table\": \"riderConfig\", \"primaryKey\": {\"column\": \"merchantOperatingCityId\", \"value\": \"{{bap_merchant_operating_city_id}}\"}, \"set\": {\"passStatusUpdateBatchSize\": 1}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }
@@ -614,27 +644,28 @@
           "listen": "test",
           "script": {
             "exec": [
-              "// Poll Pass A status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Expired'.",
+              "// Poll Pass A status via the rider domain API /multimodal/pass/list; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Expired'.",
               "var MAX_ATTEMPTS = 5;",
               "var POLL_INTERVAL_MS = 5000;",
               "var targetId = pm.collectionVariables.get('_pass_a_id');",
-              "var mockUrl = pm.environment.get('mockServerUrl');",
+              "var baseUrl = pm.environment.get('baseUrl_app');",
+              "var riderToken = pm.environment.get('rider_token');",
               "var attempt = 0;",
               "var lastStatus = null;",
               "",
               "function poll() {",
               "  attempt++;",
               "  pm.sendRequest({",
-              "    url: mockUrl + '/mock/sql/select',",
-              "    method: 'POST',",
-              "    header: { 'Content-Type': 'application/json' },",
-              "    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+              "    url: baseUrl + '/multimodal/pass/list',",
+              "    method: 'GET',",
+              "    header: { 'token': riderToken, 'Content-Type': 'application/json' }",
               "  }, function (err, res) {",
               "    if (err) {",
               "      console.log('Wait for Pass A to be Expired attempt', attempt, 'error:', err.message || err);",
               "    } else {",
-              "      var row = ((res.json().rows) || [])[0] || {};",
-              "      lastStatus = row.status;",
+              "      var passes = res.json() || [];",
+              "      var match = passes.filter(function (p) { return p.id === targetId; })[0] || {};",
+              "      lastStatus = match.status;",
               "      console.log('Wait for Pass A to be Expired attempt', attempt, 'status:', lastStatus);",
               "    }",
               "    var done = lastStatus === 'Expired' || attempt >= MAX_ATTEMPTS;",
@@ -674,27 +705,28 @@
           "listen": "test",
           "script": {
             "exec": [
-              "// Poll Pass B status; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Active'.",
+              "// Poll Pass B status via the rider domain API /multimodal/pass/list; retry every POLL_INTERVAL_MS up to MAX_ATTEMPTS, exit early on 'Active'.",
               "var MAX_ATTEMPTS = 5;",
               "var POLL_INTERVAL_MS = 5000;",
               "var targetId = pm.collectionVariables.get('_pass_b_id');",
-              "var mockUrl = pm.environment.get('mockServerUrl');",
+              "var baseUrl = pm.environment.get('baseUrl_app');",
+              "var riderToken = pm.environment.get('rider_token');",
               "var attempt = 0;",
               "var lastStatus = null;",
               "",
               "function poll() {",
               "  attempt++;",
               "  pm.sendRequest({",
-              "    url: mockUrl + '/mock/sql/select',",
-              "    method: 'POST',",
-              "    header: { 'Content-Type': 'application/json' },",
-              "    body: { mode: 'raw', raw: JSON.stringify({ db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'purchased_pass', select: ['id','status'], where_clause: [{ column_name: 'id', val: targetId, op: '=' }] }) }",
+              "    url: baseUrl + '/multimodal/pass/list',",
+              "    method: 'GET',",
+              "    header: { 'token': riderToken, 'Content-Type': 'application/json' }",
               "  }, function (err, res) {",
               "    if (err) {",
               "      console.log('Wait for Pass B to be Active attempt', attempt, 'error:', err.message || err);",
               "    } else {",
-              "      var row = ((res.json().rows) || [])[0] || {};",
-              "      lastStatus = row.status;",
+              "      var passes = res.json() || [];",
+              "      var match = passes.filter(function (p) { return p.id === targetId; })[0] || {};",
+              "      lastStatus = match.status;",
               "      console.log('Wait for Pass B to be Active attempt', attempt, 'status:', lastStatus);",
               "    }",
               "    var done = lastStatus === 'Active' || attempt >= MAX_ATTEMPTS;",
@@ -786,13 +818,12 @@
           "script": {
             "exec": [
               "var prev = pm.collectionVariables.get('_prev_batch_size');",
-              "var setVal = (prev === '' || prev === undefined || prev === null) ? 'null' : String(parseInt(prev, 10));",
+              "var setVal = (prev === '' || prev === undefined || prev === null) ? null : parseInt(prev, 10);",
               "var mocId = pm.environment.get('bap_merchant_operating_city_id');",
               "var payload = {",
-              "  db_name: 'atlas_dev', db_schema: 'atlas_app', table_name: 'rider_config',",
-              "  set: { pass_status_update_batch_size: setVal === 'null' ? null : parseInt(setVal, 10) },",
-              "  touch_updated_at: true,",
-              "  where_clause: [{ column_name: 'merchant_operating_city_id', val: mocId, op: '=' }]",
+              "  table: 'riderConfig',",
+              "  primaryKey: { column: 'merchantOperatingCityId', value: mocId },",
+              "  set: { passStatusUpdateBatchSize: setVal }",
               "};",
               "pm.collectionVariables.set('_restore_payload', JSON.stringify(payload));",
               "console.log('Restoring batch size to:', setVal);"
@@ -823,13 +854,13 @@
           "raw": "{{_restore_payload}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "raw": "{{contextApiUrl}}/api/db/update",
           "host": [
-            "{{mockServerUrl}}"
+            "{{contextApiUrl}}"
           ],
           "path": [
-            "mock",
-            "sql",
+            "api",
+            "db",
             "update"
           ]
         }

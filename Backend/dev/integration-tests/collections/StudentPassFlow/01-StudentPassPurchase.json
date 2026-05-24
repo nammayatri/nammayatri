@@ -1113,6 +1113,21 @@
       "name": "Mock Juspay CHARGED",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('payment_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
@@ -1132,16 +1147,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"id\": [\"{{payment_order_id}}\", \"{{payment_order_short_id}}\"], \"status\": \"CHARGED\", \"data\": {\"amount\": 1.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{payment_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 1.0}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }

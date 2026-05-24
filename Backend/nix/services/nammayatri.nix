@@ -281,7 +281,7 @@ in
 
         processes = lib.mkMerge [
           (lib.mkIf (!inBackend) (disableAll backendProcs))
-          (lib.mkIf (!inTestDash) (disableAll [ "test-local-api" "test-dashboard" ]))
+          (lib.mkIf (!inTestDash) (disableAll [ "test-local-api" "test-dashboard" "config-sync-server" ]))
           # When the backend slice is disabled, the test-dashboard / test-local-api
           # processes would otherwise wait on disabled backend processes
           # (nammayatri-init, rider-app-exe, …) — process-compose treats that as
@@ -290,6 +290,7 @@ in
           (lib.mkIf (!inBackend) {
             test-local-api.depends_on = lib.mkForce { };
             test-dashboard.depends_on = lib.mkForce { };
+            config-sync-server.depends_on = lib.mkForce { };
           })
           # kafka should start only after zookeeper is healthy
           (lib.mkIf inBackend { kafka.depends_on."zookeeper".condition = "process_healthy"; })
@@ -562,6 +563,30 @@ in
                 max_restarts = 30;
               };
             };
+            # Thin HTTP wrapper around config_transfer.cmd_export / cmd_patch so the
+            # test-dashboard's Config Sync panel can trigger export+patch via REST.
+            # Same python deps as test-context-api plus boto3 for --s3 uploads.
+            # passetto-service is on PATH so the patch step can spawn its own
+            # throwaway passetto-server against test_dashboard_<to>.
+            config-sync-server = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "config-sync-server";
+                runtimeInputs = [
+                  (pkgs.python3.withPackages (ps: with ps; [ psycopg2 requests python-dotenv boto3 ]))
+                  inputs'.passetto.packages.passetto-service
+                ];
+                text = ''
+                  exec python3 dev/config-sync/server.py
+                '';
+              };
+              namespace = lib.mkForce "test";
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 30;
+              };
+            };
             metabase = {
               imports = [ common ];
               command = pkgs.writeShellApplication {
@@ -779,6 +804,10 @@ in
                   port = 8116;
                   path = "/ui";
                 };
+                initial_delay_seconds = 30;
+                period_seconds = 5;
+                failure_threshold = 30;
+                timeout_seconds = 5;
               };
               # Tightened: ~60s of consecutive failures past initial_delay → kill
               # + restart (was ~210s). Haskell + migrations get a 90s startup
@@ -888,6 +917,10 @@ in
                   port = 8013;
                   path = "/v2";
                 };
+                initial_delay_seconds = 30;
+                period_seconds = 5;
+                failure_threshold = 30;
+                timeout_seconds = 5;
               };
               # Same tightened liveness as dynamic-offer-driver-app-exe.
               liveness_probe = {

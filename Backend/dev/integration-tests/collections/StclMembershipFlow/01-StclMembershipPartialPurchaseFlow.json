@@ -170,6 +170,21 @@
       "name": "Override Juspay Status (CHARGED, first purchase)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('stcl_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 200.0, \"effective_amount\": 200.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\"}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
@@ -193,16 +208,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 200.0,\n    \"effective_amount\": 200.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{stcl_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 200.0, \"effective_amount\": 200.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\"}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }
@@ -424,6 +439,21 @@
       "name": "Override Juspay Status (CHARGED, top-up)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('stcl_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 300.0, \"effective_amount\": 300.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\"}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
@@ -447,16 +477,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{stcl_order_id}}\", \"{{stcl_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 300.0,\n    \"effective_amount\": 300.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\"\n  }\n}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{stcl_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 300.0, \"effective_amount\": 300.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\"}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }

@@ -6,6 +6,7 @@ import { ToolsPanel } from './components/ToolsPanel';
 import { RemoteStackPanel } from './components/RemoteStackPanel';
 import { FinanceViewer } from './components/FinanceViewer';
 import { CoverageReportPanel } from './components/CoverageReport';
+import { ConfigSyncPanel } from './components/ConfigSyncPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import { DialogHost } from './components/Dialogs';
@@ -546,7 +547,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote' | 'coverage'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote' | 'coverage' | 'configsync'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -987,6 +988,9 @@ function App() {
           <button className={`mode-tab ${appMode === 'coverage' ? 'active' : ''}`} onClick={() => setAppMode('coverage')}>
             Code Coverage
           </button>
+          <button className={`mode-tab ${appMode === 'configsync' ? 'active' : ''}`} onClick={() => setAppMode('configsync')}>
+            Config Sync
+          </button>
           <span className="mode-tabs-spacer" />
           <TopBarActions />
         </div>
@@ -1003,6 +1007,9 @@ function App() {
             </div>
             <div style={{ display: appMode === 'coverage' ? 'contents' : 'none' }}>
               <CoverageReportPanel />
+            </div>
+            <div style={{ display: appMode === 'configsync' ? 'contents' : 'none' }}>
+              <ConfigSyncPanel />
             </div>
             <div style={{ display: appMode === 'custom' ? 'contents' : 'none' }}>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
@@ -1065,7 +1072,7 @@ function App() {
             />
             </div>
           </div>
-          {appMode !== 'remote' && appMode !== 'tools' && (
+          {appMode !== 'remote' && appMode !== 'tools' && appMode !== 'configsync' && (
             <>
               <div className="log-resize-handle" onMouseDown={onResizeStart} />
               <div className="content-logs" style={{ width: logWidth }}>

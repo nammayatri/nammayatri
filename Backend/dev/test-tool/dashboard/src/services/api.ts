@@ -3,7 +3,6 @@ import { Config, Step } from '../types';
 import { ApiDef } from '../api-catalog/types';
 import { ParsedStep } from './postman-parser';
 import { resolveVariables, executeTestScript, executePrereqScript, VariableStores, PostmanRuntimeResult } from './postman-runtime';
-import { startLogCapture, stopLogCapture } from './context';
 import { PROXY_BASE } from '../config';
 
 export interface ApiResult {
@@ -306,8 +305,10 @@ export async function callPostmanStep(
     await executePrereqScript(step.prereqScript, stores);
   }
 
-  // 2. Start tail -f on all service logs
-  const logToken = await startLogCapture();
+  // Log + mock-hits capture is the *caller's* responsibility now — see
+  // startStepCapture() in CollectionRunner. It opens both streams before this
+  // call, signals done() after, and stitches serviceLogs/mockHits onto the
+  // step state.
 
   // 4. Resolve URL
   const resolvedPath = resolveVariables(step.pathTemplate, stores);
@@ -378,12 +379,7 @@ export async function callPostmanStep(
     scriptError = result.error;
   }
 
-  // 9. Stop capture. The backend's stop_log_tails does adaptive settle waiting
-  //    (no new lines for `settle_ms`, capped at `max_wait_ms`) — that's where
-  //    the wait for async service activity (beckn callbacks, allocator) lives.
-  const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
-
-  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
 function normalizeHeaders(h: any): Record<string, string> {

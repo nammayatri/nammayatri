@@ -8,7 +8,10 @@
 
 - `Backend/dev/integration-tests/collections/<Suite>/` — Postman collections
   with `Local/` + `Master/` env-type subfolders. Per-collection prerequest
-  auto-skips mock-only steps when `envType ≠ Local`.
+  auto-skips mock-only steps when `envType ≠ Local`. Each env file is also
+  auto-mapped to an upstream config-sync source (`master` always, plus
+  `prod_international` for Helsinki and `prod` elsewhere) — surfaced as the
+  dashboard's **Sync From** dropdown. See `Backend/dev/integration-tests/Rules.md`.
 - `Backend/dev/mock-servers/` — unified mock for external HTTP services
   (port 8080). Process: `mock-server`.
 - `Backend/dev/test-tool/context-api/server.py` — control plane on
