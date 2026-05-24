@@ -110,12 +110,12 @@ jobs:
         env:
           DOCKER_REGISTRY: ghcr.io
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage
+          nix build .#packages.${{ matrix.system }}.dockerImage --out-link ./docker-result
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
-          gunzip -c ./result > image.tar || cp ./result image.tar
+          gunzip -c ./docker-result > image.tar || cp ./docker-result image.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
