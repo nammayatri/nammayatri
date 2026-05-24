@@ -13,6 +13,7 @@ import {
   remoteStatus,
   remoteClearData,
   remoteSessions,
+  remoteSyncCaddyPort,
   RemoteTarget,
 } from '../services/remote';
 import './RemoteStackPanel.css';
@@ -25,6 +26,7 @@ interface PanelState {
   startRows?: number;
   status?: string;
   error?: string;
+  caddyPort?: number;
 }
 
 const DEFAULT_REMOTE_DIR = '/tmp/nammayatri';
@@ -49,6 +51,7 @@ const defaultTarget = (): RemoteTarget => ({
   user: '',
   port: 22,
   identityFile: '',
+  devName: '',
   remoteDir: DEFAULT_REMOTE_DIR,
   copyMode: 'rsync',
   command: DEFAULT_COMMAND,
@@ -61,6 +64,7 @@ export const RemoteStackPanel: React.FC = () => {
   const [override] = useState<string | null>(getContextApiBaseOverride());
 
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
+  const hasDevName = isLocalhost || !!target.devName?.trim();
 
   // Persist form fields across page reloads / tab switches.
   useEffect(() => {
@@ -69,6 +73,12 @@ export const RemoteStackPanel: React.FC = () => {
     } catch {
       /* ignore */
     }
+    // Sync the host to local-api so launcher specs can use ${host}.
+    fetch(`${LOCAL_API_BASE}/api/remote/host`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ host: target.host || 'localhost' }),
+    }).catch(() => {});
   }, [target]);
 
   // On mount, ask local-api whether any sessions are still alive and reattach
@@ -142,8 +152,18 @@ export const RemoteStackPanel: React.FC = () => {
     ),
   );
 
-  const update = (k: keyof RemoteTarget, v: string | number) =>
-    setTarget(prev => ({ ...prev, [k]: v }));
+  const update = (k: keyof RemoteTarget, v: string | number) => {
+    setTarget(prev => {
+      const next = { ...prev, [k]: v };
+      // Auto-derive remoteDir from devName.
+      if (k === 'devName' && typeof v === 'string') {
+        const name = v.trim().toLowerCase();
+        next.devName = name;
+        next.remoteDir = name ? `/tmp/${name}/nammayatri` : DEFAULT_REMOTE_DIR;
+      }
+      return next;
+    });
+  };
 
   const onDeploy = async () => {
     setBusy('deploy');
@@ -159,7 +179,11 @@ export const RemoteStackPanel: React.FC = () => {
           status: 'No copy needed (localhost or copyMode=skip).',
         }));
       } else {
-        setState(prev => ({ ...prev, deploySession: res.session, status: 'rsync running…' }));
+        setState(prev => ({
+          ...prev,
+          deploySession: res.session,
+          status: 'rsync running…',
+        }));
       }
     } finally {
       setBusy(null);
@@ -216,6 +240,21 @@ export const RemoteStackPanel: React.FC = () => {
     }
   };
 
+  const onSyncCaddyPort = async () => {
+    if (!target.devName?.trim() || isLocalhost) return;
+    try {
+      const res = await remoteSyncCaddyPort(target);
+      if (res.caddyPort != null) {
+        setState(prev => ({ ...prev, caddyPort: res.caddyPort }));
+      } else if (res.error) {
+        setState(prev => ({ ...prev, error: res.error }));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setState(prev => ({ ...prev, error: `Caddy port sync failed: ${msg}` }));
+    }
+  };
+
   const onUseRemoteContextApi = () => {
     const host = target.host || 'localhost';
     const url = `http://${host}:7082`;
@@ -268,11 +307,26 @@ export const RemoteStackPanel: React.FC = () => {
           />
         </label>
         <label>
+          <span>Developer name (Full name without spaces and special characters) {!isLocalhost && <span style={{ color: '#e53e3e' }}>*</span>}</span>
+          <input
+            value={target.devName || ''}
+            onChange={e => update('devName', e.target.value)}
+            placeholder="e.g. rohitsaini"
+            disabled={isLocalhost}
+            required={!isLocalhost}
+            style={!isLocalhost && !target.devName?.trim() ? { borderColor: '#e53e3e' } : undefined}
+          />
+          {!isLocalhost && !target.devName?.trim() && (
+            <span style={{ color: '#e53e3e', fontSize: '0.8em' }}>Required for remote hosts</span>
+          )}
+        </label>
+        <label>
           <span>Remote dir</span>
           <input
             value={target.remoteDir || DEFAULT_REMOTE_DIR}
             onChange={e => update('remoteDir', e.target.value)}
-            disabled={isLocalhost}
+            disabled={isLocalhost || !!target.devName?.trim()}
+            title={target.devName?.trim() ? 'Auto-derived from developer name' : undefined}
           />
         </label>
         <label>
@@ -289,17 +343,24 @@ export const RemoteStackPanel: React.FC = () => {
       </div>
 
       <div className="rsp-actions">
-        <button onClick={onDeploy} disabled={!!busy}>
+        <button onClick={onDeploy} disabled={!!busy || !hasDevName}>
           {busy === 'deploy' ? 'Deploying…' : 'Deploy (rsync)'}
         </button>
-        <button onClick={onClearData} disabled={!!busy} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
+        <button onClick={onClearData} disabled={!!busy || !hasDevName} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
           {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
         </button>
-        <button onClick={onStart} disabled={!!busy}>
+        <button onClick={onStart} disabled={!!busy || !hasDevName}>
           {busy === 'start' ? 'Starting…' : 'Start mobility-stack-dev'}
         </button>
-        <button onClick={onStop} disabled={!state.startSession || busy === 'stop'}>
+        <button onClick={onStop} disabled={!state.startSession || busy === 'stop' || !hasDevName}>
           {busy === 'stop' ? 'Stopping…' : 'Stop'}
+        </button>
+        <button
+          onClick={onSyncCaddyPort}
+          disabled={!state.startSession || !target.devName?.trim() || isLocalhost}
+          title="Read the resolved Caddy port from the running stack and store it in the registry"
+        >
+          Sync Caddy Port
         </button>
         <span className="rsp-spacer" />
         <button onClick={onUseRemoteContextApi} disabled={!state.startSession} title="Point the dashboard at this host's test-context-api (port 7082) and reload">
@@ -319,6 +380,15 @@ export const RemoteStackPanel: React.FC = () => {
           <code>{override || getContextApiBaseDefault()}</code>
           {override && <span className="rsp-tag">override</span>}
         </div>
+        {state.caddyPort != null && (
+          <div>
+            <span className="rsp-label">Caddy port:</span>{' '}
+            <code>{state.caddyPort}</code>
+            {target.host && !isLocalhost && (
+              <> — <code>http://{target.host}:{state.caddyPort}</code></>
+            )}
+          </div>
+        )}
         {state.status && <div className="rsp-status">{state.status}</div>}
         {state.error && <div className="rsp-error">{state.error}</div>}
       </div>

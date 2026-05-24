@@ -2,7 +2,7 @@ let common = ./common.dhall
 
 let hcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -13,7 +13,7 @@ let hcfg =
 
 let kafkaConsumerCfgs =
       { publicTransportQuotes =
-        { brokers = [ "localhost:29092" ]
+        { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
         , groupId = "publicTransportQuotesGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4
@@ -22,7 +22,7 @@ let kafkaConsumerCfgs =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -31,7 +31,7 @@ let rccfg =
       , connectReadOnly = True
       }
 
-in  { port = +8025
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8029)
     , graceTerminationPeriod = +90
     , hedisCfg = hcfg
     , hedisClusterCfg = rccfg

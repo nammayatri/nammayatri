@@ -4,7 +4,7 @@ let sec = ./secrets/public-transport-rider-platform.dhall
 
 let hcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -15,7 +15,7 @@ let hcfg =
 
 let hccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -24,7 +24,7 @@ let hccfg =
       , connectReadOnly = True
       }
 
-in  { port = +8091
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8091)
     , selfId = "mock-public-transport-bpp"
     , uniqueKeyId = "juspay-mobility-bpp-1-key1"
     , selfUri = "http://localhost:8091/"

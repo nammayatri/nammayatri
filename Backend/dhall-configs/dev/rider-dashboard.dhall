@@ -2,9 +2,11 @@ let common = ./common.dhall
 
 let sec = ./secrets/rider-dashboard.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -14,7 +16,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -24,7 +26,7 @@ let esqDBReplicaCfg =
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -41,13 +43,13 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , token = sec.appBackendToken
       }
 
 let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , token = sec.appBackendToken
       }
 
@@ -59,7 +61,7 @@ let bharatTaxi =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -70,7 +72,7 @@ let rccfg =
 
 let rccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -92,7 +94,7 @@ let cacConfig =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -113,7 +115,7 @@ in  { esqDBCfg
     , cutOffHedisCluster = False
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
-    , port = +8017
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8017)
     , migrationPath =
       [   env:RIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/ddl-migrations/rider-dashboard"
@@ -150,6 +152,6 @@ in  { esqDBCfg
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
     , inMemConfig
-    , metricsPort = +9991
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9991)
     , incomingAPIResponseTimeout = +15
     }

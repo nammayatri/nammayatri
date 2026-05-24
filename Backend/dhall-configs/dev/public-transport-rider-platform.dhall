@@ -4,7 +4,7 @@ let sec = ./secrets/public-transport-rider-platform.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -14,7 +14,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -24,7 +24,7 @@ let esqDBReplicaCfg =
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -34,7 +34,7 @@ let rcfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -42,7 +42,7 @@ let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -64,7 +64,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
-    , port = +8023
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8023)
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/public-transport-rider-platform.log" }

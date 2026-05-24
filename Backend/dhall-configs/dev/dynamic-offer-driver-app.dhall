@@ -4,6 +4,10 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
@@ -16,7 +20,7 @@ let slackNotificationConfig =
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -26,7 +30,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -38,7 +42,7 @@ let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqLocationDBCfg.connectUser
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
@@ -49,7 +53,7 @@ let esqLocationDBRepCfg =
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
@@ -59,7 +63,7 @@ let kafkaClickhouseCfg =
 let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_driver_offer_bpp"
       , tls = False
@@ -70,7 +74,7 @@ let dashboardClickhouseCfg = driverClickhouseCfg
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -81,7 +85,7 @@ let rcfg =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -92,7 +96,7 @@ let rccfg =
 
 let rccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -103,7 +107,7 @@ let rccfgSecondary =
 
 let ltsrcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -233,7 +237,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -243,7 +247,7 @@ let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , apiKey = sec.appBackendApikey
       , internalKey = sec.internalKey
       }
@@ -452,12 +456,12 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
-    , port = +8116
-    , metricsPort = +9997
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8116)
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9997)
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8016/beckn"
-    , selfUIUrl = "http://localhost:8016/ui/"
-    , selfBaseUrl = "http://localhost:8016/"
+    , nwAddress = "http://localhost:${driverAppPort}/beckn"
+    , selfUIUrl = "http://localhost:${driverAppPort}/ui/"
+    , selfBaseUrl = "http://localhost:${driverAppPort}/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config

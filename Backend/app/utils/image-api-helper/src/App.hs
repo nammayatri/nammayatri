@@ -24,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Common (defaultLoggerConfig)
 import Kernel.Utils.App (logRequestAndResponseGeneric)
 import Kernel.Utils.Logging
+import System.Environment (lookupEnv)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
@@ -32,7 +33,8 @@ import Network.Wai.Handler.Warp
 
 runMock :: (AppCfg -> AppCfg) -> IO ()
 runMock _cfgModifier = do
-  let appCfg = defaultAppCfg
+  servicePort <- lookupEnv "SERVICE_PORT"
+  let appCfg = defaultAppCfg {port = fromMaybe defaultAppCfg.port (servicePort >>= readMaybe)}
   withAppEnv appCfg $ \appEnv -> do
     let port = appCfg.port
         settings =

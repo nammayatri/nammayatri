@@ -4,7 +4,7 @@ let sec = ./secrets/rider-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -24,7 +24,7 @@ let esqDBReplicaCfg =
 
 let hedisCfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -35,7 +35,7 @@ let hedisCfg =
 
 let hedisClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -46,7 +46,7 @@ let hedisClusterCfg =
 
 let hedisSecondaryClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -70,7 +70,7 @@ let cacConfig =
 let kvConfigUpdateFrequency = +10
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -107,7 +107,7 @@ in  { hedisCfg
     , reviveThreshold = +2
     , schedulerType = common.schedulerType.RedisBased
     , maxShards = +5
-    , metricsPort = +9990
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9990)
     , kvConfigUpdateFrequency
     , runReviver = True
     , kafkaProducerCfg
