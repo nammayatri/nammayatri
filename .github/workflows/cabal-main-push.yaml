@@ -51,17 +51,17 @@ jobs:
       - name: Restore cabal cache
         run: |
           CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
-          KEY_FILE="$CACHE_ROOT/.cache-key"
+          KEY_FILE="$CACHE_ROOT/.cache-key-local"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle"
-            rm -rf "$CACHE_ROOT/dist-newstyle"
+            echo "Cache key changed, busting dist-newstyle-local"
+            rm -rf "$CACHE_ROOT/dist-newstyle-local"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          mkdir -p "$CACHE_ROOT/dist-newstyle-local" "$CACHE_ROOT/.cabal-dir"
           echo "$CURRENT_KEY" > "$KEY_FILE"
-          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newstyle-local" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
@@ -188,17 +188,17 @@ jobs:
       - name: Restore cabal cache
         run: |
           CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
-          KEY_FILE="$CACHE_ROOT/.cache-key"
+          KEY_FILE="$CACHE_ROOT/.cache-key-prod"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle"
-            rm -rf "$CACHE_ROOT/dist-newstyle"
+            echo "Cache key changed, busting dist-newstyle-prod"
+            rm -rf "$CACHE_ROOT/dist-newstyle-prod"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          mkdir -p "$CACHE_ROOT/dist-newstyle-prod" "$CACHE_ROOT/.cabal-dir"
           echo "$CURRENT_KEY" > "$KEY_FILE"
-          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newstyle-prod" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
