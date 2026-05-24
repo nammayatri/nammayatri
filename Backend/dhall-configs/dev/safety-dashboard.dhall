@@ -2,11 +2,9 @@ let common = ./common.dhall
 
 let sec = ./secrets/safety-dashboard.dhall
 
-let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
-
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = env:DB_PRIMARY_PORT ? 5434
+      , connectPort = 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -16,7 +14,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = env:DB_PRIMARY_PORT ? 5434
+      , connectPort = 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -26,7 +24,7 @@ let esqDBReplicaCfg =
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = env:REDIS_PORT ? 6379
+      , connectPort = 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -47,19 +45,19 @@ let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
-      , url = "http://localhost:${driverAppPort}/"
+      , url = "http://localhost:8016/"
       , token = sec.driverOfferBppToken
       }
 
 let driverOfferBppManagement =
       { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
-      , url = "http://localhost:${driverAppPort}/"
+      , url = "http://localhost:8016/"
       , token = sec.driverOfferBppToken
       }
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
+      , connectPort = 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -70,7 +68,7 @@ let rccfg =
 
 let rccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
+      , connectPort = 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -92,7 +90,7 @@ let cacConfig =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      { brokers = [ "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -109,7 +107,7 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
-    , port = Natural/toInteger (env:SERVICE_PORT ? 8025)
+    , port = +8025
     , migrationPath =
       [   env:SAFETY_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/ddl-migrations/safety-dashboard"
@@ -148,6 +146,6 @@ in  { esqDBCfg
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
     , inMemConfig
-    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9993)
+    , metricsPort = +9993
     , incomingAPIResponseTimeout = +15
     }
