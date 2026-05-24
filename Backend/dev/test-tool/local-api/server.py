@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 import urllib.parse
 import re
+import shlex
 import signal
 import urllib.request
 import urllib.error
@@ -891,12 +892,18 @@ from collections import deque as _deque
 REMOTE_EXCLUDES = [
     ".git", "data", "node_modules", "dist-newstyle",
     "dist", ".direnv", "_build", "result", "result-*",
+    ".cabal-dir",
 ]
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 REMOTE_DEFAULT_COMMAND = (
     "cd Backend && nix develop .#backend -c , run-mobility-stack-dev"
 )
 REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
+
+# ── Multi-user devbox registry ──
+# Stored on the remote host so multiple developers can share a single box
+# without stomping on each other's folders or Caddy ports.
+REGISTRY_FILE = "/tmp/devbox-registry.json"
 
 # Matches DEC private-mode set/reset: ESC [ ? <nums> h|l   (e.g. \x1b[?1049h,
 # \x1b[?1000;1002;1006h). Used to snoop the PTY stream so we can replay the
@@ -931,6 +938,89 @@ _remote_sessions_lock = threading.Lock()
 
 def _is_localhost(host: str) -> bool:
     return (host or "").strip() in ("localhost", "127.0.0.1", "::1", "")
+
+
+# ── Registry helpers ──
+
+
+def _remote_read_registry(ssh_user: str, host: str, port: int, identity: str | None) -> dict:
+    """Read the devbox registry JSON from the remote host via SSH."""
+    cmd = f'cat {REGISTRY_FILE} 2>/dev/null || echo \'{{"users": {{}}}}\''
+    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
+    try:
+        result = subprocess.run(argv, capture_output=True, timeout=10)
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout)
+    except Exception:
+        pass
+    return {"users": {}}
+
+
+def _remote_write_registry(ssh_user: str, host: str, port: int, identity: str | None, registry: dict) -> bool:
+    """Write the devbox registry JSON to the remote host via SSH."""
+    data = json.dumps(registry, indent=2)
+    cmd = f"cat > {REGISTRY_FILE}"
+    argv = _ssh_argv(ssh_user, host, port, identity, want_tty=False) + [cmd]
+    try:
+        result = subprocess.run(argv, input=data.encode(), capture_output=True, timeout=10)
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _register_dev_user(ssh_user: str, host: str, port: int, identity: str | None, dev_name: str) -> dict:
+    """Ensure dev_name is in the remote registry; return their entry."""
+    if not _SAFE_NAME_RE.match(dev_name):
+        raise ValueError(f"devName contains unsafe characters: {dev_name!r}")
+    registry = _remote_read_registry(ssh_user, host, port, identity)
+    users = registry.get("users", {})
+
+    if dev_name in users:
+        return users[dev_name]
+
+    entry = {
+        "dir": f"/tmp/{dev_name}/nammayatri",
+    }
+    users[dev_name] = entry
+    registry["users"] = users
+    _remote_write_registry(ssh_user, host, port, identity, registry)
+
+    return entry
+
+
+def _remote_sync_caddy_port(body: dict) -> dict:
+    """Read the caddy port from devbox-registry.json on the remote host."""
+    host = (body.get("host") or "localhost").strip()
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    identity = (body.get("identityFile") or "").strip() or None
+    dev_name = (body.get("devName") or "").strip()
+
+    if _is_localhost(host):
+        return {"error": "sync-caddy-port is only for remote hosts"}
+    if not user:
+        return {"error": "user (SSH user) is required"}
+    if not dev_name:
+        return {"error": "devName is required"}
+
+    registry = _remote_read_registry(user, host, port, identity)
+    users = registry.get("users", {})
+    entry = users.get(dev_name)
+    if not entry:
+        return {"error": f"developer '{dev_name}' not found in registry — is the stack running?"}
+
+    caddy_port = entry.get("caddyPort")
+    if caddy_port is None:
+        return {"error": "caddy port not yet available in registry — is the stack running?"}
+
+    # Persist resolved ports so launcher specs can override defaults.
+    registry_ports = entry.get("ports") or {}
+    spec_loader.set_registry_ports(registry_ports)
+
+    return {"devName": dev_name, "caddyPort": caddy_port, "dir": entry.get("dir")}
 
 
 def _remote_session_make(kind: str, host: str) -> dict:
@@ -1078,7 +1168,7 @@ def remote_deploy(body: dict) -> dict:
     user = (body.get("user") or "").strip()
     port = int(body.get("port") or 22)
     identity = (body.get("identityFile") or "").strip() or None
-    remote_dir = (body.get("remoteDir") or REMOTE_DEFAULT_DIR).strip() or REMOTE_DEFAULT_DIR
+    dev_name = (body.get("devName") or "").strip()
     copy_mode = (body.get("copyMode") or "rsync").strip()
 
     session = _remote_session_make("deploy", host)
@@ -1101,18 +1191,26 @@ def remote_deploy(body: dict) -> dict:
             session["buf"].append("[deploy] error: 'user' is required for non-localhost host")
         return {"session": session["id"], "error": "user required"}
 
+    # devName is mandatory — derive remoteDir from the devbox registry.
+    entry = _register_dev_user(user, host, port, identity, dev_name)
+    remote_dir = entry["dir"]
+
     target = f"{user}@{host}:{remote_dir}/"
     ssh_cmd_parts = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
     if identity:
         ssh_cmd_parts += ["-i", identity]
     ssh_cmd = " ".join(ssh_cmd_parts)
 
+    # Ensure the remote directory exists (rsync won't create parent dirs).
+    mkdir_argv = _ssh_argv(user, host, port, identity, want_tty=False) + [f"mkdir -p {shlex.quote(remote_dir)}"]
+    subprocess.run(mkdir_argv, capture_output=True, timeout=10)
+
     excludes = []
     for ex in REMOTE_EXCLUDES:
         excludes += ["--exclude", ex]
 
     argv = (
-        ["rsync", "-az", "--delete", "--info=progress2,stats1", "-e", ssh_cmd]
+        ["rsync", "-az", "--delete", "--progress", "--stats", "-e", ssh_cmd]
         + excludes
         + [f"{PROJECT_ROOT}/", target]
     )
@@ -1154,7 +1252,7 @@ def remote_clear_data(body: dict) -> dict:
     user = (body.get("user") or "").strip()
     port = int(body.get("port") or 22)
     identity = (body.get("identityFile") or "").strip() or None
-    remote_dir = (body.get("remoteDir") or REMOTE_DEFAULT_DIR).strip() or REMOTE_DEFAULT_DIR
+    dev_name = (body.get("devName") or "").strip()
 
     session = _remote_session_make("clear-data", host)
     _remote_register(session)
@@ -1171,7 +1269,10 @@ def remote_clear_data(body: dict) -> dict:
                 session["finished_at"] = time.time()
                 session["buf"].append("[clear-data] error: 'user' is required for non-localhost host")
             return {"session": session["id"], "error": "user required"}
-        remote_cmd = f"cd {remote_dir} && {inner}"
+        # devName is mandatory — derive remoteDir from the devbox registry.
+        entry = _register_dev_user(user, host, port, identity, dev_name)
+        remote_dir = entry["dir"]
+        remote_cmd = f"cd {shlex.quote(remote_dir)} && {inner}"
         argv = _ssh_argv(user, host, port, identity, want_tty=False) + [remote_cmd]
 
     try:
@@ -1225,7 +1326,7 @@ def remote_start(body: dict) -> dict:
                 session["finished_at"] = time.time()
                 session["buf"].append("[start] error: 'user' is required for non-localhost host")
             return {"session": session["id"], "error": "user required"}
-        remote_cmd = f"cd {remote_dir} && {command}"
+        remote_cmd = f"cd {shlex.quote(remote_dir)} && {command}"
         argv = _ssh_argv(user, host, port, identity, want_tty=True) + [remote_cmd]
 
     master_fd, slave_fd = _pty.openpty()
@@ -2121,6 +2222,18 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         # ── Remote SSH/PTY runner ──
 
+        # POST /api/remote/host  — persist the devbox host for launcher templates
+        if method == "POST" and path == "/api/remote/host":
+            body = self._read_json_body() or {}
+            spec_loader.set_active_host(body.get("host") or "localhost")
+            self._send_json({"host": spec_loader.get_active_host()})
+            return True
+
+        # POST /api/remote/sync-caddy-port  — read resolved caddy port from remote and update registry
+        if method == "POST" and path == "/api/remote/sync-caddy-port":
+            self._send_json(_remote_sync_caddy_port(self._read_json_body() or {}))
+            return True
+
         # POST /api/remote/deploy
         if method == "POST" and path == "/api/remote/deploy":
             self._send_json(remote_deploy(self._read_json_body() or {}))
@@ -2312,6 +2425,7 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         # GET /api/launcher/{slug}
         if method == "GET" and tail == "":
+            input_store.ensure_defaults(slug, spec)
             inputs_view = input_store.public_view(slug, spec)
             stages = [stage_runner.stage_status(slug, spec, st) for st in spec["stages"]]
             self._send_json({
@@ -2405,6 +2519,12 @@ class LocalApiHandler(BaseHTTPRequestHandler):
             body = self._read_json_body() or {}
             r = stage_runner.run_stage(slug, spec, stage_id, force=bool(body.get("force")))
             self._send_json({"stage": stage_id, **r})
+            return True
+
+        # DELETE /api/launcher/{slug}/stages  — reset all stage state
+        if method == "DELETE" and tail == "stages":
+            stage_runner.reset_all_stages(slug)
+            self._send_json({"reset": True, "slug": slug})
             return True
 
         # GET /api/launcher/{slug}/status

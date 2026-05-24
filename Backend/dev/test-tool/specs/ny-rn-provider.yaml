@@ -12,11 +12,13 @@ source:
 
 ports:
   - { name: metro,   port: 8083, protocol: tcp,  allowOverride: true }
-  - { name: backend, port: 8016, protocol: http }
-  - { name: grpc,    port: 50051, protocol: tcp }
-  - { name: mock,    port: 8080, protocol: http }
+  - { name: caddy,   port: 9090, protocol: http, allowOverride: true, registryKey: caddy-reverse-proxy }
+  - { name: driver,  port: 8016, protocol: http, registryKey: dynamic-offer-driver-app }
+  - { name: rider,   port: 8013, protocol: http, registryKey: rider-app }
+  - { name: grpc,    port: 50051, protocol: tcp,  registryKey: notification-service-grpc }
+  - { name: mock,    port: 8080, protocol: http, registryKey: mock-server }
 
-adbReverse: [metro, backend, grpc, mock]
+adbReverse: [metro, caddy, driver, grpc, mock]
 
 tools: [node22, java17, yarn, adb]
 
@@ -36,6 +38,12 @@ inputs:
     label: Android package id
     type: text
     default: "in.mobility.lynxdriver.debug"
+  - key: LOCAL_PROPERTIES
+    label: local.properties content
+    type: textarea
+    default: |
+      sdk.dir=
+    required: true
   - key: CAC_CONFIG_URL
     label: CAC config URL
     type: text
@@ -66,36 +74,54 @@ stages:
       variant="${inputs.VARIANT}"
       variant_lc=$(printf '%s' "$variant" | tr '[:upper:]' '[:lower:]')
       mkdir -p "android/app/src/$variant"
-      cp "${inputs.GOOGLE_SERVICES_JSON}" "android/app/src/$variant/google-services.json"
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "android/app/src/${variant}/google-services.json"
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "android/app/google-services.json"
       if [ -f configs.zip ]; then unzip -o configs.zip; fi
-      mkdir -p "configs/master/android/$variant"
-      cp "configs/master/android/nammaYatri/.env"             "configs/master/android/$variant/.env"             2>/dev/null || true
-      cp "configs/master/android/nammaYatri/local.properties" "configs/master/android/$variant/local.properties" 2>/dev/null || true
-      cp "${inputs.GOOGLE_SERVICES_JSON}" "configs/master/android/$variant/google-services.json"
-      env_file="configs/master/android/$variant/.env"
-      touch "$env_file"
-      upsert_env() {
-        local key="$1" value="$2" tmp
-        tmp=$(mktemp)
-        grep -v "^$key=" "$env_file" > "$tmp" || true
-        printf '%s=%s\n' "$key" "$value" >> "$tmp"
-        mv "$tmp" "$env_file"
-      }
-      upsert_env UI_BASE_URL          "http://localhost:${ports.backend}/ui"
-      upsert_env CUSTOMER_UI_BASE_URL "http://localhost:8013/v2"
-      upsert_env CAC_CONFIG_URL       "${inputs.CAC_CONFIG_URL}"
-      upsert_env MERCHANT_ID_DRIVER   "${inputs.MERCHANT_ID_DRIVER}"
-      upsert_env MOENGAGE_APP_ID      "${inputs.MOENGAGE_APP_ID}"
-      rm -f "$env_file.bak"
-      echo "materialized for variant=$variant (lc=$variant_lc); env keys upserted (others preserved)"
+      conf_dir="configs/master/android/$variant"
+      mkdir -p "$conf_dir"
+      cp "configs/master/android/nammaYatri/local.properties" "$conf_dir/local.properties" 2>/dev/null || true
+      cp "${inputs.GOOGLE_SERVICES_JSON}" "$conf_dir/google-services.json"
+
+      # Ensure all keys from .env.template exist in variant .env
+      template_env="configs/.env.template"
+      variant_env="$conf_dir/.env"
+      touch "$variant_env"
+      if [ -f "$template_env" ]; then
+        while IFS='=' read -r key _; do
+          [ -z "$key" ] && continue
+          if ! grep -q "^$key=" "$variant_env"; then
+            echo "$key=" >> "$variant_env"
+          fi
+        done < "$template_env"
+      fi
+
+      # Override base URLs to point at devbox caddy
+      sed -i.bak -E "s|UI_BASE_URL=.*|UI_BASE_URL=http://${host}:${ports.caddy}/dynamic-offer-driver-app/ui|" "$conf_dir/.env"
+      sed -i.bak -E "s|CUSTOMER_UI_BASE_URL=.*|CUSTOMER_UI_BASE_URL=http://${host}:${ports.caddy}/rider-app/v2|" "$conf_dir/.env"
+      rm -f "$conf_dir/.env.bak"
+
+      # Write local.properties from user input, auto-append sdk.dir if missing
+      props="android/local.properties"
+      printf '%s\n' "${inputs.LOCAL_PROPERTIES}" > "$props"
+      sdk="$ANDROID_HOME"
+      if [ -z "$sdk" ]; then sdk="$HOME/Library/Android/sdk"; fi
+      if ! grep -q '^sdk.dir=' "$props"; then
+        printf 'sdk.dir=%s\n' "$sdk" >> "$props"
+      fi
+
+      # Patch getBaseUrlfromConfig to return our devbox URL directly,
+      # bypassing remote config and MMKV cache
+      base_url="http://${host}:${ports.caddy}/dynamic-offer-driver-app/ui"
+      utils_file="src/api/utils.ts"
+      if [ -f "$utils_file" ]; then
+        sed -i.bak "s|const baseUrl = Config.getConfig('ui_base_url', useAppStore.getState().city);|const baseUrl = '$base_url';|" "$utils_file"
+        rm -f "$utils_file.bak"
+        echo "patched utils.ts baseUrl → $base_url"
+      fi
+
+      echo "materialized for variant=$variant (lc=$variant_lc)"
     lifecycle: one-shot
-    invalidatedBy:
-      - inputs.GOOGLE_SERVICES_JSON
-      - inputs.VARIANT
-      - inputs.CAC_CONFIG_URL
-      - inputs.MERCHANT_ID_DRIVER
-      - inputs.MOENGAGE_APP_ID
-      - ports.backend
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.LOCAL_PROPERTIES, ports.driver, ports.caddy]
 
   - id: install
     needs: [sync-source]
@@ -104,6 +130,15 @@ stages:
     lifecycle: one-shot
     invalidatedBy: [provider/package.json, provider/yarn.lock]
 
+  - id: build-android
+    needs: [install, materialize]
+    cwd: provider/android
+    run: |
+      variant_cap="$(printf '%s' "${inputs.VARIANT}" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+      ./gradlew "app:install$(echo $variant_cap)MasterDebug" -PreactNativeDevServerPort=${ports.metro}
+    lifecycle: one-shot
+    invalidatedBy: ["provider/android/**", "*.gradle", inputs.VARIANT]
+
   - id: metro
     needs: [install]
     cwd: provider
@@ -111,20 +146,11 @@ stages:
     lifecycle: long-running
     readyProbe: { kind: log, pattern: "Welcome to Metro" }
 
-  - id: build-android
-    needs: [install, materialize]
-    cwd: provider/android
-    run: "./gradlew app:installLynxMasterDebug -PreactNativeDevServerPort=${ports.metro}"
-    lifecycle: one-shot
-    invalidatedBy: ["provider/android/**", "*.gradle"]
-
   - id: set-devhost
     needs: [metro]
     run: |
       set -euo pipefail
       PKG="${inputs.APP_ID}"
-      HOSTPORT="localhost:${ports.metro}"
-      PREF_PATH="shared_prefs/${PKG}_preferences.xml"
 
       echo "waiting for an adb device to come online (up to 5 min)…"
       deadline=$(( $(date +%s) + 300 ))
@@ -134,7 +160,7 @@ stages:
           break
         fi
         if [ "$(date +%s)" -ge "$deadline" ]; then
-          echo "✗ no adb device after 5 min — is an emulator/phone connected?" >&2
+          echo "no adb device after 5 min" >&2
           exit 1
         fi
         sleep 2
@@ -144,54 +170,21 @@ stages:
         echo "waiting for $PKG to be installed on device…"
         sleep 2
         if [ "$(date +%s)" -ge "$deadline" ]; then
-          echo "✗ $PKG not installed on device — run build-android first" >&2
+          echo "$PKG not installed on device" >&2
           exit 1
         fi
       done
 
-      EXISTING=$(adb shell run-as "$PKG" cat "$PREF_PATH" 2>/dev/null || true)
-      if [ -z "$EXISTING" ] || ! echo "$EXISTING" | grep -q "<map>"; then
-        EXISTING=$'<?xml version=\'1.0\' encoding=\'utf-8\' standalone=\'yes\' ?>\n<map>\n</map>'
-      fi
-      UPDATED=$(printf '%s\n' "$EXISTING" \
-        | sed -E "/<string name=\"debug_http_host\">[^<]*<\/string>/d" \
-        | sed -E "s|</map>|    <string name=\"debug_http_host\">${HOSTPORT}</string>\n</map>|")
-
-      TMP=$(mktemp)
-      printf '%s\n' "$UPDATED" > "$TMP"
       adb shell am force-stop "$PKG"
-      adb shell run-as "$PKG" sh -c "'cat > ${PREF_PATH}'" < "$TMP"
-      adb shell run-as "$PKG" cat "$PREF_PATH"
       adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
-      rm -f "$TMP"
-      echo "✓ $PKG → $HOSTPORT (launched)"
+      echo "$PKG launched (metro port baked into APK via -PreactNativeDevServerPort)"
     lifecycle: one-shot
 
 workflows:
-  first-run:
-    description: >-
-      End-to-end bring-up of the provider (driver) app: clone/update the repo,
-      materialize env + native config, install JS deps, start Metro, then
-      build & install the Android variant on the running emulator/device.
-    stages: [sync-source, materialize, install, metro, build-android]
-
-  refresh-js:
-    description: >-
-      Restart only Metro (JS bundler). Use this when you've edited JS/TS code
-      and want to reload the bundle without rebuilding native code.
-    stages: [metro]
-
-  refresh-native:
-    description: >-
-      Rebuild + reinstall the Android APK and (re)start Metro. Use this after
-      editing native Android sources, gradle config, or adding new native deps.
-    stages: [build-android, metro]
-
-  reinstall:
-    description: >-
-      Reinstall JS deps, restart Metro, and rebuild the APK. Use after
-      package.json/yarn.lock changes or when node_modules looks broken.
-    stages: [install, metro, build-android]
+  first-run:      [sync-source, materialize, install, build-android, metro, set-devhost]
+  refresh-js:     [metro, set-devhost]
+  refresh-native: [build-android, metro, set-devhost]
+  reinstall:      [install, build-android, metro, set-devhost]
 
 logs:
   - { name: metro,  kind: stage, stage: metro }

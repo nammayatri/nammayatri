@@ -6,7 +6,7 @@ let juspayGatewayUrl = "http://localhost:8015/v1"
 
 let kafkaConsumerCfgs =
       { publicTransportSearch =
-        { brokers = [ "localhost:29092" ]
+        { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
         , groupId = "publicTransportSearchGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4
@@ -16,7 +16,7 @@ let kafkaConsumerCfgs =
 in  { esqDBCfg = main.esqDBCfg
     , migrationPath = main.migrationPath
     , autoMigrate = main.autoMigrate
-    , port = +8024
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8024)
     , loggerConfig =
             common.loggerConfig
         //  { logFilePath = "/tmp/public-transport-search-consumer.log" }

@@ -1,7 +1,9 @@
 let common = ./common.dhall
 
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -9,7 +11,7 @@ let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
 let hedisClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -20,7 +22,7 @@ let hedisClusterCfg =
 
 in  { kafkaProducerCfg
     , secondaryKafkaProducerCfg
-    , port = +8090
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8090)
     , loggerConfig =
             common.loggerConfig
         //  { logRawSql = False, logFilePath = "/tmp/sdk-event-pipeline.log" }
@@ -31,7 +33,7 @@ in  { kafkaProducerCfg
     , metroWebviewEventsKafkaTopic = "metro-webview-events"
     , apiRateLimitOptions = { limit = +1, limitResetTimeInSec = +60 }
     , driverAppConfig =
-      { url = "http://127.0.0.1:8016/"
+      { url = "http://127.0.0.1:${driverAppPort}/"
       , apiKey = "ae288466-2add-11ee-be56-0242ac120002"
       }
     , riderAppAuthenticationPrefix = "providerPlatform:authTokenCacheKey:"

@@ -17,7 +17,7 @@ let schedulerConfig =
               }
       , esqDBCfg = appCfg.esqDBCfg
       , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
-      , metricsPort = +8056
+      , metricsPort = Natural/toInteger (env:METRICS_PORT ? 8056)
       , hedisCfg = appCfg.hedisCfg
       , hedisClusterCfg = appCfg.hedisClusterCfg
       , hedisSecondaryClusterCfg = appCfg.hedisSecondaryClusterCfg
@@ -26,7 +26,7 @@ let schedulerConfig =
       , hedisMigrationStage = False
       , cutOffHedisCluster = False
       , hedisPrefix = "driver-offer-scheduler"
-      , port = +8058
+      , port = Natural/toInteger (env:SERVICE_PORT ? 8058)
       , loopIntervalSec = +5
       , expirationTime = +60
       , waitBeforeRetry = +1

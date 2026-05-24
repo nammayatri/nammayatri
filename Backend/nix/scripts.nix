@@ -222,10 +222,92 @@ _:
           category = "Backend";
           description = "Run the nammayatri backend + test-context-api + mock-server (no test-dashboard).";
           exec = ''
-            # Free up service ports first so a stale process from a prior run
-            # doesn't hold the port and crash a fresh service start.
-            echo "── Pre-flight: freeing service ports ──"
-            ${killSvcPortsScript}
+            export DEV=1
+            # Free up ports from previous run FIRST — so resolve-ports.sh
+            # sees them as free and can reuse the same ports.
+            echo "── Pre-flight: freeing stale service ports ──"
+            RESOLVED_FILE="''${FLAKE_ROOT}/data/ports-resolved.nix"
+            # Collect ports to kill from ports-resolved.nix or devbox-registry.json.
+            PORTS_TO_KILL=""
+            if [[ -f "$RESOLVED_FILE" ]]; then
+              while IFS= read -r line; do
+                if [[ "$line" =~ ^[[:space:]]*[a-zA-Z][a-zA-Z0-9_-]*[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
+                  PORTS_TO_KILL="$PORTS_TO_KILL ''${BASH_REMATCH[1]}"
+                fi
+              done < "$RESOLVED_FILE"
+            else
+              # Fallback: read ports from devbox-registry.json if ports-resolved.nix
+              # doesn't exist yet (e.g. first re-deploy after a crash).
+              REGISTRY="/tmp/devbox-registry.json"
+              if [[ -f "$REGISTRY" ]]; then
+                # Derive dev name from FLAKE_ROOT: /tmp/<devname>/nammayatri → <devname>
+                DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+                if [[ -n "$DEV_NAME" ]]; then
+                  echo "ports-resolved.nix not found, falling back to devbox-registry.json (dev: $DEV_NAME)"
+                  PORTS_TO_KILL=$(${pkgs.jq}/bin/jq -r ".users[\"$DEV_NAME\"].ports // {} | to_entries[].value" "$REGISTRY" 2>/dev/null || true)
+                fi
+              fi
+            fi
+            # Kill only processes whose cwd is under our FLAKE_ROOT.
+            for port in $PORTS_TO_KILL; do
+              set +e
+              pids=$(${pkgs.lsof}/bin/lsof -ti:"$port")
+              set -e
+              for p in $pids; do
+                proc_cwd=$(readlink /proc/"$p"/cwd 2>/dev/null || true)
+                case "$proc_cwd" in
+                  "''${FLAKE_ROOT}"*)
+                    echo "Sending SIGKILL to pid $p on port $port (cwd: $proc_cwd)"
+                    kill -9 "$p" 2>/dev/null || true
+                    ;;
+                  *)
+                    echo "Port $port pid $p belongs to $proc_cwd, not ours — skipping"
+                    ;;
+                esac
+              done
+            done
+            # Resolve ports.nix with available free ports so multiple
+            # backend instances on the same devbox don't collide.
+            echo "── Pre-flight: resolving free ports ──"
+            bash "''${FLAKE_ROOT}/Backend/nix/services/resolve-ports.sh"
+            # Write resolved ports to devbox-registry.json so other tools
+            # (dashboard, other developers) can discover our ports.
+            REGISTRY="/tmp/devbox-registry.json"
+            DEV_NAME=$(echo "''${FLAKE_ROOT}" | ${pkgs.gnused}/bin/sed -n 's|^/tmp/\([^/]*\)/nammayatri.*|\1|p')
+            if [[ -n "$DEV_NAME" ]]; then
+              echo "── Pre-flight: updating devbox-registry.json (dev: $DEV_NAME) ──"
+              # Parse ports-resolved.nix into a JSON object: {"name": port, ...}
+              PORTS_JSON="{"
+              first=true
+              while IFS= read -r line; do
+                if [[ "$line" =~ ^[[:space:]]*([a-zA-Z][a-zA-Z0-9_-]*)[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*\;  ]]; then
+                  name="''${BASH_REMATCH[1]}"
+                  port="''${BASH_REMATCH[2]}"
+                  if [[ "$first" == true ]]; then first=false; else PORTS_JSON+=","; fi
+                  PORTS_JSON+="\"$name\":$port"
+                fi
+              done < "$RESOLVED_FILE"
+              PORTS_JSON+="}"
+              # Extract caddy port
+              CADDY_PORT=$(echo "$PORTS_JSON" | ${pkgs.jq}/bin/jq -r '.["caddy-reverse-proxy"] // empty' 2>/dev/null || true)
+              # Read existing registry or create empty one
+              if [[ -f "$REGISTRY" ]]; then
+                REG=$(cat "$REGISTRY")
+              else
+                REG='{"users":{}}'
+              fi
+              # Update this developer's entry with dir, ports, and caddyPort
+              REG=$(echo "$REG" | ${pkgs.jq}/bin/jq \
+                --arg dev "$DEV_NAME" \
+                --arg dir "''${FLAKE_ROOT}" \
+                --argjson ports "$PORTS_JSON" \
+                --argjson caddy "''${CADDY_PORT:-null}" \
+                '.users[$dev] = {dir: $dir, ports: $ports, caddyPort: $caddy}')
+              echo "$REG" > "$REGISTRY"
+            fi
+            # Generate Caddyfile from resolved ports for single-entry-point access.
+            echo "── Pre-flight: generating Caddyfile ──"
+            bash "''${FLAKE_ROOT}/Backend/nix/services/build-caddyfile.sh"
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.
@@ -234,8 +316,11 @@ _:
               ulimit -s "$_hard" 2>/dev/null || true
               ulimit -n "$_hard" 2>/dev/null || true
             fi
+            # Tell nammayatri.nix where to find the resolved ports file.
+            # --impure lets builtins.getEnv read this at Nix evaluation time.
+            export PORTS_RESOLVED_FILE="$RESOLVED_FILE"
             # -S NAME forces stable sort by process name (no re-ordering on status change)
-            nix run .#run-mobility-stack-dev -- -S NAME "$@"
+            nix run --impure .#run-mobility-stack-dev -- -S NAME "$@"
           '';
         };
 

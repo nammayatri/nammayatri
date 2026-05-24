@@ -112,6 +112,27 @@ def upsert_input(slug: str, input_def: dict, payload: dict) -> Any:
     return value
 
 
+def ensure_defaults(slug: str, spec: dict) -> None:
+    """Seed default values for inputs that aren't already in the store.
+    Also trims whitespace from existing string values."""
+    with _lock:
+        data = load(slug)
+        changed = False
+        for i in spec.get("inputs", []):
+            key = i["key"]
+            if key not in data and i.get("default") is not None and i.get("type") != "file":
+                raw = str(i["default"])
+                data[key] = raw if i.get("type") == "textarea" else raw.strip()
+                changed = True
+            elif key in data and isinstance(data[key], str) and i.get("type") not in ("file", "textarea"):
+                trimmed = data[key].strip()
+                if trimmed != data[key]:
+                    data[key] = trimmed
+                    changed = True
+        if changed:
+            _save_atomic(slug, data)
+
+
 def public_view(slug: str, spec: dict) -> Dict[str, Any]:
     """Return inputs safe to ship to the dashboard.
 

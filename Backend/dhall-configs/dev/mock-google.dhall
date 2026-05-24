@@ -27,7 +27,7 @@ let doNotUseRealGoogle =
         , googleAutocompleteParams : Optional (List Text)
         }
 
-in  { port = +8019
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8019)
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/mock-google.log" }
     , graceTerminationPeriod = +90

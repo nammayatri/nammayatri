@@ -2,6 +2,8 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
@@ -74,13 +76,13 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsUserName = sec.smsUserName
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
-    , passetto = { _1 = "localhost", _2 = 8079 }
+    , passetto = { _1 = "localhost", _2 = env:PASSETTO_SERVICE_PORT ? 8021 }
     , googleCfg
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , nammayatriRegistryConfig
-    , authServiceUrl = "http://localhost:8013/"
+    , authServiceUrl = "http://localhost:${riderAppPort}/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap
