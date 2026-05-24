@@ -291,6 +291,8 @@ export interface PostmanStepResult extends ApiResult {
   responseHeaders?: Record<string, string>;
   /** Upstream latency in ms — measured on context-api side (excludes browser/nginx/proxy overhead) */
   upstreamMs: number;
+  /** True if the step's prerequest script invoked pm.execution.skipRequest() */
+  skipped?: boolean;
 }
 
 /**
@@ -302,7 +304,15 @@ export async function callPostmanStep(
 ): Promise<PostmanStepResult> {
   // 1. Execute prerequest script (variable init only, delays handled by test script)
   if (step.prereqScript) {
-    await executePrereqScript(step.prereqScript, stores);
+    const prereq = await executePrereqScript(step.prereqScript, stores);
+    if (prereq.skipped) {
+      return {
+        ok: true, status: 0, data: null, elapsed: 0, upstreamMs: 0,
+        assertions: [], consoleLogs: prereq.consoleLogs, serviceLogs: {},
+        resolvedUrl: step.pathTemplate, resolvedBody: undefined, resolvedHeaders: {}, responseHeaders: {},
+        skipped: true,
+      };
+    }
   }
 
   // Log + mock-hits capture is the *caller's* responsibility now — see

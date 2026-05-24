@@ -25,6 +25,8 @@ import uuid
 from datetime import datetime, timezone
 from status_store import add_override, deep_merge
 
+from ._env import MOCK_SERVER_PORT
+
 
 def handle(handler, path, body):
     """Route Juspay requests."""
@@ -185,7 +187,7 @@ def _create_order(handler, order_id, short_id):
         "status_id": 10,
         "amount": 0.0,
         "currency": "INR",
-        "payment_links": {"web": f"http://localhost:8080/juspay/pay/{order_id}"},
+        "payment_links": {"web": f"http://localhost:{MOCK_SERVER_PORT}/juspay/pay/{order_id}"},
         "sdk_payload": {
             "requestId": order_id,
             "service": "in.juspay.nammayatri",
@@ -200,7 +202,7 @@ def _create_order(handler, order_id, short_id):
                 "firstName": "Test",
                 "lastName": "User",
                 "customerId": "test-customer",
-                "returnUrl": "http://localhost:8080/juspay/return",
+                "returnUrl": f"http://localhost:{MOCK_SERVER_PORT}/juspay/return",
                 "orderId": order_id,
             }
         },

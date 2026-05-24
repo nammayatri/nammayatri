@@ -18,6 +18,7 @@ import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
 import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
+import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { StepResult, LogEntry } from '../types';
 
 // Cities whose backing data lives in the EU prod cluster. Any environment
@@ -290,7 +291,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runningStepId, setRunningStepId] = useState<string | null>(null);
   const [runAllProgress, setRunAllProgress] = useState<{ current: number; total: number; currentSuite: string } | null>(null);
-  const [runAllResults, setRunAllResults] = useState<Array<{ group: string; env: string; suite: string; passed: number; failed: number; total: number }>>([]);
+  const [runAllResults, setRunAllResults] = useState<RunAllSuiteResult[]>([]);
+  const [runAllStartedAt, setRunAllStartedAt] = useState<number | null>(null);
+  const [, setRunAllTick] = useState(0);
   const [manualMode, setManualMode] = useState(false);
   const [versionId, setVersionId] = useState<string>('');
   const abortRef = useRef(false);
@@ -372,6 +375,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     }
   }, [syncEnvOptions, selectedSyncEnv]);
 
+  // Tick once per second while a Run-All is in flight, so the dashboard's
+  // "Elapsed" stat updates without needing extra state writes.
+  useEffect(() => {
+    if (!runAllProgress) return;
+    const id = setInterval(() => setRunAllTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [runAllProgress]);
+
   // Load and parse collection when suite changes
   useEffect(() => {
     if (!selectedDir || !selectedSuite || !currentEnv) {
@@ -435,8 +446,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
   // Ensure local DB config is synced from the chosen upstream environment.
   // Returns true to proceed, false if the user should abort.
-  const ensureSyncedFrom = useCallback(async (targetEnv: string): Promise<boolean> => {
-    if (selectedEnvType !== 'Local') return true;
+  const ensureSyncedFrom = useCallback(async (targetEnv: string, envType: string = selectedEnvType): Promise<boolean> => {
+    if (envType !== 'Local') return true;
     const status = await fetchConfigSyncStatus();
     if (status?.last_synced?.from === targetEnv && !status?.running) {
       onLog('info', `[config-sync] local already synced from '${targetEnv}' — skipping sync`);
@@ -521,6 +532,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       const { mockHits, serviceLogs } = await capture.result;
       result.serviceLogs = serviceLogs;
 
+      if (result.skipped) {
+        setStepStates(prev => ({ ...prev, [step.id]: { status: 'skip', result, durationMs: 0, mockHits } }));
+        onLog('info', `SKIP ${step.name}`);
+        for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+        if (stepIdx < visibleSteps.length - 1) await interStepWait(abortRef);
+        continue;
+      }
+
       const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
       const status = failed ? 'fail' : 'pass';
 
@@ -582,28 +601,46 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     }
 
     setRunAllProgress({ current: 0, total: jobs.length, currentSuite: '' });
+    setRunAllStartedAt(Date.now());
     startNewCoverageRun(`run-all-${Date.now()}`);
-    onLog('info', `== Running ALL ${jobs.length} collection suites ==`);
+    onLog('info', `== Running ALL ${jobs.length} collection suites in parallel ==`);
 
-    for (let i = 0; i < jobs.length; i++) {
-      if (abortRef.current) break;
+    // Config sync runs once up-front when any job targets the Local stack.
+    // The local DB is single-state, so we can't sync per-job; sync from
+    // selectedSyncEnv before launching jobs. Non-Local envs hit their own
+    // upstream and don't need a local sync.
+    const hasLocal = jobs.some(j => j.env.envType === 'Local');
+    if (hasLocal) {
+      onLog('info', `[config-sync] Run All has Local-stack jobs — syncing from '${selectedSyncEnv}'`);
+      const synced = await ensureSyncedFrom(selectedSyncEnv, 'Local');
+      if (!synced) {
+        onLog('error', '[config-sync] aborting Run All — config sync failed');
+        setIsRunning(false);
+        setRunAllProgress(null);
+        return;
+      }
+    } else {
+      onLog('info', '[config-sync] no Local-stack jobs — skipping sync');
+    }
 
-      const { group, env, suite } = jobs[i];
+    let completed = 0;
+
+    const runOneJob = async (job: { group: CollectionGroup; env: CollectionEnvironment; suite: CollectionSuite }) => {
+      const { group, env, suite } = job;
       const label = `${group.directory} / ${suite.name} (${env.city})`;
-      setRunAllProgress({ current: i + 1, total: jobs.length, currentSuite: label });
-      onLog('info', `-- [${i + 1}/${jobs.length}] ${label} --`);
+      const tag = `[${label}]`;
+      const suiteStart = performance.now();
+      onLog('info', `-- start ${label} --`);
 
-      // Fetch and parse the collection
       const raw = await fetchCollection(group.directory, suite.filename);
       if (!raw) {
-        onLog('error', `  Failed to fetch collection: ${suite.filename}`);
+        onLog('error', `${tag} Failed to fetch collection: ${suite.filename}`);
         setRunAllResults(prev => [...prev, { group: group.directory, env: env.envName, suite: suite.name, passed: 0, failed: 0, total: 0 }]);
-        continue;
+        return;
       }
 
       const parsed = parseCollection(raw as PostmanCollection, env.variables);
 
-      // Init variable stores
       const stores: VariableStores = {
         environment: { ...env.variables },
         collection: { ...parsed.collectionVars },
@@ -616,15 +653,6 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         }
       }
 
-      // Update UI to show this suite's steps
-      setSteps(parsed.steps);
-      setNodes(parsed.nodes);
-      setStepStates({});
-      setSelectedDir(group.directory);
-      setSelectedEnv(env.envName);
-      setSelectedSuite(suite.filename);
-
-      // Run all steps
       let passed = 0;
       let failed = 0;
       const suiteStepMetrics: Array<{ name: string; method: string; path: string; elapsed_ms: number }> = [];
@@ -632,25 +660,23 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         if (abortRef.current) break;
         const step = parsed.steps[stepIdx];
 
-        setRunningStepId(step.id);
-        setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
-
-        const start = performance.now();
         const capture = await startStepCapture(env.envType);
         const result = await callPostmanStep(step, stores);
         capture.done();
-        // Latency excludes pre/post-request script time — only the upstream HTTP call.
         const durationMs = result.upstreamMs;
-        const { mockHits, serviceLogs } = await capture.result;
+        const { serviceLogs } = await capture.result;
         result.serviceLogs = serviceLogs;
 
+        if (result.skipped) {
+          onLog('info', `${tag} SKIP ${step.name}`);
+          for (const line of result.consoleLogs) onLog('info', `${tag}   [script] ${line}`);
+          if (stepIdx < parsed.steps.length - 1) await interStepWait(abortRef);
+          continue;
+        }
+
         const stepFailed = result.assertions.some(a => !a.passed) || !!result.scriptError;
-        const status = stepFailed ? 'fail' : 'pass';
+        if (stepFailed) failed++; else passed++;
 
-        if (stepFailed) failed++;
-        else passed++;
-
-        // result.upstreamMs = measured on context-api side, excludes browser/nginx/proxy overhead
         suiteStepMetrics.push({
           name: step.name,
           method: step.method,
@@ -658,42 +684,42 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           elapsed_ms: result.upstreamMs,
         });
 
-        setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs, mockHits } }));
-
         const logLevel = stepFailed ? 'error' : 'success';
         const assertSummary = result.assertions.length > 0
           ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length}]`
           : '';
-        onLog(logLevel, `  ${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms)${assertSummary}`, {
+        onLog(logLevel, `${tag} ${stepFailed ? 'FAIL' : 'PASS'} ${step.name} (${durationMs}ms)${assertSummary}`, {
           request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
           response: { status: result.status, body: result.data, headers: result.responseHeaders },
           serviceLogs: result.serviceLogs,
         });
 
-        for (const line of result.consoleLogs) {
-          onLog('info', `    [script] ${line}`);
-        }
+        for (const line of result.consoleLogs) onLog('info', `${tag}   [script] ${line}`);
 
         if (stepFailed) {
-          if (result.scriptError) onLog('error', `    Script error: ${result.scriptError}`);
+          if (result.scriptError) onLog('error', `${tag}   Script error: ${result.scriptError}`);
           for (const a of result.assertions.filter(a => !a.passed)) {
-            onLog('error', `    Assertion failed: ${a.name} — ${a.error}`);
+            onLog('error', `${tag}   Assertion failed: ${a.name} — ${a.error}`);
           }
-          setExpandedSteps(prev => new Set(prev).add(step.id));
-          break; // bail on first failure within a suite
+          break;
         }
 
-        if (stepIdx < parsed.steps.length - 1) {
-          await interStepWait(abortRef);
-        }
+        if (stepIdx < parsed.steps.length - 1) await interStepWait(abortRef);
       }
 
-      const suiteResult = { group: group.directory, env: env.envName, suite: suite.name, passed, failed, total: parsed.steps.length };
+      const suiteResult: RunAllSuiteResult = {
+        group: group.directory, env: env.envName, suite: suite.name,
+        passed, failed, total: parsed.steps.length,
+        durationMs: Math.round(performance.now() - suiteStart),
+      };
       setRunAllResults(prev => [...prev, suiteResult]);
       const statusEmoji = failed > 0 ? 'FAIL' : 'PASS';
-      onLog(failed > 0 ? 'error' : 'success', `  [${statusEmoji}] ${label}: ${passed}/${parsed.steps.length} passed`);
+      onLog(failed > 0 ? 'error' : 'success', `${tag} [${statusEmoji}] ${passed}/${parsed.steps.length} passed`);
 
-      if (versionId && failed === 0) {
+      completed++;
+      setRunAllProgress({ current: completed, total: jobs.length, currentSuite: label });
+
+      if (versionId) {
         try {
           const metricsResp = await fetch(`${PROXY_BASE}/api/metrics/push`, {
             method: 'POST',
@@ -704,27 +730,35 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               env: env.envName,
               suite: suite.name,
               steps: suiteStepMetrics,
-              allPassed: true,
+              allPassed: failed === 0,
             }),
           });
           const metricsBody = await metricsResp.json().catch(() => ({}));
           if (metricsResp.ok && metricsBody.pushed) {
-            onLog('info', `  [metrics] ✓ pushed to Grafana — ${group.directory}-${env.envName}-${suite.name} version=${versionId}`);
+            onLog('info', `${tag} [metrics] ✓ pushed (status=${failed === 0 ? 'pass' : 'fail'}) version=${versionId}`);
           } else {
             const reason = metricsBody.msg || `HTTP ${metricsResp.status}`;
-            onLog('info', `  [metrics] ✗ push failed — ${reason}`);
+            onLog('info', `${tag} [metrics] ✗ push failed — ${reason}`);
           }
         } catch (e: any) {
-          onLog('info', `  [metrics] ✗ push error — ${e?.message || e}`);
+          onLog('info', `${tag} [metrics] ✗ push error — ${e?.message || e}`);
         }
       }
+    };
+
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
+      if (abortRef.current) break;
+      const batch = jobs.slice(i, i + BATCH_SIZE);
+      onLog('info', `-- batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(jobs.length / BATCH_SIZE)} (${batch.length} suites) --`);
+      await Promise.all(batch.map(runOneJob));
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     setRunAllProgress(null);
     onLog('info', '== All collections complete ==');
-  }, [isRunning, groups, onLog, versionId]);
+  }, [isRunning, groups, onLog, versionId, selectedSyncEnv, ensureSyncedFrom]);
 
   // Initialise variable stores for manual mode (re-runs collection prereq once).
   // Called the first time the user clicks a per-step Run in manual mode after
@@ -774,6 +808,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     const start = performance.now();
     const result = await callPostmanStep(step, storesRef.current);
     const durationMs = Math.round(performance.now() - start);
+
+    if (result.skipped) {
+      setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip', result, durationMs: 0 } }));
+      onLog('info', `SKIP ${step.name}`);
+      for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+      setIsRunning(false);
+      setRunningStepId(null);
+      return;
+    }
 
     const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
     const status = failed ? 'fail' : 'pass';
@@ -832,6 +875,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     const durationMs = result.upstreamMs;
     const { mockHits, serviceLogs } = await capture.result;
     result.serviceLogs = serviceLogs;
+
+    if (result.skipped) {
+      setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip', result, durationMs: 0, mockHits } }));
+      onLog('info', `SKIP ${step.name}`);
+      for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+      setIsRunning(false);
+      setRunningStepId(null);
+      return;
+    }
 
     const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
     const status = failed ? 'fail' : 'pass';
@@ -954,38 +1006,16 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         </div>
       </div>
 
-      {/* Run All progress banner */}
-      {runAllProgress && (
-        <div className="cr-run-all-progress">
-          <div className="cr-run-all-bar">
-            <div className="cr-run-all-fill" style={{ width: `${(runAllProgress.current / runAllProgress.total) * 100}%` }} />
-          </div>
-          <span className="cr-run-all-label">
-            Suite {runAllProgress.current}/{runAllProgress.total}: {runAllProgress.currentSuite}
-          </span>
-        </div>
-      )}
-
-      {/* Run All results summary */}
-      {runAllResults.length > 0 && !runAllProgress && (
-        <div className="cr-run-all-summary">
-          <div className="cr-run-all-summary-header">
-            All Collections Results — {runAllResults.filter(r => r.failed === 0).length}/{runAllResults.length} suites passed
-          </div>
-          <div className="cr-run-all-results">
-            {runAllResults.map((r, i) => (
-              <div key={i} className={`cr-run-all-result ${r.failed > 0 ? 'cr-result-fail' : 'cr-result-pass'}`}>
-                <span className={`cr-result-dot ${r.failed > 0 ? 'cr-dot-fail' : 'cr-dot-pass'}`} />
-                <span className="cr-result-suite">{r.suite}</span>
-                <span className="cr-result-env">{r.env}</span>
-                <span className="cr-result-score">{r.passed}/{r.total}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step list */}
+      {(runAllProgress || runAllResults.length > 0) ? (
+        <RunAllDashboard
+          progress={runAllProgress}
+          results={runAllResults}
+          startedAt={runAllStartedAt}
+          isRunning={isRunning}
+          onStop={stop}
+          onClose={() => { setRunAllResults([]); setRunAllStartedAt(null); }}
+        />
+      ) : (
       <div className="cr-steps">
         {visibleNodes.map(node => (
           <div key={node.id} className="cr-node">
@@ -1098,6 +1128,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           <div className="cr-empty">All steps in this suite are mock-only; nothing to run on envType={selectedEnvType}.</div>
         )}
       </div>
+      )}
 
       {/* JSON Viewer Modal */}
       {modalData !== null && <JsonViewerModal data={modalData} onClose={() => setModalData(null)} />}

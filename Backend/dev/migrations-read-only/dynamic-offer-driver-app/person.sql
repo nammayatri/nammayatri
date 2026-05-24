@@ -133,23 +133,3 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN cloud_type text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN operator_badge_token text ;
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-CREATE INDEX CONCURRENTLY person_idx_operator_badge_token ON atlas_driver_offer_bpp.person USING btree (operator_badge_token);
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-DROP INDEX person_idx_operator_badge_token;

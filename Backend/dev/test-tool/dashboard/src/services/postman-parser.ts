@@ -223,10 +223,12 @@ function resolveService(
 
 function extractScript(events: PostmanEvent[] | undefined, listen: 'test' | 'prerequest'): string | null {
   if (!events) return null;
-  const ev = events.find(e => e.listen === listen);
-  if (!ev?.script?.exec) return null;
-  const script = ev.script.exec.join('\n').trim();
-  return script || null;
+  const parts = events
+    .filter(e => e.listen === listen && e.script?.exec)
+    .map(e => e.script!.exec!.join('\n').trim())
+    .filter(s => s.length > 0);
+  if (parts.length === 0) return null;
+  return parts.join('\n');
 }
 
 function detectDelay(script: string | null): number {

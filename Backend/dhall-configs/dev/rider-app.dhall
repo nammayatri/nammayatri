@@ -6,6 +6,12 @@ let globalCommon = ../generic/common.dhall
 
 let riderAppPort = Natural/show (env:SERVICE_PORT ? 8013)
 
+let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let driverAppInternalPort = Natural/show (env:DRIVER_APP_INTERNAL_PORT ? 8116)
+
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
 let sosAlertsTopicARN =
@@ -91,7 +97,7 @@ let smsConfig =
         , token = None Text
         }
       , useFakeSms = Some 7891
-      , url = "http://localhost:4343"
+      , url = "http://localhost:${mockServerPort}/sms"
       , sender = "JUSPAY"
       }
 
@@ -215,7 +221,7 @@ let slackCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -338,7 +344,7 @@ let jobInfoMapx =
       ]
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -350,7 +356,7 @@ let cacConfig =
 let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenants = [ "dev", "test" ]
       , retryConnection = False
@@ -359,7 +365,7 @@ let superPositionConfig =
       }
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:8081/", secondaryUrl = None Text }
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
@@ -524,6 +530,6 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , masterCloudProxyConfig =
-      { masterUrl = Some "http://localhost:8116", masterSecret = Some "123" }
+      { masterUrl = Some "http://localhost:${driverAppInternalPort}", masterSecret = Some "123" }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     }

@@ -61,7 +61,7 @@
 
   # Notification service
   notification-service-grpc = 50051;
-  notification-service-http = 9091;
+  notification-service = 9091;
 
   # Application metrics
   rider-app-metrics = 9999;
@@ -80,4 +80,5 @@
   test-context-api = 7082;
   metabase = 3001;
   redis-commander = 8431;
+  victoria-metrics = 8428;
 }

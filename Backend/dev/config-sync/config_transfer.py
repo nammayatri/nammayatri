@@ -652,6 +652,52 @@ def read_table_meta(base_dir, env_name, schema, table):
     return None
 
 
+# ── Env-template resolver ───────────────────────────────────────────────────
+#
+# Patched data files (downloaded from CloudFront or produced locally by
+# cmd_patch) can carry ${VAR:default} placeholders inside string column
+# values — e.g. patches.json rewrites prod URLs to
+# `http://localhost:${RIDER_APP_PORT:8013}`. We resolve those once at the
+# start of cmd_import (see _expand_patched_data_inplace) so the downstream
+# SQL generator sees plain strings. Each developer's nix-shell env supplies
+# their remapped ports; default applies when running outside the shell.
+
+_ENV_TEMPLATE_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}")
+
+
+def _expand_env_templates(node):
+    """Recursively expand ${VAR:default} in string leaves of a JSON-loaded
+    dict / list. Non-string scalars pass through unchanged."""
+    if isinstance(node, dict):
+        return {k: _expand_env_templates(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_expand_env_templates(v) for v in node]
+    if isinstance(node, str):
+        return _ENV_TEMPLATE_RE.sub(
+            lambda m: os.environ.get(m.group(1), m.group(2) or ""),
+            node,
+        )
+    return node
+
+
+def _expand_patched_data_inplace(patched_base):
+    """Walk every *.json file under the patched data dir and resolve
+    ${VAR:default} templates. Idempotent: a second pass finds no templates
+    and rewrites nothing."""
+    count = 0
+    for jf in patched_base.rglob("*.json"):
+        try:
+            data = json.loads(jf.read_text())
+        except (json.JSONDecodeError, OSError):
+            continue
+        expanded = _expand_env_templates(data)
+        if expanded != data:
+            jf.write_text(json.dumps(expanded, ensure_ascii=False))
+            count += 1
+    if count:
+        print(f"[import] resolved env-templates in {count} patched JSON file(s)")
+
+
 def list_table_files(base_dir, env_name, schema):
     d = base_dir / env_name / schema
     if not d.exists():
@@ -896,8 +942,12 @@ _encrypt_cache = {}
 # Points to the passetto-server the patch step should talk to.
 # Set by _start_temp_passetto() when the patch command spawns a throwaway
 # instance against the `test_dashboard` DB; otherwise defaults to the
-# mobility-stack passetto (which uses local dev keys).
-_PASSETTO_URL = "http://localhost:8079"
+# mobility-stack passetto (which uses local dev keys). The default honors
+# the nix-shell PASSETTO_SERVICE_PORT so it tracks per-user port remapping.
+_PASSETTO_URL = os.environ.get(
+    "PASSETTO_SERVICE_URL",
+    f"http://localhost:{os.environ.get('PASSETTO_SERVICE_PORT', '8079')}",
+)
 
 def _encrypt_via_obj(plaintext):
     """Encrypt using passetto /encrypt with S"value" format.
@@ -1830,6 +1880,10 @@ def cmd_import(args):
                 f"Run: python config_transfer.py patch --from {from_env} --to {to_env}\n"
                 f"Or re-run import with --fetch to pull from CloudFront."
             )
+
+    # Resolve ${VAR:default} port-templates carried in the patched data
+    # against this user's nix-shell env. Idempotent — safe to re-run.
+    _expand_patched_data_inplace(patched_base)
 
     # SQL output directory
     sql_dir = SCRIPT_DIR / f"{direction}_sql"

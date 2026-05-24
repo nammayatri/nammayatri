@@ -59,7 +59,7 @@ let hedisSecondaryClusterCfg =
 
 let consumerProperties =
       { groupId = "groupId"
-      , brockers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -106,7 +106,7 @@ let kafkaClickhouseCfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -125,7 +125,7 @@ let serviceClickhouseCfg =
 let dashboardClickhouseCfg = serviceClickhouseCfg
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False

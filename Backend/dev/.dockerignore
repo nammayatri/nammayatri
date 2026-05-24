@@ -1,1 +1,18 @@
 integration-tests/collections/*/Master/Master_*.postman_environment.json
+
+# config-sync runtime/local-only artifacts — never bake into the image
+config-sync/assets/data/
+config-sync/assets/environments.json
+config-sync/assets/patches.json
+config-sync/.venv/
+config-sync/__pycache__/
+config-sync/**/__pycache__/
+config-sync/master_to_local_sql/
+config-sync/prod_to_local_sql/
+config-sync/prod_international_to_local_sql/
+config-sync/*.log
+
+# Generic noise
+**/node_modules/
+**/.git/
+**/*.pyc

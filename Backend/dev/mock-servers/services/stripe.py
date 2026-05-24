@@ -29,6 +29,8 @@ import uuid
 import time
 from urllib.parse import unquote_plus
 
+from ._env import MOCK_SERVER_PORT
+
 
 # ── In-memory state ──
 
@@ -501,7 +503,7 @@ def handle(handler, path, body):
     if resource == "account_links" and method == "POST":
         return handler._json({
             "object": "account_link",
-            "url": f"http://localhost:8080/stripe/connect/mock/{uuid.uuid4().hex[:8]}",
+            "url": f"http://localhost:{MOCK_SERVER_PORT}/stripe/connect/mock/{uuid.uuid4().hex[:8]}",
             "expires_at": _now() + 3600,
             "created": _now(),
         })

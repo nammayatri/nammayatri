@@ -8,6 +8,12 @@ let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
 
 let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
 
+let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let mockRegistryPort = Natural/show (env:MOCK_REGISTRY_PORT ? 8020)
+
 let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
@@ -125,7 +131,7 @@ let smsConfig =
         , token = None Text
         }
       , useFakeSms = Some 7891
-      , url = "http://localhost:4343"
+      , url = "http://localhost:${mockServerPort}/sms"
       , sender = "JUSPAY"
       }
 
@@ -237,7 +243,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg =
-      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -254,19 +260,19 @@ let appBackendBapInternal =
 
 let mlPricingInternal =
       { name = "PRICING"
-      , url = "http://localhost:8080/mlpricing"
+      , url = "http://localhost:${mockServerPort}/mlpricing"
       , apiKey = sec.mlPricingApiKey
       , internalKey = sec.internalKey
       }
 
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
-        , mapValue = "http://localhost:8020/"
+        , mapValue = "http://localhost:${mockRegistryPort}/"
         }
       , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
-        , mapValue = "http://localhost:8020/"
+        , mapValue = "http://localhost:${mockRegistryPort}/"
         }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:${mockRegistryPort}/" }
       ]
 
 let AllocatorJobType =
@@ -382,12 +388,12 @@ let jobInfoMapx =
       ]
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:8081/", secondaryUrl = None Text }
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -399,7 +405,7 @@ let cacConfig =
 let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenants = [ "dev", "test" ]
       , retryConnection = False

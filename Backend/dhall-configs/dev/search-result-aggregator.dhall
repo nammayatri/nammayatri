@@ -13,7 +13,7 @@ let hcfg =
 
 let kafkaConsumerCfgs =
       { publicTransportQuotes =
-        { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+        { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
         , groupId = "publicTransportQuotesGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4

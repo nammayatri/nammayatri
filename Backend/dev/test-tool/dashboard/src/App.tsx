@@ -15,7 +15,7 @@ import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog, startN
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
-import { PROXY_BASE } from './config';
+import { PROXY_BASE, refreshPortsTable } from './config';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -606,6 +606,17 @@ function App() {
   }, []);
 
   useEffect(() => { setGlobalLog(log); }, [log]);
+
+  // Discover the per-user port mapping from context-api on boot, then
+  // re-poll every 5s so any port-remap during a long-running session
+  // (developer re-runs resolve-ports.sh, devbox neighbour shifts ports,
+  // etc.) is picked up without a dashboard reload. Failures are silent —
+  // getServicePort() falls back to cached / build-time defaults.
+  useEffect(() => {
+    void refreshPortsTable();
+    const id = setInterval(() => { void refreshPortsTable(); }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // Fetch payment methods when card payment selected or dues flow active
   const needPaymentMethods = paymentPreset === 'with-card-payment' || activeFlowId === 'dues-flow';

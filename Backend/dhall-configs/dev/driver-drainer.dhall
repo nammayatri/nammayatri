@@ -47,7 +47,7 @@ let rccfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 

@@ -2,11 +2,12 @@ let common = ./common.dhall
 
 let main = ./public-transport-rider-platform.dhall
 
-let juspayGatewayUrl = "http://localhost:8015/v1"
+let juspayGatewayUrl =
+      "http://localhost:${Natural/show (env:BECKN_GATEWAY_PORT ? 8015)}/v1"
 
 let kafkaConsumerCfgs =
       { publicTransportSearch =
-        { brokers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+        { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
         , groupId = "publicTransportSearchGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4

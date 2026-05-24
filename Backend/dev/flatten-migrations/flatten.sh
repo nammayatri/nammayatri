@@ -2,7 +2,7 @@
 DB=atlas_dev
 SCHEMA=$1
 USER=$SCHEMA"_user"
-CONN_STRING="host=localhost port=5434 user=atlas dbname=atlas_dev password=atlas"
+CONN_STRING="host=localhost port=${DB_PRIMARY_PORT:-5434} user=atlas dbname=atlas_dev password=atlas"
 SCHEMA_FILE="$SCHEMA.sql"
 SCHEMA_COMMAND_FILE="$SCHEMA.command.sql"
 

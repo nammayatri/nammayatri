@@ -3,7 +3,7 @@ import './TopBarActions.css';
 import { showAlert, showConfirm } from './Dialogs';
 import { RefPicker } from './RefPicker';
 import { loadUiState, saveUiState } from './uiState';
-import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE } from '../config';
+import { PROXY_BASE as CONTEXT_API, LOCAL_API_BASE, getServiceUrl } from '../config';
 import { Terminal as IntegratedTerminal } from './Terminal';
 import { FinanceViewer } from './FinanceViewer';
 
@@ -335,10 +335,10 @@ export const TopBarActions: React.FC = () => {
             <div className="tb-floating-section" title="Systems">
               <div className="tb-floating-section-label">Systems</div>
               <div className="tb-floating-section-row">
-                <a className="tb-btn" href="http://localhost:3001" target="_blank" rel="noopener noreferrer" title="Metabase — BI / DB explorer">
+                <a className="tb-btn" href={getServiceUrl('metabase')} target="_blank" rel="noopener noreferrer" title="Metabase — BI / DB explorer">
                   🗄 DB Explorer
                 </a>
-                <a className="tb-btn" href="http://localhost:8431" target="_blank" rel="noopener noreferrer" title="redis-commander — standalone + cluster">
+                <a className="tb-btn" href={getServiceUrl('redis-commander')} target="_blank" rel="noopener noreferrer" title="redis-commander — standalone + cluster">
                   🧰 Redis Explorer
                 </a>
                 <button

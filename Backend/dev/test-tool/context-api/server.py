@@ -162,11 +162,78 @@ def redis_cmd(*args):
 PORT = 7082
 
 VICTORIA_METRICS_URL = os.environ.get("VICTORIA_METRICS_URL", "")
+# Base URL of VictoriaMetrics for read queries (without /api/v1 suffix).
+# Defaults to localhost:8428 — the port the nix process binds when running locally.
+VICTORIA_METRICS_QUERY_URL = os.environ.get("VICTORIA_METRICS_QUERY_URL", "http://127.0.0.1:8428")
 
 # ── Paths ──
 SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
+
+# Per-user resolved port overlay (written by Backend/nix/services/resolve-ports.sh).
+# When absent — first run, or fresh clone — we fall back to the base ports.nix
+# so /api/ports always returns *some* answer.
+PORTS_RESOLVED_PATH = PROJECT_ROOT / "data" / "ports-resolved.nix"
+PORTS_BASE_PATH = PROJECT_ROOT / "Backend" / "nix" / "services" / "ports.nix"
+
+# Compiled once. Matches lines like `  rider-app = 8013;` in either file.
+_PORTS_LINE_RE = re.compile(r"^\s*([a-zA-Z][a-zA-Z0-9_-]*)\s*=\s*(\d+)\s*;")
+
+
+# ${VAR:default} resolver — mirror of config-sync's _expand_env_templates.
+# Used by the newman webhook runner to pre-process Postman env files before
+# invoking newman (which doesn't expand ${...} syntax natively). Local_*
+# env files carry the templates; Master_* files don't, but the helper is
+# idempotent so feeding either through it is safe.
+_ENV_TEMPLATE_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}")
+
+
+def _expand_env_templates(node):
+    if isinstance(node, dict):
+        return {k: _expand_env_templates(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_expand_env_templates(v) for v in node]
+    if isinstance(node, str):
+        return _ENV_TEMPLATE_RE.sub(
+            lambda m: os.environ.get(m.group(1), m.group(2) or ""),
+            node,
+        )
+    return node
+
+
+def _materialize_env_for_newman(src_path: Path) -> Path:
+    """Resolve ${VAR:default} in a Postman env file, write to /tmp, return the
+    resolved path. Caller deletes after newman finishes. Returns the original
+    path unchanged if expansion is a no-op (file has no template literals)."""
+    try:
+        data = json.loads(src_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return src_path
+    resolved = _expand_env_templates(data)
+    if resolved == data:
+        return src_path
+    out = Path("/tmp") / f"{src_path.stem}.resolved.json"
+    out.write_text(json.dumps(resolved, ensure_ascii=False))
+    return out
+
+
+def _read_ports_table():
+    """Return { 'service-name': 1234, ... } parsed from data/ports-resolved.nix
+    if present, otherwise from Backend/nix/services/ports.nix. Same line format
+    in both files, so one regex parser suffices. Used by the dashboard for
+    runtime port discovery — see GET /api/ports."""
+    path = PORTS_RESOLVED_PATH if PORTS_RESOLVED_PATH.exists() else PORTS_BASE_PATH
+    out = {}
+    try:
+        for line in path.read_text().splitlines():
+            m = _PORTS_LINE_RE.match(line)
+            if m:
+                out[m.group(1)] = int(m.group(2))
+    except OSError:
+        pass
+    return {"source": str(path.relative_to(PROJECT_ROOT)) if path.is_relative_to(PROJECT_ROOT) else str(path),
+            "ports": out}
 
 # Whitelisted GitHub repos that the /api/git/refs endpoint can introspect.
 # Each entry maps "<owner>/<name>" → the local checkout path under data/
@@ -4225,6 +4292,14 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"status": "ok"})
         elif path == "/api/services-ready":
             self._send_json(_probe_haskell_services())
+        # ── Runtime port discovery ──
+        # The dashboard fetches /api/ports on first paint to learn the
+        # per-user port mapping (after resolve-ports.sh has overlaid the
+        # base ports.nix with a free-port offset). Without this, CRA bakes
+        # the default ports into the build and the dashboard can't reach
+        # remapped services.
+        elif path == "/api/ports":
+            self._send_json(_read_ports_table())
         # ── Finance Dashboard ──
         elif path == "/api/finance/dashboard":
             from urllib.parse import parse_qs
@@ -4278,6 +4353,31 @@ class ContextHandler(BaseHTTPRequestHandler):
             side = qs.get("side", ["bpp"])[0]
             schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
             self._send_json(get_finance_reference_types(schema))
+        # ── Metrics read (proxy to VictoriaMetrics for dashboard charts) ────
+        # GETs only — query / query_range / labels / series. Forwards the
+        # query string verbatim. Same shape as Prometheus's HTTP API so the
+        # dashboard can treat this endpoint as a drop-in.
+        elif method == "GET" and path.startswith("/api/metrics/v1/"):
+            vm_path = path[len("/api/metrics"):]  # → "/v1/query_range"
+            target = f"{VICTORIA_METRICS_QUERY_URL}/api{vm_path}"
+            qs = parsed.query
+            if qs:
+                target = f"{target}?{qs}"
+            try:
+                with urllib.request.urlopen(target, timeout=15) as r:
+                    body = r.read()
+                    self.send_response(r.status)
+                    self.send_header("Content-Type", r.headers.get("Content-Type", "application/json"))
+                    self.send_header("Content-Length", str(len(body)))
+                    self._cors_headers()
+                    self.end_headers()
+                    self.wfile.write(body)
+            except urllib.error.HTTPError as e:
+                self._send_json({"error": f"VM {e.code}", "detail": e.read().decode("utf-8", "ignore")}, e.code)
+            except Exception as e:
+                self._send_json({"error": "VM unreachable", "detail": str(e)}, 502)
+            return True
+
         # ── Metrics push (from dashboard after suite completes) ──────────────
         elif method == "POST" and path in ("/api/metrics/push", "/metrics/push"):
             body = self._read_json_body()
@@ -4374,12 +4474,15 @@ def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
     import time as _time
     ts_ms = int(_time.time() * 1000)
     suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
-    labels_base = f'version="{version_id}",suite="{suite_label}"'
-    if not all_passed:
-        print(f"  [metrics] skipped — suite={suite_label} FAIL (only push on full pass)")
-        return False, "skipped — suite did not fully pass"
+    status_str = "pass" if all_passed else "fail"
+    labels_base = f'version="{version_id}",collection="{collection}",env="{env}",suite="{suite_label}"'
 
-    lines = []
+    lines = [
+        # Always-on counter so the dashboard can chart pass/fail rate per suite.
+        # Emitted as a 1-sample gauge; Grafana / dashboard sums by status over a
+        # window. (True counters require monotonic state we don't have here.)
+        f'integration_test_suite_runs{{{labels_base},status="{status_str}"}} 1 {ts_ms}'
+    ]
 
     if all_passed:
         total_ms = 0
@@ -4452,9 +4555,10 @@ def _run_all_master_webhook(run_id: str, version_id: str):
                 suite_name = coll_dir.name
                 flow_name = coll_file.stem
                 report_file = Path("/tmp") / f"ny_webhook_{run_id}_{suite_name}_{flow_name}_{city}.json"
+                resolved_env_file = _materialize_env_for_newman(env_file)
                 try:
                     proc = _sp.run(
-                        ["newman", "run", str(coll_file), "-e", str(env_file),
+                        ["newman", "run", str(coll_file), "-e", str(resolved_env_file),
                          "--bail", "--timeout-request", "60000",
                          "--reporters", "json",
                          "--reporter-json-export", str(report_file)],
@@ -4503,6 +4607,11 @@ def _run_all_master_webhook(run_id: str, version_id: str):
                         _webhook_runs[run_id]["failed"] += 1
                         _webhook_runs[run_id]["errors"].append(
                             f"{suite_name}/{flow_name}/{city}: {e}")
+                finally:
+                    # Remove the materialized env-file (only if we wrote one)
+                    if resolved_env_file != env_file:
+                        try: resolved_env_file.unlink(missing_ok=True)
+                        except OSError: pass
 
     with _webhook_lock:
         _webhook_runs[run_id]["status"] = "done"

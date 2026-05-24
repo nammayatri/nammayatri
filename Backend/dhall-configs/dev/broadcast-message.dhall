@@ -50,7 +50,7 @@ let hedisClusterCfg =
 
 let consumerProperties =
       { groupId = "broadcast-messages-compute"
-      , brockers = [ env:KAFKA_BROKER as Text ? "localhost:29092" ]
+      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -66,7 +66,7 @@ let availabilityTimeWindowOption =
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False

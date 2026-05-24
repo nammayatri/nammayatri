@@ -2,6 +2,8 @@ let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
 
 let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
 
+let mockGooglePort = Natural/show (env:MOCK_GOOGLE_PORT ? 8019)
+
 let redis_cfg =
       { redis_host = "0.0.0.0"
       , redis_port = env:REDIS_PORT ? 6379
@@ -35,7 +37,7 @@ let zone_to_redis_replica_mapping =
       }
 
 let kafka_cfg =
-      { kafka_key = "bootstrap.servers", kafka_host = env:KAFKA_BROKER as Text ? "0.0.0.0:29092" }
+      { kafka_key = "bootstrap.servers", kafka_host = "0.0.0.0:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" }
 
 let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 
@@ -683,7 +685,7 @@ in  { logger_cfg
     , detection_violation_config
     , detection_anti_violation_config
     , google_compute_route_url =
-        "http://localhost:8019/directions/v2/:computeRoutes"
+        "http://localhost:${mockGooglePort}/directions/v2/:computeRoutes"
     , google_api_key = "mock-dev-key"
     , route_geo_json_config = { bucket = "route-geojson", prefix = "" }
     , trigger_fcm_callback_url_bap =

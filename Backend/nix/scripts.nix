@@ -27,6 +27,7 @@ _:
       killSvcPortsScript =
         let ports = import ./services/ports.nix; in
         killPortsSnippet (lib.attrValues ports);
+      resolvePorts = import ./services/resolve-ports.nix { inherit pkgs lib; };
       # Ports owned by , run-local-test-dashboard (test-dashboard UI + test-local-api
       # + config-sync-server).
       localTestDashboardPorts = [ 7070 7083 8090 ];
@@ -269,7 +270,11 @@ _:
             # Resolve ports.nix with available free ports so multiple
             # backend instances on the same devbox don't collide.
             echo "── Pre-flight: resolving free ports ──"
-            bash "''${FLAKE_ROOT}/Backend/nix/services/resolve-ports.sh"
+            ${lib.getExe resolvePorts}
+            if [[ ! -f "$RESOLVED_FILE" ]]; then
+              echo "ERROR: resolve-ports did not produce $RESOLVED_FILE" >&2
+              exit 1
+            fi
             # Write resolved ports to devbox-registry.json so other tools
             # (dashboard, other developers) can discover our ports.
             REGISTRY="/tmp/devbox-registry.json"
@@ -306,8 +311,24 @@ _:
               echo "$REG" > "$REGISTRY"
             fi
             # Generate Caddyfile from resolved ports for single-entry-point access.
+            # Service list lives in Backend/nix/services/caddyfile.nix; we
+            # evaluate it via nix-instantiate so the source-of-truth is Nix,
+            # not a shell array. Falls back to the base ports.nix if the
+            # resolved overlay isn't on disk yet.
             echo "── Pre-flight: generating Caddyfile ──"
-            bash "''${FLAKE_ROOT}/Backend/nix/services/build-caddyfile.sh"
+            CADDY_PORTS_FILE="$RESOLVED_FILE"
+            if [[ ! -f "$CADDY_PORTS_FILE" ]]; then
+              CADDY_PORTS_FILE="''${FLAKE_ROOT}/Backend/nix/services/ports.nix"
+            fi
+            mkdir -p "''${FLAKE_ROOT}/data"
+            nix-instantiate --eval --raw --impure --expr \
+              "import ''${FLAKE_ROOT}/Backend/nix/services/caddyfile.nix { ports = import $CADDY_PORTS_FILE; }" \
+              > "''${FLAKE_ROOT}/data/Caddyfile"
+            if [[ ! -s "''${FLAKE_ROOT}/data/Caddyfile" ]]; then
+              echo "ERROR: Caddyfile generation produced an empty file" >&2
+              exit 1
+            fi
+            echo "Generated Caddyfile at ''${FLAKE_ROOT}/data/Caddyfile"
             # Bump soft stack to the hard max. `nix run` spawns a fresh shell
             # that doesn't inherit the devshell's shellHook, so set it here too.
             # Required by process-compose / some Haskell exes that want >= 60 MB stack.

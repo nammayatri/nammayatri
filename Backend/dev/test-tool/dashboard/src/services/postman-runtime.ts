@@ -176,13 +176,15 @@ export async function executeTestScript(
 export async function executePrereqScript(
   script: string,
   stores: VariableStores
-): Promise<{ consoleLogs: string[]; error?: string }> {
+): Promise<{ consoleLogs: string[]; error?: string; skipped?: boolean }> {
   const consoleLogs: string[] = [];
   const assertions: PostmanRuntimeResult['assertions'] = [];
 
   const { setTimeoutShim, sendRequestShim, drain } = makeAsyncHelpers(consoleLogs);
 
   const pm: any = buildPmObject(null, 0, stores, assertions);
+  let skipped = false;
+  pm.execution = { skipRequest: () => { skipped = true; } };
   pm.sendRequest = sendRequestShim;
 
   const consoleObj = {
@@ -205,10 +207,10 @@ export async function executePrereqScript(
     fn(pm, consoleObj, setTimeoutShim, Math, String, Date, JSON, postman);
     await drain();
   } catch (e: any) {
-    return { consoleLogs, error: e.message };
+    return { consoleLogs, error: e.message, skipped };
   }
 
-  return { consoleLogs };
+  return { consoleLogs, skipped };
 }
 
 // ── pm object builder ──

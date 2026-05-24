@@ -11,8 +11,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import './CoverageReport.css';
+import { PROXY_BASE } from '../config';
 
-const API_BASE = 'http://localhost:7082';
+// All coverage endpoints live on the same context-api as PROXY_BASE.
+// Keeping a local alias preserves the existing call-site syntax.
+const API_BASE = PROXY_BASE;
 
 interface EndpointSpec {
   method: string;

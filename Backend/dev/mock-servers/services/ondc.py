@@ -19,6 +19,8 @@ import base64
 import hashlib
 from datetime import datetime, timezone
 
+from ._env import MOCK_SERVER_PORT
+
 from status_store import extract_path_ids, deep_merge
 
 log = logging.getLogger("mock.ondc")
@@ -43,7 +45,7 @@ def _get_bpp_identity() -> tuple[str, str]:
         return _BPP_IDENTITY_CACHE
     import psycopg2
     conn = psycopg2.connect(
-        host="localhost", port=5434, dbname="atlas_dev",
+        host="localhost", port=int(os.environ.get("DB_PRIMARY_PORT", "5434")), dbname="atlas_dev",
         user=os.environ.get("DB_USER", os.environ.get("USER", "atlas")),
         password=os.environ.get("DB_PASS", ""),
     )
@@ -102,7 +104,7 @@ def handle(handler, path, body):
     # Every callback is signed with a single PUBLIC_TRANSPORT BPP identity
     # pulled from atlas_registry.subscriber (cached after first lookup).
     bpp_id, bpp_unique_key = _get_bpp_identity()
-    bpp_uri = f"http://localhost:8080{path.rsplit('/', 1)[0]}"
+    bpp_uri = f"http://localhost:{MOCK_SERVER_PORT}{path.rsplit('/', 1)[0]}"
 
     # Build callback context
     cb_ctx = {
