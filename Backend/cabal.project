@@ -13,7 +13,6 @@ packages:
   app/dashboard/provider-dashboard
   app/dashboard/Lib
   app/unified-dashboard
-  app/safety-dashboard
   app/dashboard/CommonAPIs
   app/example-service
   app/special-zone

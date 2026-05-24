@@ -55,7 +55,6 @@
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
   unified-dashboard = 8022;
-  safety-dashboard = 8025;
   search-result-aggregator = 8029;
   location-tracking-service = 8081;
   image-api-helper = 8099;
@@ -73,7 +72,6 @@
   rider-producer-metrics = 9990;
   producer-metrics = 9990;
   unified-dashboard-metrics = 9995;
-  safety-dashboard-metrics = 9993;
   driver-offer-allocator-metrics = 8056;
   rider-app-scheduler-metrics = 8056;
 

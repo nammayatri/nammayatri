@@ -200,7 +200,6 @@ in
         "search-result-aggregator-exe"
         "kafka-consumers-exe"
         "unified-dashboard-exe"
-        "safety-dashboard-exe"
       ];
 
       # In non-backend profiles (e.g. testDashboard) every haskell process is
@@ -1195,14 +1194,6 @@ in
               SERVICE_PORT = toString ports.unified-dashboard;
               METRICS_PORT = toString ports.unified-dashboard-metrics;
               RIDER_APP_PORT = toString ports.rider-app;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-            };
-          };
-
-          safety-dashboard-exe = {
-            environment = {
-              SERVICE_PORT = toString ports.safety-dashboard;
-              METRICS_PORT = toString ports.safety-dashboard-metrics;
               DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
             };
           };
