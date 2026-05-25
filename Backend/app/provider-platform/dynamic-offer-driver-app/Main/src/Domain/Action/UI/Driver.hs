@@ -3454,7 +3454,6 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
           remark = "Refund for security deposit",
           customerName = person.firstName,
           customerVpa = vpa,
-          isDynamicWebhookRequired = False,
           transferAmount = amount, -- for now keep it the same
           payoutServiceFlow
         }

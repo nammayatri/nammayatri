@@ -300,7 +300,6 @@ buildCreatePayoutOrderReq orderId currency pr payoutServiceFlow mbTransferAmount
       pr.customerName
       vpa
       (fromMaybe "FULFILL_ONLY" pr.orderType)
-      False
       payoutServiceFlow
       mbTransferAmount
 
