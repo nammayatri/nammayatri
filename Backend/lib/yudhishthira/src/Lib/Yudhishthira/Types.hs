@@ -275,7 +275,7 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
 data InvoiceTemplateScope
   = InvoiceTypeGeneric
   | InvoiceTypeSpecific InvoiceType
-  deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, Ord, Generic, ToSchema)
 
 -- Hand-rolled (dashed) so the string is whitespace-free for DB column + Redis key use.
 instance Show InvoiceTemplateScope where
@@ -290,6 +290,17 @@ instance Read InvoiceTemplateScope where
         Just it -> [(InvoiceTypeSpecific it, "")]
         Nothing -> []
     _ -> []
+
+-- Hand-rolled to encode as a flat string via Show/Read. Generic Aeson would
+-- otherwise emit a tagged object (since this type has a mixed nullary +
+-- parametric structure) which doesn't match how the other LogicDomain parameter types serialize.
+instance ToJSON InvoiceTemplateScope where
+  toJSON = String . T.pack . show
+
+instance FromJSON InvoiceTemplateScope where
+  parseJSON = withText "InvoiceTemplateScope" $ \t ->
+    maybe (fail $ "Failed to parse InvoiceTemplateScope: " <> T.unpack t) pure
+      $ readMaybe (T.unpack t)
 
 data LogicDomain
   = POOLING
