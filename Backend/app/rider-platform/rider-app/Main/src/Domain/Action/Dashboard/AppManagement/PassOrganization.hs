@@ -121,27 +121,20 @@ mkPassDetailsInfoResp decGuardianMobile organizationName passDetails =
 getPassOrganizationPassDetailsDepot ::
   ( Id.ShortId DMerchant.Merchant ->
     Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Id.Id DPerson.Person ->
     Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe (Id.Id DPerson.Person) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.Flow PassOrganizationAPI.PassDetailsListResp
   )
-getPassOrganizationPassDetailsDepot merchantShortId opCity passEnumText mbDepotPersonId mbStatusText limit offset = do
-  passEnum <- DPassDetails.parsePassEnum passEnumText
-  depotPersonId <- mbDepotPersonId & fromMaybeM (InvalidRequest "depotPersonId is required")
-  statusText <- mbStatusText & fromMaybeM (InvalidRequest "status is required")
+getPassOrganizationPassDetailsDepot merchantShortId opCity limit offset depotPersonId statusText = do
   status <- DPassDetails.parseVerificationStatus statusText
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
   orgs <- QPassOrganization.findByDepotPersonId (Just depotPersonId)
-  let scopedOrgIds = [o.id | o <- orgs, o.merchantOperatingCityId == callerMoc.id, o.passEnum == passEnum]
+  let scopedOrgIds = [o.id | o <- orgs]
       effectiveLimit = min 100 (fromMaybe 10 limit)
       offset' = fromMaybe 0 offset
-  passDetails <-
-    if null scopedOrgIds
-      then pure []
-      else QPassDetails.findAllByPassOrganizationIdsAndVerificationStatus (Just effectiveLimit) offset scopedOrgIds [status]
+  passDetails <- QPassDetails.findAllByPassOrganizationIdsAndVerificationStatus (Just effectiveLimit) (Just offset') scopedOrgIds [status] callerMoc.id
   let orgNameById oid = case [o.name | o <- orgs, o.id == oid] of (n : _) -> n; [] -> ""
   passDetailsInfo <- forM passDetails $ \pd -> do
     decGuardianMobile <- mapM decrypt pd.guardianMobileNumber

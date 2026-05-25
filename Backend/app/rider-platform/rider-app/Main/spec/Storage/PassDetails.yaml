@@ -139,6 +139,7 @@ PassDetails:
           - in:
             - passOrganizationId
             - verificationStatus
+          - merchantOperatingCityId
       orderBy:
         field: updatedAt
         order: asc

@@ -118,15 +118,11 @@ type GetPassOrganizationPassDetails =
   )
 
 type GetPassOrganizationPassDetailsDepot =
-  ( "passDetails" :> "depot" :> Capture "passEnum" Kernel.Prelude.Text
-      :> QueryParam
+  ( "passDetails" :> "depot" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "offset" Kernel.Prelude.Int
+      :> MandatoryQueryParam
            "depotPersonId"
            (Kernel.Types.Id.Id Domain.Types.Person.Person)
-      :> QueryParam "status" Kernel.Prelude.Text
-      :> QueryParam "limit" Kernel.Prelude.Int
-      :> QueryParam
-           "offset"
-           Kernel.Prelude.Int
+      :> MandatoryQueryParam "status" Kernel.Prelude.Text
       :> Get
            '[JSON]
            PassDetailsListResp
@@ -160,7 +156,7 @@ type PostPassOrganizationAssignDepot = ("assignDepot" :> ReqBody '[JSON] AssignD
 data PassOrganizationAPIs = PassOrganizationAPIs
   { getPassOrganizationGetPassOrganization :: Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient GetOrganizationResp,
     getPassOrganizationPassDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PassDetailsListResp,
-    getPassOrganizationPassDetailsDepot :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient PassDetailsListResp,
+    getPassOrganizationPassDetailsDepot :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient PassDetailsListResp,
     postPassOrganizationPassDetailsVerify :: VerifyPassDetailsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPassOrganizationUpdate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> PassOrganizationUpdateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getPassOrganizationGetOrganizations :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> EulerHS.Types.EulerClient [GetOrganizationResp],
