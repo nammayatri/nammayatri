@@ -325,10 +325,10 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"passOrganizationIds\": [\"{{pass_organization_id}}\"], \"depotId\": \"depot-test-001\"}"
+          "raw": "{\n    \"depotPersonId\": \"{{admin_person_id}}\",\n    \"depotId\": \"depot-test-001\",\n    \"passOrganizations\": [\n        { \"id\": \"{{pass_organization_id}}\", \"isAdd\": true }\n    ]\n}"
         },
         "url": {
-          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot/{{admin_person_id}}",
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot",
           "host": [
             "{{baseUrl_dashboard}}"
           ],
@@ -336,8 +336,93 @@
             "{{bap_short_id}}",
             "{{city}}",
             "passOrganization",
-            "assignDepot",
-            "{{admin_person_id}}"
+            "assignDepot"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard Assign Depot (Idempotent re-assign to same depotPerson)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Re-assign to same depotPerson OK', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"depotPersonId\": \"{{admin_person_id}}\",\n    \"depotId\": \"depot-test-001\",\n    \"passOrganizations\": [\n        { \"id\": \"{{pass_organization_id}}\", \"isAdd\": true }\n    ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "assignDepot"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard Assign Depot (Empty passOrganizations rejected)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Empty passOrganizations is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([400, 422]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"depotPersonId\": \"{{admin_person_id}}\",\n    \"depotId\": \"depot-test-001\",\n    \"passOrganizations\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/assignDepot",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "assignDepot"
           ]
         }
       }
@@ -776,6 +861,118 @@
             {
               "key": "status",
               "value": "PENDING"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard List Pass Details by Depot (PENDING)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Depot list OK', function () { pm.response.to.have.status(200); });",
+              "var pdId = pm.environment.get('pass_details_id');",
+              "var match = (d.passDetails || []).find(function (pd) { return pd.passDetailsId === pdId; });",
+              "pm.test('Pending pass details visible via depot endpoint', function () { pm.expect(match).to.exist; pm.expect(match.verificationStatus).to.eql('PENDING'); });",
+              "pm.test('All returned rows match requested status', function () { (d.passDetails || []).forEach(function (pd) { pm.expect(pd.verificationStatus).to.eql('PENDING'); }); });",
+              "pm.test('Pagination echoed', function () { pm.expect(d.limit).to.eql(50); pm.expect(d.offset).to.eql(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/depot/{{pass_enum}}?depotPersonId={{admin_person_id}}&status=PENDING&limit=50&offset=0",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "passDetails",
+            "depot",
+            "{{pass_enum}}"
+          ],
+          "query": [
+            {
+              "key": "depotPersonId",
+              "value": "{{admin_person_id}}"
+            },
+            {
+              "key": "status",
+              "value": "PENDING"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard List Pass Details by Depot (status required)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Missing status rejected with 400', function () { pm.expect(pm.response.code).to.be.oneOf([400, 422]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_dashboard}}/{{bap_short_id}}/{{city}}/passOrganization/passDetails/depot/{{pass_enum}}?depotPersonId={{admin_person_id}}&limit=50&offset=0",
+          "host": [
+            "{{baseUrl_dashboard}}"
+          ],
+          "path": [
+            "{{bap_short_id}}",
+            "{{city}}",
+            "passOrganization",
+            "passDetails",
+            "depot",
+            "{{pass_enum}}"
+          ],
+          "query": [
+            {
+              "key": "depotPersonId",
+              "value": "{{admin_person_id}}"
             },
             {
               "key": "limit",
