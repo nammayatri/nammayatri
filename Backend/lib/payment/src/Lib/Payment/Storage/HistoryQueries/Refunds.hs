@@ -4,6 +4,7 @@ module Lib.Payment.Storage.HistoryQueries.Refunds
     findById,
     findByShortId,
     updateIsApiCallSuccess,
+    updateRefundStatus,
     updateRefundsEntryByResponse,
     updateRefundsEntryByStripeResponse,
     findLatestByOrderId,
@@ -74,6 +75,23 @@ updateIsApiCallSuccess merchantOpCityId isApiCallSuccess refunds mbAction = do
           <> maybe "" ("; action: " <>) mbAction
   QRefunds.updateIsApiCallSuccess isApiCallSuccess refunds.id
   RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) refunds.status (Just historyMessage) refunds
+
+updateRefundStatus ::
+  BeamFlow m r =>
+  Id MerchantOperatingCity ->
+  Payment.RefundStatus ->
+  DRefunds.Refunds ->
+  Maybe Text ->
+  m ()
+updateRefundStatus merchantOpCityId newStatus refunds mbAction = do
+  let historyMessage =
+        "Update refund status: "
+          <> show refunds.status
+          <> " -> "
+          <> show newStatus
+          <> maybe "" ("; action: " <>) mbAction
+  QRefunds.updateStatus newStatus refunds.id
+  RefundsHistory.recordRefundsHistory merchantOpCityId (Just refunds.status) newStatus (Just historyMessage) refunds
 
 updateRefundsEntryByResponse ::
   (BeamFlow m r, Finance.HasActorInfo m r) =>
