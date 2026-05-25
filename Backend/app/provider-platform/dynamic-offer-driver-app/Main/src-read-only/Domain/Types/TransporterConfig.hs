@@ -135,6 +135,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverFeeOverlaySendingTimeLimitInDays :: Kernel.Prelude.Int,
     driverFeeRetryThresholdConfig :: Kernel.Prelude.Int,
     driverLocationAccuracyBuffer :: Kernel.Types.Common.Meters,
+    driverLocationStalenessThresholdSeconds :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     driverPaymentCycleBuffer :: Kernel.Prelude.NominalDiffTime,
     driverPaymentCycleDuration :: Kernel.Prelude.NominalDiffTime,
     driverPaymentCycleStartTime :: Kernel.Prelude.NominalDiffTime,
