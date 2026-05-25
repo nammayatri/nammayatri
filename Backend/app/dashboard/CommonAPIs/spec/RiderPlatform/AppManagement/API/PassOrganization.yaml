@@ -104,6 +104,18 @@ apis:
         - offset: Int
       response:
         type: PassDetailsListResp
+  - GET:
+      endpoint: /passDetails/depot/{passEnum}
+      auth: ApiAuthV2
+      params:
+        passEnum: Text
+      query:
+        - depotPersonId: Id Person
+        - status: Text
+        - limit: Int
+        - offset: Int
+      response:
+        type: PassDetailsListResp
   - POST:
       endpoint: /passDetails/verify
       auth: ApiAuthV2

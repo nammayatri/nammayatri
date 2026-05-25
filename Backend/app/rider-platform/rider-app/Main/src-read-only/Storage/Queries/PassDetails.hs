@@ -60,6 +60,20 @@ findAllByPassOrganizationIdAndVerificationStatus limit offset passOrganizationId
     limit
     offset
 
+findAllByPassOrganizationIdsAndVerificationStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> [Domain.Types.PassDetails.VerificationStatus] -> m [Domain.Types.PassDetails.PassDetails])
+findAllByPassOrganizationIdsAndVerificationStatus limit offset passOrganizationId verificationStatus = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.passOrganizationId $ Se.In (Kernel.Types.Id.getId <$> passOrganizationId),
+          Se.Is Beam.verificationStatus $ Se.In verificationStatus
+        ]
+    ]
+    (Se.Asc Beam.updatedAt)
+    limit
+    offset
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails -> m (Maybe Domain.Types.PassDetails.PassDetails))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
