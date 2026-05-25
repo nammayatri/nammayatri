@@ -14,6 +14,7 @@ import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
+import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
@@ -97,11 +98,23 @@ data FleetOwnerUpdateLanguageReq = FleetOwnerUpdateLanguageReq {language :: Kern
 instance Kernel.Types.HideSecrets.HideSecrets FleetOwnerUpdateLanguageReq where
   hideSecrets = Kernel.Prelude.identity
 
-data FleetOwnerVerifyReqV2 = FleetOwnerVerifyReqV2 {mobileNumber :: Kernel.Prelude.Text, mobileCountryCode :: Kernel.Prelude.Text, otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data FleetOwnerVerifyReqV2 = FleetOwnerVerifyReqV2
+  { mobileNumber :: Kernel.Prelude.Text,
+    mobileCountryCode :: Kernel.Prelude.Text,
+    otp :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    totp :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype FleetOwnerVerifyResV2 = FleetOwnerVerifyResV2 {authToken :: Kernel.Prelude.Text}
+data FleetOwnerVerifyResV2 = FleetOwnerVerifyResV2
+  { authToken :: Kernel.Prelude.Text,
+    is2faMandatory :: Kernel.Prelude.Bool,
+    is2faEnabled :: Kernel.Prelude.Bool,
+    message :: Kernel.Prelude.Text,
+    city :: Kernel.Types.Beckn.Context.City,
+    merchantId :: Kernel.Types.Id.Id Dashboard.Common.Merchant
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
