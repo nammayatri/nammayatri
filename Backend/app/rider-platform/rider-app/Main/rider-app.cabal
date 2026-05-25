@@ -276,6 +276,7 @@ library
       Domain.Action.UI.FeedbackForm
       Domain.Action.UI.FinanceInvoice
       Domain.Action.UI.FollowRide
+      Domain.Action.UI.FRFSInternal
       Domain.Action.UI.FRFSTicketService
       Domain.Action.UI.Frontend
       Domain.Action.UI.GetDailyMetrics
@@ -845,6 +846,7 @@ library
       API.Action.UI.FavouriteDriver
       API.Action.UI.FinanceInvoice
       API.Action.UI.FollowRide
+      API.Action.UI.FRFSInternal
       API.Action.UI.FRFSTicketService
       API.Action.UI.Insurance
       API.Action.UI.InsuranceInternal

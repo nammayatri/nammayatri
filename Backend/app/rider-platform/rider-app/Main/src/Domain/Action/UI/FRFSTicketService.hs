@@ -1400,7 +1400,14 @@ getFrfsTripRouteManifest ::
 getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let cityId = personCityInfo.merchantOperatingCityId
+  buildTripRouteManifest personCityInfo.merchantOperatingCityId tripId routeId
+
+buildTripRouteManifest ::
+  Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
+  Environment.Flow FRFSTripPassengerManifestResp
+buildTripRouteManifest cityId tripId routeId = do
   integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
   let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
   schedule <- JMU.measureLatency (OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig) "getBusTripSchedule"
