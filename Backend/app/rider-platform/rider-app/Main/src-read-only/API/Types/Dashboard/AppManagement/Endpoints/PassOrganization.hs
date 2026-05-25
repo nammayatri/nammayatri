@@ -54,6 +54,7 @@ data PassDetailsInfoResp = PassDetailsInfoResp
     idCardPicture :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     name :: Kernel.Prelude.Text,
     numberOfStages :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    organizationName :: Kernel.Prelude.Text,
     passDetailsId :: Kernel.Types.Id.Id Domain.Types.PassDetails.PassDetails,
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     pincode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

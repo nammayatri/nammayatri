@@ -42,6 +42,7 @@ types:
     academicYearEnd: Maybe Day
     numberOfStages: Maybe Int
     remark: Maybe Text
+    organizationName: Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
