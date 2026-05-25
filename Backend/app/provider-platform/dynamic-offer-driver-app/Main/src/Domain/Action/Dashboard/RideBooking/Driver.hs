@@ -51,6 +51,7 @@ import Domain.Types.DriverPanCard
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
