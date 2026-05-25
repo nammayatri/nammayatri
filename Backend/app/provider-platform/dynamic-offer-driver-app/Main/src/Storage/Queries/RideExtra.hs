@@ -651,6 +651,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
                           <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
                           <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
                           <> [Se.Is BeamRD.vehicleNumber $ Se.Eq (fromJust mbVehicleNo) | isJust mbVehicleNo]
+                          <> [Se.Is BeamRD.driverCountryCode $ Se.Eq mbDriverMobileCountryCode | isJust mbDriverMobileCountryCode]
                       )
                   ]
                   Nothing
@@ -683,7 +684,7 @@ findAllRideItems isDashboardRequest merchant opCity limitVal offsetVal mbBooking
               riderDetails <- findAllWithKV [Se.Is BeamRDR.id $ Se.In $ mapMaybe (fmap getId . Booking.riderId) bookings]
               pure $ mkRideItemUsingMaps rides rideDetails' bookings riderDetails
             (_, _, Just customerPhoneDBHash) -> do
-              riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
+              riderDetails <- findAllWithKV ([Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id] <> [Se.Is BeamRDR.mobileCountryCode $ Se.Eq (fromJust mbCustomerMobileCountryCode) | isJust mbCustomerMobileCountryCode])
               bookings <-
                 findAllFromKvRedis
                   [ Se.And
