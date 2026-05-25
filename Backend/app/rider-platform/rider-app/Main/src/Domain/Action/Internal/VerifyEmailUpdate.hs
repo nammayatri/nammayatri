@@ -4,6 +4,7 @@ module Domain.Action.Internal.VerifyEmailUpdate
   )
 where
 
+import qualified Data.Text as T
 import Environment
 import Kernel.External.Encryption (encrypt)
 import Kernel.Prelude
@@ -12,7 +13,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Queries.PersonExtra as QPerson
+import qualified Storage.Queries.Person as QPerson
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,
@@ -31,10 +32,12 @@ verifyEmailUpdate apiKey merchantShortIdText req = do
   unless (Just dashboardToken == apiKey) $
     throwError (AuthBlocked "Invalid Rider App dashboard token")
   let personId = Id req.personId
-  mbExisting <- QPerson.findByEmailAndMerchantId merchant.id req.email
+      email = T.toLower req.email
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound req.personId)
+  mbExisting <- QPerson.findByEmailAndMerchantId merchant.id email
   whenJust mbExisting $ \existing ->
     when (existing.id /= personId) $
       throwError (InvalidRequest "Email already registered by another user")
-  encEmail <- encrypt req.email
+  encEmail <- encrypt email
   QPerson.updateEmailByPersonId personId encEmail
   pure Success
