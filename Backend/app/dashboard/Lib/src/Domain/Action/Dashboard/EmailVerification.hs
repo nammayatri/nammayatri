@@ -10,6 +10,7 @@ module Domain.Action.Dashboard.EmailVerification
 where
 
 import qualified Data.HashMap.Strict as HM
+import qualified Data.Text as T
 import Domain.Types.Person as DP
 import qualified Domain.Types.ServerName as DTServer
 import Kernel.External.Encryption (encrypt)
@@ -68,17 +69,18 @@ sendEmailVerificationOtp ::
   m APISuccess
 sendEmailVerificationOtp tokenInfo req = do
   runRequestValidation validateEmailOtpSendReq req
+  let email = T.toLower req.email
   sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId req.email) sendEmailRateLimitOptions
+  checkSlidingWindowLimitWithOptions (makeEmailOtpHitsCountKey tokenInfo.personId email) sendEmailRateLimitOptions
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   let callInternalSendEmailOTP =
         if DTServer.APP_BACKEND `elem` merchant.serverNames
           then InternalClient.callBAPInternalSendEmailOTP
           else InternalClient.callBPPInternalSendEmailOTP
-  emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) tokenInfo.city (InternalClient.SendEmailOTPReq {email = req.email})
+  emailRes <- callInternalSendEmailOTP (getShortId merchant.shortId) tokenInfo.city (InternalClient.SendEmailOTPReq {email = email})
   otpCode <- emailRes.otp & fromMaybeM (InternalError "OTP not returned from internal email service")
   let otpTTL = fromMaybe 300 merchant.emailOtpTTLInSecs
-  Redis.setExp (makeEmailOtpKey tokenInfo.personId req.email) otpCode otpTTL
+  Redis.setExp (makeEmailOtpKey tokenInfo.personId email) otpCode otpTTL
   pure Success
 
 verifyEmailOtp ::
@@ -97,8 +99,9 @@ verifyEmailOtp tokenInfo req = do
   merchant <- QMerchant.findById tokenInfo.merchantId >>= fromMaybeM (MerchantDoesNotExist tokenInfo.merchantId.getId)
   let maxAttempts = fromMaybe 5 merchant.emailMaxOtpVerifyAttempts
       otpTTL = fromMaybe 300 merchant.emailOtpTTLInSecs
-      key = makeEmailOtpKey tokenInfo.personId req.email
-      attemptsKey = makeEmailOtpVerifyHitsCountKey tokenInfo.personId req.email
+      email = T.toLower req.email
+      key = makeEmailOtpKey tokenInfo.personId email
+      attemptsKey = makeEmailOtpVerifyHitsCountKey tokenInfo.personId email
   attempts <- fromMaybe 0 <$> Redis.get @Int attemptsKey
   when (attempts >= maxAttempts) $ do
     Redis.del key
@@ -108,21 +111,23 @@ verifyEmailOtp tokenInfo req = do
   storedOtp <- mbStored & fromMaybeM (InvalidRequest "OTP expired or not found")
   if storedOtp == req.otp
     then do
-      Redis.del key
-      Redis.del attemptsKey
-      mbExisting <- QP.findByEmail req.email
+      person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+      mbExisting <- QP.findByEmail email
       whenJust mbExisting $ \existing ->
-        when (existing.id /= tokenInfo.personId) $
+        when (existing.id /= tokenInfo.personId) $ do
+          Redis.del key
+          Redis.del attemptsKey
           throwError (InvalidRequest "Email already registered by another user")
       let callInternalVerifyEmailUpdate =
             if DTServer.APP_BACKEND `elem` merchant.serverNames
               then InternalClient.callBAPInternalVerifyEmailUpdate
               else InternalClient.callBPPInternalVerifyEmailUpdate
-          updateReq = InternalClient.VerifyEmailUpdateReq {email = req.email, personId = tokenInfo.personId.getId}
+          updateReq = InternalClient.VerifyEmailUpdateReq {email = email, personId = tokenInfo.personId.getId}
       void $ callInternalVerifyEmailUpdate (getShortId merchant.shortId) updateReq
-      person <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
-      encEmail <- encrypt req.email
+      encEmail <- encrypt email
       QP.updatePersonEmail person.id encEmail
+      Redis.del key
+      Redis.del attemptsKey
       pure Success
     else do
       Redis.setExp attemptsKey (attempts + 1) otpTTL

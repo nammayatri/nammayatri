@@ -4,6 +4,7 @@ module Domain.Action.Internal.VerifyEmailUpdate
   )
 where
 
+import qualified Data.Text as T
 import Environment
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
@@ -11,7 +12,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.Queries.PersonExtra as QPerson
+import qualified Storage.Queries.Person as QPerson
 
 data VerifyEmailUpdateReq = VerifyEmailUpdateReq
   { email :: Text,
@@ -29,9 +30,11 @@ verifyEmailUpdate apiKey merchantShortIdText req = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError (AuthBlocked "Invalid BPP internal api key")
   let personId = Id req.personId
-  mbExisting <- QPerson.findByEmail (Just req.email)
+      email = T.toLower req.email
+  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound req.personId)
+  mbExisting <- QPerson.findByEmail (Just email)
   whenJust mbExisting $ \existing ->
     when (existing.id /= personId) $
       throwError (InvalidRequest "Email already registered by another user")
-  QPerson.updateEmailByPersonId personId req.email
+  QPerson.updateEmailByPersonId personId email
   pure Success
