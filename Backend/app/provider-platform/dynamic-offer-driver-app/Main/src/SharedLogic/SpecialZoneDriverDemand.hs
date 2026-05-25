@@ -1023,7 +1023,24 @@ filterByGateProximity targetGate driverIds = do
     then pure driverIds
     else do
       driverLocations <- LTSFlow.driversLocation driverIds
-      let locByDriver = Map.fromList $ map (\dl -> (dl.driverId, LatLong dl.lat dl.lon)) driverLocations
+      stalenessThreshold <-
+        case targetGate.merchantOperatingCityId of
+          Just mocId ->
+            CTC.findByMerchantOpCityId (cast mocId :: Id DMOC.MerchantOperatingCity) Nothing
+              <&> maybe driverLocationStalenessThresholdSecondsDefault
+                    (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))
+          Nothing -> pure driverLocationStalenessThresholdSecondsDefault
+      now <- getCurrentTime
+      let isFresh dl = diffUTCTime now dl.coordinatesCalculatedAt <= intToNominalDiffTime stalenessThreshold.getSeconds
+          (freshLocations, staleLocations) = partition isFresh driverLocations
+      unless (null staleLocations) $
+        logInfo $
+          "filterByGateProximity dropped stale driver locations targetGate=" <> targetGate.id.getId
+            <> " thresholdSec="
+            <> show stalenessThreshold.getSeconds
+            <> " staleDriverIds="
+            <> show (map (.driverId.getId) staleLocations)
+      let locByDriver = Map.fromList $ map (\dl -> (dl.driverId, LatLong dl.lat dl.lon)) freshLocations
           (kept, dropped) = partition (driverNotCommittedToOtherGate locByDriver mbTargetCached otherQueueableGates) driverIds
       unless (null dropped) $
         logInfo $
@@ -1034,11 +1051,16 @@ filterByGateProximity targetGate driverIds = do
   where
     driverNotCommittedToOtherGate locMap mbTargetCached otherGates driverId =
       case Map.lookup driverId locMap of
-        Nothing -> True -- unknown location: don't penalise
+        Nothing -> False -- unknown location: don't penalise
         Just loc ->
           let nearTarget = maybe False (isPointInOrNearGate loc gateProximityExclusionMeters) mbTargetCached
               nearOther = any (isPointInOrNearGate loc gateProximityExclusionMeters) otherGates
            in nearTarget || not nearOther
+
+-- Default driver-location staleness threshold (2 minutes) used when the
+-- per-merchant-operating-city override is unset.
+driverLocationStalenessThresholdSecondsDefault :: Seconds
+driverLocationStalenessThresholdSecondsDefault = Seconds 120
 
 -- | Booking is progressing (Confirm or StartRide fired) for a driver: decrement demand
 --   for the booking's gate/variant and, if the driver had an Accepted pickup-zone request,
