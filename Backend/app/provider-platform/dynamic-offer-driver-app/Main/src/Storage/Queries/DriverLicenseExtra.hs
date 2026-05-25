@@ -48,3 +48,23 @@ updateVerificationStatusAndRejectReason ::
 updateVerificationStatusAndRejectReason verificationStatus rejectReason (Kernel.Types.Id.Id imageId) = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set BeamDL.verificationStatus verificationStatus, Se.Set BeamDL.rejectReason (Just rejectReason), Se.Set BeamDL.updatedAt _now] [Se.Or [Se.Is BeamDL.documentImageId1 $ Se.Eq imageId, Se.Is BeamDL.documentImageId2 $ Se.Eq (Just imageId)]]
+
+-- | Update documentImageId1, verificationStatus, and rejectReason keyed on
+-- the DL's own id. Used in the reject path when the row's documentImageId1 is
+-- stale (re-upload case) so the image pointer is re-pointed atomically.
+updateDocImageAndStatusById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DriverLicense ->
+  Id Image ->
+  VerificationStatus ->
+  Text ->
+  m ()
+updateDocImageAndStatusById (Id dlId) (Id newImageId) status rejectReason = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDL.documentImageId1 newImageId,
+      Se.Set BeamDL.verificationStatus status,
+      Se.Set BeamDL.rejectReason (Just rejectReason),
+      Se.Set BeamDL.updatedAt _now
+    ]
+    [Se.Is BeamDL.id $ Se.Eq dlId]

@@ -1067,7 +1067,7 @@ enableDriver merchantOpCityId personId role driverName transporterConfig merchan
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey personId >>= fromMaybeM (PersonNotFound personId.getId)
       unless (fleetOwnerInfo.enabled && fleetOwnerInfo.verified) $ do
-        QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True, DFOI.verified = True}
+        QFOI.updateFleetOwnerEnabledAndVerifiedStatus True True personId
         cascadeFleetEnableToDrivers personId
     else do
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)

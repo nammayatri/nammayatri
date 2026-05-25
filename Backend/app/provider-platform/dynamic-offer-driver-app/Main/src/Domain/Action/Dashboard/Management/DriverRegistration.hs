@@ -1911,12 +1911,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
           case mbResolvedDl of
             Nothing -> logWarning $ "DL not found for image " <> imageId.getId
             Just dl -> do
-              QDL.updateByPrimaryKey
-                dl
-                  { DDL.documentImageId1 = imageId,
-                    DDL.verificationStatus = INVALID,
-                    DDL.rejectReason = Just imageRejectReq.reason
-                  }
+              QDL.updateDocImageAndStatusById dl.id imageId INVALID imageRejectReq.reason
               void $ uncurry (liftA2 (,)) $ TE.both (maybe (return ()) (QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason))) (Just dl.documentImageId1, dl.documentImageId2)
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         DVC.VehicleRegistrationCertificate -> do
@@ -1927,12 +1922,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
               Just rcIdRaw -> QRC.findById (Id rcIdRaw)
               Nothing -> pure Nothing
           whenJust mbResolvedRc $ \rc ->
-            QRC.updateByPrimaryKey
-              rc
-                { DRC.documentImageId = imageId,
-                  DRC.verificationStatus = INVALID,
-                  DRC.rejectReason = Just imageRejectReq.reason
-                }
+            QRC.updateDocImageAndStatusById rc.id imageId INVALID imageRejectReq.reason
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
         DVC.VehiclePermit -> do
           QImage.updateVerificationStatusAndFailureReason INVALID (ImageNotValid imageRejectReq.reason) imageId
