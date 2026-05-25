@@ -130,7 +130,7 @@ callPayout merchantId merchantOpCityId booking payoutConfig statusForRetry = do
                 currency = booking.totalPrice.currency
                 entityName = DLP.METRO_BOOKING_CASHBACK
                 payoutServiceFlow = Payout.JuspayFlow -- Stripe payouts are not supported
-                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType True payoutServiceFlow
+                createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount currency phoneNo emailId person.id.getId config.remark person.firstName (Just payoutVpa) config.orderType True payoutServiceFlow Nothing
             logDebug $ "calling create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show booking.eventDiscountAmount <> " | orderId: " <> show uid
             let createPayoutOrderCall = TP.createPayoutOrder person.clientSdkVersion person.merchantId person.merchantOperatingCityId (Just person.id.getId)
             mbPayoutOrderResp <- withTryCatch "createPayoutService:metroIncentivePayout" $ Payout.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just [booking.id.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing

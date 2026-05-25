@@ -410,7 +410,7 @@ redeemCoins driverId merchantId merchantOpCityId transporterConfig vehCategory d
     IPayout.JuspayFlow -> Just <$> (driverInformation.payoutVpa & fromMaybeM (InvalidRequest "Driver has no payout VPA"))
     IPayout.StripeFlow -> pure Nothing
   merchantOperatingCity <- CQMOC.findById (cast merchantOpCityId) >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-  let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False payoutServiceFlow
+  let createPayoutOrderReq = DPayment.mkCreatePayoutServiceReq uid calculatedAmount transporterConfig.currency phoneNo driver.email driverId.getId "converted from coins" (Just driver.firstName) vpa payoutConfig.orderType False payoutServiceFlow Nothing
       entityName = DPayment.COINS_REDEMPTION
       createPayoutOrderCall = Payout.createPayoutOrder payoutServiceName merchantOpCityId driver.id mbPersonBankAccount
   void $ DPayment.createPayoutService (cast merchantId) (Just $ cast merchantOpCityId) (cast driverId) (Just [driverId.getId]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing

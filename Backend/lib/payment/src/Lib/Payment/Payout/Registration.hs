@@ -275,6 +275,7 @@ refundRegistrationAmount orderId createPayoutOrderCall remark orderType city pay
                 amount = order.amount,
                 currency = order.currency,
                 payoutFee = Nothing,
+                transferAmount = Nothing,
                 merchantId = order.merchantId.getId,
                 merchantOpCityId = maybe "" (.getId) order.merchantOperatingCityId,
                 city = city,

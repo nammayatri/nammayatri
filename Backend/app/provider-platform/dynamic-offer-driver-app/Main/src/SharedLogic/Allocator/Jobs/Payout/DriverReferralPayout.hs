@@ -213,7 +213,7 @@ callPayoutHandler DS.DailyStats {..} _driverInfo payoutVpa payoutConfigList stat
               if directBase <= payoutConfig.thresholdPayoutAmountPerPerson
                 then do
                   logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show directBase <> " | orderId: " <> show uid
-                  let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType False payoutServiceFlow
+                  let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid amount merchantOperatingCity.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) payoutVpa payoutConfig.orderType False payoutServiceFlow Nothing
                       createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                   mbPayoutOrderResp <- withTryCatch "createPayoutService:callPayout" $ Payout.createPayoutService (cast person.merchantId) (cast <$> merchantOperatingCityId) (cast driverId) (Just [id]) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall Nothing
                   errorCatchAndHandle id driverId.getId uid mbPayoutOrderResp payoutConfig statusForRetry (\_ -> pure ())
@@ -313,7 +313,7 @@ processScheduledRegistrationRefunds merchantOpCityId payoutConfigList = do
                 QDI.updatePayoutRegAmountRefunded (Just registrationAmount) driverId
                 -- Attempt payout; rollback on failure
                 phoneNo <- mapM decrypt person.mobileNumber
-                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType False payoutServiceFlow
+                let createPayoutOrderReq = Payout.mkCreatePayoutServiceReq uid registrationAmount driverFee.currency phoneNo person.email driverId.getId payoutConfig.remark (Just person.firstName) driverInfo.payoutVpa payoutConfig.orderType False payoutServiceFlow Nothing
                     entityName = DLP.REGISTRATION_REFUND
                     createPayoutOrderCall = TP.createPayoutOrder payoutServiceName person.merchantOperatingCityId person.id mbPersonBankAccount
                 logDebug $ "Initiating scheduled registration refund for driverId: " <> driverId.getId <> " | amount: " <> show registrationAmount <> " | orderId: " <> uid

@@ -128,6 +128,7 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
             amount = totalAmount,
             currency = payoutConfig.currency,
             payoutFee = Nothing,
+            transferAmount = Nothing,
             merchantId = person.merchantId.getId,
             merchantOpCityId = person.merchantOperatingCityId.getId,
             city = show merchantOperatingCity.city,

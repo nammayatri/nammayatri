@@ -120,6 +120,7 @@ module SharedLogic.Finance.Wallet
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
+    walletTransferFromMerchantRefs,
     computeTdsRateReason,
     computeEffectiveTdsRate,
     estimateWalletDeductions,
@@ -275,6 +276,17 @@ walletCreditRefs =
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
     walletReferenceDeductedAtPaymentByPlatform
+  ]
+
+-- | Reference types for entries that represent merchant-to-driver transfers
+--   (amounts funded by the merchant, not by the rider's payment).
+--   Used to compute the correct transferAmount for payout orders.
+walletTransferFromMerchantRefs :: [Text]
+walletTransferFromMerchantRefs =
+  [ walletReferenceVATInput,
+    walletReferenceCancellationVATInput,
+    walletReferenceDiscountsOnline,
+    walletReferenceDiscountsCash
   ]
 
 -- Time helpers (shared across getWalletTransactions, postWalletPayout, postWalletTopup)
@@ -648,21 +660,33 @@ getRedeemableEntryIds accountId cutoff = do
 -- | Fetch payout eligibility data using two efficient DB-level queries:
 --   (1) non-redeemable balance: sum of credits after cutoff (DB-filtered)
 --   (2) redeemable entry IDs: unsettled credits + debits before cutoff (DB-filtered)
+--   (3) merchant transfer amount: sum of VAT input + discount entries from unsettled entries
 --   This avoids fetching all entries into Haskell memory.
 getPayoutEligibilityData ::
   (BeamFlow m r) =>
   Id Account ->
   UTCTime -> -- payout cutoff time
   UTCTime -> -- current time (upper bound)
-  m (HighPrecMoney, [Id LedgerEntry])
+
+  -- | (nonRedeemableBalance, redeemableEntryIds, merchantTransferAmount)
+  m (HighPrecMoney, [Id LedgerEntry], HighPrecMoney)
 getPayoutEligibilityData accountId cutoff now = do
   -- Query 1: credits after cutoff (for non-redeemable balance)
   creditsAfterCutoff <- findCreditsByAccountAfterTime accountId cutoff now
   let nonRedeemableBalance = sum $ map (.amount) creditsAfterCutoff
-  -- Query 2: unsettled entries before cutoff (for redeemable IDs)
+  -- Query 2: unsettled entries before cutoff (for redeemable IDs + transfer amount)
   unsettledBeforeCutoff <- findUnsettledByAccountBeforeTime accountId cutoff
   let redeemableIds = map (.id) unsettledBeforeCutoff
-  pure (nonRedeemableBalance, redeemableIds)
+      -- Transfer amount: sum of credits (toAccountId == accountId) with merchant-transfer ref types.
+      -- These represent amounts funded by the merchant (VAT input, discounts), not from the rider's payment.
+      merchantTransferAmount =
+        sum
+          [ e.amount
+            | e <- unsettledBeforeCutoff,
+              e.toAccountId == accountId,
+              e.referenceType `elem` walletTransferFromMerchantRefs
+          ]
+  pure (nonRedeemableBalance, redeemableIds, merchantTransferAmount)
 
 -- | Mark a list of wallet ledger entries as paid out.
 --   Called by the payout webhook handler after successful disbursement.
