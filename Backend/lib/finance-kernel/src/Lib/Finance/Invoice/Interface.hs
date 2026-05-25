@@ -143,7 +143,6 @@ data IndirectTaxInput = IndirectTaxInput
     sacCode :: Maybe Text,
     externalCharges :: Maybe HighPrecMoney,
     invoiceNumber :: Maybe Text,
-    currency :: Currency,
     merchantId :: Text,
     merchantOperatingCityId :: Text,
     -- VAT integration fields
@@ -168,7 +167,6 @@ data DirectTaxInput = DirectTaxInput
     tanOfDeductee :: Maybe Text,
     tdsSection :: Maybe Text,
     invoiceNumber :: Maybe Text,
-    currency :: Currency,
     merchantId :: Text,
     merchantOperatingCityId :: Text
   }

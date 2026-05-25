@@ -26,6 +26,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Core.Money (roundAmount)
 import Lib.Finance.Account.Interface
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Error.Types
@@ -107,8 +108,8 @@ updateBalanceByDelta accountId delta = do
   case mbAccount of
     Nothing -> pure $ Left $ AccountError AccountNotFound (show accountId)
     Just account -> do
-      let roundedDelta = roundAmountByCurrency' account.currency delta
-          newBalance = roundAmountByCurrency' account.currency (account.balance + roundedDelta)
+      let roundedDelta = roundAmount delta
+          newBalance = roundAmount (account.balance + roundedDelta)
       when (account.accountType == Liability && newBalance < 0) $
         pure ()
       QAccount.updateBalance newBalance accountId

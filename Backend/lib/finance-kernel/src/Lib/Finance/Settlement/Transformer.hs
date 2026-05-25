@@ -9,7 +9,8 @@ where
 import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (generateGUID, getCurrentTime, roundAmountByCurrency')
+import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Lib.Finance.Core.Money (roundAmount)
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
@@ -24,13 +25,12 @@ toPgPaymentSettlementReport ::
 toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType report = do
   now <- getCurrentTime
   reportId <- generateGUID
-  let round' = roundAmountByCurrency' report.currency
-      (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
+  let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
         Ext.CHARGEBACK ->
           ( report.disputeId,
             Nothing,
             Just "INITIATED",
-            Just (round' report.txnAmount)
+            Just (roundAmount report.txnAmount)
           )
         _ -> (Nothing, Nothing, Nothing, Nothing)
   pure
@@ -47,10 +47,10 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         txnType = mapTxnType report.txnType,
         txnStatus = mapTxnStatus report.txnStatus,
         txnDate = report.txnDate,
-        txnAmount = round' report.txnAmount,
-        pgBaseFee = round' report.pgBaseFee,
-        pgTax = round' report.pgTax,
-        settlementAmount = round' report.settlementAmount,
+        txnAmount = roundAmount report.txnAmount,
+        pgBaseFee = roundAmount report.pgBaseFee,
+        pgTax = roundAmount report.pgTax,
+        settlementAmount = roundAmount report.settlementAmount,
         currency = report.currency,
         vendorId = report.vendorId,
         uniqueSplitId = report.uniqueSplitId,
@@ -67,9 +67,9 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         refundId = report.refundId,
         refundArn = report.refundArn,
         refundDate = report.refundDate,
-        refundAmount = fmap round' report.refundAmount,
-        refundBaseFee = fmap round' report.refundBaseFee,
-        refundTax = fmap round' report.refundTax,
+        refundAmount = fmap roundAmount report.refundAmount,
+        refundBaseFee = fmap roundAmount report.refundBaseFee,
+        refundTax = fmap roundAmount report.refundTax,
         refundReasonCode = Nothing,
         refundMethod = Nothing,
         chargebackId = chargebackId,
