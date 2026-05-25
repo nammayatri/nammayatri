@@ -4,6 +4,7 @@ module API.Types.UI.FRFSFleetOperator where
 
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
+import qualified Domain.Types.FleetOperatorTripAction
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -67,15 +68,7 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetOperatorTripAction
-  = TripStart
-  | TripEnd
-  | TripReset
-  | TripRollback
-  deriving stock (Eq, Show, Generic, Ord, Read)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FleetOperatorTripActionReq = FleetOperatorTripActionReq {action :: FleetOperatorTripAction, personId :: Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
+data FleetOperatorTripActionReq = FleetOperatorTripActionReq {action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction, personId :: Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

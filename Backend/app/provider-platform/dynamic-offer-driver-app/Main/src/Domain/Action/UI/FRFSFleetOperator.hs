@@ -8,6 +8,7 @@ where
 
 import API.Types.UI.FRFSFleetOperator
 import BecknV2.FRFS.Enums (VehicleCategory (..))
+import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (unpack)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
