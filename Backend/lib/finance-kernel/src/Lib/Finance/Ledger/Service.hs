@@ -239,8 +239,8 @@ createReversal originalId reason = do
       -- Update account balances (reverse the original transaction)
       mbFrom <- QAccount.findById original.fromAccountId
       mbTo <- QAccount.findById original.toAccountId
-      forM_ mbFrom $ \a -> QAccount.updateBalance (a.balance + original.amount) original.fromAccountId
-      forM_ mbTo $ \a -> QAccount.updateBalance (a.balance - original.amount) original.toAccountId
+      forM_ mbFrom $ \a -> QAccount.updateBalance (roundAmountByCurrency' original.currency (a.balance + original.amount)) original.fromAccountId
+      forM_ mbTo $ \a -> QAccount.updateBalance (roundAmountByCurrency' original.currency (a.balance - original.amount)) original.toAccountId
 
       pure $ Right reversal
 
@@ -279,11 +279,11 @@ settleEntry entryId = do
               isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
               fromStartBal = fromAccount.balance
               toStartBal = toAccount.balance
-              fromEndBal =
+              fromEndBal = roundAmountByCurrency' entry.currency $
                 if isAssetOrExpenseAccount fromAccount
                   then fromStartBal + amount
                   else fromStartBal - amount
-              toEndBal =
+              toEndBal = roundAmountByCurrency' entry.currency $
                 if isAssetOrExpenseAccount toAccount
                   then toStartBal - amount
                   else toStartBal + amount

@@ -774,6 +774,7 @@ recordIndirectTax config = do
             sacCode = config.sacCode,
             externalCharges = config.externalCharges,
             invoiceNumber = Nothing,
+            currency = ctx.currency,
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId,
             isVat = config.isVat,
@@ -805,6 +806,7 @@ recordDirectTax config = do
             tanOfDeductee = config.tanOfDeductee,
             tdsSection = config.tdsSection,
             invoiceNumber = Nothing,
+            currency = ctx.currency,
             merchantId = ctx.merchantId,
             merchantOperatingCityId = ctx.merchantOpCityId
           }

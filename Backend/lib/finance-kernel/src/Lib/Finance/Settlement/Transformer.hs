@@ -9,7 +9,7 @@ where
 import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
-import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Kernel.Utils.Common (generateGUID, getCurrentTime, roundAmountByCurrency')
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
@@ -24,12 +24,13 @@ toPgPaymentSettlementReport ::
 toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId referenceType report = do
   now <- getCurrentTime
   reportId <- generateGUID
-  let (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
+  let round' = roundAmountByCurrency' report.currency
+      (chargebackId, chargebackReasonCode, chargebackStatus, chargebackAmount) = case report.txnType of
         Ext.CHARGEBACK ->
           ( report.disputeId,
             Nothing,
             Just "INITIATED",
-            Just report.txnAmount
+            Just (round' report.txnAmount)
           )
         _ -> (Nothing, Nothing, Nothing, Nothing)
   pure
@@ -46,10 +47,10 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         txnType = mapTxnType report.txnType,
         txnStatus = mapTxnStatus report.txnStatus,
         txnDate = report.txnDate,
-        txnAmount = report.txnAmount,
-        pgBaseFee = report.pgBaseFee,
-        pgTax = report.pgTax,
-        settlementAmount = report.settlementAmount,
+        txnAmount = round' report.txnAmount,
+        pgBaseFee = round' report.pgBaseFee,
+        pgTax = round' report.pgTax,
+        settlementAmount = round' report.settlementAmount,
         currency = report.currency,
         vendorId = report.vendorId,
         uniqueSplitId = report.uniqueSplitId,
@@ -66,9 +67,9 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         refundId = report.refundId,
         refundArn = report.refundArn,
         refundDate = report.refundDate,
-        refundAmount = report.refundAmount,
-        refundBaseFee = report.refundBaseFee,
-        refundTax = report.refundTax,
+        refundAmount = fmap round' report.refundAmount,
+        refundBaseFee = fmap round' report.refundBaseFee,
+        refundTax = fmap round' report.refundTax,
         refundReasonCode = Nothing,
         refundMethod = Nothing,
         chargebackId = chargebackId,
