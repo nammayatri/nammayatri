@@ -143,6 +143,7 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
+import Storage.Queries.Transformers.Booking (getBookingTypeFromTripCategory)
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -861,7 +862,12 @@ sendReferralFCM validRide ride booking mbRiderDetails transporterConfig = do
             mbDailyStats <- QDailyStats.findByDriverIdAndDate referredDriverId (utctDay localTime)
             (isValidRideForPayout, mbFlagReason) <- fraudChecksForReferralPayout validRide transporterConfig mobileNumberHash riderDetails mbDailyStats
             QRD.updateFirstRideIdAndFlagReason (Just ride.id.getId) mbFlagReason riderDetails.id
-            when (isValidRideForPayout && isConsideredForPayout payoutConfig riderDetails) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig driver
+            let isOtpRide = getBookingTypeFromTripCategory booking.tripCategory == SRB.SpecialZoneBooking
+            let validOtpRideCheck =
+                  case transporterConfig.takeOtpRideAsValidRideForReferral of
+                    True -> True
+                    False -> not isOtpRide
+            when (isValidRideForPayout && isConsideredForPayout payoutConfig riderDetails && validOtpRideCheck) $ fork "Updating Payout Stats of Driver : " $ updateReferralStats referredDriverId mbDailyStats localTime driver driver.merchantOperatingCityId payoutConfig driver
         Nothing -> pure ()
   where
     isConsideredForPayout payoutConfig riderDetails = do
@@ -980,7 +986,7 @@ sendDriverToDriverReferralReward ::
   Maybe RD.RiderDetails ->
   TransporterConfig ->
   m ()
-sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transporterConfig = do
+sendDriverToDriverReferralReward validRide ride booking mbRiderDetails transporterConfig = do
   driverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   referredDriverStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
   let isFirstRide = (== 1) . (.totalRides) <$> referredDriverStats
@@ -996,7 +1002,13 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
           (isValid, mbFlagReason) <- fraudChecksForReferralPayout validRide transporterConfig ((.hash) riderDetails.mobileNumber) riderDetails mbDailyStats
           QRide.updateReferralFlagReason mbFlagReason ride.id
           pure isValid
-    when passedFraudCheck $ do
+    let isOtpRide = getBookingTypeFromTripCategory booking.tripCategory == SRB.SpecialZoneBooking
+    let validOtpRideCheck =
+          case transporterConfig.takeOtpRideAsValidRideForReferral of
+            True -> True
+            False -> not isOtpRide
+
+    when (passedFraudCheck && validOtpRideCheck) $ do
       let referralMessage = "Congratulations!"
           referralTitle = "Your referred driver has completed their first ride"
       sendNotificationToDriver referringDriver.merchantOperatingCityId FCM.SHOW Nothing FCM.REFERRAL_ACTIVATED referralTitle referralMessage referringDriver referringDriver.deviceToken
@@ -1028,13 +1040,11 @@ sendDriverToDriverReferralReward validRide ride _booking mbRiderDetails transpor
               DPC.WALLET -> (d2dRewardAmount, DDS.Success)
 
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + deltaD2dEarnings) referringDriverId
-      QDriverStats.updateD2dReferralCount (driverStats.d2dReferralCount + 1) (driverStats.totalReferralCounts + 1) referringDriverId
 
       case mbDailyStats of
         Just stats -> do
           Redis.withWaitOnLockRedisWithExpiry (payoutProcessingLockKey referringDriverId.getId) 3 3 $ do
             QDailyStats.updateD2dReferralStatsByDriverId (stats.d2dReferralEarnings + deltaD2dEarnings) (stats.d2dActivatedValidRides + 1) newPayoutStatus referringDriverId (utctDay localTime)
-            QDailyStats.updateD2dReferralCount (stats.d2dReferralCounts + 1) referringDriverId (utctDay localTime)
 
           when (payoutConfig.d2dPayoutType == DPC.WALLET) $
             creditReferralWallet deltaD2dEarnings referringDriverId stats.id "d2dReferralEarnings" ride.currency referringDriver.merchantId.getId referringDriver.merchantOperatingCityId.getId

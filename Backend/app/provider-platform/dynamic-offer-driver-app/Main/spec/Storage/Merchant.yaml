@@ -1287,6 +1287,7 @@ TransporterConfig:
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
+    takeOtpRideAsValidRideForReferral: Bool
 
   beamType:
     currency: Maybe Currency
@@ -1356,6 +1357,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Maybe Int
     communicationChannelCharLimits: Maybe Value
     stclConfig: Maybe Value
+    takeOtpRideAsValidRideForReferral: Maybe Bool
 
   beamFields:
     fcmConfig:
@@ -1456,6 +1458,7 @@ TransporterConfig:
     sameRiderDriverRideCountThreshold: Just sameRiderDriverRideCountThreshold|E
     communicationChannelCharLimits: Data.Aeson.toJSON <$> communicationChannelCharLimits|E
     stclConfig: Data.Aeson.toJSON <$> stclConfig|E
+    takeOtpRideAsValidRideForReferral: Just takeOtpRideAsValidRideForReferral|E
 
   intermediateTransformers:
     fromTType:
@@ -1574,6 +1577,7 @@ TransporterConfig:
       communicationChannelCharLimits|E
     stclConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< stclConfig|E
+    takeOtpRideAsValidRideForReferral: fromMaybe True takeOtpRideAsValidRideForReferral|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey

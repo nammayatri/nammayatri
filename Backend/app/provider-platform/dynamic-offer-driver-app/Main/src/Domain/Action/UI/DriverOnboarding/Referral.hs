@@ -46,6 +46,7 @@ import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverReferral as QDR
+import qualified Domain.Action.UI.Payout as DAP
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurchaseExtra
@@ -126,6 +127,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           referredByDriver <- B.runInReplica (DriverInformation.findById dr.driverId) >>= fromMaybeM DriverInfoNotFound
           let newtotalRef = fromMaybe 0 referredByDriver.totalReferred + 1
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
+          updateD2dReferralStatsOnLink dr.driverId transporterConfig merchantId merchantOpCityId
           return Success
         Person.OPERATOR -> do
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
@@ -299,3 +301,57 @@ incrementOnboardedCount refType referredEntityId transporterConfig = do
           <> (if refType == DriverReferral then "driver" else "fleet owner")
           <> " count 1 for "
           <> show referredEntityId
+
+updateD2dReferralStatsOnLink ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id Person.Person ->
+  TransporterConfig ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+updateD2dReferralStatsOnLink referringDriverId transporterConfig merchantId merchOpCityId = do
+  driverStats <- QDriverStats.findByPrimaryKey (cast referringDriverId) >>= fromMaybeM (PersonNotFound referringDriverId.getId)
+  QDriverStats.updateD2dReferralCount (driverStats.d2dReferralCount + 1) (driverStats.totalReferralCounts + 1) (cast referringDriverId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  mbDailyStats <- QDailyStats.findByDriverIdAndDate referringDriverId (utctDay localTime)
+  case mbDailyStats of
+    Just stats -> do
+      Redis.withWaitOnLockRedisWithExpiry (DAP.payoutProcessingLockKey referringDriverId.getId) 3 3 $ do
+        QDailyStats.updateD2dReferralCount (stats.d2dReferralCounts + 1) referringDriverId (utctDay localTime)
+    Nothing -> do
+      newId <- generateGUIDText
+      now <- getCurrentTime
+      let dailyStatsOfDriver' =
+            DDS.DailyStats
+              { id = newId,
+                driverId = referringDriverId,
+                totalEarnings = 0.0,
+                numRides = 0,
+                totalDistance = 0,
+                tollCharges = 0.0,
+                bonusEarnings = 0.0,
+                merchantLocalDate = utctDay localTime,
+                currency = transporterConfig.currency,
+                distanceUnit = Meter,
+                activatedValidRides = 0,
+                referralEarnings = 0.0,
+                referralCounts = 0,
+                d2dReferralEarnings = 0.0,
+                d2dReferralCounts = 1,
+                d2dActivatedValidRides = 0,
+                payoutStatus = DDS.Initialized,
+                payoutOrderId = Nothing,
+                payoutOrderStatus = Nothing,
+                createdAt = now,
+                updatedAt = now,
+                cancellationCharges = 0.0,
+                tipAmount = 0.0,
+                totalRideTime = 0,
+                numDriversOnboarded = 0,
+                numFleetsOnboarded = 0,
+                merchantId = Just merchantId,
+                merchantOperatingCityId = Just merchOpCityId,
+                onlineDuration = Nothing
+              }
+      QDailyStats.create dailyStatsOfDriver'
+
