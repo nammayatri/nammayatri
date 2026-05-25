@@ -27,9 +27,11 @@ data BookingUpdateRequestT f = BookingUpdateRequestT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     oldEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     oldEstimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    preservedPrefixStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     status :: B.C f Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     travelledDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
+    updateType :: B.C f (Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.BookingUpdateType),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)

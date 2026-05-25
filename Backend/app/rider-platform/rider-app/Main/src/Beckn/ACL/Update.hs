@@ -19,6 +19,7 @@ module Beckn.ACL.Update
     UpdateBuildReqDetails (..),
     PaymentCompletedBuildReqDetails (..),
     EditLocationBuildReqDetails (..),
+    EditStopsBuildReqDetails (..),
     AddStopBuildReqDetails (..),
     EditStopBuildReqDetails (..),
     ChangeServiceTierBuildReqDetails (..),
@@ -31,6 +32,7 @@ import qualified Beckn.ACL.Common as Common
 import qualified Beckn.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Tag
+import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as CommonUtils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -63,6 +65,7 @@ data UpdateBuildReq = UpdateBuildReq
 data UpdateBuildReqDetails
   = UPaymentCompletedBuildReqDetails PaymentCompletedBuildReqDetails
   | UEditLocationBuildReqDetails EditLocationBuildReqDetails
+  | UEditStopsBuildReqDetails EditStopsBuildReqDetails
   | UAddStopBuildReqDetails AddStopBuildReqDetails
   | UEditStopBuildReqDetails EditStopBuildReqDetails
   | UChangeServiceTierBuildReqDetails ChangeServiceTierBuildReqDetails
@@ -79,6 +82,13 @@ data EditLocationBuildReqDetails = EditLocationBuildReqDetails
     destination :: Maybe DLoc.Location,
     stops :: Maybe [DLoc.Location],
     status :: UpdateStatus
+  }
+
+data EditStopsBuildReqDetails = EditStopsBuildReqDetails
+  { bppRideId :: Id DRide.BPPRide,
+    stops :: [DLoc.Location],
+    status :: UpdateStatus,
+    preservedPrefixStops :: Int
   }
 
 data UpdateStatus = SOFT_UPDATE | CONFIRM_UPDATE
@@ -219,6 +229,49 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
                                     }
                             },
                       fulfillmentTags = Nothing,
+                      fulfillmentType = Nothing,
+                      fulfillmentVehicle = Nothing
+                    }
+                ]
+          },
+      updateReqMessageUpdateTarget = "order.fullfillments"
+    }
+mkUpdateMessage req (UEditStopsBuildReqDetails details) = do
+  Spec.UpdateReqMessage
+    { updateReqMessageOrder =
+        Spec.Order
+          { orderBilling = Nothing,
+            orderCancellation = Nothing,
+            orderCancellationTerms = Nothing,
+            orderId = Just $ req.bppBookingId.getId,
+            orderItems = Nothing,
+            orderProvider = Nothing,
+            orderQuote = Nothing,
+            orderCreatedAt = Nothing,
+            orderUpdatedAt = Nothing,
+            orderTags = Nothing,
+            orderStatus = Just $ show details.status,
+            orderPayments = Nothing,
+            orderFulfillments =
+              Just
+                [ Spec.Fulfillment
+                    { fulfillmentId = Just details.bppRideId.getId,
+                      fulfillmentStops = CommonUtils.mkStops' Nothing details.stops Nothing,
+                      fulfillmentAgent = Nothing,
+                      fulfillmentCustomer = Nothing,
+                      fulfillmentState =
+                        Just $
+                          Spec.FulfillmentState
+                            { fulfillmentStateDescriptor =
+                                Just $
+                                  Spec.Descriptor
+                                    { descriptorLongDesc = Nothing,
+                                      descriptorCode = Just $ show Enums.EDIT_STOPS,
+                                      descriptorName = Nothing,
+                                      descriptorShortDesc = Nothing
+                                    }
+                            },
+                      fulfillmentTags = Tags.mkSingleTagGroup Tags.PRESERVED_PREFIX_STOPS (Just details.preservedPrefixStops),
                       fulfillmentType = Nothing,
                       fulfillmentVehicle = Nothing
                     }

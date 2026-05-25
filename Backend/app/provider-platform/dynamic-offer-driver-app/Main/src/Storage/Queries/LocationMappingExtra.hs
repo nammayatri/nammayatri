@@ -1,6 +1,7 @@
 module Storage.Queries.LocationMappingExtra where
 
 import qualified Data.Text as T
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.LocationMapping
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -105,6 +106,21 @@ getNewVersion oldVersion lenMappings =
       ["v", _versionNum] -> oldVersion
       _ | oldVersion == latestTag -> "v-" <> T.pack (show lenMappings)
       _ -> "v-1"
+
+bumpLatestStopMappingsToPastByEntityIdFromOrder :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Int -> m ()
+bumpLatestStopMappingsToPastByEntityIdFromOrder entityId fromOrder = do
+  now <- getCurrentTime
+  let archiveVersion = T.pack $ "v-" <> show (floor @Double @Integer $ realToFrac (utcTimeToPOSIXSeconds now) * 1000)
+  updateWithKV
+    [ Se.Set BeamLM.version archiveVersion,
+      Se.Set BeamLM.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamLM.entityId $ Se.Eq entityId,
+          Se.Is BeamLM.order $ Se.GreaterThanOrEq fromOrder,
+          Se.Is BeamLM.version $ Se.Eq latestTag
+        ]
+    ]
 
 updateVersion :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id LocationMapping -> Text -> m ()
 updateVersion id version = do

@@ -117,6 +117,13 @@ findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay stat
     (Just limitVal)
     (Just offsetVal)
 
+updateHasStops :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Bool -> m ()
+updateHasStops rbId hasStops = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.hasStops (Just hasStops), Se.Set BeamB.updatedAt now]
+    [Se.Is BeamB.id (Se.Eq $ getId rbId)]
+
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> BookingStatus -> m ()
 updateStatus rbId rbStatus = do
   now <- getCurrentTime

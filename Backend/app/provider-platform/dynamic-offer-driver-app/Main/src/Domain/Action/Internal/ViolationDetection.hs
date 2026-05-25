@@ -5,11 +5,14 @@ module Domain.Action.Internal.ViolationDetection
     addReachedStop,
     violationDetection,
     ReachedStopInfo (..),
+    getReachedStopIndices,
+    ensureNoReachedStopsBeyond,
   )
 where
 
 import Data.Aeson as Aeson hiding (Success)
 import Data.OpenApi (ToSchema)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Domain.Types.Alert
@@ -135,3 +138,13 @@ addReachedStop rideId stopIndex location timestamp = do
       field = T.pack (show stopIndex)
       key = mkReachedStopsKey rideId
   void $ Redis.hSetExp key field stopInfo 86400
+
+getReachedStopIndices :: (HedisFlow m env) => Id DRide.Ride -> m (Set.Set Int)
+getReachedStopIndices rideId = do
+  (reachedStopsMap :: [(Text, ReachedStopInfo)]) <- Redis.hGetAll (mkReachedStopsKey rideId)
+  pure . Set.fromList $ map ((.stopIndex) . snd) reachedStopsMap
+
+ensureNoReachedStopsBeyond :: (HedisFlow m env, MonadFlow m) => Id DRide.Ride -> Int -> Text -> m ()
+ensureNoReachedStopsBeyond rideId n errMsg = do
+  reached <- getReachedStopIndices rideId
+  when (any (> n) reached) $ throwError $ InvalidRequest errMsg

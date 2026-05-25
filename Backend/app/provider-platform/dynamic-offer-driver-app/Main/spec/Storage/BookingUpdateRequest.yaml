@@ -12,7 +12,10 @@ BookingUpdateRequest:
   derives: "Generic,Show"
   types:
     BookingUpdateRequestStatus:
-      enum: "SOFT, DRIVER_ACCEPTED, DRIVER_REJECTED, USER_CONFIRMED"
+      enum: "SOFT, DRIVER_ACCEPTED, DRIVER_REJECTED, USER_CONFIRMED, EXPIRED"
+      derive: "HttpInstance"
+    BookingUpdateType:
+      enum: "DESTINATION, STOPS"
       derive: "HttpInstance"
 
   beamInstance: MakeTableInstancesWithTModifier []
@@ -44,6 +47,8 @@ BookingUpdateRequest:
     getRouteReq: Maybe Text
     routeInfoResp: Maybe Text
     snapToRoadFailed: Maybe Bool
+    updateType: Maybe BookingUpdateType
+    preservedPrefixStops: Maybe Int
 
   beamType:
     distanceUnit: Maybe DistanceUnit

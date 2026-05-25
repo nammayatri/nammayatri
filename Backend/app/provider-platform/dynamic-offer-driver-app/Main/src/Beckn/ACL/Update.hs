@@ -23,6 +23,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import qualified BecknV2.Utils as Utils
 import Data.Text (toLower)
+import qualified Data.Text
 import qualified Domain.Action.Beckn.Update as DUpdate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
@@ -32,6 +33,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
+import qualified Text.Read
 import Tools.Error (GenericError (InvalidRequest))
 
 buildUpdateReq ::
@@ -74,6 +76,9 @@ parseEvent merchantId reqMsg context = do
       parseEditLocationEvent bookingId fulfillment rideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
+    "EDIT_STOPS" -> do
+      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
+      parseEditStopsEvent bookingId fulfillment rideId
     "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent bookingId fulfillment
     "ADD_BAGGAGE" -> parseAddBaggageEvent bookingId
     _ -> throwError (InvalidRequest "Invalid event type")
@@ -118,6 +123,28 @@ parseEvent merchantId reqMsg context = do
               status,
               bapBookingUpdateRequestId = messageId,
               transactionId
+            }
+
+    parseEditStopsEvent bookingId fulfillment rideId = do
+      let fulfillmentStops = fromMaybe [] fulfillment.fulfillmentStops
+      let intermediateStops = filter (\s -> s.stopType == Just (show Enums.INTERMEDIATE_STOP)) fulfillmentStops
+      stops' <- mapM (Utils.buildLocation' merchantId) intermediateStops
+      orderStatus <- reqMsg.updateReqMessageOrder.orderStatus & fromMaybeM (InvalidRequest "orderStatus not found")
+      messageId <- Utils.getMessageId context
+      status <- castOrderStatus orderStatus
+      transactionId <- Utils.getTransactionId context
+      let fulfillmentTags = Just fulfillment.fulfillmentTags
+          preservedPrefixStops = fulfillmentTags >>= Utils.getTagV2 Tag.UPDATE_DETAILS Tag.PRESERVED_PREFIX_STOPS >>= Text.Read.readMaybe . Data.Text.unpack
+      pure $
+        DUpdate.UEditRideStopsReq $
+          DUpdate.EditRideStopsReq
+            { bookingId,
+              rideId,
+              stops',
+              status,
+              bapBookingUpdateRequestId = messageId,
+              transactionId,
+              preservedPrefixStops
             }
 
     parseChangeServiceTierEvent bookingId _fulfillment = do

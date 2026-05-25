@@ -625,6 +625,12 @@ bookingRequestKeySoftUpdate bId = "Driver:Booking:Request:SoftUpdate" <> bId
 multipleRouteKeySoftUpdate :: Text -> Text
 multipleRouteKeySoftUpdate id = "multiple-routes-SoftUpdate-" <> id
 
+bookingRequestKeyConfirmUpdate :: Text -> Text
+bookingRequestKeyConfirmUpdate bId = "Driver:Booking:Request:ConfirmUpdate" <> bId
+
+multipleRouteKeyConfirmUpdate :: Text -> Text
+multipleRouteKeyConfirmUpdate id = "multiple-routes-ConfirmUpdate-" <> id
+
 isOnRideWithAdvRideConditionKey :: Text -> Text
 isOnRideWithAdvRideConditionKey driverId = "Driver:SetOnRide:" <> driverId
 
@@ -633,6 +639,15 @@ lockRide rideId = "D:C:Rd-" <> rideId
 
 editDestinationLockKey :: Id Person -> Text
 editDestinationLockKey driverId = "Driver:EditDes:DId-" <> driverId.getId
+
+updateLockKey :: Text -> Text
+updateLockKey id = "Driver:Update:BookingId-" <> id
+
+-- Per-(bookingId, order) key for the mutex between editStops CONFIRM / driver-accept and stopAction ARRIVE.
+-- stopAction at order N acquires editStopsOrderLockKey bid N. editStops CONFIRM and driver-accept (postEditResult)
+-- acquire editStopsOrderLockKey bid (n+1) where n = preservedPrefixStops.
+editStopsOrderLockKey :: Text -> Int -> Text
+editStopsOrderLockKey id stopOrder = "Driver:Processing:EditStopsOrder:BookingId-" <> id <> ":order=" <> show stopOrder
 
 editDestinationUpdatedLocGeohashKey :: Id Person -> Text
 editDestinationUpdatedLocGeohashKey driverId = "Driver:EditDes:GeoHash:DId-" <> driverId.getId

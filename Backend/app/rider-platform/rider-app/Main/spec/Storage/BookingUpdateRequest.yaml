@@ -9,7 +9,10 @@ BookingUpdateRequest:
   tableName: booking_update_request
   types:
     BookingUpdateRequestStatus:
-      enum: "SOFT,CONFIRM"
+      enum: "SOFT,CONFIRM,EXPIRED"
+      derive: "HttpInstance"
+    BookingUpdateType:
+      enum: "DESTINATION,STOPS"
       derive: "HttpInstance"
     ErrorObj:
       errorCode: Text
@@ -31,6 +34,8 @@ BookingUpdateRequest:
     oldEstimatedDistance : Maybe HighPrecMeters
     errorObj : Maybe ErrorObj
     distanceUnit : DistanceUnit
+    updateType : Maybe BookingUpdateType
+    preservedPrefixStops : Maybe Int
     createdAt: UTCTime
     updatedAt: UTCTime
     merchantId: Id Merchant

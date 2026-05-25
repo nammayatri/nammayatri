@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findAllByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ([Domain.Types.BookingUpdateRequest.BookingUpdateRequest]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m [Domain.Types.BookingUpdateRequest.BookingUpdateRequest])
 findAllByBookingId limit offset bookingId = do findAllWithOptionsKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)] (Se.Asc Beam.createdAt) limit offset
 
 findByBAPBUReqId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.BookingUpdateRequest.BookingUpdateRequest))
@@ -102,11 +102,13 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.oldEstimatedFare oldEstimatedFare,
       Se.Set Beam.oldFareParamsId (Kernel.Types.Id.getId oldFareParamsId),
       Se.Set Beam.oldMaxEstimatedDistance oldMaxEstimatedDistance,
+      Se.Set Beam.preservedPrefixStops preservedPrefixStops,
       Se.Set Beam.routeInfoResp routeInfoResp,
       Se.Set Beam.snapToRoadFailed snapToRoadFailed,
       Se.Set Beam.status status,
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.travelledDistance travelledDistance,
+      Se.Set Beam.updateType updateType,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill
     ]
@@ -136,11 +138,13 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
             oldEstimatedFare = oldEstimatedFare,
             oldFareParamsId = Kernel.Types.Id.Id oldFareParamsId,
             oldMaxEstimatedDistance = oldMaxEstimatedDistance,
+            preservedPrefixStops = preservedPrefixStops,
             routeInfoResp = routeInfoResp,
             snapToRoadFailed = snapToRoadFailed,
             status = status,
             totalDistance = totalDistance,
             travelledDistance = travelledDistance,
+            updateType = updateType,
             updatedAt = updatedAt,
             validTill = validTill
           }
@@ -167,11 +171,13 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.oldEstimatedFare = oldEstimatedFare,
         Beam.oldFareParamsId = Kernel.Types.Id.getId oldFareParamsId,
         Beam.oldMaxEstimatedDistance = oldMaxEstimatedDistance,
+        Beam.preservedPrefixStops = preservedPrefixStops,
         Beam.routeInfoResp = routeInfoResp,
         Beam.snapToRoadFailed = snapToRoadFailed,
         Beam.status = status,
         Beam.totalDistance = totalDistance,
         Beam.travelledDistance = travelledDistance,
+        Beam.updateType = updateType,
         Beam.updatedAt = updatedAt,
         Beam.validTill = validTill
       }
