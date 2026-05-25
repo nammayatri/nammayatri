@@ -271,7 +271,7 @@ getRideListUtil isDashboardRequest merchantShortId opCity _mbBookingStatus mbCur
     rideItems <-
       if useClickhouse
         then BppT.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now from to mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
-        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now (Just from) (Just to) mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
+        else QRide.findAllRideItems isDashboardRequest merchant merchantOpCity limit offset mbBookingStatus mbPaymentMode mbShortRideId mbResolvedRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbCustomerMobileCountryCode mbDriverMobileCountryCode mbDriverId now mbfrom mbto mbVehicleNo effectiveFleetOwnerId mbFromAmount mbToAmount
     logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
     rideListItems <- traverse buildRideListItem rideItems
     let rideListItems' :: [Common.RideListItem]
