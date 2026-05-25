@@ -2427,7 +2427,7 @@ mkCreatePayoutServiceReq ::
   Text ->
   Bool ->
   Payout.PayoutServiceFlow ->
-  Maybe HighPrecMoney -> -- explicit transferAmount (Nothing = use amount)
+  Maybe HighPrecMoney -> -- explicit transferAmount (Nothing = use 0)
   CreatePayoutServiceReq
 mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired payoutServiceFlow mbTransferAmount =
   CreatePayoutServiceReq
@@ -2435,7 +2435,7 @@ mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId re
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
       isDynamicWebhookRequired = isDynamicWebhookRequired,
-      transferAmount = fromMaybe amount mbTransferAmount,
+      transferAmount = fromMaybe 0 mbTransferAmount,
       ..
     }
 
