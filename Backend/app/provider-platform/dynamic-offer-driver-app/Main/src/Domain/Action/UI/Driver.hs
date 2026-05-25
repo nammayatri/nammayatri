@@ -333,18 +333,6 @@ import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
 
-data FleetInfo = FleetInfo
-  { id :: Text,
-    ownerName :: Text,
-    fleetName :: Maybe Text,
-    phoneNumber :: Maybe Text,
-    address :: Maybe Address,
-    requestReason :: Maybe Text,
-    responseReason :: Maybe Text,
-    createdAt :: UTCTime
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
 data OperatorInfo = OperatorInfo
   { id :: Text,
     firstName :: Text,
@@ -451,7 +439,7 @@ data DriverInformationRes = DriverInformationRes
     enabledAt :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text, -- deprecate later
     operatorId :: Maybe Text, -- deprecate later
-    fleetRequest :: Maybe FleetInfo,
+    fleetRequest :: Maybe DOVT.FleetInfo,
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
@@ -464,7 +452,7 @@ data DriverInformationRes = DriverInformationRes
     nomineeName :: Maybe Text,
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
-    activeFleet :: Maybe FleetInfo,
+    activeFleet :: Maybe DOVT.FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
@@ -1542,12 +1530,13 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-buildFleetInfo :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SP.Person -> FDA.FleetDriverAssociation -> m FleetInfo
+buildFleetInfo :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SP.Person -> FDA.FleetDriverAssociation -> m DOVT.FleetInfo
 buildFleetInfo person fda = do
   fleetPhoneNumber <- decrypt `mapM` person.mobileNumber
   fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
+  mbFleetBankAccount <- QDBA.findByPrimaryKey (Id @SP.Person fda.fleetOwnerId)
   return $
-    FleetInfo
+    DOVT.FleetInfo
       { id = fda.fleetOwnerId,
         ownerName = person.firstName <> maybe "" (" " <>) person.lastName,
         fleetName = fleetOwnerInfo >>= (.fleetName),
@@ -1555,6 +1544,7 @@ buildFleetInfo person fda = do
         address = fleetOwnerInfo >>= (.stripeAddress),
         requestReason = fda.requestReason,
         responseReason = fda.responseReason,
+        chargesEnabled = (.chargesEnabled) <$> mbFleetBankAccount,
         createdAt = fda.createdAt
       }
 

@@ -392,7 +392,7 @@ buildCreateOrderResp paymentOrder personId merchantOperatingCityId person paymen
             mandateStartDate = Nothing,
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing,  --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
             webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,

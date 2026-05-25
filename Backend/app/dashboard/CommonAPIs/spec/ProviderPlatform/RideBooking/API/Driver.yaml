@@ -19,6 +19,7 @@ imports:
   Rating: Domain.Types.Rating
   Ride: Domain.Types.Ride
   VerifiedBy: Domain.Types.DriverPanCard
+  DocsVerificationStatus: Dashboard.Common
 module: Driver
 
 apis:
@@ -357,12 +358,16 @@ types:
     - bankVerificationStatus: Maybe Text
     - upiId: Maybe Text
     - fleetOwnerId: Maybe Text
+    - docsVerificationStatus: Maybe DocsVerificationStatus
   DriverAssociationInfo:
     - personId: Id Person
     - name: Maybe Text
     - mobileCountryCode: Maybe Text
     - mobileNumber: Maybe Text
     - fleetName: Maybe Text
+    - verified: Maybe Bool
+    - docsVerificationStatus: Maybe DocsVerificationStatus
+    - enabled: Maybe Bool
   OnboardingAs:
     enum: "FLEET_DRIVER, INDIVIDUAL"
   GetFeedbackListRes:

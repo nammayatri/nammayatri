@@ -15,6 +15,7 @@ imports:
   VerifyAsyncResp : Kernel.External.Verification.Interface.Types
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   PayoutOrderStatusResp: Kernel.External.Payout.Interface.Types
+  DocsVerificationStatus: Dashboard.Common
 
 module: DriverRegistration
 apiPrefix: driver
@@ -331,6 +332,7 @@ types:
     - dateOfUpload: UTCTime
     - s3Path: Maybe Text
     - expiryDate: Maybe UTCTime
+    - docsVerificationStatus: Maybe DocsVerificationStatus
   DocumentsListResponse:
     - driverLicense: "[[Text]]"
     - vehicleRegistrationCertificate: [Text]

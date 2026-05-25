@@ -7,6 +7,7 @@ imports:
   RCDetails: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
   Driver: Dashboard.Common
   APISuccess: Kernel.Types.APISuccess
+  DocsVerificationStatus: Dashboard.Common
 
 module: Onboarding
 
@@ -41,6 +42,7 @@ apis:
         - onboardingVehicleCategory: VehicleCategory
         - providePrefillDetails: Bool
         - onlyMandatoryDocs: Bool
+        - docsVerificationStatus: DocsVerificationStatus
       response:
         type: StatusRes
       helperApi:
@@ -55,6 +57,7 @@ apis:
               - onboardingVehicleCategory: VehicleCategory
               - providePrefillDetails: Bool
               - onlyMandatoryDocs: Bool
+              - docsVerificationStatus: DocsVerificationStatus
             response:
               type: StatusRes
   - POST:
@@ -187,6 +190,7 @@ types:
     s3Path: Maybe Text
     imageId: Maybe Text
     expiryDate: Maybe UTCTime
+    docsVerificationStatus: Maybe DocsVerificationStatus
   ReferralInfoRes:
     personId: Id Driver
     name: Text

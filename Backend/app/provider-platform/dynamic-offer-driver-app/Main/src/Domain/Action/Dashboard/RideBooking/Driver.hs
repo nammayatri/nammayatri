@@ -41,6 +41,7 @@ import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import Domain.Types.AadhaarCard
+import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
@@ -105,6 +106,7 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
@@ -442,6 +444,7 @@ getDriverFeedbackList merchantShortId opCity mbPersonId mbMobileNumber mbMobileC
       }
 
 buildDriverInfoRes ::
+  forall m r.
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) =>
   QPerson.DriverWithRidesCount ->
   Maybe DriverLicense ->
@@ -497,8 +500,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
     Just fda -> do
       fleetOwner <- B.runInReplica $ QPerson.findById (Id fda.fleetOwnerId) >>= fromMaybeM (PersonDoesNotExist fda.fleetOwnerId)
       fleetOwnerInfo <- B.runInReplica $ QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
-      let fleetName = fleetOwnerInfo >>= (.fleetName)
-      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetName
+      Just <$> buildDriverAssociationInfoFromPerson fleetOwner fleetOwnerInfo
   operatorInfo <-
     B.runInReplica (QDriverOperator.findByDriverId person.id True) >>= \case
       Nothing -> pure Nothing
@@ -595,11 +597,12 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         bankIfsc = bankIfsc',
         bankVerificationStatus = bankVerificationStatus',
         upiId = driverInfo.payoutVpa,
-        fleetOwnerId = fleetOwnerId'
+        fleetOwnerId = fleetOwnerId',
+        docsVerificationStatus = castDriverDocsVerificationStatus <$> info.docsVerificationStatus
       }
   where
-    buildDriverAssociationInfoFromPerson :: (EncFlow m r) => DP.Person -> Maybe Text -> m Common.DriverAssociationInfo
-    buildDriverAssociationInfoFromPerson p mbFleetName = do
+    buildDriverAssociationInfoFromPerson :: DP.Person -> Maybe DFOI.FleetOwnerInformation -> m Common.DriverAssociationInfo
+    buildDriverAssociationInfoFromPerson p mbFoi = do
       mob <- traverse decrypt p.mobileNumber
       pure
         Common.DriverAssociationInfo
@@ -607,13 +610,22 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
             name = Just $ p.firstName <> maybe "" (" " <>) p.lastName,
             mobileCountryCode = p.mobileCountryCode,
             mobileNumber = mob,
-            fleetName = mbFleetName
+            fleetName = mbFoi >>= (.fleetName),
+            verified = (.verified) <$> mbFoi,
+            docsVerificationStatus = mbFoi >>= (.docsVerificationStatus) <&> castDriverDocsVerificationStatus,
+            enabled = (.enabled) <$> mbFoi
           }
 
     castOnboardingAs :: DI.OnboardingAs -> Common.OnboardingAs
     castOnboardingAs = \case
       DI.FLEET_DRIVER -> Common.FLEET_DRIVER
       DI.INDIVIDUAL -> Common.INDIVIDUAL
+
+castDriverDocsVerificationStatus :: DDVS.DocsVerificationStatus -> Dashboard.Common.DocsVerificationStatus
+castDriverDocsVerificationStatus = \case
+  DDVS.ADMIN_PENDING -> Dashboard.Common.ADMIN_PENDING
+  DDVS.ADMIN_APPROVED -> Dashboard.Common.ADMIN_APPROVED
+  DDVS.ADMIN_REJECTED -> Dashboard.Common.ADMIN_REJECTED
 
 buildAadhaarAssociationAPIEntity :: EncFlow m r => DriverInformation -> AadhaarCard -> m Common.AadhaarAssociationAPIEntity
 buildAadhaarAssociationAPIEntity driverInfo AadhaarCard {..} = do

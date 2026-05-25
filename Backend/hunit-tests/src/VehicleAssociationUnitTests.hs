@@ -126,7 +126,7 @@ testGetDriverFleetVehicleAssociationWithRealExecution =
                 Maybe Bool ->
                 Maybe Bool ->
                 Maybe Bool ->
-                Maybe Common.DocsVerificationStatus ->
+                Maybe Dashboard.Common.DocsVerificationStatus ->
                 Environment.Flow Common.DrivertoVehicleAssociationResT
         True @? "Function should return DrivertoVehicleAssociationResT",
       testCase "Executes with different query parameters and validates request handling" $ do
