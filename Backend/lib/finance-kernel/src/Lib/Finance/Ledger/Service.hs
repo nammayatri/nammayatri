@@ -89,13 +89,14 @@ createEntry ::
 createEntry input = do
   now <- getCurrentTime
   entryId <- generateGUID
-  let entry =
+  let roundedAmount = roundAmountByCurrency' input.currency input.amount
+      entry =
         LedgerEntry
           { id = Id entryId,
             fromAccountId = input.fromAccountId,
             toAccountId = input.toAccountId,
             concernedIndividualId = input.concernedIndividualId,
-            amount = input.amount,
+            amount = roundedAmount,
             currency = input.currency,
             entryType = input.entryType,
             status = input.status,
@@ -139,7 +140,7 @@ createEntryWithBalanceUpdate input = do
     (Just fromAccount, Just toAccount) -> do
       now <- getCurrentTime
       entryId <- generateGUID
-      let amount = input.amount
+      let amount = roundAmountByCurrency' input.currency input.amount
           fromStartBal = fromAccount.balance
           toStartBal = toAccount.balance
           isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
@@ -315,9 +316,10 @@ settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal t
   now <- getCurrentTime
   mbEntry <- QLedger.findById entryId
   forM_ mbEntry $ \entry -> do
-    let updatedEntry =
+    let roundedSettledAmount = roundAmountByCurrency' entry.currency settledAmount
+        updatedEntry =
           entry
-            { amount = settledAmount,
+            { amount = roundedSettledAmount,
               status = SETTLED,
               settledAt = Just now,
               fromStartingBalance = Just fromStartBal,

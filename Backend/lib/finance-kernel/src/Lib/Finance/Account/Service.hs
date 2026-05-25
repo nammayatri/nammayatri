@@ -107,10 +107,10 @@ updateBalanceByDelta accountId delta = do
   case mbAccount of
     Nothing -> pure $ Left $ AccountError AccountNotFound (show accountId)
     Just account -> do
-      let newBalance = account.balance + delta
-      -- Check for negative balance on liability accounts
+      let roundedDelta = roundAmountByCurrency' account.currency delta
+          newBalance = roundAmountByCurrency' account.currency (account.balance + roundedDelta)
       when (account.accountType == Liability && newBalance < 0) $
-        pure () -- Could enforce business rules here
+        pure ()
       QAccount.updateBalance newBalance accountId
       pure $ Right newBalance
 
