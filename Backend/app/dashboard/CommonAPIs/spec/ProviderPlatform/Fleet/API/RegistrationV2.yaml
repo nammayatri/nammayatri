@@ -1,6 +1,7 @@
 imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
+  Merchant: Dashboard.Common
   BaseUrl: Kernel.Prelude
   PaymentMode: Domain.Types.PaymentMode
   RequirementsInfo: Kernel.External.Payment.Interface.Types
@@ -149,9 +150,14 @@ types:
     - mobileNumber: Text
     - mobileCountryCode: Text
     - otp: Maybe Text
+    - totp: Maybe Text
   FleetOwnerVerifyResV2:
     - authToken: Text
-    - recordType: NewType
+    - is2faMandatory: Bool
+    - is2faEnabled: Bool
+    - message: Text
+    - city: City
+    - merchantId: Id Merchant
   FleetOwnerRegisterReqV2:
     - firstName: Text
     - lastName: Text

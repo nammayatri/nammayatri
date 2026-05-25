@@ -33,6 +33,7 @@ import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Merchant as QMerchant
+import qualified "lib-dashboard" Storage.Queries.MerchantAccess as QAccess
 import "lib-dashboard" Storage.Queries.Person as QP
 import qualified Storage.Queries.Role as QRole
 import Tools.Auth.Api
@@ -80,11 +81,26 @@ postRegistrationV2VerifyOtp merchantShortId opCity req = do
   person <- QP.findByMobileNumber req.mobileNumber req.mobileCountryCode >>= fromMaybeM (PersonDoesNotExist req.mobileNumber)
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
+  _merchantAccess <- QAccess.findByPersonIdAndMerchantIdAndCity person.id merchant.id opCity >>= fromMaybeM AccessDenied
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
-  token <- DDR.generateToken person.id merchant opCity
-  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
-  pure $ Common.FleetOwnerVerifyResV2 {authToken = token}
+  whenJust req.otp \_ -> do
+    void $ Client.callFleetAPI checkedMerchantId opCity (.registrationV2DSL.postRegistrationV2VerifyOtp) req
+  let twoFaRequired = DDR.is2FARequiredForPerson person merchant
+  (isToken, msg) <- DDR.check2FA _merchantAccess merchant twoFaRequired req.totp
+  token <-
+    if isToken
+      then DDR.generateToken person.id merchant opCity
+      else pure ""
+  when (isToken && person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  pure $
+    Common.FleetOwnerVerifyResV2
+      { authToken = token,
+        is2faMandatory = twoFaRequired,
+        is2faEnabled = _merchantAccess.is2faEnabled,
+        message = msg,
+        city = opCity,
+        merchantId = cast merchant.id
+      }
 
 type RegisterClientCall = CheckedShortId DM.Merchant -> City.City -> Text -> Common.FleetOwnerRegisterReqV2 -> Flow Common.FleetOwnerRegisterResV2
 

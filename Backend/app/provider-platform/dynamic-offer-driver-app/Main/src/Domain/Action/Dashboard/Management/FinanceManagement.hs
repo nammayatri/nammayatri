@@ -27,6 +27,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.External.Types as KET
 import Kernel.Prelude (UTCTime, listToMaybe, showBaseUrl)
 import qualified Kernel.Prelude
@@ -44,10 +45,8 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as PgPaymentSettlementReport
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
-import Kernel.External.Types (Language (ENGLISH))
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
-import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import qualified Lib.Finance.Ledger.Service as LedgerService
 import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
@@ -69,6 +68,7 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.Merchant as CQM

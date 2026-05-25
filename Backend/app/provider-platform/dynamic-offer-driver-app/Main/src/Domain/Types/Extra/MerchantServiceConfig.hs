@@ -123,6 +123,7 @@ instance Show ServiceName where
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
   show (AirportReachargeService s) = "AirportReacharge_" <> show s
+
 instance Read ServiceName where
   readsPrec d' =
     readParen

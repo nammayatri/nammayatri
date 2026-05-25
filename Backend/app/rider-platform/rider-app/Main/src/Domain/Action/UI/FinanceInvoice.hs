@@ -7,19 +7,19 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.External.Types (Language (ENGLISH))
 import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
-import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)

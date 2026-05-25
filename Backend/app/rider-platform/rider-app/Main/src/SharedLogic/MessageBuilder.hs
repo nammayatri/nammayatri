@@ -131,7 +131,6 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
 
-
 data BuildSendBookingOTPRentalMessageReq = BuildSendBookingOTPRentalMessageReq
   { otp :: Text,
     amount :: Text,
@@ -158,7 +157,6 @@ buildSendBookingOTPRentalMessage merchantOperatingCityId req = do
       buildSendBookingOTPMessage merchantOperatingCityId $
         BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
 
-
 data BuildSendBookingOTPIntercityMessageReq = BuildSendBookingOTPIntercityMessageReq
   { otp :: Text,
     amount :: Text,
@@ -184,7 +182,6 @@ buildSendBookingOTPIntercityMessage merchantOperatingCityId req = do
     Nothing ->
       buildSendBookingOTPMessage merchantOperatingCityId $
         BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
-
 
 buildBookingOtpSmsForCategory ::
   BuildMessageFlow m r =>
