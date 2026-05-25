@@ -57,6 +57,15 @@ buildLocationMapping' locationId entityId tag merchantId merchantOperatingCityId
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
 
+buildLatestLocationMapping' :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DL.Location -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> Int -> m DLM.LocationMapping
+buildLatestLocationMapping' locationId entityId tag merchantId merchantOperatingCityId order = do
+  id <- generateGUID
+  now <- getCurrentTime
+  let version = QLM.latestTag
+      createdAt = now
+      updatedAt = now
+  return DLM.LocationMapping {..}
+
 buildStopsLocationMapping :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [DL.Location] -> Text -> DLM.LocationMappingTags -> Maybe (Id Merchant) -> Maybe (Id MerchantOperatingCity) -> m [DLM.LocationMapping]
 buildStopsLocationMapping locations entityId tag merchantId merchantOperatingCityId = do
   let order = 1
@@ -72,3 +81,24 @@ buildStopLocationMapping location entityId tag merchantId merchantOperatingCityI
       locationId = location.id
   QLM.updatePastMappingVersions entityId order
   return DLM.LocationMapping {..}
+
+-- | Replace stop mappings (and re-attach the trailing destination) for `entityId` from order `n+1` onwards,
+-- using `stopMappings` as the source-of-truth (only `.locationId` is read from each).
+rewriteLatestStopMappingsFromOrder ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  DLM.LocationMappingTags ->
+  Maybe (Id Merchant) ->
+  Maybe (Id MerchantOperatingCity) ->
+  Int ->
+  [DLM.LocationMapping] ->
+  m ()
+rewriteLatestStopMappingsFromOrder entityId tag merchantId merchantOperatingCityId n stopMappings = do
+  mbDestMapping <- QLM.getLatestEndByEntityId entityId
+  QLM.bumpLatestStopMappingsToPastByEntityIdFromOrder entityId (n + 1)
+  let numNewStops = length stopMappings
+  newMappings <- mapM (\(m, ord) -> buildLatestLocationMapping' m.locationId entityId tag merchantId merchantOperatingCityId ord) (zip stopMappings [(n + 1) ..])
+  QLM.createMany newMappings
+  whenJust mbDestMapping $ \destMapping -> do
+    newDestMapping <- buildLatestLocationMapping' destMapping.locationId entityId tag merchantId merchantOperatingCityId (n + numNewStops + 1)
+    QLM.create newDestMapping

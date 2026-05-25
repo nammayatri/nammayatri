@@ -52,6 +52,10 @@ type API =
                   :> TokenAuth
                   :> ReqBody '[JSON] DRide.EditLocationReq
                   :> Post '[JSON] DRide.EditLocationResp
+                  :<|> "editStops"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] DRide.EditStopsReq
+                  :> Post '[JSON] DRide.EditLocationResp
                   :<|> "deliveryImage"
                   :> TokenAuth
                   :> Get '[JSON] Text
@@ -73,6 +77,7 @@ handler =
       getDriverLoc rideId
         :<|> getRideStatus rideId
         :<|> editLocation rideId
+        :<|> editStops rideId
         :<|> getDeliveryImage rideId
 
 getDriverLoc :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler DARide.GetDriverLocResp
@@ -86,6 +91,9 @@ getRideStatus rideId (personId, _) = withFlowHandlerAPIPersonId personId . withP
 
 editLocation :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
 editLocation rideId (personId, merchantId) editLocationReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.editLocation rideId (personId, merchantId) editLocationReq
+
+editStops :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> DRide.EditStopsReq -> FlowHandler DRide.EditLocationResp
+editStops rideId (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.editStops rideId (personId, merchantId) req
 
 getDeliveryImage :: Id SRide.Ride -> (Id SPerson.Person, Id Merchant.Merchant) -> FlowHandler Text
 getDeliveryImage rideId (personId, merchantId) = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DRide.getDeliveryImage rideId (personId, merchantId)

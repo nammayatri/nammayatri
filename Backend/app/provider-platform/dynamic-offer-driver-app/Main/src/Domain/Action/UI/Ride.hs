@@ -328,7 +328,7 @@ stopAction rideId pt stopLocId action = do
   ride <- runInReplica (QRide.findById rideId) >>= fromMaybeM (RideDoesNotExist rideId.getId)
   void $ QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   void $ QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  void $ runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  booking <- runInReplica $ QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   stopsLM <- QLM.getLatestStopsByEntityId rideId.getId
   unless (isValidRideStatus ride.status) $ throwError $ RideInvalidStatus ("This ride " <> ride.id.getId <> " is not in progress" <> Text.pack (show ride.status))
   when (null stopsLM) $ throwError $ InvalidRequest ("No stop present to be reached for ride " <> ride.id.getId)
@@ -336,37 +336,50 @@ stopAction rideId pt stopLocId action = do
   stopsInfo <- QSI.findAllByRideId rideId
   now <- getCurrentTime
   appBackendBapInternal <- asks (.appBackendBapInternal)
-  case action of
+  let bid = booking.id.getId
+  result <- case action of
     DEPART -> do
       stopInfo <- find (\stop -> stop.stopLocId == stopLocId) stopsInfo & fromMaybeM (InvalidRequest ("Invalid Stop depart request with stopLocId" <> stopLocId.getId <> "for ride " <> ride.id.getId))
-      QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       let request = CallBAPInternal.StopEventsReq CallBAPInternal.Depart rideId stopLM.order stopInfo.waitingTimeStart (Just now)
       void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+      QSI.updateByStopLocIdAndRideId (Just now) (Just pt) stopLocId rideId
       pure Success
     ARRIVE -> do
-      unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
-      id <- generateGUID
-      let stopInfo =
-            DSI.StopInformation
-              { stopLocId = stopLocId,
-                stopOrder = stopLM.order,
-                waitingTimeStart = now,
-                waitingTimeEnd = Nothing,
-                stopStartLatLng = pt,
-                rideId = rideId,
-                stopEndLatLng = Nothing,
-                createdAt = now,
-                updatedAt = now,
-                id,
-                merchantOperatingCityId = Just ride.merchantOperatingCityId,
-                merchantId = ride.merchantId
-              }
-      QSI.create stopInfo
-      let nowTs = floor $ utcTimeToPOSIXSeconds now
-      VID.addReachedStop rideId stopLM.order pt nowTs
-      let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
-      void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
-      pure Success
+      -- Mutex with editStops CONFIRM only at this stop's order. editStops with
+      -- n+1 == stopLM.order collides; other boundaries are caught by the staleness check.
+      let key = editStopsOrderLockKey bid stopLM.order
+      acquired <- Hedis.tryLockRedis key 20
+      unless acquired $ throwError $ InvalidRequest "Booking is being modified; please retry"
+      ( do
+          currentAtOrder <- QLM.findByEntityIdOrderAndVersion rideId.getId stopLM.order QLM.latestTag
+          unless (any (\m -> m.locationId == stopLocId) currentAtOrder) $
+            throwError $ InvalidRequest ("Stop at order " <> Text.pack (show stopLM.order) <> " was edited; please refresh and retry for ride " <> ride.id.getId)
+          unless (isValidStopArrivedAction stopLM stopsInfo) $ throwError $ InvalidRequest ("Invalid Stop arrived request with stopLocId " <> stopLocId.getId <> "for ride " <> ride.id.getId)
+          let request = CallBAPInternal.StopEventsReq CallBAPInternal.Arrive rideId stopLM.order now Nothing
+          void $ CallBAPInternal.stopEvents appBackendBapInternal.apiKey appBackendBapInternal.url request
+          id <- generateGUID
+          let stopInfo =
+                DSI.StopInformation
+                  { stopLocId = stopLocId,
+                    stopOrder = stopLM.order,
+                    waitingTimeStart = now,
+                    waitingTimeEnd = Nothing,
+                    stopStartLatLng = pt,
+                    rideId = rideId,
+                    stopEndLatLng = Nothing,
+                    createdAt = now,
+                    updatedAt = now,
+                    id,
+                    merchantOperatingCityId = Just ride.merchantOperatingCityId,
+                    merchantId = ride.merchantId
+                  }
+          QSI.create stopInfo
+          let nowTs = floor $ utcTimeToPOSIXSeconds now
+          VID.addReachedStop rideId stopLM.order pt nowTs
+          pure Success
+        )
+        `finally` void (Hedis.unlockRedis key)
+  pure result
   where
     isValidStopArrivedAction stopLM =
       all (\stopInfo -> stopInfo.stopOrder < stopLM.order && isJust stopInfo.waitingTimeEnd && isJust stopInfo.stopEndLatLng)

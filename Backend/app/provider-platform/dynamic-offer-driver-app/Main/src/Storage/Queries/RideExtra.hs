@@ -265,6 +265,15 @@ getActiveBookingAndRideByDriverId (Id personId) = do
           isMeterRide = booking.tripCategory == (DTC.OneWay DTC.MeterRide)
        in olderThanADay && isMeterRide && ride.status == Ride.NEW
 
+updateHasStops :: (MonadFlow m, EsqDBFlow m r) => Id Ride -> Bool -> m ()
+updateHasStops rideId hasStops = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamR.hasStops (Just hasStops),
+      Se.Set BeamR.updatedAt now
+    ]
+    [Se.Is BeamR.id (Se.Eq $ getId rideId)]
+
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> RideStatus -> m ()
 updateStatus rideId status = do
   now <- getCurrentTime

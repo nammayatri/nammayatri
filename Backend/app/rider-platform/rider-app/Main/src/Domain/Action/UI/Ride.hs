@@ -18,8 +18,11 @@ module Domain.Action.UI.Ride
     EditLocation,
     EditLocationReq (..),
     EditLocationResp (..),
+    EditStopsReq (..),
     getRideStatus,
     editLocation,
+    editStops,
+    processingSoftKey,
     getDriverPhoto,
     getDeliveryImage,
   )
@@ -54,6 +57,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude hiding (HasField)
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import Kernel.Storage.Esqueleto.Config (EsqDBEnv)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as CD
@@ -74,6 +78,7 @@ import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.Ride as QRide
+import qualified Storage.Queries.StopInformation as QSI
 import Tools.Error
 import qualified Tools.Maps as MapSearch
 
@@ -92,6 +97,12 @@ data GetRideStatusResp = GetRideStatusResp
 data EditLocationReq = EditLocationReq
   { origin :: Maybe EditLocation,
     destination :: Maybe EditLocation
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
+
+data EditStopsReq = EditStopsReq
+  { stops :: [EditLocation],
+    preservedPrefixStops :: Int
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -244,47 +255,167 @@ editLocation rideId (personId, merchantId) req = do
         throwError EditLocationAttemptsExhausted
       when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
         throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
-      newDropLocation <- buildLocation merchantId booking.merchantOperatingCityId destination
-      QL.create newDropLocation
-      startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
-      oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
-      bookingUpdateReq <- buildbookingUpdateRequest booking
-      origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
-      let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
-      -- let stopsLatLong = map (.gps) [destination] -----start using after adding stops
-      void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
-      QBUR.create bookingUpdateReq
-      startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      QLM.create startLocMap
-      oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      QLM.create oldDropLocMap
-      newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
-      QLM.create newDropLocationMap
-      prevOrder <- QLM.maxOrderByEntity booking.id.getId
-      let destination' = Just $ newDropLocation{id = show prevOrder}
-      bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
-      let dUpdateReq =
-            ACL.UpdateBuildReq
-              { bppId = booking.providerId,
-                bppUrl = booking.providerUrl,
-                transactionId = booking.transactionId,
-                messageId = bookingUpdateReq.id.getId,
-                city = merchant.defaultCity, -- TODO: Correct during interoperability
-                details =
-                  ACL.UEditLocationBuildReqDetails $
-                    ACL.EditLocationBuildReqDetails
-                      { bppRideId = ride.bppRideId,
-                        origin = Nothing,
-                        status = ACL.SOFT_UPDATE,
-                        destination = destination',
-                        stops = Nothing
-                      },
-                ..
-              }
-      becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-      void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
-      pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
+      armEditCooldown booking.id $ do
+        newDropLocation <- buildLocation merchantId booking.merchantOperatingCityId destination
+        QL.create newDropLocation
+        startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
+        oldDropLocMapping <- QLM.getLatestEndByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingId: " <> booking.id.getId)
+        bookingUpdateReq <- buildbookingUpdateRequest booking Nothing (Just DBUR.DESTINATION)
+        origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
+        let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
+        void $ Serviceability.validateServiceabilityForEditDestination sourceLatLong destination.gps person
+        QBUR.create bookingUpdateReq
+        startLocMap <- SLM.buildPickUpLocationMapping startLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+        QLM.create startLocMap
+        oldDropLocMap <- SLM.buildDropLocationMapping oldDropLocMapping.locationId bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+        QLM.create oldDropLocMap
+        newDropLocationMap <- SLM.buildDropLocationMapping newDropLocation.id bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId)
+        QLM.create newDropLocationMap
+        prevOrder <- QLM.maxOrderByEntity booking.id.getId
+        let destination' = Just $ newDropLocation{id = show prevOrder}
+        bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+        let dUpdateReq =
+              ACL.UpdateBuildReq
+                { bppId = booking.providerId,
+                  bppUrl = booking.providerUrl,
+                  transactionId = booking.transactionId,
+                  messageId = bookingUpdateReq.id.getId,
+                  city = merchant.defaultCity,
+                  details =
+                    ACL.UEditLocationBuildReqDetails $
+                      ACL.EditLocationBuildReqDetails
+                        { bppRideId = ride.bppRideId,
+                          origin = Nothing,
+                          status = ACL.SOFT_UPDATE,
+                          destination = destination',
+                          stops = Nothing
+                        },
+                  ..
+                }
+        becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+        void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+        pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
     (_, _) -> throwError PickupOrDropLocationNotFound
+
+editStopsSoftUpdate ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    MonadFlow m,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  Id SRide.Ride ->
+  (Id SPerson.Person, Id DM.Merchant) ->
+  EditStopsReq ->
+  DB.Booking ->
+  SRide.Ride ->
+  DM.Merchant ->
+  m EditLocationResp
+editStopsSoftUpdate _rideId (personId, merchantId) req booking ride merchant = do
+  let n = req.preservedPrefixStops
+      newStops = req.stops
+  logTagInfo "editStopsSoftUpdate" $ "rideId=" <> ride.id.getId <> " ride.status=" <> show ride.status <> " n=" <> show n
+  when (n < 0) $
+    throwError $ InvalidRequest $ "preservedPrefixStops cannot be negative (" <> show n <> ")"
+  when (ride.status `elem` [SRide.CANCELLED, SRide.COMPLETED]) $
+    throwError $ InvalidRequest "Cannot add stops on a terminal ride"
+  let entityId = booking.id.getId
+      hasDestination = case booking.bookingDetails of
+        DB.RentalDetails _ -> False
+        DB.MeterRideDetails d -> isJust d.toLocation
+        _ -> True
+  armEditCooldown booking.id $ do
+    rawStopMaps <- B.runInReplica $ QLM.getLatestStopsByEntityId' entityId
+    let stopMaps = if hasDestination then safeInit rawStopMaps else rawStopMaps
+        actualStopCount = length stopMaps
+    when (n > actualStopCount) $
+      throwError $ InvalidRequest $ "preservedPrefixStops (" <> show n <> ") exceeds actual stop count (" <> show actualStopCount <> ")"
+    reachedStopOrders <- map (.stopOrder) <$> B.runInReplica (QSI.findAllByRideId ride.id)
+    when (any (> n) reachedStopOrders) $
+      throwError $ InvalidRequest $ "Cannot modify (" <> show n <> ") already reached stops (orders=" <> show reachedStopOrders <> ")"
+    startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
+    origin <- QL.findById startLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId:" <> startLocMapping.locationId.getId)
+    let sourceLatLong = Maps.LatLong {lat = origin.lat, lon = origin.lon}
+    let stopLatLongs = map (.gps) newStops
+    person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    void $ Serviceability.validateServiceabilityForEditStops sourceLatLong stopLatLongs person
+    -- Boundary check: preceding stop is the n-th stop, or pickup if n == 0.
+    -- precedingLatLon <-
+    --   if n == 0
+    --     then do
+    --       startMap <- QLM.getLatestStartByEntityId entityId >>= fromMaybeM (InternalError $ "Latest start mapping not found for bookingId: " <> entityId)
+    --       loc <- QL.findById startMap.locationId >>= fromMaybeM (InternalError "Pickup location not found")
+    --       pure $ Maps.LatLong loc.lat loc.lon
+    --     else case drop (n - 1) stopMaps of
+    --       (lm : _) -> do
+    --         loc <- QL.findById lm.locationId >>= fromMaybeM (InternalError "Stop location not found")
+    --         pure $ Maps.LatLong loc.lat loc.lon
+    --       [] -> throwError $ InvalidRequest $ "Stop at position " <> show n <> " not found"
+    -- let seq' = precedingLatLon : map (.gps) newStops
+    --     -- ~0.00001 degrees ≈ 1.1 meters; tolerates float imprecision while catching real duplicates
+    --     latLonEpsilon = 0.00001 :: Double
+    --     near a b = abs (a.lat - b.lat) < latLonEpsilon && abs (a.lon - b.lon) < latLonEpsilon
+    --     consecutiveDup = any (uncurry near) (zip seq' (drop 1 seq'))
+    -- when consecutiveDup $
+    --   throwError $ InvalidRequest "Two consecutive stops cannot be at the same location"
+    -- empty newStops is valid: means remove all stops after position n
+    locs <- mapM (buildLocation merchantId booking.merchantOperatingCityId) newStops
+    QL.createMany locs
+    bookingUpdateReq <- buildbookingUpdateRequest booking (Just n) (Just DBUR.STOPS)
+    QBUR.create bookingUpdateReq
+    stopMappings <- mapM (\(loc, ord) -> SLM.buildStopLocationMapping loc bookingUpdateReq.id.getId DLM.BOOKING_UPDATE_REQUEST (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId) ord) (zip locs [(n + 1) ..])
+    QLM.createMany stopMappings
+
+    bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
+    let dUpdateReq =
+          ACL.UpdateBuildReq
+            { bppBookingId,
+              merchant,
+              bppId = booking.providerId,
+              bppUrl = booking.providerUrl,
+              transactionId = booking.transactionId,
+              messageId = bookingUpdateReq.id.getId,
+              city = merchant.defaultCity,
+              details =
+                ACL.UEditStopsBuildReqDetails $
+                  ACL.EditStopsBuildReqDetails
+                    { bppRideId = ride.bppRideId,
+                      stops = locs,
+                      status = ACL.SOFT_UPDATE,
+                      preservedPrefixStops = n
+                    },
+              ..
+            }
+    becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
+    void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
+    pure $ EditLocationResp (Just bookingUpdateReq.id) "Success"
+
+editStops ::
+  ( CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasField "esqDBReplicaEnv" r EsqDBEnv,
+    MonadFlow m,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
+  ) =>
+  Id SRide.Ride ->
+  (Id SPerson.Person, Id DM.Merchant) ->
+  EditStopsReq ->
+  m EditLocationResp
+editStops rideId (personId, merchantId) req = do
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  merchant <- CQMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+  unless isValueAddNP $ throwError (InvalidRequest "Edit stops is not supported for non value add NP")
+  editStopsSoftUpdate rideId (personId, merchantId) req booking ride merchant
 
 buildLocation ::
   MonadFlow m =>
@@ -307,8 +438,19 @@ buildLocation merchantId merchantOperatingCityId location = do
         merchantOperatingCityId = Just merchantOperatingCityId
       }
 
-buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> m DBUR.BookingUpdateRequest
-buildbookingUpdateRequest booking = do
+processingSoftKey :: Id DB.Booking -> Text
+processingSoftKey bid = "Rider:Edit:ProcessingSoft:" <> bid.getId
+
+armEditCooldown :: (CacheFlow m r, MonadFlow m) => Id DB.Booking -> m a -> m a
+armEditCooldown bookingId action = do
+  let pKey = processingSoftKey bookingId
+  acquired <- Redis.tryLockRedis pKey 60
+  unless acquired $
+    throwError $ InvalidRequest "Edit already in progress; please retry."
+  action `onException` void (Redis.unlockRedis pKey)
+
+buildbookingUpdateRequest :: MonadFlow m => DB.Booking -> Maybe Int -> Maybe DBUR.BookingUpdateType -> m DBUR.BookingUpdateRequest
+buildbookingUpdateRequest booking preservedPrefixStops updateType = do
   guid <- generateGUID
   now <- getCurrentTime
   return $
@@ -329,7 +471,9 @@ buildbookingUpdateRequest booking = do
         totalDistance = Nothing,
         errorObj = Nothing,
         travelledDistance = Nothing,
-        distanceUnit = booking.distanceUnit
+        distanceUnit = booking.distanceUnit,
+        preservedPrefixStops,
+        updateType
       }
 
 getDeliveryImage ::

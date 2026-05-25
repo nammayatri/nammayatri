@@ -33,3 +33,9 @@ ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_obj text ;
 ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_message text ;
 ALTER TABLE atlas_app.booking_update_request ADD COLUMN error_code text ;
 ALTER TABLE atlas_app.booking_update_request DROP COLUMN error_obj;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN preserved_prefix_stops integer ;
+ALTER TABLE atlas_app.booking_update_request ADD COLUMN update_type character varying(255) ;

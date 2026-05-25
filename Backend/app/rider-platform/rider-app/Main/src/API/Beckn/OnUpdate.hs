@@ -61,6 +61,9 @@ onUpdate _ reqV2 = withFlowHandlerBecknAPI do
             if req.isSynchronousOnUpdateProcessing
               then onUpdateProcessAction
               else fork "on update processing" $ onUpdateProcessAction
+          -- CONFIRM_UPDATE only: ensure BAP commits inside the BPP→BAP HTTP call so BPP's update handler
+          -- (now inline) won't return success unless BAP also committed. SOFT_UPDATE stays forked.
+          DOnUpdate.OUValidatedEditDestConfirmUpdateReq _ -> onUpdateProcessAction
           _ -> fork "on update processing" $ onUpdateProcessAction
         fork "on update received pushing ondc logs" do
           booking <- case validatedOnUpdateReq of
