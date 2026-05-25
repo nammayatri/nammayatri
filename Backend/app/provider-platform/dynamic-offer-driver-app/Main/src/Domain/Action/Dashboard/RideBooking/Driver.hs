@@ -52,6 +52,7 @@ import Domain.Types.DriverPanCard
 import qualified Domain.Types.DriverPanCard as DPanCard
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.Feedback as DFeedback
+import qualified Domain.Types.FleetOwnerInformation as DFOI
 import Domain.Types.Image (Image)
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
@@ -106,7 +107,6 @@ import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackExtra as QFeedback
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
-import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
