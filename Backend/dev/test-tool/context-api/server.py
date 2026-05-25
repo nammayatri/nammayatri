@@ -2182,6 +2182,25 @@ def _normalize_path_params(path: str) -> str:
     return path
 
 
+# Provider-dashboard hits use /bpp/driver-offer/{merchant}/{city}/...
+# Rider-dashboard hits use /bap/{merchant}/{city}/...
+# The driver/rider OpenAPI specs use /dashboard/{id}/... or /dashboard/{id}/{id}/...
+_DASHBOARD_PATH_RE = re.compile(
+    r'^/b[ap]p/(?:driver-offer/)?[^/]+/[^/]+/(.*)$'
+)
+
+
+def _normalize_dashboard_path(path: str) -> str:
+    """Convert dashboard proxy paths to spec-format paths.
+    /bpp/driver-offer/NAMMA_YATRI_PARTNER/Bangalore/foo -> /dashboard/{id}/foo
+    /bap/BRIDGE_FINLAND/Helsinki/foo -> /dashboard/{id}/foo
+    """
+    m = _DASHBOARD_PATH_RE.match(path)
+    if m:
+        return "/dashboard/{id}/" + m.group(1)
+    return path
+
+
 def _extract_coverage_spec(openapi: dict, service_name: str) -> dict:
     """Extract endpoints and their scenario-defining enum fields from an OpenAPI spec."""
     components = openapi.get("components", {})
@@ -2401,9 +2420,9 @@ def get_coverage_report(run_ids: list | None = None) -> dict:
     SERVICE_MAP = {
         "rider": "rider",
         "driver": "driver",
-        "lts": "driver",           # LTS endpoints are in driver OpenAPI
-        "provider-dashboard": None, # Dashboard endpoints are separate
-        "rider-dashboard": None,
+        "lts": "driver",               # LTS endpoints are in driver OpenAPI
+        "provider-dashboard": "driver", # Dashboard routes map to driver spec /dashboard/... paths
+        "rider-dashboard": "rider",     # Dashboard routes map to rider spec /dashboard/... paths
         "mock-idfy": None,
         "mock-server": None,
         "internal": None,
@@ -2414,8 +2433,11 @@ def get_coverage_report(run_ids: list | None = None) -> dict:
         service = SERVICE_MAP.get(raw_service, raw_service)
         if service not in hit_index:
             continue
-        # Normalize hit path: strip query string, normalize params
-        hit_path = _normalize_path_params(hit["path"])
+        # Normalize hit path: dashboard proxy paths, query strings, path params
+        hit_path = hit["path"]
+        if raw_service in ("provider-dashboard", "rider-dashboard"):
+            hit_path = _normalize_dashboard_path(hit_path)
+        hit_path = _normalize_path_params(hit_path)
         key = f"{hit['method']} {hit_path}"
         if key not in hit_index[service]:
             hit_index[service][key] = 0
