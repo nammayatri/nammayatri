@@ -665,10 +665,13 @@ refundPaymentService req refundCall = do
           now <- getCurrentTime
           let newCompletedAt = calculateCompletedAt response.status now
           HQRefunds.updateRefundsEntryByStripeResponse req.merchantOpCityId (Just response.refundId) response.errorCode response.status (Just True) newCompletedAt refundsEntry mbAction
-          pure $ Just response
+          -- refund_request.refunds_id — matching what the Stripe webhook looks up via metadata.
+          pure $ Just response {PInterface.refundId = refundId}
         Left err -> do
           logError $ "Refund API Call Failure with Error: " <> show err
           HQRefunds.updateIsApiCallSuccess req.merchantOpCityId (Just False) refundsEntry mbAction
+          -- Flip status to REFUND_FAILURE so processRefund's so retry works, else the row is stuck at REFUND_PENDING forever).
+          HQRefunds.updateRefundStatus req.merchantOpCityId PInterface.REFUND_FAILURE refundsEntry mbAction
           pure Nothing
 
 -- | Unified refund status check. Fetches latest refund for an order and refreshes
@@ -699,7 +702,8 @@ getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
               now <- getCurrentTime
               let newCompletedAt = calculateCompletedAt result.status now
               HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt refund (Just "get refund status service")
-              pure $ Just result
+              -- Return the internal refunds.id (matches refundPaymentService);
+              pure $ Just result {PInterface.refundId = refund.id.getId}
             Left err -> do
               logError $ "Get refund status failed: " <> show err
               pure $ Just $ mkRespFromRefund refund
