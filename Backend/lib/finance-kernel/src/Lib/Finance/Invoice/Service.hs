@@ -88,13 +88,14 @@ createInvoice input entryIds = do
   -- Calculate totals from line items
   -- subtotal: excludes external charges (toll, parking) and tax line items
   -- totalAmount: sum of all line items (what rider pays)
-  let lineItemsJson = Aeson.toJSON input.lineItems
-      round' = roundAmountByCurrency' input.currency
-      totalAmount = round' $ sum $ map (.lineTotal) input.lineItems
-      externalTotal = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-      taxTotal = round' $ sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) input.lineItems
+  let round' = roundAmountByCurrency' input.currency
+      roundedLineItems = map (\li -> li {unitPrice = round' li.unitPrice, lineTotal = round' li.lineTotal}) input.lineItems
+      lineItemsJson = Aeson.toJSON roundedLineItems
+      totalAmount = round' $ sum $ map (.lineTotal) roundedLineItems
+      externalTotal = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
+      taxTotal = round' $ sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) roundedLineItems
       subtotal = round' $ totalAmount - externalTotal - taxTotal
-  logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) input.lineItems)
+  logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) roundedLineItems)
   let invoice =
         Invoice
           { id = Id invoiceId,
@@ -160,7 +161,7 @@ createInvoice input entryIds = do
     case mbToAccount of
       Just toAccount
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
-          let extCharges = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+          let extCharges = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
               txnType = invoiceTypeToTransactionType input.invoiceType
               isVat = input.isVat
               indirectTaxInput =
@@ -185,7 +186,7 @@ createInvoice input entryIds = do
                   }
           void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
-          let extCharges = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+          let extCharges = round' $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
               gstAmount = round' $ case input.gstBreakdown of
                 Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
                 Nothing -> 0
