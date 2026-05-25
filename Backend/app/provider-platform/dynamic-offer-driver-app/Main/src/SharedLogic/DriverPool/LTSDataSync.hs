@@ -167,20 +167,24 @@ syncDriverPoolDataToLTS ::
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
-  mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
-  case mbExisting of
-    Just existing -> do
-      let merged = applyUpdate update existing
-      DPD.setDriverPoolData merged
-    Nothing -> do
-      mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
-      case mbExisting' of
-        Just existing' -> do
-          let merged = applyUpdate update existing'
-          DPD.setDriverPoolData merged
-          Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
-        Nothing ->
-          logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+  Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
+    mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+    case mbExisting of
+      Just existing -> do
+        let merged = applyUpdate update existing
+        DPD.setDriverPoolData merged
+      Nothing -> do
+        mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
+        case mbExisting' of
+          Just existing' -> do
+            let merged = applyUpdate update existing'
+            DPD.setDriverPoolData merged
+            Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
+          Nothing ->
+            logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+driverPoolSyncLockKey :: Id Driver -> Text
+driverPoolSyncLockKey driverId = "driver-pool-sync-lock:" <> driverId.getId
 
 -- | Apply a partial update to an existing DriverPoolData record.
 -- Only fields marked 'Set' are overwritten; 'Unchanged' fields keep current values.
