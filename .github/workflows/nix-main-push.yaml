@@ -64,12 +64,12 @@ jobs:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "master-"
         run: |
-          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure
+          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure --out-link ./docker-result
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
-          gunzip -c ./result > image.tar || cp ./result image.tar
+          gunzip -c ./docker-result > image.tar || cp ./docker-result image.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
@@ -172,12 +172,12 @@ jobs:
           DOCKER_REGISTRY: ghcr.io
           DOCKER_TAG_PREFIX: "prod-"
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage
+          nix build .#packages.${{ matrix.system }}.dockerImage --out-link ./docker-result
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
-          gunzip -c ./result > image.tar || cp ./result image.tar
+          gunzip -c ./docker-result > image.tar || cp ./docker-result image.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}

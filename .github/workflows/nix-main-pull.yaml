@@ -81,7 +81,7 @@ jobs:
         env:
           DOCKER_TAG_PREFIX: "master-"
         run: |
-          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure
+          NIX_LOCAL_BUILD="1" nix build .#packages.${{ matrix.system }}.dockerImage --impure --out-link ./docker-result
 
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
           echo "Docker image built: ${BASE_IMAGE} (not pushed)"
