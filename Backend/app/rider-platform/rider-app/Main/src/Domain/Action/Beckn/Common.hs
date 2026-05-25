@@ -801,7 +801,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 Just existingTicketId ->
                   void $
                     withTryCatch "updateTicket:autoConvertSos" $
-                      Ticket.updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, subStatus = TIT.IN, rideDescription = Just rideInfo, issueDetails = Nothing}
+                      Ticket.updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId

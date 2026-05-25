@@ -84,14 +84,26 @@ def _nix_packages(tools: Optional[List[str]]) -> List[str]:
 
 
 def _wrap_with_nix(cmd: str, tools: Optional[List[str]]) -> str:
-    """If the spec lists `tools:`, run `cmd` inside `nix-shell -p ...` so the
-    requested toolchain (correct node, JDK, adb, …) is on PATH for every stage.
-    No-ops when `tools` is empty or `cmd` is blank."""
+    """If the spec lists `tools:`, run `cmd` inside ``nix shell`` with packages
+    from ``nixpkgs-unstable`` (resolved via the project flake's ``--inputs-from``).
+
+    The project's pinned ``common/nixpkgs`` ships an older Node (20.x) that
+    does not satisfy ``react-native-app-monitor``'s ``engines.node >= 20.19``.
+    Using ``nixpkgs-unstable`` (the same input ``__main__.py`` already uses for
+    the legacy launcher) gives us Node 22+.
+
+    No-ops when ``tools`` is empty or ``cmd`` is blank."""
     pkgs = _nix_packages(tools)
     if not pkgs or not (cmd or "").strip():
         return cmd
-    pkg_args = " ".join(shlex.quote(p) for p in pkgs)
-    return f"nix-shell --quiet -p {pkg_args} --run {shlex.quote(cmd)}"
+    flake_args = " ".join(
+        shlex.quote(f"nixpkgs-unstable#{p}") for p in pkgs
+    )
+    inputs_from = shlex.quote(str(PROJECT_ROOT))
+    return (
+        f"nix shell --inputs-from {inputs_from} {flake_args}"
+        f" --command bash -c {shlex.quote(cmd)}"
+    )
 
 
 # ── In-memory launcher state ────────────────────────────────────────────────
@@ -651,6 +663,28 @@ def stop_stage(slug: str, stage_id: str) -> bool:
     if not sess:
         return False
     return _kill_session(sess)
+
+
+def reset_all_stages(slug: str) -> None:
+    """Stop all running sessions for *slug* and wipe persisted stage state.
+
+    Sessions are collected under the lock, then killed outside it so we don't
+    hold _runner_lock for up to 5 s per process (SIGTERM grace period in
+    _kill_session).  State is wiped after all kills complete to avoid a TOCTOU
+    window where a concurrent _watch_exit write lands between our load and save.
+    """
+    to_kill = []
+    with _runner_lock:
+        for key, sid in list(_by_stage.items()):
+            if key.startswith(f"{slug}/"):
+                sess = _sessions.get(sid)
+                if sess:
+                    to_kill.append(sess)
+    for sess in to_kill:
+        _kill_session(sess)
+    state = _load_state(slug)
+    state["stages"] = {}
+    _save_state(slug, state)
 
 
 def list_sessions(slug: Optional[str] = None) -> List[dict]:

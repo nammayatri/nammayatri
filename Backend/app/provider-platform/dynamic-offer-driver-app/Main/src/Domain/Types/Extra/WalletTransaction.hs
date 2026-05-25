@@ -21,3 +21,4 @@ mapWalletStatus = \case
   Payment.AUTHORIZING -> PROCESSING
   Payment.COD_INITIATED -> PROCESSING
   Payment.NEW -> INITIATED
+  Payment.PARTIAL_CHARGED -> PROCESSING

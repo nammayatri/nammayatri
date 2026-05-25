@@ -76,6 +76,8 @@ types:
     integratedBppConfigId: Id IntegratedBPPConfig
     categories: [CategoryInfoResponse]
     observingFailures: Maybe Bool
+    serviceTierType: Maybe ServiceTierType
+    routeCode: Maybe Text
 
     derive: "Show"
 

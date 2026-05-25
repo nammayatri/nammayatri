@@ -8,6 +8,7 @@ module API.Action.UI.SpecialLocation
 where
 
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Domain.Action.UI.SpecialLocation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -22,7 +23,12 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "specialLocation" :> "list" :> QueryParam "isOrigin" Kernel.Prelude.Bool :> Get '[JSON] [Lib.Queries.SpecialLocation.SpecialLocationFull])
+type API =
+  ( TokenAuth :> "specialLocation" :> "list" :> QueryParam "isOrigin" Kernel.Prelude.Bool :> Header "If-None-Match" Data.Text.Text
+      :> Get
+           '[JSON]
+           (Headers '[Header "ETag" Data.Text.Text] [Lib.Queries.SpecialLocation.SpecialLocationFull])
+  )
 
 handler :: Environment.FlowServer API
 handler = getSpecialLocationList
@@ -33,6 +39,7 @@ getSpecialLocationList ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Environment.FlowHandler [Lib.Queries.SpecialLocation.SpecialLocationFull]
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Environment.FlowHandler (Headers '[Header "ETag" Data.Text.Text] [Lib.Queries.SpecialLocation.SpecialLocationFull])
   )
-getSpecialLocationList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+getSpecialLocationList a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.SpecialLocation.getSpecialLocationList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

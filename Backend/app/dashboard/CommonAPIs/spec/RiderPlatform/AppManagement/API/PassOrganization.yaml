@@ -72,6 +72,17 @@ types:
     id: Id PassOrganization
     name: Text
     address: Maybe Text
+    depotId: Maybe Text
+
+  DepotAssign:
+    id: Id PassOrganization
+    isAdd: Bool
+
+  AssignDepotReq:
+    depotPersonId: Id Person
+    depotId: Maybe Text
+    passOrganizations: "[DepotAssign]"
+    derive: "'HideSecrets"
 
 apis:
   - GET:
@@ -114,6 +125,8 @@ apis:
       auth: ApiAuthV2
       params:
         passEnum: Text
+      query:
+        - depotPersonId: Id Person
       response:
         type: "[GetOrganizationResp]"
   - GET:
@@ -123,3 +136,10 @@ apis:
         documentId: Id MediaFile
       response:
         type: Text
+  - POST:
+      endpoint: /assignDepot
+      auth: ApiAuthV2
+      request:
+        type: AssignDepotReq
+      response:
+        type: APISuccess

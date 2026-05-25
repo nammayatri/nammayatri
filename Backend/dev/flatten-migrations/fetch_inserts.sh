@@ -1,6 +1,6 @@
 #!/bin/bash
 SCHEMA=$1
-CONN_STRING="host=localhost port=5434 user=atlas dbname=atlas_dev password=atlas"
+CONN_STRING="host=localhost port=${DB_PRIMARY_PORT:-5434} user=atlas dbname=atlas_dev password=atlas"
 
 SCHEMA_FILE="$SCHEMA.insert.sql"
 #LOCAL_DATA_DIR='../local-testing-data/'

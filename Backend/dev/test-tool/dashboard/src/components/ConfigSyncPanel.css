@@ -1,0 +1,264 @@
+.configsync-panel {
+  padding: 20px 24px;
+  max-width: 980px;
+  margin: 0 auto;
+  color: #d4d4d4;
+}
+
+.configsync-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.configsync-subtitle {
+  color: #8a8a8a;
+  font-size: 13px;
+}
+
+.configsync-subtitle code,
+.configsync-resolved code {
+  background: #2a2a2a;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.configsync-form {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+  align-items: end;
+}
+
+.configsync-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #aaa;
+}
+
+.configsync-field input,
+.configsync-field select {
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 4px;
+  color: #e0e0e0;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.configsync-field input:disabled,
+.configsync-field select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.configsync-resolved {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.configsync-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.configsync-run {
+  background: #2d6cdf;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 9px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.configsync-run:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.configsync-cancel {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.configsync-error {
+  grid-column: 1 / -1;
+  background: #4a1f1f;
+  border: 1px solid #8a3a3a;
+  color: #f5b7b7;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.configsync-skip {
+  grid-column: 1 / -1;
+  background: #1f3a4a;
+  border: 1px solid #3a6a8a;
+  color: #b7d8f5;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.configsync-steps {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+}
+
+.configsync-step {
+  flex: 1;
+  background: #1e1e1e;
+  border: 1px solid #2f2f2f;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.configsync-step.active {
+  border-color: #2d6cdf;
+  box-shadow: 0 0 0 1px #2d6cdf inset;
+}
+
+.configsync-step.status-succeeded { border-color: #2f6b30; }
+.configsync-step.status-failed    { border-color: #8a3a3a; }
+.configsync-step.status-cancelled { border-color: #8a7a3a; }
+.configsync-step.status-running   { border-color: #2d6cdf; }
+.configsync-step.status-starting  { border-color: #2d6cdf; }
+
+.configsync-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #ddd;
+}
+
+.configsync-step-status {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.configsync-step.status-succeeded .configsync-step-status { color: #6cca6c; }
+.configsync-step.status-failed    .configsync-step-status { color: #f5b7b7; }
+.configsync-step.status-running   .configsync-step-status { color: #82b1ff; }
+.configsync-step.status-starting  .configsync-step-status { color: #82b1ff; }
+
+.configsync-step-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #777;
+}
+
+.configsync-log-wrap {
+  margin-top: 20px;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.configsync-log-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1c1c1c;
+  color: #aaa;
+  font-size: 12px;
+}
+
+.configsync-log {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: #cfcfcf;
+  white-space: pre-wrap;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.configsync-log-tabs {
+  display: flex;
+  gap: 0;
+  background: #181818;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.configsync-log-tab {
+  background: transparent;
+  border: none;
+  color: #888;
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.configsync-log-tab.active {
+  color: #e0e0e0;
+  border-bottom-color: #2d6cdf;
+}
+
+.configsync-log-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.configsync-pill {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.configsync-pill-running   { background: #1a3060; color: #82b1ff; }
+.configsync-pill-succeeded { background: #1f3d20; color: #98e09a; }
+.configsync-pill-failed    { background: #4a1f1f; color: #f5b7b7; }
+.configsync-pill-cancelled { background: #3d3520; color: #e0c97a; }
+
+.configsync-copy {
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  color: #ccc;
+  border-radius: 3px;
+  font-size: 11px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+
+.configsync-copy:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.configsync-log-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: #1c1c1c;
+  border-top: 1px solid #2a2a2a;
+  color: #777;
+  font-size: 11px;
+}

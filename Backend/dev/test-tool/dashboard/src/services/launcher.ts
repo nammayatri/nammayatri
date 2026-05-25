@@ -67,6 +67,11 @@ export const stopStage = (slug: string, stageId: string): Promise<any> =>
     method: 'POST',
   });
 
+export const resetAllStages = (slug: string): Promise<{ reset: boolean; slug: string }> =>
+  j(`${base}/${encodeURIComponent(slug)}/stages`, {
+    method: 'DELETE',
+  });
+
 export const getStatus = (slug: string): Promise<{ stages: any[] }> =>
   j(`${base}/${encodeURIComponent(slug)}/status`);
 

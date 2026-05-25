@@ -23,7 +23,6 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.TransporterConfig
 import Kernel.Beam.Functions as KBF
 import Kernel.Prelude as KP
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Cac
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -61,7 +60,7 @@ create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> m 
 create = CMTC.create
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Id MerchantOperatingCity -> m ()
+clearCache :: (MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> m ()
 clearCache = CMTC.clearCache
 
 updateFCMConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> BaseUrl -> Text -> m ()

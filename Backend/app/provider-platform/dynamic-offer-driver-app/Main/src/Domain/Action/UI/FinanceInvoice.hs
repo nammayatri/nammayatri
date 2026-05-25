@@ -12,15 +12,18 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person (Person)
 import Environment (Flow)
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (ENGLISH))
 import Kernel.Prelude (head, listToMaybe, showBaseUrl)
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
+import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
+import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -174,6 +177,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       Nothing
       Nothing
       []
+      []
       (mbLimit <|> Just 10)
       (mbOffset <|> Just 0)
 
@@ -209,19 +213,29 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
       pure (mbRecipientBid', mbMerchant >>= (.businessId), mbMerchant >>= (.vatNumber))
     _ -> pure (Nothing, Nothing, Nothing)
 
-  let locale = languageToLocale (mbDriver >>= (.language))
+  let lang = fromMaybe ENGLISH (mbDriver >>= (.language))
       tz = maybe DT.utc (\tc -> DT.minutesToTimeZone (fromIntegral tc.timeDiffFromUtc `div` 60)) mbTransporterConfig
-      cfg =
-        InvoicePdfConfig
-          { locale,
-            timezone = tz,
-            logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
-            sellerTradeName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceSellerTradeName),
-            appName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceAppName)
-          }
-      pdfData = buildInvoicePdfData inv items mbTaxTxn mbPayType mbBrand mbLast4 mbRecipientBid mbSellerBid mbSellerVat
-      html = renderInvoiceHtml cfg pdfData
-
+      ctx =
+        FRT.buildInvoiceContext
+          FRT.BuildInvoiceContextInput
+            { language = lang,
+              logoUrl = mbTransporterConfig >>= (.invoiceConfig) >>= (.logoUrl) <&> showBaseUrl,
+              sellerTradeName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceSellerTradeName),
+              appName = mbTransporterConfig >>= (.invoiceConfig) >>= (.invoiceAppName),
+              invoice = inv,
+              lineItems = items,
+              mbTaxTxn = mbTaxTxn,
+              mbPaymentMode = mbPayType,
+              mbCardBrand = mbBrand,
+              mbCardLastFour = mbLast4,
+              mbRecipientBusinessId = mbRecipientBid,
+              mbSellerBusinessId = mbSellerBid,
+              mbSellerVatNumber = mbSellerVat
+            }
+      mbInvType = case inv.invoiceType of
+        AggregatedCommission -> Just AggregatedCommission
+        _ -> Nothing
+  html <- RIFT.renderHtml (Id inv.merchantOperatingCityId) mbInvType lang tz ctx
   pdfBase64 <- generateFinanceInvoicePdf inv.invoiceNumber html
 
   pure $

@@ -54,12 +54,14 @@
   provider-dashboard = 8018;
   rider-app-scheduler = 8058;
   driver-offer-allocator = 8055;
+  unified-dashboard = 8022;
+  search-result-aggregator = 8029;
   location-tracking-service = 8081;
   image-api-helper = 8099;
 
   # Notification service
   notification-service-grpc = 50051;
-  notification-service-http = 9091;
+  notification-service = 9091;
 
   # Application metrics
   rider-app-metrics = 9999;
@@ -68,9 +70,15 @@
   rider-dashboard-metrics = 9991;
   provider-dashboard-metrics = 9992;
   rider-producer-metrics = 9990;
+  producer-metrics = 9990;
+  unified-dashboard-metrics = 9995;
+  driver-offer-allocator-metrics = 8056;
+  rider-app-scheduler-metrics = 8056;
 
   # Dev tools
+  caddy-reverse-proxy = 9090;
   test-context-api = 7082;
   metabase = 3001;
   redis-commander = 8431;
+  victoria-metrics = 8428;
 }

@@ -285,12 +285,6 @@ ALTER TABLE atlas_app.search_request ADD COLUMN search_mode text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN is_multimodal_search boolean ;
 
 
-------- SQL updates -------
-
-
-ALTER TABLE atlas_app.search_request ADD COLUMN journey_leg_id character varying(36) ;
-
-
 
 
 ------- SQL updates -------
@@ -331,16 +325,6 @@ ALTER TABLE atlas_app.search_request ADD COLUMN journey_leg_id character varying
 ------- SQL updates -------
 
 
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.search_request ALTER COLUMN journey_leg_id TYPE text;
 
 
 ------- SQL updates -------

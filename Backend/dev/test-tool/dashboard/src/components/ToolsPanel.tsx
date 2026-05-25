@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   listLaunchers, getLauncher, setInputs, setSource, runWorkflow,
-  runStage, stopStage, stageStreamUrl, fileToBase64, browseFolder,
+  runStage, stopStage, resetAllStages, stageStreamUrl, fileToBase64, browseFolder,
 } from '../services/launcher';
 import {
   LauncherSummary, LauncherDetailPayload, SpecInput, StageStatus,
@@ -132,6 +132,12 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
     catch (e: any) { setError(e.message || String(e)); }
     finally { setBusy(null); }
   };
+  const handleResetAll = async () => {
+    setBusy('reset');
+    try { await resetAllStages(slug); await refresh(); }
+    catch (e: any) { setError(e.message || String(e)); }
+    finally { setBusy(null); }
+  };
 
   return (
     <div className="tools-panel">
@@ -204,6 +210,14 @@ const LauncherDetail: React.FC<{ slug: string; onBack: () => void }> = ({ slug, 
       )}
 
       <Section title="Stages">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button
+            className="btn btn-sm btn-danger"
+            disabled={busy !== null}
+            onClick={handleResetAll}
+            title="Stop all running stages and clear all state"
+          >Reset All</button>
+        </div>
         <table className="stages-table">
           <thead>
             <tr><th>Stage</th><th>State</th><th>Lifecycle</th><th>Last exit</th><th>Actions</th></tr>
@@ -418,6 +432,14 @@ const InputsForm: React.FC<{
                       : 'none'}
                 </span>
               </div>
+            ) : i.type === 'textarea' ? (
+              <textarea
+                rows={8}
+                style={{ width: '100%', fontFamily: 'monospace', fontSize: 12 }}
+                value={valueOf(i.key) || (pending[i.key] ? '' : (i.default as string) || '')}
+                placeholder={i.default != null ? String(i.default) : ''}
+                onChange={e => setPending(p => ({ ...p, [i.key]: { value: e.target.value } }))}
+              />
             ) : i.type === 'select' ? (
               <select
                 value={valueOf(i.key) || (i.default as string) || ''}

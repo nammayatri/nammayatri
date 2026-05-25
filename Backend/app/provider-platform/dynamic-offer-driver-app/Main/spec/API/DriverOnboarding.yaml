@@ -34,6 +34,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   VerificationService: Kernel.External.Verification.Types
   RequirementsInfo: Kernel.External.Payment.Interface.Types
+  Address: Kernel.External.Payment.Stripe.Types
 
 module: DriverOnboardingV2
 types:
@@ -80,6 +81,7 @@ types:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
+    canSwitchToAirport: Maybe Bool
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
       isWorking: Bool
@@ -159,6 +161,16 @@ types:
     paymentMode: PaymentMode
     requirements: Maybe RequirementsInfo
     futureRequirements: Maybe RequirementsInfo
+  FleetInfo:
+    id: Text
+    ownerName: Text
+    fleetName: Maybe Text
+    phoneNumber: Maybe Text
+    address: Maybe Address
+    requestReason: Maybe Text
+    responseReason: Maybe Text
+    chargesEnabled: Maybe Bool
+    createdAt: UTCTime
   HVSdkCallLogReq:
     txnId: Text
     hvFlowId: Maybe Text

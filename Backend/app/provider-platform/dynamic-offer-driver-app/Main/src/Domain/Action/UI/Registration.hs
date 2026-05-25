@@ -3,13 +3,13 @@
 
  This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
 
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
+ as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.This program
 
  is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
 
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
+ or FITNESS FOR A PARTICULAR PURPOSE.See the GNU Affero General Public License for more details.You should have received a copy of
 
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+ the GNU Affero General Public License along with this program.If not, see <https://www.gnu.org/licenses/>.
 -}
 
 module Domain.Action.UI.Registration
@@ -35,7 +35,8 @@ module Domain.Action.UI.Registration
   )
 where
 
-import Data.OpenApi hiding (email, info, name, url)
+import BecknV2.FRFS.Enums (VehicleCategory (BUS))
+import Data.OpenApi hiding (email, info, name, password, url)
 import Data.Text hiding (elem)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
@@ -68,6 +69,7 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.City as City
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common as BC
+import Kernel.Types.HideSecrets (HideSecrets (..))
 import Kernel.Types.Id
 import qualified Kernel.Types.Predicate as P
 import Kernel.Types.SlidingWindowLimiter
@@ -77,9 +79,12 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import qualified Lib.GtfsDataServer.Flow as NandiFlow
+import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -93,6 +98,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RegistrationToken as QR
+import qualified Text.Hex as Hex
 import Tools.Auth (authTokenCacheKey, decryptAES128)
 import Tools.Error
 import qualified Tools.Event as TE
@@ -105,13 +111,18 @@ data AuthReq = AuthReq
     merchantId :: Text,
     merchantOperatingCity :: Maybe Context.City,
     email :: Maybe Text,
+    password :: Maybe Text,
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
     registrationLon :: Maybe Double,
     otpChannel :: Maybe SOTP.OTPChannel
   }
-  deriving (Generic, FromJSON, ToSchema)
+  deriving (Generic, FromJSON, ToJSON, ToSchema)
+
+instance HideSecrets AuthReq where
+  type ReqWithoutSecrets AuthReq = AuthReq
+  hideSecrets (req :: AuthReq) = req {email = "***" <$ req.email, password = "***" <$ req.password}
 
 validateInitiateLoginReq :: Validate AuthReq
 validateInitiateLoginReq AuthReq {..} =
@@ -190,8 +201,64 @@ auth ::
   Maybe Text ->
   Flow AuthRes
 auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash = do
-  authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
-  return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
+  case fromMaybe SP.MOBILENUMBER req'.identifierType of
+    SP.GIMS_EMAIL_PASSWORD -> do
+      email <- req'.email & fromMaybeM (InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth")
+      password <- req'.password & fromMaybeM (InvalidRequest "Password is required for GIMS_EMAIL_PASSWORD auth")
+      smsCfg <- asks (.smsCfg)
+      deploymentVersion <- asks (.version)
+      mbCloudType <- asks (.cloudType)
+      let merchantId = Id req'.merchantId :: Id DO.Merchant
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
+      integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
+      baseUrl <- getGimsBaseUrl integratedBPPConfig
+      let gtfsId = integratedBPPConfig.feedKey
+      emailDbHash <- getDbHash email
+      passwordDbHash <- getDbHash password
+      let emailHashHex = Hex.encodeHex (unDbHash emailDbHash)
+          passwordHashHex = Hex.encodeHex (unDbHash passwordDbHash)
+      gimsResp <-
+        NandiFlow.gimsEmployeeLogin
+          baseUrl
+          gtfsId
+          GimsEmployeeLoginReq
+            { auth_type = Just "Email",
+              email_hash = emailHashHex,
+              password_hash = passwordHashHex
+            }
+      unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
+      operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
+      transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      person <-
+        QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.CONDUCTOR
+          >>= maybe
+            ( do
+                basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just SP.CONDUCTOR)
+                let conductorPerson = basePerson {SP.identifier = Just operatorBadgeToken, SP.operatorBadgeToken = Just operatorBadgeToken}
+                void $ QP.create conductorPerson
+                createDriverDetails conductorPerson.id merchant.id merchantOpCityId transporterConfig
+                pure conductorPerson
+            )
+            return
+      checkSlidingWindowLimit (authHitsCountKey person)
+      let entityId = getId person.id
+          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+          scfg = sessionConfig smsCfg
+          mkId = getId merchant.id
+      token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
+      _ <- QR.create token
+      void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId mbCloudType
+      cleanCachedTokens person.id
+      QR.deleteByPersonIdExceptNew person.id token.id
+      _ <- QR.setVerified True token.id
+      when person.isNew $ QP.setIsNewFalse False person.id
+      decPerson <- decrypt person
+      let personAPIEntity = SP.makePersonAPIEntity decPerson
+      return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+    _ -> do
+      authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
+      return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
 
 authWithOtp ::
   Bool ->
@@ -236,6 +303,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice (Just deploymentVersion.getDeploymentVersion) cloudType merchant.id merchantOpCityId isDashboard) return
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
 
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
@@ -300,6 +368,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             canDowngradeToTaxi = transporterConfig.canDowngradeToTaxi,
             canSwitchToRental = transporterConfig.canSwitchToRental,
             canSwitchToInterCity = transporterConfig.canSwitchToInterCity,
+            canSwitchToAirport = True,
             canSwitchToIntraCity = True,
             aadhaarVerified = False,
             blockedReason = Nothing,
@@ -423,6 +492,10 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.GIMS_EMAIL_PASSWORD -> do
+        case req.email of
+          Just email -> pure (Just email, Nothing, Nothing)
+          Nothing -> throwError $ InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth"
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
@@ -469,7 +542,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
         nyClubConsent = Just False,
         reactBundleVersion = mbReactBundleVersion,
-        cloudType = mbCloudType
+        cloudType = mbCloudType,
+        operatorBadgeToken = Nothing
       }
 
 makeSession ::

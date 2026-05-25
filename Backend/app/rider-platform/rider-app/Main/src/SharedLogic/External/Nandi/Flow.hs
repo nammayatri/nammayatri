@@ -311,3 +311,7 @@ gimsCurrentTripDetails baseUrl gtfsId req =
 gimsVerifyConductor :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> GimsVerifyReq -> m GimsVerifyResp
 gimsVerifyConductor baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorVerify gtfsId req) "gimsVerifyConductor" NandiAPI.operatorVerifyAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_VERIFY_CONDUCTOR_API") baseUrl)
+
+getWaybillMetadata :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m WaybillMetadataResponse
+getWaybillMetadata baseUrl gtfsId waybillNo =
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiWaybillMetadata gtfsId waybillNo) "getWaybillMetadata" NandiAPI.nandiWaybillMetadataAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_WAYBILL_METADATA_API") baseUrl)

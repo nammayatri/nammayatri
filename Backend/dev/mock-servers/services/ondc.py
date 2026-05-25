@@ -19,6 +19,8 @@ import base64
 import hashlib
 from datetime import datetime, timezone
 
+from ._env import MOCK_SERVER_PORT
+
 from status_store import extract_path_ids, deep_merge
 
 log = logging.getLogger("mock.ondc")
@@ -29,75 +31,43 @@ ACK = {"message": {"ack": {"status": "ACK"}}}
 _PRIVATE_KEY_B64 = "Lw9M+SHLY+yyTmqPVlbKxgvktZRfuIT8nHyE89Jmf+o="
 _SIGNING_TTL = 600  # seconds
 
-# Registry subscriber lookup — loaded lazily from DB on first use
-_subscriber_cache = None
+# BPP signing identity used for every outbound on_* callback.
+# Pulled lazily from atlas_registry.subscriber (first PUBLIC_TRANSPORT BPP row)
+# and cached. No fallback — if the registry has no row, signature verification
+# is going to fail anyway, so failing loudly here is the right behaviour.
+_BPP_IDENTITY_CACHE: tuple[str, str] | None = None
 
-
-def _get_subscriber_for_path(url_path):
-    """Find the registry subscriber_id and unique_key_id for a given mock server URL path.
-    Queries the registry DB once and caches the result."""
-    global _subscriber_cache
-    if _subscriber_cache is None or _subscriber_cache.get("__version") != "v4":
-        _subscriber_cache = {}
-        try:
-            import psycopg2
-            conn = psycopg2.connect(host="localhost", port=5434, dbname="atlas_dev",
-                                    user=os.environ.get("DB_USER", os.environ.get("USER", "atlas")),
-                                    password=os.environ.get("DB_PASS", ""))
-            conn.autocommit = True
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT subscriber_id, unique_key_id, subscriber_url
-                FROM atlas_registry.subscriber
-                WHERE (subscriber_url LIKE '%%localhost:8080/ondc%%'
-                   OR subscriber_url LIKE '%%localhost:8080/cmrl%%')
-                  AND domain = 'PUBLIC_TRANSPORT'
-            """)
-            for row in cur.fetchall():
-                sub_id, key_id, sub_url = row
-                from urllib.parse import urlparse
-                p = urlparse(sub_url).path.rstrip("/")
-                _subscriber_cache[p] = (sub_id, key_id)
-            conn.close()
-            _subscriber_cache["__version"] = "v4"
-            print(f"  [ONDC] Loaded {len(_subscriber_cache)-1} subscriber mappings from registry", flush=True)
-        except Exception as e:
-            print(f"  [ONDC] ERROR: Cannot load subscribers from registry DB: {e}", flush=True)
-            print(f"  [ONDC] Ensure psycopg2 is installed (restart stack for nix rebuild)", flush=True)
-            _subscriber_cache = {"__version": "v4"}
-
-    # Try to match the request path against cached subscriber URLs
-    # Handler receives path like /ondc/ondc/seller/v1/search — the first /ondc is the route prefix
-    check_path = url_path.rstrip("/")
-    # Strip the action (last segment): search, init, confirm, status, cancel
-    for action in ["/search", "/init", "/confirm", "/status", "/cancel", "/update", "/select"]:
-        if check_path.endswith(action):
-            check_path = check_path[:-len(action)]
-            break
-
-    # Try multiple path variations for matching
-    candidates = [check_path]
-    # Also try without route prefix: /ondc/ondc/seller/v1 → /ondc/seller/v1
-    if check_path.startswith("/ondc"):
-        candidates.append(check_path[len("/ondc"):])
-
-    for candidate in candidates:
-        if candidate in _subscriber_cache:
-            return _subscriber_cache[candidate]
-
-    # Try longest prefix match (most specific path wins)
-    best_match = None
-    best_len = 0
-    for cached_path, ids in _subscriber_cache.items():
-        if cached_path.startswith("__"):
-            continue
-        for candidate in candidates:
-            if candidate.startswith(cached_path) and len(cached_path) > best_len:
-                best_match = ids
-                best_len = len(cached_path)
-
-    return best_match
-
+def _get_bpp_identity() -> tuple[str, str]:
+    """Return (subscriber_id, unique_key_id) for the first PUBLIC_TRANSPORT BPP
+    row in atlas_registry.subscriber. Cached after first call."""
+    global _BPP_IDENTITY_CACHE
+    if _BPP_IDENTITY_CACHE is not None:
+        return _BPP_IDENTITY_CACHE
+    import psycopg2
+    conn = psycopg2.connect(
+        host="localhost", port=int(os.environ.get("DB_PRIMARY_PORT", "5434")), dbname="atlas_dev",
+        user=os.environ.get("DB_USER", os.environ.get("USER", "atlas")),
+        password=os.environ.get("DB_PASS", ""),
+    )
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT subscriber_id, unique_key_id
+        FROM atlas_registry.subscriber
+        WHERE type = 'BPP' AND domain = 'PUBLIC_TRANSPORT'
+        LIMIT 1
+    """)
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        raise RuntimeError(
+            "No PUBLIC_TRANSPORT BPP row in atlas_registry.subscriber."
+        )
+    _BPP_IDENTITY_CACHE = (row[0], row[1])
+    print(f"  [ONDC] Cached BPP identity from registry: {_BPP_IDENTITY_CACHE[0]} "
+          f"(key={_BPP_IDENTITY_CACHE[1]})", flush=True)
+    return _BPP_IDENTITY_CACHE
 
 def handle(handler, path, body):
     """Route ONDC Beckn requests — ACK + async callback."""
@@ -131,17 +101,10 @@ def handle(handler, path, body):
         if idx + 1 < len(parts) - 1:
             provider_id = parts[idx + 1]
 
-    # Look up the registry subscriber for this BPP URL path to get correct subscriber_id for signing
-    subscriber_info = _get_subscriber_for_path(path)
-    if subscriber_info:
-        bpp_id = subscriber_info[0]  # subscriber_id from registry
-        bpp_unique_key = subscriber_info[1]  # unique_key_id from registry
-        print(f"  [ONDC] Matched registry subscriber: {bpp_id} (key={bpp_unique_key})", flush=True)
-    else:
-        bpp_id = provider_id or "mock-ondc-bpp"
-        bpp_unique_key = bpp_id
-        print(f"  [ONDC] No registry match, using provider_id as bpp_id: {bpp_id}", flush=True)
-    bpp_uri = f"http://localhost:8080{path.rsplit('/', 1)[0]}"
+    # Every callback is signed with a single PUBLIC_TRANSPORT BPP identity
+    # pulled from atlas_registry.subscriber (cached after first lookup).
+    bpp_id, bpp_unique_key = _get_bpp_identity()
+    bpp_uri = f"http://localhost:{MOCK_SERVER_PORT}{path.rsplit('/', 1)[0]}"
 
     # Build callback context
     cb_ctx = {
@@ -152,7 +115,7 @@ def handle(handler, path, body):
         "bpp_id": bpp_id,
         "bpp_uri": bpp_uri,
         "transaction_id": transaction_id,
-        "message_id": str(uuid.uuid4()),
+        "message_id": message_id,
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         "version": "2.0.0",
         "ttl": "PT30S",
@@ -164,6 +127,10 @@ def handle(handler, path, body):
         intent = msg.get("intent", {})
         print(f"  [ONDC] Spawning on_search callback (bpp_id={bpp_id}) to {bap_uri}", flush=True)
         threading.Thread(target=_callback_on_search, args=(bap_uri, cb_ctx, intent, provider_id, bpp_id, bpp_unique_key), daemon=True).start()
+    elif action == "select" and bap_uri:
+        order = parsed_body.get("message", {}).get("order", {})
+        print(f"  [ONDC] Spawning on_select callback (bpp_id={bpp_id}) to {bap_uri}", flush=True)
+        threading.Thread(target=_callback_on_select, args=(bap_uri, cb_ctx, order, provider_id, bpp_id, bpp_unique_key), daemon=True).start()
     elif action == "init" and bap_uri:
         order = parsed_body.get("message", {}).get("order", {})
         print(f"  [ONDC] Spawning on_init callback (bpp_id={bpp_id}) to {bap_uri}", flush=True)
@@ -266,6 +233,7 @@ def _callback_on_search(bap_uri, ctx, intent, provider_id, bpp_id, bpp_unique_ke
     """Build on_search with catalog containing quotes."""
     fulfillment = intent.get("fulfillment", {})
     stops = fulfillment.get("stops", [])
+    vehicle_category = (fulfillment.get("vehicle") or {}).get("category") or "BUS"
 
     start_code = stops[0].get("location", {}).get("descriptor", {}).get("code", "STN_A") if stops else "STN_A"
     end_code = stops[1].get("location", {}).get("descriptor", {}).get("code", "STN_B") if len(stops) > 1 else "STN_B"
@@ -300,7 +268,7 @@ def _callback_on_search(bap_uri, ctx, intent, provider_id, bpp_id, bpp_unique_ke
                             {"type": "START", "location": {"descriptor": {"code": start_code, "name": f"Station {start_code}"}}},
                             {"type": "END", "location": {"descriptor": {"code": end_code, "name": f"Station {end_code}"}}},
                         ],
-                        "vehicle": {"category": "BUS"},
+                        "vehicle": {"category": vehicle_category},
                     }],
                     "payments": [{
                         "id": str(uuid.uuid4()),
@@ -315,14 +283,116 @@ def _callback_on_search(bap_uri, ctx, intent, provider_id, bpp_id, bpp_unique_ke
     _post_callback(bap_uri, "on_search", payload, bpp_id, bpp_unique_key)
 
 
+def _callback_on_select(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
+    """Build on_select with a firm quote for the selected item(s).
+
+    Per ONDC: select tells the BPP "here are the items I want a quote for";
+    on_select returns the priced order with a quote.breakup but no billing /
+    payment status yet (those come in on_init / on_confirm).
+
+    Mandatory shape rider-app's FRFS ACL (Beckn/ACL/FRFS/Utils.hs) enforces:
+      - each `items[].id` must echo back so the BAP can map the quote.
+      - each `items[].quantity.selected.count` must be present (else
+        "Item Quantity not found" from mkDCategorySelect).
+      - each `items[].descriptor.code` is read for fare category (SJT default).
+      - `quote.breakup` must contain one BASE_FARE entry per item with
+        `item.id == <that item's id>`, else `baseFareForItem` raises
+        "BASE_FARE not found for item <id>".
+    """
+    req_items = order.get("items") or [{}]
+    provider = order.get("provider", {})
+    fulfillment_ids_in = (req_items[0].get("fulfillment_ids") or []) if req_items else []
+    req_fulfillments = order.get("fulfillments") or []
+
+    # Echo items with mandatory fields filled in. Per-item price defaults to
+    # the request's item price (or 10 if absent).
+    resp_items = []
+    breakup = []
+    total = 0
+    for it in req_items:
+        item_id = it.get("id") or str(uuid.uuid4())
+        price_val = (it.get("price") or {}).get("value", "10")
+        currency = (it.get("price") or {}).get("currency", "INR")
+        qty = (((it.get("quantity") or {}).get("selected") or {}).get("count")) or 1
+        try:
+            total += float(price_val) * int(qty)
+        except (TypeError, ValueError):
+            pass
+        desc_code = (it.get("descriptor") or {}).get("code") or "SJT"
+        resp_items.append({
+            "id": item_id,
+            "descriptor": {"code": desc_code, "name": it.get("descriptor", {}).get("name", "Single Journey Ticket")},
+            "price": {"value": price_val, "currency": currency},
+            "quantity": {"selected": {"count": int(qty)}},
+            "fulfillment_ids": it.get("fulfillment_ids") or fulfillment_ids_in or [str(uuid.uuid4())],
+        })
+        # One BASE_FARE breakup row per item, linked by item.id — required by
+        # baseFareForItem in Beckn/ACL/FRFS/Utils.hs.
+        breakup.append({
+            "title": "BASE_FARE",
+            "item": {"id": item_id},
+            "price": {"value": price_val, "currency": currency},
+        })
+
+    payload = {
+        "context": ctx,
+        "message": {
+            "order": {
+                "provider": provider or {"id": provider_id or "mock-provider"},
+                "items": resp_items,
+                "fulfillments": req_fulfillments or [{
+                    "id": fulfillment_ids_in[0] if fulfillment_ids_in else str(uuid.uuid4()),
+                    "type": "ROUTE",
+                    "stops": [],
+                }],
+                "quote": {
+                    "price": {"value": f"{total:.2f}" if total else "10", "currency": "INR"},
+                    "breakup": breakup,
+                    "ttl": "PT15M",
+                },
+            }
+        }
+    }
+    _post_callback(bap_uri, "on_select", payload, bpp_id, bpp_unique_key)
+
+
 def _callback_on_init(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
-    """Build on_init with booking details."""
+    """Build on_init with booking details.
+
+    Same item/breakup linkage rule as on_select: rider-app's FRFS OnInit ACL
+    (Beckn/ACL/FRFS/OnInit.hs) calls zipItemsWithPrice → baseFareForItem, which
+    requires one `BASE_FARE` breakup row per item with `item.id == <item id>`.
+    """
     order_id = str(uuid.uuid4())
-    items = order.get("items", [{}])
-    item_id = items[0].get("id", "") if items else ""
-    fulfillment_ids = items[0].get("fulfillment_ids", []) if items else []
+    req_items = order.get("items") or [{}]
+    fulfillment_ids_in = (req_items[0].get("fulfillment_ids") or []) if req_items else []
     provider = order.get("provider", {})
 
+    resp_items, breakup, total = [], [], 0
+    for it in req_items:
+        item_id = it.get("id") or str(uuid.uuid4())
+        price_val = (it.get("price") or {}).get("value", "10")
+        currency = (it.get("price") or {}).get("currency", "INR")
+        qty = (((it.get("quantity") or {}).get("selected") or {}).get("count")) or 1
+        try:
+            total += float(price_val) * int(qty)
+        except (TypeError, ValueError):
+            pass
+        desc_code = (it.get("descriptor") or {}).get("code") or "SJT"
+        resp_items.append({
+            "id": item_id,
+            "descriptor": {"code": desc_code, "name": (it.get("descriptor") or {}).get("name", "Single Journey Ticket")},
+            "price": {"value": price_val, "currency": currency},
+            "quantity": {"selected": {"count": int(qty)}},
+            "fulfillment_ids": it.get("fulfillment_ids") or fulfillment_ids_in or [str(uuid.uuid4())],
+        })
+        breakup.append({
+            "title": "BASE_FARE",
+            "item": {"id": item_id},
+            "price": {"value": price_val, "currency": currency},
+        })
+
+    total_str = f"{total:.2f}" if total else "10"
     payload = {
         "context": ctx,
         "message": {
@@ -330,10 +400,10 @@ def _callback_on_init(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
                 "id": order_id,
                 "status": "ACTIVE",
                 "provider": provider or {"id": provider_id or "mock-provider"},
-                "items": items,
+                "items": resp_items,
                 "billing": order.get("billing", {"name": "Test User", "email": "test@test.com", "phone": "9999999999"}),
                 "fulfillments": [{
-                    "id": fulfillment_ids[0] if fulfillment_ids else str(uuid.uuid4()),
+                    "id": fulfillment_ids_in[0] if fulfillment_ids_in else str(uuid.uuid4()),
                     "type": "ROUTE",
                     "stops": order.get("fulfillments", [{}])[0].get("stops", []) if order.get("fulfillments") else [],
                 }],
@@ -343,18 +413,16 @@ def _callback_on_init(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
                     "type": "PRE-ORDER",
                     "status": "NOT-PAID",
                     "params": {
-                        "amount": items[0].get("price", {}).get("value", "10") if items else "10",
+                        "amount": total_str,
                         "currency": "INR",
                         "bank_code": "MOCK_BANK",
                         "bank_account_number": "1234567890",
                     },
                 }],
                 "quote": {
-                    "price": {"value": items[0].get("price", {}).get("value", "10") if items else "10", "currency": "INR"},
-                    "breakup": [{
-                        "title": "BASE_FARE",
-                        "price": {"value": items[0].get("price", {}).get("value", "10") if items else "10", "currency": "INR"},
-                    }],
+                    "price": {"value": total_str, "currency": "INR"},
+                    "breakup": breakup,
+                    "ttl": "PT15M",
                 },
             }
         }
@@ -363,32 +431,105 @@ def _callback_on_init(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
 
 
 def _callback_on_confirm(bap_uri, ctx, order, provider_id, bpp_id, bpp_unique_key):
-    """Build on_confirm with confirmed booking."""
-    order_id = order.get("id", str(uuid.uuid4()))
-    items = order.get("items", [{}])
+    """Build on_confirm with confirmed booking + issued ticket(s).
 
+    Rider-app's OnConfirm ACL (Beckn/ACL/FRFS/OnConfirm.hs:38) calls
+    `parseTickets item fulfillments` → `parseTicket` (Utils.hs:156) which
+    requires, for each item:
+      - item.fulfillment_ids non-empty (Utils.hs:139-140)
+      - a matching TICKET (or TRIP) fulfillment whose START stop has
+        authorization {token, valid_to, status} — that's the QR code.
+
+    We synthesize a TICKET fulfillment per item, link them via
+    item.fulfillment_ids → fulfillment.id, and put a mock QR token in the
+    START stop's authorization block.
+    """
+    from datetime import timedelta
+    order_id = order.get("id") or str(uuid.uuid4())
+    req_items = order.get("items") or [{}]
+    req_stops = (order.get("fulfillments") or [{}])[0].get("stops") or []
+    valid_to = (datetime.now(timezone.utc) + timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    resp_items, breakup, fulfillments, total = [], [], [], 0
+    for it in req_items:
+        item_id = it.get("id") or str(uuid.uuid4())
+        price_val = (it.get("price") or {}).get("value", "10")
+        currency = (it.get("price") or {}).get("currency", "INR")
+        qty = (((it.get("quantity") or {}).get("selected") or {}).get("count")) or 1
+        try:
+            total += float(price_val) * int(qty)
+        except (TypeError, ValueError):
+            pass
+        desc_code = (it.get("descriptor") or {}).get("code") or "SJT"
+        # One TICKET fulfillment per item with mock QR / ticket number.
+        fid = (it.get("fulfillment_ids") or [str(uuid.uuid4())])[0]
+        ticket_number = f"TKT-{uuid.uuid4().hex[:10].upper()}"
+        qr_token = f"QR-{uuid.uuid4().hex}"
+        # Build stops: copy request stops if present, else minimal START/END.
+        if req_stops:
+            stops = json.loads(json.dumps(req_stops))  # deep-copy
+        else:
+            stops = [
+                {"type": "START", "location": {"descriptor": {"code": "STN_A", "name": "Station A"}}},
+                {"type": "END",   "location": {"descriptor": {"code": "STN_B", "name": "Station B"}}},
+            ]
+        # Inject authorization on the START stop — that's where parseTicket
+        # reads QR data / validTill / status from.
+        for s in stops:
+            if s.get("type") == "START":
+                s["authorization"] = {
+                    "token": qr_token,
+                    "valid_to": valid_to,
+                    "status": "UNCLAIMED",
+                    "type": "QR",
+                }
+                break
+        fulfillments.append({
+            "id": fid,
+            "type": "TICKET",
+            "stops": stops,
+            "tags": [{
+                "descriptor": {"code": "TICKET_INFO"},
+                "list": [{"descriptor": {"code": "NUMBER"}, "value": ticket_number}],
+            }],
+        })
+        resp_items.append({
+            "id": item_id,
+            "descriptor": {"code": desc_code, "name": (it.get("descriptor") or {}).get("name", "Single Journey Ticket")},
+            "price": {"value": price_val, "currency": currency},
+            "quantity": {"selected": {"count": int(qty)}},
+            "fulfillment_ids": [fid],
+        })
+        breakup.append({
+            "title": "BASE_FARE",
+            "item": {"id": item_id},
+            "price": {"value": price_val, "currency": currency},
+        })
+
+    total_str = f"{total:.2f}" if total else "10"
     payload = {
         "context": ctx,
         "message": {
             "order": {
                 "id": order_id,
                 "status": "CONFIRMED",
-                "provider": order.get("provider", {"id": provider_id or "mock-provider"}),
-                "items": items,
-                "fulfillments": order.get("fulfillments", []),
+                "provider": order.get("provider") or {"id": provider_id or "mock-provider"},
+                "items": resp_items,
+                "fulfillments": fulfillments,
                 "payments": [{
                     "id": str(uuid.uuid4()),
                     "collected_by": "BAP",
                     "type": "PRE-ORDER",
                     "status": "PAID",
                     "params": {
-                        "amount": items[0].get("price", {}).get("value", "10") if items else "10",
+                        "amount": total_str,
                         "currency": "INR",
                     },
                 }],
-                "quote": order.get("quote", {
-                    "price": {"value": "10", "currency": "INR"},
-                }),
+                "quote": {
+                    "price": {"value": total_str, "currency": "INR"},
+                    "breakup": breakup,
+                },
             }
         }
     }

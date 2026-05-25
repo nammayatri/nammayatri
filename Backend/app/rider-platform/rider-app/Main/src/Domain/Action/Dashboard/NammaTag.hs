@@ -58,10 +58,12 @@ import Data.OpenApi (ToSchema)
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as TE
+import Data.Time (UTCTime (..), fromGregorian)
 import qualified Domain.Action.UI.CancelLogic as CancelLogic
 import qualified Domain.Types.BecknConfig as DTBC
 import qualified Domain.Types.Exophone as DTE
 import qualified Domain.Types.FRFSConfig as DFRFS
+import qualified "beckn-spec" Domain.Types.Invoice as DTI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig as DTM
 import qualified Domain.Types.MerchantPushNotification as DTPN
@@ -76,12 +78,14 @@ import qualified Domain.Types.UiRiderConfig as DTRC
 import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Types (Language (ENGLISH))
 import qualified Kernel.Prelude as Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
 import qualified Lib.Yudhishthira.Flow.Dashboard as YudhishthiraFlow
@@ -162,6 +166,57 @@ $(genToSchema ''PickupETA.PickupETAInput)
 $(genToSchema ''MerchantServiceConfigDimensions)
 $(genToSchema ''ExophoneDimensions)
 $(genToSchema ''EstimateTagsData)
+$(genToSchema ''FRT.InvoiceContext)
+
+instance Default FRT.InvoiceContext where
+  def =
+    FRT.InvoiceContext
+      { invoiceNumber = "",
+        issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
+        dueAt = Nothing,
+        invoiceType = DTI.Ride,
+        currency = INR,
+        currencyCode = "",
+        merchantId = "",
+        merchantShortId = "",
+        paymentMode = Nothing,
+        hasAdjustments = False,
+        issuedToName = Nothing,
+        issuedToAddress = Nothing,
+        supplierName = Nothing,
+        supplierAddress = Nothing,
+        supplierGSTIN = Nothing,
+        supplierTaxNo = Nothing,
+        issuedByName = Nothing,
+        issuedByAddress = Nothing,
+        merchantGstin = Nothing,
+        sellerTradeName = Nothing,
+        mbRecipientBusinessId = Nothing,
+        mbSellerBusinessId = Nothing,
+        mbSellerVatNumber = Nothing,
+        logoUrl = Nothing,
+        appName = Nothing,
+        periodStart = Nothing,
+        periodEnd = Nothing,
+        taxTxnRate = Nothing,
+        taxTxnGstRate = Nothing,
+        cardBrand = Nothing,
+        cardLastFour = Nothing,
+        lineItems = []
+      }
+
+instance Default FRT.RenderLineItem where
+  def =
+    FRT.RenderLineItem
+      { description = "",
+        descriptionType = Nothing,
+        amount = 0,
+        taxAmount = 0,
+        groupId = Nothing,
+        isExternalCharge = False,
+        itemType = Nothing,
+        language = ENGLISH
+      }
 
 postNammaTagTagCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.CreateNammaTagRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postNammaTagTagCreate merchantShortId opCity req = do
@@ -318,6 +373,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let defaultInput = CancelLogic.CancellationReasonInput {hasRideAssigned = False, isAirConditioned = False}
       logicData :: CancelLogic.CancellationReasonInput <- YudhishthiraFlow.createLogicData defaultInput (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (HM.HashMap Text [CancelLogic.CancellationReasonConfig])) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.INVOICE_TEMPLATE _scope -> do
+      logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYTU.LogicDomain -> Environment.Flow [LYTU.GetLogicsResp]
@@ -519,6 +577,12 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON defaultInput,
             LYTU.schema = toInlinedSchemaValue (Proxy @CancelLogic.CancellationReasonInput)
+          }
+    LYTU.INVOICE_TEMPLATE _scope ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: FRT.InvoiceContext),
+            LYTU.schema = toInlinedSchemaValue (Proxy @FRT.InvoiceContext)
           }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 

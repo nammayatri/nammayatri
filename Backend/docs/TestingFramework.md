@@ -262,8 +262,7 @@ See `Rules.md` for full guidelines.
 - The returned `authToken` replaces `dashboard_token` for subsequent dashboard API calls
 
 **Mock Server Integration:**
-- `POST /mock/status` — set payment status by order ID (extracted from booking status response)
-- `POST /mock/override` — break external APIs by request field matching (e.g., `body.mob`)
+- `POST /mock/override` — register a request-matching override (extract field == value → merge `response`); use with `extract: path.2, match: /orders, value: <orderId>` for payment-order updates and with `extract: body.mob` for breaking external BPP APIs
 - `DELETE /mock/override` — always clean up specific overrides after use (concurrent safety)
 
 ### Typical Ride Booking Flow
@@ -302,7 +301,7 @@ See `Rules.md` for full guidelines.
  7. Get Quotes               GET  /frfs/search/{searchId}/quote
  8. Confirm Quote V2         POST /frfs/quote/v2/{quoteId}/confirm
  9. Get Payment Info         GET  /frfs/booking/{bookingId}/status
-10. Update Mock → CHARGED    POST /mock/status
+10. Update Mock → CHARGED    POST /mock/override (extract path.2, value=orderId)
 11. Booking Status (×2)      GET  /frfs/booking/{bookingId}/status
 12. Get Booking List         GET  /frfs/booking/list
 13. Verify Ticket            POST /frfs/ticket/verify
@@ -387,30 +386,33 @@ Single Python HTTP server (port 8080) that mocks all external service integratio
 | **Transit** | `/nandi`, `/gtfs` | Public transport data |
 | **OpenAI** | `/openai` | LLM mock |
 
-### Override System
+### Override System (`POST /mock/override`)
 
-#### Mechanism 1: Status Store (`POST /mock/status`)
-
-For overriding by **known identifier** (e.g., Juspay order ID extracted from booking status response):
+The mock-server exposes a single override mechanism. Each rule matches incoming
+requests by extracting a field (`extract` + `value`, with an optional path
+substring `match`) and deep-merges the configured `response` into the handler's
+default response.
 
 ```
-Collection extracts payment_order_id from GET /frfs/booking/{id}/status
-    → POST /mock/status {"service":"juspay", "id":["order-uuid","short-id"], "status":"CHARGED"}
-        → Next GET /juspay/orders/{short-id} returns status=CHARGED
+Collection captures payment_order_id from GET /frfs/booking/{id}/status
+    → POST /mock/override {service: juspay, extract: path.2, match: /orders,
+                           value: <orderId>, response: {status: CHARGED}}
+        → Next GET /juspay/orders/<orderId> returns status=CHARGED
 ```
 
 ```json
-POST /mock/status
-{"service": "juspay", "id": ["order-uuid", "short-id"], "status": "CHARGED", "data": {"amount": 150}}
+POST /mock/override
+{"service": "juspay", "extract": "path.2", "value": "{{payment_order_id}}",
+ "match": "/orders", "response": {"status": "CHARGED", "amount": 150}}
 
-GET /mock/status
-→ lists all active statuses + overrides
+GET /mock/override
+→ lists all active rules
 
-DELETE /mock/status
-→ clears all (not concurrent-safe, prefer specific override delete)
+DELETE /mock/override
+→ removes a single rule by {service, extract, value}
 ```
 
-#### Mechanism 2: Override Rules (`POST /mock/override`)
+#### Request-matching examples
 
 For overriding by **request field matching** — when the test knows the rider's mobile but not the exact API request IDs:
 
@@ -473,8 +475,8 @@ from status_store import extract_path_ids, deep_merge
 def handle(handler, path, body):
     path_ids = extract_path_ids(path)
     override_status, extra = handler._get_override("service_name", *path_ids)
-    # override_status: from status store (e.g., "CHARGED")
-    # extra: merged dict from status store data + middleware request override
+    # override_status: `status` field from the matched /mock/override response, if any
+    # extra: the rest of the matched /mock/override response, deep-merged across all matches
 
     base = {
         "default": "response",

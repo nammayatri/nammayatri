@@ -52,6 +52,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.LocationUpdates.Internal
+import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.CallBAP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.FareCalculator
@@ -200,7 +201,7 @@ handler (UChangeServiceTierReq ChangeServiceTierReq {..}) = do
   let newFareParams = quote.fareParams
 
   -- Look up VehicleServiceTier config for AC/seating info
-  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions
+  mbVehicleServiceTierItem <- CQVST.findByServiceTierTypeAndCityIdInRideFlow newVehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea)
 
   -- Persist new fare params and update booking
   QFP.create newFareParams

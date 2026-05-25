@@ -1,7 +1,11 @@
 module Domain.Types.Invoice where
 
 import Data.Aeson (eitherDecode, encode)
+import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as LBS
 import Data.OpenApi (ToParamSchema (..))
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TEnc
 import Data.Time (UTCTime (..))
 import qualified Data.Time as DT
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
@@ -20,6 +24,18 @@ data IssuedToType = DRIVER | RIDER | CUSTOMER | FLEET_OWNER
 
 $(mkBeamInstancesForEnumAndList ''IssuedToType)
 $(mkHttpInstancesForEnum ''IssuedToType)
+
+-- Needed for `QueryParam "issuedToTypes" [IssuedToType]` — Servant requires
+-- explicit list instances (no generic FromHttpApiData [a]).
+instance FromHttpApiData [IssuedToType] where
+  parseUrlPiece = parseHeader . TEnc.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = BF.first T.pack . eitherDecode . LBS.fromStrict $ bs
+
+instance ToHttpApiData [IssuedToType] where
+  toUrlPiece = TEnc.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = LBS.toStrict . encode
 
 data DateOrTime
   = DateOnly DT.Day

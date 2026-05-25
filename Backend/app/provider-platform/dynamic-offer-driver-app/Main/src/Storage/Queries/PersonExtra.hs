@@ -730,3 +730,16 @@ updateDriverTag driverTag personId = do
   updateOneWithKV [Se.Set BeamP.driverTag (Yudhishthira.tagsNameValueExpiryToTType driverTag), Se.Set BeamP.updatedAt now] [Se.Is BeamP.id $ Se.Eq (getId personId)]
   LTSSync.syncDriverPoolDataToLTS (cast personId) $
     LTSSync.emptyUpdate {LTSSync.driverTag = LTSSync.Set driverTag}
+
+findByOperatorBadgeTokenAndMerchantId ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Maybe Text ->
+  Id Merchant ->
+  m (Maybe Person)
+findByOperatorBadgeTokenAndMerchantId operatorBadgeToken (Id merchantId) =
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.operatorBadgeToken $ Se.Eq operatorBadgeToken,
+          Se.Is BeamP.merchantId $ Se.Eq merchantId
+        ]
+    ]

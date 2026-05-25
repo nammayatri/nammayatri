@@ -42,8 +42,9 @@ sendSMS ::
   Flow Shared.SendSMSRes
 sendSMS apiKey merchantShortIdText city req = do
   merchant <- findMerchantByShortId (ShortId merchantShortIdText)
-  unless (Just merchant.internalApiKey == apiKey) $
-    throwError (AuthBlocked "Invalid BPP internal api key")
+  dashboardToken <- asks (.dashboardToken)
+  unless (Just dashboardToken == apiKey) $
+    throwError (AuthBlocked "Invalid BPP dashboard token")
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   smsCfg <- asks (.smsCfg)
 

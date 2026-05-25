@@ -324,6 +324,21 @@ updateVatNumberById vatNumber fleetOwnerPersonId = do
     ]
     [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
 
+updateFleetOwnerEnabledAndVerifiedStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Bool ->
+  Bool ->
+  Kernel.Types.Id.Id DP.Person ->
+  m ()
+updateFleetOwnerEnabledAndVerifiedStatus enabled verified fleetOwnerPersonId = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.enabled enabled,
+      Se.Set Beam.verified verified,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]
+
 updateBusinessLicenseNumberById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, EncFlow m r) =>
   Maybe (EncryptedHashed Text) ->

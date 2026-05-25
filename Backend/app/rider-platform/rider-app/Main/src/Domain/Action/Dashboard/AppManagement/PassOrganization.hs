@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.AppManagement.PassOrganization
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
     getPassOrganizationPassDetailsDocument,
+    postPassOrganizationAssignDepot,
   )
 where
 
@@ -38,6 +39,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassOrganization as QPassOrganization
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 allVerificationStatuses :: [DPassDetails.VerificationStatus]
@@ -164,22 +166,36 @@ mkPassOrganization req personId merchantShortId opCity = do
         DPassOrganization.passEnum = req.passEnum,
         DPassOrganization.id = newId,
         DPassOrganization.createdAt = now,
-        DPassOrganization.updatedAt = now
+        DPassOrganization.updatedAt = now,
+        DPassOrganization.depotPersonId = Nothing,
+        DPassOrganization.depotId = Nothing
       }
 
-getPassOrganizationGetOrganizations :: (Id.ShortId DMerchant.Merchant -> Context.City -> Kernel.Prelude.Text -> Environment.Flow [PassOrganizationAPI.GetOrganizationResp])
-getPassOrganizationGetOrganizations merchantShortId opCity passEnumText = do
+getPassOrganizationGetOrganizations ::
+  ( Id.ShortId DMerchant.Merchant ->
+    Context.City ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe (Id.Id DPerson.Person) ->
+    Environment.Flow [PassOrganizationAPI.GetOrganizationResp]
+  )
+getPassOrganizationGetOrganizations merchantShortId opCity passEnumText mbDepotPersonId = do
   passEnum <- DPassDetails.parsePassEnum passEnumText
   merchantOperatingCity <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
-  organizations <- QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCity.id passEnum
-  pure $ map mkGetOrganizationResp organizations
+  organizations <- case mbDepotPersonId of
+    Just depotPersonId -> do
+      orgs <- QPassOrganization.findByDepotPersonId (Just depotPersonId)
+      pure $ filter (\o -> o.passEnum == passEnum) orgs
+    Nothing ->
+      QPassOrganization.findByMerchantOperatingCityIdAndPassEnum merchantOperatingCity.id passEnum
+  pure $ map mkGetOrganizationResp $ filter (\o -> o.merchantOperatingCityId == merchantOperatingCity.id) organizations
 
 mkGetOrganizationResp :: DPassOrganization.PassOrganization -> PassOrganizationAPI.GetOrganizationResp
 mkGetOrganizationResp org =
   PassOrganizationAPI.GetOrganizationResp
     { PassOrganizationAPI.id = org.id,
       PassOrganizationAPI.name = org.name,
-      PassOrganizationAPI.address = org.address
+      PassOrganizationAPI.address = org.address,
+      PassOrganizationAPI.depotId = org.depotId
     }
 
 getPassOrganizationPassDetailsDocument :: (Id.ShortId DMerchant.Merchant -> Context.City -> Id.Id DMF.MediaFile -> Environment.Flow Kernel.Prelude.Text)
@@ -188,3 +204,30 @@ getPassOrganizationPassDetailsDocument merchantShortId opCity documentId = do
   mediaFile <- QMediaFile.findById documentId >>= fromMaybeM (InvalidRequest "Document not found")
   s3FilePath <- mediaFile.s3FilePath & fromMaybeM (InvalidRequest "Document has no associated S3 path")
   DPassDetails.fetchPassDocumentFromS3 s3FilePath
+
+postPassOrganizationAssignDepot ::
+  ( Id.ShortId DMerchant.Merchant ->
+    Context.City ->
+    PassOrganizationAPI.AssignDepotReq ->
+    Environment.Flow APISuccess.APISuccess
+  )
+postPassOrganizationAssignDepot merchantShortId opCity req = do
+  callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  when (null req.passOrganizations) $ Utils.throwError (InvalidRequest "passOrganizations must not be empty")
+  forM_ req.passOrganizations $ \pa -> do
+    org <- QPassOrganization.findById pa.id >>= fromMaybeM (PassOrganizationNotFound pa.id.getId)
+    unless (org.merchantOperatingCityId == callerMoc.id) $ Utils.throwError AccessDenied
+    if pa.isAdd
+      then
+        unless (isNothing org.depotPersonId || org.depotPersonId == Just req.depotPersonId) $
+          Utils.throwError (InvalidRequest "Already assigned to another depot person")
+      else
+        unless (org.depotPersonId == Just req.depotPersonId) $
+          Utils.throwError (InvalidRequest "You don't own this assignment")
+  let addIds = [pa.id | pa <- req.passOrganizations, pa.isAdd]
+      removeIds = [pa.id | pa <- req.passOrganizations, not pa.isAdd]
+  unless (null addIds) $
+    QPassOrganization.updateDepotAssignment (Just req.depotPersonId) req.depotId addIds
+  unless (null removeIds) $
+    QPassOrganization.updateDepotAssignment Nothing Nothing removeIds
+  pure APISuccess.Success

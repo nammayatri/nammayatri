@@ -6,7 +6,7 @@ in  { driverAllowedDelayForLocationUpdateInSec = +60
     , driverLocationHealthCheckIntervalInSec = +120
     , driverAppName = "dynamic-offer-driver-app"
     , notificationMinDelay = +50000
-    , metricsPort = +9994
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
     , healthcheckPort = +8115
     , loggerConfig =
             appCfg.loggerConfig

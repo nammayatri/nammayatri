@@ -66,6 +66,15 @@ getBusTripSchedule waybillNo tripNumber routeId integratedBPPConfig = IM.withInM
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getBusTripSchedule baseUrl integratedBPPConfig.feedKey waybillNo tripNumber routeId
 
+getWaybillMetadata ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m WaybillMetadataResponse
+getWaybillMetadata waybillNo integratedBPPConfig = IM.withInMemCache ["getWaybillMetadata", integratedBPPConfig.id.getId, waybillNo] 43200 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getWaybillMetadata baseUrl integratedBPPConfig.feedKey waybillNo
+
 getRoutesByRouteIds ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->

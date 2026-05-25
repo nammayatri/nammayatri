@@ -63,9 +63,9 @@ reportIssue rideId issueType apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
   case issueType of
     ICommon.AC_RELATED_ISSUE -> do
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId ride.merchantOperatingCityId Nothing Nothing
       -- Keep old AC restriction logic for backward compat
-      incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.driverId
+      incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers ride.merchantOperatingCityId ride.driverId
       -- Framework pipeline
       driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
       handleAcRestriction ride driverInfo

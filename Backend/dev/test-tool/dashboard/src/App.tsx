@@ -6,6 +6,7 @@ import { ToolsPanel } from './components/ToolsPanel';
 import { RemoteStackPanel } from './components/RemoteStackPanel';
 import { FinanceViewer } from './components/FinanceViewer';
 import { CoverageReportPanel } from './components/CoverageReport';
+import { ConfigSyncPanel } from './components/ConfigSyncPanel';
 import { LogPanel } from './components/LogPanel';
 import { TopBarActions } from './components/TopBarActions';
 import { DialogHost } from './components/Dialogs';
@@ -14,7 +15,7 @@ import { callStep, startLocationPinger, stopLocationPinger, setGlobalLog, startN
 import { buildApiCatalog } from './api-catalog';
 import { getLocationsForCity } from './mock-data/locations';
 import { Config, LogEntry, Step, StepResult } from './types';
-import { PROXY_BASE } from './config';
+import { PROXY_BASE, refreshPortsTable } from './config';
 import './App.css';
 
 const defaultConfig: Config = {
@@ -546,7 +547,7 @@ function App() {
   const [config, setConfig] = useState<Config>(loadConfig);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isRunning, setIsRunning] = useState(false);
-  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote' | 'coverage'>('collections');
+  const [appMode, setAppMode] = useState<'collections' | 'custom' | 'tools' | 'remote' | 'coverage' | 'configsync'>('collections');
   const [activeFlowId, setActiveFlowId] = useState('ride-flow');
   const [selectedOutcome, setSelectedOutcome] = useState('fulfillment');
   const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
@@ -605,6 +606,17 @@ function App() {
   }, []);
 
   useEffect(() => { setGlobalLog(log); }, [log]);
+
+  // Discover the per-user port mapping from context-api on boot, then
+  // re-poll every 5s so any port-remap during a long-running session
+  // (developer re-runs resolve-ports.sh, devbox neighbour shifts ports,
+  // etc.) is picked up without a dashboard reload. Failures are silent —
+  // getServicePort() falls back to cached / build-time defaults.
+  useEffect(() => {
+    void refreshPortsTable();
+    const id = setInterval(() => { void refreshPortsTable(); }, 5000);
+    return () => clearInterval(id);
+  }, []);
 
   // Fetch payment methods when card payment selected or dues flow active
   const needPaymentMethods = paymentPreset === 'with-card-payment' || activeFlowId === 'dues-flow';
@@ -987,6 +999,9 @@ function App() {
           <button className={`mode-tab ${appMode === 'coverage' ? 'active' : ''}`} onClick={() => setAppMode('coverage')}>
             Code Coverage
           </button>
+          <button className={`mode-tab ${appMode === 'configsync' ? 'active' : ''}`} onClick={() => setAppMode('configsync')}>
+            Config Sync
+          </button>
           <span className="mode-tabs-spacer" />
           <TopBarActions />
         </div>
@@ -1003,6 +1018,9 @@ function App() {
             </div>
             <div style={{ display: appMode === 'coverage' ? 'contents' : 'none' }}>
               <CoverageReportPanel />
+            </div>
+            <div style={{ display: appMode === 'configsync' ? 'contents' : 'none' }}>
+              <ConfigSyncPanel />
             </div>
             <div style={{ display: appMode === 'custom' ? 'contents' : 'none' }}>
             <ConfigBar config={config} onChange={setConfig} onRun={runAll} onStop={stop} isRunning={isRunning}
@@ -1065,7 +1083,7 @@ function App() {
             />
             </div>
           </div>
-          {appMode !== 'remote' && appMode !== 'tools' && (
+          {appMode !== 'remote' && appMode !== 'tools' && appMode !== 'configsync' && (
             <>
               <div className="log-resize-handle" onMouseDown={onResizeStart} />
               <div className="content-logs" style={{ width: logWidth }}>

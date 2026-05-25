@@ -162,11 +162,78 @@ def redis_cmd(*args):
 PORT = 7082
 
 VICTORIA_METRICS_URL = os.environ.get("VICTORIA_METRICS_URL", "")
+# Base URL of VictoriaMetrics for read queries (without /api/v1 suffix).
+# Defaults to localhost:8428 — the port the nix process binds when running locally.
+VICTORIA_METRICS_QUERY_URL = os.environ.get("VICTORIA_METRICS_QUERY_URL", "http://127.0.0.1:8428")
 
 # ── Paths ──
 SCRIPT_DIR = Path(__file__).resolve().parent
 COLLECTIONS_DIR = SCRIPT_DIR.parent.parent / "integration-tests" / "collections"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent.parent.parent  # nammayatri/
+
+# Per-user resolved port overlay (written by Backend/nix/services/resolve-ports.sh).
+# When absent — first run, or fresh clone — we fall back to the base ports.nix
+# so /api/ports always returns *some* answer.
+PORTS_RESOLVED_PATH = PROJECT_ROOT / "data" / "ports-resolved.nix"
+PORTS_BASE_PATH = PROJECT_ROOT / "Backend" / "nix" / "services" / "ports.nix"
+
+# Compiled once. Matches lines like `  rider-app = 8013;` in either file.
+_PORTS_LINE_RE = re.compile(r"^\s*([a-zA-Z][a-zA-Z0-9_-]*)\s*=\s*(\d+)\s*;")
+
+
+# ${VAR:default} resolver — mirror of config-sync's _expand_env_templates.
+# Used by the newman webhook runner to pre-process Postman env files before
+# invoking newman (which doesn't expand ${...} syntax natively). Local_*
+# env files carry the templates; Master_* files don't, but the helper is
+# idempotent so feeding either through it is safe.
+_ENV_TEMPLATE_RE = re.compile(r"\$\{([A-Z_][A-Z0-9_]*)(?::([^}]*))?\}")
+
+
+def _expand_env_templates(node):
+    if isinstance(node, dict):
+        return {k: _expand_env_templates(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_expand_env_templates(v) for v in node]
+    if isinstance(node, str):
+        return _ENV_TEMPLATE_RE.sub(
+            lambda m: os.environ.get(m.group(1), m.group(2) or ""),
+            node,
+        )
+    return node
+
+
+def _materialize_env_for_newman(src_path: Path) -> Path:
+    """Resolve ${VAR:default} in a Postman env file, write to /tmp, return the
+    resolved path. Caller deletes after newman finishes. Returns the original
+    path unchanged if expansion is a no-op (file has no template literals)."""
+    try:
+        data = json.loads(src_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return src_path
+    resolved = _expand_env_templates(data)
+    if resolved == data:
+        return src_path
+    out = Path("/tmp") / f"{src_path.stem}.resolved.json"
+    out.write_text(json.dumps(resolved, ensure_ascii=False))
+    return out
+
+
+def _read_ports_table():
+    """Return { 'service-name': 1234, ... } parsed from data/ports-resolved.nix
+    if present, otherwise from Backend/nix/services/ports.nix. Same line format
+    in both files, so one regex parser suffices. Used by the dashboard for
+    runtime port discovery — see GET /api/ports."""
+    path = PORTS_RESOLVED_PATH if PORTS_RESOLVED_PATH.exists() else PORTS_BASE_PATH
+    out = {}
+    try:
+        for line in path.read_text().splitlines():
+            m = _PORTS_LINE_RE.match(line)
+            if m:
+                out[m.group(1)] = int(m.group(2))
+    except OSError:
+        pass
+    return {"source": str(path.relative_to(PROJECT_ROOT)) if path.is_relative_to(PROJECT_ROOT) else str(path),
+            "ports": out}
 
 # Whitelisted GitHub repos that the /api/git/refs endpoint can introspect.
 # Each entry maps "<owner>/<name>" → the local checkout path under data/
@@ -203,12 +270,28 @@ CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
 # Keep in sync with config_transfer.py's DEFAULT_FETCH_VERSIONS. master is on v1
 # (older zip layout still uploaded); prod / prod_international are on v2.
 CONFIG_SYNC_BUNDLE_URLS = {
-    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v1",
+    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v2",
     "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
     "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v2",
 }
 CONFIG_SYNC_DEFAULT_FROM = os.environ.get("CONFIG_SYNC_DEFAULT_FROM", "prod")
 CONFIG_SYNC_MAX_LOG_LINES = 4000
+
+CONFIG_SYNC_MARKER_PATH = PROJECT_ROOT / "data" / "config-sync" / "metadata.json"
+
+
+def _load_last_synced():
+    """Read <repo-root>/data/config-sync/metadata.json so /api/config-sync/status
+    reports `last_synced` correctly even after a context-api restart."""
+    try:
+        with CONFIG_SYNC_MARKER_PATH.open("r") as f:
+            data = json.load(f)
+        if data.get("from") and data.get("synced_at"):
+            return {"from": data["from"], "finished_at": data["synced_at"]}
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        pass
+    return None
+
 
 _config_sync_state = {
     "running": False,
@@ -218,6 +301,7 @@ _config_sync_state = {
     "exit_code": None,
     "error": None,
     "log": [],
+    "last_synced": _load_last_synced(),
 }
 _config_sync_lock = threading.Lock()
 
@@ -374,6 +458,29 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         if restart_services:
             _restart_haskell_services()
             _append_log("Restarted rider/driver/mock-registry to pick up synced config.")
+
+        # Step 5: persist marker + update in-memory last_synced so future runs
+        # from same env can skip the whole pipeline. Marker lives at
+        # <repo-root>/data/config-sync/metadata.json — survives context-api
+        # restarts; the in-memory copy is what /api/config-sync/status returns.
+        synced_at = time.time()
+        try:
+            CONFIG_SYNC_MARKER_PATH.parent.mkdir(parents=True, exist_ok=True)
+            tmp = CONFIG_SYNC_MARKER_PATH.with_suffix(".json.tmp")
+            with tmp.open("w") as f:
+                json.dump({
+                    "from": from_env,
+                    "to": "local",
+                    "synced_at": synced_at,
+                    "source": "context-api/run_config_sync",
+                    "force_fetch": bool(force_fetch),
+                }, f, indent=2, sort_keys=True)
+            tmp.replace(CONFIG_SYNC_MARKER_PATH)
+            _append_log(f"Wrote sync marker: {CONFIG_SYNC_MARKER_PATH}")
+        except OSError as e:
+            _append_log(f"WARN: failed to write sync marker: {e}")
+        with _config_sync_lock:
+            _config_sync_state["last_synced"] = {"from": from_env, "finished_at": synced_at}
     except Exception as e:
         with _config_sync_lock:
             _config_sync_state["error"] = str(e)
@@ -1387,63 +1494,66 @@ def stop_ny_rn(app: str) -> bool:
     return _kill_process_group(proc)
 
 
+# Paths match each service's readiness_probe in Backend/nix/services/nammayatri.nix.
+HASKELL_SERVICE_HEALTH = [
+    ("rider-app", 8013, "/v2"),
+    ("driver-app", 8016, "/ui"),
+    ("mock-registry", 8020, "/"),
+]
+
+
+def _probe_haskell_services():
+    """One-shot probe of each haskell service's HTTP health endpoint. Returns:
+        { "ready": bool, "services": [{name, port, path, up, status, error?}] }
+    Never sleeps. Safe to call from request handlers."""
+    import urllib.request
+    import urllib.error
+
+    results = []
+    all_ok = True
+    for name, port, path in HASKELL_SERVICE_HEALTH:
+        url = f"http://127.0.0.1:{port}{path}"
+        entry = {"name": name, "port": port, "path": path, "up": False, "status": None}
+        try:
+            with urllib.request.urlopen(url, timeout=2.0) as resp:
+                entry["status"] = resp.status
+                entry["up"] = 200 <= resp.status < 400
+        except urllib.error.HTTPError as e:
+            entry["status"] = e.code
+            entry["error"] = f"HTTP {e.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            entry["error"] = str(e.reason if hasattr(e, "reason") else e)
+        if not entry["up"]:
+            all_ok = False
+        results.append(entry)
+
+    return {"ready": all_ok, "services": results}
+
+
 def _wait_for_haskell_services(timeout_seconds: int = 600) -> bool:
-    """Poll until rider-app (8013), driver-app (8016), and mock-registry (8020)
-    are all listening, AND the dynamic-offer-driver-app schema has finished
-    migrating (i.e. a recent table from ddl-migrations exists).
+    """Poll until rider-app, driver-app, and mock-registry are all listening,
+    AND the dynamic-offer-driver-app schema has finished migrating.
 
     Returns True when ready, False on timeout. We use this instead of a
     process-compose `process_healthy` dependency because we want the API
     server itself to be reachable immediately for non-sync endpoints (status,
     log tail, manual trigger) — only the auto-sync waits."""
-    import socket
-    import psycopg2
-
     deadline = time.time() + timeout_seconds
-    ports = [("rider-app", 8013), ("driver-app", 8016), ("mock-registry", 8020)]
-    # Sentinel: a NammaDSL-generated table from migrations-read-only that is created
-    # late in the migration sweep. Picked because it's stable across rebases (no later
-    # migration drops/renames it). If it exists, driver-app-exe has applied at least
-    # its read-only migrations on top of all ddl-migrations.
-    sentinel_sql = "SELECT to_regclass('atlas_driver_offer_bpp.aadhaar_card') IS NOT NULL"
-
     last_log = 0
     while time.time() < deadline:
-        # 1) ports
-        port_ok = True
-        missing = []
-        for name, port in ports:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.settimeout(1.0)
-                try:
-                    s.connect(("127.0.0.1", port))
-                except OSError:
-                    port_ok = False
-                    missing.append(f"{name}:{port}")
-        # 2) schema sentinel
-        schema_ok = False
-        if port_ok:
-            try:
-                conn = psycopg2.connect(**DB_CONFIG)
-                conn.autocommit = True
-                cur = conn.cursor()
-                cur.execute(sentinel_sql)
-                schema_ok = bool(cur.fetchone()[0])
-                cur.close()
-                conn.close()
-            except Exception:
-                schema_ok = False
-
-        if port_ok and schema_ok:
+        state = _probe_haskell_services()
+        if state["ready"]:
             print("  \033[93m[startup]\033[0m haskell services + schema ready")
             return True
 
         now = time.time()
-        if now - last_log > 10:  # progress log every 10s
-            reason = ", ".join(missing) if missing else (
-                "schema not yet migrated (aadhaar_card missing)"
-            )
-            print(f"  \033[93m[startup]\033[0m waiting for: {reason}")
+        if now - last_log > 10:
+            missing = [
+                f"{s['name']}:{s['port']}{s['path']}"
+                + (f" ({s.get('error') or s.get('status')})" if s.get("error") or s.get("status") else "")
+                for s in state["services"] if not s["up"]
+            ]
+            print(f"  \033[93m[startup]\033[0m waiting for: {', '.join(missing)}")
             last_log = now
         time.sleep(2)
     print(f"  \033[93m[startup]\033[0m timeout ({timeout_seconds}s) waiting for services")
@@ -1499,6 +1609,233 @@ def query(sql, params=()):
         return rows
     except Exception as e:
         return {"error": str(e)}
+
+
+# ── /api/db/{update,select} helpers ──────────────────────────────────────────
+# Narrow setup/diagnostic surface for integration tests. See allow_list.py for
+# which tables/columns are addressable. Hard rules enforced below:
+#   - /api/db/update WHERE is exactly one column = the table's PK.
+#   - Affected rows must be <= 1.
+#   - After a successful UPDATE the cache key
+#     `{tableCamel}_{pkCol}_{value}{shard-N}` is DEL'd from cluster Redis.
+#   - /api/db/select is read-only; tests must NOT use it for assertions.
+# Bearer-token auth via TEST_CONTEXT_API_TOKEN env (optional; unset = dev-open).
+
+import allow_list as _tca_allow_list
+
+_TCA_AUTH_TOKEN = os.environ.get("TEST_CONTEXT_API_TOKEN")
+_TCA_KV_SHARDS = int(os.environ.get("KV_SHARDS", "128"))
+_TCA_SELECT_CAP = 200
+_TCA_VALID_IDENT = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
+_TCA_CAMEL_BOUNDARY = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def _tca_camel_to_snake(name):
+    return _TCA_CAMEL_BOUNDARY.sub("_", name).lower()
+
+
+def _tca_valid_ident(name):
+    return isinstance(name, str) and bool(_TCA_VALID_IDENT.match(name))
+
+
+def _tca_kv_keys_for_all_shards(table_camel, pk_col_camel, pk_value):
+    """All possible cache keys for this PK across shards 0..KV_SHARDS-1."""
+    base = f"{table_camel}_{pk_col_camel}_{pk_value}"
+    return [f"{base}{{shard-{n}}}" for n in range(_TCA_KV_SHARDS)]
+
+
+def _tca_del_kv_key_all_shards(table_camel, pk_col_camel, pk_value):
+    """DEL the PK-keyed KV entry across every possible shard suffix.
+
+    The Haskell side computes shard = f(uuid) % KV_SHARDS where f is opaque
+    here; rather than try to mirror that math, issue DEL for every shard
+    variant via a single pipelined redis-cli session. Cluster redirects are
+    followed by -c. Returns total keys deleted.
+    """
+    keys = _tca_kv_keys_for_all_shards(table_camel, pk_col_camel, pk_value)
+    cmds = "".join(f"DEL {k}\n" for k in keys)
+    r = subprocess.run(
+        ["redis-cli", "-c", "-h", "localhost", "-p", "30001"],
+        input=cmds, capture_output=True, text=True, timeout=15,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(f"redis-cli DEL pipeline failed: {r.stderr.strip()}")
+    total = 0
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if line.startswith("(integer)"):
+            try:
+                total += int(line.split()[-1])
+            except ValueError:
+                pass
+        else:
+            try:
+                total += int(line)
+            except ValueError:
+                pass
+    return total
+
+
+def _tca_auth_ok(handler):
+    if not _TCA_AUTH_TOKEN:
+        return True
+    return handler.headers.get("Authorization", "") == f"Bearer {_TCA_AUTH_TOKEN}"
+
+
+def _tca_db_update(body):
+    from psycopg2 import sql as psql
+
+    table = body.get("table")
+    pk = body.get("primaryKey") or {}
+    set_map = body.get("set") or {}
+
+    if not isinstance(table, str):
+        return {"error": "table is required"}, 400
+    spec = _tca_allow_list.get(table)
+    if spec is None:
+        return {"error": f"table not allow-listed: {table}"}, 400
+
+    pk_col = pk.get("column")
+    pk_val = pk.get("value")
+    if pk_col != spec["pk"]:
+        return {"error": f"primaryKey.column must be {spec['pk']!r} for table {table!r}"}, 400
+    if not isinstance(pk_val, str) or not pk_val:
+        return {"error": "primaryKey.value is required (string)"}, 400
+
+    if not isinstance(set_map, dict) or not set_map:
+        return {"error": "set must be a non-empty object"}, 400
+    for col in set_map.keys():
+        if not _tca_valid_ident(col):
+            return {"error": f"invalid identifier: {col!r}"}, 400
+        if not _tca_allow_list.is_updatable(spec, col):
+            return {"error": f"column not updatable for {table!r}: {col}"}, 400
+
+    pg_table = spec.get("pg_table") or _tca_camel_to_snake(table)
+    set_parts = [
+        psql.SQL("{} = {}").format(psql.Identifier(_tca_camel_to_snake(c)), psql.Placeholder())
+        for c in set_map.keys()
+    ]
+    params = list(set_map.values()) + [pk_val]
+    sql_q = psql.SQL("UPDATE {sch}.{tbl} SET {sets} WHERE {pkc} = {ph}").format(
+        sch=psql.Identifier(spec["schema"]),
+        tbl=psql.Identifier(pg_table),
+        sets=psql.SQL(", ").join(set_parts),
+        pkc=psql.Identifier(_tca_camel_to_snake(pk_col)),
+        ph=psql.Placeholder(),
+    )
+
+    try:
+        conn = get_conn()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(sql_q, params)
+        rowcount = cur.rowcount
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return {"error": f"db error: {e}"}, 500
+
+    if rowcount > 1:
+        return {"error": "update affected more than one row; refusing"}, 500
+
+    cache_deleted = None
+    cache_key_prefix = None
+    if rowcount == 1:
+        kv_table = spec.get("kv_table_name") or table
+        cache_key_prefix = f"{kv_table}_{pk_col}_{pk_val}{{shard-*}}"
+        try:
+            cache_deleted = _tca_del_kv_key_all_shards(kv_table, pk_col, pk_val)
+        except Exception as e:
+            return {
+                "updated": rowcount,
+                "cacheKeyPattern": cache_key_prefix,
+                "cacheDeleteError": f"failed to clear cache key: {e}",
+            }, 500
+
+    return {
+        "updated": rowcount,
+        "cacheKeyPattern": cache_key_prefix,
+        "cacheDeleted": cache_deleted,
+    }, 200
+
+
+def _tca_db_select(body):
+    from psycopg2 import sql as psql
+
+    table = body.get("table")
+    spec = _tca_allow_list.get(table) if isinstance(table, str) else None
+    if spec is None:
+        return {"error": f"table not allow-listed: {table}"}, 400
+
+    cols = body.get("columns")
+    if cols is None:
+        cols = ["*"]
+    if not isinstance(cols, list) or not cols:
+        return {"error": "columns must be a non-empty array"}, 400
+    if cols != ["*"]:
+        for c in cols:
+            if not _tca_valid_ident(c):
+                return {"error": f"invalid identifier: {c!r}"}, 400
+            if not _tca_allow_list.is_selectable(spec, c):
+                return {"error": f"column not selectable for {table!r}: {c}"}, 400
+
+    pk_block = body.get("primaryKey")
+    where_block = body.get("where")
+    if (pk_block is None) == (where_block is None):
+        return {"error": "exactly one of primaryKey or where is required"}, 400
+
+    if pk_block is not None:
+        pk_col = pk_block.get("column")
+        pk_val = pk_block.get("value")
+        if pk_col != spec["pk"]:
+            return {"error": f"primaryKey.column must be {spec['pk']!r}"}, 400
+        if not isinstance(pk_val, str) or not pk_val:
+            return {"error": "primaryKey.value is required"}, 400
+        filter_col, filter_val, limit = pk_col, pk_val, 1
+    else:
+        filter_col = where_block.get("column")
+        filter_val = where_block.get("value")
+        if not _tca_valid_ident(filter_col):
+            return {"error": "where.column required (valid identifier)"}, 400
+        if not _tca_allow_list.is_filter_column(spec, filter_col):
+            return {"error": f"column not filterable for {table!r}: {filter_col}"}, 400
+        limit = body.get("limit")
+        if not isinstance(limit, int) or limit <= 0:
+            return {"error": "limit (positive int) required for where-mode"}, 400
+        if limit > _TCA_SELECT_CAP:
+            return {"error": f"limit exceeds cap {_TCA_SELECT_CAP}"}, 400
+
+    pg_table = spec.get("pg_table") or _tca_camel_to_snake(table)
+    if cols == ["*"]:
+        select_sql = psql.SQL("*")
+    else:
+        select_sql = psql.SQL(", ").join(
+            psql.SQL("{} AS {}").format(
+                psql.Identifier(_tca_camel_to_snake(c)), psql.Identifier(c)
+            )
+            for c in cols
+        )
+    sql_q = psql.SQL("SELECT {cols} FROM {sch}.{tbl} WHERE {fc} = {ph} LIMIT {lim}").format(
+        cols=select_sql,
+        sch=psql.Identifier(spec["schema"]),
+        tbl=psql.Identifier(pg_table),
+        fc=psql.Identifier(_tca_camel_to_snake(filter_col)),
+        ph=psql.Placeholder(),
+        lim=psql.Literal(limit),
+    )
+
+    try:
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute(sql_q, [filter_val])
+        col_names = [d[0] for d in cur.description] if cur.description else []
+        rows = [dict(zip(col_names, r)) for r in cur.fetchall()]
+        cur.close()
+        conn.close()
+    except Exception as e:
+        return {"error": f"db error: {e}"}, 500
+
+    return {"rows": rows, "count": len(rows)}, 200
 
 
 def get_merchants():
@@ -1700,22 +2037,14 @@ def start_log_tails():
     return token
 
 
-FLUSH_WAIT_SECS = 2.0
-
-
 def stop_log_tails(token):
-    """Wait FLUSH_WAIT_SECS seconds, then stop tails and return captured logs.
+    """Stop the tail processes for `token` and return captured logs immediately.
 
-    This is the authoritative delay for capturing async service activity (beckn
-    callbacks, allocator scheduling, etc.) that happens AFTER the synchronous
-    HTTP response has returned. Frontend callers do NOT add their own setTimeout
-    — they rely on this fixed wait.
-
-    Why a fixed wait and not an adaptive settle loop: an adaptive "no new lines
-    for N ms" check exits too early when async writers haven't started yet —
-    the loop sees zero lines, settles instantly, kills the tail before the
-    real activity hits disk. A flat 2s gives every async producer a chance
-    to fire and land its writes in the buffer.
+    Grace/settle for async backend writes is the caller's responsibility now —
+    the dashboard's step-capture helper opens logs + mock-hits streams together,
+    waits a shared grace after the step's HTTP+test-script completes, then
+    closes both. Keeping the wait server-side would race the mock-hits stream
+    close in the unified flow.
     """
     with _tail_lock:
         session = _tail_sessions.get(token, {})
@@ -1724,10 +2053,7 @@ def stop_log_tails(token):
             _tail_sessions.pop(token, None)
         return {}
 
-    import time
-    time.sleep(FLUSH_WAIT_SECS)
-
-    # Now stop and collect
+    # Stop and collect immediately — caller has already waited grace.
     with _tail_lock:
         _tail_sessions.pop(token, None)
     logs = {}
@@ -3915,8 +4241,22 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"cleared": True})
             return True
 
+        if method == "POST" and path in ("/api/db/update", "/api/db/select"):
+            if not _tca_auth_ok(self):
+                self._send_json({"error": "unauthorized"}, 401)
+                return True
+            body = self._read_json_body() or {}
+            payload, status = (
+                _tca_db_update(body) if path.endswith("/update") else _tca_db_select(body)
+            )
+            self._send_json(payload, status)
+            return True
+
         # GET API endpoints (POST also allowed for metrics/push and webhook)
-        _post_allowed = {"/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all"}
+        _post_allowed = {
+            "/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all",
+            "/api/db/update", "/api/db/select",
+        }
         if method != "GET" and not path.startswith("/proxy/") and path not in _post_allowed:
             self._send_json({"error": "method not allowed"}, 405)
             return True
@@ -3950,6 +4290,16 @@ class ContextHandler(BaseHTTPRequestHandler):
                     {"error": "usage: /api/collection/<dir>/<file>"}, 400)
         elif path == "/api/health":
             self._send_json({"status": "ok"})
+        elif path == "/api/services-ready":
+            self._send_json(_probe_haskell_services())
+        # ── Runtime port discovery ──
+        # The dashboard fetches /api/ports on first paint to learn the
+        # per-user port mapping (after resolve-ports.sh has overlaid the
+        # base ports.nix with a free-port offset). Without this, CRA bakes
+        # the default ports into the build and the dashboard can't reach
+        # remapped services.
+        elif path == "/api/ports":
+            self._send_json(_read_ports_table())
         # ── Finance Dashboard ──
         elif path == "/api/finance/dashboard":
             from urllib.parse import parse_qs
@@ -4003,6 +4353,31 @@ class ContextHandler(BaseHTTPRequestHandler):
             side = qs.get("side", ["bpp"])[0]
             schema = "atlas_app" if side == "bap" else "atlas_driver_offer_bpp"
             self._send_json(get_finance_reference_types(schema))
+        # ── Metrics read (proxy to VictoriaMetrics for dashboard charts) ────
+        # GETs only — query / query_range / labels / series. Forwards the
+        # query string verbatim. Same shape as Prometheus's HTTP API so the
+        # dashboard can treat this endpoint as a drop-in.
+        elif method == "GET" and path.startswith("/api/metrics/v1/"):
+            vm_path = path[len("/api/metrics"):]  # → "/v1/query_range"
+            target = f"{VICTORIA_METRICS_QUERY_URL}/api{vm_path}"
+            qs = parsed.query
+            if qs:
+                target = f"{target}?{qs}"
+            try:
+                with urllib.request.urlopen(target, timeout=15) as r:
+                    body = r.read()
+                    self.send_response(r.status)
+                    self.send_header("Content-Type", r.headers.get("Content-Type", "application/json"))
+                    self.send_header("Content-Length", str(len(body)))
+                    self._cors_headers()
+                    self.end_headers()
+                    self.wfile.write(body)
+            except urllib.error.HTTPError as e:
+                self._send_json({"error": f"VM {e.code}", "detail": e.read().decode("utf-8", "ignore")}, e.code)
+            except Exception as e:
+                self._send_json({"error": "VM unreachable", "detail": str(e)}, 502)
+            return True
+
         # ── Metrics push (from dashboard after suite completes) ──────────────
         elif method == "POST" and path in ("/api/metrics/push", "/metrics/push"):
             body = self._read_json_body()
@@ -4099,12 +4474,15 @@ def push_suite_metrics(version_id: str, collection: str, env: str, suite: str,
     import time as _time
     ts_ms = int(_time.time() * 1000)
     suite_label = f"{collection}-{env}-{suite}".replace(" ", "_")
-    labels_base = f'version="{version_id}",suite="{suite_label}"'
-    if not all_passed:
-        print(f"  [metrics] skipped — suite={suite_label} FAIL (only push on full pass)")
-        return False, "skipped — suite did not fully pass"
+    status_str = "pass" if all_passed else "fail"
+    labels_base = f'version="{version_id}",collection="{collection}",env="{env}",suite="{suite_label}"'
 
-    lines = []
+    lines = [
+        # Always-on counter so the dashboard can chart pass/fail rate per suite.
+        # Emitted as a 1-sample gauge; Grafana / dashboard sums by status over a
+        # window. (True counters require monotonic state we don't have here.)
+        f'integration_test_suite_runs{{{labels_base},status="{status_str}"}} 1 {ts_ms}'
+    ]
 
     if all_passed:
         total_ms = 0
@@ -4177,9 +4555,10 @@ def _run_all_master_webhook(run_id: str, version_id: str):
                 suite_name = coll_dir.name
                 flow_name = coll_file.stem
                 report_file = Path("/tmp") / f"ny_webhook_{run_id}_{suite_name}_{flow_name}_{city}.json"
+                resolved_env_file = _materialize_env_for_newman(env_file)
                 try:
                     proc = _sp.run(
-                        ["newman", "run", str(coll_file), "-e", str(env_file),
+                        ["newman", "run", str(coll_file), "-e", str(resolved_env_file),
                          "--bail", "--timeout-request", "60000",
                          "--reporters", "json",
                          "--reporter-json-export", str(report_file)],
@@ -4228,6 +4607,11 @@ def _run_all_master_webhook(run_id: str, version_id: str):
                         _webhook_runs[run_id]["failed"] += 1
                         _webhook_runs[run_id]["errors"].append(
                             f"{suite_name}/{flow_name}/{city}: {e}")
+                finally:
+                    # Remove the materialized env-file (only if we wrote one)
+                    if resolved_env_file != env_file:
+                        try: resolved_env_file.unlink(missing_ok=True)
+                        except OSError: pass
 
     with _webhook_lock:
         _webhook_runs[run_id]["status"] = "done"

@@ -4,6 +4,7 @@
 
 module Storage.Queries.VehicleServiceTier where
 
+import qualified Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
@@ -95,6 +96,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.driverRating driverRating,
       Se.Set Beam.fareAdditionPerKmOverBaseServiceTier fareAdditionPerKmOverBaseServiceTier,
       Se.Set Beam.isAirConditioned isAirConditioned,
+      Se.Set Beam.isAirportRideEnabled isAirportRideEnabled,
       Se.Set Beam.isEnabled isEnabled,
       Se.Set Beam.isIntercityEnabled isIntercityEnabled,
       Se.Set Beam.isRentalsEnabled isRentalsEnabled,
@@ -109,8 +111,10 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.seatingCapacity seatingCapacity,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
+      Se.Set Beam.specialZone (Kernel.Prelude.toJSON <$> specialZone),
       Se.Set Beam.stopFcmSuppressCount stopFcmSuppressCount,
       Se.Set Beam.stopFcmThreshold stopFcmThreshold,
+      Se.Set Beam.vehicleAgeThreshold vehicleAgeThreshold,
       Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.vehicleIconUrl ((Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl),
       Se.Set Beam.vehicleRating vehicleRating,
@@ -135,6 +139,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
             id = Kernel.Types.Id.Id id,
             isAirConditioned = isAirConditioned,
+            isAirportRideEnabled = isAirportRideEnabled,
             isEnabled = isEnabled,
             isIntercityEnabled = isIntercityEnabled,
             isRentalsEnabled = isRentalsEnabled,
@@ -149,8 +154,10 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             seatingCapacity = seatingCapacity,
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
+            specialZone = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< specialZone,
             stopFcmSuppressCount = stopFcmSuppressCount,
             stopFcmThreshold = stopFcmThreshold,
+            vehicleAgeThreshold = vehicleAgeThreshold,
             vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
             vehicleRating = vehicleRating,
@@ -172,6 +179,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.fareAdditionPerKmOverBaseServiceTier = fareAdditionPerKmOverBaseServiceTier,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isAirConditioned = isAirConditioned,
+        Beam.isAirportRideEnabled = isAirportRideEnabled,
         Beam.isEnabled = isEnabled,
         Beam.isIntercityEnabled = isIntercityEnabled,
         Beam.isRentalsEnabled = isRentalsEnabled,
@@ -186,8 +194,10 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.seatingCapacity = seatingCapacity,
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
+        Beam.specialZone = Kernel.Prelude.toJSON <$> specialZone,
         Beam.stopFcmSuppressCount = stopFcmSuppressCount,
         Beam.stopFcmThreshold = stopFcmThreshold,
+        Beam.vehicleAgeThreshold = vehicleAgeThreshold,
         Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = (Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl,
         Beam.vehicleRating = vehicleRating,

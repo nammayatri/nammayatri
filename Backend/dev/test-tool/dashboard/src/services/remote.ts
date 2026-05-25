@@ -8,6 +8,7 @@ export interface RemoteTarget {
   remoteDir?: string;
   copyMode?: 'rsync' | 'skip';
   command?: string;
+  devName?: string;
   cols?: number;
   rows?: number;
 }
@@ -18,6 +19,13 @@ export interface RemoteSessionResponse {
   skipped?: boolean;
   cols?: number;
   rows?: number;
+}
+
+export interface RegistryResponse {
+  devName?: string;
+  caddyPort?: number;
+  dir?: string;
+  error?: string;
 }
 
 export type RemoteSessionKind = 'deploy' | 'start' | 'clear-data';
@@ -73,3 +81,6 @@ export interface RemoteSessionSummary {
 
 export const remoteSessions = (): Promise<RemoteSessionSummary[]> =>
   fetch(`${LOCAL_API_BASE}/api/remote/sessions`).then(r => r.json());
+
+export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> =>
+  json('/api/remote/sync-caddy-port', t);

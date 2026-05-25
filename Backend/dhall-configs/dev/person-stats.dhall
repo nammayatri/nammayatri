@@ -8,7 +8,7 @@ let appCfg = ./dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -28,7 +28,7 @@ let esqDBReplicaCfg =
 
 let hedisCfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -39,7 +39,7 @@ let hedisCfg =
 
 let hedisClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -51,13 +51,13 @@ let hedisClusterCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
 let consumerProperties =
       { groupId = "person-stats-compute"
-      , brockers = [ "localhost:29092" ]
+      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -65,7 +65,7 @@ let consumerProperties =
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
@@ -75,7 +75,7 @@ let kafkaClickhouseCfg =
 let serviceClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_app"
       , tls = False
@@ -95,7 +95,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let kvConfigUpdateFrequency = +10
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -117,7 +117,7 @@ in  { hedisCfg
     , cacheConfig
     , dumpEvery = +10
     , kafkaConsumerCfg
-    , metricsPort = +9083
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9083)
     , timeBetweenUpdates = +10
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours

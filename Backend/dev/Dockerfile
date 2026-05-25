@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-psycopg2 \
     redis-tools \
     postgresql-client \
+    curl \
+    ca-certificates \
     && npm install -g newman@6 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -32,8 +34,12 @@ WORKDIR /app
 
 COPY test-tool/context-api/ /app/test-tool/context-api/
 COPY integration-tests/      /app/integration-tests/
+COPY config-sync/            /app/config-sync/
 
-RUN mkdir -p /app/test-tool/context-api/coverage-data
+RUN pip install --no-cache-dir -r /app/config-sync/requirements.txt
+
+RUN mkdir -p /app/test-tool/context-api/coverage-data \
+    && mkdir -p /app/config-sync/assets/data
 
 COPY --from=builder /app/build /usr/share/nginx/html
 

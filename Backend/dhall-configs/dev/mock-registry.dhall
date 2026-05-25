@@ -4,7 +4,7 @@ let sec = ./secrets/mock-registry.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -12,7 +12,7 @@ let esqDBCfg =
       , connectionPoolCount = +25
       }
 
-in  { port = +8020
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8020)
     , graceTerminationPeriod = +90
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/mock-registry.log" }

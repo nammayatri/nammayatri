@@ -94,7 +94,7 @@ calculateFareUtil merchantId merchanOperatingCityId mbDropLatLong pickupLatlong 
   return API.Types.UI.FareCalculator.FareResponse {estimatedFares = estimateAPIEntity}
   where
     buildEstimateHelper fp mbTollCharges mbTollNames mbTollIds now currency tConfig = do
-      CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions
+      CQVST.findByServiceTierTypeAndCityIdInRideFlow fp.vehicleServiceTier merchanOperatingCityId configsInExperimentVersions Nothing
         >>= \case
           Just vehicleServiceTierItem -> do
             estimate <- DBS.buildEstimate merchantId merchanOperatingCityId currency Meter Nothing now False Nothing False mbDistance Nothing Nothing mbTollCharges mbTollNames mbTollIds Nothing Nothing 0 mbDuration tConfig False vehicleServiceTierItem fp

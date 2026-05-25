@@ -30,80 +30,80 @@ handler merchantId city = postCommunicationCreate merchantId city :<|> getCommun
 
 type PostCommunicationCreate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.POST_COMMUNICATION_CREATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.POST_COMMUNICATION_CREATE))
       :> API.Types.ProviderPlatform.Management.Communication.PostCommunicationCreate
   )
 
 type GetCommunicationList =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_LIST)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_LIST))
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationList
   )
 
 type GetCommunicationInfo =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_INFO)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_INFO))
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationInfo
   )
 
 type PostCommunicationSend =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.POST_COMMUNICATION_SEND)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.POST_COMMUNICATION_SEND))
       :> API.Types.ProviderPlatform.Management.Communication.PostCommunicationSend
   )
 
 type PutCommunicationEdit =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.PUT_COMMUNICATION_EDIT)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.PUT_COMMUNICATION_EDIT))
       :> API.Types.ProviderPlatform.Management.Communication.PutCommunicationEdit
   )
 
 type DeleteCommunicationDelete =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.DELETE_COMMUNICATION_DELETE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.DELETE_COMMUNICATION_DELETE))
       :> API.Types.ProviderPlatform.Management.Communication.DeleteCommunicationDelete
   )
 
 type GetCommunicationDeliveryStatus =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_DELIVERY_STATUS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_DELIVERY_STATUS))
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationDeliveryStatus
   )
 
 type GetCommunicationRecipients =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_RECIPIENTS)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_RECIPIENTS))
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationRecipients
   )
 
 type GetCommunicationTemplate =
   ( ApiAuth
-      'DRIVER_OFFER_BPP_MANAGEMENT
-      'DSL
-      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COMMUNICATION / 'API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_TEMPLATE)
+      ('DRIVER_OFFER_BPP_MANAGEMENT)
+      ('DSL)
+      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COMMUNICATION) / ('API.Types.ProviderPlatform.Management.Communication.GET_COMMUNICATION_TEMPLATE))
       :> API.Types.ProviderPlatform.Management.Communication.GetCommunicationTemplate
   )
 
 postCommunicationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> API.Types.ProviderPlatform.Management.Communication.CreateCommunicationRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CreateCommunicationResponse)
 postCommunicationCreate merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.postCommunicationCreate merchantShortId opCity apiTokenInfo personId req
 
-getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationListType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
+getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationListType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
 getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset personId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset personId
 
 getCommunicationInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationInfoResponse)
@@ -118,10 +118,10 @@ putCommunicationEdit merchantShortId opCity apiTokenInfo communicationId req = w
 deleteCommunicationDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 deleteCommunicationDelete merchantShortId opCity apiTokenInfo communicationId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.deleteCommunicationDelete merchantShortId opCity apiTokenInfo communicationId
 
-getCommunicationDeliveryStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationDeliveryStatusType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.DeliveryStatusResponse)
+getCommunicationDeliveryStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDeliveryStatusType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.DeliveryStatusResponse)
 getCommunicationDeliveryStatus merchantShortId opCity apiTokenInfo communicationId channel status limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationDeliveryStatus merchantShortId opCity apiTokenInfo communicationId channel status limit offset
 
-getCommunicationRecipients :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Communication.CommunicationRoleType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.RecipientsResponse)
+getCommunicationRecipients :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationRoleType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.RecipientsResponse)
 getCommunicationRecipients merchantShortId opCity apiTokenInfo role fleetOwnerId operatorId search selectAll limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationRecipients merchantShortId opCity apiTokenInfo role fleetOwnerId operatorId search selectAll limit offset
 
 getCommunicationTemplate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType -> API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationTemplateResponse)

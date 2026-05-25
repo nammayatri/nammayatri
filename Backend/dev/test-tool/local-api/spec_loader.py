@@ -8,6 +8,7 @@ ${source.ref}, ${destDir}, ${repoRoot} into shell commands and env values
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import threading
@@ -269,14 +270,50 @@ def template(value: Any, ctx: Dict[str, Any]) -> Any:
     return value
 
 
-def build_ctx(spec: dict, inputs: Dict[str, Any], port_overrides: Dict[str, int]) -> Dict[str, Any]:
-    """Build the template context from a spec + current input/port state.
+_HOST_FILE = PROJECT_ROOT / "data" / "devbox-host"
+_PORTS_FILE = PROJECT_ROOT / "data" / "devbox-ports.json"
 
-    Spec-declared `default:` values are layered *under* user inputs, so
-    fields the user never touched still resolve to a usable string instead
-    of silently becoming empty (e.g. `--appId ${inputs.APP_ID}` losing its
-    argument because the user only edited GOOGLE_SERVICES_JSON)."""
-    ports = {p["name"]: port_overrides.get(p["name"], p["port"]) for p in spec["ports"]}
+
+def set_active_host(host: str) -> None:
+    """Called by the server when a remote-stack connection is established."""
+    h = host.strip() or "localhost"
+    _HOST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _HOST_FILE.write_text(h)
+
+
+def get_active_host() -> str:
+    """Read the persisted devbox host, defaulting to localhost."""
+    try:
+        return _HOST_FILE.read_text().strip() or "localhost"
+    except OSError:
+        return "localhost"
+
+
+def set_registry_ports(ports: dict) -> None:
+    """Persist resolved ports from the devbox registry."""
+    _PORTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _PORTS_FILE.write_text(json.dumps(ports))
+
+
+def get_registry_ports() -> Dict[str, int]:
+    """Read persisted devbox registry ports."""
+    try:
+        data = json.loads(_PORTS_FILE.read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def build_ctx(spec: dict, inputs: Dict[str, Any], port_overrides: Dict[str, int]) -> Dict[str, Any]:
+    """Build the template context from a spec + current input/port state."""
+    # Resolve ports: spec default → registry override (via registryKey) → per-slug override
+    registry_ports = get_registry_ports()
+    ports = {}
+    for p in spec["ports"]:
+        name = p["name"]
+        reg_key = p.get("registryKey")
+        base = registry_ports.get(reg_key, p["port"]) if reg_key else p["port"]
+        ports[name] = port_overrides.get(name, base)
     dest_dir = (spec.get("source") or {}).get("destDir") or ""
     abs_dest = str((PROJECT_ROOT / dest_dir).resolve()) if dest_dir else str(PROJECT_ROOT)
     merged_inputs: Dict[str, Any] = {}
@@ -300,6 +337,7 @@ def build_ctx(spec: dict, inputs: Dict[str, Any], port_overrides: Dict[str, int]
         "env": dict(_os.environ),
         "destDir": abs_dest,
         "repoRoot": str(PROJECT_ROOT),
+        "host": get_active_host(),
     }
 
 

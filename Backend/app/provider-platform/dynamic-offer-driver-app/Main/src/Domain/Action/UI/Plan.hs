@@ -1057,7 +1057,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             mandateStartDate = Nothing,
             mandateEndDate = Nothing,
             metadataGatewayReferenceId = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = Nothing,

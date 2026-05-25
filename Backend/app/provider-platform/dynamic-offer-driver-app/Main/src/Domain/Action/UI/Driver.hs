@@ -333,18 +333,6 @@ import Tools.SMS as Sms hiding (Success)
 import Tools.Verification hiding (ImageType, length)
 import Utils.Common.Cac.KeyNameConstants
 
-data FleetInfo = FleetInfo
-  { id :: Text,
-    ownerName :: Text,
-    fleetName :: Maybe Text,
-    phoneNumber :: Maybe Text,
-    address :: Maybe Address,
-    requestReason :: Maybe Text,
-    responseReason :: Maybe Text,
-    createdAt :: UTCTime
-  }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
 data OperatorInfo = OperatorInfo
   { id :: Text,
     firstName :: Text,
@@ -451,7 +439,7 @@ data DriverInformationRes = DriverInformationRes
     enabledAt :: Maybe UTCTime,
     fleetOwnerId :: Maybe Text, -- deprecate later
     operatorId :: Maybe Text, -- deprecate later
-    fleetRequest :: Maybe FleetInfo,
+    fleetRequest :: Maybe DOVT.FleetInfo,
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
@@ -464,7 +452,7 @@ data DriverInformationRes = DriverInformationRes
     nomineeName :: Maybe Text,
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
-    activeFleet :: Maybe FleetInfo,
+    activeFleet :: Maybe DOVT.FleetInfo,
     onboardingAs :: Maybe DriverInfo.OnboardingAs,
     vehicleImageUploadedAt :: Maybe UTCTime,
     subscriptionCreditBalance :: Maybe HighPrecMoney,
@@ -483,7 +471,9 @@ data DriverInformationRes = DriverInformationRes
     fleetReferralApplied :: Bool,
     operatorReferralApplied :: Bool,
     membershipId :: Maybe (Id DStclMembership.StclMembership),
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    role :: SP.Role,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -569,7 +559,9 @@ data DriverEntityRes = DriverEntityRes
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     vehicleImageUploadedAt :: Maybe UTCTime,
-    subscriptionCreditBalance :: Maybe HighPrecMoney
+    subscriptionCreditBalance :: Maybe HighPrecMoney,
+    role :: SP.Role,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1193,7 +1185,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
     case vehicleMB of
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
-        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+        cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
         let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers
         let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
         let mbDefaultServiceTierItem =
@@ -1313,6 +1305,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
         nomineeName = driverInfo.nomineeName,
         nomineeRelationship = driverInfo.nomineeRelationship,
         subscriptionCreditBalance = subsCreditBalance,
+        role = person.role,
+        operatorBadgeToken = if person.role == SP.CONDUCTOR then person.operatorBadgeToken else Nothing,
         ..
       }
   where
@@ -1536,12 +1530,13 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-buildFleetInfo :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SP.Person -> FDA.FleetDriverAssociation -> m FleetInfo
+buildFleetInfo :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => SP.Person -> FDA.FleetDriverAssociation -> m DOVT.FleetInfo
 buildFleetInfo person fda = do
   fleetPhoneNumber <- decrypt `mapM` person.mobileNumber
   fleetOwnerInfo <- QFOI.findByPrimaryKey (Id fda.fleetOwnerId)
+  mbFleetBankAccount <- QDBA.findByPrimaryKey (Id @SP.Person fda.fleetOwnerId)
   return $
-    FleetInfo
+    DOVT.FleetInfo
       { id = fda.fleetOwnerId,
         ownerName = person.firstName <> maybe "" (" " <>) person.lastName,
         fleetName = fleetOwnerInfo >>= (.fleetName),
@@ -1549,6 +1544,7 @@ buildFleetInfo person fda = do
         address = fleetOwnerInfo >>= (.stripeAddress),
         requestReason = fda.requestReason,
         responseReason = fda.responseReason,
+        chargesEnabled = (.chargesEnabled) <$> mbFleetBankAccount,
         createdAt = fda.createdAt
       }
 
@@ -2981,9 +2977,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
               driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-              vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-              cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
-              let availableServiceTierItems = map fst $ filter (not . snd) (selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityServiceTiers)
+              serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) Nothing Nothing Nothing personId cityId
+              let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
               let mbScheduleBookingListEligibilityTags = listToMaybe availableServiceTierItems >>= (.scheduleBookingListEligibilityTags)
               let scheduleEnabled = maybe True (not . null . intersect (maybe [] ((LYT.getTagNameValue . Yudhishthira.removeTagExpiry) <$>) driver.driverTag)) mbScheduleBookingListEligibilityTags

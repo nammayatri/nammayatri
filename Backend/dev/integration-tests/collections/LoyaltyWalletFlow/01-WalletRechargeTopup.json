@@ -173,6 +173,21 @@
       "name": "Override Juspay Status (CHARGED + Topup Earn 500)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('wallet_order_short_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 500.0, \"effective_amount\": 500.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\", \"loyalty_info\": {\"earn_details\": [{\"program_id\": \"{{loyalty_program_id}}\", \"applied\": {\"points\": \"500.00\"}, \"campaigns\": []}]}}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
@@ -197,16 +212,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"{{wallet_order_id}}\", \"{{wallet_order_short_id}}\"],\n  \"status\": \"CHARGED\",\n  \"data\": {\n    \"amount\": 500.0,\n    \"effective_amount\": 500.0,\n    \"currency\": \"INR\",\n    \"payment_method_type\": \"NB\",\n    \"payment_method\": \"JP_HDFC\",\n    \"loyalty_info\": {\n      \"earn_details\": [\n        {\n          \"program_id\": \"{{loyalty_program_id}}\",\n          \"applied\": { \"points\": \"500.00\" },\n          \"campaigns\": []\n        }\n      ]\n    }\n  }\n}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{wallet_order_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 500.0, \"effective_amount\": 500.0, \"currency\": \"INR\", \"payment_method_type\": \"NB\", \"payment_method\": \"JP_HDFC\", \"loyalty_info\": {\"earn_details\": [{\"program_id\": \"{{loyalty_program_id}}\", \"applied\": {\"points\": \"500.00\"}, \"campaigns\": []}]}}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }
@@ -239,16 +254,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"service\": \"juspay\",\n  \"id\": [\"loyalty\"],\n  \"status\": \"OK\",\n  \"data\": {\n    \"programs\": [\n      {\n        \"id\": \"{{loyalty_program_id}}\",\n        \"code\": \"LOYALTYOS7\",\n        \"burn\": { \"options\": [] },\n        \"earn\": { \"status\": \"ELIGIBLE\", \"applicable\": { \"label\": \"Earn points\", \"points\": \"0.00\" } },\n        \"campaigns\": [],\n        \"membership\": { \"enroll_on\": \"AUTO\", \"enrolled_date\": \"2026-04-16T11:42:19Z\", \"status\": \"ACTIVE\" },\n        \"topup\": { \"status\": \"ELIGIBLE\" },\n        \"ui_label\": {\n          \"asset\": { \"code\": \"POINTS\", \"name\": \"Points\" },\n          \"description\": \"Earn and redeem points at 1:1 ratio\",\n          \"title\": \"Loyalty Points Program\",\n          \"tnc\": \"Points are valid for 12 months from date of credit\",\n          \"tnc_url\": \"https://example.com/tnc\"\n        },\n        \"wallet\": {\n          \"available_points\": \"500.00\",\n          \"lifetime_earned\": \"500.00\",\n          \"lifetime_redeemed\": \"0.00\",\n          \"pockets\": [\n            { \"label\": \"TOPUP Points\", \"available_points\": \"500.00\", \"lifetime_earned\": \"500.00\", \"lifetime_redeemed\": \"0.00\" }\n          ]\n        }\n      }\n    ]\n  }\n}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"loyalty\", \"response\": {\"status\": \"OK\", \"programs\": [{\"id\": \"{{loyalty_program_id}}\", \"code\": \"LOYALTYOS7\", \"burn\": {\"options\": []}, \"earn\": {\"status\": \"ELIGIBLE\", \"applicable\": {\"label\": \"Earn points\", \"points\": \"0.00\"}}, \"campaigns\": [], \"membership\": {\"enroll_on\": \"AUTO\", \"enrolled_date\": \"2026-04-16T11:42:19Z\", \"status\": \"ACTIVE\"}, \"topup\": {\"status\": \"ELIGIBLE\"}, \"ui_label\": {\"asset\": {\"code\": \"POINTS\", \"name\": \"Points\"}, \"description\": \"Earn and redeem points at 1:1 ratio\", \"title\": \"Loyalty Points Program\", \"tnc\": \"Points are valid for 12 months from date of credit\", \"tnc_url\": \"https://example.com/tnc\"}, \"wallet\": {\"available_points\": \"500.00\", \"lifetime_earned\": \"500.00\", \"lifetime_redeemed\": \"0.00\", \"pockets\": [{\"label\": \"TOPUP Points\", \"available_points\": \"500.00\", \"lifetime_earned\": \"500.00\", \"lifetime_redeemed\": \"0.00\"}]}}]}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         }
       }

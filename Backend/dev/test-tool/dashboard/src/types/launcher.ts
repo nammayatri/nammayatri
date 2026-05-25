@@ -13,7 +13,7 @@ export interface SpecDomain {
   url: string;
 }
 
-export type InputType = 'file' | 'select' | 'text' | 'secret-text' | 'number' | 'boolean';
+export type InputType = 'file' | 'select' | 'text' | 'textarea' | 'secret-text' | 'number' | 'boolean';
 
 export interface SpecInput {
   key: string;

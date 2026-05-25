@@ -38,6 +38,11 @@
         run-mobility-stack-full = {
           imports = [ (commonFor "full") ];
           services.nammayatri.useCabal = true;
+          settings.processes."caddy-reverse-proxy" = {
+            disabled = lib.mkForce true;
+            depends_on = lib.mkForce { };
+            command = lib.mkForce ":";
+          };
         };
 
         run-local-test-dashboard = {

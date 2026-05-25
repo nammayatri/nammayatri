@@ -1,6 +1,6 @@
 let redis_cfg =
       { host = "0.0.0.0"
-      , port = 30001
+      , port = env:REDIS_CLUSTER_PORT ? 30001
       , cluster_enabled = True
       , cluster_urls = [ "" ]
       , use_legacy_version = False
@@ -16,16 +16,18 @@ let redis_cfg =
 
 let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let logger_cfg = { level = LogLevel.INFO, log_to_file = False }
 
 let driver_internal_auth_config =
-      { auth_url = "http://127.0.0.1:8016/internal/auth"
+      { auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
       , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
       , auth_token_expiry = 86400
       }
 
 let driver_dashboard_internal_auth_config =
-      { auth_url = "http://127.0.0.1:8016/internal/auth"
+      { auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
       , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
       , auth_token_expiry = 86400
       }
@@ -37,10 +39,10 @@ let tokenOriginInternalAuthMap =
       , RiderDashboard = driver_dashboard_internal_auth_config
       }
 
-in  { grpc_port = 50051
-    , http_server_port = 9091
+in  { grpc_port = env:GRPC_PORT ? 50051
+    , http_server_port = env:HTTP_SERVER_PORT ? 9091
     , internal_auth_cfg = tokenOriginInternalAuthMap
-    , driver_api_base_url = "http://127.0.0.1:8016"
+    , driver_api_base_url = "http://127.0.0.1:${driverAppPort}"
     , logger_cfg
     , redis_cfg
     , max_shards = +5

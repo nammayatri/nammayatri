@@ -1,0 +1,286 @@
+{
+  "info": {
+    "_postman_id": "8208165f-8ad2-47ac-a7b2-46220704e5d4",
+    "name": "BAP 2FA Flow",
+    "description": "Tests setting up and verifying Two-Factor Authentication (2FA) for BHARAT_TAXI (BAP / rider-dashboard) in the local environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53302812",
+    "_collection_link": "https://go.postman.co/collection/53302812-8208165f-8ad2-47ac-a7b2-46220704e5d4?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "BAP - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('bap_dashboard_token', d.authToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/login",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP - Switch Merchant And City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.is2faMandatory === false) {",
+              "    console.log('BAP: 2FA is not mandatory for this merchant — enable is2faMandatory first to run this flow.');",
+              "    pm.test('Enable 2FA mandatory on merchant before running this flow', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else if (d.is2faEnabled === true && d.authToken) {",
+              "    pm.environment.set('bap_dashboard_token', d.authToken);",
+              "    console.log('BAP: 2FA already enabled — authToken stored. Flow complete.');",
+              "    pm.test('2FA already enabled — flow terminates here', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else {",
+              "    console.log('BAP: 2FA mandatory and not yet enabled — proceeding to Initiate/Verify steps.');",
+              "    pm.test(d.message, function () { pm.expect(d.is2faEnabled).to.eql(false); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP - Initiate 2FA Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('requestId present', function () { pm.expect(d.requestId).to.be.a('string'); });",
+              "pm.environment.set('bap_2fa_request_id', d.requestId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\",\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"city\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/initiate2FaSetup",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "initiate2FaSetup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP - Verify 2FA Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('qrcode present', function () { pm.expect(d.qrcode).to.be.a('string'); });",
+              "var match = d.qrcode.match(/secret=([^&]+)/);",
+              "if (match) {",
+              "    pm.environment.set('bap_2fa_secret', match[1]);",
+              "    console.log('BAP 2FA Secret:', match[1]);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"requestId\": \"{{bap_2fa_request_id}}\",\n    \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/verify2FaSetup",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "verify2FaSetup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP - Switch Merchant And City Copy",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.is2faMandatory === false) {",
+              "    console.log('BAP: 2FA is not mandatory for this merchant — enable is2faMandatory first to run this flow.');",
+              "    pm.test('Enable 2FA mandatory on merchant before running this flow', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else if (d.is2faEnabled === true && d.authToken) {",
+              "    pm.environment.set('bap_dashboard_token', d.authToken);",
+              "    console.log('BAP: 2FA enabled after setup — authToken stored. Flow complete.');",
+              "    pm.test('2FA enabled after setup — flow complete', function () { pm.expect(d.is2faEnabled).to.eql(true); });",
+              "} else {",
+              "    console.log('BAP: 2FA setup did not enable 2FA on switch — check Initiate/Verify steps.');",
+              "    pm.test(d.message, function () { pm.expect(d.is2faEnabled).to.eql(false); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bap_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BAP - Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/logout",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

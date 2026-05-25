@@ -12,15 +12,22 @@ source:
 
 ports:
   - { name: metro,   port: 8082, protocol: tcp,  allowOverride: true }
-  - { name: backend, port: 8013, protocol: http }
-  - { name: mock,    port: 8080, protocol: http }
+  - { name: caddy,   port: 9090, protocol: http, allowOverride: true, registryKey: caddy-reverse-proxy }
+  - { name: backend, port: 8013, protocol: http, registryKey: rider-app }
+  - { name: mock,    port: 8080, protocol: http, registryKey: mock-server }
 
-adbReverse: [metro, backend, mock]
+adbReverse: [metro, caddy, backend, mock]
 
 tools: [node22, java17, yarn, adb, coreutils, gawk]
 
 env:
   ANDROID_HOME: "${env.ANDROID_HOME}"
+
+env:
+  NY_LOCAL_PROPS: "${inputs.LOCAL_PROPERTIES}"
+
+env:
+  NY_LOCAL_PROPS: "${inputs.LOCAL_PROPERTIES}"
 
 inputs:
   - key: GOOGLE_SERVICES_JSON
@@ -40,10 +47,23 @@ inputs:
     type: text
     default: "in.mobility.international.debug"
     required: true
-  - key: CLIENT_ID
-    label: Client ID (local.properties)
-    type: text
-    default: "nammayatribap"
+  - key: LOCAL_PROPERTIES
+    label: local.properties content
+    type: textarea
+    default: |
+      google.maps.api.key=
+      org.gradle.jvmargs=
+      CONFIG_URL="https://api.sandbox.moving.tech/dev/app/v2"
+      MERCHANT_ID="NAMMA_YATRI"
+      CLIENT_ID=nammayatribap
+      LOG_URL=""
+      GOOGLE_AD_MOB_ID=
+      FACEBOOK_APP_ID=NA
+      FACEBOOK_CLIENT_TOKEN=NA
+      FB_LOGIN_PROTOCOL_SCHEMA=NA
+      CLEVERTAP_ACCOUNT_ID=NA
+      CLEVERTAP_TOKEN=NA
+      CLEVERTAP_REGION=NA
     required: true
   - key: GOOGLE_AD_MOB_ID
     label: Google AD Mob ID (local.properties)
@@ -231,43 +251,36 @@ stages:
     run: |
       set -e
       variant_dir=$(printf '%s' "${inputs.VARIANT}" | tr '[:upper:]' '[:lower:]')
-      target="consumer/android/app/$variant_dir"
+      target="consumer/android/app/src/$variant_dir"
       mkdir -p "$target"
-      cp "${inputs.GOOGLE_SERVICES_JSON}" "$target/google-services.json"
-      echo "google-services.json → $target/google-services.json"
+      gservices="${inputs.GOOGLE_SERVICES_JSON}"
+      if [ -n "$gservices" ] && [ -f "$gservices" ]; then
+        cp "$gservices" "$target/google-services.json"
+        echo "google-services.json → $target/google-services.json"
+      else
+        echo "GOOGLE_SERVICES_JSON not provided — skipping"
+      fi
 
-      mkdir -p consumer/env
-      env_file="consumer/env/.env.development"
-      touch "$env_file"
-      upsert_env() {
-        local key="$1" value="$2" tmp
-        tmp=$(mktemp)
-        grep -v "^$key=" "$env_file" > "$tmp" || true
-        printf '%s=%s\n' "$key" "$value" >> "$tmp"
-        mv "$tmp" "$env_file"
-      }
-      upsert_env BASE_URL       "\"http://localhost:${ports.backend}/v2\""
-      upsert_env CAC_CONFIG_URL "\"http://localhost:${ports.mock}/cac/consumer\""
-      echo "BASE_URL + CAC_CONFIG_URL upserted in $env_file (other keys preserved)"
+      base_url="http://${host}:${ports.caddy}/rider-app/v2"
+
+      # Patch App.tsx: replace the Firebase-derived baseUrl with our caddy URL.
+      app_file="consumer/src/App.tsx"
+      if [ -f "$app_file" ]; then
+        sed -i.bak "s|const baseUrl = appConfig\.constants\.consumerBaseUrl;|const baseUrl = '$base_url';|" "$app_file"
+        rm -f "$app_file.bak"
+        echo "patched App.tsx baseUrl → $base_url"
+      fi
 
       props="consumer/android/local.properties"
-      touch "$props"
-      upsert_prop() {
-        local key="$1" value="$2" tmp
-        tmp=$(mktemp)
-        grep -v "^${key}=" "$props" > "$tmp" || true
-        printf '%s=%s\n' "$key" "$value" >> "$tmp"
-        mv "$tmp" "$props"
-      }
-      upsert_prop CLIENT_ID           "${inputs.CLIENT_ID}"
-      upsert_prop GOOGLE_AD_MOB_ID    "${inputs.GOOGLE_AD_MOB_ID}"
-      upsert_prop google.maps.api.key "${inputs.GOOGLE_MAPS_API_KEY}"
-      upsert_prop MERCHANT_ID         "\"${inputs.MERCHANT_ID}\""
-      upsert_prop CONFIG_URL          "\"${inputs.CONFIG_URL}\""
-      upsert_prop LOG_URL             "\"${inputs.LOG_URL}\""
-      echo "CLIENT_ID, GOOGLE_AD_MOB_ID, google.maps.api.key, MERCHANT_ID, CONFIG_URL, LOG_URL → local.properties"
+      printf '%s\n' "$NY_LOCAL_PROPS" > "$props"
+      sdk="$ANDROID_HOME"
+      if [ -z "$sdk" ]; then sdk="$HOME/Library/Android/sdk"; fi
+      if ! grep -q '^sdk.dir=' "$props"; then
+        printf 'sdk.dir=%s\n' "$sdk" >> "$props"
+      fi
+      echo "local.properties written ($(wc -l < "$props") lines)"
     lifecycle: one-shot
-    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.CLIENT_ID, inputs.GOOGLE_AD_MOB_ID, inputs.GOOGLE_MAPS_API_KEY, inputs.MERCHANT_ID, inputs.CONFIG_URL, inputs.LOG_URL, ports.backend, ports.mock]
+    invalidatedBy: [inputs.GOOGLE_SERVICES_JSON, inputs.VARIANT, inputs.LOCAL_PROPERTIES, ports.backend, ports.mock]
 
   - id: install
     needs: [sync-source]
@@ -334,7 +347,7 @@ stages:
       set -euo pipefail
       PKG="${inputs.APP_ID}"
       HOSTPORT="localhost:${ports.metro}"
-      PREF_PATH="shared_prefs/${PKG}_preferences.xml"
+      PREF_PATH="shared_prefs/""$PKG""_preferences.xml"
 
       echo "waiting for an adb device to come online (up to 5 min)…"
       deadline=$(( $(date +%s) + 300 ))
@@ -366,12 +379,12 @@ stages:
       fi
       UPDATED=$(printf '%s\n' "$EXISTING" \
         | sed -E "/<string name=\"debug_http_host\">[^<]*<\/string>/d" \
-        | sed -E "s|</map>|    <string name=\"debug_http_host\">${HOSTPORT}</string>\n</map>|")
+        | sed -E "s|</map>|    <string name=\"debug_http_host\">$HOSTPORT</string>\n</map>|")
 
       TMP=$(mktemp)
       printf '%s\n' "$UPDATED" > "$TMP"
       adb shell am force-stop "$PKG"
-      adb shell run-as "$PKG" sh -c "'cat > ${PREF_PATH}'" < "$TMP"
+      adb shell run-as "$PKG" sh -c "'cat > $PREF_PATH'" < "$TMP"
       adb shell run-as "$PKG" cat "$PREF_PATH"
       adb shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
       rm -f "$TMP"

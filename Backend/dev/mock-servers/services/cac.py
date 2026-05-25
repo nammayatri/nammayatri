@@ -13,9 +13,14 @@ flip a value during a test; otherwise the static defaults below are returned.
 
 from status_store import deep_merge
 
+from ._env import RIDER_APP_PORT
+from ._env import _port
+
+NOTIFICATION_SERVICE_GRPC_PORT = _port("NOTIFICATION_SERVICE_GRPC_PORT", 50051)
+
 
 CONSUMER_CONFIG = {
-    "consumerBaseUrl": "http://localhost:8013/v2",
+    "consumerBaseUrl": f"http://localhost:{RIDER_APP_PORT}/v2",
     "adConfigUrl": "",
     "enabled": True,
 }
@@ -24,13 +29,13 @@ PROVIDER_CONFIG = {
     "grpc_config": {
         "enabled": True,
         "address": "localhost",
-        "port": 50051,
+        "port": NOTIFICATION_SERVICE_GRPC_PORT,
         "restart_time_out": 10000,
     },
     "rr_grpc_config": {
         "enabled": True,
         "address": "localhost",
-        "port": 50051,
+        "port": NOTIFICATION_SERVICE_GRPC_PORT,
         "restart_time_out": 10000,
     },
     "enabled": True,

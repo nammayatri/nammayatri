@@ -273,36 +273,25 @@ python dev/mock-servers/server.py --port 8080
 
 Automatically started by `run-mobility-stack-dev` via process-compose.
 
-### Override System
+### Override System (`POST /mock/override`)
 
-Two mechanisms for test automation to control mock responses:
-
-#### 1. Status Store (`POST /mock/status`)
-
-Keyed by explicit ID (e.g., payment order ID). Set by test collection after extracting the ID from API responses.
+The only mock-control mechanism. Matches incoming requests by extracting a field
+value and deep-merging the configured `response` into the handler's default response.
 
 ```json
-POST /mock/status
+POST /mock/override
 {
   "service": "juspay",
-  "id": ["order-uuid-123", "short-id-abc"],
-  "status": "CHARGED",
-  "data": {
+  "extract": "path.2",
+  "value": "order-uuid-123",
+  "match": "/orders",
+  "response": {
+    "status": "CHARGED",
     "amount": 150.0,
     "refunds": [{"id": "rfnd-1", "amount": 50, "status": "REFUND_SUCCESS"}]
   }
 }
 ```
-
-- `id` can be string or array — stored under all IDs for lookup
-- `data` fields are **deep-merged** into the handler's default response
-- Entries auto-expire after 5 minutes
-- `GET /mock/status` lists all active entries
-- `DELETE /mock/status` clears all (use sparingly — not concurrent-safe)
-
-#### 2. Override Rules (`POST /mock/override`)
-
-Matches incoming requests by extracting a field value — for services where the test doesn't know the exact ID upfront.
 
 ```json
 POST /mock/override
@@ -313,6 +302,13 @@ POST /mock/override
   "response": {"agentTicketData": 12345, "encrypted": 12345}
 }
 ```
+
+- `value` is matched exactly against the extracted field (strict equality)
+- `match` (optional) is a path-substring gate — the rule fires only when the request path contains it
+- `response` is deep-merged into the handler's default response
+- Entries auto-expire after 5 minutes
+- `GET /mock/override` lists all active rules
+- `DELETE /mock/override` (with body `{service, extract, value}`) removes one rule
 
 **Extract syntax:**
 | Syntax | Source | Example |

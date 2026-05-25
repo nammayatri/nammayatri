@@ -762,6 +762,21 @@
       "name": "Update Payment Status \u2192 CHARGED",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('payment_order_id'), \"response\": {\"status\": \"CHARGED\", \"amount\": 10.0}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
@@ -775,18 +790,18 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{payment_order_short_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 10.0}}"
         }
       },
       "response": []
@@ -983,6 +998,21 @@
       "name": "Update Mock \u2192 REFUND_SUCCESS",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Pair-id /mock/override registration to cover the alternate id form",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({\"service\": \"juspay\", \"extract\": \"path.2\", \"value\": pm.environment.get('payment_order_id'), \"response\": {\"status\": \"AUTO_REFUNDED\", \"amount\": 10.0, \"amount_refunded\": 10.0, \"refunds\": [{\"id\": \"rfnd-mock-001\", \"amount\": 10.0, \"status\": \"REFUND_SUCCESS\", \"error_message\": null, \"error_code\": null, \"initiated_by\": \"merchant\", \"unique_request_id\": \"ref-mock-001\", \"arn\": null}]}, \"match\": \"/orders\"}) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
@@ -996,18 +1026,18 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
+            "override"
           ]
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"AUTO_REFUNDED\", \"data\": {\"amount\": 10.0, \"amount_refunded\": 10.0, \"refunds\": [{\"id\": \"rfnd-mock-001\", \"amount\": 10.0, \"status\": \"REFUND_SUCCESS\", \"error_message\": null, \"error_code\": null, \"initiated_by\": \"merchant\", \"unique_request_id\": \"ref-mock-001\", \"arn\": null}]}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{payment_order_short_id}}\", \"response\": {\"status\": \"AUTO_REFUNDED\", \"amount\": 10.0, \"amount_refunded\": 10.0, \"refunds\": [{\"id\": \"rfnd-mock-001\", \"amount\": 10.0, \"status\": \"REFUND_SUCCESS\", \"error_message\": null, \"error_code\": null, \"initiated_by\": \"merchant\", \"unique_request_id\": \"ref-mock-001\", \"arn\": null}]}}"
         }
       },
       "response": []

@@ -19,6 +19,11 @@ module SharedLogic.MessageBuilder
     buildSendOTPMessage,
     BuildSendBookingOTPMessageReq (..),
     buildSendBookingOTPMessage,
+    BuildSendBookingOTPRentalMessageReq (..),
+    buildSendBookingOTPRentalMessage,
+    BuildSendBookingOTPIntercityMessageReq (..),
+    buildSendBookingOTPIntercityMessage,
+    buildBookingOtpSmsForCategory,
     BuildGenericMessageReq (..),
     buildGenericMessage,
     buildSOSAlertMessage,
@@ -49,6 +54,8 @@ module SharedLogic.MessageBuilder
 where
 
 import qualified Data.Text as T
+import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -60,6 +67,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
@@ -121,6 +130,116 @@ buildSendBookingOTPMessage merchantOperatingCityId req = do
     QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP Nothing
       >>= fromMaybeM (MerchantMessageNotFound merchantOperatingCityId.getId (show DMM.SEND_BOOKING_OTP))
   buildSendSmsReq merchantMessage [("otp", req.otp), ("amount", req.amount)]
+
+data BuildSendBookingOTPRentalMessageReq = BuildSendBookingOTPRentalMessageReq
+  { otp :: Text,
+    amount :: Text,
+    durationHours :: Text,
+    distanceKms :: Text,
+    appUrl :: Text
+  }
+  deriving (Generic)
+
+buildSendBookingOTPRentalMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPRentalMessageReq -> m SmsReqBuilder
+buildSendBookingOTPRentalMessage merchantOperatingCityId req = do
+  mbRentalMsg <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP_RENTAL Nothing
+  case mbRentalMsg of
+    Just merchantMessage ->
+      buildSendSmsReq
+        merchantMessage
+        [ ("var1", req.otp),
+          ("var2", req.amount),
+          ("var3", req.durationHours),
+          ("var4", req.distanceKms),
+          ("var5", req.appUrl)
+        ]
+    Nothing ->
+      buildSendBookingOTPMessage merchantOperatingCityId $
+        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
+
+data BuildSendBookingOTPIntercityMessageReq = BuildSendBookingOTPIntercityMessageReq
+  { otp :: Text,
+    amount :: Text,
+    destination :: Text,
+    distanceKms :: Text,
+    appUrl :: Text
+  }
+  deriving (Generic)
+
+buildSendBookingOTPIntercityMessage :: BuildMessageFlow m r => Id DMOC.MerchantOperatingCity -> BuildSendBookingOTPIntercityMessageReq -> m SmsReqBuilder
+buildSendBookingOTPIntercityMessage merchantOperatingCityId req = do
+  mbIntercityMsg <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOperatingCityId DMM.SEND_BOOKING_OTP_INTERCITY Nothing
+  case mbIntercityMsg of
+    Just merchantMessage ->
+      buildSendSmsReq
+        merchantMessage
+        [ ("var1", req.destination),
+          ("var2", req.otp),
+          ("var3", req.amount),
+          ("var4", req.distanceKms),
+          ("var5", req.appUrl)
+        ]
+    Nothing ->
+      buildSendBookingOTPMessage merchantOperatingCityId $
+        BuildSendBookingOTPMessageReq {otp = req.otp, amount = req.amount}
+
+buildBookingOtpSmsForCategory ::
+  BuildMessageFlow m r =>
+  Id DMOC.MerchantOperatingCity ->
+  DRB.Booking ->
+  Text ->
+  m SmsReqBuilder
+buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
+  let otpTxt = otp
+      amountTxt = show booking.estimatedTotalFare.amountInt
+  case booking.tripCategory of
+    Just (DTC.Rental _) -> do
+      appUrl <- getAppUrl merchantOperatingCityId
+      let durationHours = show (fromMaybe 0 ((.getSeconds) <$> booking.estimatedDuration) `div` 3600)
+          distanceKms = show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
+      buildSendBookingOTPRentalMessage merchantOperatingCityId $
+        BuildSendBookingOTPRentalMessageReq
+          { otp = otpTxt,
+            amount = amountTxt,
+            durationHours = durationHours,
+            distanceKms = distanceKms,
+            appUrl = appUrl
+          }
+    Just (DTC.InterCity _ mbCity) -> do
+      appUrl <- getAppUrl merchantOperatingCityId
+      let (destination, distanceKms) = case booking.bookingDetails of
+            DRB.InterCityDetails det ->
+              ( shortDestination det.toLocation.address `orWhenEmpty` fromMaybe "" mbCity,
+                show ((.getMeters) (distanceToMeters det.distance) `div` 1000)
+              )
+            _ ->
+              ( fromMaybe "" mbCity,
+                show (fromMaybe 0 ((.getMeters) . distanceToMeters <$> booking.estimatedDistance) `div` 1000)
+              )
+      buildSendBookingOTPIntercityMessage merchantOperatingCityId $
+        BuildSendBookingOTPIntercityMessageReq
+          { otp = otpTxt,
+            amount = amountTxt,
+            destination = destination,
+            distanceKms = distanceKms,
+            appUrl = appUrl
+          }
+    _ ->
+      buildSendBookingOTPMessage merchantOperatingCityId $
+        BuildSendBookingOTPMessageReq
+          { otp = otpTxt,
+            amount = amountTxt
+          }
+  where
+    getAppUrl mocId = do
+      riderCfg <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+      pure riderCfg.appUrl
+    -- "Area, City" or whichever of the two is present. Empty if neither is set.
+    shortDestination addr =
+      T.intercalate ", " $
+        filter (not . T.null) $
+          catMaybes [addr.area, addr.city]
+    orWhenEmpty a b = if T.null a then b else a
 
 newtype BuildSendRideEndOTPMessageReq = BuildSendRideEndOTPMessageReq
   { otp :: Text

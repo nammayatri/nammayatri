@@ -82,8 +82,15 @@ Backs almost every dashboard action. Endpoints (selected):
 - `GET /api/collections` — scans the integration-tests directory and returns
   the Suite × EnvType × Env × Suite grid.
 - `GET /api/collection/<dir>/<filename>` — raw Postman collection JSON.
-- `POST /api/config-sync` — copy master DB config rows into atlas_dev so the
-  local stack reflects production-shaped data.
+- `POST /api/config-sync/import` — download + apply an upstream DB bundle
+  (`master`, `prod`, or `prod_international` — keys of `CONFIG_SYNC_BUNDLE_URLS`)
+  into atlas_dev so the local stack reflects production-shaped data. The last
+  successful source is persisted at `data/config-sync/.last-synced-env` and
+  re-exposed via `GET /api/config-sync/status` as `last_synced`. The dashboard's
+  **Sync From** dropdown uses this to skip re-syncing when the local DB is
+  already aligned with the selected upstream env. Per-collection compatibility
+  (Helsinki ⇒ `prod_international`, others ⇒ `prod`, `master` everywhere) is
+  derived inside `_derive_compatible_envs()` in `server.py`.
 - `POST /api/terminal/{start,input,resize,kill}` + `GET /api/terminal/stream` —
   PTY sessions used to run Postman prerequest scripts and other helper shells.
 - Service-log tailing (`tail -f` over the Haskell process log files).

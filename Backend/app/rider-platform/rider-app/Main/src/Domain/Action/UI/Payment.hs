@@ -154,7 +154,7 @@ createOrder (personId, merchantId) rideId = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
@@ -217,7 +217,7 @@ createRideBookingPaymentOrder booking = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = mbPaytmTid, -- Set terminal ID from machine mapping
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
@@ -842,21 +842,17 @@ postWalletRecharge (personId, merchantId) req = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   nwAddress <- asks (.nwAddress)
-  let mbPaymentRules =
-        fmap
-          ( \pId ->
-              Payment.PaymentRules
-                { paymentFlows =
-                    Payment.PaymentFlows
-                      { loyaltyOsTopup =
-                          Payment.PaymentFlowStatus
-                            { status = "REQUIRED",
-                              info = Just $ Payment.PaymentFlowInfo {programId = pId}
-                            }
+  let paymentRules =
+        Payment.PaymentRules
+          { paymentFlows =
+              Payment.PaymentFlows
+                { loyaltyOsTopup =
+                    Payment.PaymentFlowStatus
+                      { status = "REQUIRED",
+                        info = Payment.PaymentFlowInfo {programId = req.programId}
                       }
                 }
-          )
-          req.programId
+          }
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = paymentOrderId,
@@ -875,10 +871,10 @@ postWalletRecharge (personId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = Nothing,
             basket = Nothing,
-            paymentRules = mbPaymentRules,
+            paymentRules = Just paymentRules,
             autoRefundPostSuccess = Nothing,
             paymentFilter = Nothing
           }

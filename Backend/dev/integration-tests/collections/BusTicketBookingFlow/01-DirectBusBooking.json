@@ -750,12 +750,32 @@
       "name": "Update Payment Status (Mock)",
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Register override against the alternate order id form (short_id) so the rule",
+              "// fires whichever id rider-app uses in GET /juspay/orders/{id}",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/override',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({",
+              "        service: 'juspay', extract: 'path.2', match: '/orders',",
+              "        value: pm.environment.get('payment_order_id'),",
+              "        response: { status: 'CHARGED', amount: 10.0 }",
+              "    }) }",
+              "}, function(){});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "console.log('Mock status update:', JSON.stringify(d));",
-              "pm.test('Payment status updated', function () {",
+              "console.log('Mock override update:', JSON.stringify(d));",
+              "pm.test('Payment override registered', function () {",
               "    pm.response.to.have.status(200);",
               "    pm.expect(d.ok).to.be.true;",
               "});"
@@ -774,88 +794,16 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"status\": \"CHARGED\", \"data\": {\"amount\": 10.0}}"
+          "raw": "{\"service\": \"juspay\", \"extract\": \"path.2\", \"match\": \"/orders\", \"value\": \"{{payment_order_short_id}}\", \"response\": {\"status\": \"CHARGED\", \"amount\": 10.0}}"
         },
         "url": {
-          "raw": "{{mockServerUrl}}/mock/status",
+          "raw": "{{mockServerUrl}}/mock/override",
           "host": [
             "{{mockServerUrl}}"
           ],
           "path": [
             "mock",
-            "status"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Trigger Payment (Master Sandbox)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "// Only run on Master env \u2014 Local uses mock server instead",
-              "if (pm.environment.get('envType') !== 'Master') {",
-              "    pm.execution.skipRequest();",
-              "}"
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Payment triggered', function () {",
-              "    pm.expect(pm.response.code).to.be.oneOf([200, 202, 500]);",
-              "});",
-              "console.log('Sandbox payment trigger response:', pm.response.text());",
-              "// Wait 10s for Juspay webhook to reach rider-app and update booking status",
-              "const start = Date.now();",
-              "while (Date.now() - start < 10000) { /* busy wait 10s */ }"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"tag\": \"PaymentStatus\",\n  \"orderId\": \"{{payment_order_id}}\",\n  \"orderShortId\": \"{{payment_order_short_id}}\",\n  \"status\": \"CHARGED\",\n  \"eventName\": \"ORDER_SUCCEEDED\",\n  \"refunds\": [],\n  \"amount\": 1.0\n}"
-        },
-        "url": {
-          "raw": "{{mock_server_url}}/dev/payment/external/ANNA_APP/service/juspay/payment?city={{city}}&serviceType=FRFSBooking",
-          "protocol": "",
-          "host": [
-            "{{mock_server_url}}"
-          ],
-          "path": [
-            "dev",
-            "payment",
-            "external",
-            "ANNA_APP",
-            "service",
-            "juspay",
-            "payment"
-          ],
-          "query": [
-            {
-              "key": "city",
-              "value": "{{city}}"
-            },
-            {
-              "key": "serviceType",
-              "value": "FRFSBooking"
-            }
+            "override"
           ]
         }
       },
@@ -1153,11 +1101,49 @@
           ]
         }
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Skip when the city is not DIRECT \u2014 verifyTicket in rider-app",
+              "// (ExternalBPP/ExternalAPI/CallAPI.hs:244-248) is only implemented for DIRECT.",
+              "(function () {",
+              "  var t = pm.environment.get('frfs_integration_type') || 'DIRECT';",
+              "  if (t === 'DIRECT') return;",
+              "  console.log('[skip] ' + (pm.info && pm.info.requestName) + ' \u2014 frfs_integration_type=' + t);",
+              "  if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+              "    pm.execution.skipRequest();",
+              "  }",
+              "})();"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Verify Ticket Status",
       "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Skip when the city is not DIRECT \u2014 verifyTicket in rider-app",
+              "// (ExternalBPP/ExternalAPI/CallAPI.hs:244-248) is only implemented for DIRECT.",
+              "(function () {",
+              "  var t = pm.environment.get('frfs_integration_type') || 'DIRECT';",
+              "  if (t === 'DIRECT') return;",
+              "  console.log('[skip] ' + (pm.info && pm.info.requestName) + ' \u2014 frfs_integration_type=' + t);",
+              "  if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+              "    pm.execution.skipRequest();",
+              "  }",
+              "})();"
+            ]
+          }
+        },
         {
           "listen": "prerequest",
           "script": {

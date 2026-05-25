@@ -1,0 +1,286 @@
+{
+  "info": {
+    "_postman_id": "7c05900f-f63d-4d1c-a6bf-f3e831867996",
+    "name": "BPP 2FA Flow",
+    "description": "Tests setting up and verifying Two-Factor Authentication (2FA) for BHARAT_TAXI_PARTNER (BPP / provider-dashboard) in the local environment.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53302812",
+    "_collection_link": "https://go.postman.co/collection/53302812-7c05900f-f63d-4d1c-a6bf-f3e831867996?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "BPP - Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('bpp_dashboard_token', d.authToken);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/login",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP - Switch Merchant And City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.is2faMandatory === false) {",
+              "    console.log('BPP: 2FA is not mandatory for this merchant — enable is2faMandatory first to run this flow.');",
+              "    pm.test('Enable 2FA mandatory on merchant before running this flow', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else if (d.is2faEnabled === true && d.authToken) {",
+              "    pm.environment.set('bpp_dashboard_token', d.authToken);",
+              "    console.log('BPP: 2FA already enabled — authToken stored. Flow complete.');",
+              "    pm.test('2FA already enabled — flow terminates here', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else {",
+              "    console.log('BPP: 2FA mandatory and not yet enabled — proceeding to Initiate/Verify steps.');",
+              "    pm.test(d.message, function () { pm.expect(d.is2faEnabled).to.eql(false); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bpp_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bpp_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP - Initiate 2FA Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('requestId present', function () { pm.expect(d.requestId).to.be.a('string'); });",
+              "pm.environment.set('bpp_2fa_request_id', d.requestId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"juspay_admin@dashboard.com\",\n    \"password\": \"juspay_admin\",\n    \"merchantId\": \"{{bpp_short_id}}\",\n    \"city\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/initiate2FaSetup",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "initiate2FaSetup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP - Verify 2FA Setup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('qrcode present', function () { pm.expect(d.qrcode).to.be.a('string'); });",
+              "var match = d.qrcode.match(/secret=([^&]+)/);",
+              "if (match) {",
+              "    pm.environment.set('bpp_2fa_secret', match[1]);",
+              "    console.log('BPP 2FA Secret:', match[1]);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"requestId\": \"{{bpp_2fa_request_id}}\",\n    \"otp\": \"{{login_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/verify2FaSetup",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "verify2FaSetup"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP - Switch Merchant And City Copy",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "if (d.is2faMandatory === false) {",
+              "    console.log('BPP: 2FA is not mandatory for this merchant — enable is2faMandatory first to run this flow.');",
+              "    pm.test('Enable 2FA mandatory on merchant before running this flow', function () {",
+              "        throw new Error(d.message);",
+              "    });",
+              "} else if (d.is2faEnabled === true && d.authToken) {",
+              "    pm.environment.set('bpp_dashboard_token', d.authToken);",
+              "    console.log('BPP: 2FA enabled after setup — authToken stored. Flow complete.');",
+              "    pm.test('2FA enabled after setup — flow complete', function () { pm.expect(d.is2faEnabled).to.eql(true); });",
+              "} else {",
+              "    console.log('BPP: 2FA setup did not enable 2FA on switch — check Initiate/Verify steps.');",
+              "    pm.test(d.message, function () { pm.expect(d.is2faEnabled).to.eql(false); });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bpp_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"merchantId\": \"{{bpp_short_id}}\",\n    \"city\": \"{{city}}\",\n    \"otp\": \"{{switch_otp}}\"\n}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BPP - Logout",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bpp_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/logout",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

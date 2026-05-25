@@ -9,13 +9,170 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './CollectionRunner.css';
 import {
   CollectionGroup, CollectionEnvironment, CollectionSuite,
-  fetchCollections, fetchCollection
+  fetchCollections, fetchCollection,
+  fetchConfigSyncStatus, triggerConfigSync,
+  mockServerBase, MockHit,
+  startLogCapture, stopLogCapture
 } from '../services/context';
 import { parseCollection, ParsedStep, ParsedTreeNode, PostmanCollection } from '../services/postman-parser';
 import { VariableStores, executePrereqScript } from '../services/postman-runtime';
 import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
+import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
 import { StepResult, LogEntry } from '../types';
+
+// Cities whose backing data lives in the EU prod cluster. Any environment
+// matching one of these (by city or envName, case-insensitive) defaults its
+// Sync-From options to ['prod_international', 'master'] instead of the
+// India-default ['prod', 'master']. Append new entries here as more
+// international cities come online.
+const INTERNATIONAL_CITIES = ['Helsinki', 'Amsterdam'];
+
+// Unified post-step grace. Logs and mock-hits captures start together before
+// the step runs and close together after `done()` + this many milliseconds.
+// Long enough to catch BPP-side async fan-out (confirm → juspay session,
+// allocator scheduling, rider-app forks); short enough not to dominate step
+// latency.
+const STEP_CAPTURE_GRACE_MS = 1000;
+
+interface StepCaptureResult {
+  mockHits: MockHit[];
+  serviceLogs: Record<string, string>;
+}
+
+// Safety timeout for waiting on EventSource.open — if mock-server doesn't
+// respond in this long we proceed anyway with `mockEs` already nulled.
+const MOCK_HITS_HANDSHAKE_TIMEOUT_MS = 500;
+
+// Default inter-step wait. Even with per-step capture grace, fast steps can
+// finish before the backend's async fan-out (beckn callbacks, allocator,
+// juspay session creation triggered by confirm) settles. This wait gives the
+// previous step's tail / SSE one extra beat to drain before the next step
+// tears the tail down. Visible in collection logs as `[wait] 2s …`.
+const INTER_STEP_WAIT_MS = 2000;
+
+async function interStepWait(abortRef: React.MutableRefObject<boolean>): Promise<void> {
+  const deadline = Date.now() + INTER_STEP_WAIT_MS;
+  while (Date.now() < deadline) {
+    if (abortRef.current) return;
+    await new Promise(r => setTimeout(r, Math.min(100, deadline - Date.now())));
+  }
+}
+
+// Open both the service-log tail (HTTP /api/logs/start) and the mock-hits
+// SSE stream BEFORE the step's HTTP call, AND await each subscription's
+// confirmation so the step doesn't fire before the tail subprocess is
+// running / the SSE subscriber queue is registered. Without awaiting, fast
+// Local steps complete before either capture is active and the per-step
+// panels come back empty. Caller invokes `done()` once the postman step has
+// fully returned (HTTP + test script). After STEP_CAPTURE_GRACE_MS, both are
+// closed in parallel; `result` resolves with whatever each captured during
+// that window. UI keeps logs / mock-hits in separate panels — they just
+// share a lifecycle.
+async function startStepCapture(envType: string): Promise<{
+  done: () => void;
+  result: Promise<StepCaptureResult>;
+}> {
+  // ── Logs side ── Await the HTTP round-trip so the `tail -n 0 -f` is
+  // actually spawned before the step's HTTP call fires. `-n 0` skips
+  // backfill, so anything written before tail starts is lost.
+  const logToken: string | null = await startLogCapture().catch(() => null);
+
+  // ── Mock-hits side ── Open the SSE and wait for `open` (handshake done →
+  // server-side subscriber queue is registered) or `error` (mock-server
+  // unreachable → give up cleanly). Either way we're past the handshake race
+  // before the step fires its first request.
+  let mockHits: MockHit[] = [];
+  let mockEs: EventSource | null = null;
+  if (envType === 'Local') {
+    const es = new EventSource(`${mockServerBase()}/mock/hits/stream`);
+    es.addEventListener('message', e => {
+      try { mockHits.push(JSON.parse((e as MessageEvent).data) as MockHit); }
+      catch { /* ignore malformed frame */ }
+    });
+    await new Promise<void>(resolve => {
+      const safety = setTimeout(resolve, MOCK_HITS_HANDSHAKE_TIMEOUT_MS);
+      es.addEventListener('open', () => { clearTimeout(safety); resolve(); }, { once: true });
+      es.addEventListener('error', () => {
+        // Mock-server down / endpoint missing — null `mockEs` so close() is a
+        // no-op. Don't resolveHits here; close() still resolves the outer
+        // promise with whatever we have (empty array).
+        clearTimeout(safety);
+        try { es.close(); } catch { /* noop */ }
+        mockEs = null;
+        resolve();
+      }, { once: true });
+    });
+    // If the error handler already nulled mockEs above, leave it null.
+    if (mockEs !== null || es.readyState !== EventSource.CLOSED) {
+      mockEs = es;
+    }
+  }
+
+  let doneCalled = false;
+  let resolveResult!: (r: StepCaptureResult) => void;
+  const result = new Promise<StepCaptureResult>(res => { resolveResult = res; });
+
+  const close = async () => {
+    const [serviceLogs] = await Promise.all([
+      logToken ? stopLogCapture(logToken).catch(() => ({})) : Promise.resolve({}),
+      Promise.resolve().then(() => { try { mockEs?.close(); } catch { /* noop */ } }),
+    ]);
+    resolveResult({ mockHits, serviceLogs });
+  };
+
+  return {
+    done: () => {
+      if (doneCalled) return;
+      doneCalled = true;
+      setTimeout(close, STEP_CAPTURE_GRACE_MS);
+    },
+    result,
+  };
+}
+
+
+interface ServicesReady {
+  ready: boolean;
+  services: { name: string; port: number; path: string; up: boolean; status: number | null; error?: string }[];
+}
+
+// Poll context-api's /api/services-ready until rider/driver/mock-registry health
+// endpoints all return 2xx. Used after a config import — services restart and
+// their DB pools spend a while draining locks, during which /v2 returns 408.
+async function waitForServicesReady(
+  onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void,
+  timeoutMs = 10 * 60 * 1000,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  onLog('info', '[services] waiting for rider-app, driver-app, mock-registry to be healthy…');
+  let lastSummary = '';
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(`${PROXY_BASE}/api/services-ready`);
+      if (r.ok) {
+        const j: ServicesReady = await r.json();
+        if (j.ready) {
+          onLog('success', '[services] all healthy');
+          return true;
+        }
+        const summary = j.services
+          .filter(s => !s.up)
+          .map(s => `${s.name} (${s.error || `HTTP ${s.status ?? '?'}`})`)
+          .join(', ');
+        if (summary && summary !== lastSummary) {
+          onLog('info', `[services] still waiting: ${summary}`);
+          lastSummary = summary;
+        }
+      }
+    } catch {
+      // context-api itself may be momentarily flapping during stack restart
+    }
+    await new Promise(res => setTimeout(res, 2000));
+  }
+  onLog('error', `[services] timed out after ${Math.round(timeoutMs / 1000)}s — services never became healthy`);
+  return false;
+}
 
 interface Props {
   onLog: (level: LogEntry['level'], message: string, extra?: Partial<LogEntry>) => void;
@@ -25,6 +182,7 @@ interface StepState {
   status: 'pending' | 'running' | 'pass' | 'fail' | 'skip';
   result?: PostmanStepResult;
   durationMs?: number;
+  mockHits?: MockHit[];
 }
 
 // ── JSON Viewer Modal ──────────────────────────────────────────────
@@ -120,6 +278,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [groups, setGroups] = useState<CollectionGroup[]>([]);
   const [selectedDir, setSelectedDir] = useState('');
   const [selectedEnvType, setSelectedEnvType] = useState('Local');
+  const [selectedSyncEnv, setSelectedSyncEnv] = useState<string>('master');
   const [selectedEnv, setSelectedEnv] = useState('');
   const [selectedSuite, setSelectedSuite] = useState('');
 
@@ -132,7 +291,10 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [runningStepId, setRunningStepId] = useState<string | null>(null);
   const [runAllProgress, setRunAllProgress] = useState<{ current: number; total: number; currentSuite: string } | null>(null);
-  const [runAllResults, setRunAllResults] = useState<Array<{ group: string; env: string; suite: string; passed: number; failed: number; total: number }>>([]);
+  const [runAllResults, setRunAllResults] = useState<RunAllSuiteResult[]>([]);
+  const [runAllStartedAt, setRunAllStartedAt] = useState<number | null>(null);
+  const [, setRunAllTick] = useState(0);
+  const [manualMode, setManualMode] = useState(false);
   const [versionId, setVersionId] = useState<string>('');
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
@@ -157,6 +319,25 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const filteredEnvs = (currentGroup?.environments ?? []).filter(e => e.envType === selectedEnvType);
   const currentEnv = filteredEnvs.find(e => e.envName === selectedEnv);
   const currentSuite = currentGroup?.suites.find(s => s.filename === selectedSuite);
+  // Default Sync-From options: India envs run against `prod`+`master`; cities
+  // in INTERNATIONAL_CITIES route to the EU cluster instead, so they get
+  // `prod_international`+`master`. Extend the list as new international
+  // deployments come online.
+  // Server-side compatibleEnvs (if ever populated) still wins.
+  const _isInternational = INTERNATIONAL_CITIES.some(c => {
+    const re = new RegExp(c, 'i');
+    return re.test(currentEnv?.city ?? '') || re.test(currentEnv?.envName ?? '');
+  });
+  const _defaultSyncEnvs = _isInternational
+    ? ['prod_international', 'master']
+    : ['prod', 'master'];
+  const syncEnvOptions =
+    (currentEnv?.compatibleEnvs && currentEnv.compatibleEnvs.length > 0
+      ? currentEnv.compatibleEnvs
+      : currentGroup?.compatibleEnvs && currentGroup.compatibleEnvs.length > 0
+        ? currentGroup.compatibleEnvs
+        : _defaultSyncEnvs);
+  const syncEnvDisabled = selectedEnvType !== 'Local';
 
   // Mock-server steps are only meaningful on Local env. On any other env type
   // (e.g. Master) the local mock processes aren't running, so we hide those
@@ -186,6 +367,21 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       }
     }
   }, [selectedDir, selectedEnvType, currentGroup]);
+
+  // Keep selectedSyncEnv valid for the current env/group's compatibleEnvs.
+  useEffect(() => {
+    if (syncEnvOptions.length > 0 && !syncEnvOptions.includes(selectedSyncEnv)) {
+      setSelectedSyncEnv(syncEnvOptions[0]);
+    }
+  }, [syncEnvOptions, selectedSyncEnv]);
+
+  // Tick once per second while a Run-All is in flight, so the dashboard's
+  // "Elapsed" stat updates without needing extra state writes.
+  useEffect(() => {
+    if (!runAllProgress) return;
+    const id = setInterval(() => setRunAllTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [runAllProgress]);
 
   // Load and parse collection when suite changes
   useEffect(() => {
@@ -248,9 +444,47 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     });
   }, [currentEnv, selectedDir, selectedSuite]);
 
+  // Ensure local DB config is synced from the chosen upstream environment.
+  // Returns true to proceed, false if the user should abort.
+  const ensureSyncedFrom = useCallback(async (targetEnv: string, envType: string = selectedEnvType): Promise<boolean> => {
+    if (envType !== 'Local') return true;
+    const status = await fetchConfigSyncStatus();
+    if (status?.last_synced?.from === targetEnv && !status?.running) {
+      onLog('info', `[config-sync] local already synced from '${targetEnv}' — skipping sync`);
+      return true;
+    }
+    if (status?.running) {
+      onLog('info', `[config-sync] sync already running (from '${status.from}') — waiting for it to finish`);
+    } else {
+      onLog('info', `[config-sync] local is ${status?.last_synced?.from ? `synced from '${status.last_synced.from}'` : 'not yet synced'} — starting sync from '${targetEnv}'`);
+      const trig = await triggerConfigSync(targetEnv, false);
+      if (!trig.started) {
+        onLog('error', `[config-sync] failed to start: ${trig.error ?? 'unknown error'}`);
+        return false;
+      }
+    }
+    // Poll until done
+    for (;;) {
+      await new Promise(r => setTimeout(r, 2000));
+      const st = await fetchConfigSyncStatus();
+      if (!st) continue;
+      if (!st.running) {
+        if (st.exit_code === 0 && !st.error) {
+          onLog('success', `[config-sync] done — synced from '${targetEnv}'`);
+          const healthy = await waitForServicesReady(onLog);
+          return healthy;
+        }
+        onLog('error', `[config-sync] failed (exit=${st.exit_code}, error=${st.error ?? 'n/a'})`);
+        return false;
+      }
+    }
+  }, [selectedEnvType, onLog]);
+
   // Run all steps sequentially
   const runAll = useCallback(async () => {
     if (isRunning || visibleSteps.length === 0) return;
+    const synced = await ensureSyncedFrom(selectedSyncEnv);
+    if (!synced) return;
     abortRef.current = false;
     setIsRunning(true);
     setStepStates({});
@@ -278,21 +512,38 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('info', `-- Running ${currentSuite?.name || selectedSuite} (${currentEnv?.city || selectedEnv}) [${selectedEnvType}] --`);
     startNewCoverageRun(`collection-${selectedDir}-${selectedSuite}-${Date.now()}`);
 
-    for (const step of visibleSteps) {
+    for (let stepIdx = 0; stepIdx < visibleSteps.length; stepIdx++) {
       if (abortRef.current) break;
+      const step = visibleSteps[stepIdx];
 
       setRunningStepId(step.id);
       setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
       onLog('req', `${step.method} ${step.name}`);
 
       const start = performance.now();
+      // Open service-log tail + mock-hits stream together BEFORE the step so
+      // they capture async fan-out (beckn callbacks, BPP juspay session,
+      // rider-app forks) that lands after the HTTP response.
+      const capture = await startStepCapture(selectedEnvType);
       const result = await callPostmanStep(step, storesRef.current);
-      const durationMs = Math.round(performance.now() - start);
+      capture.done();
+      // Latency excludes pre/post-request script time — only the upstream HTTP call.
+      const durationMs = result.upstreamMs;
+      const { mockHits, serviceLogs } = await capture.result;
+      result.serviceLogs = serviceLogs;
+
+      if (result.skipped) {
+        setStepStates(prev => ({ ...prev, [step.id]: { status: 'skip', result, durationMs: 0, mockHits } }));
+        onLog('info', `SKIP ${step.name}`);
+        for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+        if (stepIdx < visibleSteps.length - 1) await interStepWait(abortRef);
+        continue;
+      }
 
       const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
       const status = failed ? 'fail' : 'pass';
 
-      setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
+      setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs, mockHits } }));
 
       // Log result
       const logLevel = failed ? 'error' : 'success';
@@ -320,12 +571,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         break; // bail on first failure
       }
 
+      if (stepIdx < visibleSteps.length - 1) {
+        await interStepWait(abortRef);
+      }
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, onLog]);
+  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -347,28 +601,46 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     }
 
     setRunAllProgress({ current: 0, total: jobs.length, currentSuite: '' });
+    setRunAllStartedAt(Date.now());
     startNewCoverageRun(`run-all-${Date.now()}`);
-    onLog('info', `== Running ALL ${jobs.length} collection suites ==`);
+    onLog('info', `== Running ALL ${jobs.length} collection suites in parallel ==`);
 
-    for (let i = 0; i < jobs.length; i++) {
-      if (abortRef.current) break;
+    // Config sync runs once up-front when any job targets the Local stack.
+    // The local DB is single-state, so we can't sync per-job; sync from
+    // selectedSyncEnv before launching jobs. Non-Local envs hit their own
+    // upstream and don't need a local sync.
+    const hasLocal = jobs.some(j => j.env.envType === 'Local');
+    if (hasLocal) {
+      onLog('info', `[config-sync] Run All has Local-stack jobs — syncing from '${selectedSyncEnv}'`);
+      const synced = await ensureSyncedFrom(selectedSyncEnv, 'Local');
+      if (!synced) {
+        onLog('error', '[config-sync] aborting Run All — config sync failed');
+        setIsRunning(false);
+        setRunAllProgress(null);
+        return;
+      }
+    } else {
+      onLog('info', '[config-sync] no Local-stack jobs — skipping sync');
+    }
 
-      const { group, env, suite } = jobs[i];
+    let completed = 0;
+
+    const runOneJob = async (job: { group: CollectionGroup; env: CollectionEnvironment; suite: CollectionSuite }) => {
+      const { group, env, suite } = job;
       const label = `${group.directory} / ${suite.name} (${env.city})`;
-      setRunAllProgress({ current: i + 1, total: jobs.length, currentSuite: label });
-      onLog('info', `-- [${i + 1}/${jobs.length}] ${label} --`);
+      const tag = `[${label}]`;
+      const suiteStart = performance.now();
+      onLog('info', `-- start ${label} --`);
 
-      // Fetch and parse the collection
       const raw = await fetchCollection(group.directory, suite.filename);
       if (!raw) {
-        onLog('error', `  Failed to fetch collection: ${suite.filename}`);
+        onLog('error', `${tag} Failed to fetch collection: ${suite.filename}`);
         setRunAllResults(prev => [...prev, { group: group.directory, env: env.envName, suite: suite.name, passed: 0, failed: 0, total: 0 }]);
-        continue;
+        return;
       }
 
       const parsed = parseCollection(raw as PostmanCollection, env.variables);
 
-      // Init variable stores
       const stores: VariableStores = {
         environment: { ...env.variables },
         collection: { ...parsed.collectionVars },
@@ -381,35 +653,30 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         }
       }
 
-      // Update UI to show this suite's steps
-      setSteps(parsed.steps);
-      setNodes(parsed.nodes);
-      setStepStates({});
-      setSelectedDir(group.directory);
-      setSelectedEnv(env.envName);
-      setSelectedSuite(suite.filename);
-
-      // Run all steps
       let passed = 0;
       let failed = 0;
       const suiteStepMetrics: Array<{ name: string; method: string; path: string; elapsed_ms: number }> = [];
-      for (const step of parsed.steps) {
+      for (let stepIdx = 0; stepIdx < parsed.steps.length; stepIdx++) {
         if (abortRef.current) break;
+        const step = parsed.steps[stepIdx];
 
-        setRunningStepId(step.id);
-        setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
-
-        const start = performance.now();
+        const capture = await startStepCapture(env.envType);
         const result = await callPostmanStep(step, stores);
-        const durationMs = Math.round(performance.now() - start);
+        capture.done();
+        const durationMs = result.upstreamMs;
+        const { serviceLogs } = await capture.result;
+        result.serviceLogs = serviceLogs;
+
+        if (result.skipped) {
+          onLog('info', `${tag} SKIP ${step.name}`);
+          for (const line of result.consoleLogs) onLog('info', `${tag}   [script] ${line}`);
+          if (stepIdx < parsed.steps.length - 1) await interStepWait(abortRef);
+          continue;
+        }
 
         const stepFailed = result.assertions.some(a => !a.passed) || !!result.scriptError;
-        const status = stepFailed ? 'fail' : 'pass';
+        if (stepFailed) failed++; else passed++;
 
-        if (stepFailed) failed++;
-        else passed++;
-
-        // result.upstreamMs = measured on context-api side, excludes browser/nginx/proxy overhead
         suiteStepMetrics.push({
           name: step.name,
           method: step.method,
@@ -417,38 +684,42 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           elapsed_ms: result.upstreamMs,
         });
 
-        setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs } }));
-
         const logLevel = stepFailed ? 'error' : 'success';
         const assertSummary = result.assertions.length > 0
           ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length}]`
           : '';
-        onLog(logLevel, `  ${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms)${assertSummary}`, {
+        onLog(logLevel, `${tag} ${stepFailed ? 'FAIL' : 'PASS'} ${step.name} (${durationMs}ms)${assertSummary}`, {
           request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
           response: { status: result.status, body: result.data, headers: result.responseHeaders },
           serviceLogs: result.serviceLogs,
         });
 
-        for (const line of result.consoleLogs) {
-          onLog('info', `    [script] ${line}`);
-        }
+        for (const line of result.consoleLogs) onLog('info', `${tag}   [script] ${line}`);
 
         if (stepFailed) {
-          if (result.scriptError) onLog('error', `    Script error: ${result.scriptError}`);
+          if (result.scriptError) onLog('error', `${tag}   Script error: ${result.scriptError}`);
           for (const a of result.assertions.filter(a => !a.passed)) {
-            onLog('error', `    Assertion failed: ${a.name} — ${a.error}`);
+            onLog('error', `${tag}   Assertion failed: ${a.name} — ${a.error}`);
           }
-          setExpandedSteps(prev => new Set(prev).add(step.id));
-          break; // bail on first failure within a suite
+          break;
         }
+
+        if (stepIdx < parsed.steps.length - 1) await interStepWait(abortRef);
       }
 
-      const suiteResult = { group: group.directory, env: env.envName, suite: suite.name, passed, failed, total: parsed.steps.length };
+      const suiteResult: RunAllSuiteResult = {
+        group: group.directory, env: env.envName, suite: suite.name,
+        passed, failed, total: parsed.steps.length,
+        durationMs: Math.round(performance.now() - suiteStart),
+      };
       setRunAllResults(prev => [...prev, suiteResult]);
       const statusEmoji = failed > 0 ? 'FAIL' : 'PASS';
-      onLog(failed > 0 ? 'error' : 'success', `  [${statusEmoji}] ${label}: ${passed}/${parsed.steps.length} passed`);
+      onLog(failed > 0 ? 'error' : 'success', `${tag} [${statusEmoji}] ${passed}/${parsed.steps.length} passed`);
 
-      if (versionId && failed === 0) {
+      completed++;
+      setRunAllProgress({ current: completed, total: jobs.length, currentSuite: label });
+
+      if (versionId) {
         try {
           const metricsResp = await fetch(`${PROXY_BASE}/api/metrics/push`, {
             method: 'POST',
@@ -459,27 +730,131 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               env: env.envName,
               suite: suite.name,
               steps: suiteStepMetrics,
-              allPassed: true,
+              allPassed: failed === 0,
             }),
           });
           const metricsBody = await metricsResp.json().catch(() => ({}));
           if (metricsResp.ok && metricsBody.pushed) {
-            onLog('info', `  [metrics] ✓ pushed to Grafana — ${group.directory}-${env.envName}-${suite.name} version=${versionId}`);
+            onLog('info', `${tag} [metrics] ✓ pushed (status=${failed === 0 ? 'pass' : 'fail'}) version=${versionId}`);
           } else {
             const reason = metricsBody.msg || `HTTP ${metricsResp.status}`;
-            onLog('info', `  [metrics] ✗ push failed — ${reason}`);
+            onLog('info', `${tag} [metrics] ✗ push failed — ${reason}`);
           }
         } catch (e: any) {
-          onLog('info', `  [metrics] ✗ push error — ${e?.message || e}`);
+          onLog('info', `${tag} [metrics] ✗ push error — ${e?.message || e}`);
         }
       }
+    };
+
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < jobs.length; i += BATCH_SIZE) {
+      if (abortRef.current) break;
+      const batch = jobs.slice(i, i + BATCH_SIZE);
+      onLog('info', `-- batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(jobs.length / BATCH_SIZE)} (${batch.length} suites) --`);
+      await Promise.all(batch.map(runOneJob));
     }
 
     setIsRunning(false);
     setRunningStepId(null);
     setRunAllProgress(null);
     onLog('info', '== All collections complete ==');
-  }, [isRunning, groups, onLog, versionId]);
+  }, [isRunning, groups, onLog, versionId, selectedSyncEnv, ensureSyncedFrom]);
+
+  // Initialise variable stores for manual mode (re-runs collection prereq once).
+  // Called the first time the user clicks a per-step Run in manual mode after
+  // toggling the mode on (or after suite change), so random vars match what a
+  // single Run-All click would have generated.
+  const manualStoresInitedRef = useRef<string | null>(null);
+  const ensureManualStoresInited = useCallback(async () => {
+    const sig = `${selectedDir}::${selectedSuite}::${selectedEnv}`;
+    if (manualStoresInitedRef.current === sig) return;
+    if (!currentEnv) return;
+    const freshStores: VariableStores = {
+      environment: { ...currentEnv.variables },
+      collection: {},
+    };
+    const raw = await fetchCollection(selectedDir, selectedSuite);
+    if (raw) {
+      const parsed = parseCollection(raw as PostmanCollection, currentEnv.variables);
+      freshStores.collection = { ...parsed.collectionVars };
+      if (raw.event) {
+        for (const ev of raw.event) {
+          if (ev.listen === 'prerequest' && ev.script?.exec) {
+            await executePrereqScript(ev.script.exec.join('\n'), freshStores);
+          }
+        }
+      }
+    }
+    storesRef.current = freshStores;
+    manualStoresInitedRef.current = sig;
+  }, [currentEnv, selectedDir, selectedSuite, selectedEnv]);
+
+  // Reset the init marker whenever selection changes so the next manual click reinitialises.
+  useEffect(() => { manualStoresInitedRef.current = null; }, [selectedDir, selectedSuite, selectedEnv]);
+
+  // Run a single step in manual mode — shares execute/log path with rerunStep
+  // but additionally lazy-inits the variable stores on the first click.
+  const runStepManual = useCallback(async (stepId: string) => {
+    if (isRunning) return;
+    const step = steps.find(s => s.id === stepId);
+    if (!step) return;
+    await ensureManualStoresInited();
+
+    setIsRunning(true);
+    setRunningStepId(stepId);
+    setStepStates(prev => ({ ...prev, [stepId]: { status: 'running' } }));
+    onLog('req', `[Step ${visibleSteps.findIndex(s => s.id === stepId) + 1}] ${step.method} ${step.name}`);
+
+    const start = performance.now();
+    const result = await callPostmanStep(step, storesRef.current);
+    const durationMs = Math.round(performance.now() - start);
+
+    if (result.skipped) {
+      setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip', result, durationMs: 0 } }));
+      onLog('info', `SKIP ${step.name}`);
+      for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+      setIsRunning(false);
+      setRunningStepId(null);
+      return;
+    }
+
+    const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
+    const status = failed ? 'fail' : 'pass';
+
+    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs } }));
+
+    const logLevel = failed ? 'error' : 'success';
+    const assertSummary = result.assertions.length > 0
+      ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length} assertions]`
+      : '';
+    onLog(logLevel, `${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms, ${result.status})${assertSummary}`, {
+      request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
+      response: { status: result.status, body: result.data, headers: result.responseHeaders },
+      serviceLogs: result.serviceLogs,
+    });
+
+    for (const line of result.consoleLogs) {
+      onLog('info', `  [script] ${line}`);
+    }
+    if (failed) {
+      if (result.scriptError) onLog('error', `  Script error: ${result.scriptError}`);
+      for (const a of result.assertions.filter(a => !a.passed)) {
+        onLog('error', `  Assertion failed: ${a.name} — ${a.error}`);
+      }
+      setExpandedSteps(prev => new Set(prev).add(stepId));
+    }
+
+    setIsRunning(false);
+    setRunningStepId(null);
+  }, [isRunning, steps, visibleSteps, ensureManualStoresInited, onLog]);
+
+  // Mark a step as skipped without executing — unlocks the next step's gate.
+  const skipStepManual = useCallback((stepId: string) => {
+    if (isRunning) return;
+    setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip' } }));
+    const step = steps.find(s => s.id === stepId);
+    if (step) onLog('info', `SKIP ${step.name}`);
+  }, [isRunning, steps, onLog]);
 
   // Re-run a single step in isolation (uses current variable state)
   const rerunStep = useCallback(async (stepId: string) => {
@@ -493,13 +868,27 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     onLog('req', `[Re-run] ${step.method} ${step.name}`);
 
     const start = performance.now();
+    const capture = await startStepCapture(selectedEnvType);
     const result = await callPostmanStep(step, storesRef.current);
-    const durationMs = Math.round(performance.now() - start);
+    capture.done();
+    // Latency excludes pre/post-request script time — only the upstream HTTP call.
+    const durationMs = result.upstreamMs;
+    const { mockHits, serviceLogs } = await capture.result;
+    result.serviceLogs = serviceLogs;
+
+    if (result.skipped) {
+      setStepStates(prev => ({ ...prev, [stepId]: { status: 'skip', result, durationMs: 0, mockHits } }));
+      onLog('info', `SKIP ${step.name}`);
+      for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+      setIsRunning(false);
+      setRunningStepId(null);
+      return;
+    }
 
     const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
     const status = failed ? 'fail' : 'pass';
 
-    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs } }));
+    setStepStates(prev => ({ ...prev, [stepId]: { status, result, durationMs, mockHits } }));
 
     const logLevel = failed ? 'error' : 'success';
     const assertSummary = result.assertions.length > 0
@@ -558,6 +947,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
             {envTypes.map(t => <option key={t} value={t}>{t}</option>)}
           </select>
         </label>
+        <label title={syncEnvDisabled ? 'Config-sync only applies to the Local stack' : 'Upstream config bundle to sync into the local DB before running'}>
+          <span>Sync From</span>
+          <select
+            className="config-sync-env"
+            value={selectedSyncEnv}
+            onChange={e => setSelectedSyncEnv(e.target.value)}
+            disabled={syncEnvDisabled}
+          >
+            {syncEnvOptions.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </label>
         <label>
           <span>Environment</span>
           <select value={selectedEnv} onChange={e => setSelectedEnv(e.target.value)} disabled={filteredEnvs.length === 0}>
@@ -577,8 +977,18 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           </select>
         </label>
         <div className="cr-actions">
-          <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
-            {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+          {!manualMode && (
+            <button className="cr-run-btn" onClick={runAll} disabled={isRunning || visibleSteps.length === 0}>
+              {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
+            </button>
+          )}
+          <button
+            className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
+            onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
+            disabled={isRunning || visibleSteps.length === 0}
+            title="Run each step individually with Run / Skip buttons"
+          >
+            {manualMode ? 'Exit Step Mode' : 'Step-by-Step'}
           </button>
           <input
             className="cr-version-input"
@@ -589,45 +999,23 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
             disabled={isRunning}
             title="Version ID tagged on metrics pushed to Grafana"
           />
-          <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0}>
+          <button className="cr-run-all-btn" onClick={runAllCollections} disabled={isRunning || groups.length === 0 || manualMode}>
             {runAllProgress ? `Running ${runAllProgress.current}/${runAllProgress.total}...` : 'Run All Collections'}
           </button>
           {isRunning && <button className="cr-stop-btn" onClick={stop}>Stop</button>}
         </div>
       </div>
 
-      {/* Run All progress banner */}
-      {runAllProgress && (
-        <div className="cr-run-all-progress">
-          <div className="cr-run-all-bar">
-            <div className="cr-run-all-fill" style={{ width: `${(runAllProgress.current / runAllProgress.total) * 100}%` }} />
-          </div>
-          <span className="cr-run-all-label">
-            Suite {runAllProgress.current}/{runAllProgress.total}: {runAllProgress.currentSuite}
-          </span>
-        </div>
-      )}
-
-      {/* Run All results summary */}
-      {runAllResults.length > 0 && !runAllProgress && (
-        <div className="cr-run-all-summary">
-          <div className="cr-run-all-summary-header">
-            All Collections Results — {runAllResults.filter(r => r.failed === 0).length}/{runAllResults.length} suites passed
-          </div>
-          <div className="cr-run-all-results">
-            {runAllResults.map((r, i) => (
-              <div key={i} className={`cr-run-all-result ${r.failed > 0 ? 'cr-result-fail' : 'cr-result-pass'}`}>
-                <span className={`cr-result-dot ${r.failed > 0 ? 'cr-dot-fail' : 'cr-dot-pass'}`} />
-                <span className="cr-result-suite">{r.suite}</span>
-                <span className="cr-result-env">{r.env}</span>
-                <span className="cr-result-score">{r.passed}/{r.total}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Step list */}
+      {(runAllProgress || runAllResults.length > 0) ? (
+        <RunAllDashboard
+          progress={runAllProgress}
+          results={runAllResults}
+          startedAt={runAllStartedAt}
+          isRunning={isRunning}
+          onStop={stop}
+          onClose={() => { setRunAllResults([]); setRunAllStartedAt(null); }}
+        />
+      ) : (
       <div className="cr-steps">
         {visibleNodes.map(node => (
           <div key={node.id} className="cr-node">
@@ -642,6 +1030,14 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               const isExpanded = expandedSteps.has(stepId);
               const logsExpanded = expandedLogs.has(stepId);
               const logCount = state?.result?.serviceLogs ? Object.keys(state.result.serviceLogs).length : 0;
+              const mockHitCount = state?.mockHits?.length ?? 0;
+
+              // Manual-mode gating: first step always enabled; later steps require prev step pass or skip.
+              const visibleIdx = visibleSteps.findIndex(s => s.id === stepId);
+              const prevVisibleId = visibleIdx > 0 ? visibleSteps[visibleIdx - 1].id : null;
+              const prevState = prevVisibleId ? stepStates[prevVisibleId] : null;
+              const gateOpen = visibleIdx === 0 || (prevState?.status === 'pass' || prevState?.status === 'skip');
+              const notYetRun = !state || state.status === 'pending';
 
               return (
                 <div key={stepId} className={`cr-step cr-step-${state?.status || 'pending'}`}>
@@ -656,6 +1052,31 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                       <button className="cr-logs-badge" onClick={e => { e.stopPropagation(); toggleLogs(stepId); }}>
                         logs({logCount})
                       </button>
+                    )}
+                    {manualMode && notYetRun && (
+                      <>
+                        <button
+                          className="cr-step-run-btn"
+                          onClick={e => { e.stopPropagation(); runStepManual(stepId); }}
+                          disabled={isRunning || !gateOpen}
+                          title={gateOpen ? 'Run this step' : 'Previous step must pass or be skipped first'}
+                        >
+                          ▶ Run
+                        </button>
+                        <button
+                          className="cr-step-skip-btn"
+                          onClick={e => { e.stopPropagation(); skipStepManual(stepId); }}
+                          disabled={isRunning || !gateOpen}
+                          title="Skip this step (unlocks next)"
+                        >
+                          Skip
+                        </button>
+                      </>
+                    )}
+                    {mockHitCount > 0 && (
+                      <span className="cr-mock-badge" title={`${mockHitCount} outbound mock call${mockHitCount === 1 ? '' : 's'} during this step`}>
+                        🟣 {mockHitCount} mock
+                      </span>
                     )}
                     {state?.status === 'fail' && (
                       <button
@@ -691,6 +1112,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                         </button>
                       </div>
                       <pre className="cr-response-body">{JSON.stringify(state.result.data, null, 2)}</pre>
+                      {mockHitCount > 0 && <MockHitsPanel hits={state.mockHits!} />}
                     </div>
                   )}
                   {logsExpanded && state?.result?.serviceLogs && (
@@ -706,12 +1128,62 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
           <div className="cr-empty">All steps in this suite are mock-only; nothing to run on envType={selectedEnvType}.</div>
         )}
       </div>
+      )}
 
       {/* JSON Viewer Modal */}
       {modalData !== null && <JsonViewerModal data={modalData} onClose={() => setModalData(null)} />}
     </div>
   );
 };
+
+function MockHitsPanel({ hits }: { hits: MockHit[] }) {
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const toggle = (id: number) => setExpanded(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  return (
+    <div className="cr-mock-hits">
+      <div className="cr-mock-hits-header">🟣 Mock calls ({hits.length})</div>
+      {hits.map(h => {
+        const open = expanded.has(h.id);
+        const errored = h.status >= 400;
+        return (
+          <div key={h.id} className={`cr-mock-hit ${errored ? 'cr-mock-hit-err' : ''}`}>
+            <div className="cr-mock-hit-header" onClick={() => toggle(h.id)}>
+              <span className="cr-mock-hit-chev">{open ? '▼' : '▸'}</span>
+              <span className="cr-mock-hit-method">{h.method}</span>
+              <span className="cr-mock-hit-path" title={h.url}>{h.path}{h.query ? `?${h.query}` : ''}</span>
+              {h.service && <span className="cr-mock-hit-svc">{h.service}</span>}
+              <span className="cr-mock-hit-duration">{h.duration_ms}ms</span>
+              <span className={`cr-mock-hit-status ${errored ? 'cr-status-error' : ''}`}>{h.status}</span>
+            </div>
+            {open && (
+              <div className="cr-mock-hit-detail">
+                <div className="cr-mock-hit-row"><b>Full URL</b><code>http://localhost:8080{h.url}</code></div>
+                <div className="cr-mock-hit-row"><b>Request headers</b>
+                  <pre>{JSON.stringify(h.request_headers, null, 2)}</pre>
+                </div>
+                {h.request_body !== null && h.request_body !== undefined && (
+                  <div className="cr-mock-hit-row"><b>Request body</b>
+                    <pre>{typeof h.request_body === 'string' ? h.request_body : JSON.stringify(h.request_body, null, 2)}</pre>
+                  </div>
+                )}
+                <div className="cr-mock-hit-row"><b>Response headers</b>
+                  <pre>{JSON.stringify(h.response_headers, null, 2)}</pre>
+                </div>
+                <div className="cr-mock-hit-row"><b>Response body</b>
+                  <pre>{typeof h.response_body === 'string' ? h.response_body : JSON.stringify(h.response_body, null, 2)}</pre>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function ServiceLogsTabs({ logs }: { logs: Record<string, string> }) {
   const [active, setActive] = useState(Object.keys(logs)[0] || '');

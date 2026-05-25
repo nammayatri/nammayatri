@@ -24,6 +24,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PassOrganization.PassOrganization] -> m ())
 createMany = traverse_ create
 
+findByDepotPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.PassOrganization.PassOrganization])
+findByDepotPersonId depotPersonId = do findAllWithKV [Se.Is Beam.depotPersonId $ Se.Eq (Kernel.Types.Id.getId <$> depotPersonId)]
+
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m (Maybe Domain.Types.PassOrganization.PassOrganization))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -41,6 +44,13 @@ findByMerchantOperatingCityIdAndPassEnum merchantOperatingCityId passEnum = do
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.PassOrganization.PassOrganization))
 findByPersonId personId = do findOneWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
+updateDepotAssignment ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> [Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization] -> m ())
+updateDepotAssignment depotPersonId depotId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.depotPersonId (Kernel.Types.Id.getId <$> depotPersonId), Se.Set Beam.depotId depotId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.In (Kernel.Types.Id.getId <$> id)]
+
 updatePassOrganization ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization -> m ())
@@ -56,6 +66,8 @@ updateByPrimaryKey (Domain.Types.PassOrganization.PassOrganization {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.address address,
+      Se.Set Beam.depotId depotId,
+      Se.Set Beam.depotPersonId (Kernel.Types.Id.getId <$> depotPersonId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.name name,
@@ -72,6 +84,8 @@ instance FromTType' Beam.PassOrganization Domain.Types.PassOrganization.PassOrga
         Domain.Types.PassOrganization.PassOrganization
           { address = address,
             createdAt = createdAt,
+            depotId = depotId,
+            depotPersonId = Kernel.Types.Id.Id <$> depotPersonId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -86,6 +100,8 @@ instance ToTType' Beam.PassOrganization Domain.Types.PassOrganization.PassOrgani
     Beam.PassOrganizationT
       { Beam.address = address,
         Beam.createdAt = createdAt,
+        Beam.depotId = depotId,
+        Beam.depotPersonId = Kernel.Types.Id.getId <$> depotPersonId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

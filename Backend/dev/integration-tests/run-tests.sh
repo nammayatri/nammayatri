@@ -44,6 +44,8 @@ SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
+INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
+RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -442,6 +444,8 @@ run_scheduler() {
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
+run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
+run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -462,6 +466,8 @@ show_help() {
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
+    echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
+    echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -488,6 +494,11 @@ show_help() {
     echo "  ./run-tests.sh stcl                               # All STCL membership suites"
     echo "  ./run-tests.sh stcl NY_Bangalore                  # STCL suites for Bangalore"
     echo "  ./run-tests.sh stcl NY_Bangalore 01-StclMembershipPartialPurchaseFlow  # Specific suite"
+    echo "  ./run-tests.sh intercity                          # All intercity suites, all cities"
+    echo "  ./run-tests.sh intercity NY_Bangalore             # Intercity suites for Bangalore"
+    echo "  ./run-tests.sh intercity NY_Bangalore 01-IntercityRideFlow  # Specific intercity suite"
+    echo "  ./run-tests.sh rental                             # All rental suites, all cities"
+    echo "  ./run-tests.sh rental NY_Bangalore 01-RentalRideFlow        # Specific rental suite"
     echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
     echo "  ./run-tests.sh online BF_Helsinki -vp             # Pretty-print full JSON request/response"
     echo "  ./run-tests.sh online BF_Helsinki -d              # Debug: per-API service logs for all APIs"
@@ -538,6 +549,12 @@ case "${1:-}" in
         ;;
     stcl|stcl-membership)
         run_stcl "${2:-}" "${3:-}"
+        ;;
+    intercity)
+        run_intercity "${2:-}" "${3:-}"
+        ;;
+    rental)
+        run_rental "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

@@ -1,29 +1,24 @@
-"""In-memory status store + request-matching override system.
+"""Request-matching override system for the mock server.
 
-Two mechanisms:
+POST /mock/override registers a rule that fires when a future request to the
+named service has an extracted field equal to `value`. The rule's `response`
+dict is then deep-merged into the handler's default response.
 
-1. **Status store** (existing): keyed by (service, id)
-   POST /mock/status {"service": "juspay", "id": ["ord-123"], "status": "CHARGED"}
+  POST /mock/override {
+    "service": "juspay",
+    "extract": "path.2",                  // where to find the value in the request
+    "value": "ord_abc123",                 // exact match required
+    "match": "/orders",                    // optional path-substring gate
+    "response": {"status": "CHARGED", "amount": 10.0}
+  }
 
-2. **Override rules** (new): match incoming requests by extracting IDs from path/query/body
-   POST /mock/override {
-     "service": "cmrl",
-     "extract": "body.mob",          // where to find the ID in incoming requests
-     "value": "9876543210",           // what value to match
-     "response": {"returnCode": "500", "returnMessage": "Technical Failure"}
-   }
-
-   Extract syntax:
-     body.<json_path>    — from JSON request body (supports nested: body.data.customer.phone)
-     path.<index>        — from URL path segment by index (0-based)
-     query.<param>       — from query parameter
-     header.<name>       — from request header
-
-   When a request to the matching service has the extracted value == value,
-   the "response" dict is deep-merged into the handler's default response.
+  Extract syntax:
+    body.<json_path>    from JSON request body (supports nested: body.data.customer.phone)
+    path.<index>        from URL path segment by index (0-based)
+    query.<param>       from query parameter
+    header.<name>       from request header
 """
 
-import json
 import logging
 import threading
 import time
@@ -32,138 +27,26 @@ log = logging.getLogger("mock-server")
 
 STATUS_TTL = 300  # 5 minutes
 
-# ── Status store (existing) ──
-
-_store = {}
-_extract_store = {}  # (service) → [{extract, status, data, expires}]
-_lock = threading.Lock()
-
-
-def set_status(service, identifiers, status, data=None):
-    if isinstance(identifiers, str):
-        identifiers = [identifiers]
-    entry = {"status": status, "data": data or {}, "expires": time.time() + STATUS_TTL}
-    with _lock:
-        for ident in identifiers:
-            _store[(service, ident)] = entry
-    log.info(f"Status set: {service}/[{', '.join(identifiers)}] = {status}")
-    return len(identifiers)
-
-
-def get_status(service, identifier):
-    key = (service, identifier)
-    with _lock:
-        entry = _store.get(key)
-        if entry is None:
-            return None
-        if time.time() > entry["expires"]:
-            del _store[key]
-            return None
-        return entry
-
-
-def set_extract_status(service, extract, status, match=None, data=None):
-    """Store a status rule that matches future requests by extracting an ID.
-
-    Args:
-        service: service name (e.g. "juspay")
-        extract: where to find the ID (e.g. "path.2")
-        status: status to return when matched
-        match: API path pattern to match (e.g. "/orders" matches any path containing /orders).
-               If None, matches all requests to the service.
-        data: extra data to deep-merge into response
-    """
-    entry = {"extract": extract, "status": status, "match": match,
-             "data": data or {}, "expires": time.time() + STATUS_TTL}
-    with _lock:
-        _extract_store.setdefault(service, []).append(entry)
-    match_desc = f" on {match}" if match else ""
-    log.info(f"Extract status set: {service}{match_desc} extract={extract} → {status}")
-
-
-def get_extract_status(service, path, body=None, query=None, headers=None):
-    """Check if any extract-based status rule matches this request.
-    Returns (status, data) or (None, {})."""
-    with _lock:
-        rules = _extract_store.get(service, [])
-    now = time.time()
-    for rule in rules:
-        if now > rule["expires"]:
-            continue
-        # Check path pattern match
-        if rule.get("match") and rule["match"] not in path:
-            continue
-        extract = rule["extract"]
-        extracted_id = _extract_value(extract, path, body, query, headers)
-        if extracted_id:
-            # Match: store as explicit ID for future lookups too
-            set_status(service, [extracted_id], rule["status"], rule["data"])
-            return rule["status"], rule["data"]
-    return None, {}
-
-
-def _extract_value(extract, path, body=None, query=None, headers=None):
-    """Extract a value from a request using the extract syntax."""
-    if extract.startswith("path."):
-        idx = int(extract.split(".", 1)[1])
-        parts = [p for p in path.strip("/").split("/") if p]
-        return parts[idx] if idx < len(parts) else None
-    elif extract.startswith("body."):
-        json_path = extract.split(".", 1)[1]
-        if body and isinstance(body, dict):
-            val = body
-            for key in json_path.split("."):
-                if isinstance(val, dict):
-                    val = val.get(key)
-                else:
-                    return None
-            return str(val) if val is not None else None
-    elif extract.startswith("query."):
-        param = extract.split(".", 1)[1]
-        if query and isinstance(query, dict):
-            return query.get(param)
-    elif extract.startswith("header."):
-        name = extract.split(".", 1)[1]
-        if headers and isinstance(headers, dict):
-            return headers.get(name)
-    return None
-
-
-def list_statuses():
-    now = time.time()
-    with _lock:
-        for k in [k for k, v in _store.items() if now > v["expires"]]:
-            del _store[k]
-        return {
-            f"{k[0]}/{k[1]}": {"status": v["status"], "data": v["data"], "ttl": int(v["expires"] - now)}
-            for k, v in _store.items()
-        }
-
-
-def clear_statuses():
-    with _lock:
-        _store.clear()
-
-
-# ── Override rules (new) ──
-
-_overrides = []  # list of {service, extract, value, response, expires}
+_overrides = []  # list of {service, extract, value, match, response, expires}
 _override_lock = threading.Lock()
 
 
-def add_override(service, extract, value, response):
-    """Add an override rule. When a request to `service` has `extract` == `value`,
-    merge `response` into the handler's default response."""
+def add_override(service, extract, value, response, match=None):
+    """Register an override rule. When a request to `service` has the extracted
+    field equal to `value` (and the path contains `match`, if provided),
+    `response` is deep-merged into the handler's default response."""
     entry = {
         "service": service,
         "extract": extract,
         "value": str(value),
+        "match": match,
         "response": response or {},
         "expires": time.time() + STATUS_TTL,
     }
     with _override_lock:
         _overrides.append(entry)
-    log.info(f"Override added: {service} where {extract}={value}")
+    match_desc = f" on {match}" if match else ""
+    log.info(f"Override added: {service}{match_desc} where {extract}={value}")
 
 
 def list_overrides():
@@ -172,7 +55,7 @@ def list_overrides():
         _overrides[:] = [o for o in _overrides if o["expires"] > now]
         return [
             {"service": o["service"], "extract": o["extract"], "value": o["value"],
-             "response": o["response"], "ttl": int(o["expires"] - now)}
+             "match": o.get("match"), "response": o["response"], "ttl": int(o["expires"] - now)}
             for o in _overrides
         ]
 
@@ -215,8 +98,6 @@ def check_overrides(service, path, query_string, headers, body_parsed, body_raw=
     now = time.time()
     merged = {}
 
-    # Try body decoder first (handles encrypted bodies like CRIS/CMRL),
-    # then fall back to the plain-parsed body
     decoded_body = None
     if body_raw and service in _body_decoders:
         try:
@@ -230,6 +111,8 @@ def check_overrides(service, path, query_string, headers, body_parsed, body_raw=
         _overrides[:] = [o for o in _overrides if o["expires"] > now]
         for o in _overrides:
             if o["service"] != service:
+                continue
+            if o.get("match") and o["match"] not in path:
                 continue
             extracted = _extract_value(o["extract"], path, query_string, headers, decoded_body)
             if extracted is not None and str(extracted) == o["value"]:
@@ -272,8 +155,6 @@ def _jq_get(obj, path):
             return None
     return obj
 
-
-# ── Shared utilities ──
 
 def deep_merge(base, override):
     """Merge override into base. Override wins for scalars; dicts merge recursively."""

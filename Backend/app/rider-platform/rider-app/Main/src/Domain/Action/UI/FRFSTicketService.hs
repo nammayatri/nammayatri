@@ -670,10 +670,14 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
           quotesWithCategories
   mapM
     ( \(quote, quoteCategories) -> do
+        let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+            mbFirstRouteStation = decodedRouteStations >>= listToMaybe
+            serviceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+            routeCode = mbFirstRouteStation <&> (.code)
         let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
               if integratedBppConfig.platformType == DIBC.MULTIMODAL
                 then (Nothing, Nothing)
-                else (decodeFromText =<< quote.routeStationsJson, decodeFromText quote.stationsJson)
+                else (decodedRouteStations, decodeFromText quote.stationsJson)
         let fareParameters = FRFSUtils.mkFareParameters (FRFSUtils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
             categories = map mkCategoryInfoResponse quoteCategories
         singleAdultTicketPrice <- (find (\category -> category.categoryType == ADULT) fareParameters.priceItems <&> (.unitPrice)) & fromMaybeM (InternalError "Adult Ticket Unit Price not found.")

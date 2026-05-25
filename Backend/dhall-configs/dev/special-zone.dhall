@@ -2,7 +2,7 @@ let sec = ./secrets/provider-dashboard.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = "atlas_special_zone_user"
       , connectPassword = "atlas"
       , connectDatabase = "atlas_dev"
@@ -12,7 +12,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5435
+      , connectPort = env:DB_PRIMARY_REPLICA_PORT ? 5435
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -31,7 +31,7 @@ let loggerConfig =
       , prettyPrinting = True
       }
 
-in  { port = +8032
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8032)
     , migrationPath = [ "dev/ddl-migrations/special-zone" ]
     , autoMigrate = True
     , esqDBCfg

@@ -1,6 +1,12 @@
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
+let mockGooglePort = Natural/show (env:MOCK_GOOGLE_PORT ? 8019)
+
 let redis_cfg =
       { redis_host = "0.0.0.0"
-      , redis_port = 6379
+      , redis_port = env:REDIS_PORT ? 6379
       , redis_pool_size = 10
       , redis_partition = 0
       , reconnect_max_attempts = 10
@@ -13,7 +19,7 @@ let redis_cfg =
 
 let replica_redis_cfg =
       { redis_host = "0.0.0.0"
-      , redis_port = 6379
+      , redis_port = env:REDIS_PORT ? 6379
       , redis_pool_size = 10
       , redis_partition = 0
       , reconnect_max_attempts = 10
@@ -31,7 +37,7 @@ let zone_to_redis_replica_mapping =
       }
 
 let kafka_cfg =
-      { kafka_key = "bootstrap.servers", kafka_host = "0.0.0.0:29092" }
+      { kafka_key = "bootstrap.servers", kafka_host = "0.0.0.0:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" }
 
 let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 
@@ -39,7 +45,7 @@ let logger_cfg = { level = LogLevel.INFO, log_to_file = False }
 
 let stop_detection_cab_config_on_pickup =
       { stop_detection_update_callback_url =
-          "http://127.0.0.1:8016/internal/stopDetection"
+          "http://127.0.0.1:${driverAppPort}/internal/stopDetection"
       , max_eligible_stop_speed_threshold = Some 2.0
       , radius_threshold_meters = 25
       , min_points_within_radius_threshold = 5
@@ -48,7 +54,7 @@ let stop_detection_cab_config_on_pickup =
 
 let stop_detection_cab_config_on_ride =
       { stop_detection_update_callback_url =
-          "http://127.0.0.1:8016/internal/stopDetection"
+          "http://127.0.0.1:${driverAppPort}/internal/stopDetection"
       , max_eligible_stop_speed_threshold = Some 2.0
       , radius_threshold_meters = 25
       , min_points_within_radius_threshold = 15
@@ -57,7 +63,7 @@ let stop_detection_cab_config_on_ride =
 
 let stop_detection_bus_config_new =
       { stop_detection_update_callback_url =
-          "http://127.0.0.1:8016/internal/stopDetection"
+          "http://127.0.0.1:${driverAppPort}/internal/stopDetection"
       , max_eligible_stop_speed_threshold = None Double
       , radius_threshold_meters = 50
       , min_points_within_radius_threshold = 5
@@ -187,14 +193,14 @@ let detection_violation_cab_config_new =
       with Stopped =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationDetectionConfig
@@ -202,7 +208,7 @@ let detection_violation_cab_config_new =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingDetectionConfig
@@ -210,7 +216,7 @@ let detection_violation_cab_config_new =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionDetectionConfig
@@ -218,7 +224,7 @@ let detection_violation_cab_config_new =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedDetectionConfig
@@ -226,14 +232,14 @@ let detection_violation_cab_config_new =
       with SafetyCheck =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.SafetyCheckDetection safetyCheckDetectionConfig
         }
       with RideStopReached =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -244,14 +250,14 @@ let detection_violation_cab_config_inprogress =
       with Stopped =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationDetectionConfig
@@ -259,7 +265,7 @@ let detection_violation_cab_config_inprogress =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingDetectionConfig
@@ -267,7 +273,7 @@ let detection_violation_cab_config_inprogress =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionDetectionConfig
@@ -275,7 +281,7 @@ let detection_violation_cab_config_inprogress =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedDetectionConfig
@@ -283,14 +289,14 @@ let detection_violation_cab_config_inprogress =
       with SafetyCheck =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8013/internal/violationDetection"
+            "http://127.0.0.1:${riderAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.SafetyCheckDetection safetyCheckDetectionConfig
         }
       with RideStopReached =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -301,14 +307,14 @@ let detection_violation_bus_config_new =
       with Stopped =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8013/internal/violationDetection"
+            "http://127.0.0.1:${riderAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationDetectionConfig
@@ -316,7 +322,7 @@ let detection_violation_bus_config_new =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingDetectionConfig
@@ -324,7 +330,7 @@ let detection_violation_bus_config_new =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionDetectionConfig
@@ -332,7 +338,7 @@ let detection_violation_bus_config_new =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedDetectionConfig
@@ -343,14 +349,14 @@ let detection_violation_bus_config_inprogress =
       with Stopped =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationDetectionConfig
@@ -358,7 +364,7 @@ let detection_violation_bus_config_inprogress =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingDetectionConfig
@@ -366,7 +372,7 @@ let detection_violation_bus_config_inprogress =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionDetectionConfig
@@ -374,7 +380,7 @@ let detection_violation_bus_config_inprogress =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedDetectionConfig
@@ -385,14 +391,14 @@ let detection_anti_violation_cab_config_new =
       with Stopped =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedAntiDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationAntiDetectionConfig
@@ -400,7 +406,7 @@ let detection_anti_violation_cab_config_new =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingAntiDetectionConfig
@@ -408,7 +414,7 @@ let detection_anti_violation_cab_config_new =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionAntiDetectionConfig
@@ -416,7 +422,7 @@ let detection_anti_violation_cab_config_new =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedAntiDetectionConfig
@@ -424,14 +430,14 @@ let detection_anti_violation_cab_config_new =
       with SafetyCheck =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.SafetyCheckDetection safetyCheckDetectionConfig
         }
       with RideStopReached =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -442,14 +448,14 @@ let detection_anti_violation_cab_config_inprogress =
       with Stopped =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedAntiDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationAntiDetectionConfig
@@ -457,7 +463,7 @@ let detection_anti_violation_cab_config_inprogress =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingAntiDetectionConfig
@@ -465,7 +471,7 @@ let detection_anti_violation_cab_config_inprogress =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionAntiDetectionConfig
@@ -473,7 +479,7 @@ let detection_anti_violation_cab_config_inprogress =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedAntiDetectionConfig
@@ -481,14 +487,14 @@ let detection_anti_violation_cab_config_inprogress =
       with SafetyCheck =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8013/internal/violationDetection"
+            "http://127.0.0.1:${riderAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.SafetyCheckDetection safetyCheckDetectionConfig
         }
       with RideStopReached =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -499,14 +505,14 @@ let detection_anti_violation_bus_config_new =
       with Stopped =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedAntiDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationAntiDetectionConfig
@@ -514,7 +520,7 @@ let detection_anti_violation_bus_config_new =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingAntiDetectionConfig
@@ -522,7 +528,7 @@ let detection_anti_violation_bus_config_new =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionAntiDetectionConfig
@@ -530,7 +536,7 @@ let detection_anti_violation_bus_config_new =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedAntiDetectionConfig
@@ -538,7 +544,7 @@ let detection_anti_violation_bus_config_new =
       with RideStopReached =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -549,14 +555,14 @@ let detection_anti_violation_bus_config_inprogress =
       with Stopped =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.StoppedDetection stoppedAntiDetectionConfig
         }
       with RouteDeviation =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RouteDeviationDetection
               routeDeviationAntiDetectionConfig
@@ -564,7 +570,7 @@ let detection_anti_violation_bus_config_inprogress =
       with Overspeeding =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OverspeedingDetection
               overspeedingAntiDetectionConfig
@@ -572,7 +578,7 @@ let detection_anti_violation_bus_config_inprogress =
       with OppositeDirection =
         { enabled = True
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.OppositeDirectionDetection
               oppositeDirectionAntiDetectionConfig
@@ -580,7 +586,7 @@ let detection_anti_violation_bus_config_inprogress =
       with TripNotStarted =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.TripNotStartedDetection
               tripNotStartedAntiDetectionConfig
@@ -588,7 +594,7 @@ let detection_anti_violation_bus_config_inprogress =
       with RideStopReached =
         { enabled = False
         , detection_callback_url =
-            "http://127.0.0.1:8016/internal/violationDetection"
+            "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
         , detection_config =
             DetectionConfigType.RideStopReachedDetection
               rideStopReachedDetectionConfig
@@ -633,21 +639,21 @@ in  { logger_cfg
     , drainer_delay = 2
     , new_ride_drainer_delay = 2
     , kafka_cfg
-    , port = 8081
-    , auth_url = "http://127.0.0.1:8016/internal/auth"
+    , port = env:SERVICE_PORT ? 8081
+    , auth_url = "http://127.0.0.1:${driverAppPort}/internal/auth"
     , auth_api_key = "ae288466-2add-11ee-be56-0242ac120002"
     , bulk_location_callback_url =
-        "http://127.0.0.1:8016/internal/bulkLocUpdate"
+        "http://127.0.0.1:${driverAppPort}/internal/bulkLocUpdate"
     , stop_detection = stop_detection_config
     , auth_token_expiry = 86400
     , min_location_accuracy = 50.0
     , driver_location_accuracy_buffer = 25.0
     , driver_reached_destination_buffer = 25.0
     , driver_reached_destination_callback_url =
-        "http://127.0.0.1:8016/internal/destinationReached"
+        "http://127.0.0.1:${driverAppPort}/internal/destinationReached"
     , driver_source_departed_buffer = 100.0
     , driver_source_departed_callback_url =
-        "http://127.0.0.1:8016/internal/sourceDeparted"
+        "http://127.0.0.1:${driverAppPort}/internal/sourceDeparted"
     , redis_expiry = 86400
     , last_location_timstamp_expiry = 86400
     , location_update_limit = 6000000000
@@ -669,21 +675,21 @@ in  { logger_cfg
       driver_location_delay_in_sec = 60
     , driver_location_delay_for_new_ride_sec = 60
     , trigger_fcm_callback_url =
-        "http://127.0.0.1:8016/internal/driverInactiveFCM"
+        "http://127.0.0.1:${driverAppPort}/internal/driverInactiveFCM"
     , apns_url = "https://api.sandbox.push.apple.com:443"
     , pickup_notification_threshold = 40.0
     , pickup_instruction_notification_threshold = 200.0
     , arriving_notification_threshold = 100.0
     , detection_callback_url =
-        "http://127.0.0.1:8016/internal/violationDetection"
+        "http://127.0.0.1:${driverAppPort}/internal/violationDetection"
     , detection_violation_config
     , detection_anti_violation_config
     , google_compute_route_url =
-        "http://localhost:8019/directions/v2/:computeRoutes"
+        "http://localhost:${mockGooglePort}/directions/v2/:computeRoutes"
     , google_api_key = "mock-dev-key"
     , route_geo_json_config = { bucket = "route-geojson", prefix = "" }
     , trigger_fcm_callback_url_bap =
-        "http://127.0.0.1:8013/internal/driverArrivalNotification"
+        "http://127.0.0.1:${riderAppPort}/internal/driverArrivalNotification"
     , osrm_distance_matrix_base_url = "http://router.project-osrm.org"
     , duration_cache_time_slots =
       [ "06:00:00", "12:00:00", "18:00:00", "19:55:00" ]

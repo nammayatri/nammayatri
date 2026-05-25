@@ -28,7 +28,7 @@ ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"            # Backend/ — used to resolv
 REPO_ROOT="$(cd "$ROOT/.." && pwd)"                # repo root (one level above Backend/)
 
 INST=/tmp/pg_install
-PORT=5434
+PORT="${DB_PRIMARY_PORT:-5434}"
 SOCKET_DIR="$HOME/NY/socket/db-primary"
 DATA_DIR="$REPO_ROOT/data/db-primary"              # data dir lives under repo root, not Backend/
 HBA=/tmp/pg_hba_local.conf

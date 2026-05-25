@@ -4,6 +4,16 @@ let sec = ./secrets/dynamic-offer-driver-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
+let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let mockRegistryPort = Natural/show (env:MOCK_REGISTRY_PORT ? 8020)
+
 let sosAlertsTopicARN =
       "arn:aws:chatbot::463356420488:chat-configuration/slack-channel/sos-notifications"
 
@@ -16,7 +26,7 @@ let slackNotificationConfig =
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -26,7 +36,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -38,7 +48,7 @@ let esqLocationDBCfg = esqDBCfg
 
 let esqLocationDBRepCfg =
       { connectHost = esqLocationDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqLocationDBCfg.connectUser
       , connectPassword = esqLocationDBCfg.connectPassword
       , connectDatabase = esqLocationDBCfg.connectDatabase
@@ -49,7 +59,7 @@ let esqLocationDBRepCfg =
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
@@ -59,7 +69,7 @@ let kafkaClickhouseCfg =
 let driverClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_driver_offer_bpp"
       , tls = False
@@ -70,7 +80,7 @@ let dashboardClickhouseCfg = driverClickhouseCfg
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -81,7 +91,7 @@ let rcfg =
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -92,7 +102,7 @@ let rccfg =
 
 let rccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -103,7 +113,7 @@ let rccfgSecondary =
 
 let ltsrcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -121,7 +131,7 @@ let smsConfig =
         , token = None Text
         }
       , useFakeSms = Some 7891
-      , url = "http://localhost:4343"
+      , url = "http://localhost:${mockServerPort}/sms"
       , sender = "JUSPAY"
       }
 
@@ -233,7 +243,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -243,26 +253,26 @@ let kvConfigUpdateFrequency = +10
 
 let appBackendBapInternal =
       { name = "APP_BACKEND"
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , apiKey = sec.appBackendApikey
       , internalKey = sec.internalKey
       }
 
 let mlPricingInternal =
       { name = "PRICING"
-      , url = "http://localhost:8080/mlpricing"
+      , url = "http://localhost:${mockServerPort}/mlpricing"
       , apiKey = sec.mlPricingApiKey
       , internalKey = sec.internalKey
       }
 
 let registryMap =
       [ { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a51"
-        , mapValue = "http://localhost:8020/"
+        , mapValue = "http://localhost:${mockRegistryPort}/"
         }
       , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
-        , mapValue = "http://localhost:8020/"
+        , mapValue = "http://localhost:${mockRegistryPort}/"
         }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:8020/" }
+      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:${mockRegistryPort}/" }
       ]
 
 let AllocatorJobType =
@@ -378,12 +388,12 @@ let jobInfoMapx =
       ]
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:8081/", secondaryUrl = None Text }
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
 
 let VocaliticsConfig = { url = "http://0.0.0.0:8000/", token = "secret-key" }
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -395,7 +405,7 @@ let cacConfig =
 let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenants = [ "dev", "test" ]
       , retryConnection = False
@@ -452,12 +462,12 @@ in  { esqDBCfg
     , hedisNonCriticalClusterCfg = rccfg
     , hedisMigrationStage = False
     , cutOffHedisCluster = False
-    , port = +8116
-    , metricsPort = +9997
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8116)
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9997)
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8016/beckn"
-    , selfUIUrl = "http://localhost:8016/ui/"
-    , selfBaseUrl = "http://localhost:8016/"
+    , nwAddress = "http://localhost:${driverAppPort}/beckn"
+    , selfUIUrl = "http://localhost:${driverAppPort}/ui/"
+    , selfBaseUrl = "http://localhost:${driverAppPort}/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
@@ -555,7 +565,5 @@ in  { esqDBCfg
     , emailServiceConfig
     , ttenTokenCacheExpiry = +86390
     , masterCloudProxyConfig =
-      { masterUrl = None Text
-      , masterSecret = Some "123"
-      }
+      { masterUrl = None Text, masterSecret = Some "123" }
     }

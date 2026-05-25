@@ -32,25 +32,31 @@ Guidelines for writing and maintaining Newman/Postman integration test collectio
 - Booking/search/estimate IDs (set from responses)
 - Payment order IDs
 
-## Mock Server Overrides
+## Mock Server Overrides (`POST /mock/override`)
 
-### ID-based status (`POST /mock/status`)
-For overriding responses by a known identifier (e.g., payment order ID):
+The mock server has a single override mechanism. Each rule matches incoming
+requests by extracting a field value; when it matches, `response` is deep-merged
+into the handler's default response.
+
 ```json
-{"service": "juspay", "id": ["order-123", "short-456"], "status": "CHARGED", "data": {"amount": 150}}
+{"service": "juspay", "extract": "path.2", "value": "{{payment_order_id}}",
+ "match": "/orders", "response": {"status": "CHARGED", "amount": 10.0}}
 ```
-- `id` can be string or array — stored under all IDs
-- `data` fields are deep-merged into the default response
-
-### Request-matching overrides (`POST /mock/override`)
-For overriding responses by matching a field in the incoming request:
 ```json
-{"service": "cris", "extract": "body.mob", "value": "9876543210", "response": {"respCode": 500}}
+{"service": "cris", "extract": "body.mob", "value": "9876543210",
+ "response": {"respCode": 500}}
 ```
 - **Extract syntax:** `body.<path>`, `path.<index>`, `query.<param>`, `header.<name>`
+- `value` is matched with strict equality against the extracted field
+- `match` (optional) is a path-substring gate — rule fires only when the request path contains it
 - For encrypted request bodies (CRIS, CMRL), registered body decoders decrypt before matching
 - Overrides auto-expire after 5 minutes
 - **Always `DELETE /mock/override` after use** to avoid leaking between tests
+
+For payment-order updates, register the override **after** capturing the
+order id from the create-order / payment-info response. Collections register
+the rule twice — once per id form (`payment_order_id` and `payment_order_short_id`) —
+because rider-app may poll status using either form.
 
 ## Collection Structure
 
@@ -67,6 +73,18 @@ For overriding responses by matching a field in the incoming request:
 4. Collections are shared across cities — no city-specific logic in collections
 5. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/feature-migrations/0001-dashboard-access-setup.sql`)
 
+## Upstream Config Environment (Sync From)
+
+Each city's environment file is auto-mapped to one or more upstream config-sync bundles (the same set listed in `CONFIG_SYNC_BUNDLE_URLS` in `Backend/dev/test-tool/context-api/server.py`):
+
+- `master` — always available (every city).
+- `prod_international` — Helsinki cities only (detected when the env file's `city` or filename contains `helsinki`, case-insensitive).
+- `prod` — every non-Helsinki city.
+
+The test-dashboard surfaces this as a **Sync From** dropdown next to **Env Type**. On Run, the dashboard checks `/api/config-sync/status`; if `last_synced.from` already matches the chosen upstream env, the sync is skipped. Otherwise it triggers `/api/config-sync/import` and blocks until done. The last successful source is persisted at `data/config-sync/.last-synced-env` so the marker survives `test-context-api` restarts.
+
+Compatibility is derived in `_derive_compatible_envs()` (`server.py`) — to change a city's mapping, edit that helper. No change to the postman environment file is needed; newman keeps consuming `Local/Local_*.postman_environment.json` unchanged (the `compatibleEnvs` field is computed at scan time and never written into the JSON).
+
 ## Environment Types & Mock-Server Auto-Skip
 
 Each suite has two environment-type subfolders:
@@ -80,6 +98,30 @@ Requests that hit mock endpoints are skipped automatically on non-Local envs:
 - **In the test dashboard**: the same predicate is evaluated at render time and mock-only steps are hidden from the step list when the selected env type is not `Local`. The Run button shows the visible step count with a "N hidden" suffix.
 
 Authors: do not gate mock requests with manual `if (envType ...)` blocks inside each request — the collection-level prerequest already handles it. Just ensure mock requests are addressed via the `{{mockServerUrl}}` / `{{mock_fcm_url}}` variables (which is the existing convention).
+
+### Per-city BPP integration variations (`frfs_integration_type`)
+
+Some rider-app endpoints are only implemented for a subset of FRFS BPP integration types — e.g. `POST /frfs/ticket/verify` (`ExternalBPP/ExternalAPI/CallAPI.hs:244-248`) only handles `DIRECT` and throws `Unimplemented!` for `ONDC`. To keep one collection runnable across all cities, each FRFS city env declares its integration type:
+
+```json
+{ "key": "frfs_integration_type", "value": "DIRECT", "type": "default" }
+```
+
+Values: `DIRECT` (synchronous BPP, e.g. Chennai bus) or `ONDC` (async Beckn via mock-server, e.g. Bhubaneshwar bus / Chalo).
+
+Steps that depend on a DIRECT-only code path should add a step-level prerequest that skips when the value isn't `DIRECT`:
+
+```javascript
+(function () {
+  var t = pm.environment.get('frfs_integration_type') || 'DIRECT';
+  if (t === 'DIRECT') return;
+  if (pm.execution && typeof pm.execution.skipRequest === 'function') {
+    pm.execution.skipRequest();
+  }
+})();
+```
+
+Newman reports those steps as `skipped`, not `failed`, so the collection still exits 0 on ONDC cities. See `BusTicketBookingFlow/01-DirectBusBooking.json` — the `Verify Ticket` and `Verify Ticket Status` steps use exactly this pattern.
 
 ## Adding a New Flow
 

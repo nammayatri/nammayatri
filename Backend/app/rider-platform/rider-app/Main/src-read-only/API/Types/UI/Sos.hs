@@ -79,7 +79,7 @@ data SosReq = SosReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, kaptureTicketId :: Kernel.Prelude.Maybe Data.Text.Text, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
+data SosRes = SosRes {externalSOSSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, kaptureTicketId :: Kernel.Prelude.Maybe Data.Text.Text, ticketId :: Kernel.Prelude.Maybe Data.Text.Text, sosId :: Kernel.Types.Id.Id Safety.Domain.Types.Sos.Sos}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -112,6 +112,7 @@ data StartTrackingRes = StartTrackingRes {sosId :: Kernel.Types.Id.Id Safety.Dom
 data TriggerApi
   = POLICE
   | KAPTURE
+  | SUPPORT_TICKET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

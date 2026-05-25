@@ -110,7 +110,7 @@ initiateRegistration merchantId mbMerchantOpCityId personId createOrderCall cust
             basket = Nothing,
             paymentRules = Nothing,
             autoRefundPostSuccess = if isAutoRefundEnabled then Just True else Nothing,
-            webhookUrl = Just $ showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             paymentFilter =
               Just
                 PInterface.PaymentFilter

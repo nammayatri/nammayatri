@@ -49,6 +49,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -364,7 +365,7 @@ buildRideDetails ::
 buildRideDetails booking ride driver vehicle = do
   now <- getCurrentTime
   vehicleRegCert <- QVRC.findLastVehicleRCWrapper vehicle.registrationNo
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow ride.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea)
   let defaultServiceTierName = (.name) <$> find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
   return $
     SRD.RideDetails

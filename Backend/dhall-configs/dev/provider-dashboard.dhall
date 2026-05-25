@@ -2,9 +2,13 @@ let common = ./common.dhall
 
 let sec = ./secrets/provider-dashboard.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
+let driverAppPort = Natural/show (env:DRIVER_APP_PORT ? 8016)
+
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -14,7 +18,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -24,7 +28,7 @@ let esqDBReplicaCfg =
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -34,7 +38,7 @@ let rcfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -48,31 +52,31 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
-      , url = "http://localhost:8016/"
+      , url = "http://localhost:${driverAppPort}/"
       , token = sec.driverOfferBppToken
       }
 
 let driverOfferBppManagement =
       { name = common.ServerName.DRIVER_OFFER_BPP_MANAGEMENT
-      , url = "http://localhost:8016/"
+      , url = "http://localhost:${driverAppPort}/"
       , token = sec.driverOfferBppToken
       }
 
 let appBackend =
       { name = common.ServerName.APP_BACKEND
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , token = sec.appBackendToken
       }
 
 let appBackendManagement =
       { name = common.ServerName.APP_BACKEND_MANAGEMENT
-      , url = "http://localhost:8013/"
+      , url = "http://localhost:${riderAppPort}/"
       , token = sec.appBackendToken
       }
 
 let rccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -83,7 +87,7 @@ let rccfg =
 
 let rccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -101,7 +105,7 @@ let specialZone =
 let cacheConfig = { configsExpTime = +86400 }
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -125,7 +129,7 @@ in  { esqDBCfg
     , cutOffHedisCluster = False
     , kafkaProducerCfg
     , secondaryKafkaProducerCfg
-    , port = +8018
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8018)
     , migrationPath =
       [   env:PROVIDER_DASHBOARD_MIGRATION_PATH as Text
         ? "dev/ddl-migrations/provider-dashboard"
@@ -168,6 +172,6 @@ in  { esqDBCfg
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
     , inMemConfig
-    , metricsPort = +9992
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9992)
     , incomingAPIResponseTimeout = +15
     }

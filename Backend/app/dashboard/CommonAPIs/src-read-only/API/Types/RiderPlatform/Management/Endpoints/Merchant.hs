@@ -40,6 +40,7 @@ data JobName
   = NyRegularMasterTrigger
   | PartnerInvoiceDataExportTrigger
   | DailyPassStatusUpdateTrigger
+  | PassExpiryReminderMasterTrigger
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

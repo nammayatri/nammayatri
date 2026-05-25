@@ -237,7 +237,7 @@
       },
       {
         "find": "https://preprod.gateway.ondc.org",
-        "replace": "http://localhost:8015/v1"
+        "replace": "http://localhost:8080/ondc"
       },
       {
         "find": "https://ondc-preprod.sequelstring.com",

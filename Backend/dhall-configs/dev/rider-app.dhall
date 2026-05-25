@@ -4,6 +4,14 @@ let sec = ./secrets/rider-app.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let riderAppPort = Natural/show (env:SERVICE_PORT ? 8013)
+
+let mockServerPort = Natural/show (env:MOCK_SERVER_PORT ? 8080)
+
+let ltsPort = Natural/show (env:LOCATION_TRACKING_SERVICE_PORT ? 8081)
+
+let driverAppInternalPort = Natural/show (env:DRIVER_APP_INTERNAL_PORT ? 8116)
+
 let ondcUrl = "https://analytics-api.aws.ondc.org/v1/api/push-txn-logs"
 
 let sosAlertsTopicARN =
@@ -18,7 +26,7 @@ let slackNotificationConfig =
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -28,7 +36,7 @@ let esqDBCfg =
 
 let esqDBReplicaCfg =
       { connectHost = esqDBCfg.connectHost
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = esqDBCfg.connectUser
       , connectPassword = esqDBCfg.connectPassword
       , connectDatabase = esqDBCfg.connectDatabase
@@ -38,7 +46,7 @@ let esqDBReplicaCfg =
 
 let rcfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -60,7 +68,7 @@ let hcfg =
 
 let ltsRedis =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +1
       , connectMaxConnections = +50
@@ -71,7 +79,7 @@ let ltsRedis =
 
 let ltsSecondaryRedis =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -89,7 +97,7 @@ let smsConfig =
         , token = None Text
         }
       , useFakeSms = Some 7891
-      , url = "http://localhost:4343"
+      , url = "http://localhost:${mockServerPort}/sms"
       , sender = "JUSPAY"
       }
 
@@ -98,7 +106,7 @@ let InfoBIPConfig =
       , password = common.InfoBIPConfig.password
       , token = common.InfoBIPConfig.token
       , url = "https://gye1yw.api.infobip.com"
-      , webhookurl = "http://localhost:8013/v2/update/status"
+      , webhookurl = "http://localhost:${riderAppPort}/v2/update/status"
       , sender = "JUSPAY"
       }
 
@@ -213,7 +221,7 @@ let slackCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:29092" ]
+      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -227,7 +235,7 @@ let cacheFeedbackFormConfig = { configsExpTime = +5184000 }
 
 let hccfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -238,7 +246,7 @@ let hccfg =
 
 let hccfgSecondary =
       { connectHost = "localhost"
-      , connectPort = 30002
+      , connectPort = env:REDIS_SECONDARY_CLUSTER_PORT ? 30002
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -336,7 +344,7 @@ let jobInfoMapx =
       ]
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -348,7 +356,7 @@ let cacConfig =
 let cacTenants = [ "dev", "test" ]
 
 let superPositionConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${mockServerPort}"
       , interval = 10
       , tenants = [ "dev", "test" ]
       , retryConnection = False
@@ -357,12 +365,12 @@ let superPositionConfig =
       }
 
 let LocationTrackingeServiceConfig =
-      { url = "http://localhost:8081/", secondaryUrl = None Text }
+      { url = "http://localhost:${ltsPort}/", secondaryUrl = None Text }
 
 let kafkaClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_kafka"
       , tls = False
@@ -372,7 +380,7 @@ let kafkaClickhouseCfg =
 let riderClickhouseCfg =
       { username = sec.clickHouseUsername
       , host = "localhost"
-      , port = 8123
+      , port = env:CLICKHOUSE_PORT ? 8123
       , password = sec.clickHousePassword
       , database = "atlas_app"
       , tls = False
@@ -419,12 +427,12 @@ in  { esqDBCfg
     , cutOffNonCriticalHedisCluster = False
     , smsCfg = smsConfig
     , infoBIPCfg = InfoBIPConfig
-    , port = +8013
-    , metricsPort = +9999
+    , port = Natural/toInteger (env:SERVICE_PORT ? 8013)
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9999)
     , hostName = "localhost"
-    , nwAddress = "http://localhost:8013/beckn/cab/v1"
-    , selfUIUrl = "http://localhost:8013/v2/"
-    , selfBaseUrl = "http://localhost:8013/"
+    , nwAddress = "http://localhost:${riderAppPort}/beckn/cab/v1"
+    , selfUIUrl = "http://localhost:${riderAppPort}/v2/"
+    , selfBaseUrl = "http://localhost:${riderAppPort}/"
     , signingKey = sec.signingKey
     , signatureExpiry = common.signatureExpiry
     , s3Config = common.s3Config
@@ -522,9 +530,6 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , masterCloudProxyConfig =
-      { masterUrl = Some "http://localhost:8116"
-      , masterSecret = Some "123"
-      }
-    , bapHostRedirectMap =
-      [] : List { mapKey : Text, mapValue : Optional Text }
+      { masterUrl = Some "http://localhost:${driverAppInternalPort}", masterSecret = Some "123" }
+    , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     }

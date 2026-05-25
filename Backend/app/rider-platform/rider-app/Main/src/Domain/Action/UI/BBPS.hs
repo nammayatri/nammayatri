@@ -107,7 +107,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            webhookUrl = Just $ Kernel.Prelude.showBaseUrl nwAddress,
+            webhookUrl = Just nwAddress,
             splitSettlementDetails = splitSettlementDetails,
             basket = Nothing,
             paymentRules = Nothing,
@@ -343,6 +343,7 @@ txnStatusToBBPSStatus = \case
   Payment.AUTO_REFUNDED -> DBBPS.REFUNDED
   Payment.CLIENT_AUTH_TOKEN_EXPIRED -> DBBPS.FAILED
   Payment.CANCELLED -> DBBPS.FAILED
+  Payment.PARTIAL_CHARGED -> DBBPS.PENDING
 
 withBBPSLock :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m, EsqDBReplicaFlow m r) => Kernel.Types.Id.Id DBBPS.BBPS -> m () -> m ()
 withBBPSLock id func = Redis.whenWithLockRedis (bbpsLockKey id.getId) 60 func

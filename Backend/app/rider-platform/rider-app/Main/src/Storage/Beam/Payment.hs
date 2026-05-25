@@ -25,6 +25,7 @@ import qualified Lib.Finance.Storage.Beam.DirectTaxTransaction as BeamDirectTax
 import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamIndirectTax
 import qualified Lib.Finance.Storage.Beam.Invoice as BeamInvoice
 import qualified Lib.Finance.Storage.Beam.InvoiceLedgerLink as BeamInvoiceLedger
+import qualified Lib.Finance.Storage.Beam.InvoiceTemplate as BeamInvoiceTemplate
 import qualified Lib.Finance.Storage.Beam.LedgerEntry as BeamLedger
 import qualified Lib.Finance.Storage.Beam.PgPaymentSettlementReport as BeamPgPayment
 import qualified Lib.Finance.Storage.Beam.PgPayoutSettlementReport as BeamPgPayout
@@ -110,6 +111,9 @@ instance HasSchemaName BeamInvoice.InvoiceT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamInvoiceLedger.InvoiceLedgerLinkT where
+  schemaName _ = T.pack currentSchemaName
+
+instance HasSchemaName BeamInvoiceTemplate.InvoiceTemplateT where
   schemaName _ = T.pack currentSchemaName
 
 instance HasSchemaName BeamLedger.LedgerEntryT where

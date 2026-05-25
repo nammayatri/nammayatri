@@ -306,7 +306,8 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
       email = Nothing,
       registrationLat = Nothing,
       registrationLon = Nothing,
-      otpChannel = Nothing
+      otpChannel = Nothing,
+      password = Nothing
     }
 
 fleetOwnerVerify ::
@@ -331,15 +332,6 @@ fleetOwnerVerifyHandler h req = do
       case mobileNumberOtpKey of
         Just otpHash -> do
           unless (otpHash == otp) $ throwError InvalidAuthData
-          let merchantId = ShortId req.merchantId
-          merchant <-
-            QMerchant.findByShortId merchantId
-              >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
-          mobileNumberHash <- getDbHash req.mobileNumber
-          person <- QP.findByMobileNumberAndMerchantAndRoles req.mobileCountryCode mobileNumberHash merchant.id [DP.FLEET_OWNER, DP.FLEET_BUSINESS, DP.OPERATOR] >>= fromMaybeM (PersonNotFound req.mobileNumber)
-          -- currently we don't create fleetOwnerInfo for operator
-          when (DCommon.checkFleetOwnerRole person.role) $
-            void $ QFOI.updateFleetOwnerVerifiedStatus True person.id
           pure Success
         Nothing -> throwError InvalidAuthData
     _ -> throwError InvalidAuthData

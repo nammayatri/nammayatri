@@ -8,7 +8,7 @@ let appCfg = ./dynamic-offer-driver-app.dhall
 
 let esqDBCfg =
       { connectHost = "localhost"
-      , connectPort = 5434
+      , connectPort = env:DB_PRIMARY_PORT ? 5434
       , connectUser = sec.dbUserId
       , connectPassword = sec.dbPassword
       , connectDatabase = "atlas_dev"
@@ -28,7 +28,7 @@ let esqDBReplicaCfg =
 
 let hedisCfg =
       { connectHost = "localhost"
-      , connectPort = 6379
+      , connectPort = env:REDIS_PORT ? 6379
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -39,7 +39,7 @@ let hedisCfg =
 
 let hedisClusterCfg =
       { connectHost = "localhost"
-      , connectPort = 30001
+      , connectPort = env:REDIS_CLUSTER_PORT ? 30001
       , connectAuth = None Text
       , connectDatabase = +0
       , connectMaxConnections = +50
@@ -50,7 +50,7 @@ let hedisClusterCfg =
 
 let consumerProperties =
       { groupId = "groupId"
-      , brockers = [ "localhost:29092" ]
+      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -66,7 +66,7 @@ let cacheConfig = { configsExpTime = +86400 }
 let kvConfigUpdateFrequency = +10
 
 let cacConfig =
-      { host = "http://localhost:8080"
+      { host = "http://localhost:${Natural/show (env:MOCK_SERVER_PORT ? 8080)}"
       , interval = 10
       , tenant = "test"
       , retryConnection = False
@@ -90,7 +90,7 @@ in  { hedisCfg
     , availabilityTimeWindowOption
     , granualityPeriodType = common.periodType.Hours
     , httpClientOptions = common.httpClientOptions
-    , metricsPort = +9994
+    , metricsPort = Natural/toInteger (env:METRICS_PORT ? 9994)
     , encTools = appCfg.encTools
     , loggerConfig =
             common.loggerConfig

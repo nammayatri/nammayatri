@@ -23,6 +23,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters
+import qualified Kernel.Types.Time
 import qualified Kernel.Types.TimeBound
 import qualified Kernel.Types.Value
 import Kernel.Utils.TH
@@ -737,7 +738,10 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     vehicleCategory :: Dashboard.Common.VehicleCategory,
     isEnabled :: Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -771,7 +775,10 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -806,7 +813,10 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     scheduleBookingListEligibilityTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area]
+    allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
+    vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -1337,7 +1337,10 @@ instance IsBaseError DriverOnboardingError where
     ImageValidationFailed -> Just "Validation of Image failed."
     ImageNotReadable -> Just "Image is not readable."
     ImageLowQuality -> Just "Image quality is not good"
-    ImageInvalidType provided actual -> Just $ "Provided image type \"" <> provided <> "\" doesn't match actual type \"" <> actual <> "\"."
+    ImageInvalidType provided actual ->
+      if actual == ""
+        then Just $ "We couldn't detect a valid " <> provided <> " in the uploaded image. Please ensure the document is clearly visible and try again."
+        else Just $ "The uploaded image appears to be a " <> actual <> " instead of a " <> provided <> ". Please upload a clear photo of your " <> provided <> "."
     ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
@@ -1631,7 +1634,9 @@ instance IsHTTPError DeliveryErrors where
 
 instance IsAPIError DeliveryErrors
 
-data SpecialZoneErrors = DriverLocationOutOfRestictionBounds
+data SpecialZoneErrors
+  = DriverLocationOutOfRestictionBounds
+  | SpecialLocationNotModified
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
@@ -1639,12 +1644,15 @@ instanceExceptionWithParent 'HTTPException ''SpecialZoneErrors
 instance IsBaseError SpecialZoneErrors where
   toMessage = \case
     DriverLocationOutOfRestictionBounds -> Just "Driver location out of restriction bounds."
+    SpecialLocationNotModified -> Just "Special location list is not modified."
 
 instance IsHTTPError SpecialZoneErrors where
   toErrorCode = \case
     DriverLocationOutOfRestictionBounds -> "DRIVER_LOCATION_OUT_OF_RESTRICTION_BOUNDS"
+    SpecialLocationNotModified -> "SPECIAL_LOCATION_NOT_MODIFIED"
   toHttpCode = \case
     DriverLocationOutOfRestictionBounds -> E400
+    SpecialLocationNotModified -> E304
 
 instance IsAPIError SpecialZoneErrors
 
@@ -2061,3 +2069,21 @@ instance IsHTTPError AddBaggageError where
     AddBaggageFarePolicyNotFound _ -> E500
 
 instance IsAPIError AddBaggageError
+
+data IntegratedBPPConfigError
+  = IntegratedBPPConfigNotFound
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
+
+instance IsBaseError IntegratedBPPConfigError where
+  toMessage = \case
+    IntegratedBPPConfigNotFound -> Just "Integrated BPP Config not found"
+
+instance IsHTTPError IntegratedBPPConfigError where
+  toErrorCode = \case
+    IntegratedBPPConfigNotFound -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+  toHttpCode = \case
+    IntegratedBPPConfigNotFound -> E404
+
+instance IsAPIError IntegratedBPPConfigError

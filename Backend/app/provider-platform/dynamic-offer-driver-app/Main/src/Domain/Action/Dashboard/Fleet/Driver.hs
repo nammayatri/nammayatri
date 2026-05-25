@@ -1714,7 +1714,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         vehicleIconURL <- case vehicleType of
           Nothing -> pure Nothing
           Just variant -> do
-            cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing
+            cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId driver.merchantOperatingCityId Nothing Nothing
             let mbServiceTierForIcon = find (\vst -> variant `elem` vst.allowedVehicleVariant) cityVehicleServiceTiers
             pure $ mbServiceTierForIcon >>= (.vehicleIconUrl) >>= \url -> Just $ show url
 
@@ -1868,7 +1868,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
       serviceTiersByCity <-
         if null merchantOpCityIds
           then pure Map.empty
-          else Map.fromList <$> mapM (\cityId -> (cityId,) <$> CQVST.findAllByMerchantOpCityId cityId Nothing) merchantOpCityIds
+          else Map.fromList <$> mapM (\cityId -> (cityId,) <$> CQVST.findAllByMerchantOpCityId cityId Nothing Nothing) merchantOpCityIds
 
       -- Batch fetch profile photos for all drivers
       allProfilePhotos <-
@@ -3612,7 +3612,8 @@ fetchOrCreatePerson moc req_ = do
             identifierType = Just DP.MOBILENUMBER,
             registrationLat = Nothing,
             registrationLon = Nothing,
-            otpChannel = Nothing
+            otpChannel = Nothing,
+            password = Nothing
           }
   mobileNumberHash <- getDbHash req_.driverPhoneNumber
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER
@@ -4694,7 +4695,7 @@ getDriverFleetScheduledBookingList merchantShortId opCity _ mbLimit mbOffset mbF
               offset = fromMaybe 0 mbOffset
               possibleScheduledTripCategories = [DTC.Rental DTC.OnDemandStaticOffer, DTC.InterCity DTC.OneWayOnDemandStaticOffer Nothing, DTC.OneWay DTC.OneWayOnDemandStaticOffer]
               tripCategory = maybe possibleScheduledTripCategories (: []) mbTripCategory
-          cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+          cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
           let allVehicleVariants = nub $ concatMap (.allowedVehicleVariant) cityServiceTiers
               safelimit = toInteger transporterConfig.recentScheduledBookingsSafeLimit
           -- Fleet sees all scheduled bookings; no location/reachability filter (unlike driver app listScheduledBookings)

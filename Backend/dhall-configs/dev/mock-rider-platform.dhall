@@ -5,7 +5,7 @@ let sec = ./secrets/rider-app.dhall
 let noSignatureSubscribers =
       [ "pre-prod-ondc-ticketing-api-delhi.transportstack.in" ]
 
-in  { port = +8027
+in  { port = Natural/toInteger (env:SERVICE_PORT ? 8027)
     , loggerConfig =
         common.loggerConfig // { logFilePath = "/tmp/mock-rider-platform.log" }
     , registryUrl = common.registryUrl

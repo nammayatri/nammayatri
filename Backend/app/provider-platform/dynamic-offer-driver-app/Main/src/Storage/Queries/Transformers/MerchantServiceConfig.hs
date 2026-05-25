@@ -54,6 +54,7 @@ getConfigJSON = \case
     Whatsapp.GupShupConfig cfg -> toJSON cfg
     Whatsapp.TataCommunicationsConfig cfg -> toJSON cfg
     Whatsapp.KarixConfig cfg -> toJSON cfg
+    Whatsapp.TwilioConfig cfg -> toJSON cfg
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig cfg -> toJSON cfg
     Verification.FaceVerificationConfig cfg -> toJSON cfg
@@ -99,6 +100,7 @@ getConfigJSON = \case
     Payment.PaytmEDCConfig cfg -> toJSON cfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig cfg -> toJSON cfg
+    Ticket.ZendeskConfig cfg -> toJSON cfg
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig cfg -> toJSON cfg
     Notification.PayTMConfig cfg -> toJSON cfg
@@ -155,6 +157,7 @@ getServiceName = \case
     Whatsapp.GupShupConfig _ -> Domain.WhatsappService Whatsapp.GupShup
     Whatsapp.TataCommunicationsConfig _ -> Domain.WhatsappService Whatsapp.TataCommunications
     Whatsapp.KarixConfig _ -> Domain.WhatsappService Whatsapp.Karix
+    Whatsapp.TwilioConfig _ -> Domain.WhatsappService Whatsapp.Twilio
   Domain.VerificationServiceConfig verificationCfg -> case verificationCfg of
     Verification.IdfyConfig _ -> Domain.VerificationService Verification.Idfy
     Verification.FaceVerificationConfig _ -> Domain.VerificationService Verification.InternalScripts
@@ -182,6 +185,7 @@ getServiceName = \case
   Domain.MembershipPaymentServiceConfig paymentCfg -> Domain.MembershipPaymentService $ getPaymentServiceConfigJson paymentCfg
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture
+    Ticket.ZendeskConfig _ -> Domain.IssueTicketService Ticket.Zendesk
   Domain.NotificationServiceConfig notificationServiceCfg -> case notificationServiceCfg of
     Notification.FCMConfig _ -> Domain.NotificationService Notification.FCM
     Notification.PayTMConfig _ -> Domain.NotificationService Notification.PayTM
@@ -252,6 +256,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> eitherValue configJSON
   Domain.WhatsappService Whatsapp.Karix -> Domain.WhatsappServiceConfig . Whatsapp.KarixConfig <$> eitherValue configJSON
+  Domain.WhatsappService Whatsapp.Twilio -> Domain.WhatsappServiceConfig . Whatsapp.TwilioConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.Idfy -> Domain.VerificationServiceConfig . Verification.IdfyConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.InternalScripts -> Domain.VerificationServiceConfig . Verification.FaceVerificationConfig <$> eitherValue configJSON
   Domain.VerificationService Verification.GovtData -> Right $ Domain.VerificationServiceConfig Verification.GovtDataConfig
@@ -275,6 +280,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.CautioPaymentService paymentServiceName -> Domain.CautioPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.MembershipPaymentService paymentServiceName -> Domain.MembershipPaymentServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
   Domain.IssueTicketService Ticket.Kapture -> Domain.IssueTicketServiceConfig . Ticket.KaptureConfig <$> eitherValue configJSON
+  Domain.IssueTicketService Ticket.Zendesk -> Domain.IssueTicketServiceConfig . Ticket.ZendeskConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.FCM -> Domain.NotificationServiceConfig . Notification.FCMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.PayTM -> Domain.NotificationServiceConfig . Notification.PayTMConfig <$> eitherValue configJSON
   Domain.NotificationService Notification.GRPC -> Domain.NotificationServiceConfig . Notification.GRPCConfig <$> eitherValue configJSON

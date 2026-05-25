@@ -2,6 +2,18 @@ let sec = ./secrets/common.dhall
 
 let globalCommon = ../generic/common.dhall
 
+let riderAppPort = Natural/show (env:RIDER_APP_PORT ? 8013)
+
+let mockGooglePort = Natural/show (env:MOCK_GOOGLE_PORT ? 8019)
+
+let becknGatewayPort = Natural/show (env:BECKN_GATEWAY_PORT ? 8015)
+
+let mockRegistryPort = Natural/show (env:MOCK_REGISTRY_PORT ? 8020)
+
+let uiDevPort = Natural/show (env:UI_DEV_PORT ? 3000)
+
+let urlShortnerPort = Natural/show (env:URL_SHORTNER_PORT ? 9023)
+
 let nsdlRegistryUrl = "https://pilot-gateway-1.beckn.nsdl.co.in/"
 
 let becknOneRegistryUrl = "https://beckn-one.succinct.in/subscribers"
@@ -23,34 +35,36 @@ let googleCfg =
       }
 
 let mockGoogleCfg =
-      { googleMapsUrl = "http://localhost:8019/"
-      , googleRoadsUrl = "http://localhost:8019/"
+      { googleMapsUrl = "http://localhost:${mockGooglePort}/"
+      , googleRoadsUrl = "http://localhost:${mockGooglePort}/"
       , googleKey = "mock-google-key"
       , useAdvancedDirections = True
-      , googlePlaceNewUrl = "http://localhost:8019/"
+      , googlePlaceNewUrl = "http://localhost:${mockGooglePort}/"
       , useNewPlaces = True
       , googleRouteConfig
       }
 
 let internalEndPointMap =
-      [ { mapKey = "http://localhost:8015/v1"
-        , mapValue = "http://localhost:8015/v1"
+      [ { mapKey = "http://localhost:${becknGatewayPort}/v1"
+        , mapValue = "http://localhost:${becknGatewayPort}/v1"
         }
-      , { mapKey = "http://localhost:3000", mapValue = "http://localhost:3000" }
+      , { mapKey = "http://localhost:${uiDevPort}"
+        , mapValue = "http://localhost:${uiDevPort}"
+        }
       ]
 
 let SchedulerType = < RedisBased | DbBased >
 
 let urlShortnerConfig =
-      { url = "http://localhost:9023/", apiKey = sec.urlShortnerApiKey }
+      { url = "http://localhost:${urlShortnerPort}/", apiKey = sec.urlShortnerApiKey }
 
-let ondcRegistryUrl = "http://localhost:8020/"
+let ondcRegistryUrl = "http://localhost:${mockRegistryPort}/"
 
-let ondcGatewayUrl = "http://localhost:8015/v1"
+let ondcGatewayUrl = "http://localhost:${becknGatewayPort}/v1"
 
-let nyRegistryUrl = "http://localhost:8020/"
+let nyRegistryUrl = "http://localhost:${mockRegistryPort}/"
 
-let nyGatewayUrl = "http://localhost:8015/v1"
+let nyGatewayUrl = "http://localhost:${becknGatewayPort}/v1"
 
 let nammayatriRegistryConfig =
       { apiKey = sec.nammayatriRegistryApiKey, url = nyRegistryUrl }
@@ -74,13 +88,13 @@ in  { smsSessionConfig = globalCommon.smsSessionConfig
     , smsUserName = sec.smsUserName
     , smsPassword = sec.smsPassword
     , InfoBIPConfig = sec.InfoBIPConfig
-    , passetto = { _1 = "localhost", _2 = 8079 }
+    , passetto = { _1 = "localhost", _2 = env:PASSETTO_SERVICE_PORT ? 8021 }
     , googleCfg
     , mockGoogleCfg
     , googleTranslateUrl = "https://www.googleapis.com/"
     , googleTranslateKey = sec.googleTranslateKey
     , nammayatriRegistryConfig
-    , authServiceUrl = "http://localhost:8013/"
+    , authServiceUrl = "http://localhost:${riderAppPort}/"
     , consumerType = globalCommon.consumerType
     , schedulerType = SchedulerType
     , internalEndPointMap

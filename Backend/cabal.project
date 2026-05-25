@@ -1,14 +1,12 @@
 packages:
   app/alchemist
   app/provider-platform/dynamic-offer-driver-drainer
-  app/beckn-cli
   app/provider-platform/dynamic-offer-driver-app/Main
   app/provider-platform/dynamic-offer-driver-app/Allocator
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
   app/rider-platform/rider-app/search-result-aggregator
-  app/safety-dashboard
   app/mocks/sms
   app/mocks/fcm
   app/dashboard/rider-dashboard
@@ -22,11 +20,10 @@ packages:
   app/mocks/rider-platform
   app/kafka-consumers
   app/mocks/idfy
-  app/mocks/payment
-  app/mocks/google
   app/rider-platform/public-transport-rider-platform/Main
   app/rider-platform/public-transport-rider-platform/search-consumer
   app/mocks/public-transport-provider-platform
+  app/mocks/google
   app/utils/route-extractor
   app/utils/image-api-helper
   lib/passetto-lib
@@ -34,6 +31,7 @@ packages:
   lib/beckn-services
   lib/payment
   lib/shared-services
+  lib/gtfs-data-server
   lib/location-updates
   lib/special-zone
   lib/scheduler
