@@ -288,6 +288,7 @@ types:
     - supplierAddress: Maybe Text
     - supplierGstin: Maybe Text
     - supplierTaxNo: Maybe Text
+    - supplierId: Maybe Text
     - merchantGstin: Maybe Text
     - issuedToName: Maybe Text
     - issuedToAddress: Maybe Text
