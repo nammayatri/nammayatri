@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "Kaleyra SMS Flow",
+    "description": "Integration tests for Kaleyra SMS service via the internal sendSMS endpoint.\n\nPrerequisites:\n1. Kaleyra merchant_service_config inserted for the target merchant (see feature-migrations/0012 or setup-local-kaleyra.sql)\n2. merchant_service_usage_config updated with KaleyraSms in sms_providers_priority_list\n3. merchant_message entry for SEND_OTP with sender_header and message template\n\nTest 1 (OTP) works out of the box with useFakeSms (default local dev config).\nTest 2 (Real OTP) requires real Kaleyra credentials, useFakeSms=None, and test_phone_number set in env (with +91 prefix). Backend generates the OTP and Kaleyra delivers it to your phone.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Generate a random phone number with +91 for OTP tests (no real SMS sent with useFakeSms)",
+          "if (!pm.collectionVariables.get('_test_phone_number')) {",
+          "    var num = '+919' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_phone_number', num);",
+          "    console.log('Test phone number (OTP only):', num);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Send OTP SMS via Kaleyra (works with useFakeSms)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// With useFakeSms set (default local dev), this returns the fake OTP",
+              "// without calling Kaleyra. Validates: merchant lookup, auth, city resolution.",
+              "// With useFakeSms = None + real creds, it sends a real OTP SMS via Kaleyra."
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "var body = pm.response.json();",
+              "",
+              "pm.test('Response contains OTP', function () {",
+              "    pm.expect(body).to.have.property('otp');",
+              "    pm.expect(body.otp).to.not.be.null;",
+              "});",
+              "",
+              "console.log('OTP SMS response:', JSON.stringify(body));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "api-key",
+            "value": "{{dashboard_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phoneNumber\": \"{{_test_phone_number}}\",\n  \"messageKey\": \"SEND_OTP\",\n  \"templateVars\": {\n    \"hash\": \"testHash123\"\n  },\n  \"isOtp\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_internal}}/internal/sendSMS/{{merchant_short_id}}/{{city}}",
+          "host": [
+            "{{baseUrl_internal}}"
+          ],
+          "path": [
+            "internal",
+            "sendSMS",
+            "{{merchant_short_id}}",
+            "{{city}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Send Real OTP SMS via Kaleyra (requires real credentials + useFakeSms=None)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// This test sends a REAL OTP SMS via Kaleyra — it requires:",
+              "//   1. Real Kaleyra apiKey + sid in merchant_service_config",
+              "//   2. useFakeSms = None in dhall config (otherwise it short-circuits)",
+              "//   3. test_phone_number set in the environment (your own number with +91 prefix)",
+              "// The backend generates the OTP and Kaleyra delivers it to your phone.",
+              "// Skips automatically if test_phone_number is not set.",
+              "var phone = pm.environment.get('test_phone_number');",
+              "if (!phone || phone.trim() === '') {",
+              "    console.log('[skip] test_phone_number not set — skipping real OTP SMS test');",
+              "    pm.collectionVariables.set('_skip_real_otp', 'true');",
+              "} else {",
+              "    pm.collectionVariables.set('_skip_real_otp', 'false');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.collectionVariables.get('_skip_real_otp') === 'true') {",
+              "    pm.test('[skipped] Real OTP SMS test — test_phone_number not set', function () {",
+              "        // intentionally empty — skip",
+              "    });",
+              "} else {",
+              "    pm.test('Status code is 200', function () {",
+              "        pm.response.to.have.status(200);",
+              "    });",
+              "",
+              "    var body = pm.response.json();",
+              "",
+              "    pm.test('Response contains backend-generated OTP', function () {",
+              "        pm.expect(body).to.have.property('otp');",
+              "        pm.expect(body.otp).to.not.be.null;",
+              "    });",
+              "",
+              "    console.log('Real OTP SMS response:', JSON.stringify(body));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "api-key",
+            "value": "{{dashboard_token}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phoneNumber\": \"{{test_phone_number}}\",\n  \"messageKey\": \"SEND_OTP\",\n  \"templateVars\": {\n    \"hash\": \"testHash123\"\n  },\n  \"isOtp\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_internal}}/internal/sendSMS/{{merchant_short_id}}/{{city}}",
+          "host": [
+            "{{baseUrl_internal}}"
+          ],
+          "path": [
+            "internal",
+            "sendSMS",
+            "{{merchant_short_id}}",
+            "{{city}}"
+          ]
+        }
+      }
+    }
+  ]
+}

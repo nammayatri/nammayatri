@@ -48,6 +48,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.SmsService Sms.VonageSms -> Domain.SmsServiceConfig . Sms.VonageSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.KarixSms -> Domain.SmsServiceConfig . Sms.KarixSmsConfig <$> valueToMaybe configJSON
     Domain.SmsService Sms.PinbixSms -> Domain.SmsServiceConfig . Sms.PinbixSmsConfig <$> valueToMaybe configJSON
+    Domain.SmsService Sms.KaleyraSms -> Domain.SmsServiceConfig . Sms.KaleyraSmsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.GupShup -> Domain.WhatsappServiceConfig . Whatsapp.GupShupConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.TataCommunications -> Domain.WhatsappServiceConfig . Whatsapp.TataCommunicationsConfig <$> valueToMaybe configJSON
     Domain.WhatsappService Whatsapp.Karix -> Domain.WhatsappServiceConfig . Whatsapp.KarixConfig <$> valueToMaybe configJSON
@@ -125,6 +126,7 @@ getServiceNameConfigJson = \case
     Sms.VonageSmsConfig cfg -> (Domain.SmsService Sms.VonageSms, toJSON cfg)
     Sms.KarixSmsConfig cfg -> (Domain.SmsService Sms.KarixSms, toJSON cfg)
     Sms.PinbixSmsConfig cfg -> (Domain.SmsService Sms.PinbixSms, toJSON cfg)
+    Sms.KaleyraSmsConfig cfg -> (Domain.SmsService Sms.KaleyraSms, toJSON cfg)
   Domain.WhatsappServiceConfig whatsappCfg -> case whatsappCfg of
     Whatsapp.GupShupConfig cfg -> (Domain.WhatsappService Whatsapp.GupShup, toJSON cfg)
     Whatsapp.TataCommunicationsConfig cfg -> (Domain.WhatsappService Whatsapp.TataCommunications, toJSON cfg)
