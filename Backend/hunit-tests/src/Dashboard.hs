@@ -10,10 +10,13 @@ module Dashboard
 where
 
 import AddVehicleUnitTests (addVehicleUnitTests)
+import CancellationDuesUnitTests (cancellationDuesUnitTests)
 import CreateRequestUnitTests (createRequestUnitTests)
 import DriverDocumentUploadUnitTests (driverDocumentUploadUnitTests)
 import DriverOperationHubUnitTests (driverOperationHubUnitTests)
+import FleetRoleUnitTests (fleetRoleUnitTests)
 import RegistrationUnitTests (registrationUnitTests)
+import StclMembershipUnitTests (stclMembershipUnitTests)
 import Test.Tasty (TestTree, testGroup)
 import VehicleAssociationUnitTests (vehicleAssociationUnitTests)
 
@@ -27,5 +30,8 @@ dashboardUnitTests =
       driverDocumentUploadUnitTests,
       driverOperationHubUnitTests,
       addVehicleUnitTests,
-      createRequestUnitTests
+      createRequestUnitTests,
+      cancellationDuesUnitTests,
+      stclMembershipUnitTests,
+      fleetRoleUnitTests
     ]
