@@ -130,6 +130,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
       isAutoPlus = requestedVehicleServiceTier == DVST.AUTO_PLUS
       cCharges = roundToIntegral <$> congestionCharges
       pCharges = roundToIntegral <$> priorityCharges
+      rawBaseFare = fromMaybe searchTry.baseFare nearbyReq.baseFare
+      netBaseFare = rawBaseFare - fromMaybe 0 nearbyReq.commissionCharges
    in SearchRequestForDriverAPIEntity
         { searchRequestId = nearbyReq.searchTryId,
           searchTryId = nearbyReq.searchTryId,
@@ -143,8 +145,8 @@ makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadat
           distanceToPickup = nearbyReq.actualDistanceToPickup,
           distanceToPickupWithUnit = convertMetersToDistance nearbyReq.distanceUnit nearbyReq.actualDistanceToPickup,
           durationToPickup = nearbyReq.durationToPickup,
-          baseFare = roundToIntegral $ fromMaybe searchTry.baseFare nearbyReq.baseFare, -- short term, later remove searchTry.baseFare
-          baseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' nearbyReq.currency (fromMaybe searchTry.baseFare nearbyReq.baseFare)) nearbyReq.currency,
+          baseFare = roundToIntegral netBaseFare, -- net fare = gross fare - commission
+          baseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' nearbyReq.currency netBaseFare) nearbyReq.currency,
           customerExtraFee = roundToIntegral <$> searchTry.customerExtraFee,
           customerExtraFeeWithCurrency = flip PriceAPIEntity searchTry.currency <$> searchTry.customerExtraFee,
           fromLocation = convertDomainType searchRequest.fromLocation,
