@@ -46,6 +46,7 @@ LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
+PREPAID_DIR="$SCRIPT_DIR/collections/PrepaidSubscriptionFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -446,6 +447,7 @@ run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
+run_prepaid() { run_frfs "$PREPAID_DIR" "PREPAID SUBSCRIPTION" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -552,6 +554,9 @@ case "${1:-}" in
         ;;
     intercity)
         run_intercity "${2:-}" "${3:-}"
+        ;;
+    prepaid|prepaid-subscription)
+        run_prepaid "${2:-}" "${3:-}"
         ;;
     rental)
         run_rental "${2:-}" "${3:-}"

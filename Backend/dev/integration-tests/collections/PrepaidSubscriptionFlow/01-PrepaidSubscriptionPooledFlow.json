@@ -1,0 +1,1668 @@
+{
+  "info": {
+    "name": "NY Prepaid Subscription - Pooled Flow",
+    "description": "End-to-end prepaid subscription flow (non-category-scoped / pooled balance).\n\nA fresh CAR driver subscribes to a PREPAID_SUBSCRIPTION plan, the mock Juspay auto-CHARGES the order, payment status is polled to trigger webhook processing, the subscription becomes ACTIVE, and a full ride cycle (accept \u2192 start \u2192 end) is completed. After ride end the driver's RideCredit balance is asserted to be lower than the initial balance.\n\n\u2500\u2500 PREREQUISITE SQL (run once against local DB, adapted for NAMMA_YATRI_PARTNER / Bangalore) \u2500\u2500\n\n-- Q1: Enable prepaid at merchant level\nUPDATE atlas_driver_offer_bpp.merchant\nSET prepaid_subscription_and_wallet_enabled = true\nWHERE short_id = 'NAMMA_YATRI_PARTNER';\n\n-- Q2: Set prepaid threshold in transporter_config.subscription_config\nUPDATE atlas_driver_offer_bpp.transporter_config\nSET subscription_config = jsonb_set(\n  COALESCE(subscription_config::jsonb, '{}'),\n  '{prepaidSubscriptionThreshold}', '100.0'\n)\nWHERE merchant_operating_city_id IN (\n  SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city\n  WHERE merchant_short_id = 'NAMMA_YATRI_PARTNER' AND city = 'Bangalore'\n);\n\n-- Q3: Disable old subscription toggle (no YATRI_SUBSCRIPTION conflict)\nUPDATE atlas_driver_offer_bpp.transporter_config tc\nSET subscription = false, updated_at = now()\nFROM atlas_driver_offer_bpp.merchant_operating_city moc\nJOIN atlas_driver_offer_bpp.merchant m ON m.id = moc.merchant_id\nWHERE tc.merchant_operating_city_id = moc.id\n  AND m.short_id = 'NAMMA_YATRI_PARTNER'\n  AND moc.city = 'Bangalore';\n\n-- Q4: Insert PREPAID_SUBSCRIPTION config row (skip if already exists)\nINSERT INTO atlas_driver_offer_bpp.subscription_config (\n  service_name, merchant_operating_city_id, merchant_id,\n  allow_driver_fee_calc_schedule, allow_due_addition, allow_manual_payment_links,\n  deep_link_expiry_time_in_minutes, generic_batch_size_for_jobs,\n  generic_job_reschedule_time, is_triggered_at_end_ride, max_retry_count,\n  payment_link_channel, payment_link_job_time, payment_service_name,\n  send_deep_link, send_in_app_fcm_notifications, use_overlay_service,\n  payout_service_name, default_city_vehicle_category,\n  number_of_free_trial_rides, free_trial_rides_applicable,\n  subscription_enabled_for_vehicle_categories, execution_enabled_for_vehicle_categories,\n  is_subscription_enabled_at_category_level, enable_city_based_fee_switch,\n  subscription_down, is_ui_enabled, autopay_enabled, show_manual_plans_in_ui,\n  send_manual_payment_link_job_max_delay, manual_payment_link_rate_limit_expiry_seconds,\n  enable_offers_for_members, created_at, updated_at\n)\nSELECT\n  'PREPAID_SUBSCRIPTION', moc.id, m.id,\n  false, false, false, 15, 30, 60, true, 4,\n  'WHATSAPP', 21600, 'Payment_Juspay',\n  false, true, true, 'Payout_Juspay', 'CAR',\n  0, false,\n  ARRAY['CAR','AUTO_CATEGORY','MOTORCYCLE']::text[], ARRAY['CAR','AUTO_CATEGORY','MOTORCYCLE']::text[],\n  true, false, false, true, false, true,\n  43200, 21600, false, now(), now()\nFROM atlas_driver_offer_bpp.merchant m\nJOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.merchant_id = m.id\nWHERE m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore'\nON CONFLICT DO NOTHING;\n\n-- Q5: Disable YATRI_SUBSCRIPTION UI (prevents conflicting plan list)\nUPDATE atlas_driver_offer_bpp.subscription_config sc\nSET is_ui_enabled = false, updated_at = now()\nFROM atlas_driver_offer_bpp.merchant_operating_city moc\nJOIN atlas_driver_offer_bpp.merchant m ON m.id = moc.merchant_id\nWHERE sc.merchant_operating_city_id = moc.id\n  AND sc.service_name = 'YATRI_SUBSCRIPTION'\n  AND m.short_id = 'NAMMA_YATRI_PARTNER'\n  AND moc.city = 'Bangalore';\n\n-- Q6: Insert PREPAID CAR plan (\u20b91 registration for easy local testing, \u20b95000 credits, 2-day validity)\nINSERT INTO atlas_driver_offer_bpp.plan (\n  id, merchant_id, merchant_op_city_id, payment_mode, plan_type,\n  name, description, max_amount, registration_amount, plan_base_amount,\n  is_offer_applicable, max_credit_limit, free_ride_count, frequency,\n  cgst_percentage, sgst_percentage, max_mandate_amount,\n  subscribed_flag_toggle_allowed, is_deprecated, eligible_for_coin_discount,\n  service_name, based_on_entity, vehicle_category, allow_strike_off,\n  product_ownership_amount, billing_type, validity_in_days, is_fleet_owner_plan\n)\nSELECT\n  gen_random_uuid()::text, m.id, moc.id::text, 'MANUAL', 'SUBSCRIPTION',\n  'ECONOMY', 'Enjoy rides worth 5000 in 1!', 0, 1, 'RECHARGE_5000.0',\n  true, 5000, 0, 'FLEXIBLE',\n  0.09, 0.09, 0,\n  true, false, true,\n  'PREPAID_SUBSCRIPTION', 'RIDE', 'CAR', true,\n  0, 'PREPAID', 2, false\nFROM atlas_driver_offer_bpp.merchant m\nJOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.merchant_id = m.id\nWHERE m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore';\n\n\u2500\u2500 DRIVER-LEVEL SETUP (run after Driver Auth + OTP steps complete) \u2500\u2500\n\nAfter the 'Driver OTP Verify' step, the driver_id is printed to the console.\nRun this SQL to enable PREPAID_SUBSCRIPTION for that driver:\n\nUPDATE atlas_driver_offer_bpp.driver_information\nSET services_enabled_for_subscription = ARRAY['PREPAID_SUBSCRIPTION']::text[],\n    updated_at = now()\nWHERE driver_id = '<paste driver_id from console here>';",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random test phone numbers and registration ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = 'KA' + String(Math.floor(10 + Math.random() * 89))",
+          "        + String.fromCharCode(65 + Math.floor(Math.random() * 26))",
+          "        + String.fromCharCode(65 + Math.floor(Math.random() * 26))",
+          "        + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    pm.collectionVariables.set('_test_reg_no', regNo);",
+          "    console.log('[Prepaid] Test driver:', dNum, '| rider:', rNum, '| reg:', regNo);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "DB - Enable Prepaid at Merchant Level",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Enable Prepaid at Merchant Level executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"UPDATE atlas_driver_offer_bpp.merchant SET prepaid_subscription_and_wallet_enabled = true WHERE short_id = 'NAMMA_YATRI_PARTNER'\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Set Prepaid Threshold in transporter_config",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Set Prepaid Threshold in transporter_config executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"UPDATE atlas_driver_offer_bpp.transporter_config SET subscription_config = jsonb_set(COALESCE(subscription_config::jsonb, '{}'), '{prepaidSubscriptionThreshold}', '100.0') WHERE merchant_operating_city_id IN (SELECT id FROM atlas_driver_offer_bpp.merchant_operating_city WHERE merchant_short_id = 'NAMMA_YATRI_PARTNER' AND city = 'Bangalore')\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Disable Old Subscription Toggle",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Disable Old Subscription Toggle executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"UPDATE atlas_driver_offer_bpp.transporter_config tc SET subscription = false, updated_at = now() FROM atlas_driver_offer_bpp.merchant_operating_city moc JOIN atlas_driver_offer_bpp.merchant m ON m.id = moc.merchant_id WHERE tc.merchant_operating_city_id = moc.id AND m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore'\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Insert PREPAID_SUBSCRIPTION Config Row",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Insert PREPAID_SUBSCRIPTION Config Row executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"INSERT INTO atlas_driver_offer_bpp.subscription_config (service_name, merchant_operating_city_id, merchant_id, allow_driver_fee_calc_schedule, allow_due_addition, allow_manual_payment_links, deep_link_expiry_time_in_minutes, generic_batch_size_for_jobs, generic_job_reschedule_time, is_triggered_at_end_ride, max_retry_count, payment_link_channel, payment_link_job_time, payment_service_name, send_deep_link, send_in_app_fcm_notifications, use_overlay_service, payout_service_name, default_city_vehicle_category, number_of_free_trial_rides, free_trial_rides_applicable, subscription_enabled_for_vehicle_categories, execution_enabled_for_vehicle_categories, is_subscription_enabled_at_category_level, enable_city_based_fee_switch, subscription_down, is_ui_enabled, autopay_enabled, show_manual_plans_in_ui, send_manual_payment_link_job_max_delay, manual_payment_link_rate_limit_expiry_seconds, enable_offers_for_members, created_at, updated_at) SELECT 'PREPAID_SUBSCRIPTION', moc.id, m.id, false, false, false, 15, 30, 60, true, 4, 'WHATSAPP', 21600, 'Payment_Juspay', false, true, true, 'Payout_Juspay', 'CAR', 0, false, ARRAY['CAR','AUTO_CATEGORY','MOTORCYCLE']::text[], ARRAY['CAR','AUTO_CATEGORY','MOTORCYCLE']::text[], true, false, false, true, false, true, 43200, 21600, false, now(), now() FROM atlas_driver_offer_bpp.merchant m JOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.merchant_id = m.id WHERE m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore' ON CONFLICT DO NOTHING\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Disable YATRI_SUBSCRIPTION UI",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Disable YATRI_SUBSCRIPTION UI executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"UPDATE atlas_driver_offer_bpp.subscription_config sc SET is_ui_enabled = false, updated_at = now() FROM atlas_driver_offer_bpp.merchant_operating_city moc JOIN atlas_driver_offer_bpp.merchant m ON m.id = moc.merchant_id WHERE sc.merchant_operating_city_id = moc.id AND sc.service_name = 'YATRI_SUBSCRIPTION' AND m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore'\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Insert PREPAID CAR Plan (fee=1, credits=5000, 2-day validity)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Insert PREPAID CAR Plan (fee=1, credits=5000, 2-day validity) executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, merchant_op_city_id, payment_mode, plan_type, name, description, max_amount, registration_amount, plan_base_amount, is_offer_applicable, max_credit_limit, free_ride_count, frequency, cgst_percentage, sgst_percentage, max_mandate_amount, subscribed_flag_toggle_allowed, is_deprecated, eligible_for_coin_discount, service_name, based_on_entity, vehicle_category, allow_strike_off, product_ownership_amount, billing_type, validity_in_days, is_fleet_owner_plan) SELECT gen_random_uuid()::text, m.id, moc.id::text, 'MANUAL', 'SUBSCRIPTION', 'ECONOMY', 'Enjoy rides worth 5000 in 1!', 0, 1, 'RECHARGE_5000.0', true, 5000, 0, 'FLEXIBLE', 0.09, 0.09, 0, true, false, true, 'PREPAID_SUBSCRIPTION', 'RIDE', 'CAR', true, 0, 'PREPAID', 2, false FROM atlas_driver_offer_bpp.merchant m JOIN atlas_driver_offer_bpp.merchant_operating_city moc ON moc.merchant_id = m.id WHERE m.short_id = 'NAMMA_YATRI_PARTNER' AND moc.city = 'Bangalore' ON CONFLICT DO NOTHING\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB - Enable All NAMMA_YATRI_PARTNER Drivers for PREPAID_SUBSCRIPTION",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('DB - Enable All NAMMA_YATRI_PARTNER Drivers for PREPAID_SUBSCRIPTION executed', function () {",
+              "    var j = pm.response.json();",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "    pm.expect(j).to.not.have.property('error');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"sql\": \"UPDATE atlas_driver_offer_bpp.driver_information SET services_enabled_for_subscription = ARRAY['PREPAID_SUBSCRIPTION']::text[], updated_at = now() WHERE merchant_id = (SELECT id FROM atlas_driver_offer_bpp.merchant WHERE short_id = 'NAMMA_YATRI_PARTNER')\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/raw",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "raw"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('[Prepaid Pooled] Driver ID:', d.person.id, '\u2014 now run the driver-level SQL to enable PREPAID_SUBSCRIPTION for this driver_id.');",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"prepaid-test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{driver_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Dashboard Switch City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{dashboard_city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle - CAR (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] AddVehicle:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"{{vehicle_class}}\",\n  \"colour\": \"White\",\n  \"model\": \"{{vehicle_model}}\",\n  \"make\": \"{{vehicle_make}}\",\n  \"vehicleCategory\": \"{{vehicle_category}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "addVehicle"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Enable driver:', pm.response.text());"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "driver",
+            "{{driver_id}}",
+            "enable"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Prepaid Plan List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has prepaid plans', function () {",
+              "    pm.expect(d.list, 'plan list').to.be.an('array').that.is.not.empty;",
+              "});",
+              "if (d.list && d.list.length > 0) {",
+              "    // Prefer CAR plan, else first available",
+              "    var carPlan = d.list.find(function(p) { return p.vehicleCategory === 'CAR'; }) || d.list[0];",
+              "    pm.environment.set('prepaid_plan_id', carPlan.id);",
+              "    console.log('[Prepaid Pooled] Using plan:', carPlan.id, '| name:', carPlan.name, '| vehicleCategory:', carPlan.vehicleCategory, '| maxCreditLimit:', carPlan.maxCreditLimit, '| registrationAmount:', carPlan.registrationAmount);",
+              "    console.log('[Prepaid Pooled] Total plans returned:', d.list.length);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/list?serviceName=%22PREPAID_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22PREPAID_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Subscribe to Prepaid Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// getStatusV2 looks up payment_order.short_id (Juspay order_id / orderResp.order_id on local mock)",
+              "var resp = d.orderResp || {};",
+              "var looksLikeMockFallback = function (s) { return typeof s === 'string' && /^mock-short-/.test(s); };",
+              "var shortId = (resp.id && !looksLikeMockFallback(resp.id)) ? resp.id : (resp.order_id || resp.orderId);",
+              "if (shortId) {",
+              "    pm.environment.set('prepaid_order_id', shortId);",
+              "    console.log('[Prepaid Pooled] Subscription shortId:', shortId, '| uuid:', d.orderId);",
+              "    if (d.orderResp.payment_links) {",
+              "        console.log('[Prepaid Pooled] Payment link:', d.orderResp.payment_links.web || JSON.stringify(d.orderResp.payment_links));",
+              "    }",
+              "} else {",
+              "    console.log('[Prepaid Pooled] WARNING: no orderResp.id in response:', JSON.stringify(d));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/{{prepaid_plan_id}}/subscribe?serviceName=%22PREPAID_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "{{prepaid_plan_id}}",
+            "subscribe"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22PREPAID_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Poll Payment Status (triggers CHARGED webhook)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Stage CHARGED on mock (idempotent; also auto-applied on GET for local create-order)",
+              "var shortId = pm.environment.get('prepaid_order_id');",
+              "if (shortId && pm.environment.get('mockServerUrl')) {",
+              "  pm.sendRequest({",
+              "    url: pm.environment.get('mockServerUrl') + '/mock/status',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: { mode: 'raw', raw: JSON.stringify({",
+              "      service: 'juspay',",
+              "      id: [shortId],",
+              "      status: 'CHARGED',",
+              "      data: { amount: 1.0, effective_amount: 1.0, currency: 'INR',",
+              "        payment_method_type: 'UPI', payment_method: 'UPI_INTENT' }",
+              "    }) }",
+              "  }, function (err, res) {",
+              "    if (err) console.log('[Prepaid Pooled] mock/status error:', err);",
+              "    else console.log('[Prepaid Pooled] mock/status:', res.code, res.json());",
+              "  });",
+              "}",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Payment status response:', JSON.stringify(d));",
+              "// The driver app internally detects CHARGED status from mock and marks subscription ACTIVE"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/payment/status/v2/{{prepaid_order_id}}",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "payment",
+            "status",
+            "v2",
+            "{{prepaid_order_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Current Plan (verify ACTIVE + capture balance)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait briefly for webhook processing to complete",
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Driver is subscribed to prepaid plan', function () {",
+              "    pm.expect(d.subscribed, 'subscribed').to.be.true;",
+              "    pm.expect(d.currentPlanDetails, 'currentPlanDetails').to.exist;",
+              "});",
+              "console.log('[Prepaid Pooled] currentPlan subscribed=', d.subscribed,",
+              "    '| plan:', (d.currentPlanDetails && d.currentPlanDetails.name) || 'N/A',",
+              "    '| creditLimit:', (d.currentPlanDetails && d.currentPlanDetails.totalPlanCreditLimit));",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('baseURL_namma_P') + '/subscription/transactions?limit=1',",
+              "    method: 'GET',",
+              "    header: { token: pm.environment.get('driver_token') }",
+              "}, function (err, res) {",
+              "    pm.test('ACTIVE purchase + RideCredit balance captured', function () {",
+              "        pm.expect(err).to.be.null;",
+              "        pm.expect(res).to.have.property('code', 200);",
+              "        var tx = res.json();",
+              "        pm.expect(tx.currentBalance, 'currentBalance').to.be.above(0);",
+              "        pm.environment.set('prepaid_initial_balance', String(tx.currentBalance));",
+              "    });",
+              "    if (!err && res.code === 200) {",
+              "        console.log('[Prepaid Pooled] RideCredit balance:', res.json().currentBalance);",
+              "    }",
+              "});",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('baseURL_namma_P') + '/plan/subscriptionPurchases?limit=10&offset=0',",
+              "    method: 'GET',",
+              "    header: { token: pm.environment.get('driver_token') }",
+              "}, function (err, res) {",
+              "    pm.test('Subscription purchase is ACTIVE', function () {",
+              "        pm.expect(err).to.be.null;",
+              "        pm.expect(res.code, 'subscriptionPurchases status').to.equal(200);",
+              "        var body = res.json();",
+              "        if (!body) { console.log('[Prepaid Pooled] subscriptionPurchases raw:', res.text()); }",
+              "        var purchases = (body && body.list) ? body.list : [];",
+              "        var active = purchases.find(function (p) {",
+              "            return p.subscriptionPurchaseStatus === 'ACTIVE';",
+              "        });",
+              "        pm.expect(active, 'ACTIVE purchase in list (or use RideCredit balance check)').to.exist;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/currentPlan?serviceName=%22PREPAID_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "currentPlan"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22PREPAID_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Go Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Driver is now ONLINE.');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            },
+            {
+              "key": "mode",
+              "value": "%22ONLINE%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"prepaid-test-rider\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "vt",
+            "value": "{{vehicle_variant}}"
+          },
+          {
+            "key": "dm",
+            "value": "ONLINE"
+          },
+          {
+            "key": "mId",
+            "value": "{{driver_merchant_id}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": [
+            "{{baseUrl_lts}}"
+          ],
+          "path": [
+            "driver",
+            "location"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Ride Search",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('[Prepaid Pooled] Search ID:', d.searchId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async beckn search processing across services",
+              "const _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Koramangala\", \"areaCode\": \"560034\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Indiranagar\", \"areaCode\": \"560038\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results (wait for CAR estimate)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 3000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+              "    var est = d.estimates.find(function(e) { return e.vehicleVariant === want; })",
+              "           || d.estimates.find(function(e) { return e.vehicleServiceTierType === want; })",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    console.log('[Prepaid Pooled] Estimate:', est.id, est.vehicleVariant, 'fare:', est.estimatedFare, '(wanted', want + ')');",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () {",
+              "    pm.expect(d.estimates, 'estimates').to.be.an('array').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideSearch",
+            "{{searchId}}",
+            "results"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Select Estimate (Auto-Assign)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Wait for async select + ride assignment across services",
+              "const _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "estimate",
+            "{{estimateId}}",
+            "select2"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Get Nearby Requests",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('[Prepaid Pooled] searchTryId:', req.searchTryId, '| baseFare:', req.baseFare, '| variant:', req.requestedVehicleVariant);",
+              "} else {",
+              "    console.log('[Prepaid Pooled] WARNING: No nearby requests found. Response:', JSON.stringify(d));",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests (prepaid balance sufficient)', function () {",
+              "    pm.expect(d.searchRequestsForDriver, 'searchRequestsForDriver').to.be.an('array').that.is.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "nearbyRideRequest"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Ride (hold created on prepaid balance)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Driver accepted ride. PENDING hold placed on RideCredit balance.');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "searchRequest",
+            "quote",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const delay = pm.environment.get('booking_wait_ms') || 5000;",
+              "const start = Date.now(); while (Date.now() - start < delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var otp = booking.rideOtp;",
+              "    if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "        otp = booking.rideList[0].rideOtp;",
+              "    }",
+              "    pm.environment.set('ride_otp', otp);",
+              "    console.log('[Prepaid Pooled] Booking:', booking.id, '| OTP:', otp, '| Status:', booking.status);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "onlyActive",
+              "value": "true"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('[Prepaid Pooled] Ride ID:', d.list[0].id, '| Status:', d.list[0].status);",
+              "}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "isActive",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Ride started.');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "start"
+          ]
+        }
+      }
+    },
+    {
+      "name": "End Ride (hold settled \u2192 balance deducted)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('[Prepaid Pooled] Ride ended. PENDING hold settled; base fare debited from RideCredit balance.');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Balance Deducted (currentPlan post-ride)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for end-ride processing to complete",
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Driver still subscribed', function () {",
+              "    pm.expect(d.subscribed, 'subscribed').to.be.true;",
+              "});",
+              "pm.sendRequest({",
+              "    url: pm.environment.get('baseURL_namma_P') + '/subscription/transactions?limit=1',",
+              "    method: 'GET',",
+              "    header: { token: pm.environment.get('driver_token') }",
+              "}, function (err, res) {",
+              "    pm.test('RideCredit balance deducted after ride', function () {",
+              "        pm.expect(err).to.be.null;",
+              "        pm.expect(res).to.have.property('code', 200);",
+              "        var newBalance = res.json().currentBalance;",
+              "        var initBalance = parseFloat(pm.environment.get('prepaid_initial_balance') || '0');",
+              "        console.log('[Prepaid Pooled] Balance before ride:', initBalance,",
+              "            '| Balance after ride:', newBalance, '| Deducted:', initBalance - newBalance);",
+              "        pm.expect(newBalance, 'post-ride balance').to.be.below(initBalance);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/currentPlan?serviceName=%22PREPAID_SUBSCRIPTION%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "currentPlan"
+          ],
+          "query": [
+            {
+              "key": "serviceName",
+              "value": "%22PREPAID_SUBSCRIPTION%22"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Subscription Purchase History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Purchase history present', function () {",
+              "    pm.expect(d.list, 'purchase list').to.be.an('array').that.is.not.empty;",
+              "});",
+              "if (d.list && d.list.length > 0) {",
+              "    d.list.forEach(function(p, i) {",
+              "        console.log('[Prepaid Pooled] Purchase', i, '| id:', p.id, '| status:', p.status,",
+              "            '| planFee:', p.planFee, '| planRideCredit:', p.planRideCredit,",
+              "            '| expiryDate:', p.expiryDate, '| vehicleCategory:', p.vehicleCategory);",
+              "    });",
+              "    var activePurchase = d.list.find(function(p) { return p.subscriptionPurchaseStatus === 'ACTIVE'; });",
+              "    pm.test('Has ACTIVE purchase', function () {",
+              "        pm.expect(activePurchase, 'active purchase').to.exist;",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/subscriptionPurchases?limit=10&offset=0",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "plan",
+            "subscriptionPurchases"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_number",
+      "value": ""
+    },
+    {
+      "key": "_test_reg_no",
+      "value": ""
+    }
+  ]
+}
