@@ -1733,6 +1733,7 @@ types:
     - vehicleCategory: Maybe VehicleCategory
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
+    - enableForAirport: Maybe Bool
     - dateOfRegistration: Maybe UTCTime
     - mYManufacturing: Maybe Day
     - vehicleModelYear: Maybe Int

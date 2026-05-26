@@ -23,6 +23,7 @@ data VehicleT f = VehicleT
     color :: B.C f Kernel.Prelude.Text,
     downgradeReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverId :: B.C f Kernel.Prelude.Text,
+    enableForAirport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     energyType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
