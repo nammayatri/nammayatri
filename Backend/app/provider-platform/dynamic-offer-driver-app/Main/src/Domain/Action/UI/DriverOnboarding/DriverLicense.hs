@@ -233,9 +233,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
           Nothing -> do
             mDriverDL <- Query.findByDriverId personId
-            when (isJust mDriverDL) $ do
-              Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
-              throwImageError imageId1 DriverAlreadyLinked
+            whenJust mDriverDL $ \dl ->
+              when (dl.verificationStatus /= Documents.INVALID) $ do
+                Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
+                throwImageError imageId1 DriverAlreadyLinked
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
@@ -402,7 +403,7 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
 
   case mDriverLicense of
     Just driverLicense -> do
-      Query.upsert driverLicense
+      persistedDlId <- Query.upsert driverLicense
       case person.role of
         Person.DRIVER -> do
           DriverInfo.updateDlNumber mEncryptedDL person.id
@@ -419,7 +420,7 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
         person.id
         person.merchantId
         person.merchantOperatingCityId
-        (Just $ driverLicense.id.getId)
+        (Just persistedDlId.getId)
         (Just driverLicense.licenseExpiry)
         Nothing
       pure ()
