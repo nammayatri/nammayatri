@@ -112,6 +112,7 @@ cancelRideHandle ::
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     HasField "blackListedJobs" r [Text],
+    HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r
   ) =>

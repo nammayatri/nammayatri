@@ -733,13 +733,16 @@ calculateDriverPool ::
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     Redis.HedisFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->
   m ([DriverPoolResult], [DriverPoolResult], [QP.NearestDriversResult]) -- (offRide, onRide, rawApproxPool)
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
+  enableLtsPoolData <- asks (.enableLtsPoolDataForPooling)
+  let fetchPoolData = if enableLtsPoolData then DPDBuilder.getOrBuildDriverPoolDataBatch else DPDBuilder.buildDriverPoolDataFromDB
   approxDriverPool <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers
@@ -756,7 +759,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             taxConfig = transporterConfig.taxConfig,
             ..
           }
-        DPDBuilder.getOrBuildDriverPoolDataBatch
+        fetchPoolData
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection ->
       filterM
@@ -833,7 +836,8 @@ calculateDriverPoolWithActualDist ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisLTSFlowEnv r,
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   CalculateDriverPoolReq a ->
   PoolType ->
