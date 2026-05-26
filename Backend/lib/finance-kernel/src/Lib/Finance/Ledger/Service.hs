@@ -64,6 +64,7 @@ import Kernel.Prelude
 import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.Finance.Core.Money (roundAmount)
 import Lib.Finance.Core.Types (TimeRange (..))
 import Lib.Finance.Domain.Types.Account (Account)
 import qualified Lib.Finance.Domain.Types.Account as Account
@@ -89,13 +90,14 @@ createEntry ::
 createEntry input = do
   now <- getCurrentTime
   entryId <- generateGUID
-  let entry =
+  let roundedAmount = roundAmount input.amount
+      entry =
         LedgerEntry
           { id = Id entryId,
             fromAccountId = input.fromAccountId,
             toAccountId = input.toAccountId,
             concernedIndividualId = input.concernedIndividualId,
-            amount = input.amount,
+            amount = roundedAmount,
             currency = input.currency,
             entryType = input.entryType,
             status = input.status,
@@ -139,7 +141,7 @@ createEntryWithBalanceUpdate input = do
     (Just fromAccount, Just toAccount) -> do
       now <- getCurrentTime
       entryId <- generateGUID
-      let amount = input.amount
+      let amount = roundAmount input.amount
           fromStartBal = fromAccount.balance
           toStartBal = toAccount.balance
           isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
@@ -238,8 +240,8 @@ createReversal originalId reason = do
       -- Update account balances (reverse the original transaction)
       mbFrom <- QAccount.findById original.fromAccountId
       mbTo <- QAccount.findById original.toAccountId
-      forM_ mbFrom $ \a -> QAccount.updateBalance (a.balance + original.amount) original.fromAccountId
-      forM_ mbTo $ \a -> QAccount.updateBalance (a.balance - original.amount) original.toAccountId
+      forM_ mbFrom $ \a -> QAccount.updateBalance (roundAmount (a.balance + original.amount)) original.fromAccountId
+      forM_ mbTo $ \a -> QAccount.updateBalance (roundAmount (a.balance - original.amount)) original.toAccountId
 
       pure $ Right reversal
 
@@ -278,11 +280,11 @@ settleEntry entryId = do
               isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
               fromStartBal = fromAccount.balance
               toStartBal = toAccount.balance
-              fromEndBal =
+              fromEndBal = roundAmount $
                 if isAssetOrExpenseAccount fromAccount
                   then fromStartBal + amount
                   else fromStartBal - amount
-              toEndBal =
+              toEndBal = roundAmount $
                 if isAssetOrExpenseAccount toAccount
                   then toStartBal - amount
                   else toStartBal + amount
@@ -315,9 +317,10 @@ settleEntryWithBalancesAndAmount entryId settledAmount fromStartBal fromEndBal t
   now <- getCurrentTime
   mbEntry <- QLedger.findById entryId
   forM_ mbEntry $ \entry -> do
-    let updatedEntry =
+    let roundedSettledAmount = roundAmount settledAmount
+        updatedEntry =
           entry
-            { amount = settledAmount,
+            { amount = roundedSettledAmount,
               status = SETTLED,
               settledAt = Just now,
               fromStartingBalance = Just fromStartBal,

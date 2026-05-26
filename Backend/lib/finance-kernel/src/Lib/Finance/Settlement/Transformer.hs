@@ -10,6 +10,7 @@ import qualified Kernel.External.Settlement.Interface.Types as Ext
 import Kernel.Prelude
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common (generateGUID, getCurrentTime)
+import Lib.Finance.Core.Money (roundAmount)
 import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport as Dom
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 
@@ -29,7 +30,7 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
           ( report.disputeId,
             Nothing,
             Just "INITIATED",
-            Just report.txnAmount
+            Just (roundAmount report.txnAmount)
           )
         _ -> (Nothing, Nothing, Nothing, Nothing)
   pure
@@ -46,10 +47,10 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         txnType = mapTxnType report.txnType,
         txnStatus = mapTxnStatus report.txnStatus,
         txnDate = report.txnDate,
-        txnAmount = report.txnAmount,
-        pgBaseFee = report.pgBaseFee,
-        pgTax = report.pgTax,
-        settlementAmount = report.settlementAmount,
+        txnAmount = roundAmount report.txnAmount,
+        pgBaseFee = roundAmount report.pgBaseFee,
+        pgTax = roundAmount report.pgTax,
+        settlementAmount = roundAmount report.settlementAmount,
         currency = report.currency,
         vendorId = report.vendorId,
         uniqueSplitId = report.uniqueSplitId,
@@ -66,9 +67,9 @@ toPgPaymentSettlementReport merchantId merchantOperatingCityId referenceId refer
         refundId = report.refundId,
         refundArn = report.refundArn,
         refundDate = report.refundDate,
-        refundAmount = report.refundAmount,
-        refundBaseFee = report.refundBaseFee,
-        refundTax = report.refundTax,
+        refundAmount = fmap roundAmount report.refundAmount,
+        refundBaseFee = fmap roundAmount report.refundBaseFee,
+        refundTax = fmap roundAmount report.refundTax,
         refundReasonCode = Nothing,
         refundMethod = Nothing,
         chargebackId = chargebackId,

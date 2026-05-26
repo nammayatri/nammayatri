@@ -46,6 +46,7 @@ import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import Lib.Finance.Domain.Types.Invoice
 import Lib.Finance.Domain.Types.InvoiceLedgerLink
 import Lib.Finance.Domain.Types.LedgerEntry (LedgerEntry)
+import Lib.Finance.Core.Money (roundAmount)
 import Lib.Finance.Error.Types
 import Lib.Finance.Invoice.Interface
 import Lib.Finance.Invoice.InvoiceNumber
@@ -88,12 +89,13 @@ createInvoice input entryIds = do
   -- Calculate totals from line items
   -- subtotal: excludes external charges (toll, parking) and tax line items
   -- totalAmount: sum of all line items (what rider pays)
-  let lineItemsJson = Aeson.toJSON input.lineItems
-      totalAmount = sum $ map (.lineTotal) input.lineItems
-      externalTotal = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-      taxTotal = sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) input.lineItems
-      subtotal = totalAmount - externalTotal - taxTotal
-  logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) input.lineItems)
+  let roundedLineItems = map (\li -> li {unitPrice = roundAmount li.unitPrice, lineTotal = roundAmount li.lineTotal}) input.lineItems
+      lineItemsJson = Aeson.toJSON roundedLineItems
+      totalAmount = roundAmount $ sum $ map (.lineTotal) roundedLineItems
+      externalTotal = roundAmount $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
+      taxTotal = roundAmount $ sum $ map (.lineTotal) $ filter (\li -> not li.isExternalCharge && li.itemType == Just Tax) roundedLineItems
+      subtotal = roundAmount $ totalAmount - externalTotal - taxTotal
+  logDebug $ "Sum of unit price of all line items: " <> show (sum $ map (.unitPrice) roundedLineItems)
   let invoice =
         Invoice
           { id = Id invoiceId,
@@ -159,14 +161,14 @@ createInvoice input entryIds = do
     case mbToAccount of
       Just toAccount
         | toAccount.counterpartyType == Just GOVERNMENT_INDIRECT -> do
-          let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
+          let extCharges = roundAmount $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
               txnType = invoiceTypeToTransactionType input.invoiceType
               isVat = input.isVat
               indirectTaxInput =
                 IndirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    taxableValue = totalAmount - entry.amount - extCharges,
+                    taxableValue = roundAmount $ totalAmount - entry.amount - extCharges,
                     totalTaxAmount = entry.amount,
                     gstBreakdown = input.gstBreakdown,
                     taxCreditType = Output,
@@ -183,8 +185,8 @@ createInvoice input entryIds = do
                   }
           void $ createIndirectTaxEntry indirectTaxInput
         | toAccount.counterpartyType == Just GOVERNMENT_DIRECT -> do
-          let extCharges = sum $ map (.lineTotal) $ filter (.isExternalCharge) input.lineItems
-              gstAmount = case input.gstBreakdown of
+          let extCharges = roundAmount $ sum $ map (.lineTotal) $ filter (.isExternalCharge) roundedLineItems
+              gstAmount = roundAmount $ case input.gstBreakdown of
                 Just breakdown -> fromMaybe 0 breakdown.cgstAmount + fromMaybe 0 breakdown.sgstAmount + fromMaybe 0 breakdown.igstAmount
                 Nothing -> 0
               txnType = invoiceTypeToDirectTransactionType input.invoiceType
@@ -192,7 +194,7 @@ createInvoice input entryIds = do
                 DirectTaxInput
                   { transactionType = txnType,
                     referenceId = entry.referenceId,
-                    grossAmount = totalAmount - extCharges - gstAmount,
+                    grossAmount = roundAmount $ totalAmount - extCharges - gstAmount,
                     tdsAmount = entry.amount,
                     tdsTreatment = DirectTax.Deducted,
                     counterpartyId = input.counterpartyId,
@@ -220,19 +222,19 @@ createIndirectTaxEntry ::
 createIndirectTaxEntry input = do
   now <- getCurrentTime
   taxTxnId <- generateGUID
-  let taxAmount = input.totalTaxAmount
+  let taxAmount = roundAmount input.totalTaxAmount
       -- GST-specific fields: zero for VAT, normal split for GST
       (cgstAmt, sgstAmt, igstAmt) =
         if input.isVat
           then (0, 0, 0) -- no CGST/SGST/IGST for VAT
           else case input.gstBreakdown of
             Just breakdown ->
-              ( fromMaybe 0 breakdown.cgstAmount,
-                fromMaybe 0 breakdown.sgstAmount,
-                fromMaybe 0 breakdown.igstAmount
+              ( roundAmount $ fromMaybe 0 breakdown.cgstAmount,
+                roundAmount $ fromMaybe 0 breakdown.sgstAmount,
+                roundAmount $ fromMaybe 0 breakdown.igstAmount
               )
             Nothing ->
-              let cg = taxAmount / 2.0
+              let cg = roundAmount $ taxAmount / 2.0
                in (cg, taxAmount - cg, 0)
       computedTaxRate = if input.taxableValue > 0 then realToFrac (taxAmount / input.taxableValue) * 100.0 else 0.0
       saleType = if input.isVat then Nothing else Just (if isJust input.gstinOfParty then B2B else B2C)
@@ -242,7 +244,7 @@ createIndirectTaxEntry input = do
             transactionDate = now,
             transactionType = input.transactionType,
             referenceId = input.referenceId,
-            taxableValue = input.taxableValue,
+            taxableValue = roundAmount input.taxableValue,
             -- OLD GST columns (backward compat: zeroed for VAT)
             gstRate = if input.isVat then 0 else computedTaxRate,
             cgstAmount = cgstAmt,
@@ -280,7 +282,7 @@ createDirectTaxEntry ::
 createDirectTaxEntry input = do
   now <- getCurrentTime
   taxTxnId <- generateGUID
-  let netAmountPaid = input.grossAmount - input.tdsAmount
+  let netAmountPaid = roundAmount $ input.grossAmount - input.tdsAmount
       tdsRate = if input.grossAmount > 0 then realToFrac (input.tdsAmount / input.grossAmount) * 100.0 else 0.0
       directTaxTxn =
         DirectTaxTransaction
@@ -288,9 +290,9 @@ createDirectTaxEntry input = do
             transactionDate = now,
             transactionType = input.transactionType,
             referenceId = input.referenceId,
-            grossAmount = input.grossAmount,
+            grossAmount = roundAmount input.grossAmount,
             tdsRate = tdsRate,
-            tdsAmount = input.tdsAmount,
+            tdsAmount = roundAmount input.tdsAmount,
             netAmountPaid = netAmountPaid,
             tdsTreatment = input.tdsTreatment,
             tdsSection = input.tdsSection,
