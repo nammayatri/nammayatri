@@ -56,14 +56,14 @@ getPassOrganizationGetPassOrganization merchantShortId opCity personId = do
 getPassOrganizationPassDetails ::
   ( Id.ShortId DMerchant.Merchant ->
     Context.City ->
-    Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe (Id.Id DPassOrganization.PassOrganization) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Text ->
     Environment.Flow PassOrganizationAPI.PassDetailsListResp
   )
-getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganizationId mbStatusText limit offset = do
+getPassOrganizationPassDetails merchantShortId opCity mbPassOrganizationId mbStatusText limit offset passEnumText = do
   passEnum <- DPassDetails.parsePassEnum passEnumText
   mbStatus <- traverse DPassDetails.parseVerificationStatus mbStatusText
   callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")

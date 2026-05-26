@@ -94,18 +94,6 @@ apis:
       response:
         type: GetOrganizationResp
   - GET:
-      endpoint: /passDetails/{passEnum}
-      auth: ApiAuthV2
-      params:
-        passEnum: Text
-      query:
-        - passOrganizationId: Id PassOrganization
-        - status: Text
-        - limit: Int
-        - offset: Int
-      response:
-        type: PassDetailsListResp
-  - GET:
       endpoint: /passDetails/depot/
       auth: ApiAuthV2
       query:
@@ -114,6 +102,18 @@ apis:
       mandatoryQuery:
         - depotPersonId: Id Person
         - status: Text
+      response:
+        type: PassDetailsListResp
+  - GET:
+      endpoint: /passDetails/
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - passEnum: Text
+      query:
+        - passOrganizationId: Id PassOrganization
+        - status: Text
+        - limit: Int
+        - offset: Int
       response:
         type: PassDetailsListResp
   - POST:

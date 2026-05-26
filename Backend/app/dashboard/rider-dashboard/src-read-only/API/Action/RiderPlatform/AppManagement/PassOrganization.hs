@@ -25,10 +25,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetails :<|> GetPassOrganizationPassDetailsDepot :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument :<|> PostPassOrganizationAssignDepot))
+type API = ("passOrganization" :> (GetPassOrganizationGetPassOrganization :<|> GetPassOrganizationPassDetailsDepot :<|> GetPassOrganizationPassDetails :<|> PostPassOrganizationPassDetailsVerify :<|> PostPassOrganizationUpdate :<|> GetPassOrganizationGetOrganizations :<|> GetPassOrganizationPassDetailsDocument :<|> PostPassOrganizationAssignDepot))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> getPassOrganizationPassDetailsDepot merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city :<|> getPassOrganizationPassDetailsDocument merchantId city :<|> postPassOrganizationAssignDepot merchantId city
+handler merchantId city = getPassOrganizationGetPassOrganization merchantId city :<|> getPassOrganizationPassDetailsDepot merchantId city :<|> getPassOrganizationPassDetails merchantId city :<|> postPassOrganizationPassDetailsVerify merchantId city :<|> postPassOrganizationUpdate merchantId city :<|> getPassOrganizationGetOrganizations merchantId city :<|> getPassOrganizationPassDetailsDocument merchantId city :<|> postPassOrganizationAssignDepot merchantId city
 
 type GetPassOrganizationGetPassOrganization =
   ( ApiAuth
@@ -38,20 +38,20 @@ type GetPassOrganizationGetPassOrganization =
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationGetPassOrganization
   )
 
-type GetPassOrganizationPassDetails =
-  ( ApiAuth
-      'APP_BACKEND_MANAGEMENT
-      'DSL
-      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS)
-      :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetails
-  )
-
 type GetPassOrganizationPassDetailsDepot =
   ( ApiAuth
       'APP_BACKEND_MANAGEMENT
       'DSL
       ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS_DEPOT)
       :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetailsDepot
+  )
+
+type GetPassOrganizationPassDetails =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PASS_ORGANIZATION / 'API.Types.Dashboard.AppManagement.PassOrganization.GET_PASS_ORGANIZATION_PASS_DETAILS)
+      :> API.Types.Dashboard.AppManagement.PassOrganization.GetPassOrganizationPassDetails
   )
 
 type PostPassOrganizationPassDetailsVerify =
@@ -97,11 +97,11 @@ type PostPassOrganizationAssignDepot =
 getPassOrganizationGetPassOrganization :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.GetOrganizationResp)
 getPassOrganizationGetPassOrganization merchantShortId opCity apiTokenInfo personId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationGetPassOrganization merchantShortId opCity apiTokenInfo personId
 
-getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
-getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passEnum passOrganizationId status limit offset = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passEnum passOrganizationId status limit offset
-
 getPassOrganizationPassDetailsDepot :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
 getPassOrganizationPassDetailsDepot merchantShortId opCity apiTokenInfo limit offset depotPersonId status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetailsDepot merchantShortId opCity apiTokenInfo limit offset depotPersonId status
+
+getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
+getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passOrganizationId status limit offset passEnum = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passOrganizationId status limit offset passEnum
 
 postPassOrganizationPassDetailsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.PassOrganization.VerifyPassDetailsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postPassOrganizationPassDetailsVerify merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.PassOrganization.postPassOrganizationPassDetailsVerify merchantShortId opCity apiTokenInfo req
