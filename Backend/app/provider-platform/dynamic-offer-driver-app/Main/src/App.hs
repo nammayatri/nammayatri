@@ -53,6 +53,7 @@ import Kernel.Utils.App
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
+import Kernel.Utils.Servant.BecknResponseWrapper (extractBapIdFromBody, wrapBecknResponse)
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
 import Network.HTTP.Types (status408)
@@ -66,6 +67,7 @@ import Network.Wai.Handler.Warp
   )
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
+import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import System.Environment (lookupEnv)
 import Tools.Beam.UtilsTH (HasSchemaName (..), currentSchemaName)
 import "utils" Utils.Common.Events as UE
@@ -160,7 +162,18 @@ runDynamicOfferDriverApp' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+        shouldWrapForOffUs body = case extractBapIdFromBody body of
+          Nothing -> pure False
+          Just bapId -> do
+            result <- try @_ @SomeException $ runFlowR flowRt' appEnv (CQVAN.isValueAddNP bapId)
+            pure $ case result of
+              Right isValueAdd -> not isValueAdd
+              Left _ -> False
+        becknWrapMiddleware =
+          if appCfg.becknResponseWrapped
+            then wrapBecknResponse shouldWrapForOffUs
+            else EulerHS.Prelude.id
+    runSettings settings $ becknWrapMiddleware . timeoutMiddleware $ App.run (App.EnvR flowRt' appEnv)
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

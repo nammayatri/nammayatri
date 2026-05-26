@@ -13,26 +13,19 @@
 -}
 
 module Beckn.ACL.OnStatus
-  ( buildOnStatusMessage,
+  (
     mkOnStatusMessageV2,
     buildOnStatusReqV2,
     module DStatus,
   )
 where
 
-import qualified Beckn.ACL.Common as Common
 import qualified Beckn.ACL.Common.Order as Common
 import qualified Beckn.OnDemand.Utils.Common as BUtils
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.OnDemand.Utils.OnUpdate as UtilsOU
-import qualified Beckn.Types.Core.Taxi.Common.Tags as Tags
-import qualified Beckn.Types.Core.Taxi.OnStatus as OnStatus
-import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingCancelledOrder as BookingCancelledOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.BookingReallocationOrder as BookingReallocationOS
 import qualified Beckn.Types.Core.Taxi.OnStatus.Order.NewBookingOrder as NewBookingOS
-import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideAssignedOrder as RideAssignedOS
-import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideCompletedOrder as RideCompletedOS
-import qualified Beckn.Types.Core.Taxi.OnStatus.Order.RideStartedOrder as RideStartedOS
 import qualified BecknV2.OnDemand.Enums as EventEnum
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601, mapServiceTierToCategory)
@@ -52,103 +45,103 @@ import qualified SharedLogic.Beckn.Common as Common
 import qualified SharedLogic.FarePolicy as SFP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 
-buildOnStatusMessage ::
-  (EsqDBFlow m r, EncFlow m r) =>
-  DStatus.OnStatusBuildReq ->
-  m OnStatus.OnStatusMessage
-buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)) = do
-  return $
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.NewBooking $
-            NewBookingOS.NewBookingOrder
-              { id = bookingId.getId,
-                state = NewBookingOS.orderState,
-                ..
-              }
-      }
-buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
-  let Common.BookingDetails {..} = bookingDetails
-  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
-  return $
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.RideAssigned $
-            RideAssignedOS.RideAssignedOrder
-              { id = booking.id.getId,
-                state = RideAssignedOS.orderState,
-                ..
-              }
-      }
-buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
-  let Common.BookingDetails {..} = bookingDetails
-  let image = Nothing
-  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
-  return $
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.RideStarted $
-            RideStartedOS.RideStartedOrder
-              { id = booking.id.getId,
-                state = RideStartedOS.orderState,
-                ..
-              }
-      }
-buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = do
-  let Common.BookingDetails {..} = bookingDetails
-  let image = Nothing
-  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  distanceTagGroup <- Common.buildDistanceTagGroup ride
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0 booking.isSafetyPlus
-  quote <- Common.buildRideCompletedQuote ride fareParams
-  return $
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.RideCompleted
-            RideCompletedOS.RideCompletedOrder
-              { id = booking.id.getId,
-                state = RideCompletedOS.orderState,
-                quote,
-                payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
-                fulfillment = fulfillment
-              }
-      }
-buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {..}) = do
-  fulfillment <- forM bookingDetails $ \bookingDetails' -> do
-    let Common.BookingDetails {driver, driverStats, vehicle, ride} = bookingDetails'
-    let image = Nothing
-    let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-    Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
-  pure
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.BookingCancelled $
-            BookingCancelledOS.BookingCancelledOrder
-              { id = booking.id.getId,
-                state = BookingCancelledOS.orderState,
-                cancellation_reason = Common.castCancellationSource cancellationSource,
-                fulfillment
-              }
-      }
-buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
-  let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
-  let Common.BookingDetails {..} = bookingDetails
-  let image = Nothing
-  let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
-  fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
-  pure
-    OnStatus.OnStatusMessage
-      { order =
-          OnStatus.BookingReallocation $
-            BookingReallocationOS.BookingReallocationOrder
-              { id = booking.id.getId,
-                state = BookingReallocationOS.orderState, -----
-                reallocation_reason = Common.castCancellationSource cancellationSource,
-                fulfillment
-              }
-      }
+-- buildOnStatusMessage ::
+--   (EsqDBFlow m r, EncFlow m r) =>
+--   DStatus.OnStatusBuildReq ->
+--   m OnStatus.OnStatusMessage
+-- buildOnStatusMessage (DStatus.NewBookingBuildReq (DNewBookingBuildReq bookingId)) = do
+--   return $
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.NewBooking $
+--             NewBookingOS.NewBookingOrder
+--               { id = bookingId.getId,
+--                 state = NewBookingOS.orderState,
+--                 ..
+--               }
+--       }
+-- buildOnStatusMessage (DStatus.RideAssignedReq Common.DRideAssignedReq {..}) = do
+--   let Common.BookingDetails {..} = bookingDetails
+--   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
+--   return $
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.RideAssigned $
+--             RideAssignedOS.RideAssignedOrder
+--               { id = booking.id.getId,
+--                 state = RideAssignedOS.orderState,
+--                 ..
+--               }
+--       }
+-- buildOnStatusMessage (DStatus.RideStartedReq Common.DRideStartedReq {..}) = do
+--   let Common.BookingDetails {..} = bookingDetails
+--   let image = Nothing
+--   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
+--   return $
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.RideStarted $
+--             RideStartedOS.RideStartedOrder
+--               { id = booking.id.getId,
+--                 state = RideStartedOS.orderState,
+--                 ..
+--               }
+--       }
+-- buildOnStatusMessage (DStatus.RideCompletedReq Common.DRideCompletedReq {..}) = do
+--   let Common.BookingDetails {..} = bookingDetails
+--   let image = Nothing
+--   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--   distanceTagGroup <- Common.buildDistanceTagGroup ride
+--   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG (distanceTagGroup <> arrivalTimeTagGroup)) Nothing False False False 0 booking.isSafetyPlus
+--   quote <- Common.buildRideCompletedQuote ride fareParams
+--   return $
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.RideCompleted
+--             RideCompletedOS.RideCompletedOrder
+--               { id = booking.id.getId,
+--                 state = RideCompletedOS.orderState,
+--                 quote,
+--                 payment = Just $ Common.mkRideCompletedPayment ride.currency paymentMethodInfo paymentUrl,
+--                 fulfillment = fulfillment
+--               }
+--       }
+-- buildOnStatusMessage (DStatus.BookingCancelledReq Common.DBookingCancelledReq {..}) = do
+--   fulfillment <- forM bookingDetails $ \bookingDetails' -> do
+--     let Common.BookingDetails {driver, driverStats, vehicle, ride} = bookingDetails'
+--     let image = Nothing
+--     let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--     Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
+--   pure
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.BookingCancelled $
+--             BookingCancelledOS.BookingCancelledOrder
+--               { id = booking.id.getId,
+--                 state = BookingCancelledOS.orderState,
+--                 cancellation_reason = Common.castCancellationSource cancellationSource,
+--                 fulfillment
+--               }
+--       }
+-- buildOnStatusMessage (DStatus.BookingReallocationBuildReq DStatus.DBookingReallocationBuildReq {bookingReallocationInfo, bookingDetails}) = do
+--   let DStatus.BookingCancelledInfo {cancellationSource} = bookingReallocationInfo
+--   let Common.BookingDetails {..} = bookingDetails
+--   let image = Nothing
+--   let arrivalTimeTagGroup = Common.mkArrivalTimeTagGroup ride.driverArrivalTime
+--   fulfillment <- Common.mkFulfillment (Just driver) (Just driverStats) ride booking (Just vehicle) image (Just $ Tags.TG arrivalTimeTagGroup) Nothing False False False 0 booking.isSafetyPlus
+--   pure
+--     OnStatus.OnStatusMessage
+--       { order =
+--           OnStatus.BookingReallocation $
+--             BookingReallocationOS.BookingReallocationOrder
+--               { id = booking.id.getId,
+--                 state = BookingReallocationOS.orderState, -----
+--                 reallocation_reason = Common.castCancellationSource cancellationSource,
+--                 fulfillment
+--               }
+--       }
 
 buildOnStatusReqV2 ::
   ( MonadFlow m,
@@ -230,6 +223,7 @@ tfOrder (DStatus.NewBookingBuildReq DNewBookingBuildReq {bookingId}) _ becknConf
         orderUpdatedAt = Nothing --------To do keep booking created and updated time
       }
 tfOrder (DStatus.RideAssignedReq req) mbFarePolicy becknConfig = Common.tfAssignedReqToOrder req mbFarePolicy becknConfig EventEnum.RIDE_ASSIGNED
+tfOrder (DStatus.DriverArrivedReq req) mbFarePolicy becknConfig = Common.tfArrivedReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideStartedReq req) mbFarePolicy becknConfig = Common.tfStartReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.RideCompletedReq req) mbFarePolicy becknConfig = Common.tfCompleteReqToOrder req mbFarePolicy becknConfig
 tfOrder (DStatus.BookingCancelledReq req) _ becknConfig = Common.tfCancelReqToOrder req becknConfig
