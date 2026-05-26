@@ -705,8 +705,10 @@ in
                 text = ''
                   cd dev/test-tool/dashboard
                   npm install
-                  npm run build
-                  npx serve -s build -l 7070 --no-clipboard
+                  export NODE_ENV=development
+                  export PORT=7070
+                  export BROWSER=none
+                  npm start
                 '';
               };
               namespace = lib.mkForce "test";
