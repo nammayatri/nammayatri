@@ -68,7 +68,6 @@ import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
@@ -394,7 +393,7 @@ handler ValidatedDSearchReq {..} sReq = do
             SL.PickupDrop slId _ _ -> Just slId
             _ -> Nothing
       mbPickupZone <- case mbSlId of
-        Just slId -> Esq.runInReplica $ findGateInfoByLatLongWithinRadius slId pickupLatLong 1000.0
+        Just slId -> findGateInfoByLatLongWithinRadius slId pickupLatLong 1000.0
         Nothing -> pure Nothing
       logDebug $
         "getSpecialZoneQueueInfo area=" <> show area

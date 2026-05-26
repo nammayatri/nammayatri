@@ -48,7 +48,6 @@ import qualified Kernel.Prelude as KP
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -648,7 +647,7 @@ snapJourneyLegToNearestGate ::
   DJourneyLeg.JourneyLeg ->
   m DJourneyLeg.JourneyLeg
 snapJourneyLegToNearestGate journeyLeg = do
-  mbSpecialLocationStart <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull (LatLong (journeyLeg.startLocation.latitude) (journeyLeg.startLocation.longitude))
+  mbSpecialLocationStart <- QSpecialLocation.findSpecialLocationByLatLongFull (LatLong (journeyLeg.startLocation.latitude) (journeyLeg.startLocation.longitude))
   snappedStart <- case mbSpecialLocationStart of
     Just specialLoc -> do
       let mbFilteredSpecialLoc = QSpecialLocation.filterGates (Just specialLoc) True

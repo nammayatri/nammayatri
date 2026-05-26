@@ -40,7 +40,7 @@ postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merch
 postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  gate <- Esq.runInReplica (QGI.findById (Kernel.Types.Id.Id req.gateId)) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
+  gate <- QGI.findById (Kernel.Types.Id.Id req.gateId) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
   let mbPriorityIds = fmap (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
   totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds req.isDemandHigh
   logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId
@@ -86,9 +86,9 @@ getSpecialZoneQueueQueueStats :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.
 getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   merchant <- findMerchantByShortId merchantShortId
   _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  gate <- Esq.runInReplica (QGI.findById (Kernel.Types.Id.Id gateId)) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> gateId)
+  gate <- QGI.findById (Kernel.Types.Id.Id gateId) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> gateId)
   let specialLocationId = gate.specialLocationId.getId
-  mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Kernel.Types.Id.Id specialLocationId)
+  mbSpecialLocation <- QSL.findById (Kernel.Types.Id.Id specialLocationId)
   let specialLocationName = maybe "" (.locationName) mbSpecialLocation
   -- Get all drivers near gate once, filter to those inside pickup zone
   driversNearGate <- LTSFlow.nearBy gate.point.lat gate.point.lon (Just False) Nothing 2500 merchant.id Nothing Nothing
@@ -161,7 +161,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
       }
   where
     isInsideGateGeometry gateInfoId driverLoc = do
-      mbGate <- Esq.runInReplica $ QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
+      mbGate <- QGI.findGateInfoIfDriverInsideGatePickupZone (LatLong driverLoc.lat driverLoc.lon)
       pure $ case mbGate of
         Just g -> g.id == gateInfoId
         Nothing -> False

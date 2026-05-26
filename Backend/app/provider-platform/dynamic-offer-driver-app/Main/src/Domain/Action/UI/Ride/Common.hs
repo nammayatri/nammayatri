@@ -41,6 +41,7 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
+import qualified Kernel.Storage.Esqueleto as Esq
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, HighPrecMoney, Meters, Money, Months, PriceAPIEntity (..), Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
@@ -183,7 +184,8 @@ data DriverRideRes = DriverRideRes
 mkDriverRideRes ::
   ( EncFlow m r,
     CacheFlow m r,
-    EsqDBFlow m r
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r
   ) =>
   RD.RideDetails ->
   Maybe Text ->

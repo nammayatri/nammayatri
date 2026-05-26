@@ -516,11 +516,11 @@ runDemandCheckForVariants ::
   [(Text, DVST.ServiceTierType)] -> -- (vehicleType key for queue/Redis, serviceTier for fare lookup)
   m ()
 runDemandCheckForVariants merchantOpCityId merchantId bookingId pickupZoneGateId variants = do
-  mbGate <- Esq.runInReplica $ QGI.findById (Id pickupZoneGateId)
+  mbGate <- QGI.findById (Id pickupZoneGateId)
   case mbGate of
     Nothing -> logWarning $ "runDemandCheckForVariants: gate not found id=" <> pickupZoneGateId
     Just gate -> do
-      mbSpecialLocation <- Esq.runInReplica $ QSL.findById gate.specialLocationId
+      mbSpecialLocation <- QSL.findById gate.specialLocationId
       let isQueueEnabled = fromMaybe False (mbSpecialLocation >>= (.isQueueEnabled))
       unless isQueueEnabled $
         logDebug $ "runDemandCheckForVariants: queue not enabled for specialLocation=" <> gate.specialLocationId.getId <> ", skipping"
@@ -697,7 +697,7 @@ notifyDrivers ::
   m Int
 notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh driverIds = do
   let gateId = gate.id.getId
-  mbSpecialLocation <- Esq.runInReplica $ QSL.findById (Id specialLocationId)
+  mbSpecialLocation <- QSL.findById (Id specialLocationId)
   specialLocationName <- case mbSpecialLocation of
     Just sl -> pure sl.locationName
     Nothing -> do
@@ -879,6 +879,7 @@ data CachedGateForProximity = CachedGateForProximity
 --   and rarely change, so a stale read is acceptable.
 getCachedGatesForProximity ::
   ( CacheFlow m r,
+    EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     MonadFlow m,
     CoreMetrics m
@@ -887,7 +888,7 @@ getCachedGatesForProximity ::
   m [CachedGateForProximity]
 getCachedGatesForProximity slId =
   IM.withInMemCache ["GateProximityPolygons", slId.getId] 3600 $ do
-    rows <- Esq.runInReplica $ QGI.findAllGatesBySpecialLocationId slId
+    rows <- QGI.findAllGatesBySpecialLocationId slId
     pure $
       map
         ( \(g, mbGeoJson) ->
@@ -998,6 +999,7 @@ filterByGateProximity ::
     HasLocationService m r,
     HasShortDurationRetryCfg r c,
     HasRequestId r,
+    EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
   DGI.GateInfo -> -- target gate (where the request will be sent)
@@ -1129,7 +1131,7 @@ handleQueueSkipIfApplicable (Just gateId) vehicleType driverId merchantId search
   let idempotencyKey = "QueueSkip:Done:" <> searchTryId
   wasSet <- Redis.withCrossAppRedis $ Redis.setNxExpire idempotencyKey 86400 ("1" :: Text)
   when wasSet $ do
-    mbGateInfo <- Esq.runInReplica $ QGI.findById (Id gateId)
+    mbGateInfo <- QGI.findById (Id gateId)
     case mbGateInfo >>= (.maxRideSkipsBeforeQueueRemoval) of
       Nothing -> pure ()
       Just threshold -> do
