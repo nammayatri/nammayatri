@@ -288,6 +288,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     subscription :: Kernel.Prelude.Bool,
     subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
+    takeOtpRideAsValidRideForReferral :: Kernel.Prelude.Bool,
     taxConfig :: Domain.Types.TransporterConfig.TaxConfig,
     tdsFromEmail :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
