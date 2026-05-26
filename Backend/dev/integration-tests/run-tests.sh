@@ -11,6 +11,7 @@
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
 #   ./run-tests.sh metro FRFS_Bangalore               # Run metro suites for Bangalore only
 #   ./run-tests.sh subway                             # Run all subway ticket booking suites
+#   ./run-tests.sh push-notification                  # Run push notification CRUD suites (BPP + BAP)
 #   ./run-tests.sh ophub                              # Run all operation hub suites
 #   ./run-tests.sh ophub NY_Bangalore                 # Run operation hub suites for Bangalore
 #   ./run-tests.sh --list                             # List available suites
@@ -48,6 +49,7 @@ LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
+PUSH_NOTIFICATION_DIR="$SCRIPT_DIR/collections/PushNotificationCRUD"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
@@ -488,6 +490,7 @@ run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
+run_push_notification() { run_frfs "$PUSH_NOTIFICATION_DIR" "PUSH NOTIFICATION CRUD" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
 run_sms() {
     echo ""
@@ -543,6 +546,7 @@ show_help() {
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
     echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
+    echo "  push-notification   Run push notification CRUD suites (list, upsert, toggle, delete)"
     echo "  fleet               Run fleet management suites (driver name, association)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
     echo "  ophub               Run operation hub suites (hub requests, driver mobile search)"
@@ -586,6 +590,8 @@ show_help() {
     echo "  ./run-tests.sh intercity NY_Bangalore 01-IntercityRideFlow  # Specific intercity suite"
     echo "  ./run-tests.sh rental                             # All rental suites, all cities"
     echo "  ./run-tests.sh rental NY_Bangalore 01-RentalRideFlow        # Specific rental suite"
+    echo "  ./run-tests.sh push-notification                           # All push notification CRUD suites"
+    echo "  ./run-tests.sh push-notification NY_Bangalore              # PN CRUD for Bangalore"
     echo "  ./run-tests.sh fleet                              # All fleet management suites"
     echo "  ./run-tests.sh fleet NY_Bangalore                 # Fleet suites for Bangalore"
     echo "  ./run-tests.sh sms                                          # Kaleyra SMS (OTP only by default)"
@@ -648,6 +654,9 @@ case "${1:-}" in
         ;;
     rental)
         run_rental "${2:-}" "${3:-}"
+        ;;
+    push-notification|pn)
+        run_push_notification "${2:-}" "${3:-}"
         ;;
     fleet)
         run_fleet "${2:-}" "${3:-}"

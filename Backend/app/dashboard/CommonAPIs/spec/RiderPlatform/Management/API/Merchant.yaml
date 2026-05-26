@@ -42,6 +42,10 @@ imports:
   VehicleServiceTierOrderConfig: Dashboard.Common
   ServiceTierType: Dashboard.Common
   SetJsonLogicDebugReq: Lib.Yudhishthira.Tools.DebugLog
+  MerchantPushNotificationRes: Dashboard.Common.Merchant
+  MerchantPushNotificationUpsertReq: Dashboard.Common.Merchant
+  MerchantPushNotification: Dashboard.Common.Merchant
+  Language: Kernel.External.Types
 
 module: Merchant
 
@@ -345,6 +349,44 @@ apis:
         type: SetJsonLogicDebugReq
       response:
         type: APISuccess
+  - GET: # MerchantPushNotificationListAPI
+      endpoint: /config/pushNotification
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - key: Text
+        - language: Language
+        - isCritical: Bool
+        - shouldTrigger: Bool
+      response:
+        type: "[MerchantPushNotificationRes]"
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_LIST
+  - GET: # MerchantPushNotificationKeysAPI
+      endpoint: /config/pushNotification/keys
+      auth: ApiAuthV2
+      response:
+        type: "[Text]"
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_LIST
+  - POST: # MerchantPushNotificationUpsertAPI
+      endpoint: /config/pushNotification/upsert
+      auth: ApiAuthV2
+      query:
+        - toggle: Bool
+        - allLanguages: Bool
+      request:
+        type: MerchantPushNotificationUpsertReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_UPSERT
+  - DELETE: # MerchantPushNotificationDeleteAPI
+      endpoint: /config/pushNotification/{notificationId}/delete
+      auth: ApiAuthV2
+      params:
+        notificationId: Id MerchantPushNotification
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_DELETE
 
 types:
   MerchantUpdateReq:

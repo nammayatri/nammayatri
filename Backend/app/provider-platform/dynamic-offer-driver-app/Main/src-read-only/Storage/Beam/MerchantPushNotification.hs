@@ -16,13 +16,16 @@ import Tools.Beam.UtilsTH
 
 data MerchantPushNotificationT f = MerchantPushNotificationT
   { body :: (B.C f Kernel.Prelude.Text),
+    channels :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     fcmNotificationType :: (B.C f Kernel.External.Notification.FCM.Types.FCMNotificationType),
     fcmSubCategory :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Notification.Interface.Types.SubCategory)),
     id :: (B.C f Kernel.Prelude.Text),
+    isCritical :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     key :: (B.C f Kernel.Prelude.Text),
     language :: (B.C f Kernel.External.Types.Language),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    shouldTrigger :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     title :: (B.C f Kernel.Prelude.Text),
     tripCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
