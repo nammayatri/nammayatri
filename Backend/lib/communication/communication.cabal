@@ -26,6 +26,7 @@ flag Local
 
 library
   exposed-modules:
+      Lib.Communication.Domain.Action.Dispatch
       Lib.Communication.Domain.Types.Communication
       Lib.Communication.Domain.Types.CommunicationDelivery
       Lib.Communication.Storage.Beam.Communication
@@ -36,6 +37,7 @@ library
       Lib.Communication.Storage.Queries.CommunicationDeliveryExtra
       Lib.Communication.Storage.Queries.OrphanInstances.Communication
       Lib.Communication.Storage.Queries.OrphanInstances.CommunicationDelivery
+      Lib.Communication.Scheduler.JobData
       Tools.Beam.UtilsTH
   hs-source-dirs:
       src

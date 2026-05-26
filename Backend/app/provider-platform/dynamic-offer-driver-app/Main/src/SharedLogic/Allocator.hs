@@ -20,7 +20,7 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
-import qualified Lib.Communication.Domain.Types.Communication as LComm
+import Lib.Communication.Scheduler.JobData (CommunicationDeliveryDispatchJobData (..))
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -598,21 +598,6 @@ data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCre
 instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
 
 type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData
-
-data CommunicationDeliveryDispatchJobData = CommunicationDeliveryDispatchJobData
-  { deliveryId :: Text,
-    communicationId :: Text,
-    channel :: LComm.ChannelType,
-    recipientId :: Text,
-    merchantId :: Text,
-    merchantOperatingCityId :: Text,
-    title :: Text,
-    body :: Text,
-    htmlBody :: Maybe Text,
-    templateId :: Maybe Text,
-    templateName :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'CommunicationDeliveryDispatch
 

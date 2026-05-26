@@ -35,7 +35,7 @@ import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
-import qualified Lib.Communication.Domain.Types.Communication as LComm
+import Lib.Communication.Scheduler.JobData (CommunicationDeliveryDispatchJobData (..))
 import qualified Lib.Yudhishthira.Types as LYT
 
 data RiderJobType
@@ -470,21 +470,6 @@ data SettlementReportIngestionJobData = SettlementReportIngestionJobData
 instance JobInfoProcessor 'SettlementReportIngestion
 
 type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
-
-data CommunicationDeliveryDispatchJobData = CommunicationDeliveryDispatchJobData
-  { deliveryId :: Text,
-    communicationId :: Text,
-    channel :: LComm.ChannelType,
-    recipientId :: Text,
-    merchantId :: Text,
-    merchantOperatingCityId :: Text,
-    title :: Text,
-    body :: Text,
-    htmlBody :: Maybe Text,
-    templateId :: Maybe Text,
-    templateName :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 instance JobInfoProcessor 'CommunicationDeliveryDispatch
 

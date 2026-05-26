@@ -3,18 +3,17 @@ module SharedLogic.Allocator.Jobs.Communication.CommunicationDeliveryDispatch
   )
 where
 
-import Domain.Action.Dashboard.Management.Communication
-  ( CommunicationDeliveryDispatchPayload (..),
-    processFleetCommunicationDeliveryPayload,
-  )
+import Domain.Action.Dashboard.Management.Communication (dispatchCommunicationDelivery)
+import Kernel.External.Encryption (EncFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Utils.Common
+import Lib.Communication.Domain.Action.Dispatch (processCommunicationDeliveryJob)
 import Lib.Scheduler
-import SharedLogic.Allocator (AllocatorJobType (..), CommunicationDeliveryDispatchJobData (..))
+import SharedLogic.Allocator (AllocatorJobType (..))
 import Storage.Beam.Communication ()
 import Storage.Beam.CommunicationDelivery ()
 
@@ -34,20 +33,5 @@ sendCommunicationDelivery ::
   Job 'CommunicationDeliveryDispatch ->
   m ExecutionResult
 sendCommunicationDelivery Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
-  let jobData = jobInfo.jobData
-      payload =
-        CommunicationDeliveryDispatchPayload
-          { deliveryId = jobData.deliveryId,
-            communicationId = jobData.communicationId,
-            channel = jobData.channel,
-            recipientId = jobData.recipientId,
-            merchantId = jobData.merchantId,
-            merchantOperatingCityId = jobData.merchantOperatingCityId,
-            title = jobData.title,
-            body = jobData.body,
-            htmlBody = jobData.htmlBody,
-            templateId = jobData.templateId,
-            templateName = jobData.templateName
-          }
-  processFleetCommunicationDeliveryPayload payload
+  processCommunicationDeliveryJob jobInfo.jobData dispatchCommunicationDelivery
   pure Complete

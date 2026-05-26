@@ -14,8 +14,7 @@ module Domain.Action.Dashboard.Management.Communication
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
     getCommunicationTemplate,
-    CommunicationDeliveryDispatchPayload (..),
-    processFleetCommunicationDeliveryPayload,
+    dispatchCommunicationDelivery,
   )
 where
 
@@ -27,6 +26,7 @@ import Data.List (nub, nubBy)
 import qualified Data.Text as T
 import qualified Lib.Communication.Domain.Types.Communication as DComm
 import qualified Lib.Communication.Domain.Types.CommunicationDelivery as DDelivery
+import Lib.Communication.Scheduler.JobData (CommunicationDeliveryDispatchJobData (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -71,23 +71,6 @@ import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
-
--- | Scheduler job payload: one delivery per recipient×channel. Used by the CommunicationDeliveryDispatch
--- scheduler job to send via PUSH/SMS/WhatsApp without reading Communication from DB.
-data CommunicationDeliveryDispatchPayload = CommunicationDeliveryDispatchPayload
-  { deliveryId :: Text,
-    communicationId :: Text,
-    channel :: DComm.ChannelType,
-    recipientId :: Text,
-    merchantId :: Text,
-    merchantOperatingCityId :: Text,
-    title :: Text,
-    body :: Text,
-    htmlBody :: Maybe Text,
-    templateId :: Maybe Text,
-    templateName :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 -- | Resolve mediaFileIds to mediaUrls JSON. Returns Nothing if no ids; Just (toJSON [...]) otherwise.
 resolveMediaFileIds ::
@@ -706,7 +689,7 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
       then QDelivery.updateStatusById DDelivery.DS_DELIVERED delivery.id
       else do
         let jobData =
-              Allocator.CommunicationDeliveryDispatchJobData
+              CommunicationDeliveryDispatchJobData
                 { deliveryId = delivery.id.getId,
                   communicationId = comm.id.getId,
                   channel = delivery.channel,
@@ -721,34 +704,10 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
                 }
         createJobIn @_ @'Allocator.CommunicationDeliveryDispatch (Just merchantId) (Just merchantOpCityId) 0 jobData
 
--- | Process a fleet communication delivery payload.
--- Sends via the appropriate channel and updates delivery status to SENT or FAILED.
--- Called by the CommunicationDeliveryDispatch scheduler job handler.
-processFleetCommunicationDeliveryPayload ::
-  ( MonadIO m,
-    EsqDBFlow m r,
-    MonadFlow m,
-    CacheFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasField "requestId" r (Maybe Text),
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasKafkaProducer r,
-    Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
-  ) =>
-  CommunicationDeliveryDispatchPayload ->
-  m ()
-processFleetCommunicationDeliveryPayload payload = do
-  let deliveryId = Kernel.Types.Id.Id payload.deliveryId
-  result <- try @_ @SomeException $ dispatchFromPayload payload
-  case result of
-    Right _ -> QDelivery.updateStatusById DDelivery.DS_SENT deliveryId
-    Left err -> do
-      logError $ "Fleet communication dispatch failed for delivery " <> payload.deliveryId <> ": " <> show err
-      QDelivery.updateStatusById DDelivery.DS_FAILED deliveryId
-
-dispatchFromPayload ::
+-- | Driver-app dispatch function for a communication delivery.
+-- Routes to FCM/SMS/WhatsApp based on channel; called by the lib's
+-- processCommunicationDeliveryJob which handles try/catch and status updates.
+dispatchCommunicationDelivery ::
   ( MonadIO m,
     EsqDBFlow m r,
     MonadFlow m,
@@ -760,9 +719,9 @@ dispatchFromPayload ::
     HasKafkaProducer r,
     Hedis.HedisLTSFlowEnv r
   ) =>
-  CommunicationDeliveryDispatchPayload ->
+  CommunicationDeliveryDispatchJobData ->
   m ()
-dispatchFromPayload p = do
+dispatchCommunicationDelivery p = do
   let recipientId = Kernel.Types.Id.Id p.recipientId
       merchantId = Kernel.Types.Id.Id p.merchantId
       merchantOpCityId = Kernel.Types.Id.Id p.merchantOperatingCityId
@@ -775,23 +734,19 @@ dispatchFromPayload p = do
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for SMS")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
-      -- Look up the DLT-registered template from merchant_message by domain+channel
       mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.SMS)
       case mbMerchantMsg of
         Just merchantMsg -> do
-          -- Substitute {#var1#} with the body text to match the DLT template
           let smsBody = T.replace "{#var1#}" p.body merchantMsg.message
               sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
           Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender merchantMsg.templateId merchantMsg.messageType) >>= Sms.checkSmsResult
         Nothing -> do
-          -- Fallback: send as-is if no template found
           logWarning $ "No merchant_message template found for FLEET SMS, sending body as-is for delivery " <> p.deliveryId
           Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq p.body phoneNumber smsCfg.sender (fromMaybe "" p.templateId) Nothing) >>= Sms.checkSmsResult
     DComm.CH_WHATSAPP -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for WhatsApp")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
-      -- Look up WhatsApp template from merchant_message
       mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.WHATSAPP)
       let whatsappTemplateId = maybe (fromMaybe "" p.templateId) (.templateId) mbMerchantMsg
       let req =
