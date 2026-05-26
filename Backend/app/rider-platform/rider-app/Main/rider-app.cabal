@@ -527,6 +527,7 @@ library
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
+      SharedLogic.Scheduler.Jobs.Communication.CommunicationDeliveryDispatch
       SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.CheckRefundStatus
@@ -1172,6 +1173,8 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.ClientPersonInfo
+      Storage.Beam.Communication
+      Storage.Beam.CommunicationDelivery
       Storage.Beam.CrisRdsBalanceHistory
       Storage.Beam.CrisRecon
       Storage.Beam.DeletedPerson
@@ -1640,6 +1643,7 @@ library
     , mobility-core
     , morpheus-graphql-client
     , mtl
+    , communication
     , openapi3
     , passetto-client
     , passetto-lib

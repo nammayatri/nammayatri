@@ -20,6 +20,7 @@ module SharedLogic.Allocator where
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
+import qualified Lib.Communication.Domain.Types.Communication as LComm
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
@@ -94,6 +95,7 @@ data AllocatorJobType
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
+  | CommunicationDeliveryDispatch
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -146,6 +148,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
+  restoreAnyJobInfo SCommunicationDeliveryDispatch jobData = AnyJobInfo <$> restoreJobInfo SCommunicationDeliveryDispatch jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -595,3 +598,22 @@ data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCre
 instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
 
 type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData
+
+data CommunicationDeliveryDispatchJobData = CommunicationDeliveryDispatchJobData
+  { deliveryId :: Text,
+    communicationId :: Text,
+    channel :: LComm.ChannelType,
+    recipientId :: Text,
+    merchantId :: Text,
+    merchantOperatingCityId :: Text,
+    title :: Text,
+    body :: Text,
+    htmlBody :: Maybe Text,
+    templateId :: Maybe Text,
+    templateName :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CommunicationDeliveryDispatch
+
+type instance JobContent 'CommunicationDeliveryDispatch = CommunicationDeliveryDispatchJobData

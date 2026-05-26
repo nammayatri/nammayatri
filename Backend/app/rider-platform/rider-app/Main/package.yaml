@@ -182,6 +182,7 @@ library:
     - special-zone-a
     - special-zone
     - payment
+    - communication
     - sessionizer-metrics
     - beckn-services
     - shared-services

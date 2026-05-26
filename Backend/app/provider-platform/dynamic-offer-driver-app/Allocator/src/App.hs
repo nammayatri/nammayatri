@@ -45,6 +45,7 @@ import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.Allocator
 import SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation (runAggregatedCommissionInvoiceCreationJob)
+import SharedLogic.Allocator.Jobs.Communication.CommunicationDeliveryDispatch (sendCommunicationDelivery)
 import SharedLogic.Allocator.Jobs.Cautio.InstallationStatus (installationStatus)
 import SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
 import SharedLogic.Allocator.Jobs.Document.VerificationRetry
@@ -160,6 +161,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . scheduledTDSDistribution)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . triggerIffcoTokioInsuranceForOnRideDrivers)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runAggregatedCommissionInvoiceCreationJob)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . sendCommunicationDelivery)
     }
 
 runDriverOfferAllocator ::

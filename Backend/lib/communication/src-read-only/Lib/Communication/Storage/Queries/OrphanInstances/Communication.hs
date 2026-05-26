@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.OrphanInstances.Communication where
+module Lib.Communication.Storage.Queries.OrphanInstances.Communication where
 
 import qualified Data.Aeson
-import qualified Domain.Types.Communication
+import qualified Lib.Communication.Domain.Types.Communication
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -12,13 +12,13 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
-import qualified Storage.Beam.Communication as Beam
+import qualified Lib.Communication.Storage.Beam.Communication as Beam
 
-instance FromTType' Beam.Communication Domain.Types.Communication.Communication where
+instance FromTType' Beam.Communication Lib.Communication.Domain.Types.Communication.Communication where
   fromTType' (Beam.CommunicationT {..}) = do
     pure $
       Just
-        Domain.Types.Communication.Communication
+        Lib.Communication.Domain.Types.Communication.Communication
           { body = body,
             channels = fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< channels),
             contentType = contentType,
@@ -28,11 +28,11 @@ instance FromTType' Beam.Communication Domain.Types.Communication.Communication 
             htmlBody = htmlBody,
             id = Kernel.Types.Id.Id id,
             mediaUrls = mediaUrls,
-            merchantId = Kernel.Types.Id.Id merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
             scheduledAt = scheduledAt,
             senderDisplayName = senderDisplayName,
-            senderId = Kernel.Types.Id.Id senderId,
+            senderId = senderId,
             senderRole = senderRole,
             status = status,
             templateId = templateId,
@@ -43,8 +43,8 @@ instance FromTType' Beam.Communication Domain.Types.Communication.Communication 
             variables = variables
           }
 
-instance ToTType' Beam.Communication Domain.Types.Communication.Communication where
-  toTType' (Domain.Types.Communication.Communication {..}) = do
+instance ToTType' Beam.Communication Lib.Communication.Domain.Types.Communication.Communication where
+  toTType' (Lib.Communication.Domain.Types.Communication.Communication {..}) = do
     Beam.CommunicationT
       { Beam.body = body,
         Beam.channels = Just $ Data.Aeson.toJSON channels,
@@ -55,11 +55,11 @@ instance ToTType' Beam.Communication Domain.Types.Communication.Communication wh
         Beam.htmlBody = htmlBody,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.mediaUrls = mediaUrls,
-        Beam.merchantId = Kernel.Types.Id.getId merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.merchantId = merchantId,
+        Beam.merchantOperatingCityId = merchantOperatingCityId,
         Beam.scheduledAt = scheduledAt,
         Beam.senderDisplayName = senderDisplayName,
-        Beam.senderId = Kernel.Types.Id.getId senderId,
+        Beam.senderId = senderId,
         Beam.senderRole = senderRole,
         Beam.status = status,
         Beam.templateId = templateId,

@@ -1,19 +1,18 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Beam.CommunicationDelivery where
+module Lib.Communication.Storage.Beam.CommunicationDelivery where
 
 import qualified Database.Beam as B
-import Domain.Types.Common ()
-import qualified Domain.Types.Communication
-import qualified Domain.Types.CommunicationDelivery
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import Tools.Beam.UtilsTH
+import qualified Lib.Communication.Domain.Types.Communication
+import qualified Lib.Communication.Domain.Types.CommunicationDelivery
 
 data CommunicationDeliveryT f = CommunicationDeliveryT
-  { channel :: B.C f Domain.Types.Communication.ChannelType,
+  { channel :: B.C f Lib.Communication.Domain.Types.Communication.ChannelType,
     communicationId :: B.C f Kernel.Prelude.Text,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     deliveredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -25,8 +24,8 @@ data CommunicationDeliveryT f = CommunicationDeliveryT
     operatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     readAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     recipientId :: B.C f Kernel.Prelude.Text,
-    recipientRole :: B.C f Domain.Types.CommunicationDelivery.CommunicationRecipientRole,
-    status :: B.C f Domain.Types.CommunicationDelivery.DeliveryStatus,
+    recipientRole :: B.C f Lib.Communication.Domain.Types.CommunicationDelivery.CommunicationRecipientRole,
+    status :: B.C f Lib.Communication.Domain.Types.CommunicationDelivery.DeliveryStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
@@ -39,4 +38,4 @@ type CommunicationDelivery = CommunicationDeliveryT Identity
 
 $(enableKVPG ''CommunicationDeliveryT ['id] [['communicationId]])
 
-$(mkTableInstances ''CommunicationDeliveryT "communication_delivery")
+$(mkTableInstancesGenericSchema ''CommunicationDeliveryT "communication_delivery")

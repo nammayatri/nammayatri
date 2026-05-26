@@ -436,6 +436,7 @@ library
       SharedLogic.Allocator
       SharedLogic.Allocator.Jobs.AggregatedCommissionInvoiceCreation.AggregatedCommissionInvoiceCreation
       SharedLogic.Allocator.Jobs.Cautio.InstallationStatus
+      SharedLogic.Allocator.Jobs.Communication.CommunicationDeliveryDispatch
       SharedLogic.Allocator.Jobs.CongestionCharge.CongestionChargeAvg
       SharedLogic.Allocator.Jobs.Document.VerificationRetry
       SharedLogic.Allocator.Jobs.DriverFeeUpdates.BadDebtCalculationScheduler
@@ -708,7 +709,6 @@ library
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.CommonDriverOnboardingDocumentsExtra
-      Storage.Queries.CommunicationDeliveryExtra
       Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DigilockerVerificationExtra
@@ -1119,8 +1119,6 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.CommonDriverOnboardingDocuments
-      Domain.Types.Communication
-      Domain.Types.CommunicationDelivery
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
@@ -1490,8 +1488,6 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.CommonDriverOnboardingDocuments
-      Storage.Queries.Communication
-      Storage.Queries.CommunicationDelivery
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
@@ -1596,8 +1592,6 @@ library
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationDuesDetails
       Storage.Queries.OrphanInstances.CancellationReason
-      Storage.Queries.OrphanInstances.Communication
-      Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
@@ -1808,6 +1802,7 @@ library
     , casing
     , cassava
     , cereal
+    , communication
     , communication-engine
     , consequence-engine
     , containers
@@ -1958,6 +1953,7 @@ executable dynamic-offer-driver-app-exe
     , casing
     , cassava
     , cereal
+    , communication
     , communication-engine
     , consequence-engine
     , containers

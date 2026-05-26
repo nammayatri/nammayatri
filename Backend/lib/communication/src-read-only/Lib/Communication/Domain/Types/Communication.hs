@@ -1,38 +1,35 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Domain.Types.Communication where
+module Lib.Communication.Domain.Types.Communication where
 
 import Data.Aeson
-import qualified Domain.Types.Merchant
-import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
+import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data Communication = Communication
   { body :: Kernel.Prelude.Text,
-    channels :: [Domain.Types.Communication.ChannelType],
-    contentType :: Domain.Types.Communication.CommunicationContentType,
+    channels :: [Lib.Communication.Domain.Types.Communication.ChannelType],
+    contentType :: Lib.Communication.Domain.Types.Communication.CommunicationContentType,
     createdAt :: Kernel.Prelude.UTCTime,
-    ctaButton :: Kernel.Prelude.Maybe Domain.Types.Communication.CTAButton,
-    domain :: Domain.Types.Communication.CommunicationDomain,
+    ctaButton :: Kernel.Prelude.Maybe Lib.Communication.Domain.Types.Communication.CTAButton,
+    domain :: Lib.Communication.Domain.Types.Communication.CommunicationDomain,
     htmlBody :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    id :: Kernel.Types.Id.Id Domain.Types.Communication.Communication,
+    id :: Kernel.Types.Id.Id Lib.Communication.Domain.Types.Communication.Communication,
     mediaUrls :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
-    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    merchantId :: Kernel.Prelude.Text,
+    merchantOperatingCityId :: Kernel.Prelude.Text,
     scheduledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     senderDisplayName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    senderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    senderRole :: Domain.Types.Communication.CommunicationSenderRole,
-    status :: Domain.Types.Communication.CommunicationStatus,
+    senderId :: Kernel.Prelude.Text,
+    senderRole :: Lib.Communication.Domain.Types.Communication.CommunicationSenderRole,
+    status :: Lib.Communication.Domain.Types.Communication.CommunicationStatus,
     templateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     templateName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     title :: Kernel.Prelude.Text,
-    triggerType :: Domain.Types.Communication.CommunicationTriggerType,
+    triggerType :: Lib.Communication.Domain.Types.Communication.CommunicationTriggerType,
     updatedAt :: Kernel.Prelude.UTCTime,
     variables :: Kernel.Prelude.Maybe Data.Aeson.Value
   }
@@ -54,24 +51,12 @@ data CommunicationTriggerType = TT_MANUAL | TT_SYSTEM | TT_SCHEDULED deriving (E
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ChannelType)
 
-$(mkHttpInstancesForEnum ''ChannelType)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationContentType)
-
-$(mkHttpInstancesForEnum ''CommunicationContentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationDomain)
 
-$(mkHttpInstancesForEnum ''CommunicationDomain)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationSenderRole)
-
-$(mkHttpInstancesForEnum ''CommunicationSenderRole)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationStatus)
 
-$(mkHttpInstancesForEnum ''CommunicationStatus)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CommunicationTriggerType)
-
-$(mkHttpInstancesForEnum ''CommunicationTriggerType)

@@ -48,6 +48,7 @@ packages:
   lib/consequence-engine
   lib/communication-engine
   lib/behavior-engine
+  lib/communication
   hunit-tests
 -- ## 6 parallel jobs by default.
 --
