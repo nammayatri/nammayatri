@@ -909,4 +909,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stcl_config jso
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN take_otp_ride_as_valid_ride_for_referral boolean ;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_location_staleness_threshold_seconds integer ;
