@@ -15,13 +15,15 @@ data DBCreateObject = DBCreateObject
     contents :: DBCreateObjectContent,
     mappings :: Mapping,
     contentsObj :: A.Object,
-    forceDrainToDB :: Bool
+    forceDrainToDB :: Bool,
+    primaryKey :: Text
   }
   deriving stock (Show)
 
 instance FromJSON DBCreateObject where
   parseJSON = A.withObject "DBCreateObject" $ \o -> do
     contentsV2 <- o A..: "contents_v2"
+    primaryKey <- contentsV2 A..: "tag"
     command <- contentsV2 A..: "command"
     tagObject :: DBModelObject <- command A..: "tag"
     contents <- command A..: "contents"

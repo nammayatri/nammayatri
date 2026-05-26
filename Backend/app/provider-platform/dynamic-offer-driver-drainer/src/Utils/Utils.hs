@@ -209,3 +209,13 @@ shouldPushToKafkaOnly model _dontEnableDbTables = textToSnakeCaseText model.getD
 
 shouldPushToDbOnly :: DBModel -> [Text] -> Bool
 shouldPushToDbOnly model _dontEnableForKafka = textToSnakeCaseText model.getDBModel `elem` _dontEnableForKafka || model.getDBModel `elem` _dontEnableForKafka
+
+setDrainerTtl :: DBModel -> Text -> Flow ()
+setDrainerTtl model pKey = do
+  mTtlMap <- (>>= drainerTtlConfigs) <$> L.getOption KBT.Tables
+  whenJust (mTtlMap >>= HM.lookup (textToSnakeCaseText model.getDBModel)) $ \ttl -> do
+    res <- RQ.expireKey pKey ttl
+    case res of
+      Left err -> L.logError ("DRAIN_TTL_EXPIRE_FAILED" :: Text) (pKey <> " : " <> show err)
+      Right False -> L.logWarning ("DRAIN_TTL_KEY_ABSENT" :: Text) ("EXPIRE no-op, key not found: " <> pKey)
+      Right True -> pure ()
