@@ -132,6 +132,20 @@ PassDetails:
       limit: limit
       offset: offset
 
+    findAllByPassOrganizationIdsAndVerificationStatus:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and:
+          - in:
+            - passOrganizationId
+            - verificationStatus
+          - merchantOperatingCityId
+      orderBy:
+        field: updatedAt
+        order: asc
+      limit: limit
+      offset: offset
+
     updateVerificationStatus:
       kvFunction: updateWithKV
       params: [verificationStatus, validTill, remark, numberOfStages, academicYearStart, academicYearEnd]

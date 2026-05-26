@@ -4,6 +4,7 @@
 module Domain.Action.Dashboard.AppManagement.PassOrganization
   ( getPassOrganizationGetPassOrganization,
     getPassOrganizationPassDetails,
+    getPassOrganizationPassDetailsDepot,
     postPassOrganizationPassDetailsVerify,
     postPassOrganizationUpdate,
     getPassOrganizationGetOrganizations,
@@ -80,7 +81,8 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
   let offset' = fromMaybe 0 offset
   passDetailsInfo <- forM passDetails $ \pd -> do
     decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
-    pure $ mkPassDetailsInfoResp decGuardianMobile pd
+    org <- QPassOrganization.findById pd.passOrganizationId >>= fromMaybeM (PassOrganizationNotFound pd.passOrganizationId.getId)
+    pure $ mkPassDetailsInfoResp decGuardianMobile org.name pd
   pure $
     PassOrganizationAPI.PassDetailsListResp
       { PassOrganizationAPI.passDetails = passDetailsInfo,
@@ -88,8 +90,8 @@ getPassOrganizationPassDetails merchantShortId opCity passEnumText mbPassOrganiz
         PassOrganizationAPI.offset = offset'
       }
 
-mkPassDetailsInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
-mkPassDetailsInfoResp decGuardianMobile passDetails =
+mkPassDetailsInfoResp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> DPassDetails.PassDetails -> PassOrganizationAPI.PassDetailsInfoResp
+mkPassDetailsInfoResp decGuardianMobile organizationName passDetails =
   PassOrganizationAPI.PassDetailsInfoResp
     { PassOrganizationAPI.passDetailsId = passDetails.id,
       PassOrganizationAPI.personId = passDetails.personId,
@@ -111,9 +113,38 @@ mkPassDetailsInfoResp decGuardianMobile passDetails =
       PassOrganizationAPI.academicYearEnd = passDetails.academicYearEnd,
       PassOrganizationAPI.numberOfStages = passDetails.numberOfStages,
       PassOrganizationAPI.remark = passDetails.remark,
+      PassOrganizationAPI.organizationName = organizationName,
       PassOrganizationAPI.createdAt = passDetails.createdAt,
       PassOrganizationAPI.updatedAt = passDetails.updatedAt
     }
+
+getPassOrganizationPassDetailsDepot ::
+  ( Id.ShortId DMerchant.Merchant ->
+    Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Id.Id DPerson.Person ->
+    Kernel.Prelude.Text ->
+    Environment.Flow PassOrganizationAPI.PassDetailsListResp
+  )
+getPassOrganizationPassDetailsDepot merchantShortId opCity limit offset depotPersonId statusText = do
+  status <- DPassDetails.parseVerificationStatus statusText
+  callerMoc <- QMerchantOperatingCity.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+  orgs <- QPassOrganization.findByDepotPersonId (Just depotPersonId)
+  let scopedOrgIds = [o.id | o <- orgs]
+      effectiveLimit = min 100 (fromMaybe 10 limit)
+      offset' = fromMaybe 0 offset
+  passDetails <- QPassDetails.findAllByPassOrganizationIdsAndVerificationStatus (Just effectiveLimit) (Just offset') scopedOrgIds [status] callerMoc.id
+  let orgNameById oid = case [o.name | o <- orgs, o.id == oid] of (n : _) -> n; [] -> ""
+  passDetailsInfo <- forM passDetails $ \pd -> do
+    decGuardianMobile <- mapM decrypt pd.guardianMobileNumber
+    pure $ mkPassDetailsInfoResp decGuardianMobile (orgNameById pd.passOrganizationId) pd
+  pure $
+    PassOrganizationAPI.PassDetailsListResp
+      { PassOrganizationAPI.passDetails = passDetailsInfo,
+        PassOrganizationAPI.limit = effectiveLimit,
+        PassOrganizationAPI.offset = offset'
+      }
 
 postPassOrganizationPassDetailsVerify :: (Id.ShortId DMerchant.Merchant -> Context.City -> PassOrganizationAPI.VerifyPassDetailsReq -> Environment.Flow APISuccess.APISuccess)
 postPassOrganizationPassDetailsVerify merchantShortId opCity req = do
