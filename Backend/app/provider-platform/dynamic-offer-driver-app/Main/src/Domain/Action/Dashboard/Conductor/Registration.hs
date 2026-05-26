@@ -36,6 +36,8 @@ postConductorBulkRegister ::
   Common.ConductorBulkRegisterReq ->
   Flow Common.ConductorBulkRegisterResp
 postConductorBulkRegister merchantShortId opCity req = do
+  when (length req.conductors > 50) $
+    throwError $ InvalidRequest "Bulk register limit is 50 conductors per request"
   (baseUrl, gtfsId) <- getGimsConfig merchantShortId opCity
   results <- mapM (registerConductorBestEffort baseUrl gtfsId) req.conductors
   return Common.ConductorBulkRegisterResp {results}
@@ -61,7 +63,8 @@ registerConductor baseUrl gtfsId req = do
         { token_no = req.operatorBadgeToken,
           email_hash = emailHashHex,
           password_hash = passwordHashHex,
-          first_name = req.firstName
+          first_name = req.firstName,
+          role = req.role
         }
   return Common.ConductorRegisterResp {success = gimsResp.success, operatorBadgeToken = req.operatorBadgeToken}
 
@@ -76,12 +79,13 @@ registerConductorBestEffort baseUrl gtfsId req = do
         { token_no = req.operatorBadgeToken,
           email_hash = emailHashHex,
           password_hash = passwordHashHex,
-          first_name = req.firstName
+          first_name = req.firstName,
+          role = req.role
         }
   case outcome of
     Left ex -> do
       logError $ "Conductor registration failed for " <> req.operatorBadgeToken <> ": " <> show ex
-      return Common.ConductorBulkRegisterResult {operatorBadgeToken = req.operatorBadgeToken, success = False, errorMessage = Just (show ex)}
+      return Common.ConductorBulkRegisterResult {operatorBadgeToken = req.operatorBadgeToken, success = False, errorMessage = Just "Registration failed due to an internal error"}
     Right (Right resp) -> return Common.ConductorBulkRegisterResult {operatorBadgeToken = req.operatorBadgeToken, success = resp.success, errorMessage = Nothing}
     Right (Left errMsg) -> return Common.ConductorBulkRegisterResult {operatorBadgeToken = req.operatorBadgeToken, success = False, errorMessage = Just errMsg}
 

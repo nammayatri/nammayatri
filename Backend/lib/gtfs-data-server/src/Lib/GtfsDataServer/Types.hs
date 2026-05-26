@@ -319,7 +319,8 @@ instance HideSecrets GimsEmployeeLoginReq where
 -- | Response from the employee login endpoint (driver-app only).
 data GimsEmployeeLoginResp = GimsEmployeeLoginResp
   { verified :: Bool,
-    token :: Maybe Text
+    token :: Maybe Text,
+    role :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -327,12 +328,13 @@ data GimsEmployeeRegisterReq = GimsEmployeeRegisterReq
   { token_no :: Text,
     email_hash :: Text,
     password_hash :: Text,
-    first_name :: Text
+    first_name :: Text,
+    role :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 instance HideSecrets GimsEmployeeRegisterReq where
-  hideSecrets (GimsEmployeeRegisterReq tokenNo _ _ firstName) = GimsEmployeeRegisterReq tokenNo "***" "***" firstName
+  hideSecrets (GimsEmployeeRegisterReq tokenNo _ _ firstName role) = GimsEmployeeRegisterReq tokenNo "***" "***" firstName role
 
 data GimsEmployeeRegisterResp = GimsEmployeeRegisterResp
   { success :: Bool,

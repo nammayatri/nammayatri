@@ -28,7 +28,13 @@ data ConductorBulkRegisterTReq = ConductorBulkRegisterTReq {conductors :: [Condu
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ConductorRegisterReq = ConductorRegisterReq {operatorBadgeToken :: Kernel.Prelude.Text, firstName :: Kernel.Prelude.Text, email :: Kernel.Prelude.Text, password :: Kernel.Prelude.Text}
+data ConductorRegisterReq = ConductorRegisterReq
+  { operatorBadgeToken :: Kernel.Prelude.Text,
+    firstName :: Kernel.Prelude.Text,
+    email :: Kernel.Prelude.Text,
+    password :: Kernel.Prelude.Text,
+    role :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -36,7 +42,7 @@ data ConductorRegisterResp = ConductorRegisterResp {success :: Kernel.Prelude.Bo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ConductorRegisterTReq = ConductorRegisterTReq {operatorBadgeToken :: Kernel.Prelude.Text, firstName :: Kernel.Prelude.Text, email :: Kernel.Prelude.Text}
+data ConductorRegisterTReq = ConductorRegisterTReq {operatorBadgeToken :: Kernel.Prelude.Text, firstName :: Kernel.Prelude.Text, email :: Kernel.Prelude.Text, role :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -28,11 +28,13 @@ types:
     - firstName: Text
     - email: Text
     - password: Text
+    - role: Maybe Text
 
   ConductorRegisterTReq: # hide secrets — password omitted
     - operatorBadgeToken: Text
     - firstName: Text
     - email: Text
+    - role: Maybe Text
 
   ConductorRegisterResp:
     - success: Bool
