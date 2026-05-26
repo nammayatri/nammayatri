@@ -111,7 +111,11 @@ populateTipAmount rideId tipAmount apiKey = do
                 createRes <- InvoiceSvc.createInvoice newInvoiceInput (priorEntryIds <> newEntryIds)
                 case createRes of
                   Left err -> logError $ "Failed to mint regenerated invoice with tip: " <> show err
-                  Right newInv ->
+                  Right newInv -> do
+                    -- Update booking.financeInvoiceId so direct lookups by ID
+                    -- return the regenerated invoice (with tip) instead of the
+                    -- voided original.
+                    QBooking.updateFinanceInvoiceId booking.id (Just newInv.id.getId)
                     logInfo $ "Regenerated invoice " <> newInv.id.getId <> " (replacing voided " <> priorInv.id.getId <> ") with tip " <> show tipAmount
 
   pure Success
