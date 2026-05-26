@@ -192,8 +192,8 @@ updateActivityWithDriverFlowStatus active mode driverFlowStatus mbHasRideStarted
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
       { LTSSync.active = LTSSync.Set active,
-        LTSSync.mode = LTSSync.Set mode,
-        LTSSync.hasRideStarted = LTSSync.Set mbHasRideStarted
+        LTSSync.mode = if isJust mode then LTSSync.Set mode else LTSSync.Unchanged,
+        LTSSync.hasRideStarted = if isJust mbHasRideStarted then LTSSync.Set mbHasRideStarted else LTSSync.Unchanged
       }
 
 updateDynamicBlockedStateWithActivity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Person.Driver -> Maybe Text -> Maybe Int -> Text -> Id Merchant -> Text -> Id DMOC.MerchantOperatingCity -> DTDBT.BlockedBy -> Bool -> Maybe Bool -> Maybe Common.DriverMode -> BlockReasonFlag -> m ()
@@ -428,7 +428,7 @@ updateTripCategoryAndTripEndLocationByDriverId driverId tripCategory tripEndLoca
     [Se.Is BeamDI.driverId (Se.Eq (getId driverId))]
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate
-      { LTSSync.onRideTripCategory = LTSSync.Set (show <$> tripCategory),
+      { LTSSync.onRideTripCategory = if isJust tripCategory then LTSSync.Set (show <$> tripCategory) else LTSSync.Unchanged,
         LTSSync.driverTripEndLocation = LTSSync.Set tripEndLocation
       }
 
