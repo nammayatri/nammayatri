@@ -2280,7 +2280,6 @@ data CreatePayoutServiceReq = CreatePayoutServiceReq
     remark :: Text,
     customerName :: Text,
     customerVpa :: Maybe Text,
-    isDynamicWebhookRequired :: Bool,
     payoutServiceFlow :: PT.PayoutServiceFlow
   }
 
@@ -2453,16 +2452,14 @@ mkCreatePayoutServiceReq ::
   Maybe Text ->
   Maybe Text ->
   Text ->
-  Bool ->
   Payout.PayoutServiceFlow ->
   Maybe HighPrecMoney -> -- explicit transferAmount (Nothing = use 0)
   CreatePayoutServiceReq
-mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired payoutServiceFlow mbTransferAmount =
+mkCreatePayoutServiceReq orderId amount currency mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType payoutServiceFlow mbTransferAmount =
   CreatePayoutServiceReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
       customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
-      isDynamicWebhookRequired = isDynamicWebhookRequired,
       transferAmount = fromMaybe 0 mbTransferAmount,
       ..
     }
