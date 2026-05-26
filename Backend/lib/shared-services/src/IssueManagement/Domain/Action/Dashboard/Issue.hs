@@ -45,6 +45,7 @@ import qualified IssueManagement.Storage.Queries.Issue.IssueMessage as QIM
 import qualified IssueManagement.Storage.Queries.Issue.IssueOption as QIO
 import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIR
 import qualified IssueManagement.Storage.Queries.Issue.IssueTranslation as QIT
+import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import IssueManagement.Tools.Error
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
@@ -2025,7 +2026,10 @@ sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle req = 
     case result of
       Right _ -> pure ()
       Left err -> logError $ "sendDashboardChatMessage: sendChatNotification failed " <> show err
-  pure $ UIR.toChatMessageItem chatMsg
+  -- Resolve any MediaFile UUIDs to URLs before responding so the dashboard can
+  -- render attachments without a follow-up call.
+  mfs <- if null mediaIds then pure [] else QMF.findAllIn mediaIds
+  pure $ UIR.toChatMessageItem mfs chatMsg
 
 listDashboardChatMessages ::
   ( Esq.EsqDBReplicaFlow m r,
@@ -2042,7 +2046,11 @@ listDashboardChatMessages merchantShortId opCity issueReportId issueHandle mbSin
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   messages <- B.runInReplica $ QCM.findChatMessagesAfter issueReportId mbSince mbLimit
-  pure $ map UIR.toChatMessageItem messages
+  -- Batch-resolve all referenced MediaFile records in one query so the
+  -- dashboard receives ready-to-render URLs alongside the raw UUIDs.
+  let allMediaIds = concatMap (.mediaFileIds) messages
+  allMfs <- if null allMediaIds then pure [] else B.runInReplica $ QMF.findAllIn allMediaIds
+  pure $ map (UIR.toChatMessageItem allMfs) messages
 
 markDashboardChatRead ::
   ( Esq.EsqDBReplicaFlow m r,

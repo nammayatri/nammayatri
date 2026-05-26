@@ -301,6 +301,9 @@ data ChatMessageItem = ChatMessageItem
     chatContentType :: DCM.ChatContentType,
     text :: Text,
     mediaFileIds :: [Id MediaFile],
+    -- Resolved MediaFile records aligned with mediaFileIds (server fills these
+    -- so clients don't have to translate the UUID to an S3 key themselves).
+    mediaFiles :: [MediaFile_],
     deliveredAt :: Maybe UTCTime,
     readAt :: Maybe UTCTime,
     createdAt :: UTCTime

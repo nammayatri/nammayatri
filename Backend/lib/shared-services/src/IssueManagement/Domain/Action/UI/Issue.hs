@@ -1172,7 +1172,10 @@ createChatMessage personId issueReportId identifier req = do
             merchantId = issueReport.merchantId
           }
   QCM.create chatMsg
-  pure (toChatMessageItem chatMsg)
+  -- Resolve attached MediaFile records so the client receives both the raw
+  -- UUIDs (for back-compat) and the rendered URLs in a single round trip.
+  mfs <- if null mediaIds then pure [] else QMF.findAllIn mediaIds
+  pure (toChatMessageItem mfs chatMsg)
 
 -- | Fetches chat messages on an issue ordered by createdAt ascending.
 -- Optionally filters to messages strictly newer than @since@. Used by both
@@ -1191,7 +1194,11 @@ listChatMessages personId issueReportId mbSince mbLimit = do
   unless (issueReport.personId == personId) $
     throwError (InvalidRequest "This issue does not belong to the caller.")
   messages <- QCM.findChatMessagesAfter issueReportId mbSince mbLimit
-  pure $ map toChatMessageItem messages
+  -- Batch-fetch every referenced MediaFile in one query, then attach the
+  -- relevant subset to each message in toChatMessageItem (avoids N+1).
+  let allMediaIds = concatMap (.mediaFileIds) messages
+  allMfs <- if null allMediaIds then pure [] else QMF.findAllIn allMediaIds
+  pure $ map (toChatMessageItem allMfs) messages
 
 -- | Rider marks operator messages as read up to a given timestamp.
 markChatRead ::
@@ -1233,18 +1240,24 @@ getChatState personId issueReportId = do
         [] -> Nothing
   pure $ Common.ChatStateRes {unread, latestMessageAt = latestAt}
 
-toChatMessageItem :: DCM.ChatMessage -> Common.ChatMessageItem
-toChatMessageItem c =
-  Common.ChatMessageItem
-    { messageId = c.id.getId,
-      senderType = c.senderType,
-      chatContentType = c.chatContentType,
-      text = c.message,
-      mediaFileIds = c.mediaFileIds,
-      deliveredAt = Nothing,
-      readAt = c.readAt,
-      createdAt = c.createdAt
-    }
+-- | Converts a stored ChatMessage to its API representation, attaching the
+-- pre-resolved MediaFile records for any mediaFileIds the message references.
+-- Callers must supply the relevant MediaFile rows (typically batch-fetched);
+-- this function filters to the ones whose id matches the message.
+toChatMessageItem :: [D.MediaFile] -> DCM.ChatMessage -> Common.ChatMessageItem
+toChatMessageItem allMediaFiles c =
+  let relevantMfs = filter (\mf -> mf.id `elem` c.mediaFileIds) allMediaFiles
+   in Common.ChatMessageItem
+        { messageId = c.id.getId,
+          senderType = c.senderType,
+          chatContentType = c.chatContentType,
+          text = c.message,
+          mediaFileIds = c.mediaFileIds,
+          mediaFiles = mkMediaFiles relevantMfs,
+          deliveredAt = Nothing,
+          readAt = c.readAt,
+          createdAt = c.createdAt
+        }
 
 mkIssueOption :: (D.IssueOption, Maybe D.IssueTranslation) -> Text
 mkIssueOption (issueOption, issueOptionTranslation) =
