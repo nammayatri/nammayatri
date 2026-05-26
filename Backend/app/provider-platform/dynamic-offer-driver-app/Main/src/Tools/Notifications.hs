@@ -32,6 +32,7 @@ import Domain.Types.Location
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantClientConfig as DMCC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Message as Message
 import qualified Domain.Types.Overlay as DTMO
@@ -195,20 +196,21 @@ dynamicFCMNotifyPerson merchantOpCityId personId mbDeviceToken lang tripCategory
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId fcmReq.notificationKey tripCategory fcmReq.subCategory (Just lang) mbConfigInExperimentVersions
   when (isNothing mbMerchantPN) $ logError $ "MISSED_FCM - " <> fcmReq.notificationKey
   whenJust mbMerchantPN $ \merchantPN -> do
-    let title = FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
-        body = FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
-        notificationData =
-          FCM.FCMData
-            { fcmNotificationType = merchantPN.fcmNotificationType,
-              fcmShowNotification = fcmReq.showType,
-              fcmEntityType = fcmReq.entityType,
-              fcmEntityIds = fcmReq.entityId,
-              fcmEntityData = entityData,
-              fcmNotificationJSON = FCM.createAndroidNotification title body merchantPN.fcmNotificationType fcmReq.sound,
-              fcmOverlayNotificationJSON = FCM.createAndroidOverlayNotification <$> fcmReq.overlayReq,
-              fcmNotificationId = Nothing
-            }
-    FCM.notifyPersonWithPriority fcmConfig fcmReq.priority (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+    when merchantPN.shouldTrigger $ do
+      let title = FCMNotificationTitle $ buildTemplate dynamicParams merchantPN.title
+          body = FCMNotificationBody $ buildTemplate dynamicParams merchantPN.body
+          notificationData =
+            FCM.FCMData
+              { fcmNotificationType = merchantPN.fcmNotificationType,
+                fcmShowNotification = fcmReq.showType,
+                fcmEntityType = fcmReq.entityType,
+                fcmEntityIds = fcmReq.entityId,
+                fcmEntityData = entityData,
+                fcmNotificationJSON = FCM.createAndroidNotification title body merchantPN.fcmNotificationType fcmReq.sound,
+                fcmOverlayNotificationJSON = FCM.createAndroidOverlayNotification <$> fcmReq.overlayReq,
+                fcmNotificationId = Nothing
+              }
+      FCM.notifyPersonWithPriority fcmConfig fcmReq.priority (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
 
 notifyOnNewSearchRequestAvailable ::
   ( CacheFlow m r,
@@ -1905,3 +1907,89 @@ notifyPickupNoShow merchantOpCityId driverId entityData = do
   case grpcResult of
     Left e -> logWarning $ "GRPC pickup zone no-show notification failed for driver " <> driverId.getId <> ": " <> show e
     Right _ -> pure ()
+
+-- | Request type for generic merchant push notification dispatch
+data MerchantPNReq = MerchantPNReq
+  { key :: Text,
+    tripCategory :: Maybe Trip.TripCategory,
+    subCategory :: Maybe Notification.SubCategory,
+    dynamicParams :: [(Text, Text)],
+    entityId :: Text
+  }
+
+-- | Generic helper that looks up a MerchantPushNotification by key, checks shouldTrigger/channels,
+-- builds title/body from template, and dispatches to configured channels.
+-- isCritical=True → synchronous (errors propagate), isCritical=False → async via fork.
+dispatchMerchantNotification ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  MerchantPNReq ->
+  Maybe [LYT.ConfigVersionMap] ->
+  m ()
+dispatchMerchantNotification merchantOpCityId person pnReq mbConfigVersionMap = do
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId pnReq.key pnReq.tripCategory pnReq.subCategory person.language mbConfigVersionMap
+  case mbMerchantPN of
+    Nothing -> logWarning $ "MISSED_MERCHANT_PN key=" <> pnReq.key
+    Just merchantPN -> do
+      unless merchantPN.shouldTrigger $ logInfo $ "DISABLED_MERCHANT_PN key=" <> pnReq.key
+      when merchantPN.shouldTrigger $ do
+        case merchantPN.channels of
+          Nothing -> logWarning $ "NULL_CHANNELS key=" <> pnReq.key <> " — old row not configured for new dispatch, skipping"
+          Just [] -> logInfo $ "EMPTY_CHANNELS key=" <> pnReq.key <> " — explicitly disabled"
+          Just channels -> do
+            let title = buildTemplate pnReq.dynamicParams merchantPN.title
+                body = buildTemplate pnReq.dynamicParams merchantPN.body
+                dispatchChannel channel = do
+                  result <- try @_ @SomeException $ dispatchToChannel merchantOpCityId person pnReq merchantPN.fcmNotificationType channel title body
+                  case result of
+                    Left e -> logWarning $ "CHANNEL_DISPATCH_FAILED key=" <> pnReq.key <> " channel=" <> show channel <> " error=" <> show e
+                    Right _ -> pure ()
+            if merchantPN.isCritical
+              then forM_ channels dispatchChannel
+              else fork ("MerchantPN:" <> pnReq.key) $ forM_ channels dispatchChannel
+
+dispatchToChannel ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  MerchantPNReq ->
+  FCM.FCMNotificationType ->
+  DMPN.NotificationChannel ->
+  Text ->
+  Text ->
+  m ()
+dispatchToChannel merchantOpCityId person pnReq fcmNotificationType channel title body = do
+  case channel of
+    DMPN.FCM -> do
+      fcmConfig <- findFCMConfigWithFallback merchantOpCityId person.id
+      let notificationData =
+            FCM.FCMData
+              { fcmNotificationType = fcmNotificationType,
+                fcmShowNotification = FCM.SHOW,
+                fcmEntityType = FCM.Product,
+                fcmEntityIds = pnReq.entityId,
+                fcmEntityData = Nothing :: Maybe EmptyDynamicParam,
+                fcmNotificationJSON = FCM.createAndroidNotification (FCMNotificationTitle title) (FCMNotificationBody body) fcmNotificationType Nothing,
+                fcmOverlayNotificationJSON = Nothing,
+                fcmNotificationId = Nothing
+              }
+      FCM.notifyPersonWithPriority fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+    DMPN.GRPC -> do
+      notifyWithGRPCProvider merchantOpCityId Notification.DRIVER_NOTIFY title body person.id Nothing EmptyDynamicParam
+    DMPN.SMS -> logWarning $ "SMS channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.WHATSAPP -> logWarning $ "WHATSAPP channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.OVERLAY -> logWarning $ "OVERLAY channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.WEB -> logWarning $ "WEB channel dispatch not yet implemented for key=" <> pnReq.key

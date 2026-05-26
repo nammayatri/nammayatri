@@ -2024,6 +2024,10 @@ MerchantClientConfig:
 MerchantPushNotification:
   tableName: merchant_push_notification
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
+  types:
+    NotificationChannel:
+      enum: "FCM,GRPC,SMS,WHATSAPP,OVERLAY,WEB"
+      derive: "HttpInstance"
   fields:
     id: Id MerchantPushNotification
     key: Text
@@ -2035,6 +2039,21 @@ MerchantPushNotification:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     tripCategory: Maybe TripCategory
+    shouldTrigger: Bool
+    channels: "Maybe [NotificationChannel]"
+    isCritical: Bool
+  beamType:
+    shouldTrigger: Maybe Bool
+    channels: Maybe [Text]
+    isCritical: Maybe Bool
+  fromTType:
+    shouldTrigger: Kernel.Prelude.fromMaybe True|I
+    isCritical: Kernel.Prelude.fromMaybe False|I
+    channels: (fmap . mapMaybe) (readMaybe . Data.Text.unpack) channels|E
+  toTType:
+    shouldTrigger: Kernel.Prelude.Just|I
+    isCritical: Kernel.Prelude.Just|I
+    channels: (fmap . fmap) (Data.Text.pack . Kernel.Prelude.show) channels|E
   default:
     id: "md5(random()::text || clock_timestamp()::text)::uuid"
   constraints:

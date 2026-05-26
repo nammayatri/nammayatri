@@ -16,10 +16,13 @@
 module Storage.CachedQueries.Merchant.MerchantPushNotification
   ( create,
     findAllByMerchantOpCityId,
+    findAllByMerchantOpCityIdAndMessageKey,
+    findByPrimaryKey,
     findMatchingMerchantPN,
     findMatchingMerchantPNInRideFlow,
     findAllByMerchantOpCityIdInRideFlow,
     clearCache,
+    clearCacheById,
     updateByPrimaryKey,
   )
 where
@@ -48,6 +51,12 @@ findAllByMerchantOpCityId id _mbConfigVersionMap =
   Hedis.safeGet (makeMerchantOpCityIdAllKey id) >>= \case
     Just configs -> return configs
     Nothing -> cacheAllMerchantPNs id /=<< Queries.findAllByMerchantOpCityId id
+
+findAllByMerchantOpCityIdAndMessageKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> m [MerchantPushNotification]
+findAllByMerchantOpCityIdAndMessageKey = Queries.findAllByMerchantOpCityIdAndMessageKey
+
+findByPrimaryKey :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantPushNotification -> m (Maybe MerchantPushNotification)
+findByPrimaryKey = Queries.findByPrimaryKey
 
 findMatchingMerchantPN :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> Maybe Notification.SubCategory -> Maybe DLanguage.Language -> Maybe [LYT.ConfigVersionMap] -> m (Maybe MerchantPushNotification)
 findMatchingMerchantPN merchantOperatingCityId messageKey tripCategory subCategory personLanguage _mbConfigVersionMap = do
@@ -97,6 +106,10 @@ makeMerchantOpCityIdAndMessageKeyAndTripCategory id messageKey tripCategory = "C
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> Text -> Maybe TripCategory -> m ()
 clearCache merchantOpCityId messageKey tripCategory = do
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAndMessageKeyAndTripCategory merchantOpCityId messageKey tripCategory)
+  Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
+
+clearCacheById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
+clearCacheById merchantOpCityId =
   Hedis.runInMultiCloudRedisWrite $ Hedis.del (makeMerchantOpCityIdAllKey merchantOpCityId)
 
 updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantPushNotification -> m ()

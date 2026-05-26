@@ -31,6 +31,7 @@ import qualified Domain.Types.Journey
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantMessage as DMM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantPushNotification as DMPN
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.MerchantServiceUsageConfig (MerchantServiceUsageConfig)
 import qualified Domain.Types.NotificationSoundsConfig as NSC
@@ -1979,3 +1980,77 @@ notifyBusTripStarted person vehicleNumber routeName tripId mbJourneyId = do
     [("vehicleNumber", vehicleNumber), ("routeName", routeName)]
     Nothing
     Nothing
+
+-- | Request type for generic merchant push notification dispatch
+data MerchantPNReq = MerchantPNReq
+  { key :: Text,
+    tripCategory :: Maybe TripCategory,
+    subCategory :: Maybe Notification.SubCategory,
+    dynamicParams :: [(Text, Text)],
+    entityId :: Text
+  }
+
+-- | Generic helper that looks up a MerchantPushNotification by key, checks shouldTrigger/channels,
+-- builds title/body from template, and dispatches to configured channels.
+-- isCritical=True -> synchronous (errors propagate), isCritical=False -> async via fork.
+dispatchMerchantNotification ::
+  ServiceFlow m r =>
+  Person.Person ->
+  MerchantPNReq ->
+  Maybe [LYT.ConfigVersionMap] ->
+  m ()
+dispatchMerchantNotification person pnReq mbConfigVersionMap = do
+  let merchantOpCityId = person.merchantOperatingCityId
+  mbMerchantPN <- CPN.findMatchingMerchantPN merchantOpCityId pnReq.key pnReq.tripCategory pnReq.subCategory person.language mbConfigVersionMap
+  case mbMerchantPN of
+    Nothing -> logWarning $ "MISSED_MERCHANT_PN key=" <> pnReq.key
+    Just merchantPN -> do
+      unless merchantPN.shouldTrigger $ logInfo $ "DISABLED_MERCHANT_PN key=" <> pnReq.key
+      when merchantPN.shouldTrigger $ do
+        case merchantPN.channels of
+          Nothing -> logWarning $ "NULL_CHANNELS key=" <> pnReq.key <> " — old row not configured for new dispatch, skipping"
+          Just [] -> logInfo $ "EMPTY_CHANNELS key=" <> pnReq.key <> " — explicitly disabled"
+          Just channels -> do
+            let title = buildTemplate pnReq.dynamicParams merchantPN.title
+                body = buildTemplate pnReq.dynamicParams merchantPN.body
+                dispatchChannel channel = do
+                  result <- try @_ @SomeException $ dispatchToChannel person pnReq merchantPN.fcmNotificationType channel title body
+                  case result of
+                    Left e -> logWarning $ "CHANNEL_DISPATCH_FAILED key=" <> pnReq.key <> " channel=" <> show channel <> " error=" <> show e
+                    Right _ -> pure ()
+            if merchantPN.isCritical
+              then forM_ channels dispatchChannel
+              else fork ("MerchantPN:" <> pnReq.key) $ forM_ channels dispatchChannel
+
+dispatchToChannel ::
+  ServiceFlow m r =>
+  Person.Person ->
+  MerchantPNReq ->
+  Notification.Category ->
+  DMPN.NotificationChannel ->
+  Text ->
+  Text ->
+  m ()
+dispatchToChannel person pnReq category channel title body = do
+  case channel of
+    DMPN.FCM -> do
+      let notificationData =
+            Notification.NotificationReq
+              { category = category,
+                subCategory = pnReq.subCategory,
+                showNotification = Notification.SHOW,
+                messagePriority = Nothing,
+                entity = Notification.Entity Notification.Product pnReq.entityId EmptyDynamicParam,
+                body = body,
+                title = title,
+                auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
+                sound = Nothing,
+                ttl = Nothing,
+                dynamicParams = EmptyDynamicParam
+              }
+      notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+    DMPN.GRPC -> logWarning $ "GRPC channel dispatch not supported in rider-app for key=" <> pnReq.key
+    DMPN.SMS -> logWarning $ "SMS channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.WHATSAPP -> logWarning $ "WHATSAPP channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.OVERLAY -> logWarning $ "OVERLAY channel dispatch not yet implemented for key=" <> pnReq.key
+    DMPN.WEB -> logWarning $ "WEB channel dispatch not yet implemented for key=" <> pnReq.key

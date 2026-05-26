@@ -4,6 +4,7 @@
 
 module Storage.Queries.MerchantPushNotification where
 
+import qualified Data.Text
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPushNotification
 import qualified Domain.Types.Trip
@@ -61,8 +62,10 @@ updateByPrimaryKey (Domain.Types.MerchantPushNotification.MerchantPushNotificati
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.body body,
+      Se.Set Beam.channels (((fmap . fmap) (Data.Text.pack . Kernel.Prelude.show) channels)),
       Se.Set Beam.fcmNotificationType fcmNotificationType,
       Se.Set Beam.fcmSubCategory fcmSubCategory,
+      Se.Set Beam.isCritical (Kernel.Prelude.Just isCritical),
       Se.Set Beam.key key,
       Se.Set Beam.language language,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -80,9 +83,11 @@ instance FromTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotif
       Just
         Domain.Types.MerchantPushNotification.MerchantPushNotification
           { body = body,
+            channels = ((fmap . mapMaybe) (readMaybe . Data.Text.unpack) channels),
             fcmNotificationType = fcmNotificationType,
             fcmSubCategory = fcmSubCategory,
             id = Kernel.Types.Id.Id id,
+            isCritical = Kernel.Prelude.fromMaybe False isCritical,
             key = key,
             language = language,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -98,9 +103,11 @@ instance ToTType' Beam.MerchantPushNotification Domain.Types.MerchantPushNotific
   toTType' (Domain.Types.MerchantPushNotification.MerchantPushNotification {..}) = do
     Beam.MerchantPushNotificationT
       { Beam.body = body,
+        Beam.channels = ((fmap . fmap) (Data.Text.pack . Kernel.Prelude.show) channels),
         Beam.fcmNotificationType = fcmNotificationType,
         Beam.fcmSubCategory = fcmSubCategory,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.isCritical = Kernel.Prelude.Just isCritical,
         Beam.key = key,
         Beam.language = language,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

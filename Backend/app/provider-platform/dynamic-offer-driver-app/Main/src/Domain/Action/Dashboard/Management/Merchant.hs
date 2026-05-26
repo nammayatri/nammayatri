@@ -67,6 +67,10 @@ module Domain.Action.Dashboard.Management.Merchant
     getMerchantConfigGeometryList,
     putMerchantConfigGeometryUpdate,
     postMerchantConfigDebugLogUpdate,
+    getMerchantConfigPushNotification,
+    getMerchantConfigPushNotificationKeys,
+    postMerchantConfigPushNotificationUpsert,
+    deleteMerchantConfigPushNotificationDelete,
     getMerchantMerchantDocument,
     getMerchantMerchantDocumentList,
     postMerchantMerchantDocumentCreate,
@@ -146,6 +150,9 @@ import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
 import qualified "shared-services" IssueManagement.Domain.Types.Issue.IssueConfig as DIConfig
 import qualified "shared-services" IssueManagement.Storage.CachedQueries.Issue.IssueConfig as CQIssueConfig
+-- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
+
+import Kernel.Beam.Functions (deleteWithKV, findAllWithOptionsKV)
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.SMS as SMS
@@ -181,6 +188,7 @@ import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
+import qualified Sequelize as Se
 import SharedLogic.Allocator (AggregatedCommissionInvoiceCreationJobData, AllocatorJobType (..), BadDebtCalculationJobData, CalculateDriverFeesJobData, CongestionChargeCalculationRequestJobData, DriverReferralPayoutJobData, IffcoTokioInsuranceJobData, ReconciliationJobData, ScheduledBatchPayoutJobData, SupplyDemandRequestJobData)
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as DriverPool
 import qualified SharedLogic.DriverFee as SDF
@@ -195,6 +203,7 @@ import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.MerchantDocument ()
 import Storage.Beam.SpecialZone ()
+import qualified Storage.Beam.MerchantPushNotification as BeamMPN
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
@@ -4633,6 +4642,174 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
   pure Success
+
+---------------------------------------------------------------------
+getMerchantConfigPushNotification ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Language ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Flow [Common.MerchantPushNotificationRes]
+getMerchantConfigPushNotification merchantShortId opCity mbLimit mbOffset mbKey mbLanguage mbIsCritical mbShouldTrigger = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let lim = fromMaybe 50 mbLimit
+      off = fromMaybe 0 mbOffset
+      filters =
+        [Se.Is BeamMPN.merchantOperatingCityId $ Se.Eq (getId merchantOpCityId)]
+          <> maybe [] (\k -> [Se.Is BeamMPN.key $ Se.Eq k]) mbKey
+          <> maybe [] (\l -> [Se.Is BeamMPN.language $ Se.Eq l]) mbLanguage
+          <> maybe [] (\ic -> [Se.Is BeamMPN.isCritical $ Se.Eq (Just ic)]) mbIsCritical
+          <> maybe [] (\st -> [Se.Is BeamMPN.shouldTrigger $ Se.Eq (Just st)]) mbShouldTrigger
+  notifications <- findAllWithOptionsKV [Se.And filters] (Se.Desc BeamMPN.createdAt) (Just lim) (Just off)
+  pure $ map mkMerchantPushNotificationRes notifications
+  where
+    mkMerchantPushNotificationRes DMPN.MerchantPushNotification {..} =
+      Common.MerchantPushNotificationRes
+        { id = getId id,
+          key = key,
+          title = title,
+          body = body,
+          language = language,
+          fcmNotificationType = show fcmNotificationType,
+          fcmSubCategory = show <$> fcmSubCategory,
+          tripCategory = show <$> tripCategory,
+          shouldTrigger = shouldTrigger,
+          channels = fmap mapChannelToCommon <$> channels,
+          isCritical = isCritical
+        }
+
+getMerchantConfigPushNotificationKeys ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow [Text]
+getMerchantConfigPushNotificationKeys merchantShortId opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  notifications <- CQMPN.findAllByMerchantOpCityId merchantOpCityId Nothing
+  pure $ DL.nub $ map (.key) notifications
+
+postMerchantConfigPushNotificationUpsert ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Common.MerchantPushNotificationUpsertReq ->
+  Flow APISuccess
+postMerchantConfigPushNotificationUpsert merchantShortId opCity mbToggle mbAllLanguages req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  case mbToggle of
+    Just True -> do
+      newShouldTrigger <- req.shouldTrigger & fromMaybeM (InvalidRequest "shouldTrigger is required for toggle")
+      existingNotifs <- CQMPN.findAllByMerchantOpCityIdAndMessageKey merchantOpCityId req.key
+      when (null existingNotifs) $ throwError (InvalidRequest "No push notifications found for this key")
+      case mbAllLanguages of
+        Just True -> do
+          mapM_ (\n -> CQMPN.updateByPrimaryKey n{DMPN.shouldTrigger = newShouldTrigger}) existingNotifs
+        _ -> do
+          language <- req.language & fromMaybeM (InvalidRequest "language is required for toggle")
+          let matching = filter (\n -> n.language == language) existingNotifs
+          when (null matching) $ throwError (InvalidRequest "No notification found for this key+language")
+          mapM_ (\n -> CQMPN.updateByPrimaryKey n{DMPN.shouldTrigger = newShouldTrigger}) matching
+      let tripCategories = DL.nub $ map (.tripCategory) existingNotifs
+      mapM_ (\tc -> CQMPN.clearCache merchantOpCityId req.key tc) tripCategories
+      CQMPN.clearCacheById merchantOpCityId
+    _ -> do
+      runRequestValidation Common.validateMerchantPushNotificationUpsertReq req
+      title <- req.title & fromMaybeM (InvalidRequest "title is required for upsert")
+      body <- req.body & fromMaybeM (InvalidRequest "body is required for upsert")
+      language <- req.language & fromMaybeM (InvalidRequest "language is required for upsert")
+      fcmNotificationType <- req.fcmNotificationType & fromMaybeM (InvalidRequest "fcmNotificationType is required for upsert")
+      parsedFcmNotificationType <- readMaybe (T.unpack fcmNotificationType) & fromMaybeM (InvalidRequest $ "Invalid fcmNotificationType: " <> fcmNotificationType)
+      parsedFcmSubCategory <- case req.fcmSubCategory of
+        Nothing -> pure Nothing
+        Just sc -> case readMaybe (T.unpack sc) of
+          Nothing -> throwError (InvalidRequest $ "Invalid fcmSubCategory: " <> sc)
+          Just v -> pure (Just v)
+      parsedTripCategory <- case req.tripCategory of
+        Nothing -> pure Nothing
+        Just tc -> case readMaybe (T.unpack tc) of
+          Nothing -> throwError (InvalidRequest $ "Invalid tripCategory: " <> tc)
+          Just v -> pure (Just v)
+      existingNotifs <- CQMPN.findAllByMerchantOpCityIdAndMessageKey merchantOpCityId req.key
+      let mbExisting = find (\n -> n.language == language && n.tripCategory == parsedTripCategory && n.fcmSubCategory == parsedFcmSubCategory) existingNotifs
+      case mbExisting of
+        Just existing -> do
+          let updatedNotif =
+                existing
+                  { DMPN.title = title,
+                    DMPN.body = body,
+                    DMPN.fcmNotificationType = parsedFcmNotificationType,
+                    DMPN.fcmSubCategory = parsedFcmSubCategory,
+                    DMPN.tripCategory = parsedTripCategory,
+                    DMPN.shouldTrigger = fromMaybe existing.shouldTrigger req.shouldTrigger,
+                    DMPN.channels = fmap mapCommonToChannel <$> req.channels <|> existing.channels,
+                    DMPN.isCritical = fromMaybe existing.isCritical req.isCritical
+                  }
+          CQMPN.updateByPrimaryKey updatedNotif
+        Nothing -> do
+          when (isNothing req.channels || req.channels == Just []) $ throwError (InvalidRequest "channels must be a non-empty list when creating a new notification")
+          newId <- generateGUID
+          now <- getCurrentTime
+          let newNotif =
+                DMPN.MerchantPushNotification
+                  { id = newId,
+                    key = req.key,
+                    title = title,
+                    body = body,
+                    language = language,
+                    fcmNotificationType = parsedFcmNotificationType,
+                    fcmSubCategory = parsedFcmSubCategory,
+                    tripCategory = parsedTripCategory,
+                    merchantId = merchant.id,
+                    merchantOperatingCityId = merchantOpCityId,
+                    shouldTrigger = fromMaybe True req.shouldTrigger,
+                    channels = fmap mapCommonToChannel <$> req.channels,
+                    isCritical = fromMaybe False req.isCritical,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+          CQMPN.create newNotif
+      CQMPN.clearCache merchantOpCityId req.key parsedTripCategory
+      CQMPN.clearCacheById merchantOpCityId
+  pure Success
+
+deleteMerchantConfigPushNotificationDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.MerchantPushNotification ->
+  Flow APISuccess
+deleteMerchantConfigPushNotificationDelete merchantShortId opCity notificationId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let driverNotifId = cast @Common.MerchantPushNotification @DMPN.MerchantPushNotification notificationId
+  existingNotif <- CQMPN.findByPrimaryKey driverNotifId >>= fromMaybeM (InvalidRequest "Push notification not found")
+  unless (existingNotif.merchantOperatingCityId == merchantOpCityId) $ throwError (InvalidRequest "Push notification does not belong to this merchant operating city")
+  deleteWithKV [Se.And [Se.Is BeamMPN.id $ Se.Eq (getId driverNotifId)]]
+  CQMPN.clearCache merchantOpCityId existingNotif.key existingNotif.tripCategory
+  CQMPN.clearCacheById merchantOpCityId
+  pure Success
+
+mapChannelToCommon :: DMPN.NotificationChannel -> Common.NotificationChannel
+mapChannelToCommon DMPN.FCM = Common.NCH_FCM
+mapChannelToCommon DMPN.GRPC = Common.NCH_GRPC
+mapChannelToCommon DMPN.SMS = Common.NCH_SMS
+mapChannelToCommon DMPN.WHATSAPP = Common.NCH_WHATSAPP
+mapChannelToCommon DMPN.OVERLAY = Common.NCH_OVERLAY
+mapChannelToCommon DMPN.WEB = Common.NCH_WEB
+
+mapCommonToChannel :: Common.NotificationChannel -> DMPN.NotificationChannel
+mapCommonToChannel Common.NCH_FCM = DMPN.FCM
+mapCommonToChannel Common.NCH_GRPC = DMPN.GRPC
+mapCommonToChannel Common.NCH_SMS = DMPN.SMS
+mapCommonToChannel Common.NCH_WHATSAPP = DMPN.WHATSAPP
+mapCommonToChannel Common.NCH_OVERLAY = DMPN.OVERLAY
+mapCommonToChannel Common.NCH_WEB = DMPN.WEB
 
 ---------------------------------------------------------------------
 
