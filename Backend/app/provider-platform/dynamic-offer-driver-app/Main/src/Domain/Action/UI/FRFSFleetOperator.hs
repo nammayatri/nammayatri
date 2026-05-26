@@ -31,6 +31,7 @@ import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest)
 import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
+import Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (GenericError (InvalidRequest))
@@ -154,12 +155,13 @@ getV2FrfsTripRouteManifest ::
     Text ->
     Flow FRFSTripPassengerManifestResp
   )
-getV2FrfsTripRouteManifest (_, _merchantId, _merchantOpCityId) tripId routeId = do
+getV2FrfsTripRouteManifest (_, _merchantId, merchantOpCityId) tripId routeId = do
   logInfo $ "FRFSFleetOperator: Getting trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
   bapInternal <- asks (.appBackendBapInternal)
+  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found: " <> merchantOpCityId.getId)
   let riderAppUrl = bapInternal.url
       riderAppApiKey = bapInternal.apiKey
-  getFrfsTripManifest riderAppApiKey riderAppUrl tripId routeId
+  getFrfsTripManifest riderAppApiKey riderAppUrl tripId routeId merchantOpCity.city
 
 -- | Perform trip action (start, end, reset, rollback)
 postFrfsFleetOperatorTripAction ::

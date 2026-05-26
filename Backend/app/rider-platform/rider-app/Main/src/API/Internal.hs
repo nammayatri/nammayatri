@@ -5,6 +5,7 @@ module API.Internal
 where
 
 import qualified API.Action.UI.AlertWebhook as AlertWebhook
+import qualified API.Action.UI.FRFSInternal as FRFSInternal
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Auth as Auth
@@ -48,6 +49,7 @@ type API =
            :<|> OfferDiscount.API
            :<|> SendSMS.API
            :<|> InMemManagement.API
+           :<|> FRFSInternal.API
        )
 
 handler :: FlowServer API
@@ -71,3 +73,4 @@ handler =
     :<|> OfferDiscount.handler
     :<|> SendSMS.handler
     :<|> InMemManagement.handler
+    :<|> FRFSInternal.handler
