@@ -558,4 +558,5 @@ in  { esqDBCfg
       { masterUrl = None Text
       , masterSecret = Some "123"
       }
+    , enableLtsPoolDataForPooling = True
     }

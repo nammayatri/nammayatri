@@ -144,7 +144,8 @@ data HandlerEnv = HandlerEnv
     dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
     ttenTokenCacheExpiry :: Seconds,
-    emailServiceConfig :: EmailServiceConfig
+    emailServiceConfig :: EmailServiceConfig,
+    enableLtsPoolDataForPooling :: Bool
   }
   deriving (Generic)
 

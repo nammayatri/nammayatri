@@ -183,7 +183,8 @@ data AppCfg = AppCfg
     bapHostRedirectMap :: BapHostRedirectMap,
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
-    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig
+    masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
+    enableLtsPoolDataForPooling :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -310,7 +311,8 @@ data AppEnv = AppEnv
     cloudType :: Maybe CloudType,
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    masterCloudForwarderManager :: Http.Manager
+    masterCloudForwarderManager :: Http.Manager,
+    enableLtsPoolDataForPooling :: Bool
   }
   deriving (Generic)
 
