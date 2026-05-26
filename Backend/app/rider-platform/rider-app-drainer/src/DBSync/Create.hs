@@ -70,6 +70,7 @@ runCreateQuery createDataEntry dbCreateObject = do
               return $ Left entryId
             Right _ -> do
               EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              setDrainerTtl dbCreateObject.dbModel dbCreateObject.primaryKey
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
