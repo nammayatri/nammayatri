@@ -433,6 +433,8 @@ executeBatchForSignature _dbStreamKey signature entries = do
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
               void $ publishDBSyncMetric $ Event.BatchEntriesProcessed sig.tableName.getDBModel (length batchEntries)
 
+              forM_ batchEntries $ \entry -> setDrainerTtl entry.createObject.dbModel entry.createObject.primaryKey
+
               -- Push successful batch entries to Kafka
               kafkaResults <- pushEntriesToKafka _dbStreamKey batchEntries
               let (kafkaSuccesses, kafkaFailures) = kafkaResults

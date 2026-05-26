@@ -83,6 +83,14 @@ deleteKey key = do
   redisToUse <- getRedisName
   L.runKVDB redisToUse $ L.del (DTE.encodeUtf8 <$> key)
 
+expireKey ::
+  Text ->
+  Integer ->
+  Flow (Either ET.KVDBReply Bool)
+expireKey key ttl = do
+  redisToUse <- getRedisName
+  L.runKVDB redisToUse $ L.expire (DTE.encodeUtf8 key) ttl
+
 readHashKey :: Read a => Text -> Text -> Flow (Either Text a)
 readHashKey key value = do
   val <- getHashKey key value
