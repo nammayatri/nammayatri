@@ -39,10 +39,10 @@ getPassOrganizationGetPassOrganization merchantShortId opCity apiTokenInfo perso
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationGetPassOrganization) personId
 
-getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.Flow API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
-getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passEnum passOrganizationId status limit offset = do
+getPassOrganizationPassDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PassOrganization.PassOrganization) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Environment.Flow API.Types.Dashboard.AppManagement.PassOrganization.PassDetailsListResp)
+getPassOrganizationPassDetails merchantShortId opCity apiTokenInfo passOrganizationId status limit offset passEnum = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationPassDetails) passEnum passOrganizationId status limit offset
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.passOrganizationDSL.getPassOrganizationPassDetails) passOrganizationId status limit offset passEnum
 
 postPassOrganizationPassDetailsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.AppManagement.PassOrganization.VerifyPassDetailsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postPassOrganizationPassDetailsVerify merchantShortId opCity apiTokenInfo req = do
