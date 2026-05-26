@@ -2032,3 +2032,32 @@ instance IsHTTPError ChangeServiceTierError where
     ChangeServiceTierQuoteNoFarePolicy -> E500
 
 instance IsAPIError ChangeServiceTierError
+
+data AddBaggageError
+  = AddBaggageNotSupported
+  | AddBaggageInvalidBookingStatus Text
+  | AddBaggageExceedsMax Int
+  | AddBaggageFarePolicyNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''AddBaggageError
+
+instance IsBaseError AddBaggageError where
+  toMessage AddBaggageNotSupported = Just "Add baggage is currently supported only for RideOTP bookings."
+  toMessage (AddBaggageInvalidBookingStatus status) = Just $ "Cannot add baggage in booking status: " <> status
+  toMessage (AddBaggageExceedsMax maxN) = Just $ "Number of luggages exceeds maximum allowed: " <> show maxN
+  toMessage (AddBaggageFarePolicyNotFound quoteId) = Just $ "Fare policy not found for quoteId: " <> quoteId
+
+instance IsHTTPError AddBaggageError where
+  toErrorCode = \case
+    AddBaggageNotSupported -> "ADD_BAGGAGE_NOT_SUPPORTED"
+    AddBaggageInvalidBookingStatus _ -> "ADD_BAGGAGE_INVALID_BOOKING_STATUS"
+    AddBaggageExceedsMax _ -> "ADD_BAGGAGE_EXCEEDS_MAX"
+    AddBaggageFarePolicyNotFound _ -> "ADD_BAGGAGE_FARE_POLICY_NOT_FOUND"
+  toHttpCode = \case
+    AddBaggageNotSupported -> E400
+    AddBaggageInvalidBookingStatus _ -> E400
+    AddBaggageExceedsMax _ -> E400
+    AddBaggageFarePolicyNotFound _ -> E500
+
+instance IsAPIError AddBaggageError

@@ -511,3 +511,17 @@ updateServiceTierOnChange bookingId newServiceTier mbNewFare mbNewQuoteId mbServ
       acThresholdSets = maybe [] (\ac -> [Se.Set BeamB.vehicleServiceTierAirConditioned (Just ac)]) mbAirConditioned
       seatSets = maybe [] (\s -> [Se.Set BeamB.vehicleServiceTierSeatingCapacity (Just s)]) mbSeatingCapacity
   updateOneWithKV (baseSets <> fareSets <> quoteSets <> nameSets <> descSets <> acSets <> acThresholdSets <> seatSets) [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+updateEstimatedFare ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DRB.Booking ->
+  HighPrecMoney ->
+  m ()
+updateEstimatedFare bookingId newFare = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamB.estimatedFare newFare,
+      Se.Set BeamB.estimatedTotalFare newFare,
+      Se.Set BeamB.updatedAt now
+    ]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]

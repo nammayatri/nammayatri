@@ -75,6 +75,7 @@ parseEvent merchantId reqMsg context = do
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
     "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent bookingId fulfillment
+    "ADD_BAGGAGE" -> parseAddBaggageEvent bookingId
     _ -> throwError (InvalidRequest "Invalid event type")
   where
     parseAddStopEvent bookingId fulfillment = do
@@ -131,6 +132,17 @@ parseEvent merchantId reqMsg context = do
             { bookingId,
               newVehicleServiceTier = newServiceTier,
               bppQuoteId
+            }
+
+    parseAddBaggageEvent bookingId = do
+      let mbLuggageText = Utils.getTagV2 Tag.SEARCH_REQUEST_INFO Tag.NUMBER_OF_LUGGAGE reqMsg.updateReqMessageOrder.orderTags
+      luggageText <- mbLuggageText & fromMaybeM (InvalidRequest "number_of_luggage tag not found in ADD_BAGGAGE event")
+      numberOfLuggages <- (Kernel.Prelude.readMaybe . toString $ luggageText) & fromMaybeM (InvalidRequest $ "Invalid number_of_luggage: " <> luggageText)
+      pure $
+        DUpdate.UAddBaggageReq $
+          DUpdate.AddBaggageReq
+            { bookingId,
+              numberOfLuggages
             }
 
 castOrderStatus :: (MonadFlow m) => Text -> m Enums.OrderStatus

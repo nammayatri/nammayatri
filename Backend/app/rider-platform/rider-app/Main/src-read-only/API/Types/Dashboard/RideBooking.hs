@@ -3,6 +3,7 @@
 
 module API.Types.Dashboard.RideBooking where
 
+import qualified API.Types.Dashboard.RideBooking.AddBaggage
 import qualified API.Types.Dashboard.RideBooking.Booking
 import qualified API.Types.Dashboard.RideBooking.Cancel
 import qualified API.Types.Dashboard.RideBooking.ChangeServiceTier
@@ -24,7 +25,8 @@ import qualified Text.Read
 import qualified Text.Show
 
 data RideBookingUserActionType
-  = BOOKING API.Types.Dashboard.RideBooking.Booking.BookingUserActionType
+  = ADD_BAGGAGE API.Types.Dashboard.RideBooking.AddBaggage.AddBaggageUserActionType
+  | BOOKING API.Types.Dashboard.RideBooking.Booking.BookingUserActionType
   | CANCEL API.Types.Dashboard.RideBooking.Cancel.CancelUserActionType
   | CHANGE_SERVICE_TIER API.Types.Dashboard.RideBooking.ChangeServiceTier.ChangeServiceTierUserActionType
   | CONFIRM API.Types.Dashboard.RideBooking.Confirm.ConfirmUserActionType
@@ -42,6 +44,7 @@ data RideBookingUserActionType
 
 instance Text.Show.Show RideBookingUserActionType where
   show = \case
+    ADD_BAGGAGE e -> "ADD_BAGGAGE/" <> show e
     BOOKING e -> "BOOKING/" <> show e
     CANCEL e -> "CANCEL/" <> show e
     CHANGE_SERVICE_TIER e -> "CHANGE_SERVICE_TIER/" <> show e
@@ -61,12 +64,21 @@ instance Text.Read.Read RideBookingUserActionType where
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(BOOKING v1, r2) | r1 <- stripPrefix "BOOKING/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(ADD_BAGGAGE v1, r2) | r1 <- stripPrefix "ADD_BAGGAGE/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( BOOKING v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "BOOKING/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( CANCEL v1,
                    r2
                  )
                  | r1 <- stripPrefix "CANCEL/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( CHANGE_SERVICE_TIER v1,
                    r2
