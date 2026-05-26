@@ -199,7 +199,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
-              when (verifyBy /= DPan.FRONTEND_SDK) $ do
+              when (verifyBy /= DPan.FRONTEND_SDK) $
                 case (panName, extractedNameOnCard) of
                   (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
                     let nameCompareReq =
@@ -212,33 +212,28 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                     isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
                     unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
                   _ -> pure ()
-                when documentVerificationConfig.doStrictVerifcation $ do
-                  now <- getCurrentTime
-                  let parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
-                  verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedNameOnCard
-
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
+      whenJust mdriverPanInformation $ \driverPanInformation -> do
+        let verificationStatus = driverPanInformation.verificationStatus
+        when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
+          Utils.cleanupUploadedImages [Id req.imageId] person.id
+          throwError $ DocumentAlreadyValidated "PAN"
+      resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
+      extractedPan <- validateExtractedPan resp
+      when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
+        DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
       case mdriverPanInformation of
-        Just driverPanInformation -> do
-          let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-            Utils.cleanupUploadedImages [Id req.imageId] person.id
-            throwError $ DocumentAlreadyValidated "PAN"
-
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
-          DPQuery.updateVerificationStatus Documents.VALID person.id
+        Just _ -> DPQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
-          resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
-          extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
           DPQuery.create panCardDetails
+      when (documentVerificationConfig.doStrictVerifcation && verifyBy /= DPan.FRONTEND_SDK) $ do
+        now <- getCurrentTime
+        let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
+            parsedDob = extractedPan.date_of_birth >>= DVRC.parseDateTime
+        verifyPanFlow person merchantOpCityId documentVerificationConfig (fromMaybe "" extractedPanNo) (fromMaybe now parsedDob) (Id req.imageId) extractedPan.name_on_card
 
       pure Success
 
