@@ -98,7 +98,8 @@ sendSearchRequestToDrivers ::
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
-    HasField "ltsHedisEnv" r Redis.HedisEnv
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -217,7 +218,8 @@ sendSearchRequestToDrivers' ::
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv)
+    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   DriverPoolConfig ->
   SearchTry ->
