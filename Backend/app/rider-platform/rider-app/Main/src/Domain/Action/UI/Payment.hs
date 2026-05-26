@@ -33,6 +33,7 @@ module Domain.Action.UI.Payment
 where
 
 import qualified API.Types.UI.Payment as PaymentAPI
+import qualified Beckn.ACL.Cancel as CancelACL
 import qualified Beckn.ACL.Confirm as ACL
 import Control.Applicative ((<|>))
 -- import Data.Aeson (defaultOptions, withObject, (.:?))
@@ -331,9 +332,10 @@ pollPaytmEdcPaymentStatus merchantId _merchantOperatingCityId personId orderId =
                           }
                   eitherCancelResult <- withTryCatch "PaytmEDC:CancelBookingOnPollFailure" $ DCancel.cancel booking Nothing cancelReq SBCR.ByApplication
                   case eitherCancelResult of
-                    Right _ -> do
+                    Right dCancelRes -> do
                       void $ QRideB.updateStatus booking.id SRB.CANCELLED
                       void $ QBPL.makeAllInactiveByBookingId booking.id
+                      void . withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< CancelACL.buildCancelReqV2 dCancelRes Nothing
                       logInfo $ "PaytmEDC poll: Successfully cancelled booking " <> bookingIdText <> " due to poll failures"
                     Left cancelErr -> logError $ "PaytmEDC poll: Failed to cancel booking " <> bookingIdText <> ": " <> show cancelErr
                 else logInfo $ "PaytmEDC poll: Booking " <> bookingIdText <> " already in non-cancellable state: " <> show booking.status
