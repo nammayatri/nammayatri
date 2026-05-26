@@ -86,6 +86,7 @@ sendScheduledRideAssignedOnUpdate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasField "enableLtsPoolDataForPooling" r Bool,
     Redis.HedisLTSFlowEnv r,
     CH.ClickhouseFlow m r
   ) =>
@@ -294,6 +295,7 @@ cancelOrReallocate ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     HasField "blackListedJobs" r [Text],
+    HasField "enableLtsPoolDataForPooling" r Bool,
     CH.ClickhouseFlow m r
   ) =>
   DRide.Ride ->

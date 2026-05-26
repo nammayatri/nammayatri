@@ -60,7 +60,8 @@ getNextDriverPoolBatch ::
     Redis.HedisLTSFlowEnv r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   DriverPoolConfig ->
   DSR.SearchRequest ->
@@ -108,7 +109,8 @@ prepareDriverPoolBatch ::
     Redis.HedisLTSFlowEnv r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    ClickhouseFlow m r
+    ClickhouseFlow m r,
+    HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   [DVST.VehicleServiceTier] ->
   DM.Merchant ->
