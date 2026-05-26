@@ -116,6 +116,13 @@ incrementVehicleNoEtaCounter merchantName merchantOperatingCityId source = do
   let vehicleNoEtaCounter = bmContainer.vehicleNoEtaCounter
   liftIO $ P.withLabel vehicleNoEtaCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, source) P.incCounter
 
+incrementEmptyVehiclesCounter :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementEmptyVehiclesCounter merchantName merchantOperatingCityId serviceTier = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let emptyVehiclesCounter = bmContainer.emptyVehiclesCounter
+  liftIO $ P.withLabel emptyVehiclesCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, serviceTier) P.incCounter
+
 incrementVehicleHistoricCounter :: HasBAPMetrics m r => Text -> Text -> m ()
 incrementVehicleHistoricCounter merchantName merchantOperatingCityId = do
   bmContainer <- asks (.bapMetrics)

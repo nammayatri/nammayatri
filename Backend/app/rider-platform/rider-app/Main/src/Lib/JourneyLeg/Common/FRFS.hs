@@ -111,7 +111,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
+                    merchantOperatingCityId = booking.merchantOperatingCityId
                   }
           mbQuote <- QFRFSQuote.findById booking.quoteId
           validBuses <-
@@ -165,7 +167,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      serviceTierType = Nothing,
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -206,7 +210,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    serviceTierType = mbCurrentLegDetails >>= (.finalBoardedBusServiceTierType),
+                    merchantOperatingCityId = journeyLeg.merchantOperatingCityId
                   }
 
           vehiclePositionsToReturn <-
@@ -244,7 +250,9 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      serviceTierType = Nothing,
+                      merchantOperatingCityId = journeyLeg.merchantOperatingCityId
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
