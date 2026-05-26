@@ -1,0 +1,102 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           communication
+version:        0.1.0.0
+description:    Shared communication domain -- tables, queries, and scheduler job data for fleet/ride-hailing/general messaging. Used by both driver and rider platforms.
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+flag Local
+  description: Enable this flag for faster compile times
+  manual: True
+  default: False
+
+library
+  exposed-modules:
+      Lib.Communication.Domain.Action.Dispatch
+      Lib.Communication.Domain.Types.Communication
+      Lib.Communication.Domain.Types.CommunicationDelivery
+      Lib.Communication.Storage.Beam.Communication
+      Lib.Communication.Storage.Beam.CommunicationDelivery
+      Lib.Communication.Storage.Queries.Communication
+      Lib.Communication.Storage.Queries.CommunicationDelivery
+      Lib.Communication.Storage.Queries.CommunicationExtra
+      Lib.Communication.Storage.Queries.CommunicationDeliveryExtra
+      Lib.Communication.Storage.Queries.OrphanInstances.Communication
+      Lib.Communication.Storage.Queries.OrphanInstances.CommunicationDelivery
+      Lib.Communication.Scheduler.JobData
+      Tools.Beam.UtilsTH
+  hs-source-dirs:
+      src
+      src-read-only
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DerivingStrategies
+      DuplicateRecordFields
+      ExplicitNamespaces
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      StandaloneDeriving
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      BlockArguments
+      TypeSynonymInstances
+      UndecidableInstances
+      DerivingStrategies
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , beam-core
+    , beam-mysql
+    , beam-postgres
+    , containers
+    , euler-hs
+    , mobility-core
+    , openapi3
+    , postgresql-simple
+    , record-dot-preprocessor
+    , record-hasfield
+    , sequelize
+    , text
+    , time
+  if flag(Local)
+    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+  else
+    ghc-options: -O2 -j4

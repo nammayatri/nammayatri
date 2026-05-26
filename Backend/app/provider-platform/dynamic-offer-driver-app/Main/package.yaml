@@ -185,6 +185,7 @@ library:
     - location-updates
     - special-zone-a
     - payment
+    - communication
     - gtfs-data-server
     - sessionizer-metrics
     - webhook

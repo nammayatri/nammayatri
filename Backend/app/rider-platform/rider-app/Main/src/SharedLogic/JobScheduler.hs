@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Types.Price
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
+import Lib.Communication.Scheduler.JobData (CommunicationDeliveryDispatchJobData (..))
 import qualified Lib.Yudhishthira.Types as LYT
 
 data RiderJobType
@@ -75,6 +76,7 @@ data RiderJobType
   | DailyPassStatusUpdate
   | PassExpiryReminderMaster
   | SettlementReportIngestion
+  | CommunicationDeliveryDispatch
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -121,6 +123,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SDailyPassStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SDailyPassStatusUpdate jobData
   restoreAnyJobInfo SPassExpiryReminderMaster jobData = AnyJobInfo <$> restoreJobInfo SPassExpiryReminderMaster jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
+  restoreAnyJobInfo SCommunicationDeliveryDispatch jobData = AnyJobInfo <$> restoreJobInfo SCommunicationDeliveryDispatch jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -467,3 +470,7 @@ data SettlementReportIngestionJobData = SettlementReportIngestionJobData
 instance JobInfoProcessor 'SettlementReportIngestion
 
 type instance JobContent 'SettlementReportIngestion = SettlementReportIngestionJobData
+
+instance JobInfoProcessor 'CommunicationDeliveryDispatch
+
+type instance JobContent 'CommunicationDeliveryDispatch = CommunicationDeliveryDispatchJobData

@@ -73,7 +73,7 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | FLEET_COMMUNICATION_DISPATCH deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
@@ -82,7 +82,6 @@ instance Show ConsumerType where
   show BROADCAST_MESSAGE = "broadcast-message"
   show PERSON_STATS = "person-stats"
   show LOCATION_UPDATE = "location-update"
-  show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
 
 type Seconds' = Integer
 

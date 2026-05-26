@@ -1,0 +1,151 @@
+let rootDir = env:GIT_ROOT_PATH
+
+let outputPrefixReadOnly =
+      rootDir ++ "/Backend/lib/communication/src-read-only/Lib/Communication/"
+
+let outputPrefix = rootDir ++ "/Backend/lib/communication/src/Lib/Communication/"
+
+let migrationPath =
+      rootDir ++ "/Backend/dev/migrations-read-only/dynamic-offer-driver-app/"
+
+let riderMigrationPath =
+      rootDir ++ "/Backend/dev/migrations-read-only/rider-app/"
+
+let outputPath =
+      { _apiRelatedTypes = ""
+      , _extraApiRelatedTypes = ""
+      , _extraApiRelatedCommonTypes = ""
+      , _beamQueries = outputPrefixReadOnly ++ "Storage/Queries"
+      , _extraBeamQueries = outputPrefix ++ "Storage/Queries/"
+      , _cachedQueries = outputPrefixReadOnly ++ "Storage/CachedQueries"
+      , _extraCachedQueries = outputPrefix ++ "Storage/CachedQueries/"
+      , _beamTable = outputPrefixReadOnly ++ "Storage/Beam"
+      , _domainHandler = outputPrefix ++ "Domain/Action/UI"
+      , _domainHandlerDashboard = ""
+      , _domainType = outputPrefixReadOnly ++ "Domain/Types"
+      , _servantApi = ""
+      , _servantApiDashboard = ""
+      , _servantApiClient = ""
+      , _sql =
+        [ { _1 = migrationPath, _2 = "atlas_driver_offer_bpp" }
+        , { _1 = riderMigrationPath, _2 = "atlas_app" }
+        ]
+      , _purescriptFrontend = ""
+      }
+
+let GeneratorType =
+      < SERVANT_API
+      | SERVANT_API_DASHBOARD
+      | API_TREE
+      | API_TREE_DASHBOARD
+      | API_TREE_COMMON
+      | API_TREE_CLIENT
+      | API_TYPES
+      | DOMAIN_HANDLER
+      | DOMAIN_HANDLER_DASHBOARD
+      | BEAM_QUERIES
+      | CACHED_QUERIES
+      | BEAM_TABLE
+      | DOMAIN_TYPE
+      | SQL
+      | PURE_SCRIPT_FRONTEND
+      >
+
+let ImportType = < SIMPLE | QUALIFIED >
+
+let PackageImport =
+      { _importType : ImportType
+      , _importPackageName : Text
+      , _importModuleName : Text
+      }
+
+let DefaultImports =
+      { _qualifiedImports : List Text
+      , _simpleImports : List Text
+      , _packageImports : List PackageImport
+      , _generationType : GeneratorType
+      }
+
+let defaultTypeImportMapper =
+      [ { _1 = "Text", _2 = "Kernel.Prelude" }
+      , { _1 = "Maybe", _2 = "Kernel.Prelude" }
+      , { _1 = "Double", _2 = "Kernel.Prelude" }
+      , { _1 = "TimeOfDay", _2 = "Data.Time.Calendar" }
+      , { _1 = "Day", _2 = "Data.Time.Calendar" }
+      , { _1 = "Int", _2 = "Kernel.Prelude" }
+      , { _1 = "Bool", _2 = "Kernel.Prelude" }
+      , { _1 = "Id", _2 = "Kernel.Types.Id" }
+      , { _1 = "ShortId", _2 = "Kernel.Types.Id" }
+      , { _1 = "UTCTime", _2 = "Kernel.Prelude" }
+      ]
+
+let extraDefaultFields =
+      [ { _1 = "createdAt", _2 = "UTCTime" }
+      , { _1 = "updatedAt", _2 = "UTCTime" }
+      ]
+
+let sqlMapper =
+      [ { _1 = "\\[Text\\]", _2 = "text[]" }
+      , { _1 = "Text", _2 = "text" }
+      , { _1 = "\\[Id ", _2 = "text[]" }
+      , { _1 = "Id ", _2 = "character varying(36)" }
+      , { _1 = "Int", _2 = "integer" }
+      , { _1 = "Bool", _2 = "boolean" }
+      , { _1 = "UTCTime", _2 = "timestamp with time zone" }
+      ]
+
+let defaultImports =
+      [ { _simpleImports = [] : List Text
+        , _qualifiedImports = [ "!Kernel.Beam.Lib.UtilsTH", "!Tools.Beam.UtilsTH" ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.DOMAIN_TYPE
+        }
+      , { _simpleImports =
+          [ "Kernel.Prelude"
+          , "Kernel.Beam.Lib.UtilsTH"
+          , "Kernel.External.Encryption"
+          ]
+        , _qualifiedImports = [ "Database.Beam as B" ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.BEAM_TABLE
+        }
+      , { _simpleImports =
+          [ "Kernel.Beam.Functions"
+          , "Kernel.Prelude"
+          , "Kernel.External.Encryption"
+          , "Kernel.Utils.Common (MonadFlow, CacheFlow, EsqDBFlow, getCurrentTime, fromMaybeM)"
+          , "Kernel.Types.Error"
+          ]
+        , _qualifiedImports = [ "Sequelize as Se" ]
+        , _packageImports = [] : List PackageImport
+        , _generationType = GeneratorType.BEAM_QUERIES
+        }
+      ]
+
+let ApiKind = < UI | DASHBOARD >
+
+in  { _output = outputPath
+    , _storageConfig =
+      { _sqlTypeMapper = sqlMapper
+      , _extraDefaultFields = extraDefaultFields
+      , _defaultCachedQueryKeyPrefix = ""
+      , _cacheFlowType = None Text
+      }
+    , _defaultImports = defaultImports
+    , _defaultTypeImportMapper = defaultTypeImportMapper
+    , _generate =
+      [ GeneratorType.DOMAIN_TYPE
+      , GeneratorType.BEAM_TABLE
+      , GeneratorType.BEAM_QUERIES
+      , GeneratorType.SQL
+      ]
+    , _packageMapping = [] : List { _1 : GeneratorType, _2 : Text }
+    , _apiKind = ApiKind.UI
+    , _serverName = None Text
+    , _folderName = None Text
+    , _apiDashboardPrefix = None Text
+    , _serverNameTypePrefix = None Text
+    , _migrationParams =
+        [] : List { _migrationName : Text, _migrationParam : Optional Text }
+    , _endpointPrefix = None Text
+    }

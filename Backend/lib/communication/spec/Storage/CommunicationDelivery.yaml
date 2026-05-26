@@ -1,10 +1,7 @@
 imports:
-  Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Person: Domain.Types.Person
-  Communication: Domain.Types.Communication
-  ChannelType: Domain.Types.Communication
-  CommunicationDelivery: Domain.Types.CommunicationDelivery
+  Communication: Lib.Communication.Domain.Types.Communication
+  ChannelType: Lib.Communication.Domain.Types.Communication
+  CommunicationDelivery: Lib.Communication.Domain.Types.CommunicationDelivery
 
 CommunicationDelivery:
   tableName: communication_delivery
@@ -21,9 +18,9 @@ CommunicationDelivery:
   fields:
     id: Id CommunicationDelivery
     communicationId: Id Communication
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    recipientId: Id Person
+    merchantId: Text
+    merchantOperatingCityId: Text
+    recipientId: Text
     recipientRole: CommunicationRecipientRole
     channel: ChannelType
     status: DeliveryStatus

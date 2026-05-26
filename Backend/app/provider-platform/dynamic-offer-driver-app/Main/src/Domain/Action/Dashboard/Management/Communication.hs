@@ -2,8 +2,8 @@
 
 -- | Fleet Communication Framework: create/send messages, list sent/drafts/received,
 -- delivery status, and recipient resolution. WEB channel is updated in-process;
--- PUSH/SMS/WhatsApp are published to Kafka and processed by a consumer (one message
--- per delivery so multiple channels per driver are handled independently).
+-- PUSH/SMS/WhatsApp are dispatched via scheduler jobs (one job per delivery so
+-- multiple channels per driver are handled independently).
 module Domain.Action.Dashboard.Management.Communication
   ( postCommunicationCreate,
     getCommunicationList,
@@ -14,8 +14,7 @@ module Domain.Action.Dashboard.Management.Communication
     getCommunicationDeliveryStatus,
     getCommunicationRecipients,
     getCommunicationTemplate,
-    CommunicationDeliveryDispatchPayload (..),
-    processFleetCommunicationDeliveryPayload,
+    dispatchCommunicationDelivery,
   )
 where
 
@@ -25,9 +24,9 @@ import qualified Data.Aeson as Aeson
 import Data.Function (on)
 import Data.List (nub, nubBy)
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TEnc
-import qualified Domain.Types.Communication as DComm
-import qualified Domain.Types.CommunicationDelivery as DDelivery
+import qualified Lib.Communication.Domain.Types.Communication as DComm
+import qualified Lib.Communication.Domain.Types.CommunicationDelivery as DDelivery
+import Lib.Communication.Scheduler.JobData (CommunicationDeliveryDispatchJobData (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -42,13 +41,15 @@ import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Streaming.Kafka.Producer (produceMessage)
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Types.Predicate (MaxLength (..))
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified SharedLogic.Allocator as Allocator
+import Storage.Beam.SchedulerJob ()
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
 import Storage.Beam.IssueManagement ()
@@ -56,8 +57,11 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Communication as QComm
-import qualified Storage.Queries.CommunicationDelivery as QDelivery
+import qualified Lib.Communication.Storage.Queries.Communication as QComm
+import qualified Lib.Communication.Storage.Queries.CommunicationDelivery as QDelivery
+import qualified Storage.Queries.CommunicationExtra as QCommExtra
+import Storage.Beam.Communication ()
+import Storage.Beam.CommunicationDelivery ()
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -67,24 +71,6 @@ import Tools.Error
 import qualified Tools.Notifications as Notify
 import qualified Tools.SMS as Sms
 import qualified Tools.Whatsapp as Whatsapp
-
--- | Payload for Kafka: one message per delivery (per recipient × per channel).
--- Consumer uses this to send via PUSH/SMS/WhatsApp without reading Communication from DB.
--- | Kafka payload: one delivery per recipient×channel. Used when PUSH/SMS/WhatsApp consumer processes a message.
-data CommunicationDeliveryDispatchPayload = CommunicationDeliveryDispatchPayload
-  { deliveryId :: Text,
-    communicationId :: Text,
-    channel :: DComm.ChannelType,
-    recipientId :: Text,
-    merchantId :: Text,
-    merchantOperatingCityId :: Text,
-    title :: Text,
-    body :: Text,
-    htmlBody :: Maybe Text,
-    templateId :: Maybe Text,
-    templateName :: Maybe Text
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON)
 
 -- | Resolve mediaFileIds to mediaUrls JSON. Returns Nothing if no ids; Just (toJSON [...]) otherwise.
 resolveMediaFileIds ::
@@ -128,10 +114,10 @@ postCommunicationCreate merchantShortId opCity personId req = do
       comm =
         DComm.Communication
           { id = commId,
-            merchantId = merchant.id,
-            merchantOperatingCityId = merchantOpCityId,
+            merchantId = merchant.id.getId,
+            merchantOperatingCityId = merchantOpCityId.getId,
             domain = toDomainDomain req.domain,
-            senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId,
+            senderId = (Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId).getId,
             senderRole = toDomainSenderRole CommAPI.ROLE_ADMIN,
             senderDisplayName = Nothing,
             title = req.title,
@@ -177,20 +163,21 @@ getCommunicationList ::
 getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain mbSearch mbLimit mbOffset personId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let listType = fromMaybe CommAPI.LIST_SENT mbListType
-  let senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
-      recipientId = senderId
+  let personIdTyped = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
+      senderIdText = personIdTyped.getId
+      recipientIdText = senderIdText
   case listType of
     CommAPI.LIST_SENT -> do
       let domainFilter = toDomainDomain <$> mbDomain
-      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset
+      comms <- QCommExtra.findBySenderIdWithSearchAndLimitOffset senderIdText (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_DRAFT -> do
-      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset
+      comms <- QCommExtra.findBySenderIdWithSearchAndLimitOffset senderIdText (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_RECEIVED -> do
-      deliveries <- QDelivery.findByRecipientIdAndWebChannel recipientId mbLimit mbOffset
+      deliveries <- QDelivery.findByRecipientIdAndWebChannel recipientIdText mbLimit mbOffset
       items <- mapM mkReceivedListItem deliveries
       let filtered = maybe items (\s -> filter (\item -> commMatchesSearch item.title item.body item.senderName s) items) mbSearch
       return $ CommAPI.CommunicationListResponse {communications = filtered, summary = Dashboard.Common.Summary {totalCount = length filtered, count = length filtered}}
@@ -269,7 +256,7 @@ putCommunicationEdit merchantShortId _opCity communicationId req = do
   let effectiveChannels = maybe comm.channels (map toDomainChannel) req.channels
       effectiveTitle = fromMaybe comm.title req.title
       effectiveBody = fromMaybe comm.body req.body
-  validateChannelLimits comm.merchantOperatingCityId effectiveChannels effectiveTitle effectiveBody
+  validateChannelLimits (Kernel.Types.Id.Id comm.merchantOperatingCityId) effectiveChannels effectiveTitle effectiveBody
   mediaUrlsJson <- resolveMediaFileIds req.mediaFileIds
   QComm.updateCommunication
     commId
@@ -679,9 +666,9 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
             DDelivery.CommunicationDelivery
               { id = deliveryId,
                 communicationId = comm.id,
-                merchantId = merchantId,
-                merchantOperatingCityId = merchantOpCityId,
-                recipientId = Kernel.Types.Id.Id recipientIdText,
+                merchantId = merchantId.getId,
+                merchantOperatingCityId = merchantOpCityId.getId,
+                recipientId = recipientIdText,
                 recipientRole,
                 channel = channel,
                 status = DDelivery.DS_PENDING,
@@ -695,19 +682,18 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
               }
       QDelivery.create delivery
       return delivery
-  -- Step 2: WEB in-process; PUSH/SMS/WhatsApp via Kafka (one message per delivery)
+  -- Step 2: WEB in-process; PUSH/SMS/WhatsApp via scheduler job (one job per delivery)
   let allDeliveries = concat deliveries
-  topic <- asks (.fleetCommunicationDispatchTopic)
   forM_ allDeliveries $ \delivery ->
     if delivery.channel == DComm.CH_WEB
       then QDelivery.updateStatusById DDelivery.DS_DELIVERED delivery.id
       else do
-        let payload =
-              CommunicationDeliveryDispatchPayload
+        let jobData =
+              CommunicationDeliveryDispatchJobData
                 { deliveryId = delivery.id.getId,
                   communicationId = comm.id.getId,
                   channel = delivery.channel,
-                  recipientId = delivery.recipientId.getId,
+                  recipientId = delivery.recipientId,
                   merchantId = merchantId.getId,
                   merchantOperatingCityId = merchantOpCityId.getId,
                   title = comm.title,
@@ -716,36 +702,12 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
                   templateId = comm.templateId,
                   templateName = comm.templateName
                 }
-        produceMessage (topic, Just $ TEnc.encodeUtf8 delivery.id.getId) payload
+        createJobIn @_ @'Allocator.CommunicationDeliveryDispatch (Just merchantId) (Just merchantOpCityId) 0 jobData
 
--- | Process a fleet communication delivery from Kafka payload (called by consumer).
--- Sends via the appropriate channel and updates delivery status to SENT or FAILED.
--- | Used by Kafka consumer when processing PUSH/SMS/WhatsApp deliveries; sends via FCM/SMS/WhatsApp APIs and updates delivery status.
-processFleetCommunicationDeliveryPayload ::
-  ( MonadIO m,
-    EsqDBFlow m r,
-    MonadFlow m,
-    CacheFlow m r,
-    EncFlow m r,
-    CoreMetrics m,
-    HasField "requestId" r (Maybe Text),
-    HasFlowEnv m r '["smsCfg" ::: SmsConfig],
-    HasKafkaProducer r,
-    Hedis.HedisFlow m r,
-    Hedis.HedisLTSFlowEnv r
-  ) =>
-  CommunicationDeliveryDispatchPayload ->
-  m ()
-processFleetCommunicationDeliveryPayload payload = do
-  let deliveryId = Kernel.Types.Id.Id payload.deliveryId
-  result <- try @_ @SomeException $ dispatchFromPayload payload
-  case result of
-    Right _ -> QDelivery.updateStatusById DDelivery.DS_SENT deliveryId
-    Left err -> do
-      logError $ "Fleet communication dispatch failed for delivery " <> payload.deliveryId <> ": " <> show err
-      QDelivery.updateStatusById DDelivery.DS_FAILED deliveryId
-
-dispatchFromPayload ::
+-- | Driver-app dispatch function for a communication delivery.
+-- Routes to FCM/SMS/WhatsApp based on channel; called by the lib's
+-- processCommunicationDeliveryJob which handles try/catch and status updates.
+dispatchCommunicationDelivery ::
   ( MonadIO m,
     EsqDBFlow m r,
     MonadFlow m,
@@ -757,9 +719,9 @@ dispatchFromPayload ::
     HasKafkaProducer r,
     Hedis.HedisLTSFlowEnv r
   ) =>
-  CommunicationDeliveryDispatchPayload ->
+  CommunicationDeliveryDispatchJobData ->
   m ()
-dispatchFromPayload p = do
+dispatchCommunicationDelivery p = do
   let recipientId = Kernel.Types.Id.Id p.recipientId
       merchantId = Kernel.Types.Id.Id p.merchantId
       merchantOpCityId = Kernel.Types.Id.Id p.merchantOperatingCityId
@@ -772,23 +734,19 @@ dispatchFromPayload p = do
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for SMS")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
       smsCfg <- asks (.smsCfg)
-      -- Look up the DLT-registered template from merchant_message by domain+channel
       mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.SMS)
       case mbMerchantMsg of
         Just merchantMsg -> do
-          -- Substitute {#var1#} with the body text to match the DLT template
           let smsBody = T.replace "{#var1#}" p.body merchantMsg.message
               sender = fromMaybe smsCfg.sender merchantMsg.senderHeader
           Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq smsBody phoneNumber sender merchantMsg.templateId merchantMsg.messageType) >>= Sms.checkSmsResult
         Nothing -> do
-          -- Fallback: send as-is if no template found
           logWarning $ "No merchant_message template found for FLEET SMS, sending body as-is for delivery " <> p.deliveryId
           Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq p.body phoneNumber smsCfg.sender (fromMaybe "" p.templateId) Nothing) >>= Sms.checkSmsResult
     DComm.CH_WHATSAPP -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
       mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InvalidRequest "Recipient phone not available for WhatsApp")
       let phoneNumber = fromMaybe "+91" person.mobileCountryCode <> mobileNumber
-      -- Look up WhatsApp template from merchant_message
       mbMerchantMsg <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just DMM.FLEET) (Just DMM.WHATSAPP)
       let whatsappTemplateId = maybe (fromMaybe "" p.templateId) (.templateId) mbMerchantMsg
       let req =
@@ -858,7 +816,7 @@ mkDeliveryStatusItem :: DDelivery.CommunicationDelivery -> CommAPI.DeliveryStatu
 mkDeliveryStatusItem d =
   CommAPI.DeliveryStatusItem
     { id = Kernel.Types.Id.getId d.id,
-      recipientId = Kernel.Types.Id.getId d.recipientId,
+      recipientId = d.recipientId,
       recipientName = Nothing,
       recipientRole = fromDomainRecipientRole d.recipientRole,
       channel = fromDomainChannel d.channel,
