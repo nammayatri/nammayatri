@@ -5,52 +5,63 @@ COPY test-tool/dashboard/package.json ./
 RUN npm install
 
 COPY test-tool/dashboard/ ./
-
-ENV REACT_APP_PROXY_BASE=/api \
-    REACT_APP_LOCAL_API_BASE="" \
-    REACT_APP_RIDER_URL="https://api.sandbox.moving.tech" \
-    REACT_APP_DRIVER_URL="https://api.sandbox.moving.tech" \
-    REACT_APP_PROVIDER_DASHBOARD_URL="https://dashboard.integ.moving.tech" \
-    REACT_APP_MOCK_SERVER_URL=""
-
 RUN npm run build
 
-FROM python:3.12-slim
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY config-sync/requirements.txt /app/config-sync/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /app/config-sync/requirements.txt
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx \
     nodejs \
     npm \
-    supervisor \
-    python3-psycopg2 \
     redis-tools \
     postgresql-client \
     curl \
     ca-certificates \
+    gettext-base \
+    patchelf \
+    libgmp10 \
+    libffi8 \
+    libsodium23 \
+    libncursesw6 \
     && npm install -g newman@6 \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
-
 COPY test-tool/context-api/ /app/test-tool/context-api/
-COPY integration-tests/      /app/integration-tests/
-COPY config-sync/            /app/config-sync/
+COPY integration-tests/     /app/integration-tests/
+COPY config-sync/           /app/config-sync/
 
-RUN pip install --no-cache-dir -r /app/config-sync/requirements.txt
+# passetto-server is shipped as per-arch prebuilts under config-sync/bin/.
+# Stage the right one for $TARGETARCH at both lookup paths used by
+# config_transfer.py (SCRIPT_DIR/bin/passetto-server-<arch> AND
+# SCRIPT_DIR/passetto-server). The binaries are built under Nix so their
+# ELF interpreter points at /nix/store/...-glibc-*/lib/ld-linux-*.so.* —
+# patchelf'd to Debian's loader so they run in this image. GLIBC symbol
+# requirements top out at 2.34, which Bookworm (glibc 2.36) satisfies.
+ARG TARGETARCH
+RUN case "$TARGETARCH" in \
+      amd64) PS_ARCH=x86_64;  INTERP=/lib64/ld-linux-x86-64.so.2 ;; \
+      arm64) PS_ARCH=aarch64; INTERP=/lib/ld-linux-aarch64.so.1 ;; \
+      *)     echo "unsupported TARGETARCH=$TARGETARCH" && exit 1 ;; \
+    esac \
+ && SRC="/app/config-sync/bin/passetto-server-${PS_ARCH}" \
+ && test -f "$SRC" || (echo "missing $SRC" && exit 1) \
+ && chmod +x "$SRC" \
+ && patchelf --set-interpreter "$INTERP" "$SRC" \
+ && "$SRC" --help >/dev/null 2>&1 || "$SRC" --version >/dev/null 2>&1 || true \
+ && ln -sf "$SRC" /app/config-sync/passetto-server \
+ && ln -sf "$SRC" /usr/local/bin/passetto-server
 
 RUN mkdir -p /app/test-tool/context-api/coverage-data \
     && mkdir -p /app/config-sync/assets/data
 
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/build /usr/share/spa
 
-COPY test-tool/k8s/nginx.conf /etc/nginx/conf.d/default.conf
-RUN rm -f /etc/nginx/sites-enabled/default
-
-COPY test-tool/k8s/supervisord.conf /etc/supervisor/conf.d/ny-test.conf
-
-EXPOSE 80
+EXPOSE 7082 8090
 
 ENV PYTHONUNBUFFERED=1 \
     RUN_LOCAL_TESTING_DATA_ON_STARTUP=false
 
-CMD ["supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
+CMD ["python3", "/app/test-tool/context-api/server.py"]

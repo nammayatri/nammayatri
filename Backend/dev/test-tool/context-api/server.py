@@ -267,13 +267,10 @@ DRIVER_URL = os.environ.get("DRIVER_URL", "http://localhost:8016")
 
 # ── Config-sync (replaces the standalone config-sync process) ──
 CONFIG_SYNC_DIR = PROJECT_ROOT / "Backend" / "dev" / "config-sync"
-# Keep in sync with config_transfer.py's DEFAULT_FETCH_VERSIONS. master is on v1
-# (older zip layout still uploaded); prod / prod_international are on v2.
-CONFIG_SYNC_BUNDLE_URLS = {
-    "master":             "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/master_to_local/v2",
-    "prod":               "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_to_local/v2",
-    "prod_international": "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com/prod_international_to_local/v2",
-}
+# Allowed --from values. The actual S3 bucket / per-direction version is owned
+# by config_transfer.py (DEFAULT_S3_PUBLIC_BUCKET + DEFAULT_FETCH_VERSIONS), so
+# there is only one source of truth for the fetch URL.
+CONFIG_SYNC_ENVS = ("master", "prod", "prod_international")
 CONFIG_SYNC_DEFAULT_FROM = os.environ.get("CONFIG_SYNC_DEFAULT_FROM", "prod")
 CONFIG_SYNC_MAX_LOG_LINES = 4000
 
@@ -366,17 +363,20 @@ def _restart_haskell_services():
 
 
 def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: bool = False):
-    """Run `config_transfer.py import --from <env> --to local --fetch --fetch-url <URL>`.
+    """Run `config_transfer.py import --from <env> --to local --fetch`.
     Streams stdout into _config_sync_state['log']. Restarts haskell services on success.
+
+    The fetch URL is resolved entirely inside config_transfer.py from its
+    DEFAULT_S3_PUBLIC_BUCKET + DEFAULT_FETCH_VERSIONS (overridable via
+    CONFIG_SYNC_CLOUDFRONT_URL / CONFIG_SYNC_FETCH_URL_<DIRECTION> env vars).
 
     force_fetch=True passes `--force-fetch` so the importer ignores any
     previously-patched local bundle and re-downloads from S3."""
-    if from_env not in CONFIG_SYNC_BUNDLE_URLS:
-        msg = f"unknown env '{from_env}'. Available: {list(CONFIG_SYNC_BUNDLE_URLS)}"
+    if from_env not in CONFIG_SYNC_ENVS:
+        msg = f"unknown env '{from_env}'. Available: {list(CONFIG_SYNC_ENVS)}"
         with _config_sync_lock:
             _config_sync_state["error"] = msg
         return
-    url = CONFIG_SYNC_BUNDLE_URLS[from_env]
     with _config_sync_lock:
         if _config_sync_state["running"]:
             return
@@ -425,7 +425,7 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         # Step 1: prod import (no feature-migrations yet).
         import_args = [
             "import", "--from", from_env, "--to", "local",
-            "--fetch", "--fetch-url", url,
+            "--fetch",
             "--skip-feature-migrations",
         ]
         if force_fetch:
@@ -3224,7 +3224,7 @@ class ContextHandler(BaseHTTPRequestHandler):
 
         if method == "GET" and path == "/api/config-sync/envs":
             self._send_json({
-                "envs": list(CONFIG_SYNC_BUNDLE_URLS.keys()),
+                "envs": list(CONFIG_SYNC_ENVS),
                 "default": CONFIG_SYNC_DEFAULT_FROM,
             })
             return True
@@ -3270,8 +3270,8 @@ class ContextHandler(BaseHTTPRequestHandler):
             body = self._read_json_body()
             from_env = body.get("from", CONFIG_SYNC_DEFAULT_FROM)
             force_fetch = bool(body.get("forceFetch", False))
-            if from_env not in CONFIG_SYNC_BUNDLE_URLS:
-                self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_BUNDLE_URLS)}, 400)
+            if from_env not in CONFIG_SYNC_ENVS:
+                self._send_json({"error": f"unknown env '{from_env}'", "envs": list(CONFIG_SYNC_ENVS)}, 400)
                 return True
             accepted = trigger_config_sync(from_env, force_fetch=force_fetch)
             if not accepted:
@@ -4653,7 +4653,7 @@ def main():
         f"  DB: {DB_CONFIG['user']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}")
     print(f"  Proxy: /proxy/rider/* → {RIDER_URL}")
     print(f"  Proxy: /proxy/driver/* → {DRIVER_URL}")
-    print(f"  Config-sync envs: {list(CONFIG_SYNC_BUNDLE_URLS.keys())}  (default: {CONFIG_SYNC_DEFAULT_FROM})\n")
+    print(f"  Config-sync envs: {list(CONFIG_SYNC_ENVS)}  (default: {CONFIG_SYNC_DEFAULT_FROM})\n")
 
     run_startup_local_testing_data()
 

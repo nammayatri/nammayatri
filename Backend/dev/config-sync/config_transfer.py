@@ -55,11 +55,19 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = SCRIPT_DIR / "assets"
 DATA_DIR = ASSETS_DIR / "data"
 TMP_DIR = DATA_DIR / "tmp"
-# Repo root: Backend/dev/config-sync/ → up 3 levels.
+# Repo root: Backend/dev/config-sync/ → up 3 levels in a checkout.
+# Container layouts flatten this (script lives at /app/config-sync), so allow
+# CONFIG_SYNC_REPO_ROOT to override and fall back to SCRIPT_DIR's parent when
+# parents[2] isn't reachable.
 # The sync marker (data/config-sync/metadata.json) is written by
 # context-api's run_config_sync after a successful local import — *not* here,
 # since the export+patch+publish flow doesn't change local state.
-REPO_ROOT = SCRIPT_DIR.parents[2]
+_repo_root_env = os.getenv("CONFIG_SYNC_REPO_ROOT")
+if _repo_root_env:
+    REPO_ROOT = Path(_repo_root_env)
+else:
+    _parents = list(SCRIPT_DIR.parents)
+    REPO_ROOT = _parents[2] if len(_parents) > 2 else _parents[-1]
 MARKER_PATH = REPO_ROOT / "data" / "config-sync" / "metadata.json"
 
 _RE_ENCRYPT = re.compile(r'0\.1\.0\|[0-9]+\|[A-Za-z0-9+/=]{16,}')
@@ -87,7 +95,7 @@ DEFAULT_S3_PUBLIC_BUCKET = os.getenv(
     "https://backend-ny-config-sync.s3.ap-south-1.amazonaws.com",
 )
 DEFAULT_FETCH_VERSIONS = {
-    "master_to_local": "v1",
+    "master_to_local": "v3",
     "prod_to_local": "v2",
     "prod_international_to_local": "v2",
 }

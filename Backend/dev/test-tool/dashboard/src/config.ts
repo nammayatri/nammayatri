@@ -9,7 +9,7 @@ const _readContextApiOverride = (): string | null => {
     return null;
   }
 };
-const _proxyDefault = process.env.REACT_APP_PROXY_BASE || 'http://localhost:7082';
+const _proxyDefault = process.env.REACT_APP_PROXY_BASE ?? 'http://localhost:7082';
 export const PROXY_BASE = _readContextApiOverride() || _proxyDefault;
 
 export function setContextApiBase(url: string | null): void {
@@ -96,17 +96,20 @@ export const RIDER_URL = process.env.REACT_APP_RIDER_URL || getServiceUrl('rider
 export const DRIVER_URL = process.env.REACT_APP_DRIVER_URL || getServiceUrl('dynamic-offer-driver-app');
 export const PROVIDER_DASHBOARD_URL = process.env.REACT_APP_PROVIDER_DASHBOARD_URL || getServiceUrl('provider-dashboard');
 // Default URL when no per-env entry exists.
-export const CONFIG_SYNC_BASE = process.env.REACT_APP_CONFIG_SYNC_BASE || 'http://localhost:8090';
+export const CONFIG_SYNC_BASE = process.env.REACT_APP_CONFIG_SYNC_BASE ?? 'http://localhost:8090';
 
-// Per-source-env URL map. Same config-sync server can live in different
-// k8s clusters depending on which `--from` env it talks to (each env's
-// cluster runs its own copy so it has direct DB access). Override at build
-// time via REACT_APP_CONFIG_SYNC_URLS (JSON object), e.g.:
+// Per-source-env URL map. Each env's cluster runs its own config-sync pod
+// (needs direct DB access to that env). In a deployed dashboard the
+// recommended values are RELATIVE paths so the browser stays same-origin
+// and the dashboard pod's nginx proxies to the in-cluster config-sync:
 //
-//   REACT_APP_CONFIG_SYNC_URLS='{"master":"https://config-sync.master.internal",
-//                                "prod":"https://config-sync.prod.internal"}'
+//   REACT_APP_CONFIG_SYNC_URLS='{"master":"/config-sync/master",
+//                                "prod":"/config-sync/prod"}'
 //
-// Anything missing falls back to CONFIG_SYNC_BASE.
+// (See the ny-test-nginx-conf ConfigMap in the deployment for the matching
+// location blocks.)
+// Absolute URLs still work for local dev or one-off pointing at a remote
+// host. Anything missing falls back to CONFIG_SYNC_BASE.
 const _parseUrlMap = (): Record<string, string> => {
   const raw = process.env.REACT_APP_CONFIG_SYNC_URLS;
   if (!raw) return {};
