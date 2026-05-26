@@ -14,14 +14,16 @@
 
 module API.DecodeFile where
 
+import Data.Char (isAlphaNum)
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Base64 as B64
 import Data.String.Conversions
+import qualified Data.Text as T
 import Environment
 import Kernel.Mock.App hiding (runMock)
 import Kernel.Prelude
 import Kernel.Types.Error (GenericError (InvalidRequest))
-import Kernel.Utils.Common
+import Kernel.Utils.Common (fromEitherM, fromMaybeM)
 import Servant
 
 type DecodeFileAPI =
@@ -37,7 +39,24 @@ data DecodeFileReq = DecodeFileReq
 
 decodeFileHandler :: DecodeFileReq -> MockM AppEnv Text
 decodeFileHandler req = {- apiHandler $ -} do
-  let path = cs req.filePath
+  path <- toSandboxedPath req.filePath & fromMaybeM (InvalidRequest "filePath must be a simple file name")
   raw <- B64.decode (cs req.base64) & fromEitherM (InvalidRequest . cs)
   liftIO $ B.writeFile path raw
   pure "OK"
+
+toSandboxedPath :: Text -> Maybe FilePath
+toSandboxedPath rawName = do
+  let fileName = T.strip rawName
+  guard $ isValidFileName fileName
+  pure $ "/tmp/image-api-helper-" <> T.unpack fileName
+
+isValidFileName :: Text -> Bool
+isValidFileName fileName =
+  not (T.null fileName)
+    && T.length fileName <= 128
+    && fileName /= "."
+    && fileName /= ".."
+    && T.all isSafeFileNameChar fileName
+
+isSafeFileNameChar :: Char -> Bool
+isSafeFileNameChar char = isAlphaNum char || char `elem` ['.', '_', '-']
