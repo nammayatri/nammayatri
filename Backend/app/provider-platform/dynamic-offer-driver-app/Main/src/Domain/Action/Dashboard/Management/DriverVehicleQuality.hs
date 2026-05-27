@@ -23,6 +23,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
+import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
@@ -119,8 +120,11 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   whenJust mbRc $ \rc -> QVRC.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) rc.id
 
   mbVehicle <- QVehicle.findByRegistrationNo req.registrationNo
-  whenJust mbVehicle $ \vehicle ->
+  whenJust mbVehicle $ \vehicle -> do
     QVehicle.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) vehicle.driverId
+    tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing Nothing Nothing vehicle.driverId _merchantOpCity.id
+    let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
+    QVehicle.updateSelectedServiceTiers newTiers vehicle.driverId
 
   logInfo $ "Vehicle rating updated for RC: " <> req.registrationNo <> " rating: " <> show req.rating
   pure APISuccess.Success
