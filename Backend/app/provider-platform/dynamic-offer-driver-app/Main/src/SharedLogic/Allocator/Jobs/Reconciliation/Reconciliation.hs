@@ -40,8 +40,8 @@ import qualified Lib.Finance.Domain.Types.LedgerEntry as LedgerEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconEntry
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntry as QLedger
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import qualified Lib.Finance.Storage.Queries.PgPaymentSettlementReportExtra as QPgPaymentSettlement

@@ -98,9 +98,7 @@ getPrepaidAccountByOwner ::
   CounterpartyType ->
   Text -> -- Owner ID
   m (Maybe Account)
-getPrepaidAccountByOwner counterpartyType ownerId = do
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ find (\acc -> acc.accountType == RideCredit) accounts
+getPrepaidAccountByOwner counterpartyType ownerId = findAccountsByCounterparty (Just counterpartyType) (Just ownerId) RideCredit
 
 getPrepaidBalanceByOwner ::
   (BeamFlow m r) =>

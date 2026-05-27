@@ -46,8 +46,8 @@ import qualified Lib.Finance.Domain.Types.ReconciliationEntry as ReconciliationE
 import qualified Lib.Finance.Domain.Types.ReconciliationSummary as ReconSummary
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Ledger.Service as LedgerService
-import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceLedgerLink as QInvoiceLedgerLink
@@ -442,7 +442,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
     buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.InvoiceListItem
     buildInvoiceItem invoice = do
       -- Get GST details from indirect tax transaction
-      indirectTaxTxns <- QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
+      indirectTaxTxns <- QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
 
       let (taxableValue, gstRate, gstAmount, cgstAmount, sgstAmount, gstinOfParty, sacCode, mbTaxRate, mbIssuedToTaxNo, mbIssuedByTaxNo) = case indirectTaxTxns of
             (txn : _) ->
@@ -460,7 +460,7 @@ getFinanceManagementInvoiceList merchantShortId opCity mbFleetOwnerOrDriverId mb
             _ -> (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
       -- Get TDS details from direct tax transaction by invoiceNumber
-      directTaxTxns <- QDirectTax.findByInvoiceNumber invoice.invoiceNumber
+      directTaxTxns <- QDirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
       let tdsRef = case directTaxTxns of
             (txn : _) -> Just $ fromMaybe "" txn.tdsSection <> " (TDS: " <> show txn.tdsAmount <> ")"
             _ -> Nothing
@@ -1339,7 +1339,7 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   results <- forM invoices $ \inv -> do
     res <- withTryCatch ("renderInvoice:" <> inv.invoiceNumber) $ do
       let items = parseLineItems inv.lineItems
-      taxTxns <- QIndirectTax.findByInvoiceNumber inv.invoiceNumber
+      taxTxns <- QIndirectTax.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
       (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
         Just orderId -> do

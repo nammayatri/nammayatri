@@ -80,7 +80,6 @@ getOrCreateAccount input = do
         input.counterpartyType
         input.counterpartyId
         input.accountType
-        input.currency
 
     case mbExisting of
       Just existing -> pure $ Right existing
@@ -114,20 +113,20 @@ updateBalanceByDelta accountId delta = do
       QAccount.updateBalance newBalance accountId
       pure $ Right newBalance
 
--- | Find all accounts for a counterparty
+-- | Find the pooled (no sub-ledger) account for a counterparty by type.
 findAccountsByCounterparty ::
   (BeamFlow.BeamFlow m r) =>
   Maybe CounterpartyType -> -- Counterparty type (e.g., DRIVER, FLEET_OWNER)
   Maybe Text -> -- Counterparty ID
-  m [Account]
-findAccountsByCounterparty = QAccount.findByCounterparty
+  AccountType ->
+  m (Maybe Account)
+findAccountsByCounterparty = findAccountByCounterpartyAndType
 
--- | Find specific account by counterparty and type
+-- | Find specific account by counterparty, type, and optional sub-ledger.
 findAccountByCounterpartyAndType ::
   (BeamFlow.BeamFlow m r) =>
   Maybe CounterpartyType -> -- Counterparty type
   Maybe Text -> -- Counterparty ID
   AccountType ->
-  Currency ->
   m (Maybe Account)
 findAccountByCounterpartyAndType = QAccount.findByCounterpartyAndType

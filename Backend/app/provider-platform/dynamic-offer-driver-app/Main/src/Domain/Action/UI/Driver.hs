@@ -1239,12 +1239,11 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
                   else (False, Nothing, Nothing)
               _ -> (False, Nothing, Nothing)
           _ -> (False, Nothing, Nothing)
-  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
   subsCreditBalance <-
     if isPrepaidSubscriptionAndWalletEnabled
       then do
-        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit
         return $ (.balance) <$> mbRideCreditAccount
       else return Nothing
   return $
@@ -1638,7 +1637,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   (subsCreditBalance, panDec, panAadhaarLinkedFlag', gstinApplicableFlag', mbWalletAccount, bankAccountNumber', bankIfsc', bankVerificationStatus') <-
     if isPrepaidSubscriptionAndWalletEnabled
       then do
-        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit
         mbPanCard <- QPanCard.findByDriverId id
         panDec' <- traverse (decrypt . (.panCardNumber)) mbPanCard
         mbGstin <- QDGExtra.findGSTInByDriverId id

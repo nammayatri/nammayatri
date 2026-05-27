@@ -18,7 +18,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Invoice as FinanceInvoice
 import Lib.Finance.Invoice.PdfService
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QFinanceInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import Storage.Beam.Payment ()
@@ -85,7 +85,7 @@ getSubscriptionInvoices (mbDriverId, _, _) mbFrom mbInvoiceType mbLimit mbOffset
   where
     buildInvoiceItem :: FinanceInvoice.Invoice -> Flow API.FinanceInvoiceItem
     buildInvoiceItem invoice = do
-      indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumber invoice.invoiceNumber
+      indirectTaxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just invoice.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe indirectTaxTxns
 
       mbPaymentMethod <- case invoice.paymentOrderId of
@@ -186,7 +186,7 @@ getFinanceInvoicePdf (mbDriverId, _, merchantOpCityId) mbFrom mbInvoiceType mbLi
   let inv = head invoices
       items = parseLineItems inv.lineItems
 
-  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
+  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
   let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
 
   (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of

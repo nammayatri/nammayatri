@@ -46,15 +46,10 @@ Account:
       kvFunction: findOneWithKV
       where: id
 
-    findByCounterparty:
-      kvFunction: findAllWithKV
-      where:
-        and: [counterpartyType, counterpartyId]
-
     findByCounterpartyAndType:
       kvFunction: findOneWithKV
       where:
-        and: [counterpartyType, counterpartyId, accountType, currency]
+        and: [counterpartyType, counterpartyId, accountType]
 
     updateBalance:
       kvFunction: updateWithKV

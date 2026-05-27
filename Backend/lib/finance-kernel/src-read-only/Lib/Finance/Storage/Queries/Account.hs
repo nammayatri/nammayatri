@@ -23,21 +23,15 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.Account.Account] -> m ())
 createMany = traverse_ create
 
-findByCounterparty ::
-  (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Account.Account]))
-findByCounterparty counterpartyType counterpartyId = do findAllWithKV [Se.And [Se.Is Beam.counterpartyType $ Se.Eq counterpartyType, Se.Is Beam.counterpartyId $ Se.Eq counterpartyId]]
-
 findByCounterpartyAndType ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Finance.Domain.Types.Account.AccountType -> Kernel.Types.Common.Currency -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
-findByCounterpartyAndType counterpartyType counterpartyId accountType currency = do
+  (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.Account.CounterpartyType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Lib.Finance.Domain.Types.Account.AccountType -> m (Maybe Lib.Finance.Domain.Types.Account.Account))
+findByCounterpartyAndType counterpartyType counterpartyId accountType = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam.counterpartyType $ Se.Eq counterpartyType,
           Se.Is Beam.counterpartyId $ Se.Eq counterpartyId,
-          Se.Is Beam.accountType $ Se.Eq accountType,
-          Se.Is Beam.currency $ Se.Eq currency
+          Se.Is Beam.accountType $ Se.Eq accountType
         ]
     ]
 

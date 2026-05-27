@@ -111,7 +111,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
@@ -215,7 +215,7 @@ validateInvoiceEntry entry = do
                   else Nothing
               ]
 
-  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber entry.invoiceNumber
+  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just entry.invoiceNumber)
   let totalTaxableValue = Kernel.Prelude.sum $ map (.taxableValue) taxTxns
       totalGstAmount = Kernel.Prelude.sum $ map (.totalGstAmount) taxTxns
 

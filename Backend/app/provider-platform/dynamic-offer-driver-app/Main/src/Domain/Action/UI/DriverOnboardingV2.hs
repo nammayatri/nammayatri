@@ -60,7 +60,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
@@ -1187,7 +1187,7 @@ validateInvoiceEntry entry = do
               ]
 
   -- Validate GST/tax details
-  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber entry.invoiceNumber
+  taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just entry.invoiceNumber)
   let totalTaxableValue = sum $ map (.taxableValue) taxTxns
       totalGstAmount = sum $ map (.totalGstAmount) taxTxns
 
