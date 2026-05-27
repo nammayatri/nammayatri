@@ -569,7 +569,9 @@ mkQuoteRes (quote, quoteCategories) = do
   (stations :: [FRFSTypes.FRFSStationAPI]) <- decodeFromText quote.stationsJson & fromMaybeM (InvalidStationJson $ show quote.stationsJson)
   let routeStations :: Maybe [FRFSTypes.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
       mbFirstRouteStation = routeStations >>= KP.listToMaybe
-      serviceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+      mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
+      serviceTierType = mbVehicleServiceTier <&> (._type)
+      serviceTierName = mbVehicleServiceTier <&> (.shortName)
       routeCode = mbFirstRouteStation <&> (.code)
       fareParameters = Utils.mkFareParameters (Utils.mkCategoryPriceItemFromQuoteCategories quoteCategories)
       categories = map Utils.mkCategoryInfoResponse quoteCategories
