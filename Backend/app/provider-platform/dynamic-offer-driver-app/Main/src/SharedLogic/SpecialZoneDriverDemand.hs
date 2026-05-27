@@ -667,13 +667,19 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
   queueCount <-
     if remaining > 0
       then do
-        queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
-        let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-            -- Exclude priority drivers already processed
-            queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
-        eligible <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter queueDriverIds
-        eligibleNearGate <- filterByGateProximity gate eligible
-        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
+        let mbVariant = DV.castServiceTierToVariant <$> mbServiceTier
+        case mbVariant of
+          Nothing -> do
+            logWarning $ "forceNotifyDriverDemand: unable to parse vehicleType as service tier, skipping fare calc: " <> vehicleType
+            pure 0
+          Just variant -> do
+            queueResp <- LTSFlow.getQueueDrivers specialLocationId (show variant)
+            let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+                -- Exclude priority drivers already processed
+                queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
+            eligible <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter queueDriverIds
+            eligibleNearGate <- filterByGateProximity gate eligible
+            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
       else pure 0
   pure (priorityCount + queueCount)
 
