@@ -973,6 +973,7 @@ library
       API.Types.UI.FRFSTicketService
       API.Types.UI.Insurance
       API.Types.UI.Invoice
+      API.Types.UI.Loyalty
       API.Types.UI.MeterRideInternal
       API.Types.UI.Metrics
       API.Types.UI.Miscellaneous

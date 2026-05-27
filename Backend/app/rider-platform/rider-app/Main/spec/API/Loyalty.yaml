@@ -1,15 +1,32 @@
 imports:
-  LoyaltyInfoRequest: Kernel.External.Wallet.Interface.Types
-  LoyaltyInfoResponse: Kernel.External.Wallet.Interface.Types
+  LoyaltyProgramSummary: Lib.Payment.Wallet.Types
+  Day: Data.Time.Calendar
 
 module: Loyalty
 
-types: {}
+types:
+  DailySpend:
+    date: Day
+    amount: Int
+    derive: "Show, Eq"
+
+  LoyaltyInfoResp:
+    programs: "[LoyaltyProgramSummary]"
+    derive: "Show, Eq"
+
+  MonthlyExpenseResp:
+    last30DaysSpend: "[DailySpend]"
+    derive: "Show, Eq"
 
 apis:
   - POST:
       endpoint: /wallet/loyaltyInfo
       auth: TokenAuth
       response:
-        type: LoyaltyInfoResponse
+        type: LoyaltyInfoResp
 
+  - POST:
+      endpoint: /rider/monthlyExpense
+      auth: TokenAuth
+      response:
+        type: MonthlyExpenseResp

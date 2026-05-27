@@ -1880,8 +1880,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       deploymentVersion <- asks (.version)
       transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
       if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
-        then fork "updateDynamicPricingAcceptanceCounters" $
-          geoAddDynamicPricingCounter mkAcceptanceVehicleCategoryWithDistanceBin mkAcceptanceVehicleCategory mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon searchReq.id.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
+        then
+          fork "updateDynamicPricingAcceptanceCounters" $
+            geoAddDynamicPricingCounter mkAcceptanceVehicleCategoryWithDistanceBin mkAcceptanceVehicleCategory mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon searchReq.id.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
         else pure ()
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
       let estimatedFare = fareSum fareParams $ Just sd.conditionalCharges

@@ -53,6 +53,7 @@ library
       Lib.Payment.Storage.Queries.PayoutRequestExtra
       Lib.Payment.Storage.Queries.RefundsExtra
       Lib.Payment.Wallet.Service
+      Lib.Payment.Wallet.Types
       Tools.Beam.UtilsTH
       Lib.Payment.Domain.Types.Offer
       Lib.Payment.Domain.Types.OfferStats

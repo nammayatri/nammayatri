@@ -29,7 +29,6 @@ import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Payment.Interface as Payment
 import qualified Kernel.External.Payment.Interface.Types as PInterface
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
-import qualified Kernel.External.Wallet.Interface.Types as WalletTypes
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -39,7 +38,9 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerToo
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
+import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
+import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
@@ -50,10 +51,12 @@ import qualified Lib.Payment.Domain.Types.Refunds as DRefunds
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
+import qualified Lib.Payment.Wallet.Types as WalletSummary
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.JobScheduler as JobScheduler
@@ -98,13 +101,12 @@ getLoyaltyInfo ::
   Text ->
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
-  m WalletTypes.LoyaltyInfoResponse
+  m [WalletSummary.LoyaltyProgramSummary]
 getLoyaltyInfo customerId merchantId merchantOperatingCityId = do
   resp <- LoyaltyWallet.loyaltyInfo customerId merchantId merchantOperatingCityId
   mbProgramMap <- TPayment.loadLoyaltyProgramMap merchantId merchantOperatingCityId
   let resolveProgramType pid = T.pack . show <$> (Map.lookup pid =<< mbProgramMap)
-      enrich p = p {WalletTypes.programType = resolveProgramType (p.id_)}
-  pure $ resp {WalletTypes.programs = fmap (map enrich) resp.programs}
+  pure $ map (WalletSummary.toLoyaltyProgramSummary resolveProgramType) (fromMaybe [] resp.programs)
 
 -- | Type alias for fulfillment status handler function
 -- This allows callers to pass the appropriate handler for their payment service type
@@ -262,11 +264,25 @@ orderStatusHandlerWithRefunds fulfillmentHandler paymentService paymentOrder upd
               _ -> pure ()
         -- Invalidate the Offer List Cache
         case newPaymentFulfillmentStatus of
-          DPayment.FulfillmentSucceeded ->
+          DPayment.FulfillmentSucceeded -> do
             fork "Invalidate Offer List Cache" $ do
               person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
               let merchantOperatingCityId = maybe person.merchantOperatingCityId (cast @DPayment.MerchantOperatingCity @DMOC.MerchantOperatingCity) paymentOrder.merchantOperatingCityId
               invalidateOfferListCache person merchantOperatingCityId paymentService (mkPrice (Just paymentOrder.currency) paymentOrder.amount)
+            fork "increment rider spend" $
+              Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+                SWC.incrementByValue
+                  (round paymentOrder.amount)
+                  (FRFSUtils.riderSpendKey personId)
+                  (SWC.SlidingWindowOptions 30 SWC.Days)
+          DPayment.FulfillmentRefunded ->
+            fork "decrement rider spend" $
+              Redis.runInMasterCloudRedisCellWithCrossAppRedis $
+                SWC.decrementByValueInTimeBucket
+                  paymentOrder.createdAt
+                  (round paymentOrder.amount)
+                  (FRFSUtils.riderSpendKey personId)
+                  (SWC.SlidingWindowOptions 30 SWC.Days)
           _ -> pure ()
     _ -> pure ()
   -- Update the Payment Order with the new payment fulfillment status, domain entity id and domain transaction id

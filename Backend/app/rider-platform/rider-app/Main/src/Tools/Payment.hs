@@ -739,6 +739,7 @@ getPaymentOrderValidity merchantId merchantOperatingCityId mbPlaceId paymentServ
     Just (DMSC.PassPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.ParkingPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
     Just (DMSC.MembershipPaymentServiceConfig vsc) -> extractPaymentOrderValidity vsc
+    Just (DMSC.JuspayWalletServiceConfig vsc) -> extractPaymentOrderValidity vsc
     _ -> Nothing
   where
     extractPaymentOrderValidity = \case
