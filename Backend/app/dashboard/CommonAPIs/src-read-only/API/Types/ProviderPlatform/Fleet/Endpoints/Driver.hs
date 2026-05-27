@@ -244,6 +244,7 @@ data DriveVehicleAssociationListItemT = DriveVehicleAssociationListItemT
     responseReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     associatedOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     enabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     selectedServiceTiers :: [Kernel.Prelude.Text],
     driverDob :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime

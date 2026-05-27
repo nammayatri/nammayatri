@@ -317,6 +317,14 @@ Ride:
       kvFunction: updateOneWithKV
       params: [discountAmount]
       where: id
+    updateCommission:
+      kvFunction: updateOneWithKV
+      params: [commission]
+      where: id
+    updateCommissionAndDiscount:
+      kvFunction: updateOneWithKV
+      params: [commission, discountAmount]
+      where: id
     updatePreviousRideTripEndPosAndTime:
       kvFunction: updateOneWithKV
       params: [previousRideTripEndPos, previousRideTripEndTime]

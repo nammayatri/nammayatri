@@ -1984,6 +1984,7 @@ types:
     - responseReason: Maybe Text
     - associatedOn: Maybe UTCTime
     - createdAt: Maybe UTCTime
+    - updatedAt: Maybe UTCTime
     - enabled: Maybe Bool
     - selectedServiceTiers: [Text]
     - driverDob: Maybe UTCTime

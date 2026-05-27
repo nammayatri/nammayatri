@@ -106,7 +106,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler.Environment (JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -761,7 +761,7 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       whenJust mbTdsAmount $ \tdsAmount ->
         void $ transfer OwnerLiability GovtDirect tdsAmount tdsRef
       when (isVat && serviceVatAmount > 0) $
-        void $ transfer GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
+        void $ transferWithoutAttribution GovtExpense OwnerLiability serviceVatAmount walletReferenceVATInput
       -- BAP subsidy — BAP remits to BPP in both modes (2-leg pass-through); credits driver wallet.
       let discountsRef = if isOnline then walletReferenceDiscountsOnline else walletReferenceDiscountsCash
       when (customerDiscountAmount > 0) $ do
