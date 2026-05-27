@@ -606,9 +606,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   failures <- case rcValidationRules of
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules lang
-  let mbCanSwitchToAirport = rcValidationRules >>= (.enableForAirport)
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight mbCanSwitchToAirport
+      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
       expiryFailures = getExpiryFailures transporterConfig rcInput now
       allFailures = failures <> expiryFailures
   mVehicleRC <- do
@@ -639,8 +638,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   onVerifyRCHandler person resp.response mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
   where
-    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> Maybe Bool -> CreateRCInput
-    createRCInput vehicleCategory fleetOwnerId documentImageId' dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight enableForAirport' =
+    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
+    createRCInput vehicleCategory fleetOwnerId documentImageId' dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
       CreateRCInput
         { registrationNumber = rcVerificationResponse.registrationNumber,
           fitnessUpto = convertTextToUTC rcVerificationResponse.fitnessUpto,
@@ -649,7 +648,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           airConditioned = mbAirConditioned,
           oxygen = mbOxygen,
           ventilator = mbVentilator,
-          enableForAirport = enableForAirport',
+          enableForAirport = Nothing,
           documentImageId = documentImageId',
           vehicleClass = rcVerificationResponse.vehicleClass,
           vehicleClassCategory = rcVerificationResponse.vehicleCategory,

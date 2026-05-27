@@ -565,6 +565,7 @@ DocumentVerificationConfig:
       reviewRequired: Maybe Bool
       bodyType: Maybe Text
       priority: Maybe Int
+      enableForAirport: Maybe Bool
       derive: "Eq, Ord, Read"
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
@@ -1427,7 +1428,6 @@ RCValidationRules:
     fuelType: Maybe [Text]
     vehicleClass: Maybe [Text]
     vehicleOEM: Maybe [Text]
-    enableForAirport: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
