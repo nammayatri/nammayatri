@@ -8,10 +8,10 @@ where
 
 import API.Types.UI.FRFSFleetOperator
 import BecknV2.FRFS.Enums (VehicleCategory (..))
-import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (unpack)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant

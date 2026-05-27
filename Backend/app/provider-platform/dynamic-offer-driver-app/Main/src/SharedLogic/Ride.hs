@@ -112,10 +112,14 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     when (isPrepaidSubscriptionAndWalletEnabled && isNothing mbAccount) $ do
       logError $
         "Prepaid scoped RideCredit account missing at accept"
-          <> " | counterpartyType=" <> show counterpartyType
-          <> " | ownerId=" <> ownerId
-          <> " | vehicleCategory=" <> show mbVehicleCategory
-          <> " | bookingId=" <> booking.id.getId
+          <> " | counterpartyType="
+          <> show counterpartyType
+          <> " | ownerId="
+          <> ownerId
+          <> " | vehicleCategory="
+          <> show mbVehicleCategory
+          <> " | bookingId="
+          <> booking.id.getId
       throwError $
         InvalidRequest "Prepaid ride credits are not available for this vehicle category. Purchase a subscription plan for this category."
     whenJust mbAccount $ \_ -> do

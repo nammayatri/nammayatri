@@ -437,11 +437,12 @@ getSubcriptionStatusWithPlanPrepaid driverId = do
       (ownerType, ownerId) = if isFleetOwner then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
-  mbVehicleCategory <- if isolationEnabled
-    then do
-      subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId (show PREPAID_SUBSCRIPTION))
-      Just <$> getVehicleCategory (cast driverId) subscriptionConfig
-    else pure Nothing
+  mbVehicleCategory <-
+    if isolationEnabled
+      then do
+        subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId (show PREPAID_SUBSCRIPTION))
+        Just <$> getVehicleCategory (cast driverId) subscriptionConfig
+      else pure Nothing
   mbPurchase <- QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
   pure (Nothing, mkSyntheticDriverPlanFromPurchase <$> mbPurchase)
 
@@ -507,7 +508,6 @@ getSubsriptionConfigAndPlanGeneric serviceName (personId, _, merchantOpCityId) m
   let mbIsFleetOwnerPlan = if isFleetOwner then Just True else Nothing
   plans <- if subscriptionConfig.showManualPlansInUI == Just True then QPDE.findByMerchantOpCityIdAndServiceName merchantOpCityId serviceName (Just False) mbIsFleetOwnerPlan else QPD.findByMerchantOpCityIdAndPaymentModeWithServiceName merchantOpCityId (maybe AUTOPAY (.planType) mbDPlan) serviceName (Just False) mbIsFleetOwnerPlan
   return (subscriptionConfig, plans)
-
 
 filterPlansByFleetOwnerFlag :: Maybe Bool -> [Plan] -> [Plan]
 filterPlansByFleetOwnerFlag (Just True) = filter (\p -> p.isFleetOwnerPlan == Just True)
@@ -580,11 +580,12 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
       let isFleetOwner = DCommon.checkFleetOwnerRole person.role
           (ownerType, ownerId) = if isFleetOwner then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
       -- When isolation is enabled, use getVehicleCategory so a driver with no vehicle record
-      mbVehicleCategory <- if isolationEnabled
-        then do
-          subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show PREPAID_SUBSCRIPTION))
-          Just <$> getVehicleCategory (cast personId) subscriptionConfig
-        else pure Nothing
+      mbVehicleCategory <-
+        if isolationEnabled
+          then do
+            subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId (show PREPAID_SUBSCRIPTION))
+            Just <$> getVehicleCategory (cast personId) subscriptionConfig
+          else pure Nothing
       mbPurchase <- B.runInReplica $ QSPE.findLatestActiveByOwnerAndServiceName handleSubscriptionExpiry ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
       pure $ mkSyntheticDriverPlanFromPurchase <$> mbPurchase
     _ -> B.runInReplica $ QDPlan.findByDriverIdWithServiceName personId serviceName
@@ -632,9 +633,10 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
   latestManualPaymentDate <- case serviceName of
     PREPAID_SUBSCRIPTION -> do
       purchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.ACTIVE
-      let scopedPurchases = if prepaidIsolationEnabled
-            then maybe purchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) purchases) (mDriverPlan >>= (.vehicleCategory))
-            else purchases
+      let scopedPurchases =
+            if prepaidIsolationEnabled
+              then maybe purchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) purchases) (mDriverPlan >>= (.vehicleCategory))
+              else purchases
       pure $ listToMaybe (sortOn (Down . (.updatedAt)) scopedPurchases) <&> (.updatedAt)
     _ -> do
       latestManualPayment <- QDF.findLatestByFeeTypeAndStatusWithServiceName DF.RECURRING_INVOICE [DF.CLEARED, DF.COLLECTED_CASH] driverId serviceName
@@ -651,9 +653,10 @@ currentPlan serviceName (driverId, _merchantId, merchantOperatingCityId) = do
     case serviceName of
       PREPAID_SUBSCRIPTION -> do
         pendingPurchases <- QSP.findAllByOwnerAndStatus ownerId ownerType DSP.PENDING
-        let scopedPending = if prepaidIsolationEnabled
-              then maybe pendingPurchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) pendingPurchases) (mDriverPlan >>= (.vehicleCategory))
-              else pendingPurchases
+        let scopedPending =
+              if prepaidIsolationEnabled
+                then maybe pendingPurchases (\vc -> filter (\p -> p.vehicleCategory == Just vc) pendingPurchases) (mDriverPlan >>= (.vehicleCategory))
+                else pendingPurchases
             mbPendingPurchase = listToMaybe $ sortOn (Down . (.purchaseTimestamp)) scopedPending
         case mbPendingPurchase of
           Just purchase -> do

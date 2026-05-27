@@ -299,8 +299,8 @@ instance ToJSON InvoiceTemplateScope where
 
 instance FromJSON InvoiceTemplateScope where
   parseJSON = withText "InvoiceTemplateScope" $ \t ->
-    maybe (fail $ "Failed to parse InvoiceTemplateScope: " <> T.unpack t) pure
-      $ readMaybe (T.unpack t)
+    maybe (fail $ "Failed to parse InvoiceTemplateScope: " <> T.unpack t) pure $
+      readMaybe (T.unpack t)
 
 data LogicDomain
   = POOLING

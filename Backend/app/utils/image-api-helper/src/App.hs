@@ -24,12 +24,12 @@ import Kernel.Prelude
 import Kernel.Types.Common (defaultLoggerConfig)
 import Kernel.Utils.App (logRequestAndResponseGeneric)
 import Kernel.Utils.Logging
-import System.Environment (lookupEnv)
 import Network.Wai.Handler.Warp
   ( defaultSettings,
     runSettings,
     setPort,
   )
+import System.Environment (lookupEnv)
 
 runMock :: (AppCfg -> AppCfg) -> IO ()
 runMock _cfgModifier = do

@@ -408,10 +408,10 @@ in
                 (haskellProcessFor "producer-exe")
               ];
               environment = {
-              PRODUCER_TYPE = "Rider";
+                PRODUCER_TYPE = "Rider";
                 GET_MY_SCHEMA = "atlas_app";
-              METRICS_PORT = toString ports.rider-producer-metrics;
-            };
+                METRICS_PORT = toString ports.rider-producer-metrics;
+              };
               depends_on = {
                 "nammayatri-init".condition = "process_completed_successfully";
                 "rider-app-exe".condition = "process_healthy";
@@ -518,84 +518,84 @@ in
               };
             };
 
-          # Processes from other repos in nammayatri GitHub org
-          beckn-gateway = {
-            imports = [ common ];
-            command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
-            environment = {
-              SERVICE_PORT = toString ports.beckn-gateway;
-              METRICS_PORT = toString ports.beckn-gateway-metrics;
-            };
-          };
-          mock-registry = {
-            imports = [ common ];
-            command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
-            environment = {
-              SERVICE_PORT = toString ports.mock-registry;
-            };
-            depends_on."nammayatri-init".condition = "process_completed_successfully";
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = ports.mock-registry;
-                path = "/";
+            # Processes from other repos in nammayatri GitHub org
+            beckn-gateway = {
+              imports = [ common ];
+              command = ny.config.haskellProjects.default.outputs.finalPackages.beckn-gateway;
+              environment = {
+                SERVICE_PORT = toString ports.beckn-gateway;
+                METRICS_PORT = toString ports.beckn-gateway-metrics;
               };
             };
-            # Mirrors readiness_probe → if /:${toString ports.mock-registry} stays unhealthy past the
-            # failure_threshold window, process-compose kills the proc and
-            # availability.restart brings it back. (Readiness alone never
-            # triggers a restart in process-compose.)
-            liveness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = ports.mock-registry;
-                path = "/";
+            mock-registry = {
+              imports = [ common ];
+              command = ny.config.haskellProjects.default.outputs.finalPackages.mock-registry;
+              environment = {
+                SERVICE_PORT = toString ports.mock-registry;
               };
-              initial_delay_seconds = 30;
-              period_seconds = 10;
-              failure_threshold = 6;
-              timeout_seconds = 5;
+              depends_on."nammayatri-init".condition = "process_completed_successfully";
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = ports.mock-registry;
+                  path = "/";
+                };
+              };
+              # Mirrors readiness_probe → if /:${toString ports.mock-registry} stays unhealthy past the
+              # failure_threshold window, process-compose kills the proc and
+              # availability.restart brings it back. (Readiness alone never
+              # triggers a restart in process-compose.)
+              liveness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = ports.mock-registry;
+                  path = "/";
+                };
+                initial_delay_seconds = 30;
+                period_seconds = 10;
+                failure_threshold = 6;
+                timeout_seconds = 5;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 20;
-              max_restarts = 50;
+            location-tracking-service = {
+              imports = [ common ];
+              command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
+              environment = {
+                BYPASS_LTS_S3_AND_GCP = "true";
+                SERVICE_PORT = toString ports.location-tracking-service;
+                RIDER_APP_PORT = toString ports.rider-app;
+                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+              };
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
             };
-          };
-          location-tracking-service = {
-            imports = [ common ];
-            command = ny.inputs.location-tracking-service.packages.${pkgs.system}.default;
-            environment = {
-              BYPASS_LTS_S3_AND_GCP = "true";
-              SERVICE_PORT = toString ports.location-tracking-service;
-              RIDER_APP_PORT = toString ports.rider-app;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+            notification-service = {
+              imports = [ common ];
+              command = ny.inputs.notification-service.packages.${pkgs.system}.default;
+              environment = {
+                SERVICE_PORT = toString ports.notification-service-grpc;
+                GRPC_PORT = toString ports.notification-service-grpc;
+                HTTP_SERVER_PORT = toString ports.notification-service;
+                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+              };
+              availability = {
+                restart = "on_failure";
+                backoff_seconds = 20;
+                max_restarts = 50;
+              };
             };
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 50;
+            osrm-server = {
+              imports = [ common ];
+              command = self'.packages.osrm-server;
             };
-          };
-          notification-service = {
-            imports = [ common ];
-            command = ny.inputs.notification-service.packages.${pkgs.system}.default;
-            environment = {
-              SERVICE_PORT = toString ports.notification-service-grpc;
-              GRPC_PORT = toString ports.notification-service-grpc;
-              HTTP_SERVER_PORT = toString ports.notification-service;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-            };
-            availability = {
-              restart = "on_failure";
-              backoff_seconds = 20;
-              max_restarts = 50;
-            };
-          };
-          osrm-server = {
-            imports = [ common ];
-            command = self'.packages.osrm-server;
-          };
 
             kafka-consumers-exe = {
               environment = {
@@ -952,12 +952,12 @@ in
             };
 
             dynamic-offer-driver-app-exe = {
-            environment = {
-              SERVICE_PORT = toString ports.dynamic-offer-driver-app-internal;
-              METRICS_PORT = toString ports.driver-app-metrics;
-              RIDER_APP_PORT = toString ports.rider-app;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-            };
+              environment = {
+                SERVICE_PORT = toString ports.dynamic-offer-driver-app-internal;
+                METRICS_PORT = toString ports.driver-app-metrics;
+                RIDER_APP_PORT = toString ports.rider-app;
+                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+              };
               # Probes hit ${toString ports.dynamic-offer-driver-app-internal} (the actual app port) so process_healthy
               # reflects the app itself, not the driver-proxy on ${toString ports.dynamic-offer-driver-app}.
               readiness_probe = {
@@ -1072,49 +1072,49 @@ in
               shutdown.signal = 9;
             };
 
-          # Single reverse-proxy entry point for devbox access (via Tailscale).
-          # Reads data/Caddyfile generated by build-caddyfile.sh.
-          # Routes: /rider-app/*, /driver-app/*, /rider-dashboard/*, etc.
-          caddy-reverse-proxy = {
-            imports = [ common ];
-            command = pkgs.writeShellApplication {
-              name = "caddy-reverse-proxy";
-              runtimeInputs = [ pkgs.caddy ];
-              text = ''
-                CADDYFILE="''${FLAKE_ROOT:-..}/data/Caddyfile"
-                if [ ! -f "$CADDYFILE" ]; then
-                  echo "ERROR: $CADDYFILE not found. Run build-caddyfile.sh first." >&2
-                  exit 1
-                fi
-                echo "caddy-reverse-proxy: listening on :${toString ports.caddy-reverse-proxy}"
-                exec caddy run --config "$CADDYFILE" --adapter caddyfile
-              '';
-            };
-            depends_on = {
-              "nammayatri-init".condition = "process_completed_successfully";
-            };
-            readiness_probe = {
-              http_get = {
-                host = "127.0.0.1";
-                port = ports.caddy-reverse-proxy;
-                path = "/__caddy_health";
+            # Single reverse-proxy entry point for devbox access (via Tailscale).
+            # Reads data/Caddyfile generated by build-caddyfile.sh.
+            # Routes: /rider-app/*, /driver-app/*, /rider-dashboard/*, etc.
+            caddy-reverse-proxy = {
+              imports = [ common ];
+              command = pkgs.writeShellApplication {
+                name = "caddy-reverse-proxy";
+                runtimeInputs = [ pkgs.caddy ];
+                text = ''
+                  CADDYFILE="''${FLAKE_ROOT:-..}/data/Caddyfile"
+                  if [ ! -f "$CADDYFILE" ]; then
+                    echo "ERROR: $CADDYFILE not found. Run build-caddyfile.sh first." >&2
+                    exit 1
+                  fi
+                  echo "caddy-reverse-proxy: listening on :${toString ports.caddy-reverse-proxy}"
+                  exec caddy run --config "$CADDYFILE" --adapter caddyfile
+                '';
               };
-              initial_delay_seconds = 2;
-              period_seconds = 3;
-              failure_threshold = 5;
-              timeout_seconds = 2;
+              depends_on = {
+                "nammayatri-init".condition = "process_completed_successfully";
+              };
+              readiness_probe = {
+                http_get = {
+                  host = "127.0.0.1";
+                  port = ports.caddy-reverse-proxy;
+                  path = "/__caddy_health";
+                };
+                initial_delay_seconds = 2;
+                period_seconds = 3;
+                failure_threshold = 5;
+                timeout_seconds = 2;
+              };
+              availability = {
+                restart = "always";
+                backoff_seconds = 5;
+                max_restarts = 50;
+              };
+              shutdown.signal = 9;
             };
-            availability = {
-              restart = "always";
-              backoff_seconds = 5;
-              max_restarts = 50;
-            };
-            shutdown.signal = 9;
-          };
 
             rider-app-exe = {
-            environment.SERVICE_PORT = toString ports.rider-app;
-            environment.METRICS_PORT = toString ports.rider-app-metrics;
+              environment.SERVICE_PORT = toString ports.rider-app;
+              environment.METRICS_PORT = toString ports.rider-app-metrics;
               readiness_probe = {
                 http_get = {
                   host = "127.0.0.1";
@@ -1146,11 +1146,11 @@ in
             };
 
             rider-dashboard-exe = {
-            environment = {
-              SERVICE_PORT = toString ports.rider-dashboard;
-              METRICS_PORT = toString ports.rider-dashboard-metrics;
-              RIDER_APP_PORT = toString ports.rider-app;
-            };
+              environment = {
+                SERVICE_PORT = toString ports.rider-dashboard;
+                METRICS_PORT = toString ports.rider-dashboard-metrics;
+                RIDER_APP_PORT = toString ports.rider-app;
+              };
               readiness_probe = {
                 http_get = {
                   host = "127.0.0.1";
@@ -1183,12 +1183,12 @@ in
             };
 
             provider-dashboard-exe = {
-            environment = {
-              SERVICE_PORT = toString ports.provider-dashboard;
-              METRICS_PORT = toString ports.provider-dashboard-metrics;
-              RIDER_APP_PORT = toString ports.rider-app;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-            };
+              environment = {
+                SERVICE_PORT = toString ports.provider-dashboard;
+                METRICS_PORT = toString ports.provider-dashboard-metrics;
+                RIDER_APP_PORT = toString ports.rider-app;
+                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+              };
               readiness_probe = {
                 http_get = {
                   host = "127.0.0.1";
@@ -1219,8 +1219,8 @@ in
             };
 
             rider-app-scheduler-exe = {
-            environment.SERVICE_PORT = toString ports.rider-app-scheduler;
-            environment.METRICS_PORT = toString ports.rider-app-scheduler-metrics;
+              environment.SERVICE_PORT = toString ports.rider-app-scheduler;
+              environment.METRICS_PORT = toString ports.rider-app-scheduler-metrics;
               availability = {
                 restart = "always";
                 backoff_seconds = 20;
@@ -1229,8 +1229,8 @@ in
             };
 
             driver-offer-allocator-exe = {
-            environment.SERVICE_PORT = toString ports.driver-offer-allocator;
-            environment.METRICS_PORT = toString ports.driver-offer-allocator-metrics;
+              environment.SERVICE_PORT = toString ports.driver-offer-allocator;
+              environment.METRICS_PORT = toString ports.driver-offer-allocator-metrics;
               availability = {
                 restart = "always";
                 backoff_seconds = 20;
@@ -1238,42 +1238,42 @@ in
               };
             };
 
-          image-api-helper-exe = {
-            environment.SERVICE_PORT = toString ports.image-api-helper;
-          };
-
-          mock-fcm-exe = {
-            environment.SERVICE_PORT = toString ports.mock-fcm;
-          };
-
-          mock-google-exe = {
-            environment.SERVICE_PORT = toString ports.mock-google;
-          };
-
-          mock-idfy-exe = {
-            environment.SERVICE_PORT = toString ports.mock-idfy;
-          };
-
-          mock-sms-exe = {
-            environment.SERVICE_PORT = toString ports.mock-sms;
-          };
-
-          producer-exe = {
-            environment.METRICS_PORT = toString ports.producer-metrics;
-          };
-
-          unified-dashboard-exe = {
-            environment = {
-              SERVICE_PORT = toString ports.unified-dashboard;
-              METRICS_PORT = toString ports.unified-dashboard-metrics;
-              RIDER_APP_PORT = toString ports.rider-app;
-              DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+            image-api-helper-exe = {
+              environment.SERVICE_PORT = toString ports.image-api-helper;
             };
-          };
 
-          search-result-aggregator-exe = {
-            environment.SERVICE_PORT = toString ports.search-result-aggregator;
-          };
+            mock-fcm-exe = {
+              environment.SERVICE_PORT = toString ports.mock-fcm;
+            };
+
+            mock-google-exe = {
+              environment.SERVICE_PORT = toString ports.mock-google;
+            };
+
+            mock-idfy-exe = {
+              environment.SERVICE_PORT = toString ports.mock-idfy;
+            };
+
+            mock-sms-exe = {
+              environment.SERVICE_PORT = toString ports.mock-sms;
+            };
+
+            producer-exe = {
+              environment.METRICS_PORT = toString ports.producer-metrics;
+            };
+
+            unified-dashboard-exe = {
+              environment = {
+                SERVICE_PORT = toString ports.unified-dashboard;
+                METRICS_PORT = toString ports.unified-dashboard-metrics;
+                RIDER_APP_PORT = toString ports.rider-app;
+                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
+              };
+            };
+
+            search-result-aggregator-exe = {
+              environment.SERVICE_PORT = toString ports.search-result-aggregator;
+            };
           }
         ];
       };
@@ -1338,26 +1338,26 @@ in
           };
 
           redis."redis" = {
-          enable = true;
-          port = ports.redis;
-        };
+            enable = true;
+            port = ports.redis;
+          };
 
           redis-cluster."cluster1" = {
-          enable = true;
-          nodes = {
-            "n1" = { port = ports.redis-cluster-n1; };
-            "n2" = { port = ports.redis-cluster-n2; };
-            "n3" = { port = ports.redis-cluster-n3; };
-            "n4" = { port = ports.redis-cluster-n4; };
-            "n5" = { port = ports.redis-cluster-n5; };
-            "n6" = { port = ports.redis-cluster-n6; };
+            enable = true;
+            nodes = {
+              "n1" = { port = ports.redis-cluster-n1; };
+              "n2" = { port = ports.redis-cluster-n2; };
+              "n3" = { port = ports.redis-cluster-n3; };
+              "n4" = { port = ports.redis-cluster-n4; };
+              "n5" = { port = ports.redis-cluster-n5; };
+              "n6" = { port = ports.redis-cluster-n6; };
+            };
           };
-        };
 
           zookeeper."zookeeper" = {
-          enable = true;
-          port = ports.zookeeper;
-        };
+            enable = true;
+            port = ports.zookeeper;
+          };
 
           apache-kafka."kafka" = {
             enable = true;

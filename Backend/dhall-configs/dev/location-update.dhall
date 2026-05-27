@@ -59,7 +59,8 @@ let hedisSecondaryClusterCfg =
 
 let consumerProperties =
       { groupId = "groupId"
-      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      , brockers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }
@@ -106,7 +107,8 @@ let kafkaClickhouseCfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      { brokers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 

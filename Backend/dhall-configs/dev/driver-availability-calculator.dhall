@@ -50,7 +50,8 @@ let hedisClusterCfg =
 
 let consumerProperties =
       { groupId = "groupId"
-      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      , brockers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }

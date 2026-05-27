@@ -37,7 +37,9 @@ let zone_to_redis_replica_mapping =
       }
 
 let kafka_cfg =
-      { kafka_key = "bootstrap.servers", kafka_host = "0.0.0.0:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" }
+      { kafka_key = "bootstrap.servers"
+      , kafka_host = "0.0.0.0:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}"
+      }
 
 let LogLevel = < TRACE | DEBUG | INFO | WARN | ERROR | OFF >
 

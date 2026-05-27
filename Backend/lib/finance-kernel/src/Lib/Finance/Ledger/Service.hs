@@ -280,14 +280,16 @@ settleEntry entryId = do
               isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
               fromStartBal = fromAccount.balance
               toStartBal = toAccount.balance
-              fromEndBal = roundAmount $
-                if isAssetOrExpenseAccount fromAccount
-                  then fromStartBal + amount
-                  else fromStartBal - amount
-              toEndBal = roundAmount $
-                if isAssetOrExpenseAccount toAccount
-                  then toStartBal - amount
-                  else toStartBal + amount
+              fromEndBal =
+                roundAmount $
+                  if isAssetOrExpenseAccount fromAccount
+                    then fromStartBal + amount
+                    else fromStartBal - amount
+              toEndBal =
+                roundAmount $
+                  if isAssetOrExpenseAccount toAccount
+                    then toStartBal - amount
+                    else toStartBal + amount
           _ <- QAccount.updateBalance fromEndBal entry.fromAccountId
           _ <- QAccount.updateBalance toEndBal entry.toAccountId
           let updatedEntry =

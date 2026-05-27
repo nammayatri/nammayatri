@@ -8,12 +8,12 @@ import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Action.Dashboard.EmailVerification as DEV
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified "lib-dashboard" Domain.Types.ServerName as DSN
-import qualified "lib-dashboard" Tools.Auth.Dashboard as Auth
-import qualified "lib-dashboard" Tools.InternalClient as InternalClient
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?), (@?=))
+import qualified "lib-dashboard" Tools.Auth.Dashboard as Auth
+import qualified "lib-dashboard" Tools.InternalClient as InternalClient
 import Prelude
 
 -- =============================================================================

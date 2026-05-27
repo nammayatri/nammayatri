@@ -70,7 +70,8 @@ let kafkaClickhouseCfg =
       }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      { brokers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -92,7 +93,8 @@ let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
 let consumerProperties =
       { groupId = "fleet-communication-dispatch"
-      , brockers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      , brockers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , autoCommit = None Integer
       , kafkaCompression = common.kafkaCompression.LZ4
       }

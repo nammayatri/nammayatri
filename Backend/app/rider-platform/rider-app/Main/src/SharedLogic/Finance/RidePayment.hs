@@ -1127,14 +1127,15 @@ regenerateRideTipInvoice rideId tipAmount = do
   let rideFareEntries = List.filter (\e -> e.referenceType == ridePaymentRefRideFare) rideEntries
   -- Find the RideFare entry linked to an active (Paid/Issued/Draft) invoice.
   -- There may be stale entries from earlier recreate attempts linked to Voided invoices.
-  mbActiveEntry <- findM
-    ( \entry -> do
-        mbInv <- FInvoiceService.getInvoiceForEntry entry.id
-        pure $ case mbInv of
-          Nothing -> False
-          Just inv -> inv.status `elem` [FInvoice.Paid, FInvoice.Issued, FInvoice.Draft]
-    )
-    rideFareEntries
+  mbActiveEntry <-
+    findM
+      ( \entry -> do
+          mbInv <- FInvoiceService.getInvoiceForEntry entry.id
+          pure $ case mbInv of
+            Nothing -> False
+            Just inv -> inv.status `elem` [FInvoice.Paid, FInvoice.Issued, FInvoice.Draft]
+      )
+      rideFareEntries
   case mbActiveEntry of
     Nothing -> logInfo $ "regenerateRideTipInvoice: no active RideFare invoice found for ride " <> rideId
     Just entry -> do
@@ -1165,46 +1166,47 @@ regenerateRideTipInvoice rideId tipAmount = do
                   }
               newLineItems = priorLineItems <> [tipLineItem]
           -- Step 4: create the new invoice first — only void old one after success
-          createRes <- FInvoiceService.createInvoice
-            InvoiceInput
-              { invoiceType = priorInv.invoiceType,
-                paymentOrderId = priorInv.paymentOrderId,
-                issuedToType = priorInv.issuedToType,
-                issuedToId = priorInv.issuedToId,
-                issuedToName = priorInv.issuedToName,
-                issuedToAddress = priorInv.issuedToAddress,
-                issuedByType = priorInv.issuedByType,
-                issuedById = priorInv.issuedById,
-                issuedByName = priorInv.issuedByName,
-                issuedByAddress = priorInv.issuedByAddress,
-                supplierName = priorInv.supplierName,
-                supplierAddress = priorInv.supplierAddress,
-                supplierGSTIN = priorInv.supplierGSTIN,
-                supplierTaxNo = priorInv.supplierTaxNo,
-                supplierId = priorInv.supplierId,
-                merchantGstin = priorInv.merchantGstin,
-                referenceId = priorInv.referenceId,
-                gstinOfParty = Nothing,
-                panOfParty = Nothing,
-                panType = Nothing,
-                counterpartyId = priorInv.issuedToId,
-                tdsRateReason = Nothing,
-                tanOfDeductee = Nothing,
-                lineItems = newLineItems,
-                gstBreakdown = Nothing,
-                currency = priorInv.currency,
-                dueAt = priorInv.dueAt,
-                merchantId = priorInv.merchantId,
-                merchantOperatingCityId = priorInv.merchantOperatingCityId,
-                merchantShortId = priorInv.merchantId,
-                isVat = False,
-                issuedToTaxNo = Nothing,
-                issuedByTaxNo = Nothing,
-                paymentMode = priorInv.paymentMode,
-                periodStart = priorInv.periodStart,
-                periodEnd = priorInv.periodEnd
-              }
-            (priorEntryIds <> tipEntryIds)
+          createRes <-
+            FInvoiceService.createInvoice
+              InvoiceInput
+                { invoiceType = priorInv.invoiceType,
+                  paymentOrderId = priorInv.paymentOrderId,
+                  issuedToType = priorInv.issuedToType,
+                  issuedToId = priorInv.issuedToId,
+                  issuedToName = priorInv.issuedToName,
+                  issuedToAddress = priorInv.issuedToAddress,
+                  issuedByType = priorInv.issuedByType,
+                  issuedById = priorInv.issuedById,
+                  issuedByName = priorInv.issuedByName,
+                  issuedByAddress = priorInv.issuedByAddress,
+                  supplierName = priorInv.supplierName,
+                  supplierAddress = priorInv.supplierAddress,
+                  supplierGSTIN = priorInv.supplierGSTIN,
+                  supplierTaxNo = priorInv.supplierTaxNo,
+                  supplierId = priorInv.supplierId,
+                  merchantGstin = priorInv.merchantGstin,
+                  referenceId = priorInv.referenceId,
+                  gstinOfParty = Nothing,
+                  panOfParty = Nothing,
+                  panType = Nothing,
+                  counterpartyId = priorInv.issuedToId,
+                  tdsRateReason = Nothing,
+                  tanOfDeductee = Nothing,
+                  lineItems = newLineItems,
+                  gstBreakdown = Nothing,
+                  currency = priorInv.currency,
+                  dueAt = priorInv.dueAt,
+                  merchantId = priorInv.merchantId,
+                  merchantOperatingCityId = priorInv.merchantOperatingCityId,
+                  merchantShortId = priorInv.merchantId,
+                  isVat = False,
+                  issuedToTaxNo = Nothing,
+                  issuedByTaxNo = Nothing,
+                  paymentMode = priorInv.paymentMode,
+                  periodStart = priorInv.periodStart,
+                  periodEnd = priorInv.periodEnd
+                }
+              (priorEntryIds <> tipEntryIds)
           case createRes of
             Left err -> logError $ "regenerateRideTipInvoice: failed to create RideTip invoice for ride " <> rideId <> ": " <> show err
             Right newInv -> do

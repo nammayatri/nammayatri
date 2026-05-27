@@ -56,7 +56,9 @@ let internalEndPointMap =
 let SchedulerType = < RedisBased | DbBased >
 
 let urlShortnerConfig =
-      { url = "http://localhost:${urlShortnerPort}/", apiKey = sec.urlShortnerApiKey }
+      { url = "http://localhost:${urlShortnerPort}/"
+      , apiKey = sec.urlShortnerApiKey
+      }
 
 let ondcRegistryUrl = "http://localhost:${mockRegistryPort}/"
 

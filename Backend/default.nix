@@ -91,7 +91,7 @@
       pre-commit.settings.imports = [
         ./nix/pre-commit.nix
       ];
-      pre-commit.settings.hooks.treefmt.enable = lib.mkForce false;
+      pre-commit.settings.hooks.treefmt.enable = lib.mkForce true;
       treefmt.config.settings.formatter.ormolu.excludes = [
         "vira.hs"
       ];

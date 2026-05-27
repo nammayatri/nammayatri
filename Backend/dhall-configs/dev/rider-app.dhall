@@ -221,7 +221,8 @@ let slackCfg =
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      { brokers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -530,6 +531,8 @@ in  { esqDBCfg
     , blackListedJobs = [] : List Text
     , emailServiceConfig
     , masterCloudProxyConfig =
-      { masterUrl = Some "http://localhost:${driverAppInternalPort}", masterSecret = Some "123" }
+      { masterUrl = Some "http://localhost:${driverAppInternalPort}"
+      , masterSecret = Some "123"
+      }
     , bapHostRedirectMap = [] : List { mapKey : Text, mapValue : Optional Text }
     }
