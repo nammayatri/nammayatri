@@ -1280,3 +1280,6 @@ getServiceTierTypeFromRouteStationsJson mbJson = do
   firstRoute <- listToMaybe routeStations
   vst <- firstRoute.vehicleServiceTier
   Just vst._type
+
+riderSpendKey :: Id DP.Person -> Text
+riderSpendKey personId = "rider:spend:" <> personId.getId

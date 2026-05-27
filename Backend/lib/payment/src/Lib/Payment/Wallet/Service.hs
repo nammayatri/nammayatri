@@ -8,7 +8,7 @@ module Lib.Payment.Wallet.Service
     recordLoyaltyHistoryReversal,
     bumpWalletAggregatesOnEarn,
     bumpWalletAggregatesOnBurn,
-    reconcileWalletFromLoyaltyInfo,
+    reconcileWalletFromProgram,
     processLoyaltyInfoFromOrderStatus,
     getOrCreateWalletPayment,
   )
@@ -16,7 +16,6 @@ where
 
 import qualified Data.Text as T
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import qualified Kernel.External.Wallet.Interface.Types as WalletTypes
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id (Id (..))
@@ -37,6 +36,7 @@ import qualified Lib.Payment.Storage.Beam.BeamFlow as PBeamFlow
 import qualified Lib.Payment.Storage.Queries.Wallet as QWallet
 import qualified Lib.Payment.Storage.Queries.WalletHistory as QWH
 import qualified Lib.Payment.Storage.Queries.WalletPayments as QWP
+import Lib.Payment.Wallet.Types (LoyaltyProgramSummary)
 
 data LoyaltyReferenceType
   = LOYALTY_EARN_TOPUP
@@ -270,65 +270,50 @@ bumpWalletAggregatesOnBurn walletId points = do
       newLifetimeBurned = wallet.lifetimeBurned + points
   QWallet.updateAggregatesOnBurn newAvailable newLifetimeBurned walletId
 
-reconcileWalletFromLoyaltyInfo ::
+reconcileWalletFromProgram ::
   (FBeamFlow.BeamFlow m r, PBeamFlow.BeamFlow m r, Log m, MonadTime m) =>
   DWallet.Wallet ->
-  WalletTypes.LoyaltyInfoResponse ->
+  LoyaltyProgramSummary ->
   m ()
-reconcileWalletFromLoyaltyInfo wallet resp = do
-  let mbProgram = findProgramById wallet.programId resp
-  case mbProgram of
-    Nothing ->
-      logWarning $
-        "reconcileWalletFromLoyaltyInfo: program "
-          <> wallet.programId
-          <> " not found in Juspay loyaltyInfo response for wallet "
-          <> wallet.id.getId
-    Just program -> do
-      let pw = program.wallet
-          pockets = fromMaybe [] pw.pockets
-          pocketByKeyword kw =
-            find (\p -> maybe False (T.isInfixOf kw . T.toLower) p.label) pockets
-          pocketTopup = pocketByKeyword "topup"
-          pocketCashback = pocketByKeyword "reward"
-          mbJuspayAvailable = parsePoints =<< pw.availablePoints
-          mbJuspayLifeEarned = parsePoints =<< pw.lifetimeEarned
-          mbJuspayLifeRedeemed = parsePoints =<< pw.lifetimeRedeemed
-          mbJuspayTopup = parsePoints =<< ((.lifetimeEarned) =<< pocketTopup)
-          mbJuspayCashback = parsePoints =<< ((.lifetimeEarned) =<< pocketCashback)
-          mismatched mbJuspay localVal = maybe False (/= localVal) mbJuspay
-          drifted =
-            mismatched mbJuspayAvailable wallet.availableBalance
-              || mismatched mbJuspayLifeEarned wallet.lifetimeEarned
-              || mismatched mbJuspayLifeRedeemed wallet.lifetimeBurned
-              || mismatched mbJuspayTopup wallet.topupEarned
-              || mismatched mbJuspayCashback wallet.cashbackEarned
-          syncAvailable = fromMaybe wallet.availableBalance mbJuspayAvailable
-          syncLifeEarned = fromMaybe wallet.lifetimeEarned mbJuspayLifeEarned
-          syncLifeBurned = fromMaybe wallet.lifetimeBurned mbJuspayLifeRedeemed
-          syncTopup = fromMaybe wallet.topupEarned mbJuspayTopup
-          syncCashback = fromMaybe wallet.cashbackEarned mbJuspayCashback
-      when drifted $ do
-        logError $
-          "wallet drift for " <> wallet.id.getId
-            <> " sync: available="
-            <> show syncAvailable
-            <> " lifeEarned="
-            <> show syncLifeEarned
-            <> " lifeBurned="
-            <> show syncLifeBurned
-            <> " topup="
-            <> show syncTopup
-            <> " cashback="
-            <> show syncCashback
-        QWallet.syncFromLoyaltyInfo syncAvailable syncLifeEarned syncLifeBurned syncTopup syncCashback wallet.id
-      whenJust mbJuspayAvailable $ \v ->
-        when (v /= wallet.availableBalance) $ QFAccount.updateBalance v wallet.accountId
+reconcileWalletFromProgram wallet program = do
+  let pw = program.wallet
+      pockets = fromMaybe [] pw.pockets
+      pocketByKeyword kw =
+        find (\p -> maybe False (T.isInfixOf kw . T.toLower) p.label) pockets
+      mbAvailable = parsePoints =<< pw.availablePoints
+      mbLifeEarned = parsePoints =<< pw.lifetimeEarned
+      mbLifeRedeemed = parsePoints =<< pw.lifetimeRedeemed
+      mbTopup = parsePoints =<< ((.lifetimeEarned) =<< pocketByKeyword "topup")
+      mbCashback = parsePoints =<< ((.lifetimeEarned) =<< pocketByKeyword "reward")
+      mismatched mbRemote localVal = maybe False (/= localVal) mbRemote
+      drifted =
+        mismatched mbAvailable wallet.availableBalance
+          || mismatched mbLifeEarned wallet.lifetimeEarned
+          || mismatched mbLifeRedeemed wallet.lifetimeBurned
+          || mismatched mbTopup wallet.topupEarned
+          || mismatched mbCashback wallet.cashbackEarned
+      syncAvailable = fromMaybe wallet.availableBalance mbAvailable
+      syncLifeEarned = fromMaybe wallet.lifetimeEarned mbLifeEarned
+      syncLifeBurned = fromMaybe wallet.lifetimeBurned mbLifeRedeemed
+      syncTopup = fromMaybe wallet.topupEarned mbTopup
+      syncCashback = fromMaybe wallet.cashbackEarned mbCashback
+  when drifted $ do
+    logError $
+      "wallet drift for " <> wallet.id.getId
+        <> " sync: available="
+        <> show syncAvailable
+        <> " lifeEarned="
+        <> show syncLifeEarned
+        <> " lifeBurned="
+        <> show syncLifeBurned
+        <> " topup="
+        <> show syncTopup
+        <> " cashback="
+        <> show syncCashback
+    QWallet.syncFromLoyaltyInfo syncAvailable syncLifeEarned syncLifeBurned syncTopup syncCashback wallet.id
+  whenJust mbAvailable $ \v ->
+    when (v /= wallet.availableBalance) $ QFAccount.updateBalance v wallet.accountId
   where
-    findProgramById pid r =
-      let programs = fromMaybe [] r.programs
-       in find (\p -> p.id_ == pid) programs
-
     parsePoints :: Text -> Maybe HighPrecMoney
     parsePoints t = realToFrac <$> (readMaybe (T.unpack t) :: Maybe Double)
 
@@ -339,7 +324,7 @@ processLoyaltyInfoFromOrderStatus ::
   Text -> -- domainEntityId (e.g. frfs_ticket_booking_payment.id; caller falls back to orderId when absent) — stamped on each WalletHistory row
   Payment.LoyaltyInfo ->
   (Text -> m (Maybe FAccount.CounterpartyType)) -> -- resolveProgram
-  m WalletTypes.LoyaltyInfoResponse -> -- fetchFullInfo
+  m [LoyaltyProgramSummary] -> -- fetchFullInfo
   m ()
 processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveProgram fetchFullInfo = do
   let merchantId = order.merchantId.getId
@@ -390,9 +375,10 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
         (wallet, _acc) <-
           getOrCreateWalletForPerson personId programType earn.programId currency merchantId mbMerchantOperatingCityId
         let kind = if isTopup then DWP.TOPUP else DWP.CASHBACK
+            basePoints = if isTopup then order.amount else earn.points
             baseBucket =
               if null earn.campaigns || isTopup
-                then [(Nothing, earn.points, earn.reversedPoints)]
+                then [(Nothing, basePoints, earn.reversedPoints)]
                 else []
             campaignBuckets =
               if null earn.campaigns
@@ -423,14 +409,13 @@ processLoyaltyInfoFromOrderStatus personId order domainEntityId loyalty resolveP
   reconcileRes <- try @_ @SomeException fetchFullInfo
   case reconcileRes of
     Left e -> logError $ "loyaltyInfo reconcile fetch failed: " <> show e
-    Right loyaltyInfoResp ->
-      forM_ (fromMaybe [] loyaltyInfoResp.programs) $ \program -> do
-        mbProgramType <- resolveProgram program.id_
-        case mbProgramType of
+    Right programs ->
+      forM_ programs $ \program ->
+        case program.programType >>= (readMaybe . T.unpack) of
           Nothing -> pure ()
           Just programType -> do
-            (w, _) <- getOrCreateWalletForPerson personId programType program.id_ currency merchantId mbMerchantOperatingCityId
-            reconcileWalletFromLoyaltyInfo w loyaltyInfoResp
+            (w, _) <- getOrCreateWalletForPerson personId programType program.id currency merchantId mbMerchantOperatingCityId
+            reconcileWalletFromProgram w program
 
 getOrCreateWalletPayment ::
   (PBeamFlow.BeamFlow m r, Log m) =>

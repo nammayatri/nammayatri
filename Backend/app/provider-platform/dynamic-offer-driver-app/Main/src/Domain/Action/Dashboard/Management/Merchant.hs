@@ -158,10 +158,10 @@ import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry
-import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
