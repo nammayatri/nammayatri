@@ -104,20 +104,21 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   -- Base variants + every variant the operator has explicitly configured on the gate
   -- (via per-variant threshold maps). Without this the hardcoded list silently drops
   -- custom variants like SUV_PLUS / TAXI_PLUS so their config never reaches the dashboard.
-  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE", "AMBULANCE"]
+  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE"]
       configuredVariants =
         concatMap Map.keys $
           catMaybes [gate.minDriverThresholds, gate.maxDriverThresholds, gate.demandThresholds]
       vehicleTypes = nub (baseVariants <> configuredVariants)
   -- Build a map from driverId to DriverLocation for quick lookup
-  let uniqVariantsList = nub $ map (\vt -> castServiceTierToVariant (read (T.unpack vt) :: DVST.ServiceTierType)) vehicleTypes
+  let tierList = catMaybes $ map (\vt -> readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType) vehicleTypes
+      uniqVariantsList = nub $ map castServiceTierToVariant tierList
   uniqVariantsQueueList <- mapM (\vt' -> do resp <- LTSFlow.getQueueDrivers specialLocationId (show vt'); pure (vt', resp)) uniqVariantsList
   let uniqVariantsQueueMap = Map.fromList uniqVariantsQueueList
 
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM vehicleTypes $ \vt -> do
-    let variant = castServiceTierToVariant (read (T.unpack vt) :: DVST.ServiceTierType)
-        mbQueueResp = Map.lookup variant uniqVariantsQueueMap
+    let variant = fmap castServiceTierToVariant (readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType)
+        mbQueueResp = variant >>= (`Map.lookup` uniqVariantsQueueMap)
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
     mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
     mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
