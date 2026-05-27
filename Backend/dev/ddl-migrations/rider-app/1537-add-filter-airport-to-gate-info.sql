@@ -1,1 +1,1 @@
-ALTER TABLE atlas_app.gate_info ADD COLUMN filter_airport_json text;
+ALTER TABLE atlas_app.gate_info ADD COLUMN enable_queue_filter text;
