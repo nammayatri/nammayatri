@@ -35,9 +35,9 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 
 whatsAppOptAPI :: ServiceFlow m r => Id Merchant -> Id DMOC.MerchantOperatingCity -> Whatsapp.OptApiReq -> m APISuccess
 whatsAppOptAPI merchantId merchantOperatingCityId req = do

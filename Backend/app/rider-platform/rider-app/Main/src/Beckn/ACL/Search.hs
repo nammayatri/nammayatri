@@ -26,9 +26,9 @@ import EulerHS.Prelude hiding (state, (%~))
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 
 buildSearchReqV2 ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>

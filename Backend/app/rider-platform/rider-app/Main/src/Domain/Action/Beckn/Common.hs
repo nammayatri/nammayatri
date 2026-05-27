@@ -83,6 +83,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -130,7 +131,6 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QRBE

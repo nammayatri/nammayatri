@@ -55,6 +55,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Safety.Domain.Action.UI.Sos as SafetySos
 import qualified Safety.Domain.Types.Common as SafetyCommon
@@ -81,7 +82,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Sos as CQSos
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QP

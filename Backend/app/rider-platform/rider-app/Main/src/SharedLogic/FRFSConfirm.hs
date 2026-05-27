@@ -44,6 +44,7 @@ import Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common hiding (mkPrice)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -62,7 +63,6 @@ import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking

@@ -45,10 +45,10 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import Kernel.Utils.Predicates
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issue as Queries
 import qualified Storage.Queries.Person as QP

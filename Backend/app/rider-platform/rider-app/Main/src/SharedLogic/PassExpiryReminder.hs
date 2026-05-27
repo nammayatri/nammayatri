@@ -12,8 +12,8 @@ import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.ConfigPilot.Config.RiderConfig as SCRC
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import Tools.Error

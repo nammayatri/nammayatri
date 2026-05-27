@@ -29,8 +29,8 @@ import Kernel.Types.Beckn.ReqTypes
 import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 
 data DStatusReq = DStatusReq
   { booking :: Booking,

@@ -21,12 +21,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking

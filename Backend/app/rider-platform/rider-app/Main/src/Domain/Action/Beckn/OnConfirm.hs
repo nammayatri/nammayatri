@@ -44,12 +44,12 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.SessionizerMetrics.Types.Event
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Person as QPerson

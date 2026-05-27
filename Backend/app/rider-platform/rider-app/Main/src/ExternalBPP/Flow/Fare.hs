@@ -16,10 +16,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Prelude as P
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c, HasMasterCloudForwarder r) => Id Person -> Id Merchant -> Id MerchantOperatingCity -> IntegratedBPPConfig -> CallAPI.FareRoute -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> [Spec.ServiceTierType] -> [DFRFSQuote.FRFSQuoteType] -> Bool -> Bool -> m (Bool, [FRFSFare])

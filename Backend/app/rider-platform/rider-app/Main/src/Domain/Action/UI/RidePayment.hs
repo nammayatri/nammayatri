@@ -32,6 +32,8 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -47,7 +49,7 @@ import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity

@@ -21,9 +21,9 @@ import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JWT hiding (ServiceAccount (..))
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import Tools.Error
 import Utils.Common.JWT.Config as C
 import qualified Utils.Common.JWT.Config as GW

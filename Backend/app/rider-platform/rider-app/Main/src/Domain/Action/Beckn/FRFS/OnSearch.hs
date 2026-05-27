@@ -48,6 +48,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
@@ -57,7 +58,6 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory

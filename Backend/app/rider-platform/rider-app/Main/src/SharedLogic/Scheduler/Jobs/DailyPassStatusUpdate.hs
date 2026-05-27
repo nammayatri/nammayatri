@@ -9,12 +9,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
 

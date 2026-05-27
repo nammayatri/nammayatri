@@ -94,6 +94,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyLeg.Taxi as JLT
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
@@ -107,7 +108,6 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person

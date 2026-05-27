@@ -112,12 +112,12 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Domain.Types.Account as FAccount
 import Lib.Payment.Domain.Types.PaymentOrder
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import System.Environment as SE
 
 -- RideBooking (BoothOnline / Kaali-Peeli): uses Paytm EDC from shared-kernel (PaytmEDCConfig).

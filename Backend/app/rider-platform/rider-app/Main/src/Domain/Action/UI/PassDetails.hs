@@ -56,12 +56,12 @@ import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Types.TryException (withTryCatch)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logInfo)
 import qualified Kernel.Utils.Common as Utils
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import qualified Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import qualified Storage.Queries.PassDetails as QPassDetails

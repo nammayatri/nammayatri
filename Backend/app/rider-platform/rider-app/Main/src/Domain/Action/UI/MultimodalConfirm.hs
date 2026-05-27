@@ -114,6 +114,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH
 import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
@@ -143,7 +144,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate

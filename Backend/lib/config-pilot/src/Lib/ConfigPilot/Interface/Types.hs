@@ -22,7 +22,7 @@
 -- 3. Add an instance of @ConfigTypeInfo@ for that config in the appropriate Config module.
 --
 -- Reuse an existing dimension type (e.g. CommonDimensions) by using it in step 3.
-module Storage.ConfigPilot.Interface.Types
+module Lib.ConfigPilot.Interface.Types
   ( -- * Type Classes
     ConfigTypeInfo (..),
     ConfigDimensions (..),

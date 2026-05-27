@@ -31,8 +31,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, MonadFlow, fromMaybeM)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Maps as Maps

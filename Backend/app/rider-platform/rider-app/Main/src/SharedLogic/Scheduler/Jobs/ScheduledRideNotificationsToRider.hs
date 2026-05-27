@@ -37,13 +37,13 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Person as QPerson

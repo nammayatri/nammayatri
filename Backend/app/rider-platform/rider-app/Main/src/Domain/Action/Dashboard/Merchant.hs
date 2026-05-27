@@ -106,6 +106,8 @@ import Kernel.Utils.Geometry (getGeomFromKML)
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
 import qualified Lib.GateInfo.Geometry as GGeom
+import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
@@ -139,8 +141,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQ
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Getter (invalidateConfigInMem)
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.BusinessHour as SQBH
 import qualified Storage.Queries.BusinessHourExtra as SQBHE

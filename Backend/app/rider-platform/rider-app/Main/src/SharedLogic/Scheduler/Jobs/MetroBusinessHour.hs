@@ -12,12 +12,12 @@ import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRCR
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 
 updateMetroBusinessHour ::
   ( EsqDBFlow m r,

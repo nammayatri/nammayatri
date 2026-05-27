@@ -10,11 +10,11 @@ import Kernel.External.Call.Types (CallService)
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import qualified Storage.CachedQueries.Exophone as CQExo
 import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 
 data ExophoneDimensions = ExophoneDimensions
   { merchantOperatingCityId :: Text,

@@ -13,9 +13,9 @@ import qualified Kernel.External.SOS.Types as SOS
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 
 -- | Request body for ERSS reauth — LTS sends this to get a fresh token.
 data ErssReauthReq = ErssReauthReq

@@ -12,12 +12,12 @@ import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.Transformers.MerchantServiceConfig as TRMSC
 import Tools.Error

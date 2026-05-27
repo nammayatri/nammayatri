@@ -67,6 +67,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id as ID
 import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
@@ -78,7 +79,6 @@ import qualified Storage.CachedQueries.Merchant as SMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
