@@ -18,9 +18,9 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Utils as JMU
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PopularLocation as QPopularLocation
 import qualified Storage.Queries.RecentLocation as QRecentLocation

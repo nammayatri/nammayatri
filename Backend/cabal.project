@@ -24,6 +24,7 @@ packages:
   lib/scheduler
   lib/sessionizer-metrics
   lib/yudhishthira
+  lib/config-pilot
   lib/finance-kernel
   lib/producer
   lib/utils

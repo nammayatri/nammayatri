@@ -76,6 +76,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.JSON (objectWithSingleFieldParsing)
 import qualified Kernel.Utils.Schema as S
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified SharedLogic.CallBPP as CallBPP
@@ -87,7 +88,6 @@ import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney

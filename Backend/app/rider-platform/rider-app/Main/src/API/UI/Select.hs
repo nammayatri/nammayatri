@@ -42,13 +42,13 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth

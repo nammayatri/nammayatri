@@ -13,9 +13,9 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import System.IO (hFileSize)
 import Tools.Error

@@ -11,12 +11,12 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified SharedLogic.Offer as SOffer
 import Storage.Beam.Payment ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
 

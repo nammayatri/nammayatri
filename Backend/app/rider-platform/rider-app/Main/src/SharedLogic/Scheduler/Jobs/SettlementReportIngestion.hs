@@ -33,6 +33,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Settlement.Ingestion (ingestPaymentSettlementReport)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Scheduler
@@ -41,7 +42,6 @@ import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getOneConfig)
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
 lockTTLSeconds :: Int

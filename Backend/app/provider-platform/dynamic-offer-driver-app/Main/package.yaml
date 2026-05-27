@@ -137,6 +137,7 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - config-pilot
   - behavior-tracker
   - behavior-engine
   - consequence-engine

@@ -38,6 +38,7 @@ import Kernel.Utils.Common (fork, fromMaybeM, generateGUID, getCurrentTime)
 import Kernel.Utils.Logging (logDebug, logInfo)
 import Kernel.Utils.Servant.Client (withShortRetry)
 import qualified Kernel.Utils.Time as KUT
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal
@@ -47,7 +48,6 @@ import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog

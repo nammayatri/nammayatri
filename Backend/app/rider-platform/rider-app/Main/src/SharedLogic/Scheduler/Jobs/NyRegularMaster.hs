@@ -9,6 +9,7 @@ import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Logging (logInfo)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
@@ -16,7 +17,6 @@ import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingH
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QCMOC
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.NyRegularSubscription as NyRegularSubscription
 import qualified Tools.Error as Tools
 

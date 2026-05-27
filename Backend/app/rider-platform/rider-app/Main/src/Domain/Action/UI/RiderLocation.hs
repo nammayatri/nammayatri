@@ -22,12 +22,12 @@ import qualified Kernel.Types.Id
 import Kernel.Types.Version (CloudType (..))
 import qualified Kernel.Utils.CalculateDistance
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 postIdentifyNearByBus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> API.Types.UI.RiderLocation.RiderLocationRequest -> Environment.Flow API.Types.UI.RiderLocation.RiderLocationResponse

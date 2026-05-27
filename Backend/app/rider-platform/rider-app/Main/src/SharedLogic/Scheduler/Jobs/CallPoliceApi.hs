@@ -29,13 +29,13 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Ride as QR
 import Tools.Error

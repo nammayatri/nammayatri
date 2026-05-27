@@ -1,13 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Storage.ConfigPilot.Config.CommonConfig
+module Lib.ConfigPilot.Config.CommonConfig
   ( CommonDimensions (..),
   )
 where
 
 import Kernel.Prelude
+import Lib.ConfigPilot.Interface.Types
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import Storage.ConfigPilot.Interface.Types
 
 -- | Shared dimension type for configs that use common dimensions.
 -- Every dimension record includes merchantOperatingCityId and merchantId for fetching configs.

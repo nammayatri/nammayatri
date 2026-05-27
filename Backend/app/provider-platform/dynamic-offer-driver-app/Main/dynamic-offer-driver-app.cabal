@@ -1823,6 +1823,7 @@ library
     , cassava
     , cereal
     , communication-engine
+    , config-pilot
     , consequence-engine
     , containers
     , cryptonite
@@ -1974,6 +1975,7 @@ executable dynamic-offer-driver-app-exe
     , cassava
     , cereal
     , communication-engine
+    , config-pilot
     , consequence-engine
     , containers
     , cryptonite

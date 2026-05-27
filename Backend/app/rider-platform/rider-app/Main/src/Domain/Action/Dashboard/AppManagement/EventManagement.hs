@@ -56,9 +56,9 @@ import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.DraftTicketChangeHistory as QDTCH
