@@ -16,6 +16,7 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import GHC.Generics (Generic)
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
 -- | Status of a document in the verification process
@@ -125,6 +126,15 @@ instance FromField DocStatusMap where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be DocStatusMap
 
 instance FromBackendRow Postgres DocStatusMap
+
+-- KV drainer serialization: without this overlapping instance, the generic
+-- `HasSqlValueSyntax B.Value a => ToSQLObject a` instance routes DocStatusMap
+-- through `valueToText (B.Value v) = show v`, producing the Haskell `Show`
+-- output of the Aeson Value (e.g. "Object (fromList [])") instead of JSON.
+-- That string then fails the DB INSERT with `invalid input syntax for type json`.
+-- Encode as JSON to match the canonical `ToSQLObject A.Value` pattern.
+instance {-# OVERLAPPING #-} ToSQLObject DocStatusMap where
+  convertToSQLObject = SQLObjectValue . T.pack . show . A.encode
 
 -- | Helper functions for working with DocStatusMap
 
