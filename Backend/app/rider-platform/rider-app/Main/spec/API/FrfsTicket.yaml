@@ -78,6 +78,7 @@ types:
     observingFailures: Maybe Bool
     serviceTierType: Maybe ServiceTierType
     routeCode: Maybe Text
+    serviceTierName: Maybe Text
 
     derive: "Show"
 

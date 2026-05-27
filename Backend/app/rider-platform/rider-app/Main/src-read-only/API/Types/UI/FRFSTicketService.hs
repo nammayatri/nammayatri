@@ -163,6 +163,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
+    serviceTierName :: Data.Maybe.Maybe Data.Text.Text,
     serviceTierType :: Data.Maybe.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stations :: [FRFSStationAPI],
     validTill :: Kernel.Prelude.UTCTime,

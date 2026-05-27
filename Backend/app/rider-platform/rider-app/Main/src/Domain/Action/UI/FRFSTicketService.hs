@@ -672,7 +672,9 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     ( \(quote, quoteCategories) -> do
         let decodedRouteStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
             mbFirstRouteStation = decodedRouteStations >>= listToMaybe
-            serviceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+            mbVehicleServiceTier = mbFirstRouteStation >>= (.vehicleServiceTier)
+            serviceTierType = mbVehicleServiceTier <&> (._type)
+            serviceTierName = mbVehicleServiceTier <&> (.shortName)
             routeCode = mbFirstRouteStation <&> (.code)
         let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
               if integratedBppConfig.platformType == DIBC.MULTIMODAL
