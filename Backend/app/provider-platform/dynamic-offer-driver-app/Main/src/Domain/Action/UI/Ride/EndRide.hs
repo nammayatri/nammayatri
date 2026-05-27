@@ -64,6 +64,7 @@ import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -723,7 +724,10 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         isValueAddNP <- CQVAN.isValueAddNP booking.bapId
         stopsInfo <- if fromMaybe False finalUpdatedRide.hasStops then QSI.findAllByRideId finalUpdatedRide.id else return []
         let goHomeReqId = finalUpdatedRide.driverGoHomeRequestId
-        Just <$> DUIRideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo Nothing
+        mbDriverPerson <- QP.findById finalUpdatedRide.driverId
+        let endRideLanguage = fromMaybe KET.ENGLISH (mbDriverPerson >>= (.language))
+        endRideLabels <- DUIRideCommon.fetchEarningsLabels endRideLanguage
+        Just <$> DUIRideCommon.mkDriverRideRes endRideLanguage (Just endRideLabels) rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo Nothing
 
   return $
     EndRideResp

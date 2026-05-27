@@ -551,6 +551,7 @@ library
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications

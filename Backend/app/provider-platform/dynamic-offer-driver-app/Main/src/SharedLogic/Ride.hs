@@ -22,6 +22,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DGetHomeRequest
 import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.DriverRidePayoutBankAccount as DDPBA
 import Domain.Types.EmptyDynamicParam
+import Domain.Types.FareParameters (FareParameters)
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DTMM
 import Domain.Types.Person
@@ -52,6 +53,7 @@ import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.Analytics as Analytics
+import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -69,6 +71,7 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverRidePayoutBankAccount as QDRPB
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRideD
@@ -219,6 +222,38 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
       rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
+
+recomputeRideFinancialsForFareUpdate ::
+  DBooking.Booking ->
+  DRide.Ride ->
+  Id FareParameters ->
+  HighPrecMoney -> -- new estimated fare (for the BAP comparison)
+  Flow ()
+recomputeRideFinancialsForFareUpdate booking ride newFareParamsId newEstimatedFare = do
+  newFareParams <- QFP.findById newFareParamsId >>= fromMaybeM (FareParametersNotFound newFareParamsId.getId)
+  mbFarePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
+  newCommission <- FC.calculateCommission newFareParams mbFarePolicy
+  let currentDiscount = ride.discountAmount
+  rawDiscountAmount <-
+    if isJust currentDiscount && newEstimatedFare /= booking.estimatedFare
+      then do
+        appBackendBapInternal <- asks (.appBackendBapInternal)
+        let reqBody =
+              CallBAPInternal.OfferDiscountReq
+                { fareAmount = Just newEstimatedFare,
+                  projectFareParamsBreakup = FC.projectFareParamsBreakup newFareParams
+                }
+        result <-
+          withTryCatch "getOfferDiscount:recomputeRideFinancialsForFareUpdate" $
+            CallBAPInternal.getOfferDiscount appBackendBapInternal.internalKey appBackendBapInternal.url booking.id.getId reqBody
+        case result of
+          Right resp -> pure resp.discountAmount
+          Left err -> do
+            logError $ "Error getting offer discount on fare update, falling back to current ride discount: " <> show err
+            pure currentDiscount
+      else pure currentDiscount
+  let newDiscount = FC.clampDiscountToDiscountable newFareParams rawDiscountAmount
+  QRide.updateCommissionAndDiscount newCommission newDiscount ride.id
 
 releaseLien ::
   ( MonadFlow m,

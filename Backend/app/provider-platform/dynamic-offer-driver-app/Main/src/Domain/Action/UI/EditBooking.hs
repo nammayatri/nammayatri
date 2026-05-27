@@ -78,6 +78,7 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
             Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
           let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
           QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+          recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq.fareParamsId bookingUpdateReq.estimatedFare
           CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
           void $ Redis.unlockRedis (editDestinationLockKey driverId)
           driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)

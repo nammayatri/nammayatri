@@ -146,7 +146,16 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   let shouldActivateRc = True
       skipMessages = False -- Need translations for API response
   res <- castStatusRes <$> SStatus.statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc onlyMandatoryDocs skipMessages
-  pure $ applyVehicleDocsFilter mbDocsVerificationStatusFilter res
+  -- When no filter is provided and enableManualDocumentStatusCheck is enabled,
+  -- default to ADMIN_APPROVED so only fully-approved vehicles are shown.
+  let effectiveFilter =
+        case mbDocsVerificationStatusFilter of
+          Just _ -> mbDocsVerificationStatusFilter
+          Nothing ->
+            if transporterConfig.enableManualDocumentStatusCheck == Just True
+              then Just Dashboard.Common.ADMIN_APPROVED
+              else Nothing
+  pure $ applyVehicleDocsFilter effectiveFilter res
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->

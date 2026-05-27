@@ -156,6 +156,7 @@ RIDE_COMBOS=(
   "09-OnlineRideUserCancellationWithDiscountOffer" # Online + Cancel   + Discount
   "10-CashRideUserCancellation"                    # Cash   + Cancel   + NoDiscount
   "11-CashRideUserCancellationWithDiscountOffer"   # Cash   + Cancel   + Discount
+  "12-EditDestinationWithDiscountRecompute"        # Online + EditDest + Discount (recompute verification)
 )
 
 for combo in "${RIDE_COMBOS[@]}"; do

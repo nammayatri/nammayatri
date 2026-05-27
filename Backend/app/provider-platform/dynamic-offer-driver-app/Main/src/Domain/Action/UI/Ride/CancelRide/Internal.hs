@@ -66,7 +66,7 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
-import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transfer_)
+import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -614,7 +614,7 @@ createCancellationLedgerEntries booking ride fee gstOnCancellation transporterCo
               Just pct -> HighPrecMoney (cancelInclusive.getHighPrecMoney * (toRational pct / 100))
               Nothing -> 0
         when (cancelServiceVatAmount > 0) $
-          void $ transfer GovtIndirect OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
+          void $ transferWithoutAttribution GovtIndirect OwnerLiability cancelServiceVatAmount walletReferenceCancellationVATInput
         invoice
           InvoiceConfig
             { invoiceType = RideCancellation,

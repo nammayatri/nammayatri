@@ -1702,7 +1702,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
               currentTripTransaction <- WMB.findNextActiveTripTransaction fleetOwnerId driver.id
               case currentTripTransaction of
                 Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
-                Nothing -> return (False, False, Nothing)
+                Nothing -> return (False, True, Nothing)
             else return (False, False, Nothing)
         let isRcAssociated = isJust vehicleNo
             isDriverActive = fda.isActive
@@ -1742,6 +1742,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                   vehicleDocsVerificationStatus = vehicleDocsVerificationStatus,
                   associatedOn = fda.associatedOn,
                   createdAt = Just fda.createdAt,
+                  updatedAt = Just fda.updatedAt,
                   upcomingRouteCode = routeCode,
                   verificationDocsStatus =
                     Just
@@ -1987,6 +1988,7 @@ getDriverFleetVehicleAssociation merchantShortId opCity mbLimit mbOffset mbVehic
                   responseReason = Nothing,
                   associatedOn = mbAssociatedOn,
                   createdAt = Just vrc.createdAt,
+                  updatedAt = Just vrc.updatedAt,
                   selectedServiceTiers = selectedServiceTiers,
                   enabled = enabled,
                   driverId = driverId,
@@ -2311,7 +2313,7 @@ getFleetDriverInfo fleetOwnerId driverId isDriver = do
           then do
             case currentTripTransaction of
               Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
-              Nothing -> return (False, False, Nothing)
+              Nothing -> return (False, True, Nothing)
           else return (False, False, Nothing)
       mobileNumber <- mapM decrypt driver.mobileNumber
       return (Just driver.firstName, driver.lastName, Just driver.id.getId, mobileNumber, mode, Just isDriverOnPickup, Just isDriverOnRide, routeCode, Just driverInfo'.enabled, driverInfo'.docsVerificationStatus)
