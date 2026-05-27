@@ -48,6 +48,7 @@ Vehicle:
     downgradeReason: Maybe Text
     oxygen: Maybe Bool
     ventilator: Maybe Bool
+    enableForAirport: Maybe Bool
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double

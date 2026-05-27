@@ -60,6 +60,7 @@ mkPersist
       pickupZoneArrivalTimeoutInSec Int Maybe
       pickupRequestResponseTimeoutInSec Int Maybe
       notificationActiveTillInSec Int Maybe
+      filterAirportJson Text Maybe
       Primary id
       deriving Generic
     |]
@@ -74,9 +75,13 @@ instance ToTType GateInfoGeomT Domain.GateInfo where
         minDriverThresholdsJson = encodeThresholdMap minDriverThresholds,
         maxDriverThresholdsJson = encodeThresholdMap maxDriverThresholds,
         demandThresholdsJson = encodeThresholdMap demandThresholds,
+        filterAirportJson = encodeBoolMap enableQueueFilter,
         ..
       }
 
 -- | Encode a per-variant threshold map back to JSON text for storage.
 encodeThresholdMap :: Maybe (Map.Map Text Int) -> Maybe Text
 encodeThresholdMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
+
+encodeBoolMap :: Maybe (Map.Map Text Bool) -> Maybe Text
+encodeBoolMap = fmap (TE.decodeUtf8 . BL.toStrict . A.encode)
