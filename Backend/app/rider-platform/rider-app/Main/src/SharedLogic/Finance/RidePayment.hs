@@ -601,9 +601,8 @@ getWalletAccountByOwner ::
   CounterpartyType ->
   Text ->
   m (Maybe Account)
-getWalletAccountByOwner counterpartyType ownerId = do
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ List.find (\acc -> acc.accountType == Liability) accounts
+getWalletAccountByOwner counterpartyType ownerId =
+  findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Liability
 
 getWalletBalanceByOwner ::
   (BeamFlow.BeamFlow m r) =>

@@ -22,13 +22,16 @@ create = createWithKV
 createMany :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => ([Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction] -> m ())
 createMany = traverse_ create
 
-findByCounterparty :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction]))
-findByCounterparty counterpartyId = do findAllWithKV [Se.Is Beam.counterpartyId $ Se.Eq counterpartyId]
-
 findById ::
   (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) =>
   (Kernel.Types.Id.Id Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction -> m (Maybe Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByInvoiceNumber :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction]))
+findByInvoiceNumber invoiceNumber = do findAllWithKV [Se.Is Beam.invoiceNumber $ Se.Eq invoiceNumber]
+
+findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction]))
+findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
 findByTransactionDate :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.UTCTime -> m ([Lib.Finance.Domain.Types.IndirectTaxTransaction.IndirectTaxTransaction]))
 findByTransactionDate transactionDate = do findAllWithKV [Se.Is Beam.transactionDate $ Se.Eq transactionDate]

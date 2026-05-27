@@ -55,13 +55,17 @@ DirectTaxTransaction:
       kvFunction: findOneWithKV
       where: id
 
-    findByCounterparty:
-      kvFunction: findAllWithKV
-      where: counterpartyId
-
     findByTransactionDate:
       kvFunction: findAllWithKV
       where: transactionDate
+
+    findByReferenceId:
+      kvFunction: findAllWithKV
+      where: referenceId
+
+    findByInvoiceNumber:
+      kvFunction: findAllWithKV
+      where: invoiceNumber
 
   defaultQueryTypeConstraint: "(Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema

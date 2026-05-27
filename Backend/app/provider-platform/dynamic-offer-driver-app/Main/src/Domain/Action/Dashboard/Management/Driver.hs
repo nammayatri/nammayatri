@@ -333,9 +333,8 @@ buildDriverListItem (person, driverInformation, mbVehicle) = do
 
 ---------------------------------------------------------------------
 getDriverActivity :: ShortId DM.Merchant -> Context.City -> Flow Common.DriverActivityRes
-getDriverActivity merchantShortId _ = do
-  merchant <- findMerchantByShortId merchantShortId
-  Common.mkDriverActivityRes <$> B.runInReplica (QDriverInfo.countDrivers merchant.id)
+getDriverActivity _merchantShortId _ = do
+  return $ Common.mkDriverActivityRes (0, 0) -- TODO: Remove this API usage from UI
 
 ---------------------------------------------------------------------
 postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow APISuccess

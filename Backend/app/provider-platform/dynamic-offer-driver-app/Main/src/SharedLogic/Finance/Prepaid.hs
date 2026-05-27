@@ -122,12 +122,10 @@ getPrepaidAccountByOwner ::
   m (Maybe Account)
 getPrepaidAccountByOwner counterpartyType ownerId mbVehicleCategory = do
   let subLedger = prepaidSubLedger mbVehicleCategory
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $
-    case subLedger of
-      -- Pooled wallet (mbVehicleCategory = Nothing): one RideCredit row per owner today.
-      Nothing -> listToMaybe accounts
-      Just _ -> find (\acc -> acc.subLedger == subLedger) accounts
+  case subLedger of
+    -- Pooled wallet (mbVehicleCategory = Nothing): one RideCredit row per owner today.
+    Nothing -> findAccountsByCounterparty (Just counterpartyType) (Just ownerId) RideCredit
+    Just _ -> findAccountByCounterpartyAndType (Just counterpartyType) (Just ownerId) RideCredit subLedger
 
 getPrepaidBalanceByOwner ::
   (BeamFlow m r) =>

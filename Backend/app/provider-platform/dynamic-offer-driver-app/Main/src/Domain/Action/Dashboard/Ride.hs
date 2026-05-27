@@ -72,8 +72,8 @@ import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction ()
 import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as FinanceIndirectTax
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import qualified Lib.Finance.Storage.Queries.DirectTaxTransactionExtra as QDirectTax
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.DirectTaxTransaction as QDirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF

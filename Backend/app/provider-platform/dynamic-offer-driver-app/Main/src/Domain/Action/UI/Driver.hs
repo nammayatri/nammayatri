@@ -1231,7 +1231,6 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
                   else (False, Nothing, Nothing)
               _ -> (False, Nothing, Nothing)
           _ -> (False, Nothing, Nothing)
-  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
       vehicleCategoryScopedPrepaidEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
       mbSubLedger =
@@ -1241,7 +1240,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
   subsCreditBalance <-
     if isPrepaidSubscriptionAndWalletEnabled
       then do
-        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency mbSubLedger
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just person.id.getId) FAccountTypes.RideCredit mbSubLedger
         return $ (.balance) <$> mbRideCreditAccount
       else return Nothing
   return $
@@ -1644,7 +1643,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   (subsCreditBalance, panDec, panAadhaarLinkedFlag', gstinApplicableFlag', mbWalletAccount, bankAccountNumber', bankIfsc', bankVerificationStatus') <-
     if isPrepaidSubscriptionAndWalletEnabled
       then do
-        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit merchantOperatingCity.currency mbSubLedger
+        mbRideCreditAccount <- FAccount.findAccountByCounterpartyAndType (Just FAccountTypes.DRIVER) (Just id.getId) FAccountTypes.RideCredit mbSubLedger
         mbPanCard <- QPanCard.findByDriverId id
         panDec' <- traverse (decrypt . (.panCardNumber)) mbPanCard
         mbGstin <- QDGExtra.findGSTInByDriverId id

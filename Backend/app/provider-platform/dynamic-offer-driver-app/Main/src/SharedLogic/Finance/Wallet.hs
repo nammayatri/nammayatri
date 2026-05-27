@@ -333,9 +333,8 @@ getWalletAccountByOwner ::
   CounterpartyType ->
   Text -> -- Owner ID
   m (Maybe Account)
-getWalletAccountByOwner counterpartyType ownerId = do
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ find (\acc -> acc.accountType == Liability) accounts
+getWalletAccountByOwner counterpartyType ownerId =
+  findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Liability
 
 -- | Returns the driver's Control (cash-earnings memo) account, if any. Distinct
 --   from the Liability wallet account — Control tracks cumulative cash ride
@@ -346,9 +345,8 @@ getControlAccountByOwner ::
   CounterpartyType ->
   Text -> -- Owner ID
   m (Maybe Account)
-getControlAccountByOwner counterpartyType ownerId = do
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure $ find (\acc -> acc.accountType == Control) accounts
+getControlAccountByOwner counterpartyType ownerId =
+  findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Control
 
 -- | Fetch both Liability (real wallet) and Control (cash-earnings memo)
 --   accounts for an owner. Used by the driver wallet transactions feed which
@@ -359,11 +357,9 @@ getWalletAndControlAccountsByOwner ::
   Text ->
   m (Maybe Account, Maybe Account)
 getWalletAndControlAccountsByOwner counterpartyType ownerId = do
-  accounts <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId)
-  pure
-    ( find (\acc -> acc.accountType == Liability) accounts,
-      find (\acc -> acc.accountType == Control) accounts
-    )
+  mbLiability <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Liability
+  mbControl <- findAccountsByCounterparty (Just counterpartyType) (Just ownerId) Control
+  pure (mbLiability, mbControl)
 
 getWalletBalanceByOwner ::
   (BeamFlow m r) =>

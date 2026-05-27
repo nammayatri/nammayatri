@@ -15,7 +15,7 @@ import Lib.Finance.Domain.Types.Invoice (InvoiceStatus (..))
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.PdfService
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
@@ -93,7 +93,7 @@ getFinanceInvoicePdf (mbPersonId, _) mbFrom mbInvoiceId mbInvoiceType mbLimit mb
   results <- forM invoices $ \inv -> do
     res <- withTryCatch ("renderInvoice:" <> inv.invoiceNumber) $ do
       let items = parseLineItems inv.lineItems
-      taxTxns <- QIndirectTaxExtra.findByInvoiceNumber inv.invoiceNumber
+      taxTxns <- QIndirectTaxExtra.findByInvoiceNumber (Just inv.invoiceNumber)
       let mbTaxTxn = Kernel.Prelude.listToMaybe taxTxns
       (mbPayType, mbBrand, mbLast4) <- case inv.paymentOrderId of
         Just orderId -> do

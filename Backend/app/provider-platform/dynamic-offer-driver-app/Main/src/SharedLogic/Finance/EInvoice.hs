@@ -28,7 +28,7 @@ import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as IndirectTax
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import Lib.Finance.Invoice.Interface (InvoiceLineItem, LineItemDescription (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
-import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTax
+import qualified Lib.Finance.Storage.Queries.IndirectTaxTransaction as QIndirectTax
 import qualified Lib.Finance.Storage.Queries.Invoice as QFInvoice
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.Queries.DriverGstin as QDriverGstin
@@ -97,7 +97,7 @@ generateEInvoiceForInvoice invoice = do
                 "GSTEInvoice: auth token obtained, tokenLength="
                   <> show (T.length authToken)
                   <> ctx
-              mbIndirectTax <- listToMaybe <$> QIndirectTax.findByInvoiceNumber invoice.invoiceNumber
+              mbIndirectTax <- listToMaybe <$> QIndirectTax.findByInvoiceNumber (Just invoice.invoiceNumber)
               logInfo $
                 "GSTEInvoice: indirect-tax lookup result hasRecord="
                   <> show (isJust mbIndirectTax)
