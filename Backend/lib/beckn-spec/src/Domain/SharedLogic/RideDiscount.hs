@@ -16,12 +16,10 @@
 --   is zero and the cancellation pair carries the full amount.
 --
 --   The customer offer discount applies only to the discount-applicable ride
---   pair. We recompute VAT by applying the original tax multiplier
---     m = (taxExcl + tax) / taxExcl
---   to the post-discount taxable base (= taxExcl * ratio), which is
---   mathematically identical to ratio-scaling each component — the
---   multiplier phrasing is used here because it reads as "recompute VAT
---   over the post-discount fare" at the call site.
+--   pair. We back-calculate VAT from the post-discount tax-inclusive amount by
+--   scaling each component (taxExcl, tax) by ratio = basePostDiscount / base.
+--   This correctly handles the tax-inclusive base: solving x + rate*x = basePostDiscount
+--   gives x = basePostDiscount / (1 + rate), which is equivalent to taxExcl * ratio.
 --
 --   Non-discountable ride and toll are carried through untouched.
 module Domain.SharedLogic.RideDiscount
@@ -112,12 +110,15 @@ clampDiscount b raw = max 0 (min raw (discountApplicableBase b))
 --   recompute ride VAT over the post-discount inclusive amount.
 --
 --   Algorithm:
---     base        = discountApplicableRideFareTaxExclusive + discountApplicableRideFareTax
+--     base             = discountApplicableRideFareTaxExclusive + discountApplicableRideFareTax
 --     basePostDiscount = base − clampedDiscount
---     multiplier  = preTax / preExcl      -- pre-discount tax-on-base multiplier
---     postTax     = basePostDiscount × multiplier
---     postExcl    = basePostDiscount − postTax
---     absorbedVat = preTax − postTax      -- VAT lost to the discount (platform covers)
+--     ratio            = basePostDiscount / base
+--     postExcl         = taxExclPreDiscount × ratio   -- back-calculate from tax-inclusive total
+--     postTax          = taxPreDiscount × ratio
+--     absorbedVat      = preTax − postTax             -- VAT lost to the discount (platform covers)
+--
+--   Both components scale by the same ratio because basePostDiscount is tax-inclusive.
+--   Equivalently: postExcl = basePostDiscount / (1 + taxRate), postTax = basePostDiscount − postExcl.
 --
 --   Invariant: postExcl + postTax = basePostDiscount = base − clampedDiscount.
 --   absorbedVat is a separate platform expense, not part of the fare partition.
@@ -139,9 +140,8 @@ applyRideDiscount b rawDiscount
     taxPreDiscount = b.discountApplicableRideFareTax
     basePostDiscount = base - clamped
     ratio = toRational basePostDiscount / toRational base
-    multiplier = if taxExclPreDiscount > 0 then toRational taxPreDiscount / toRational taxExclPreDiscount else 0
-    postTax = fromRational (toRational basePostDiscount * multiplier)
-    postExcl = basePostDiscount - postTax
+    postTax = fromRational (toRational taxPreDiscount * ratio)
+    postExcl = fromRational (toRational taxExclPreDiscount * ratio)
     noOpResult =
       RideDiscountResult
         { postDiscountApplicableTaxExclusive = taxExclPreDiscount,
