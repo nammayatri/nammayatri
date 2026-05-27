@@ -59,6 +59,8 @@ let dontEnableForDb = [] : List Text
 
 let dontEnableForKafka = [] : List Text
 
+let jsonRepairModels = [ "DigilockerVerification" ] : List Text
+
 let kafkaProperties =
         [ { propName = "queue.buffering.max.messages", propValue = "5000" }
         , { propName = "message.max.bytes", propValue = "1000000" }
@@ -78,4 +80,5 @@ in  { esqDBCfg
     , dontEnableForDb
     , dontEnableForKafka
     , kafkaProperties
+    , jsonRepairModels
     }
