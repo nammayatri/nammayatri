@@ -42,7 +42,7 @@ findBySenderIdWithLimitOffset senderId mbStatus mbDomain mbLimit mbOffset = do
     (Just limitVal)
     (Just offsetVal)
 
-findBySenderIdWithSearchAndLimitOffset ::
+findBySenderIdWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Maybe Domain.Types.Communication.CommunicationStatus ->
@@ -50,8 +50,9 @@ findBySenderIdWithSearchAndLimitOffset ::
   Maybe Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Domain.Types.Communication.ChannelType ->
   m [Domain.Types.Communication.Communication]
-findBySenderIdWithSearchAndLimitOffset senderId mbStatus mbDomain mbSearchString mbLimit mbOffset = do
+findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOffset mbChannel = do
   let limitVal = fromIntegral $ min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
@@ -76,6 +77,14 @@ findBySenderIdWithSearchAndLimitOffset senderId mbStatus mbDomain mbSearchString
                                     B.||?. B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [comm.senderDisplayName] (B.val_ ""))) q)
                           )
                           mbSearchString
+                        B.&&?. maybe
+                          (B.sqlBool_ $ B.val_ True)
+                          ( \ch ->
+                              let channelStr = show ch
+                                  sqlExpr = "COALESCE(channels::text, '[]') LIKE '%" <> "\"" <> channelStr <> "\"" <> "%'"
+                               in B.sqlBool_ (B.customExpr_ sqlExpr)
+                          )
+                          mbChannel
                   )
                   $ B.all_ (BeamCommon.communication BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] res)
