@@ -62,7 +62,7 @@ mkPersist
       pickupZoneArrivalTimeoutInSec Int Maybe
       pickupRequestResponseTimeoutInSec Int Maybe
       notificationActiveTillInSec Int Maybe
-      filterAirportJson Text Maybe
+      enableQueueFilter Text Maybe
       Primary id
       deriving Generic
     |]
@@ -84,7 +84,7 @@ instance FromTType GateInfoT Domain.GateInfo where
           minDriverThresholds = decodeThresholdMap minDriverThresholdsJson,
           maxDriverThresholds = decodeThresholdMap maxDriverThresholdsJson,
           demandThresholds = decodeThresholdMap demandThresholdsJson,
-          enableQueueFilter = decodeBoolMap filterAirportJson,
+          enableQueueFilter = decodeBoolMap enableQueueFilter,
           ..
         }
 
