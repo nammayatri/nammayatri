@@ -55,8 +55,9 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle-local"
+            echo "Cache key changed, busting dist-newstyle-local and cabal store"
             rm -rf "$CACHE_ROOT/dist-newstyle-local"
+            rm -rf "$CACHE_ROOT/.cabal-dir"
           fi
 
           mkdir -p "$CACHE_ROOT/dist-newstyle-local" "$CACHE_ROOT/.cabal-dir"
@@ -192,8 +193,9 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle-prod"
+            echo "Cache key changed, busting dist-newstyle-prod and cabal store"
             rm -rf "$CACHE_ROOT/dist-newstyle-prod"
+            rm -rf "$CACHE_ROOT/.cabal-dir"
           fi
 
           mkdir -p "$CACHE_ROOT/dist-newstyle-prod" "$CACHE_ROOT/.cabal-dir"
