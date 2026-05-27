@@ -15,7 +15,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import qualified Lib.GtfsDataServer.Types as NandiTypes
-import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getBaseUrl)
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Text.Hex as Hex
@@ -49,7 +49,7 @@ getGimsConfig merchantShortId opCity = do
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   integratedBPPConfig <- findIntegratedBPPConfig Nothing merchantOpCity.id "BUS" DIBC.APPLICATION
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
   return (baseUrl, integratedBPPConfig.feedKey)
 
 registerConductor :: BaseUrl -> Text -> Common.ConductorRegisterReq -> Flow Common.ConductorRegisterResp

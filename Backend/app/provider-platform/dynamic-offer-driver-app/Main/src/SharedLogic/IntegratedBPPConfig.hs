@@ -4,7 +4,7 @@ module SharedLogic.IntegratedBPPConfig
     findFirstIbppConfigByCityAndVehicle,
     findAllIntegratedBPPConfig,
     findAllIntegratedBPPConfigAcrossCities,
-    getGimsBaseUrl,
+    getBaseUrl,
   )
 where
 
@@ -75,7 +75,7 @@ findAllIntegratedBPPConfigAcrossCities ::
 findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType =
   QIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) (Just vehicleCategory) platformType
 
-getGimsBaseUrl :: (MonadFlow m) => IntegratedBPPConfig -> m BaseUrl
-getGimsBaseUrl cfg = case cfg.providerConfig of
-  DIRECT directCfg -> directCfg.baseUrl & fromMaybeM (InvalidRequest "GIMS baseUrl not configured in IntegratedBPPConfig")
-  ONDC _ -> throwError $ InvalidRequest "GIMS requires DIRECT provider config"
+getBaseUrl :: (MonadFlow m) => IntegratedBPPConfig -> m BaseUrl
+getBaseUrl cfg = case cfg.providerConfig of
+  DIRECT directCfg -> directCfg.baseUrl & fromMaybeM (InvalidRequest "baseUrl not configured in IntegratedBPPConfig")
+  ONDC _ -> throwError $ InvalidRequest "Base URL is not applicable for ONDC provider config in IntegratedBPPConfig"

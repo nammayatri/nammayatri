@@ -13,7 +13,7 @@ import Kernel.Utils.Common
 import qualified Lib.GtfsDataServer.Domain.Types.RouteStopMapping as RSM
 import qualified Lib.GtfsDataServer.Flow as Flow
 import Lib.GtfsDataServer.Types
-import SharedLogic.IntegratedBPPConfig (getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (getBaseUrl)
 
 -- Route Queries
 
@@ -23,7 +23,7 @@ getRouteByRouteId ::
   Text ->
   m (Maybe RouteInfoNandi)
 getRouteByRouteId integratedBPPConfig routeId = IM.withInMemCache ["RouteByRouteId", integratedBPPConfig.id.getId, routeId] 43200 $ do
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
   route <- Flow.getRouteByRouteId baseUrl (integratedBPPConfig.feedKey) routeId
   case route of
     Just route' -> pure $ Just route'
@@ -37,7 +37,7 @@ getRouteStopMappingByRouteCode ::
   IntegratedBPPConfig ->
   m [RSM.RouteStopMapping]
 getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache ["RSM", routeCode, integratedBPPConfig.id.getId] 3600 $ do
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
   routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl (integratedBPPConfig.feedKey) (Just routeCode) Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
   routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig (integratedBPPConfig.merchantId) (integratedBPPConfig.merchantOperatingCityId)
@@ -50,7 +50,7 @@ getExampleTrip ::
   Text ->
   m (Maybe TripDetails)
 getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", integratedBPPConfig.id.getId, routeId] 1800 $ do
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
   Flow.getExampleTrip baseUrl (integratedBPPConfig.feedKey) routeId
 
 -- Parse Functions

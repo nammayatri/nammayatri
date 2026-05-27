@@ -84,7 +84,7 @@ import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
-import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, getBaseUrl)
 import qualified SharedLogic.OTP as SOTP
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
@@ -212,7 +212,7 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
       integratedBPPConfig <- findFirstIbppConfigByCityAndVehicle merchantOpCityId (show BUS)
-      baseUrl <- getGimsBaseUrl integratedBPPConfig
+      baseUrl <- getBaseUrl integratedBPPConfig
       let gtfsId = integratedBPPConfig.feedKey
       emailDbHash <- getDbHash email
       passwordDbHash <- getDbHash password
