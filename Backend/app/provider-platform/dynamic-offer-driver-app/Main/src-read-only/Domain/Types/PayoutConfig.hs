@@ -17,6 +17,7 @@ data PayoutConfig = PayoutConfig
   { batchLimit :: Kernel.Prelude.Int,
     coinRedemptionMinimumLimit :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     d2dPayoutType :: Domain.Types.PayoutConfig.D2DPayoutTypeEnum,
+    enableReferrals :: Kernel.Prelude.Bool,
     expand :: Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand,
     isAutoRefundEnabled :: Kernel.Prelude.Bool,
     isPayoutEnabled :: Kernel.Prelude.Bool,
