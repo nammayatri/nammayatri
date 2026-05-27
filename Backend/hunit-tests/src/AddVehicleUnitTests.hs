@@ -117,14 +117,18 @@ createTestVehicleRequest =
       Common.airConditioned = Just True,
       Common.driverName = Just "John Doe",
       Common.imageId = Just (Kernel.Types.Id.Id "image-123"),
+      Common.imageId2 = Nothing,
       Common.vehicleCategory = Nothing,
       Common.oxygen = Just False,
       Common.ventilator = Just False,
+      Common.enableForAirport = Nothing,
       Common.dateOfRegistration = Just (UTCTime (fromGregorian 2023 1 1) 0),
       Common.mYManufacturing = Just (fromGregorian 2023 1 1),
       Common.vehicleModelYear = Just 2023,
       Common.vehicleTags = Just ["Premium", "AC"],
-      Common.fuelType = Just "Petrol"
+      Common.fuelType = Just "Petrol",
+      Common.skipFleetChecks = Nothing,
+      Common.udinNumber = Nothing
     }
 
 -- | Generate a test vehicle request with custom parameters
@@ -141,14 +145,18 @@ createCustomVehicleRequest regNo vehicleClass capacity colour energyType model m
       Common.airConditioned = airConditioned,
       Common.driverName = driverName,
       Common.imageId = Just (Kernel.Types.Id.Id "image-123"),
+      Common.imageId2 = Nothing,
       Common.vehicleCategory = Nothing,
       Common.oxygen = oxygen,
       Common.ventilator = Just False,
+      Common.enableForAirport = Nothing,
       Common.dateOfRegistration = Just (UTCTime (fromGregorian 2023 1 1) 0),
       Common.mYManufacturing = Just (fromGregorian 2023 1 1),
       Common.vehicleModelYear = Just 2023,
       Common.vehicleTags = Just ["Premium", "AC"],
-      Common.fuelType = Just "Petrol"
+      Common.fuelType = Just "Petrol",
+      Common.skipFleetChecks = Nothing,
+      Common.udinNumber = Nothing
     }
 
 -- | Generate standard test API token info
