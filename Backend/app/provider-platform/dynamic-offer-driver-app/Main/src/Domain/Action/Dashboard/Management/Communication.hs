@@ -174,23 +174,24 @@ getCommunicationList ::
   Maybe Int ->
   Kernel.Types.Id.Id Dashboard.Common.Person ->
   Environment.Flow CommAPI.CommunicationListResponse
-getCommunicationList merchantShortId _opCity mbListType _mbChannel mbDomain mbSearch mbLimit mbOffset personId = do
+getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSearch mbLimit mbOffset personId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let listType = fromMaybe CommAPI.LIST_SENT mbListType
   let senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
       recipientId = senderId
+      domainChannel = toDomainChannel <$> mbChannel
   case listType of
     CommAPI.LIST_SENT -> do
       let domainFilter = toDomainDomain <$> mbDomain
-      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset
+      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset domainChannel
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_DRAFT -> do
-      comms <- QComm.findBySenderIdWithSearchAndLimitOffset senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset
+      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset domainChannel
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_RECEIVED -> do
-      deliveries <- QDelivery.findByRecipientIdAndWebChannel recipientId mbLimit mbOffset
+      deliveries <- QDelivery.findByRecipientIdWithChannel recipientId domainChannel mbLimit mbOffset
       items <- mapM mkReceivedListItem deliveries
       let filtered = maybe items (\s -> filter (\item -> commMatchesSearch item.title item.body item.senderName s) items) mbSearch
       return $ CommAPI.CommunicationListResponse {communications = filtered, summary = Dashboard.Common.Summary {totalCount = length filtered, count = length filtered}}

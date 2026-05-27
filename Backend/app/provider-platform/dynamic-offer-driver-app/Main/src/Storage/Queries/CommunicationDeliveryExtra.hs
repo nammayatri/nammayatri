@@ -16,24 +16,33 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.CommunicationDelivery as Beam
 import Storage.Queries.OrphanInstances.CommunicationDelivery
 
-findByRecipientIdAndWebChannel ::
+findByRecipientIdWithChannel ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Maybe Domain.Types.Communication.ChannelType ->
   Maybe Int ->
   Maybe Int ->
   m [Domain.Types.CommunicationDelivery.CommunicationDelivery]
-findByRecipientIdAndWebChannel recipientId mbLimit mbOffset = do
+findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset = do
   let limitVal = min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromMaybe 0 mbOffset
-  findAllWithOptionsKV
-    [ Se.And
-        [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
-          Se.Is Beam.channel $ Se.Eq Domain.Types.Communication.CH_WEB
+  case mbChannel of
+    Nothing ->
+      findAllWithOptionsKV
+        [Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId)]
+        (Se.Desc Beam.createdAt)
+        (Just limitVal)
+        (Just offsetVal)
+    Just channel ->
+      findAllWithOptionsKV
+        [ Se.And
+            [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
+              Se.Is Beam.channel $ Se.Eq channel
+            ]
         ]
-    ]
-    (Se.Desc Beam.createdAt)
-    (Just limitVal)
-    (Just offsetVal)
+        (Se.Desc Beam.createdAt)
+        (Just limitVal)
+        (Just offsetVal)
 
 findByCommunicationIdWithFilters ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
