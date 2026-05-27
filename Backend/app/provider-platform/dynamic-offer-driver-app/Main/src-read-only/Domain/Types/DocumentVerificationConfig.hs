@@ -118,6 +118,8 @@ data FieldInfo = FieldInfo {_type :: Domain.Types.DocumentVerificationConfig.Fie
 
 data FieldType = FieldText | FieldInt | FieldDouble deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data SupportedFileExtension = JPG | JPEG | PNG | PDF | WEBP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data SupportedVehicleClasses
   = DLValidClasses [Kernel.Prelude.Text]
   | RCValidClasses [Domain.Types.DocumentVerificationConfig.VehicleClassVariantMap]
@@ -147,6 +149,8 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentFlowGrouping)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FieldType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedFileExtension)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SupportedVehicleClasses)
 

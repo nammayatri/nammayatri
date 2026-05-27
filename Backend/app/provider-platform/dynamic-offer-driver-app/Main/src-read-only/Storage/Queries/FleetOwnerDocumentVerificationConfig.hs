@@ -25,12 +25,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findAllByMerchantOpCityIdAndRole ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityIdAndRole merchantOperatingCityId role = do
   findAllWithKV
     [ Se.And
@@ -62,6 +62,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.disableWarning disableWarning,
       Se.Set Beam.doStrictVerifcation doStrictVerifcation,
       Se.Set Beam.documentCategory documentCategory,
+      Se.Set Beam.isApprovalSupported isApprovalSupported,
       Se.Set Beam.isDefaultEnabledOnManualVerification isDefaultEnabledOnManualVerification,
       Se.Set Beam.isDisabled isDisabled,
       Se.Set Beam.isHidden isHidden,
@@ -70,6 +71,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.order order,
+      Se.Set Beam.supportedFileExtensions supportedFileExtensions,
       Se.Set Beam.title title,
       Se.Set Beam.updatedAt _now
     ]
@@ -93,6 +95,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             doStrictVerifcation = doStrictVerifcation,
             documentCategory = documentCategory,
             documentType = documentType,
+            isApprovalSupported = isApprovalSupported,
             isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
             isDisabled = isDisabled,
             isHidden = isHidden,
@@ -103,6 +106,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             order = order,
             role = role,
+            supportedFileExtensions = supportedFileExtensions,
             title = title,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -119,6 +123,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.doStrictVerifcation = doStrictVerifcation,
         Beam.documentCategory = documentCategory,
         Beam.documentType = documentType,
+        Beam.isApprovalSupported = isApprovalSupported,
         Beam.isDefaultEnabledOnManualVerification = isDefaultEnabledOnManualVerification,
         Beam.isDisabled = isDisabled,
         Beam.isHidden = isHidden,
@@ -129,6 +134,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.order = order,
         Beam.role = role,
+        Beam.supportedFileExtensions = supportedFileExtensions,
         Beam.title = title,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
