@@ -83,3 +83,14 @@ BEGIN
           AND ma.operating_city::text = c.city
     );
 END $$;
+
+-- FLEET role: allow respond-only for admin-request maker/checker flow in local IT
+-- (create/list stay JUSPAY_ADMIN-only per Local_API_AppManagement_AdminRequest.sql)
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type)
+VALUES (
+    atlas_bpp_dashboard.uuid_generate_v4(),
+    'e5a69a26-d165-455a-a711-33a41e0d4812',
+    'DSL',
+    'USER_FULL_ACCESS',
+    'PROVIDER_APP_MANAGEMENT/ADMIN_REQUEST/POST_ADMIN_REQUEST_RESPOND'
+) ON CONFLICT DO NOTHING;
