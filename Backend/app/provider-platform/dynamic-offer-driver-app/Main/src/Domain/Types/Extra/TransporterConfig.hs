@@ -7,13 +7,14 @@ import Data.Aeson.Types
 import Data.ByteString (ByteString)
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
 import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import GHC.Generics (Generic)
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import Prelude
 
 data AppletKey = SosAppletID | RentalAppletID | FleetAppletID deriving (Show, Read, Eq, Ord, Generic)
@@ -70,6 +71,9 @@ instance FromField ExotelMapping where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be ExotelMapping
 
 instance FromBackendRow Postgres ExotelMapping
+
+instance {-# OVERLAPPING #-} ToSQLObject ExotelMapping where
+  convertToSQLObject = SQLObjectValue . pack . show . encode
 
 instance ToJSON ExotelMapping where
   toJSON = \case ExotelMapping m -> object ["exotelMap" .= m]

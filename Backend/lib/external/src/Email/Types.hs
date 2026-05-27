@@ -29,6 +29,7 @@ import Database.PostgreSQL.Simple.FromField (FromField (fromField))
 import qualified Database.PostgreSQL.Simple.FromField as DPSF
 import Kernel.Prelude
 import Kernel.Utils.Dhall (FromDhall)
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 
 data EmailServiceConfig = EmailServiceConfig
   { sendGridUrl :: Maybe Text,
@@ -79,6 +80,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailOTPConfig
 
 instance FromBackendRow Postgres EmailOTPConfig
 
+instance {-# OVERLAPPING #-} ToSQLObject EmailOTPConfig where
+  convertToSQLObject = SQLObjectValue . show . A.encode
+
 fromFieldEmailMagicLinkConfig ::
   DPSF.Field ->
   Maybe ByteString ->
@@ -99,6 +103,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailMagicLinkConfig
 
 instance FromBackendRow Postgres EmailMagicLinkConfig
 
+instance {-# OVERLAPPING #-} ToSQLObject EmailMagicLinkConfig where
+  convertToSQLObject = SQLObjectValue . show . A.encode
+
 fromFieldEmailBusinessVerificationConfig ::
   DPSF.Field ->
   Maybe ByteString ->
@@ -118,3 +125,6 @@ instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be EmailBusinessVerif
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be EmailBusinessVerificationConfig
 
 instance FromBackendRow Postgres EmailBusinessVerificationConfig
+
+instance {-# OVERLAPPING #-} ToSQLObject EmailBusinessVerificationConfig where
+  convertToSQLObject = SQLObjectValue . show . A.encode

@@ -150,6 +150,7 @@ dependencies:
   - google-cloud-pubsub
   - beam-core
   - beam-postgres
+  - sequelize
   - postgresql-simple
   - http-client
   - http-client-tls

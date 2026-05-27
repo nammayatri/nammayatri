@@ -10,6 +10,7 @@ import qualified IssueManagement.Common as Common
 import IssueManagement.Domain.Types.Issue.IssueMessage
 import Kernel.Prelude
 import Kernel.Types.Id
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 
 data IssueConfig = IssueConfig
   { id :: Id IssueConfig,
@@ -54,3 +55,6 @@ instance HasSqlValueSyntax be A.Value => HasSqlValueSyntax be MessageTransformat
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be MessageTransformationConfig
 
 instance FromBackendRow Postgres MessageTransformationConfig
+
+instance {-# OVERLAPPING #-} ToSQLObject MessageTransformationConfig where
+  convertToSQLObject = SQLObjectValue . show . A.encode
