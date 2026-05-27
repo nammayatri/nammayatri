@@ -189,6 +189,11 @@ valueToTextForModel :: [Text] -> DBModel -> Value -> T.Text
 valueToTextForModel jsonRepairModels dbModel value
   | dbModel.getDBModel `elem` jsonRepairModels =
     case value of
+      -- The producer quote-wraps every column value (via `show`), so the
+      -- poison `Object (fromList [])` lands in the `SqlString` branch, not
+      -- `SqlValue`. We attempt repair on both; the prefix-gate in
+      -- 'repairShownAesonValue' leaves ordinary strings (e.g. "PENDING") alone.
+      SqlString t -> quote $ fromMaybe t (repairShownAesonValue t)
       SqlValue t -> quote $ fromMaybe t (repairShownAesonValue t)
       _ -> valueToText value
   | otherwise = valueToText value
