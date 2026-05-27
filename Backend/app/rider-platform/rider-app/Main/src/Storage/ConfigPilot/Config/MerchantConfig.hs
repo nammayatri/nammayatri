@@ -9,11 +9,11 @@ import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import qualified Storage.CachedQueries.MerchantConfig as SCMC
 import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 
 data MerchantConfigDimensions = MerchantConfigDimensions
   { merchantOperatingCityId :: Text

@@ -11,8 +11,8 @@ import Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common (fork, logError)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
 import Text.Regex.Posix ((=~))
 import Tools.Metrics

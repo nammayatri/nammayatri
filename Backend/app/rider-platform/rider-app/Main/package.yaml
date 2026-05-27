@@ -133,6 +133,7 @@ dependencies:
   - hashable
   - json-logic-hs
   - yudhishthira
+  - config-pilot
   - text-format
   - scientific
   - resource-pool

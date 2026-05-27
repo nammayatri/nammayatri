@@ -641,7 +641,6 @@ library
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
       Storage.ConfigPilot.Config.BecknConfig
-      Storage.ConfigPilot.Config.CommonConfig
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FRFSConfig
       Storage.ConfigPilot.Config.MerchantConfig
@@ -653,7 +652,6 @@ library
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
       Storage.ConfigPilot.Interface.Getter
       Storage.ConfigPilot.Interface.Setter
-      Storage.ConfigPilot.Interface.Types
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
       Storage.GraphqlQueries.Types
@@ -1611,6 +1609,7 @@ library
     , casing
     , cassava
     , cereal
+    , config-pilot
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1757,6 +1756,7 @@ executable rider-app-exe
     , casing
     , cassava
     , cereal
+    , config-pilot
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1896,6 +1896,7 @@ test-suite rider-app-test
     , casing
     , cassava
     , cereal
+    , config-pilot
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0

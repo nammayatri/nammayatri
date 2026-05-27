@@ -10,10 +10,10 @@ import qualified Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 import qualified Storage.Queries.BecknConfig as SQBC
 
 data BecknConfigDimensions = BecknConfigDimensions

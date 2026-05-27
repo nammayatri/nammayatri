@@ -9,11 +9,11 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRRN
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRN
 import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
 
 data RideRelatedNotificationConfigDimensions = RideRelatedNotificationConfigDimensions
   { merchantOperatingCityId :: Text,
