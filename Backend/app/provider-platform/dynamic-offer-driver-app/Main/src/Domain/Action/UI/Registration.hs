@@ -80,7 +80,7 @@ import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
-import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..))
+import Lib.GtfsDataServer.Types (GimsEmployeeLoginReq (..), GimsEmployeeRole (..))
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
@@ -230,17 +230,27 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
       unless gimsResp.verified $ throwError $ InvalidRequest "GIMS verification failed"
       operatorBadgeToken <- gimsResp.token & fromMaybeM (InvalidRequest "GIMS did not return operator badge token")
       transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      let loginRole = case gimsResp.role of
+            Just GimsConductor -> SP.BUS_CONDUCTOR
+            _ -> SP.BUS_DRIVER
       person <-
-        QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.CONDUCTOR
+        QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id loginRole
           >>= maybe
             ( do
-                basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just SP.CONDUCTOR)
-                let conductorPerson = basePerson {SP.identifier = Just operatorBadgeToken, SP.operatorBadgeToken = Just operatorBadgeToken}
+                basePerson <- makePerson req' transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice Nothing mbCloudType merchant.id merchantOpCityId False (Just loginRole)
+                let conductorPerson = basePerson {SP.operatorBadgeToken = Just operatorBadgeToken}
                 void $ QP.create conductorPerson
                 createDriverDetails conductorPerson.id merchant.id merchantOpCityId transporterConfig
                 pure conductorPerson
             )
-            return
+            ( \existingPerson ->
+                if existingPerson.operatorBadgeToken == Just operatorBadgeToken
+                  then pure existingPerson
+                  else do
+                    let refreshedPerson = existingPerson {SP.operatorBadgeToken = Just operatorBadgeToken}
+                    QP.updateByPrimaryKey refreshedPerson
+                    pure refreshedPerson
+            )
       checkSlidingWindowLimit (authHitsCountKey person)
       let entityId = getId person.id
           useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp

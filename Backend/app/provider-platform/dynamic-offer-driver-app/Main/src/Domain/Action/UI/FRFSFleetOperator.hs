@@ -8,10 +8,10 @@ where
 
 import API.Types.UI.FRFSFleetOperator
 import BecknV2.FRFS.Enums (VehicleCategory (..))
-import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (unpack)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import Domain.Types.FleetOperatorTripAction (FleetOperatorTripAction (..))
 import Domain.Types.IntegratedBPPConfig (PlatformType (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
@@ -23,17 +23,14 @@ import Kernel.Prelude (listToMaybe)
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Seconds (..))
-import Kernel.Types.Error (PersonError (PersonNotFound))
 import Kernel.Types.Id (Id (..), getId)
 import Kernel.Types.TimeBound (TimeBound (..))
 import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, logInfo, throwError)
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest)
-import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
-import Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import SharedLogic.IntegratedBPPConfig (findFirstIbppConfigByCityAndVehicle, findIntegratedBPPConfig, getGimsBaseUrl)
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.Person as QPerson
 import Tools.Error (GenericError (InvalidRequest))
 
 getV2FrfsRoute ::
@@ -155,13 +152,12 @@ getV2FrfsTripRouteManifest ::
     Text ->
     Flow FRFSTripPassengerManifestResp
   )
-getV2FrfsTripRouteManifest (_, _merchantId, merchantOpCityId) tripId routeId = do
+getV2FrfsTripRouteManifest (_, _merchantId, _merchantOpCityId) tripId routeId = do
   logInfo $ "FRFSFleetOperator: Getting trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
   bapInternal <- asks (.appBackendBapInternal)
-  merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest $ "MerchantOperatingCity not found: " <> merchantOpCityId.getId)
   let riderAppUrl = bapInternal.url
       riderAppApiKey = bapInternal.apiKey
-  getFrfsTripManifest riderAppApiKey riderAppUrl tripId routeId merchantOpCity.city
+  getFrfsTripManifest riderAppApiKey riderAppUrl tripId routeId
 
 -- | Perform trip action (start, end, reset, rollback)
 postFrfsFleetOperatorTripAction ::
@@ -172,47 +168,32 @@ postFrfsFleetOperatorTripAction ::
     FleetOperatorTripActionReq ->
     Flow FleetOperatorTripActionResp
   )
-postFrfsFleetOperatorTripAction (mbCallerId, _merchantId, merchantOpCityId) req = do
-  let FleetOperatorTripActionReq {action = act, personId = pid} = req
-  callerId <- mbCallerId & fromMaybeM (InvalidRequest "Unauthorized")
-  unless (getId callerId == pid) $
-    throwError $ InvalidRequest "Unauthorized: personId mismatch"
-
-  person <- QPerson.findById callerId >>= fromMaybeM (PersonNotFound pid)
-  condToken <- person.operatorBadgeToken & fromMaybeM (InvalidRequest $ "No operatorBadgeToken for person: " <> pid)
-
+postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
+  let FleetOperatorTripActionReq {action = act} = req
   integratedBPPConfig <-
-    findIntegratedBPPConfig
-      Nothing
+    findFirstIbppConfigByCityAndVehicle
       merchantOpCityId
       (show BUS)
-      MULTIMODAL
-
   baseUrl <- getGimsBaseUrl integratedBPPConfig
-
-  let anchor =
+  let gtfsId = DIBC.feedKey integratedBPPConfig
+      anchor =
         GimsOperationAnchor
-          { conductor_token = Just condToken,
-            driver_token = Nothing,
-            vehicle_number = Nothing
+          { conductor_token = req.conductorToken,
+            driver_token = req.driverToken,
+            vehicle_number = req.vehicleNumber
           }
-
-  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl (DIBC.feedKey integratedBPPConfig) anchor
+  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let GimsCurrentOperationResp {waybill_no = wbNo, number_of_trips = numTrips} = gimsOps
-
-  let configId = getId integratedBPPConfig.id
-      redisKey = configId <> ":" <> condToken <> ":" <> wbNo <> ":tripnumber"
+      configId = getId integratedBPPConfig.id
+      redisKey = configId <> ":" <> wbNo <> ":tripnumber"
   now <- getCurrentTime
   let epochNow = round (utcTimeToPOSIXSeconds now * 1000) :: Int64
-
   logInfo $ "FRFSFleetOperator: Trip action - " <> show act
-  result <- case act of
-    TripStart -> handleTripStart baseUrl (DIBC.feedKey integratedBPPConfig) anchor numTrips redisKey epochNow
-    TripEnd -> handleTripEnd baseUrl (DIBC.feedKey integratedBPPConfig) anchor redisKey numTrips
-    TripReset -> handleTripReset baseUrl (DIBC.feedKey integratedBPPConfig) anchor redisKey numTrips
-    TripRollback -> handleTripRollback baseUrl (DIBC.feedKey integratedBPPConfig) anchor redisKey epochNow numTrips
-
-  return result
+  case act of
+    TripStart -> handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow
+    TripEnd -> handleTripEnd baseUrl gtfsId anchor redisKey numTrips
+    TripReset -> handleTripReset baseUrl gtfsId anchor redisKey numTrips
+    TripRollback -> handleTripRollback baseUrl gtfsId anchor redisKey epochNow numTrips
   where
     handleTripStart baseUrl gtfsId anchor numTrips redisKey epochNow = do
       let lockKey = redisKey <> ":lock"
@@ -350,65 +331,43 @@ postFrfsFleetOperatorCurrentOperation ::
     FleetOperatorCurrentOperationReq ->
     Flow FleetOperatorCurrentOperationResp
   )
-postFrfsFleetOperatorCurrentOperation (mbCallerId, _merchantId, merchantOpCityId) req = do
-  let FleetOperatorCurrentOperationReq {personId = pid} = req
+postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = do
   logInfo "FRFSFleetOperator: Current operation"
-  callerId <- mbCallerId & fromMaybeM (InvalidRequest "Unauthorized")
-  unless (getId callerId == pid) $
-    throwError $ InvalidRequest "Unauthorized: personId mismatch"
-
-  person <- QPerson.findById callerId >>= fromMaybeM (PersonNotFound pid)
-  condToken <- person.operatorBadgeToken & fromMaybeM (InvalidRequest $ "No operatorBadgeToken for person: " <> pid)
-
-  -- 1.Find BPP config for BUS/MULTIMODAL
   integratedBPPConfig <-
-    findIntegratedBPPConfig
-      Nothing
+    findFirstIbppConfigByCityAndVehicle
       merchantOpCityId
       (show BUS)
-      MULTIMODAL
-
-  -- 2.Get OTP REST base URL
   baseUrl <- getGimsBaseUrl integratedBPPConfig
-
-  let anchor =
+  let gtfsId = DIBC.feedKey integratedBPPConfig
+      anchor =
         GimsOperationAnchor
-          { conductor_token = Just condToken,
-            driver_token = Nothing,
-            vehicle_number = Nothing
+          { conductor_token = req.conductorToken,
+            driver_token = req.driverToken,
+            vehicle_number = req.vehicleNumber
           }
-
-  -- 3.Get current operation (waybill)
-  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl (DIBC.feedKey integratedBPPConfig) anchor
-  let GimsCurrentOperationResp {waybill_no = wbNo} = gimsOps
-
-  -- 4.Get trip number from Redis
+  gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let configId = getId integratedBPPConfig.id
-      redisKey = configId <> ":" <> condToken <> ":" <> wbNo <> ":tripnumber"
+      redisKey = configId <> ":" <> gimsOps.waybill_no <> ":tripnumber"
   mbPrevTrip <- Hedis.get redisKey
   let prevTrip = fromMaybe 0 (mbPrevTrip :: Maybe Int)
-
-  -- 5.Get trip details
   tripResp <-
     NandiFlow.gimsCurrentTripDetails
       baseUrl
-      (DIBC.feedKey integratedBPPConfig)
+      gtfsId
       GimsCurrentTripDetailsReq
         { previous_trip_number = prevTrip,
-          conductor_token = Just condToken,
-          driver_token = Nothing,
-          vehicle_number = Nothing
+          conductor_token = req.conductorToken,
+          driver_token = req.driverToken,
+          vehicle_number = req.vehicleNumber
         }
-
-  -- 6.Transform to API response
   let GimsCurrentTripDetailsResp {waybill_no = wNo, vehicle_number = vNum, conductor_token = cToken, driver_token = dToken, history = hist, current = curr, upcoming = upc} = tripResp
   return $
     FleetOperatorCurrentOperationResp
       { waybillNo = wNo,
         vehicleNumber = vNum,
-        gtfsId = DIBC.feedKey integratedBPPConfig,
-        conductorToken = Just cToken,
-        driverToken = Just dToken,
+        gtfsId = gtfsId,
+        conductorToken = cToken,
+        driverToken = dToken,
         history = map transformTripInfo hist,
         current = transformTripInfo <$> curr,
         upcoming = map transformTripInfo upc

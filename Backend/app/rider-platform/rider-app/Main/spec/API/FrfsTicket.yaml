@@ -367,8 +367,8 @@ types:
   FleetOperatorCurrentOperationResp:
     waybillNo: Text
     vehicleNumber: Text
-    conductorToken: Text
-    driverToken: Text
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
     history: "[OperatorTripInfo]"
     current: Maybe OperatorTripInfo
     upcoming: "[OperatorTripInfo]"

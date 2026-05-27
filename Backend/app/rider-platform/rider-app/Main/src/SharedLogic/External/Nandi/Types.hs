@@ -1238,8 +1238,8 @@ data GimsTripInfo = GimsTripInfo
 data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
   { waybill_no :: Text,
     vehicle_number :: Text,
-    conductor_token :: Text,
-    driver_token :: Text,
+    conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
     history :: [GimsTripInfo],
     current :: Maybe GimsTripInfo,
     upcoming :: [GimsTripInfo]

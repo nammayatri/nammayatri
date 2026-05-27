@@ -190,7 +190,15 @@ data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY d
 
 data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | GIMS_EMAIL_PASSWORD deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR | CONDUCTOR deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data Role
+  = DRIVER
+  | ADMIN
+  | FLEET_OWNER
+  | FLEET_BUSINESS
+  | OPERATOR
+  | BUS_CONDUCTOR
+  | BUS_DRIVER
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 

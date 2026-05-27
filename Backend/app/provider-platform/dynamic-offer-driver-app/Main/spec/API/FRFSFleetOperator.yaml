@@ -52,7 +52,8 @@ types:
 
   FleetOperatorTripActionReq:
     action: FleetOperatorTripAction
-    personId: Text
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
     vehicleNumber: Maybe Text
     derive: "Show"
 
@@ -62,7 +63,8 @@ types:
     derive: "Show"
 
   FleetOperatorCurrentOperationReq:
-    personId: Text
+    conductorToken: Maybe Text
+    driverToken: Maybe Text
     vehicleNumber: Maybe Text
     derive: "Show"
 

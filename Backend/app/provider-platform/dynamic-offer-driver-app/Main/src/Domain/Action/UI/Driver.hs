@@ -1306,7 +1306,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
         nomineeRelationship = driverInfo.nomineeRelationship,
         subscriptionCreditBalance = subsCreditBalance,
         role = person.role,
-        operatorBadgeToken = if person.role == SP.CONDUCTOR then person.operatorBadgeToken else Nothing,
+        operatorBadgeToken = if person.role `elem` [SP.BUS_CONDUCTOR, SP.BUS_DRIVER] then person.operatorBadgeToken else Nothing,
         ..
       }
   where
