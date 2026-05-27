@@ -411,12 +411,12 @@ executeBatchForSignature _dbStreamKey signature entries = do
       pure (concat successes, concat failures)
   where
     executeSingleBatch sig batchEntries objects = do
-      case generateBulkInsertForSignature sig objects of
+      Env {_connectionPool, _jsonRepairModels} <- ask
+      case generateBulkInsertForSignature _jsonRepairModels sig objects of
         Nothing -> do
           EL.logError ("BATCH_QUERY_GENERATION_FAILED" :: Text) (show sig)
           processIndividualEntries _dbStreamKey batchEntries
         Just bulkQuery -> do
-          Env {_connectionPool} <- ask
           startTime <- EL.getCurrentDateInMillis
           result <- EL.runIO $ try $ DBQ.executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 bulkQuery)
           endTime <- EL.getCurrentDateInMillis
@@ -458,14 +458,14 @@ splitIntoBatches size items
     let (batch, rest) = splitAt size items
      in batch : splitIntoBatches size rest
 
-generateBulkInsertForSignature :: ColumnSignature -> [DBCreateObject] -> Maybe Text
-generateBulkInsertForSignature signature createObjects = do
+generateBulkInsertForSignature :: [Text] -> ColumnSignature -> [DBCreateObject] -> Maybe Text
+generateBulkInsertForSignature jsonRepairModels signature createObjects = do
   guard (not $ null createObjects)
 
   let schema = SchemaName $ T.pack DBQ.currentSchemaName
       tableName = DBQ.quote' (DBQ.textToSnakeCaseText signature.tableName.getDBModel)
       columnNamesText = T.intercalate ", " $ map DBQ.quote' signature.columnNames
-  valueRows <- mapM (generateValueRowForSignature signature) createObjects
+  valueRows <- mapM (generateValueRowForSignature jsonRepairModels signature) createObjects
   let valuesText = T.intercalate ", " valueRows
 
   Just $
@@ -477,8 +477,8 @@ generateBulkInsertForSignature signature createObjects = do
       <> " ON CONFLICT DO NOTHING;"
 
 -- | Generate a single value row for the signature
-generateValueRowForSignature :: ColumnSignature -> DBCreateObject -> Maybe Text
-generateValueRowForSignature signature createObj = do
+generateValueRowForSignature :: [Text] -> ColumnSignature -> DBCreateObject -> Maybe Text
+generateValueRowForSignature jsonRepairModels signature createObj = do
   let DBCreateObjectContent termWraps = createObj.contents
       -- Create a map for quick lookup
       valueMap = M.fromList $ map (\(TermWrap column value) -> (DBQ.replaceMappings column createObj.mappings, value)) termWraps
@@ -486,5 +486,5 @@ generateValueRowForSignature signature createObj = do
       values = mapM (`M.lookup` valueMap) signature.columnNames
 
   case values of
-    Just vals -> Just $ "(" <> T.intercalate ", " (map DBQ.valueToText vals) <> ")"
+    Just vals -> Just $ "(" <> T.intercalate ", " (map (DBQ.valueToTextForModel jsonRepairModels signature.tableName) vals) <> ")"
     Nothing -> Nothing -- Column mismatch, shouldn't happen due to validation
