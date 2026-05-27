@@ -67,3 +67,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_image_id character
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN vehicle_rating_remark text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle ADD COLUMN enable_for_airport boolean ;

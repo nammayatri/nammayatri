@@ -25,6 +25,7 @@ data Vehicle = Vehicle
     color :: Kernel.Prelude.Text,
     downgradeReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     energyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     luggageCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,

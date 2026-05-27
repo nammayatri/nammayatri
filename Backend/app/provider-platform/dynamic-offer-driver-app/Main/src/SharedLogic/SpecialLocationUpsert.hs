@@ -95,7 +95,8 @@ data SpecialLocationCSVRow = SpecialLocationCSVRow
     gateInfoId :: Maybe Text,
     gateInfoNotificationActiveTillInSec :: Maybe Text,
     enforceTollRoute :: Maybe Text,
-    render :: Maybe Text
+    render :: Maybe Text,
+    enableQueueFilter :: Maybe Text
   }
   deriving (Show)
 
@@ -140,6 +141,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
+      <*> optional (r .: "filter_airport")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
@@ -167,6 +169,11 @@ cleanMaybeCSVField _ fieldValue _ = cleanField fieldValue
 
 parseJsonMap :: Maybe Text -> Maybe (Map.Map Text Int)
 parseJsonMap mbT = do
+  t <- mbT >>= cleanField
+  Aeson.decodeStrict (TE.encodeUtf8 t)
+
+parseBoolMap :: Maybe Text -> Maybe (Map.Map Text Bool)
+parseBoolMap mbT = do
   t <- mbT >>= cleanField
   Aeson.decodeStrict (TE.encodeUtf8 t)
 
@@ -317,7 +324,8 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
             pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
             pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
-            notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)"
+            notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
+            enableQueueFilter = parseBoolMap row.enableQueueFilter
           }
   return (city, locationName, (specialLocation, gateInfo), pickupPriority, dropPriority, mbSpecialLocationId)
 
@@ -439,5 +447,6 @@ mergeGateInfoWithExisting new (Just old) =
       DGI.pickupZoneArrivalTimeoutInSec = new.pickupZoneArrivalTimeoutInSec <|> old.pickupZoneArrivalTimeoutInSec,
       DGI.pickupRequestResponseTimeoutInSec = new.pickupRequestResponseTimeoutInSec <|> old.pickupRequestResponseTimeoutInSec,
       -- Preserve operator-configured active-till on CSV re-upserts when not in the file.
-      DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec
+      DGI.notificationActiveTillInSec = new.notificationActiveTillInSec <|> old.notificationActiveTillInSec,
+      DGI.enableQueueFilter = new.enableQueueFilter <|> old.enableQueueFilter
      }

@@ -481,7 +481,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
-        canSwitchToAirport = if canSwitchToAirport' then Just driverInfo.canSwitchToAirport else Nothing,
+        canSwitchToAirport = if canSwitchToAirport' && fromMaybe True vehicle.enableForAirport then Just driverInfo.canSwitchToAirport else Nothing,
         airConditioned = mbAirConditioned
       }
 

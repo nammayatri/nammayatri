@@ -42,6 +42,7 @@ import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -53,6 +54,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDriverCorrelation as RDC
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Error
 import Tools.Notifications
 
@@ -154,7 +156,19 @@ handler merchantId req ride = do
       let newRatingValue = ratingValue
       QRating.updateRating newRatingValue feedbackDetails isSafe issueId wasOfferedAssistance req.shouldFavDriver mediaId rideRating.id driverId
       pure (newRatingValue - oldRatingValue, False)
-  calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
+  newRating <- calculateAverageRating driverId merchant.minimumDriverRatesCount shouldIncrementCount netRatingValue ratingCount ratingsSum transporterConfig
+  syncServiceTiersOnRatingChange newRating driverId ride.merchantOperatingCityId
+
+syncServiceTiersOnRatingChange ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
+  Maybe Centesimal ->
+  Id DP.Person ->
+  Id DMOC.MerchantOperatingCity ->
+  m ()
+syncServiceTiersOnRatingChange newRating personId merchantOpCityId = do
+  tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing (Just newRating) Nothing personId merchantOpCityId
+  let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
+  QVehicle.updateSelectedServiceTiers newTiers personId
 
 calculateAverageRating ::
   (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
@@ -165,7 +179,7 @@ calculateAverageRating ::
   Maybe Int ->
   Maybe Int ->
   DTC.TransporterConfig ->
-  m ()
+  m (Maybe Centesimal)
 calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount ratingValue mbtotalRatings mbtotalRatingScore transporterConfig = do
   logTagInfo "PersonAPI" $ "Recalculating average rating for driver " +|| personId ||+ ""
   let totalRatings = fromMaybe 0 mbtotalRatings
@@ -191,6 +205,11 @@ calculateAverageRating personId minimumDriverRatesCount shouldIncrementCount rat
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue shouldIncrementCount
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
+  let newRating =
+        if newRatingsCount > 0
+          then Just $ fromIntegral newTotalRatingScore / fromIntegral newRatingsCount
+          else Just 0
+  pure newRating
 
 buildRating ::
   MonadFlow m =>

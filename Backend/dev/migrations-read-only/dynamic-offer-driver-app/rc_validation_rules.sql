@@ -10,3 +10,9 @@ ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN vehicle_oem te
 ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN enable_for_airport boolean ;
