@@ -1394,24 +1394,34 @@ getFrfsTripRouteManifest ::
   Text ->
   Environment.Flow FRFSTripPassengerManifestResp
 getFrfsTripRouteManifest (mbPersonId, _merchantId) tripId routeId = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  buildTripRouteManifest personCityInfo.merchantOperatingCityId tripId routeId
+  _ <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  buildTripRouteManifest tripId routeId
 
 buildTripRouteManifest ::
-  Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
   Text ->
   Text ->
   Environment.Flow FRFSTripPassengerManifestResp
-buildTripRouteManifest cityId tripId routeId = do
-  integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe =<< SIBC.findAllIntegratedBPPConfig cityId Enums.BUS DIBC.MULTIMODAL
+buildTripRouteManifest tripId routeId = do
+  bookings <- JMU.measureLatency (QFRFSTicketBooking.findAllConfirmedByTripId tripId) "findAllByTripId"
+  case listToMaybe bookings of
+    Nothing ->
+      pure $ FRFSTripPassengerManifestResp {manifest = []}
+    Just firstBooking -> buildManifestForBookings firstBooking bookings tripId routeId
+
+buildManifestForBookings ::
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  [DFRFSTicketBooking.FRFSTicketBooking] ->
+  Text ->
+  Text ->
+  Environment.Flow FRFSTripPassengerManifestResp
+buildManifestForBookings firstBooking bookings tripId routeId = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigById firstBooking.integratedBppConfigId
   let (waybillNo, tripNo) = JMU.getWaybillNoAndTripNoFromTripId tripId
   schedule <- JMU.measureLatency (OTPRest.getBusTripSchedule waybillNo tripNo routeId integratedBPPConfig) "getBusTripSchedule"
   scheduleDetail <-
     schedule & listToMaybe
       & fromMaybeM (InvalidRequest "Bus schedule not found")
   let stops = scheduleDetail.eta
-  bookings <- JMU.measureLatency (QFRFSTicketBooking.findAllConfirmedByTripId tripId) "findAllByTripId"
   let bookingIds = map (.id) bookings
   allTickets <- JMU.measureLatency (QFRFSTicket.findAllByTicketBookingIds bookingIds) "findAllByTicketBookingIds"
   let ticketMap = Map.fromListWith (++) $ map (\t -> (t.frfsTicketBookingId, [t])) allTickets

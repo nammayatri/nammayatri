@@ -271,8 +271,8 @@ instance FromJSON GimsTripInfo where
 data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
   { waybill_no :: Text,
     vehicle_number :: Text,
-    conductor_token :: Text,
-    driver_token :: Text,
+    conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
     history :: [GimsTripInfo],
     current :: Maybe GimsTripInfo,
     upcoming :: [GimsTripInfo]
@@ -316,9 +316,26 @@ data GimsEmployeeLoginReq = GimsEmployeeLoginReq
 instance HideSecrets GimsEmployeeLoginReq where
   hideSecrets req = req {email_hash = "***", password_hash = "***"}
 
+-- | Roles GIMS recognises for an employee. Wire form is lowercase
+-- (\"driver\" / \"conductor\"); parser is case-insensitive. Unknown values
+-- fail the whole login response — keep this in sync with the Rust enum.
+data GimsEmployeeRole = GimsDriver | GimsConductor
+  deriving (Generic, Show, Eq)
+
+instance FromJSON GimsEmployeeRole where
+  parseJSON = withText "GimsEmployeeRole" $ \t -> case T.toLower t of
+    "driver" -> pure GimsDriver
+    "conductor" -> pure GimsConductor
+    other -> fail $ "Unknown GIMS employee role: " <> T.unpack other
+
+instance ToJSON GimsEmployeeRole where
+  toJSON GimsDriver = String "driver"
+  toJSON GimsConductor = String "conductor"
+
 -- | Response from the employee login endpoint (driver-app only).
 data GimsEmployeeLoginResp = GimsEmployeeLoginResp
   { verified :: Bool,
-    token :: Maybe Text
+    token :: Maybe Text,
+    role :: Maybe GimsEmployeeRole
   }
   deriving (Generic, FromJSON, ToJSON, Show)
