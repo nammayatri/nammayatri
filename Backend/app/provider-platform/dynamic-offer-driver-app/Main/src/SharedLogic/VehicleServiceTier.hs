@@ -45,8 +45,8 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
               || ( (compareNumber vehicleServiceTier.airConditionedThreshold driverInfo.airConditionScore)
                      && (isNothing vehicleServiceTier.airConditionedThreshold || vehicle.airConditioned /= Just False)
                  )
-          driverRatingCheck = compareNumber mbDriverRating vehicleServiceTier.driverRating
-          vehicleRatingCheck = compareNumber vehicle.vehicleRating vehicleServiceTier.vehicleRating
+          driverRatingCheck = compareNumber' mbDriverRating vehicleServiceTier.driverRating
+          vehicleRatingCheck = compareNumber' vehicle.vehicleRating vehicleServiceTier.vehicleRating
           mfcCheck = case (vehicleAgeInMonths, vehicleServiceTier.vehicleAgeThreshold) of
             (Just (Months age), Just (Months threshold)) -> age < threshold
             _ -> True
@@ -60,6 +60,13 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
     compareNumber mbX mbY =
       case (mbX, mbY) of
         (Just x, Just y) -> x >= y
+        _ -> True
+
+    compareNumber' :: Ord a => Maybe a -> Maybe a -> Bool
+    compareNumber' mbX mbY =
+      case (mbX, mbY) of
+        (Just x, Just y) -> x >= y
+        (Nothing, Just _) -> False
         _ -> True
 
 fetchVehicleTierForDriverWithUsageRestriction ::
