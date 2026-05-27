@@ -43,6 +43,7 @@ import qualified Domain.Action.UI.DemandHotspots as DH
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Ride.EndRide as EHandler
 import Domain.Action.UI.Ride.StartRide as SRide
+import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types as DTC
 import Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
@@ -78,6 +79,7 @@ import qualified Lib.Finance.Storage.Queries.LedgerEntryExtra as QLedgerExtra
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.Finance.Prepaid as FinancePrepaid
 import qualified SharedLogic.Finance.Wallet as FinanceWallet
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -955,14 +957,18 @@ fareBreakUp merchantShortId opCity reqRideId = do
     Nothing -> pure Nothing
   return
     Common.FareBreakUpRes
-      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.fareParams,
+      { estimatedFareBreakUp = Just $ buildFareBreakUp booking.discountAmount booking.fareParams,
         actualFareBreakUp = case actualFareBreakUp of
-          Just fareParams -> Just $ buildFareBreakUp fareParams
+          Just fareParams -> Just $ buildFareBreakUp ride.discountAmount fareParams
           Nothing -> Nothing
       }
 
-buildFareBreakUp :: DFP.FareParameters -> Common.FareBreakUp
-buildFareBreakUp DFP.FareParameters {..} = do
+buildFareBreakUp :: Maybe HighPrecMoney -> DFP.FareParameters -> Common.FareBreakUp
+buildFareBreakUp mbDiscount fp@DFP.FareParameters {..} = do
+  let mbProjectedBreakup = FC.projectFareParamsBreakup fp
+      discountAmount = fromMaybe 0 mbDiscount
+      mbApplied = mbProjectedBreakup <&> \b -> RD.applyRideDiscount b discountAmount
+      postDiscountTax = mbApplied <&> (.postDiscountApplicableTax)
   Common.FareBreakUp
     { fareParametersDetails = buildFareParametersDetails fareParametersDetails,
       driverSelectedFare = roundToIntegral <$> driverSelectedFare,
@@ -985,6 +991,9 @@ buildFareBreakUp DFP.FareParameters {..} = do
       customerCancellationDuesWithCurrency = flip PriceAPIEntity currency <$> customerCancellationDues,
       tollChargesWithCurrency = flip PriceAPIEntity currency <$> tollCharges,
       congestionChargeWithCurrency = flip PriceAPIEntity currency <$> congestionCharge,
+      tollFareTaxWithCurrency = flip PriceAPIEntity currency <$> tollFareTax,
+      discountWithCurrency = flip PriceAPIEntity currency <$> mbDiscount,
+      discountTaxWithCurrency = flip PriceAPIEntity currency <$> postDiscountTax,
       ..
     }
 

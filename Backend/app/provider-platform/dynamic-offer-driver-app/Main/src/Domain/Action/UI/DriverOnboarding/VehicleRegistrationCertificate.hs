@@ -871,8 +871,8 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   unless (rc.verificationStatus == Documents.VALID) $ do
-    DAQuery.updateRcErrorMessage driverId rc.id "Can't perform activate/inactivate operations on invalid RC!"
-    throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
+    DAQuery.updateRcErrorMessage driverId rc.id "Vehicle is not ready to be linked"
+    throwError (InvalidRequest "Vehicle is not ready to be linked")
   now <- getCurrentTime
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
@@ -1037,8 +1037,8 @@ deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
   case (mAssoc, isOldFlow) of
     (Just assoc, False) -> do
       when (assoc.driverId == driverId) $ do
-        DAQuery.updateRcErrorMessage driverId rc.id "Deactivate RC first to delete!"
-        throwError (InvalidRequest "Deactivate RC first to delete!")
+        DAQuery.updateRcErrorMessage driverId rc.id "Deactivate Vehicle first to delete!"
+        throwError (InvalidRequest "Deactivate Vehicle first to delete!")
     (Just _, True) -> deactivateRC False transporterConfig rc driverId
     (_, _) -> return ()
   DAQuery.endAssociationForRC driverId rc.id

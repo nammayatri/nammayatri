@@ -59,6 +59,16 @@ updateCancellationFeeIfCancelledField cancellationFeeIfCancelled cancellationCha
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateCommission :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCommission commission id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateCommissionAndDiscount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateCommissionAndDiscount commission discountAmount id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.commission commission, Se.Set Beam.discountAmount discountAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateDiscountAmount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateDiscountAmount discountAmount id = do
   _now <- getCurrentTime
