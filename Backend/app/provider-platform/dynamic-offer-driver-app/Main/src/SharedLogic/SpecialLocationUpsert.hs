@@ -141,7 +141,7 @@ instance FromNamedRecord SpecialLocationCSVRow where
       <*> optional (r .: "gate_info_notification_active_till_in_sec")
       <*> optional (r .: "enforce_toll_route")
       <*> optional (r .: "render")
-      <*> optional (r .: "filter_airport")
+      <*> optional (r .: "enable_queue_filter")
 
 ---------------------------------------------------------------------
 -- CSV Helper Functions
