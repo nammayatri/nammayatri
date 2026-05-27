@@ -402,10 +402,9 @@ type FrfsTripManifestAPI =
     :> Capture "routeId" Text
     :> "manifest"
     :> Header "token" Text
-    :> QueryParam "city" Context.City
     :> Get '[JSON] FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
 
-frfsTripManifestClient :: Text -> Text -> Maybe Text -> Maybe Context.City -> EulerClient FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
+frfsTripManifestClient :: Text -> Text -> Maybe Text -> EulerClient FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
 frfsTripManifestClient = client (Proxy @FrfsTripManifestAPI)
 
 frfsTripManifestAPI :: Proxy FrfsTripManifestAPI
@@ -421,9 +420,8 @@ getFrfsTripManifest ::
   BaseUrl ->
   Text ->
   Text ->
-  Context.City ->
   m FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
-getFrfsTripManifest apiKey internalUrl tripId routeId city = do
+getFrfsTripManifest apiKey internalUrl tripId routeId = do
   logInfo $ "CallBAPInternal: Getting FRFS trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsTripManifestClient tripId routeId (Just apiKey) (Just city)) "GetFrfsTripManifest" frfsTripManifestAPI
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsTripManifestClient tripId routeId (Just apiKey)) "GetFrfsTripManifest" frfsTripManifestAPI

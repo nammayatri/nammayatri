@@ -350,9 +350,9 @@ data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq {conduc
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
-  { conductorToken :: Data.Text.Text,
+  { conductorToken :: Data.Maybe.Maybe Data.Text.Text,
     current :: Data.Maybe.Maybe OperatorTripInfo,
-    driverToken :: Data.Text.Text,
+    driverToken :: Data.Maybe.Maybe Data.Text.Text,
     history :: [OperatorTripInfo],
     upcoming :: [OperatorTripInfo],
     vehicleNumber :: Data.Text.Text,
