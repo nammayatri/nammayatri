@@ -42,7 +42,10 @@ data Env = Env
     _dontEnableDbTables :: [Text],
     _dontEnableForKafka :: [Text],
     _connectionPool :: Pool Connection,
-    _esqDBCfg :: EsqDBConfig
+    _esqDBCfg :: EsqDBConfig,
+    -- | Tables for which the drainer repairs Haskell-`Show`'d Aeson values back
+    -- to JSON before building SQL (interim mitigation, see DBQuery.Functions).
+    _jsonRepairModels :: [Text]
   }
 
 data AppCfg = AppCfg
@@ -56,7 +59,8 @@ data AppCfg = AppCfg
     loggerConfig :: LoggerConfig,
     dontEnableForDb :: [Text],
     dontEnableForKafka :: [Text],
-    kafkaProperties :: [KTC.KafkaProperties]
+    kafkaProperties :: [KTC.KafkaProperties],
+    jsonRepairModels :: [Text]
   }
   deriving (Generic, FromDhall)
 
