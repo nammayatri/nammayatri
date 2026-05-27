@@ -130,6 +130,8 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                         offerDiscountAmount = rideDiscountAmount,
                         cashbackPayoutAmount = ridePayoutAmount,
                         rideVatAbsorbedOnDiscount = 0,
+                        cancellationCharge = 0,
+                        cancellationTax = 0,
                         financeCtx = ledgerCtx
                       }
                     mbLedgerInfo

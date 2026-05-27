@@ -401,8 +401,10 @@ upsertCoreRidePaymentLedger ::
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
+  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
+  HighPrecMoney -> -- cancellationTax (0 for normal ride)
   m UpsertCoreLedgerResult
-upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount = do
+upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax = do
   let rideId = ctx.referenceId
   existingEntries <- findRidePaymentEntries rideId
   let coreEntries = filter (\e -> e.referenceType `elem` coreRidePaymentRefTypes) existingEntries
@@ -433,35 +435,50 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
           Left err -> do
             logError $ "Failed to create core ride payment ledger for " <> rideId <> ": " <> show err
             pure ([], Nothing)
-  if null coreEntries
-    then do
-      (newIds, mbInv) <- doCreate
-      logInfo $ "Created PENDING core ride payment ledger entries for ride: " <> rideId
-      pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = False}
-    else
-      if not (null pendingCoreEntries) && newTotal /= oldTotal
-        then do
-          let staleIds = map (.id) pendingCoreEntries
-          voidRidePaymentLedger staleIds
-          voidRideInvoice rideId
-          logInfo $
-            "Voided " <> show (length staleIds) <> " stale PENDING core entries (old="
-              <> show oldTotal
-              <> " new="
-              <> show newTotal
-              <> ") for ride: "
-              <> rideId
-          (newIds, mbInv) <- doCreate
-          pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
-        else do
-          logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
-          pure
-            UpsertCoreLedgerResult
-              { coreEntryIds = map (.id) pendingCoreEntries,
-                invoiceId = Nothing,
-                didCreate = False,
-                didVoidStale = False
-              }
+  coreResult <-
+    if null coreEntries
+      then do
+        if newTotal > 0
+          then do
+            (newIds, mbInv) <- doCreate
+            logInfo $ "Created PENDING core ride payment ledger entries for ride: " <> rideId
+            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = False}
+          else do
+            logInfo $ "Core ride payment total is zero, skipping create for ride: " <> rideId
+            pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = False}
+      else
+        if not (null pendingCoreEntries) && newTotal /= oldTotal
+          then do
+            let staleIds = map (.id) pendingCoreEntries
+            voidRidePaymentLedger staleIds
+            voidRideInvoice rideId
+            logInfo $
+              "Voided " <> show (length staleIds) <> " stale PENDING core entries (old="
+                <> show oldTotal
+                <> " new="
+                <> show newTotal
+                <> ") for ride: "
+                <> rideId
+            (newIds, mbInv) <- doCreate
+            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+          else do
+            logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
+            pure
+              UpsertCoreLedgerResult
+                { coreEntryIds = map (.id) pendingCoreEntries,
+                  invoiceId = Nothing,
+                  didCreate = False,
+                  didVoidStale = False
+                }
+  -- Upsert cancellation fee entries when cancellationCharge is non-zero.
+  -- Idempotent: if entries were already created (e.g. by createPendingCancellationFeeLedger
+  -- before this call) the existing-entries check skips re-creation.
+  when (cancellationCharge > 0) $ do
+    let cancelEntries = filter (\e -> e.referenceType `elem` [ridePaymentRefCancellationFee, ridePaymentRefCancellationGST]) existingEntries
+    when (null cancelEntries) $ do
+      void $ createPendingCancellationFeeLedger ctx cancellationCharge cancellationTax
+      logInfo $ "Created PENDING cancellation fee ledger entries for ride: " <> rideId
+  pure coreResult
 
 -- ---------------------------------------------------------------------------
 -- 1b. Create SETTLED ledger entries for fully discounted rides (amount = 0)
