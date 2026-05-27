@@ -648,6 +648,8 @@ data RidePaymentLedgerInfo = RidePaymentLedgerInfo
     --   BuyerExpense → BuyerAsset; paid across to BPP via buyer-external
     --   where it is credited to the driver as part of BaseRide.
     rideVatAbsorbedOnDiscount :: HighPrecMoney,
+    cancellationCharge :: HighPrecMoney, -- cancellation fee without tax (0 for normal ride)
+    cancellationTax :: HighPrecMoney, -- GST/VAT on cancellation fee (0 for normal ride)
     financeCtx :: FinanceCtx
   }
   deriving (Show, Generic)
@@ -669,9 +671,11 @@ mkRidePaymentLedgerInfo ::
   HighPrecMoney -> -- offerDiscountAmount
   HighPrecMoney -> -- cashbackPayoutAmount
   HighPrecMoney -> -- rideVatAbsorbedOnDiscount
+  HighPrecMoney -> -- cancellationCharge (0 for normal ride)
+  HighPrecMoney -> -- cancellationTax (0 for normal ride)
   FinanceCtx ->
   RidePaymentLedgerInfo
-mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount financeCtx =
+mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge parkingChargeVat platformFee offerDiscountAmount cashbackPayoutAmount rideVatAbsorbedOnDiscount cancellationCharge cancellationTax financeCtx =
   RidePaymentLedgerInfo
     { rideFare,
       gstAmount,
@@ -683,6 +687,8 @@ mkRidePaymentLedgerInfo rideFare gstAmount tollFare tollVatAmount parkingCharge 
       offerDiscountAmount,
       cashbackPayoutAmount,
       rideVatAbsorbedOnDiscount,
+      cancellationCharge,
+      cancellationTax,
       financeCtx
     }
 
@@ -725,6 +731,8 @@ buildLedgerInfoFromBreakups breakups discount cashback appFee _tip ctx =
               r.clampedDiscount
               cashback
               r.rideVatAbsorbedOnDiscount
+              0 -- cancellationCharge (not applicable for normal ride)
+              0 -- cancellationTax
               ctx
       pure (Just info)
   where
@@ -859,7 +867,7 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
                 orderId = serviceResp.orderId
               }
       -- Create or update PENDING core ride ledger entries (RideFare, GST, PlatformFee) after successful payment creation.
-      -- Tip and cancellation entries are managed separately — not touched here.
+      -- Cancellation entries are handled via cancellationCharge/cancellationTax fields; tip entries are managed separately.
       whenJust mbLedgerInfo $ \ledgerInfo ->
         void $
           RidePaymentFinance.upsertCoreRidePaymentLedger
@@ -872,6 +880,8 @@ makePaymentIntent merchantId merchantOpCityId paymentMode personId mbRideId mbEx
             ledgerInfo.offerDiscountAmount
             ledgerInfo.cashbackPayoutAmount
             ledgerInfo.rideVatAbsorbedOnDiscount
+            ledgerInfo.cancellationCharge
+            ledgerInfo.cancellationTax
       pure (Just resp)
 
 cancelPaymentIntent ::

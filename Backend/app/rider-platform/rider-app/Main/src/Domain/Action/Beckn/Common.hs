@@ -566,6 +566,8 @@ rideAssignedReqHandler req = do
                       cashbackPayoutAmount = bookingPayoutAmount,
                       platformFee = applicationFeeAmount,
                       rideVatAbsorbedOnDiscount = 0,
+                      cancellationCharge = 0,
+                      cancellationTax = 0,
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
@@ -612,6 +614,8 @@ rideAssignedReqHandler req = do
                       cashbackPayoutAmount = bookingPayoutAmount,
                       platformFee = applicationFeeAmount,
                       rideVatAbsorbedOnDiscount = 0,
+                      cancellationCharge = 0,
+                      cancellationTax = 0,
                       financeCtx = ledgerCtx
                     }
                   mbLedgerInfo
@@ -994,6 +998,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   offerDiscountAmount = rideDiscountAmount,
                   cashbackPayoutAmount = ridePayoutAmount,
                   rideVatAbsorbedOnDiscount = 0,
+                  cancellationCharge = 0,
+                  cancellationTax = 0,
                   financeCtx = cashLedgerCtx
                 }
               mbCashLedgerInfo
@@ -1008,6 +1014,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           cashLedgerInfo.offerDiscountAmount
           cashLedgerInfo.cashbackPayoutAmount
           cashLedgerInfo.rideVatAbsorbedOnDiscount
+          0 -- cancellationCharge (not applicable at ride-end)
+          0 -- cancellationTax
       unless (null upsertRes.coreEntryIds) $ do
         settleResult <- RidePaymentFinance.settleRidePaymentLedger cashLedgerCtx upsertRes.coreEntryIds RidePaymentFinance.settledReasonRidePayment
         case settleResult of
@@ -1039,6 +1047,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
                   offerDiscountAmount = rideDiscountAmount,
                   cashbackPayoutAmount = ridePayoutAmount,
                   rideVatAbsorbedOnDiscount = 0,
+                  cancellationCharge = 0,
+                  cancellationTax = 0,
                   financeCtx = ledgerCtx
                 }
               mbLedgerInfo
@@ -1409,8 +1419,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                 logDebug $ "[CancellationSettlement] Creating cancellation payment intent amount=" <> show fee.amount <> " currency=" <> show fee.currency
                 let cancellationLedgerInfo =
                       SPayment.RidePaymentLedgerInfo
-                        { rideFare = cancellationBase,
-                          gstAmount = cancellationGST,
+                        { rideFare = 0,
+                          gstAmount = 0,
                           tollFare = 0,
                           tollVatAmount = 0,
                           parkingCharge = 0,
@@ -1419,6 +1429,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                           offerDiscountAmount = 0,
                           cashbackPayoutAmount = 0,
                           rideVatAbsorbedOnDiscount = 0,
+                          cancellationCharge = cancellationBase,
+                          cancellationTax = cancellationGST,
                           financeCtx = ledgerCtx
                         }
                 eitherMbIntent <-
@@ -1450,7 +1462,14 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                             logError $ "[CancellationSettlement] Charge failed for PI: " <> cancellationPaymentIntentResp.paymentIntentId
                             markDueOnFailure
               _ -> do
-                -- Cash/UPI: create pending entries then mark as DUE for later collection
+                -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
+                pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries ride.id.getId
+                unless (null pendingEntries) $ do
+                  let entryIds = map (.id) pendingEntries
+                  RidePaymentFinance.voidRidePaymentLedger entryIds
+                  logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries for cancelled ride: " <> ride.id.getId
+                RidePaymentFinance.voidRideInvoice ride.id.getId
+                -- Create pending cancellation entries then mark as DUE for later collection
                 cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationGST
                 case cashLedgerResp of
                   Right (_mbInvoiceId, pendingEntryIds) ->

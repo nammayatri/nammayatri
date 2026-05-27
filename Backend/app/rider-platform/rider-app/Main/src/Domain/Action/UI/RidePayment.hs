@@ -343,6 +343,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                     offerDiscountAmount = rideDiscountAmount,
                     cashbackPayoutAmount = ridePayoutAmount,
                     rideVatAbsorbedOnDiscount = 0,
+                    cancellationCharge = 0,
+                    cancellationTax = 0,
                     financeCtx = tipLedgerCtx
                   }
                 mbTipLedgerInfo
@@ -365,6 +367,8 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                         offerDiscountAmount = rideDiscountAmount,
                         cashbackPayoutAmount = ridePayoutAmount,
                         rideVatAbsorbedOnDiscount = 0,
+                        cancellationCharge = 0,
+                        cancellationTax = 0,
                         financeCtx = ledgerCtx
                       }
                     mbLedgerInfo
@@ -794,6 +798,8 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
             debtDiscountAmount
             0 -- debt settlement doesn't have cashback
             0 -- rideVatAbsorbedOnDiscount (debt settlement: no absorbed VAT split)
+            0 -- cancellationCharge (not applicable for debt settlement)
+            0 -- cancellationTax
             debtLedgerCtx
 
     paymentIntentResp <-
