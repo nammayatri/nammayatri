@@ -159,6 +159,7 @@ library
     , safe-exceptions
     , safe-money
     , scientific
+    , sequelize
     , servant
     , servant-client
     , servant-client-core

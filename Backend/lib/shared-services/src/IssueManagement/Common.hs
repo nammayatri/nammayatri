@@ -350,6 +350,9 @@ instance BeamSqlBackend be => B.HasSqlEqualityCheck be KaptureConfig
 
 instance FromBackendRow Postgres KaptureConfig
 
+instance {-# OVERLAPPING #-} ToSQLObject KaptureConfig where
+  convertToSQLObject = SQLObjectValue . show . encode
+
 data Translation = Translation
   { language :: Language,
     translation :: Text

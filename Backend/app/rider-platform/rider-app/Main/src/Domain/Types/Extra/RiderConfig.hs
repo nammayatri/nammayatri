@@ -18,6 +18,7 @@ import qualified Domain.Types.ServiceTierType
 import Kernel.Prelude hiding (error)
 import Kernel.Types.Id (Id)
 import qualified Lib.Types.SpecialLocation as SL
+import Sequelize.SQLObject (SQLObject (..), ToSQLObject (..))
 import qualified Tools.Beam.UtilsTH
 import Prelude
 
@@ -77,6 +78,9 @@ instance FromField ExotelMapping where
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be ExotelMapping
 
 instance FromBackendRow Postgres ExotelMapping
+
+instance {-# OVERLAPPING #-} ToSQLObject ExotelMapping where
+  convertToSQLObject = SQLObjectValue . decodeUtf8 . encode
 
 instance ToJSON ExotelMapping where
   toJSON = \case ExotelMapping m -> object ["exotelMap" .= m]
