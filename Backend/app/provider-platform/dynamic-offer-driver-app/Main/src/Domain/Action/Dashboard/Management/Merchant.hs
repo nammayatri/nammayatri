@@ -3879,7 +3879,8 @@ data VehicleVariantMappingCSVRow = VehicleVariantMappingCSVRow
     manufacturerModel :: Text,
     reviewRequired :: Text,
     vehicleModel :: Text,
-    priority :: Text
+    priority :: Text,
+    enableForAirport :: Text
   }
 
 instance FromNamedRecord VehicleVariantMappingCSVRow where
@@ -3893,6 +3894,7 @@ instance FromNamedRecord VehicleVariantMappingCSVRow where
       <*> r .: "review_required"
       <*> r .: "vehicle_model"
       <*> r .: "priority"
+      <*> r .: "enable_for_airport"
 
 postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = do
@@ -3929,7 +3931,8 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             reviewRequired = cleanFieldToLower row.reviewRequired <&> (mapToBool . T.toLower),
             vehicleModel = Just vehicleModel,
             priority = cleanFieldToLower row.priority >>= readMaybe . T.unpack,
-            bodyType = Nothing
+            bodyType = Nothing,
+            enableForAirport = cleanFieldToLower row.enableForAirport <&> (mapToBool . T.toLower)
           }
 
     validateCategory :: Text -> Flow Enums.VehicleCategory

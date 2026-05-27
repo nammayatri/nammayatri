@@ -33,8 +33,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.RCValidationRules.RCValidationRules {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.enableForAirport enableForAirport,
-      Se.Set Beam.fuelType fuelType,
+    [ Se.Set Beam.fuelType fuelType,
       Se.Set Beam.maxVehicleAge maxVehicleAge,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -49,8 +48,7 @@ instance FromTType' Beam.RCValidationRules Domain.Types.RCValidationRules.RCVali
     pure $
       Just
         Domain.Types.RCValidationRules.RCValidationRules
-          { enableForAirport = enableForAirport,
-            fuelType = fuelType,
+          { fuelType = fuelType,
             id = Kernel.Types.Id.Id id,
             maxVehicleAge = maxVehicleAge,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -64,8 +62,7 @@ instance FromTType' Beam.RCValidationRules Domain.Types.RCValidationRules.RCVali
 instance ToTType' Beam.RCValidationRules Domain.Types.RCValidationRules.RCValidationRules where
   toTType' (Domain.Types.RCValidationRules.RCValidationRules {..}) = do
     Beam.RCValidationRulesT
-      { Beam.enableForAirport = enableForAirport,
-        Beam.fuelType = fuelType,
+      { Beam.fuelType = fuelType,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.maxVehicleAge = maxVehicleAge,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
