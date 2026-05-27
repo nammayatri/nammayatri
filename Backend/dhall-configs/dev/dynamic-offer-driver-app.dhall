@@ -243,7 +243,8 @@ let cacheConfig = { configsExpTime = +86400 }
 let cacheTranslationConfig = { expTranslationTime = +3600 }
 
 let kafkaProducerCfg =
-      { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+      { brokers =
+        [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
@@ -272,7 +273,9 @@ let registryMap =
       , { mapKey = "localhost/beckn/cab/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
         , mapValue = "http://localhost:${mockRegistryPort}/"
         }
-      , { mapKey = "JUSPAY.BG.1", mapValue = "http://localhost:${mockRegistryPort}/" }
+      , { mapKey = "JUSPAY.BG.1"
+        , mapValue = "http://localhost:${mockRegistryPort}/"
+        }
       ]
 
 let AllocatorJobType =

@@ -7,7 +7,8 @@ let juspayGatewayUrl =
 
 let kafkaConsumerCfgs =
       { publicTransportSearch =
-        { brokers = [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
+        { brokers =
+          [ "localhost:${Natural/show (env:KAFKA_BROKER_PORT ? 29092)}" ]
         , groupId = "publicTransportSearchGroup"
         , timeoutMilliseconds = +10000
         , kafkaCompression = common.kafkaCompression.LZ4

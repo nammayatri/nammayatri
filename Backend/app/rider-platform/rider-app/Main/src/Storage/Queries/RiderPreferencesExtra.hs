@@ -25,12 +25,13 @@ findLocationPickupByGeohash ::
   Text ->
   m (Maybe RiderPreferences)
 findLocationPickupByGeohash riderId geohash = do
-  rows <- findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.riderId $ Se.Eq (getId riderId),
-          Se.Is Beam.preferenceType $ Se.Eq LOCATION_PICKUP
-        ]
-    ]
+  rows <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is Beam.riderId $ Se.Eq (getId riderId),
+            Se.Is Beam.preferenceType $ Se.Eq LOCATION_PICKUP
+          ]
+      ]
   pure $ find matchesGeohash rows
   where
     matchesGeohash rp = case rp.preferenceData of

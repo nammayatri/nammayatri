@@ -965,10 +965,11 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           let busDriverId =
                 maybe
                   journeyLeg.busDriverId
-                  (\driverId ->
-                     if Text.null driverId
-                       then journeyLeg.busDriverId
-                       else Just driverId)
+                  ( \driverId ->
+                      if Text.null driverId
+                        then journeyLeg.busDriverId
+                        else Just driverId
+                  )
                   booking.driverId
 
           mbQuote <- QFRFSQuote.findById booking.quoteId

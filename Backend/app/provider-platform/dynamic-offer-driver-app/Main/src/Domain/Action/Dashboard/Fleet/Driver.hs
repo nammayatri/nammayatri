@@ -1194,8 +1194,9 @@ validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId = do
       fleetOwnerOrOperatorId <- mbFleetOwnerId & fromMaybeM (InvalidRequest "fleetOwnerId required")
       fleetOwnerOrOperator <- QPerson.findById (Id fleetOwnerOrOperatorId) >>= fromMaybeM (PersonNotFound fleetOwnerOrOperatorId)
       case fleetOwnerOrOperator.role of
-        role | DCommon.checkFleetOwnerRole role ->
-          pure (Just DP.FLEET_OWNER, Just fleetOwnerOrOperatorId)
+        role
+          | DCommon.checkFleetOwnerRole role ->
+            pure (Just DP.FLEET_OWNER, Just fleetOwnerOrOperatorId)
         DP.OPERATOR ->
           pure (Just DP.OPERATOR, Just fleetOwnerOrOperatorId)
         _ ->

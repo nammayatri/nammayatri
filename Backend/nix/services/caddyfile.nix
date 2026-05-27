@@ -43,34 +43,34 @@ let
   routeBlock = svc:
     if ports ? ${svc}
     then ''
-	handle_path /${svc}/* {
-		reverse_proxy 127.0.0.1:${toString ports.${svc}}
-	}
-''
+      	handle_path /${svc}/* {
+      		reverse_proxy 127.0.0.1:${toString ports.${svc}}
+      	}
+    ''
     else
-      # builtins.trace prints to stderr at eval time, mirroring the old
-      # `echo "  WARN: skipping $svc — not in ports file" >&2`.
+    # builtins.trace prints to stderr at eval time, mirroring the old
+    # `echo "  WARN: skipping $svc — not in ports file" >&2`.
       builtins.trace "build-caddyfile: skipping ${svc} — not in ports file" "";
 
   routes = builtins.concatStringsSep "" (map routeBlock exposedServices);
 in
 ''
-{
-	auto_https off
-	admin off
-}
+  {
+  	auto_https off
+  	admin off
+  }
 
-http://:${toString caddyPort} {
-	bind 0.0.0.0
+  http://:${toString caddyPort} {
+  	bind 0.0.0.0
 
-	handle /__caddy_health {
-		respond "ok" 200
-	}
+  	handle /__caddy_health {
+  		respond "ok" 200
+  	}
 
-${routes}
-	log {
-		output stderr
-		format console
-	}
-}
+  ${routes}
+  	log {
+  		output stderr
+  		format console
+  	}
+  }
 ''

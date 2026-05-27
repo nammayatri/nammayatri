@@ -1027,8 +1027,9 @@ filterByGateProximity targetGate driverIds = do
         case targetGate.merchantOperatingCityId of
           Just mocId ->
             CTC.findByMerchantOpCityId (cast mocId :: Id DMOC.MerchantOperatingCity) Nothing
-              <&> maybe driverLocationStalenessThresholdSecondsDefault
-                    (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))
+              <&> maybe
+                driverLocationStalenessThresholdSecondsDefault
+                (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))
           Nothing -> pure driverLocationStalenessThresholdSecondsDefault
       now <- getCurrentTime
       let isFresh dl = diffUTCTime now dl.coordinatesCalculatedAt <= intToNominalDiffTime stalenessThreshold.getSeconds

@@ -5,9 +5,9 @@ module API.Internal.SendEmailOTP
 where
 
 import qualified Domain.Action.Internal.SendEmailOTP as Domain
+import qualified Email.OTP.API as Shared
 import Environment
 import EulerHS.Prelude hiding (id)
-import qualified Email.OTP.API as Shared
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Utils.Common
 

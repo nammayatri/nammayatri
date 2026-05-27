@@ -2,8 +2,8 @@ module Lib.JourneyModule.RouteServiceability where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified BecknV2.FRFS.Enums
-import qualified Data.Map.Strict as Map
 import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Domain.Types.FRFSVehicleServiceTier as DFRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
@@ -13,6 +13,7 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, foldr, groupBy, id, length, map, mapM_, null, readMaybe, toList, whenJust)
 import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude hiding (whenJust)
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
@@ -22,11 +23,10 @@ import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.FRFSSeatBooking as SeatBooking
 import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
-import qualified Kernel.Storage.Hedis as Hedis
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
