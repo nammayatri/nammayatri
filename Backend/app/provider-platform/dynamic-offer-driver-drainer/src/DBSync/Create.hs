@@ -59,7 +59,7 @@ runCreateQuery createDataEntry dbCreateObject = do
   if shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbCreateObject.forceDrainToDB
     then return $ Right entryId
     else do
-      let insertQuery = generateInsertForTable dbCreateObject
+      let insertQuery = generateInsertForTable _jsonRepairModels dbCreateObject
       case insertQuery of
         Just query -> do
           result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
@@ -79,11 +79,11 @@ runCreateQuery createDataEntry dbCreateObject = do
           return $ Left entryId
 
 -- | Generate an insert query for a given table and schema
-generateInsertForTable :: DBCreateObject -> Maybe Text
-generateInsertForTable DBCreateObject {dbModel, contents, mappings} = do
+generateInsertForTable :: [Text] -> DBCreateObject -> Maybe Text
+generateInsertForTable jsonRepairModels DBCreateObject {dbModel, contents, mappings} = do
   let DBCreateObjectContent termWarps = contents
   let schema = SchemaName $ T.pack currentSchemaName
-  generateInsertQuery InsertQuery {..}
+  generateInsertQuery jsonRepairModels InsertQuery {..}
 
 getCreateObjectForKafka :: DBModel -> A.Object -> A.Value
 getCreateObjectForKafka model content =

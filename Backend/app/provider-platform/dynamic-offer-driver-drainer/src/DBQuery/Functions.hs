@@ -3,9 +3,12 @@ module DBQuery.Functions where
 import Config.Env (getDbConnectionRetryDelay, getDbConnectionRetryMaxAttempts)
 import Control.Exception (throwIO)
 import DBQuery.Types
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map.Strict as M
 import Data.Pool (Pool, destroyAllResources, withResource)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Types as ET
@@ -14,8 +17,8 @@ import Text.Casing (quietSnake)
 currentSchemaName :: String
 currentSchemaName = "atlas_driver_offer_bpp"
 
-generateInsertQuery :: InsertQuery -> Maybe Text
-generateInsertQuery InsertQuery {..} = do
+generateInsertQuery :: [Text] -> InsertQuery -> Maybe Text
+generateInsertQuery jsonRepairModels InsertQuery {..} = do
   let schemaName = schema.getSchemaName
   if null termWarps
     then Nothing
@@ -24,15 +27,15 @@ generateInsertQuery InsertQuery {..} = do
             unzip $
               termWarps <&> \(TermWrap column value) -> do
                 let keyText = quote' $ replaceMappings column mappings
-                let valueText = valueToText value
+                let valueText = valueToTextForModel jsonRepairModels dbModel value
                 (keyText, valueText)
           table = schemaName <> "." <> quote' (textToSnakeCaseText dbModel.getDBModel)
           inserts = T.intercalate ", " columnNames
           valuesList = T.intercalate ", " values
       Just $ "INSERT INTO " <> table <> " (" <> inserts <> ") VALUES (" <> valuesList <> ")" <> " ON CONFLICT DO NOTHING;"
 
-generateUpdateQuery :: UpdateQuery -> Maybe Text
-generateUpdateQuery UpdateQuery {..} = do
+generateUpdateQuery :: [Text] -> UpdateQuery -> Maybe Text
+generateUpdateQuery jsonRepairModels UpdateQuery {..} = do
   let schemaName = schema.getSchemaName
   let correctWhereClauseText = makeWhereCondition whereClause mappings
       setQuery = makeSetConditions
@@ -43,7 +46,7 @@ generateUpdateQuery UpdateQuery {..} = do
   where
     makeSetConditions :: Text
     makeSetConditions = do
-      let correctSetClauseText = map (\(Set column value) -> (replaceMappings column mappings, valueToText value)) setClauses
+      let correctSetClauseText = map (\(Set column value) -> (replaceMappings column mappings, valueToTextForModel jsonRepairModels dbModel value)) setClauses
       T.intercalate "," (map (\(k, v) -> (quote' . textToSnakeCaseText) k <> "=" <> v) correctSetClauseText)
 
 generateDeleteQuery :: DeleteQuery -> Maybe Text
@@ -173,6 +176,36 @@ valueToText value = case value of
     valueToText' (SqlInteger n) = show n
     valueToText' (SqlValue t) = show t -- quote' t
     valueToText' (SqlList a) = "[" <> T.intercalate "," (map valueToText' a) <> "]"
+
+-- | Like 'valueToText', but for the scoped models (configured via Dhall
+-- @jsonRepairModels@) it first tries to repair a value that was accidentally
+-- serialized via Haskell's `Show` instance for an Aeson Value (e.g.
+-- "Object (fromList [])") back into valid JSON ("{}"). Without this, such values
+-- break INSERT/UPDATE on json columns with `invalid input syntax for type json`.
+-- Non-scoped models are untouched. The model list is an interim drainer-side
+-- mitigation for poison stream entries while the producer-side fix (correct
+-- `ToSQLObject` instance) rolls out.
+valueToTextForModel :: [Text] -> DBModel -> Value -> T.Text
+valueToTextForModel jsonRepairModels dbModel value
+  | dbModel.getDBModel `elem` jsonRepairModels =
+    case value of
+      SqlValue t -> quote $ fromMaybe t (repairShownAesonValue t)
+      _ -> valueToText value
+  | otherwise = valueToText value
+
+-- | Repair the textual output of Haskell's `Show` for a @Data.Aeson.Value@ back
+-- into JSON text. Aeson's @Read Value@ instance round-trips its @Show@, so we
+-- read the value and re-encode it. Only the container show-forms
+-- ("Object (fromList " / "Array ") are treated as repairable, so legitimate
+-- enum/text values (e.g. "PENDING", "Null") are never touched. Returns Nothing
+-- when the text is not a recognizable shown-Aeson container or cannot be
+-- parsed, in which case the caller keeps the original text.
+repairShownAesonValue :: Text -> Maybe Text
+repairShownAesonValue t =
+  let s = T.unpack (T.stripStart t)
+   in if "Object (fromList " `isPrefixOf` s || "Array " `isPrefixOf` s
+        then (\v -> TE.decodeUtf8 $ LBS.toStrict $ A.encode v) <$> (readMaybe s :: Maybe A.Value)
+        else Nothing
 
 valueToTextForInConditions :: [Value] -> T.Text
 valueToTextForInConditions values = "(" <> T.intercalate "," (map valueToText values) <> ")"
