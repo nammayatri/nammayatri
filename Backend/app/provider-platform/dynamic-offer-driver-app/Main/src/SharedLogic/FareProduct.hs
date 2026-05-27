@@ -153,6 +153,14 @@ getAllFareProducts _merchantId merchantOpCityId searchSources fromLocationLatLon
           }
 
     mkSpecialLocationTag pickupSpecialLocationCategory dropSpecialLocationCategory priority = pickupSpecialLocationCategory <> "_" <> dropSpecialLocationCategory <> "_" <> "Priority" <> priority
+
+    --   If a fare product for the given trip category is not configured at the gate level,
+    -- fall back to the parent special location (without gate ID). A gate is just a refinement
+    -- of its special location, so this fallback is safe.
+    -- We intentionally do NOT fall back from special location to Default area here. If a trip
+    -- category (e.g. OneWayOnDemandDynamicOffer) has no fare product in a special location,
+    -- that is by design — we don't want that category offered there. Falling back to Default
+    -- would incorrectly enable trip categories that were deliberately excluded from the zone.
     findFareProductsWithGateFallback areaWithGate areaWithoutGate = do
       if SL.hasGateId areaWithGate
         then do
