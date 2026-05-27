@@ -459,8 +459,13 @@ upsertCoreRidePaymentLedger ctx rideFare gstAmount tollFare tollVatAmount platfo
                 <> show newTotal
                 <> ") for ride: "
                 <> rideId
-            (newIds, mbInv) <- doCreate
-            pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+            if newTotal > 0
+              then do
+                (newIds, mbInv) <- doCreate
+                pure UpsertCoreLedgerResult {coreEntryIds = newIds, invoiceId = mbInv, didCreate = True, didVoidStale = True}
+              else do
+                logInfo $ "Core ride payment total is zero, skipping create after void for ride: " <> rideId
+                pure UpsertCoreLedgerResult {coreEntryIds = [], invoiceId = Nothing, didCreate = False, didVoidStale = True}
           else do
             logInfo $ "Core ride payment ledger already up to date for ride: " <> rideId
             pure
