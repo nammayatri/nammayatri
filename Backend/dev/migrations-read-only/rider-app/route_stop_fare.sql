@@ -24,3 +24,9 @@ ALTER TABLE atlas_app.route_stop_fare ADD PRIMARY KEY ( category, end_stop_code,
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN offered_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_stop_fare DROP CONSTRAINT route_stop_fare_pkey;
+ALTER TABLE atlas_app.route_stop_fare ADD PRIMARY KEY ( category, fare_policy_id);

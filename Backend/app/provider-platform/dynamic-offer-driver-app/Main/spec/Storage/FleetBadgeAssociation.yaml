@@ -22,10 +22,6 @@ FleetBadgeAssociation:
 
   constraints:
     id: PrimaryKey
-    badgeId: "!SecondaryKey"
-    driverId: "!SecondaryKey"
-    fleetOwnerId: "!SecondaryKey"
-    badgeType: "!SecondaryKey"
 
   default:
     badgeType: "'DRIVER'"

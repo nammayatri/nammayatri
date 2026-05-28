@@ -44,6 +44,7 @@ CallStatus:
   constraints:
     id: PrimaryKey
     callId: "!SecondaryKey" # forcing to be a secondary key
+    rideId: "!SecondaryKey"
 
   queries:
     findById:

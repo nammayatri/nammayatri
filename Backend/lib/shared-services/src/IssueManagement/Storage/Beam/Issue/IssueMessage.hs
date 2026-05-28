@@ -51,6 +51,6 @@ instance B.Table IssueMessageT where
 
 type IssueMessage = IssueMessageT Identity
 
-$(enableKVPG ''IssueMessageT ['id] [['message]])
+$(enableKVPG ''IssueMessageT ['id] [])
 
 $(mkTableInstancesGenericSchema ''IssueMessageT "issue_message")

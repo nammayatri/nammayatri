@@ -25,9 +25,6 @@ FleetBadge:
 
   constraints:
     id: PrimaryKey
-    fleetOwnerId: SecondaryKey
-    badgeName: SecondaryKey
-    badgeType: SecondaryKey
 
   queries:
     findOneBadgeByNameAndBadgeTypeAndFleetOwnerId:

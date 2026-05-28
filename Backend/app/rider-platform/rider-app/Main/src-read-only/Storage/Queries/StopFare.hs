@@ -81,16 +81,8 @@ updateFareByStopCodes amount farePolicyId startStopCode endStopCode category = d
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> Kernel.Prelude.Text -> m (Maybe Domain.Types.StopFare.StopFare))
-findByPrimaryKey category endStopCode farePolicyId startStopCode = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.category $ Se.Eq (Kernel.Prelude.Just category),
-          Se.Is Beam.endStopCode $ Se.Eq endStopCode,
-          Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId),
-          Se.Is Beam.startStopCode $ Se.Eq startStopCode
-        ]
-    ]
+  (Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType -> Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m (Maybe Domain.Types.StopFare.StopFare))
+findByPrimaryKey category farePolicyId = do findOneWithKV [Se.And [Se.Is Beam.category $ Se.Eq (Kernel.Prelude.Just category), Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.StopFare.StopFare -> m ())
 updateByPrimaryKey (Domain.Types.StopFare.StopFare {..}) = do
@@ -99,19 +91,15 @@ updateByPrimaryKey (Domain.Types.StopFare.StopFare {..}) = do
     [ Se.Set Beam.amount amount,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.currency currency,
+      Se.Set Beam.endStopCode endStopCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.offeredAmount offeredAmount,
+      Se.Set Beam.startStopCode startStopCode,
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.And
-        [ Se.Is Beam.category $ Se.Eq (Kernel.Prelude.Just category),
-          Se.Is Beam.endStopCode $ Se.Eq endStopCode,
-          Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId),
-          Se.Is Beam.startStopCode $ Se.Eq startStopCode
-        ]
-    ]
+    [Se.And [Se.Is Beam.category $ Se.Eq (Kernel.Prelude.Just category), Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 instance FromTType' Beam.StopFare Domain.Types.StopFare.StopFare where
   fromTType' (Beam.StopFareT {..}) = do
