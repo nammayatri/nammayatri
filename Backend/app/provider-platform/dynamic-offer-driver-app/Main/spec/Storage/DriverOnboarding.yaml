@@ -1117,7 +1117,8 @@ DriverUdyam :
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-    # udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+
   queries:
     findById:
       kvFunction: findOneWithKV

@@ -29,6 +29,6 @@ instance B.Table DeviceVehicleMappingT where
 
 type DeviceVehicleMapping = DeviceVehicleMappingT Identity
 
-$(enableKVPG ''DeviceVehicleMappingT ['deviceId, 'gtfsId] [])
+$(enableKVPG ''DeviceVehicleMappingT ['deviceId, 'gtfsId] [['vehicleNo]])
 
 $(mkTableInstances ''DeviceVehicleMappingT "device_vehicle_mapping")

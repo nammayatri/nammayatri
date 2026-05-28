@@ -19,6 +19,9 @@ PersonWallet:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  constraints:
+    personId: SecondaryKey
+
   queries:
     findByPersonId:
       kvFunction: findOneWithKV
@@ -50,6 +53,9 @@ WalletRewardPosting:
     merchantOperatingCityId : Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  constraints:
+    walletId: SecondaryKey
 
   queries:
     findByWalletIdAndStatus:

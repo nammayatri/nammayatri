@@ -837,6 +837,9 @@ FRFSRecon:
     reconStatus: Maybe ReconStatus
     paymentGateway: Maybe Text
 
+  constraints:
+    frfsTicketBookingId: SecondaryKey
+
   default:
     destinationStationCode: "'NA'" # Default For DSL
     sourceStationCode: "'NA'" # Default For DSL
@@ -1088,11 +1091,9 @@ StopFare:
     category: Kernel.Prelude.Just|I
   constraints:
     farePolicyId: PrimaryKey
-    startStopCode: PrimaryKey
-    endStopCode: PrimaryKey
     category: PrimaryKey
-  extraIndexes:
-    - columns: [startStopCode, endStopCode]
+    startStopCode: "PrimaryKey | CompositeSecondaryKey StopMapping"
+    endStopCode: "PrimaryKey | CompositeSecondaryKey StopMapping"
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
