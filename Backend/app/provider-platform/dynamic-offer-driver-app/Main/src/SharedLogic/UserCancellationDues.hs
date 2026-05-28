@@ -27,7 +27,8 @@ data UserCancellationDuesData = UserCancellationDuesData
     serviceTier :: DServiceTierType.ServiceTierType,
     tripCategory :: DTC.TripCategory,
     cancellationReasonSelected :: Maybe DCancellationReason.CancellationReasonCode,
-    userSdkVersion :: Maybe Text
+    userSdkVersion :: Maybe Text,
+    isCashPayment :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
@@ -52,7 +53,8 @@ instance Default UserCancellationDuesData where
         serviceTier = DServiceTierType.TAXI,
         tripCategory = DTC.OneWay DTC.OneWayOnDemandDynamicOffer,
         cancellationReasonSelected = Nothing,
-        userSdkVersion = Nothing
+        userSdkVersion = Nothing,
+        isCashPayment = False
       }
 
 data UserCancellationDuesResult = UserCancellationDuesResult

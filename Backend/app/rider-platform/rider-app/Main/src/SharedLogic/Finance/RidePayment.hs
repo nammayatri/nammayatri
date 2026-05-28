@@ -113,6 +113,7 @@ module SharedLogic.Finance.RidePayment
     markCashbackEntriesAsDue,
     markCashbackEntriesAsPaidOut,
     voidRidePaymentLedger,
+    voidRidePaymentEntriesAndInvoice,
     createTipLedger,
     regenerateRideTipInvoice,
     createCancellationFeeLedger,
@@ -835,6 +836,19 @@ voidRideInvoice rideId = do
         Just inv -> do
           FInvoiceService.updateInvoiceStatus inv.id FInvoice.Cancelled
           logInfo $ "[voidRideInvoice] Cancelled Ride invoice " <> inv.id.getId <> " for rideId=" <> rideId
+
+-- | Void all unsettled ledger entries for a ride then cancel the ride invoice.
+--   Single call-site for any cancellation path (cash or online, with or without fee).
+voidRidePaymentEntriesAndInvoice ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  m ()
+voidRidePaymentEntriesAndInvoice rideId = do
+  pendingEntries <- findUnsettledRidePaymentEntries rideId
+  unless (null pendingEntries) $ do
+    voidRidePaymentLedger (map (.id) pendingEntries)
+    logInfo $ "Voided " <> show (length pendingEntries) <> " pending ledger entries for cancelled ride: " <> rideId
+  voidRideInvoice rideId
 
 -- | Mark the Ride invoice as Paid after successful payment capture.
 markRideInvoicePaid ::

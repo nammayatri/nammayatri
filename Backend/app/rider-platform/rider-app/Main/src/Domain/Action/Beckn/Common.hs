@@ -1463,12 +1463,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
                             markDueOnFailure
               _ -> do
                 -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
-                pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries ride.id.getId
-                unless (null pendingEntries) $ do
-                  let entryIds = map (.id) pendingEntries
-                  RidePaymentFinance.voidRidePaymentLedger entryIds
-                  logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries for cancelled ride: " <> ride.id.getId
-                RidePaymentFinance.voidRideInvoice ride.id.getId
+                void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
                 -- Create pending cancellation entries then mark as DUE for later collection
                 cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationGST
                 case cashLedgerResp of
@@ -1488,10 +1483,12 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
         _ -> pure ()
     when (isNothing cancellationFee) $
       whenJust mbRide $ \ride -> do
-        when ride.onlinePayment $ do
-          logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
-          void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-  -- Ledger entries are voided inside cancelPaymentIntent
+        if ride.onlinePayment
+          then do
+            logInfo $ "Cancel payment intent as no cancellation fees found: rideId: " <> ride.id.getId
+            void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
+          else void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
+  -- Ledger entries are voided inside cancelPaymentIntent (online) or voidRidePaymentEntriesAndInvoice (cash)
 
   unless (cancellationSource == DBCR.ByUser) $
     QBCR.upsert bookingCancellationReason
