@@ -369,14 +369,13 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
             (merchantShortId, rideCityCode) <- fetchDashboardLinkContext person.merchantId rideMocId
             let rideInfo = SIVR.buildRideInfo ride person phoneNumber
                 kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
-                dashboardRideInfoUrl =
+                mediaLinks =
                   buildDashboardMediaUrls
                     riderConfig.dashboardMediaFileUrlPattern
                     (Just ride.id.getId)
                     Nothing
                     merchantShortId
                     rideCityCode
-                mediaLinks = dashboardRideInfoUrl
             ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
@@ -541,14 +540,13 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
                 case A.toJSON rideMoc.city of
                   A.String code -> code
                   _ -> show rideMoc.city
-              dashboardRideInfoUrl =
+              mediaLinks =
                 buildDashboardMediaUrls
                   riderConfig.dashboardMediaFileUrlPattern
-                  (Just ride.id.getId)
+                  Nothing
                   (Just sosId.getId)
                   merchantShortId
                   rideCityCode
-              mediaLinks = dashboardRideInfoUrl
           case sosDetails.ticketId of
             Just ticketId -> do
               void $
