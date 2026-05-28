@@ -606,8 +606,9 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
   failures <- case rcValidationRules of
     Nothing -> pure []
     Just rules -> validateRCResponse rcValidationReq rules lang
+  let mbCanSwitchToAirport = rcValidationRules >>= (.enableForAirport)
   let mbReqStatus = if null failures then mbReqStatus' else Just "failed"
-      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight
+      rcInput = createRCInput mbVehicleCategory mbFleetOwnerId mbDocumentImageId mbDateOfRegistration mbVehicleModelYear mbGrossVehicleWeight mbUnladdenWeight mbCanSwitchToAirport
       expiryFailures = getExpiryFailures transporterConfig rcInput now
       allFailures = failures <> expiryFailures
   mVehicleRC <- do
@@ -638,8 +639,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   onVerifyRCHandler person resp.response mbVehicleCategory mbAirConditioned mbDocumentImageId mbVehicleVariant mbVehicleDoors mbVehicleSeatBelts mbDateOfRegistration mbVehicleModelYear mbOxygen mbVentilator (Just verifyRes.remPriorityList) mbImageExtractionValidation mbEncryptedRC imageId mbRetryCnt mbReqStatus
     else initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures
   where
-    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> CreateRCInput
-    createRCInput vehicleCategory fleetOwnerId documentImageId' dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight =
+    createRCInput :: Maybe DVC.VehicleCategory -> Maybe Text -> Id Image.Image -> Maybe UTCTime -> Maybe Int -> Maybe Float -> Maybe Float -> Maybe Bool -> CreateRCInput
+    createRCInput vehicleCategory fleetOwnerId documentImageId' dateOfRegistration vehicleModelYear mbGrossVehicleWeight mbUnladdenWeight enableForAirport' =
       CreateRCInput
         { registrationNumber = rcVerificationResponse.registrationNumber,
           fitnessUpto = convertTextToUTC rcVerificationResponse.fitnessUpto,
@@ -648,6 +649,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
           airConditioned = mbAirConditioned,
           oxygen = mbOxygen,
           ventilator = mbVentilator,
+          enableForAirport = enableForAirport',
           documentImageId = documentImageId',
           vehicleClass = rcVerificationResponse.vehicleClass,
           vehicleClassCategory = rcVerificationResponse.vehicleCategory,
@@ -708,6 +710,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             airConditioned = input.airConditioned,
             oxygen = input.oxygen,
             ventilator = input.ventilator,
+            enableForAirport = input.enableForAirport,
             luggageCapacity = Nothing,
             vehicleRating = Nothing,
             vehicleRatingRemark = Nothing,
@@ -805,7 +808,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
                   when (rc.verificationStatus == Documents.VALID && isJust rc.vehicleVariant && null allFailures) $ do
                     driverInfo <- DIQuery.findById vehicle.driverId >>= fromMaybeM DriverInfoNotFound
                     driver <- Person.findById vehicle.driverId >>= fromMaybeM (PersonNotFound vehicle.driverId.getId)
-                    vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing
+                    vehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
                     let updatedVehicle = makeFullVehicleFromRC vehicleServiceTiers driverInfo driver person.merchantId vehicle.registrationNo rc person.merchantOperatingCityId now Nothing
                     VQuery.upsert updatedVehicle
               whenJust rcVerificationResponse.registrationNumber $ \num -> Redis.del $ makeFleetOwnerKey num
@@ -975,7 +978,7 @@ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc = do
       whenJust rc.vehicleVariant $ \variant -> do
         when (variant == DV.SUV) $
           DIQuery.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi driverInfo.driverId
-      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+      cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
       person <- Person.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
       -- driverStats <- runInReplica $ QDriverStats.findById driverInfo.driverId >>= fromMaybeM DriverInfoNotFound
       let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo person merchantId rcNumber rc merchantOpCityId now Nothing

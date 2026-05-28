@@ -43,6 +43,7 @@ data DriverInformationT f = DriverInformationT
     canDowngradeToHatchback :: B.C f Kernel.Prelude.Bool,
     canDowngradeToSedan :: B.C f Kernel.Prelude.Bool,
     canDowngradeToTaxi :: B.C f Kernel.Prelude.Bool,
+    canSwitchToAirport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToInterCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToIntraCity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

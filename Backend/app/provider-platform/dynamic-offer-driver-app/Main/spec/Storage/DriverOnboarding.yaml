@@ -303,6 +303,7 @@ VehicleRegistrationCertificate:
     airConditioned: Maybe Bool
     oxygen: Maybe Bool
     ventilator: Maybe Bool
+    enableForAirport: Maybe Bool
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
@@ -1425,6 +1426,7 @@ RCValidationRules:
     fuelType: Maybe [Text]
     vehicleClass: Maybe [Text]
     vehicleOEM: Maybe [Text]
+    enableForAirport: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:

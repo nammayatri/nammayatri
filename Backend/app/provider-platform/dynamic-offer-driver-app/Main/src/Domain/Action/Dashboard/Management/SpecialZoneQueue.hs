@@ -13,13 +13,17 @@ where
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue as SZQT
 import Data.List (nub)
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
 import Data.Time (addUTCTime)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQueueRequest as DSZQR
+import Domain.Types.VehicleVariant (castServiceTierToVariant)
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Prelude (read)
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
@@ -100,22 +104,28 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   -- Base variants + every variant the operator has explicitly configured on the gate
   -- (via per-variant threshold maps). Without this the hardcoded list silently drops
   -- custom variants like SUV_PLUS / TAXI_PLUS so their config never reaches the dashboard.
-  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE", "AMBULANCE"]
+  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE"]
       configuredVariants =
         concatMap Map.keys $
           catMaybes [gate.minDriverThresholds, gate.maxDriverThresholds, gate.demandThresholds]
       vehicleTypes = nub (baseVariants <> configuredVariants)
   -- Build a map from driverId to DriverLocation for quick lookup
+  let tierList = catMaybes $ map (\vt -> readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType) vehicleTypes
+      uniqVariantsList = nub $ map castServiceTierToVariant tierList
+  uniqVariantsQueueList <- mapM (\vt' -> do resp <- LTSFlow.getQueueDrivers specialLocationId (show vt'); pure (vt', resp)) uniqVariantsList
+  let uniqVariantsQueueMap = Map.fromList uniqVariantsQueueList
+
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
   vehicleStats <- forM vehicleTypes $ \vt -> do
-    queueResp <- LTSFlow.getQueueDrivers specialLocationId vt
+    let variant = fmap castServiceTierToVariant (readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType)
+        mbQueueResp = variant >>= (`Map.lookup` uniqVariantsQueueMap)
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
     mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
     mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
     -- Drivers who accepted the pickup notification and are en-route to the gate
     acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
-    let totalInQueue = queueResp.queueSize
-        queuedDriverIds = map (.driverId) queueResp.drivers
+    let totalInQueue = maybe 0 (.queueSize) mbQueueResp
+        queuedDriverIds = maybe [] (map (.driverId) . (.drivers)) mbQueueResp
         -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
         inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
         outsidePickupZone = totalInQueue - inPickupZone
@@ -123,7 +133,7 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         -- Check per-driver notified key to determine committedToPickup
         notifiedDriverIds = acceptedDriverIds -- drivers who accepted are committed
         -- Build per-driver details with location from the nearBy data
-        driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) queueResp.drivers
+        driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) (maybe [] (.drivers) mbQueueResp)
     pure
       SZQT.VehicleQueueStats
         { vehicleType = vt,

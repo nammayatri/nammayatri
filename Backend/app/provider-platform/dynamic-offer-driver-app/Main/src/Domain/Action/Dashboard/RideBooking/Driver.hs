@@ -473,7 +473,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
       pure $ map getShortId availableMerchantsShortId
     Nothing -> pure []
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just [])
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId (Just []) Nothing
   driverStats <- runInReplica $ QDriverStats.findById person.id >>= fromMaybeM DriverInfoNotFound
   selectedServiceTiers <-
     maybe
@@ -938,7 +938,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
           createReminder ODC.VehiclePermit personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just permitExpiry) Nothing
         whenJust newRC.insuranceValidity $ \insuranceValidity ->
           createReminder ODC.VehicleInsurance personId merchant.id merchantOpCityId (Just newRC.id.getId) (Just insuranceValidity) Nothing
-        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
+        cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
         -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
         unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
           driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
@@ -974,6 +974,7 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       airConditioned,
       oxygen,
       ventilator,
+      enableForAirport,
       documentImageId = "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,

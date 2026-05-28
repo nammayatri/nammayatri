@@ -11,7 +11,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RCValidationRulesT f = RCValidationRulesT
-  { fuelType :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+  { enableForAirport :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    fuelType :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
     id :: (B.C f Kernel.Prelude.Text),
     maxVehicleAge :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     merchantId :: (B.C f Kernel.Prelude.Text),

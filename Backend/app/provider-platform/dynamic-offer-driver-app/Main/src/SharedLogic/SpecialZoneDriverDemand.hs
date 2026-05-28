@@ -84,6 +84,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
+import qualified Storage.Queries.VehicleExtra as QV
 import qualified Tools.Notifications as Notify
 
 -- | Drivers within this many meters of a *different* queueable gate at the same
@@ -156,7 +157,7 @@ clearAirportPerKmFareCacheForPolicy fpId = do
         Map.fromListWith (<>) [(cityId, [(tier, slId)]) | (cityId, tier, slId) <- pickupProducts]
   cacheKeys <-
     fmap concat . forM (Map.toList byCity) $ \(cityId, tierSlPairs) -> do
-      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing
+      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing Nothing
       let variantsForTier tier =
             [ v
               | vst <- cityServiceTiers,
@@ -184,7 +185,7 @@ computeAirportPerKmFare ::
   DV.VehicleVariant ->
   m (Maybe HighPrecMoney)
 computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant = do
-  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
   let eligibleServiceTiers =
         [ vst.serviceTierType
           | vst <- cityServiceTiers,
@@ -610,7 +611,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> show (length queueDriverIds)
                 <> " cooldown="
                 <> show cooldown
-            eligible <- filterEligibleDrivers gateId queueDriverIds
+            eligible <- filterEligibleDrivers variant gateId gate.enableQueueFilter queueDriverIds
             eligibleNearGate <- filterByGateProximity gate eligible
             logInfo $
               "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
@@ -658,7 +659,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- fails, fare calc is silently skipped (notification still sent without perKmFare).
       mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
-  eligiblePriority <- filterEligibleDrivers gateId priorityDriverIds
+  eligiblePriority <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter priorityDriverIds
   eligiblePriorityNearGate <- filterByGateProximity gate eligiblePriority
   priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
   let remaining = max 0 (needed - priorityCount)
@@ -666,13 +667,19 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
   queueCount <-
     if remaining > 0
       then do
-        queueResp <- LTSFlow.getQueueDrivers specialLocationId vehicleType
-        let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-            -- Exclude priority drivers already processed
-            queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
-        eligible <- filterEligibleDrivers gateId queueDriverIds
-        eligibleNearGate <- filterByGateProximity gate eligible
-        notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
+        let mbVariant = DV.castServiceTierToVariant <$> mbServiceTier
+        case mbVariant of
+          Nothing -> do
+            logWarning $ "forceNotifyDriverDemand: unable to parse vehicleType as service tier, skipping fare calc: " <> vehicleType
+            pure 0
+          Just variant -> do
+            queueResp <- LTSFlow.getQueueDrivers specialLocationId (show variant)
+            let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
+                -- Exclude priority drivers already processed
+                queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
+            eligible <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter queueDriverIds
+            eligibleNearGate <- filterByGateProximity gate eligible
+            notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
       else pure 0
   pure (priorityCount + queueCount)
 
@@ -823,11 +830,13 @@ filterEligibleDrivers ::
     Forkable m,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
+  Text -> -- vehicleType
   Text -> -- gateId
+  Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, vehicle.canSwitchToAirport must be Just True
   [Id DP.Person] ->
   m [Id DP.Person]
-filterEligibleDrivers _ [] = pure []
-filterEligibleDrivers gateId driverIds = do
+filterEligibleDrivers _ _ _ [] = pure []
+filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
   shards <- asks (.gateNotifiedKeyShards)
   now <- getCurrentTime
   let cooldownKeyFor d = mkGateDriverNotifiedKey shards gateId d.getId
@@ -861,14 +870,36 @@ filterEligibleDrivers gateId driverIds = do
             | info <- driverInfos,
               info.onRide || info.mode == Just DTC.OFFLINE
           ]
+      airportIneligibleDrivers =
+        Set.fromList
+          [ info.driverId
+            | info <- driverInfos,
+              not info.canSwitchToAirport
+          ]
+  -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
+  let mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
+      vehicleAirportFilterEnabled = fromMaybe False (Map.lookup vehicleType =<< mbFilterAirport)
+  vehicleEligibleDriverIds <- case mbTier of
+    Nothing -> pure driverIds
+    Just tier -> do
+      vehicles <- QV.findAllByDriverIds driverIds
+      let eligibleSet =
+            Set.fromList
+              [ v.driverId
+                | v <- vehicles,
+                  tier `elem` v.selectedServiceTiers,
+                  not vehicleAirportFilterEnabled || v.enableForAirport == Just True
+              ]
+      pure $ filter (`Set.member` eligibleSet) driverIds
   pure $
     filter
       ( \d ->
           not (Set.member (cooldownKeyFor d) inCooldownKeys)
             && not (Set.member d busyDrivers)
             && not (Set.member d onRideDriversOrOfflineDrivers)
+            && not (Set.member d airportIneligibleDrivers)
       )
-      driverIds
+      vehicleEligibleDriverIds
 
 -- | Cached snapshot of a queueable gate used for the proximity check. Carries the
 --   parsed pickup-zone polygon(s) so the in-memory filter can do point-in-polygon

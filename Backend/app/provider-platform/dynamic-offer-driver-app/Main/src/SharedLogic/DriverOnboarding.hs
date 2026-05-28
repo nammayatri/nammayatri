@@ -42,7 +42,7 @@ import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.TransporterConfig as DTC
-import Domain.Types.Vehicle
+import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -166,8 +166,8 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
 
-checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> [DVST.VehicleServiceTier] -> Maybe Text -> Flow ()
-checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleServiceTiers downgradeReason = do
+checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> Flow ()
+checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCityId cityVehicleServiceTiers downgradeReason shouldUpdateServiceTiers = do
   driverInfo <- runInReplica $ DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
   let serviceTierACThresholds = map (\DVST.VehicleServiceTier {isAirConditioned = _a, ..} -> airConditionedThreshold) (filter (\v -> vehicle.variant `elem` v.allowedVehicleVariant) cityVehicleServiceTiers)
@@ -185,12 +185,19 @@ checkAndUpdateAirConditioned isDashboard isAirConditioned personId cityVehicleSe
   mbRc <- runInReplica $ QRC.findLastVehicleRCWrapper vehicle.registrationNo
   QVehicle.updateAirConditioned (Just isAirConditioned) downgradeReason personId
   whenJust mbRc $ \rc -> QRC.updateAirConditioned (Just isAirConditioned) rc.id
+  when shouldUpdateServiceTiers $ do
+    let acRestricted = isAirConditioned && not (checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds))
+        driverInfo' = if acRestricted then driverInfo {DI.airConditionScore = Just 0.0} else driverInfo
+        vehicle' = vehicle {DV.airConditioned = Just isAirConditioned}
+    serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True (Just driverInfo') (Just vehicle') Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+    let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
+    QVehicle.updateSelectedServiceTiers newTiers personId
 
 checkIfACAllowedForDriver :: DI.DriverInformation -> [Double] -> Bool
 checkIfACAllowedForDriver driverInfo serviceTierACThresholds = null serviceTierACThresholds || any ((fromMaybe 0 driverInfo.airConditionScore) <=) serviceTierACThresholds
 
-incrementDriverAcUsageRestrictionCount :: [DVST.VehicleServiceTier] -> Id Person -> Flow ()
-incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
+incrementDriverAcUsageRestrictionCount :: [DVST.VehicleServiceTier] -> Id DMOC.MerchantOperatingCity -> Id Person -> Flow ()
+incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers merchantOpCityId personId = do
   driverInfo <- DIQuery.findById personId >>= fromMaybeM DriverInfoNotFound
   driver <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let mbMaxACUsageRestrictionThreshold = safeMaximum . mapMaybe (\DVST.VehicleServiceTier {..} -> airConditionedThreshold) $ cityVehicleServiceTiers
@@ -210,6 +217,10 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
             scoreInt = round airConditionScore :: Int
         when (scoreInt == thresholdInt - 1 || scoreInt == thresholdInt) $
           fork "Send AC Warning Overlay" $ ACOverlay.sendACUsageWarningOverlay driver
+  let updatedDriverInfo = driverInfo {DI.airConditionScore = Just airConditionScore}
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction True (Just updatedDriverInfo) Nothing Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
+  let newTiers = (.serviceTierType) . fst <$> filter (not . snd) serviceTiers
+  QVehicle.updateSelectedServiceTiers newTiers personId
   where
     safeMaximum :: Ord a => [a] -> Maybe a
     safeMaximum [] = Nothing
@@ -322,7 +333,7 @@ makeRCAPIEntity VehicleRegistrationCertificate {..} rcDecrypted =
 makeFullVehicleFromRC :: [DVST.VehicleServiceTier] -> DI.DriverInformation -> Person -> Id DTM.Merchant -> Text -> VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> UTCTime -> Maybe [Text] -> Vehicle
 makeFullVehicleFromRC vehicleServiceTiers driverInfo driver merchantId_ certificateNumber rc merchantOpCityId now vehicleTag = do
   let vehicle = makeVehicleFromRC driver.id merchantId_ certificateNumber rc merchantOpCityId now vehicleTag
-  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers
+  let availableServiceTiersForDriver = (.serviceTierType) . fst <$> selectVehicleTierForDriverWithUsageRestriction True driverInfo vehicle vehicleServiceTiers Nothing now
   addSelectedServiceTiers availableServiceTiersForDriver vehicle
   where
     addSelectedServiceTiers :: [DVST.ServiceTierType] -> Vehicle -> Vehicle
@@ -349,6 +360,7 @@ makeVehicleFromRC driverId merchantId certificateNumber rc merchantOpCityId now 
       airConditioned = rc.airConditioned,
       oxygen = rc.oxygen,
       ventilator = rc.ventilator,
+      enableForAirport = rc.enableForAirport,
       luggageCapacity = rc.luggageCapacity,
       vehicleRating = rc.vehicleRating,
       vehicleRatingRemark = rc.vehicleRatingRemark,
@@ -383,6 +395,7 @@ data CreateRCInput = CreateRCInput
     airConditioned :: Maybe Bool,
     oxygen :: Maybe Bool,
     ventilator :: Maybe Bool,
+    enableForAirport :: Maybe Bool,
     bodyType :: Maybe Text,
     fuelType :: Maybe Text,
     color :: Maybe Text,
@@ -476,6 +489,7 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         airConditioned = airConditioned,
         oxygen = input.oxygen,
         ventilator = input.ventilator,
+        enableForAirport = input.enableForAirport,
         luggageCapacity = Nothing,
         vehicleRating = Nothing,
         vehicleRatingRemark = Nothing,

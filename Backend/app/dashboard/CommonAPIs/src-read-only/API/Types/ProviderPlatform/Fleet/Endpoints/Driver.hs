@@ -76,6 +76,7 @@ data AddVehicleReq = AddVehicleReq
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     mYManufacturing :: Kernel.Prelude.Maybe Data.Time.Day,
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

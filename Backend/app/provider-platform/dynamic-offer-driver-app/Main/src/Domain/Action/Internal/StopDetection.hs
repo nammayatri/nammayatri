@@ -16,6 +16,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.CallBAP as BP
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -48,7 +49,7 @@ stopDetection StopDetectionReq {..} = do
     oldStopCount :: Maybe Int <- Redis.safeGet $ mkStopCountRedisKey rideId.getId
     let currStopCount = 1 + fromMaybe 0 oldStopCount
     Redis.setExp (mkStopCountRedisKey ride.id.getId) currStopCount 1200 --20 mins
-    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
+    vehicleServiceTier <- CQVST.findByServiceTierTypeAndCityIdInRideFlow booking.vehicleServiceTier booking.merchantOperatingCityId booking.configInExperimentVersions (booking.area >>= SL.pickupSpecialZoneIdFromArea) >>= fromMaybeM (VehicleServiceTierNotFound (show booking.vehicleServiceTier))
     case (vehicleServiceTier.stopFcmThreshold, vehicleServiceTier.stopFcmSuppressCount) of
       (Just threshold, Just suppressCount) -> do
         let condition = sendNotificationCondition threshold suppressCount currStopCount

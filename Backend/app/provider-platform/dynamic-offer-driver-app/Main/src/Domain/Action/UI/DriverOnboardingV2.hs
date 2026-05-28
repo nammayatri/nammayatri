@@ -263,9 +263,6 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast personId)))
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
-  vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
-  -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId Nothing
   (mbTripCategory, mbPickup, mbVehicleServiceType) <-
     if driverInfo.onRide
       then do
@@ -273,7 +270,8 @@ getDriverRateCard (mbPersonId, _, merchantOperatingCityId) reqDistance reqDurati
         booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound $ "Booking not found for ride booking id:" <> ride.bookingId.getId)
         pure (ride.tripCategory, Just $ LatLong booking.fromLocation.lat booking.fromLocation.lon, Just booking.vehicleServiceTier)
       else pure (Nothing, Nothing, Nothing)
-  let driverVehicleServiceTierTypes = (\(vehicleServiceTier, _) -> vehicleServiceTier.serviceTierType) <$> selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
+  serviceTiers <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) Nothing Nothing Nothing personId merchantOperatingCityId
+  let driverVehicleServiceTierTypes = (.serviceTierType) . fst <$> serviceTiers
   let mbServiceTierType' = mbServiceTierType <|> mbVehicleServiceType
   let tripCategory = fromMaybe (OneWay OneWayOnDemandDynamicOffer) (mbTripCategoryQuery <|> mbTripCategory)
   case mbServiceTierType' of
@@ -388,8 +386,8 @@ postDriverUpdateAirCondition ::
   )
 postDriverUpdateAirCondition (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.UpdateAirConditionUpdateRequest {..} = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just [])
-  SDO.checkAndUpdateAirConditioned False isAirConditioned personId cityVehicleServiceTiers Nothing
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just []) Nothing
+  SDO.checkAndUpdateAirConditioned False isAirConditioned personId merchantOperatingCityId cityVehicleServiceTiers Nothing True
   now <- getCurrentTime
   QDI.updateLastACStatusCheckedAt (Just now) personId
   return Success
@@ -406,11 +404,10 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   driverInfo <- runInReplica $ QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- runInReplica $ QVehicle.findById personId >>= fromMaybeM (VehicleDoesNotExist personId.getId)
-  -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just []) Nothing
   let personLanguage = fromMaybe ENGLISH person.language
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
+  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOpCityId
   let serviceTierACThresholds = map (\(VehicleServiceTier {..}, _) -> airConditionedThreshold) driverVehicleServiceTierTypes
   let isACCheckEnabledForCity = any isJust serviceTierACThresholds
   let isACAllowedForDriver = SDO.checkIfACAllowedForDriver driverInfo (catMaybes serviceTierACThresholds)
@@ -467,6 +464,15 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
           )
           False
           driverVehicleServiceTierTypes
+      canSwitchToAirport' =
+        foldl
+          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToAirportForAnyServiceTierSoFar
+                else canSwitchToAirportForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isAirportRideEnabled
+          )
+          False
+          driverVehicleServiceTierTypes
       canSwitchToIntraCity' = any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
 
   return $
@@ -475,6 +481,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
+        canSwitchToAirport = if canSwitchToAirport' && fromMaybe True vehicle.enableForAirport then Just driverInfo.canSwitchToAirport else Nothing,
         airConditioned = mbAirConditioned
       }
 
@@ -489,14 +496,13 @@ postDriverUpdateServiceTiers ::
 postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.UI.DriverOnboardingV2.DriverVehicleServiceTiers {..} = do
   -- Todo: Handle oxygen,ventilator here also. For now, frontend can handle
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
-  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just [])
+  cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOperatingCityId (Just []) Nothing
 
-  whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId cityVehicleServiceTiers Nothing
+  whenJust airConditioned $ \ac -> SDO.checkAndUpdateAirConditioned False ac.isWorking personId merchantOperatingCityId cityVehicleServiceTiers Nothing False
   driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
   vehicle <- QVehicle.findById personId >>= fromMaybeM (VehicleNotFound personId.getId)
 
-  let driverVehicleServiceTierTypes = selectVehicleTierForDriverWithUsageRestriction False driverInfo vehicle cityVehicleServiceTiers
+  driverVehicleServiceTierTypes <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) (Just vehicle) Nothing (Just cityVehicleServiceTiers) personId merchantOperatingCityId
   mbSelectedServiceTiers <-
     driverVehicleServiceTierTypes `forM` \(driverServiceTier, _) -> do
       let isAlreadySelected = driverServiceTier.serviceTierType `elem` vehicle.selectedServiceTiers
@@ -510,7 +516,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
   let selectedServiceTierTypes = map (.serviceTierType) $ catMaybes mbSelectedServiceTiers
   QVehicle.updateSelectedServiceTiers selectedServiceTierTypes personId
 
-  {- Atleast one intercity/rental non usage resctricted service tier should be selected for getting intercity/rental rides -}
+  {- Atleast one intercity/rental/airport non usage restricted service tier should be selected for getting respective rides -}
   let canSwitchToInterCity' =
         foldl
           ( \canSwitchToInterCityForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
@@ -529,6 +535,15 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           )
           False
           driverVehicleServiceTierTypes
+      canSwitchToAirport' =
+        foldl
+          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
+              if isUsageRestricted
+                then canSwitchToAirportForAnyServiceTierSoFar
+                else canSwitchToAirportForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToAirport canSwitchToAirport && fromMaybe True selectedServiceTier.isAirportRideEnabled)
+          )
+          False
+          driverVehicleServiceTierTypes
 
       canSwitchToIntraCity' =
         if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
@@ -536,6 +551,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           else True
 
   QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
+  QDI.updateAirportSwitch canSwitchToAirport' personId
 
   return Success
 
