@@ -585,10 +585,11 @@ resolveIGMIssue :: (Id SP.Person, Id DM.Merchant) -> Id Domain.IssueReport -> Ma
 resolveIGMIssue (personId, merchantId) issueReportId response rating = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (InternalError $ "Issue Report not found " <> show issueReportId.getId)
-  becknIssueId <- maybe (throwError $ InvalidRequest "IGM Issue Id not found") return issueReport.becknIssueId
-  mbIGMIssue <- QIGM.findByPrimaryKey (Id becknIssueId)
-  maybe (throwError $ InvalidRequest "IGM Issue not found") (\igmIssue -> processIGMIssue igmIssue issueReport person) mbIGMIssue
-  pure ()
+  case issueReport.becknIssueId of
+    Nothing -> pure ()
+    Just becknIssueId -> do
+      mbIGMIssue <- QIGM.findByPrimaryKey (Id becknIssueId)
+      maybe (throwError $ InvalidRequest "IGM Issue not found") (\igmIssue -> processIGMIssue igmIssue issueReport person) mbIGMIssue
   where
     processIGMIssue igmIssue issueReport person = do
       merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
