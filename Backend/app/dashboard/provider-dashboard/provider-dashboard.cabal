@@ -43,6 +43,7 @@ library
       Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.AppManagement.SubscriptionTransaction
       Domain.Action.ProviderPlatform.CheckVerification
+      Domain.Action.ProviderPlatform.Conductor.Registration
       Domain.Action.ProviderPlatform.Fleet.Driver
       Domain.Action.ProviderPlatform.Fleet.LiveMap
       Domain.Action.ProviderPlatform.Fleet.Onboarding
@@ -103,6 +104,8 @@ library
       API.Action.ProviderPlatform.AppManagement.Penalty
       API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.AppManagement.SubscriptionTransaction
+      API.Action.ProviderPlatform.Conductor
+      API.Action.ProviderPlatform.Conductor.Registration
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
       API.Action.ProviderPlatform.Fleet.LiveMap
@@ -155,6 +158,7 @@ library
       API.Action.ProviderPlatform.RideBooking.SearchRequest
       API.Action.ProviderPlatform.RideBooking.Volunteer
       API.Client.ProviderPlatform.AppManagement
+      API.Client.ProviderPlatform.Conductor
       API.Client.ProviderPlatform.Fleet
       API.Client.ProviderPlatform.IssueManagement
       API.Client.ProviderPlatform.Management

@@ -170,6 +170,7 @@ library
       Domain.Action.Dashboard.AppManagement.Subscription
       Domain.Action.Dashboard.AppManagement.SubscriptionTransaction
       Domain.Action.Dashboard.Common
+      Domain.Action.Dashboard.Conductor.Registration
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Access
@@ -916,6 +917,8 @@ library
       API.Action.Dashboard.AppManagement.Penalty
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.AppManagement.SubscriptionTransaction
+      API.Action.Dashboard.Conductor
+      API.Action.Dashboard.Conductor.Registration
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.Fleet.LiveMap

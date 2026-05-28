@@ -61,6 +61,18 @@ gimsEmployeeLogin :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurat
 gimsEmployeeLogin baseUrl gtfsId req =
   withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorEmployeeLogin gtfsId req) "gimsEmployeeLogin" NandiAPI.operatorEmployeeLoginAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_EMPLOYEE_LOGIN_API") baseUrl)
 
+gimsEmployeeRegister :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> GimsEmployeeRegisterReq -> m GimsEmployeeRegisterResp
+gimsEmployeeRegister baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorEmployeeRegister gtfsId req) "gimsEmployeeRegister" NandiAPI.operatorEmployeeRegisterAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_GIMS_EMPLOYEE_REGISTER_API") baseUrl)
+
+gimsEmployeeRegisterE :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasRequestId r) => BaseUrl -> Text -> GimsEmployeeRegisterReq -> m (Either Text GimsEmployeeRegisterResp)
+gimsEmployeeRegisterE baseUrl gtfsId req =
+  callAPI baseUrl (NandiAPI.postOperatorEmployeeRegister gtfsId req) "gimsEmployeeRegister" NandiAPI.operatorEmployeeRegisterAPI >>= \case
+    Right resp -> pure (Right resp)
+    Left err -> do
+      logError $ "Error registering employee: " <> show err
+      pure (Left "Failed to register employee")
+
 getStopChildren :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> Text -> m [Text]
 getStopChildren baseUrl gtfsId stopCode =
   withShortRetry $ callAPI baseUrl (NandiAPI.getNandiStopChildren gtfsId stopCode) "getStopChildren" NandiAPI.stopChildrenAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_STOP_CHILDREN_API") baseUrl)

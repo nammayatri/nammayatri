@@ -30,7 +30,7 @@ import Kernel.Utils.Common (fromMaybeM, getCurrentTime, logError, logInfo, throw
 import qualified Lib.GtfsDataServer.Flow as NandiFlow
 import Lib.GtfsDataServer.Types
 import SharedLogic.CallBAPInternal (getFrfsTripManifest)
-import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getGimsBaseUrl)
+import SharedLogic.IntegratedBPPConfig (findIntegratedBPPConfig, getBaseUrl)
 import Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Person as QPerson
@@ -188,7 +188,7 @@ postFrfsFleetOperatorTripAction (mbCallerId, _merchantId, merchantOpCityId) req 
       (show BUS)
       MULTIMODAL
 
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
 
   let anchor =
         GimsOperationAnchor
@@ -369,7 +369,7 @@ postFrfsFleetOperatorCurrentOperation (mbCallerId, _merchantId, merchantOpCityId
       MULTIMODAL
 
   -- 2.Get OTP REST base URL
-  baseUrl <- getGimsBaseUrl integratedBPPConfig
+  baseUrl <- getBaseUrl integratedBPPConfig
 
   let anchor =
         GimsOperationAnchor
