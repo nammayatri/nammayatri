@@ -904,14 +904,8 @@ cancelPaymentIntent merchantId merchantOpCityId paymentMode rideId = do
   -- Cancel at Stripe — tolerate failures (PI may already be cancelled/captured/expired)
   handle (\(e :: SomeException) -> logError $ "Cancel payment intent failed for ride " <> rideId.getId <> ": " <> show e) $
     DPayment.cancelPaymentIntentService commonMerchantOperatingCityId (cast @Ride.Ride @DPayment.Ride rideId) cancelPaymentIntentCall
-  -- Void unsettled ledger entries (PENDING or DUE) regardless of Stripe cancel result
-  pendingEntries <- RidePaymentFinance.findUnsettledRidePaymentEntries rideId.getId
-  unless (null pendingEntries) $ do
-    let entryIds = map (.id) pendingEntries
-    RidePaymentFinance.voidRidePaymentLedger entryIds
-    logInfo $ "Voided " <> show (length entryIds) <> " pending ledger entries for cancelled ride: " <> rideId.getId
-  -- Cancel the associated Ride invoice
-  RidePaymentFinance.voidRideInvoice rideId.getId
+  -- Void unsettled ledger entries and ride invoice regardless of Stripe cancel result
+  void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice rideId.getId
 
 chargePaymentIntent ::
   ( MonadFlow m,

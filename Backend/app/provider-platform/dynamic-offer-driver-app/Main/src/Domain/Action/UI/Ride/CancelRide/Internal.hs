@@ -466,6 +466,12 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
       driverWaitingTime = if isJust ride.driverArrivalTime then Just (round $ diffUTCTime now (fromJust ride.driverArrivalTime)) else Nothing
   mbSearchRequest <- QSR.findByTransactionIdAndMerchantId booking.transactionId booking.providerId
   let userSdkVersionText = Version.versionToText <$> (mbSearchRequest >>= (.userSdkVersion))
+  mbPaymentMethod <- forM booking.paymentMethodId $ \pmId ->
+    CQMPM.findByIdAndMerchantOpCityId pmId booking.merchantOperatingCityId
+      >>= fromMaybeM (MerchantPaymentMethodNotFound pmId.getId)
+  let isCashPayment = case mbPaymentMethod of
+        Nothing -> True
+        Just pm -> pm.paymentInstrument == DMPM.Cash
   let logicInput =
         UserCancellationDues.UserCancellationDuesData
           { cancelledBy = cancellationType,
@@ -486,7 +492,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
             serviceTier = booking.vehicleServiceTier,
             tripCategory = booking.tripCategory,
             cancellationReasonSelected = reasonCode,
-            userSdkVersion = userSdkVersionText
+            userSdkVersion = userSdkVersionText,
+            isCashPayment = isCashPayment
           }
   if transporterConfig.canAddCancellationFee
     then do
@@ -545,7 +552,9 @@ getCancellationCharges booking ride cancellationType reasonCode = do
           case charges' of
             Just charges -> do
               let totalFee = charges + fromMaybe 0 tax'
-              return (Just $ PriceAPIEntity {amount = totalFee, currency = booking.currency}, tax', mbVersion)
+              if totalFee == 0
+                then return (Nothing, Nothing, mbVersion)
+                else return (Just $ PriceAPIEntity {amount = totalFee, currency = booking.currency}, tax', mbVersion)
             Nothing -> return (Nothing, tax', mbVersion)
         else return (Nothing, Nothing, Nothing)
 
