@@ -30,12 +30,16 @@ findPlaceByGeoHash geoHash = do findAllWithKV [Se.Is Beam.geoHash $ Se.Eq geoHas
 findPlaceByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.PlaceNameCache.PlaceNameCache])
 findPlaceByPlaceId placeId = do findAllWithKV [Se.Is Beam.placeId $ Se.Eq placeId]
 
+updateAddressHashByPlaceId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateAddressHashByPlaceId addressHash placeId = do updateWithKV [Se.Set Beam.addressHash addressHash] [Se.Is Beam.placeId $ Se.Eq placeId]
+
 instance FromTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCache where
   fromTType' (Beam.PlaceNameCacheT {..}) = do
     pure $
       Just
         Domain.Types.PlaceNameCache.PlaceNameCache
           { addressComponents = addressComponents,
+            addressHash = addressHash,
             formattedAddress = formattedAddress,
             geoHash = geoHash,
             id = Kernel.Types.Id.Id id,
@@ -50,6 +54,7 @@ instance ToTType' Beam.PlaceNameCache Domain.Types.PlaceNameCache.PlaceNameCache
   toTType' (Domain.Types.PlaceNameCache.PlaceNameCache {..}) = do
     Beam.PlaceNameCacheT
       { Beam.addressComponents = addressComponents,
+        Beam.addressHash = addressHash,
         Beam.formattedAddress = formattedAddress,
         Beam.geoHash = geoHash,
         Beam.id = Kernel.Types.Id.getId id,

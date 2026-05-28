@@ -15,6 +15,7 @@ PlaceNameCache:
     placeId: Maybe Text
     addressComponents: "[AddressResp]"
     geoHash: Maybe Text
+    addressHash: Maybe Text
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
@@ -34,6 +35,10 @@ PlaceNameCache:
     deleteById:
       kvFunction: deleteWithKV
       where: id
+    updateAddressHashByPlaceId:
+      kvFunction: updateWithKV
+      params: [addressHash]
+      where: placeId
 
   excludedFields:
     - merchantId

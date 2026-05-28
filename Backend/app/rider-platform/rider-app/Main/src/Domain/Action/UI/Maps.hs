@@ -27,8 +27,12 @@ module Domain.Action.UI.Maps
   )
 where
 
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Digest.Pure.MD5 as MD5
 import qualified Data.Geohash as DG
 import Data.Text (pack)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time as DT
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -73,6 +77,9 @@ data AutoCompleteReq = AutoCompleteReq
 makeAutoCompleteKey :: Text -> Text -> Text
 makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" <> token <> "|" <> typeOfSearch
 
+addressDigest :: Text -> Text
+addressDigest = T.pack . show . MD5.md5 . BSL.fromStrict . TE.encodeUtf8 . T.toCaseFold . T.strip
+
 autoComplete :: (ServiceFlow m r, EventStreamFlow m r, HasShortDurationRetryCfg r c) => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> AutoCompleteReq -> m Maps.AutoCompleteResp
 autoComplete (personId, merchantId) entityId AutoCompleteReq {..} = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
@@ -101,16 +108,35 @@ autoComplete (personId, merchantId) entityId AutoCompleteReq {..} = do
               let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId (show reqOrigin.lat) (show reqOrigin.lon) now now
               triggerAutoCompleteEvent autoCompleteData
               Redis.setExp key autoCompleteData 300
-  Maps.autoComplete
-    merchantId
-    merchantOperatingCityId
-    entityId
-    Maps.AutoCompleteReq
-      { country = toInterfaceCountry merchantOperatingCity.country,
-        radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantOperatingCity.distanceUnit $ fromInteger radius) radiusWithUnit,
-        ..
-      }
+  res <-
+    Maps.autoComplete
+      merchantId
+      merchantOperatingCityId
+      entityId
+      Maps.AutoCompleteReq
+        { country = toInterfaceCountry merchantOperatingCity.country,
+          radiusWithUnit = Just $ fromMaybe (convertMetersToDistance merchantOperatingCity.distanceUnit $ fromInteger radius) radiusWithUnit,
+          ..
+        }
+  fork "Validate placeNameCache against fresh autocomplete" $
+    validateTopPredictions (take 2 res.predictions)
+  pure res
   where
+    -- Detects when Google has updated a place's address (same placeId, new text)
+    -- so the stale lat/lon cached against that placeId gets evicted. Only the top
+    -- 2 predictions are checked to bound the per-request background cost. Legacy
+    -- rows (addressHash = Nothing) are eagerly seeded rather than deleted to
+    -- avoid a cache stampede; this accepts at most one potentially-stale serve
+    -- per placeId, then future Google updates are caught correctly.
+    validateTopPredictions preds = forM_ preds $ \p ->
+      whenJust p.placeId $ \pid -> do
+        let newHash = addressDigest p.description
+        (entries, _src) <- CM.findPlaceByPlaceId pid
+        forM_ entries $ \entry -> case entry.addressHash of
+          Just h
+            | h == newHash -> pure ()
+            | otherwise -> CM.delete entry
+          Nothing -> CM.backfillAddressHashByPlaceId pid newHash
     toInterfaceCountry = \case
       Context.India -> Maps.India
       Context.France -> Maps.France
@@ -202,6 +228,7 @@ convertResultsRespToPlaceNameCache resultsResp latitude longitude geoHashPrecisi
             lon = resultsResp.location.lon,
             placeId = resultsResp.placeId,
             geoHash = pack <$> DG.encode geoHashPrecisionValue (latitude, longitude),
+            addressHash = Nothing,
             createdAt = now
           }
   return res

@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 
 data PlaceNameCache = PlaceNameCache
   { addressComponents :: [Domain.Types.Extra.PlaceNameCache.AddressResp],
+    addressHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     formattedAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     geoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PlaceNameCache.PlaceNameCache,
