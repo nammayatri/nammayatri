@@ -122,7 +122,12 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   mbVehicle <- QVehicle.findByRegistrationNo req.registrationNo
   whenJust mbVehicle $ \vehicle -> do
     QVehicle.updateVehicleRatingAndRemark (Just req.rating) (Just req.remark) vehicle.driverId
-    tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing Nothing Nothing Nothing vehicle.driverId _merchantOpCity.id
+
+    -- Create updated vehicle object with new rating for tier calculation
+    let updatedVehicle = vehicle {DVeh.vehicleRating = Just req.rating, DVeh.vehicleRatingRemark = Just req.remark}
+
+    -- Recalculate service tiers with updated vehicle
+    tierResults <- fetchVehicleTierForDriverWithUsageRestriction True Nothing (Just updatedVehicle) Nothing Nothing vehicle.driverId _merchantOpCity.id
     let newTiers = (.serviceTierType) . fst <$> filter (not . snd) tierResults
     QVehicle.updateSelectedServiceTiers newTiers vehicle.driverId
 
