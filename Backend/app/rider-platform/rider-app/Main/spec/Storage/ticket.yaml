@@ -555,7 +555,8 @@ SeatManagement:
 
   constraints:
     id: PrimaryKey
-    ticketServiceCategoryId: SecondaryKey
+    ticketServiceCategoryId: "CompositeSecondaryKey categoryDateGroup"
+    date: "CompositeSecondaryKey categoryDateGroup"
   queries:
     findByTicketServiceCategoryIdAndDate:
       kvFunction: findOneWithKV
