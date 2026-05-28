@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data PlaceNameCacheT f = PlaceNameCacheT
   { addressComponents :: B.C f [Domain.Types.Extra.PlaceNameCache.AddressResp],
+    addressHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     formattedAddress :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     geoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

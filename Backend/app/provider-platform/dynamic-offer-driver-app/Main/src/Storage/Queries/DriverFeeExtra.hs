@@ -621,26 +621,6 @@ findLatestByFeeTypeAndStatusWithTotalEarnings feeType status driverId totalEarni
     Nothing
     <&> listToMaybe
 
--- TODO : Merge relevant queries
-findAllByTimeMerchantAndStatusWithServiceName ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id Merchant ->
-  UTCTime ->
-  UTCTime ->
-  [Domain.DriverFeeStatus] ->
-  ServiceNames ->
-  m [DriverFee]
-findAllByTimeMerchantAndStatusWithServiceName (Id merchantId) startTime endTime status serviceName = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.merchantId $ Se.Eq merchantId,
-          Se.Is BeamDF.endTime $ Se.GreaterThanOrEq startTime,
-          Se.Is BeamDF.serviceName $ Se.Eq (Just serviceName),
-          Se.Is BeamDF.endTime $ Se.LessThanOrEq endTime,
-          Se.Is BeamDF.status $ Se.In status
-        ]
-    ]
-
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
 updateStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Id DriverFee -> UTCTime -> m ()
 updateStatus status (Id driverFeeId) now = do
@@ -863,19 +843,6 @@ updateStatusAndAddedToFeeId newStatus addedToFeeId driverFeeIds now =
       Se.Set BeamDF.updatedAt now
     ]
     [Se.Is BeamDF.id (Se.In ((.getId) <$> driverFeeIds))]
-
--- | Find all cancellation penalties that were added to a specific DriverFee
-findAllByAddedToFeeId ::
-  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id DriverFee ->
-  m [DriverFee]
-findAllByAddedToFeeId driverFeeId =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is BeamDF.addedToFeeId $ Se.Eq (Just driverFeeId.getId),
-          Se.Is BeamDF.feeType $ Se.Eq CANCELLATION_PENALTY
-        ]
-    ]
 
 findUnbilledCancellationPenaltiesForDriver ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

@@ -14,3 +14,8 @@ ALTER TABLE atlas_app.place_name_cache ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.place_name_cache ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.place_name_cache ADD COLUMN address_hash text ;
