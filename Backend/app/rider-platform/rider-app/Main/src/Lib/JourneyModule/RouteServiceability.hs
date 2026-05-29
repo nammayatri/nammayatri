@@ -52,6 +52,21 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       vehicleNos
   let seatLayoutMappingByVehicleNo = Map.fromList (zip vehicleNos seatLayoutMappings)
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
+      -- Map of vehicleNo -> active tripId, derived from the schedule details' active trip
+      -- (same logic as the single-vehicle path), so live vehicles can carry their currentTripId.
+      activeTripIdByVehicleNo =
+        Map.fromList $
+          catMaybes $
+            map
+              ( \detail ->
+                  if detail.is_active_trip == Just True
+                    then do
+                      waybill <- detail.waybill_no
+                      tNum <- detail.trip_number
+                      return (detail.vehicle_no, JMU.makeTripIdFromWaybillNoAndTripNo waybill tNum)
+                    else Nothing
+              )
+              busScheduleDetails
 
   when shouldRunSeatHoldReaper $ do
     mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
@@ -72,7 +87,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       getBusScheduleInfo busScheduleDetails integratedBPPConfig routeInfo.routeId fromStopCode toStopCode frfsTierMap seatLayoutMappingByVehicleNo
   liveVehiclesFork <-
     awaitableFork "getLiveVehicles" $
-      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo
+      getLiveVehicles routeInfo.buses integratedBPPConfig frfsTierMap mbSourceStopLatLong maxLiveVehicles seatLayoutMappingByVehicleNo activeTripIdByVehicleNo
   schedules <-
     L.await Nothing schedulesFork >>= \case
       Left err -> throwError $ InternalError $ "getBusScheduleInfo fork failed: " <> show err
@@ -164,7 +179,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                             serviceTierName = (.shortName) <$> frfsServiceTier,
                             vehicleNumber = detail.vehicle_no,
                             tripId = combinedTripId,
-                            isActiveTrip = Nothing,
+                            isActiveTrip = detail.is_active_trip,
                             serviceSubTypes = mbServiceSubTypes,
                             vehicleTagNumber = mbVehicleTagNumber,
                             availableSeats = availableSeatsCount,
@@ -176,7 +191,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
           )
           busScheduleDetails'
 
-    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' = do
+    getLiveVehicles busesData integratedBPPConfig' frfsTierMap' mbSourceLatLong maxLiveCount seatLayoutMappingByVehicleNo' activeTripIdByVehicleNo' = do
       allVehicles <-
         catMaybes
           <$> mapM
@@ -211,7 +226,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
                           locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral bus.busData.timestamp,
                           serviceTierType = serviceTier,
                           serviceTierName = (.shortName) <$> frfsServiceTier,
-                          currentTripId = Nothing,
+                          currentTripId = Map.lookup bus.vehicleNumber activeTripIdByVehicleNo',
                           serviceSubTypes = mbServiceSubTypes,
                           vehicleTagNumber = mbVehicleTagNumber,
                           seatSelectionType = seatSelType
