@@ -55,6 +55,7 @@ update (Domain.Types.TransporterConfig.TransporterConfig {..}) = do
       Se.Set Beam.scheduledRideSearchRepeatLimit (Just scheduledRideSearchRepeatLimit),
       Se.Set Beam.driverPaymentCycleStartTime (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleStartTime),
       Se.Set Beam.timeDiffFromUtc timeDiffFromUtc,
+      Se.Set Beam.defaultOnboardingAs defaultOnboardingAs,
       Se.Set Beam.driverPaymentCycleBuffer (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleBuffer),
       Se.Set Beam.driverPaymentReminderInterval (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentReminderInterval),
       Se.Set Beam.driverPaymentCycleDuration (Kernel.Utils.Common.nominalDiffTimeToSeconds driverPaymentCycleDuration),

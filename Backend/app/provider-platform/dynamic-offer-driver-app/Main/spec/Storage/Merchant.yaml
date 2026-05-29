@@ -53,6 +53,7 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
+  OnboardingAs: Domain.Types.DriverInformation
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1216,6 +1217,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: Bool
     isDriverNameMandatoryInBulkUpload: Bool
     onboardingDocsCountLimit: Maybe Int
+    defaultOnboardingAs: Maybe OnboardingAs
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
@@ -1654,6 +1656,7 @@ TransporterConfig:
     communicationChannelCharLimits: json
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
+    defaultOnboardingAs: character varying(255)
 
   default:
     mediaFileUrlPattern: |-
@@ -1864,6 +1867,7 @@ TransporterConfig:
         - scheduledRideSearchRepeatLimit
         - driverPaymentCycleStartTime
         - timeDiffFromUtc
+        - defaultOnboardingAs
         - driverPaymentCycleBuffer
         - driverPaymentReminderInterval
         - driverPaymentCycleDuration

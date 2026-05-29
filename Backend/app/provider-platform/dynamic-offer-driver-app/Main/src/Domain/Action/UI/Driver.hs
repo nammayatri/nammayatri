@@ -1692,7 +1692,9 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           activeFleet = activeFleet,
           fleetRequest = fleetRequest,
           fleetOwnerId = (.fleetOwnerId) <$> mbActiveFda,
-          onboardingAs = driverInfo.onboardingAs,
+          onboardingAs = case activeFleet of
+            Just _ -> Just DriverInfo.FLEET_DRIVER
+            Nothing -> driverInfo.onboardingAs <|> merchantConfig.defaultOnboardingAs,
           subscriptionCreditBalance = subsCreditBalance,
           operatorInfo = operatorInfo,
           pan = panDec,
