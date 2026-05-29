@@ -96,7 +96,7 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
   -- At least one of mbRcNo or mbDriverId must be provided
   unless (isJust mbRcNo || isJust mbDriverId) $
     throwError $ InvalidRequest "Either rcNo or driverId must be provided"
-  requests <- QOHR.findAllRequestsInRange from to limit offset Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
+  requests <- QOHR.findAllRequestsInRange from to limit offset Nothing Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
   reqs <- mapM castHubRequests requests
   pure (OperationHubRequestsResp reqs)
 

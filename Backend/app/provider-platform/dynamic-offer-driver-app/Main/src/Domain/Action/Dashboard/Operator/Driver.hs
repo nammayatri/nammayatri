@@ -101,11 +101,12 @@ getDriverOperatorFetchHubRequests ::
   Maybe Int ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   Maybe (Id CommonDriver.OperationHub) ->
   Maybe Text ->
   Maybe Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubReqResp
-getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbReqOperationHubId mbOperationHubName mbRegistrationNo = do
+getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus mbReqType mbLimit mbOffset mbDriverId mbMobileNumber mbDriverMobileNumber mbReqOperationHubId mbOperationHubName mbRegistrationNo = do
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
       offset = fromMaybe 0 mbOffset
@@ -115,7 +116,8 @@ getDriverOperatorFetchHubRequests _merchantShortId _opCity mbFrom mbTo mbStatus 
       mbOperationHubId = cast @CommonDriver.OperationHub @DOH.OperationHub <$> mbReqOperationHubId
       mbDriverIdPerson = (Id :: Text -> Id DP.Person) <$> mbDriverId
   mbMobileNumberHash <- mapM getDbHash mbMobileNumber
-  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) Nothing mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverIdPerson
+  mbDriverMobileNumberHash <- mapM getDbHash mbDriverMobileNumber
+  reqList <- SQOH.findAllRequestsInRange from to limit offset mbMobileNumberHash mbDriverMobileNumberHash (castReqStatusToDomain <$> mbStatus) (castReqTypeToDomain <$> mbReqType) Nothing mbOperationHubId mbOperationHubName mbRegistrationNo mbDriverIdPerson
   logInfo $ "Driver Operator Fetch Hub Requests' params - mbFrom: " <> show mbFrom <> " from: " <> show from <> " to: " <> show to
   let summary = Common.Summary {totalCount = 10000, count = length reqList}
   requests <- mapM castHubRequests reqList
