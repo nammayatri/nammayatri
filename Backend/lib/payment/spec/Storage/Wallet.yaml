@@ -24,6 +24,9 @@ PersonWallet:
       kvFunction: findOneWithKV
       where: personId
 
+  constraints:
+    personId: SecondaryKey
+
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
 

@@ -17,6 +17,10 @@ CrisRecon:
   sqlType:
     dateIst: "date"
 
+  constraints:
+    id: PrimaryKey
+    bppOrderId: SecondaryKey
+
   queries:
     findByBppOrderId:
       kvFunction: findOneWithKV

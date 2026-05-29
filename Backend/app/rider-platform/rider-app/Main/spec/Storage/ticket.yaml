@@ -327,6 +327,7 @@ SpecialOccasion:
   constraints:
     id: PrimaryKey
     entityId: SecondaryKey
+    placeId: SecondaryKey
 
   queries:
     findSpecialOccasionByEntityIdAndDate:
