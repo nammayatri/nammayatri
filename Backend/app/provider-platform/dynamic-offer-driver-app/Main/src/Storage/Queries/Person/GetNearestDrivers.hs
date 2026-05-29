@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Value)
+import Lib.Finance.Domain.Types.Account (CounterpartyType)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
@@ -68,6 +69,7 @@ data NearestDriversResult = NearestDriversResult
     isTollRouteEligible :: Bool, -- True if tollRouteBlockedTill is Nothing or < now
     driverGender :: Person.Gender,
     vehicleNumber :: Maybe Text,
+    fleetOwnerId :: Maybe Text,
     -- On-ride forward batching fields (Nothing for non-on-ride drivers)
     previousRideDropLat :: Maybe Double,
     previousRideDropLon :: Maybe Double,
@@ -230,6 +232,7 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
             previousRideDropLat = mbPrevDropLat,
             previousRideDropLon = mbPrevDropLon,
             vehicleNumber = Just dpd.registrationNo,
+            fleetOwnerId = dpd.fleetOwnerId,
             distanceFromDriverToDestination = mbDistToDestination
           }
 
@@ -284,13 +287,13 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
     filterByWalletBalance isPrepaidEnabled results
       | not isPrepaidEnabled = pure results
       | otherwise = do
-        -- Prepaid balance check
         results' <- case (rideFare, prepaidSubscriptionThreshold <|> fleetPrepaidSubscriptionThreshold) of
-          (Just fare, Just threshold) ->
+          (Just fare, Just _) ->
             filterM
               ( \r -> do
                   let mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (DV.castServiceTierToVehicleCategory r.serviceTier) else Nothing
-                  mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyDriver r.driverId.getId mbVehicleCategory
+                      (counterpartyType, ownerId, threshold) = resolveOwnerAndThreshold r
+                  mbBalance <- getPrepaidAvailableBalanceByOwner counterpartyType ownerId mbVehicleCategory
                   pure $ maybe False (>= (fare + threshold)) mbBalance
               )
               results
@@ -302,11 +305,17 @@ getNearestDrivers NearestDriversReq {..} fetchPoolData = do
                 requiredBalance = minAmt + estimatedDeductions
             filterM
               ( \r -> do
-                  mbBalance <- getWalletBalanceByOwner counterpartyDriver r.driverId.getId
+                  let (counterpartyType, ownerId, _) = resolveOwnerAndThreshold r
+                  mbBalance <- getWalletBalanceByOwner counterpartyType ownerId
                   pure $ maybe False (>= requiredBalance) mbBalance
               )
               results'
           _ -> pure results'
+
+    resolveOwnerAndThreshold :: NearestDriversResult -> (CounterpartyType, Text, HighPrecMoney)
+    resolveOwnerAndThreshold r = case r.fleetOwnerId of
+      Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId, fromMaybe 0 fleetPrepaidSubscriptionThreshold)
+      Nothing -> (counterpartyDriver, r.driverId.getId, fromMaybe 0 prepaidSubscriptionThreshold)
 
     shouldCheckCashWallet = case paymentInstrument of
       Nothing -> True
