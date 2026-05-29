@@ -41,6 +41,6 @@ instance B.Table AadhaarCardT where
 
 type AadhaarCard = AadhaarCardT Identity
 
-$(enableKVPG ''AadhaarCardT ['driverId] [])
+$(enableKVPG ''AadhaarCardT ['driverId] [['aadhaarBackImageId], ['aadhaarFrontImageId], ['aadhaarNumberHash]])
 
 $(mkTableInstances ''AadhaarCardT "aadhaar_card")

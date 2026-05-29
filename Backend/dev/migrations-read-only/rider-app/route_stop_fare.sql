@@ -24,3 +24,8 @@ ALTER TABLE atlas_app.route_stop_fare ADD PRIMARY KEY ( category, end_stop_code,
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN offered_amount double precision ;
+
+
+------- SQL updates -------
+
+CREATE INDEX CONCURRENTLY route_stop_fare_idx_end_stop_code_start_stop_code ON atlas_app.route_stop_fare USING btree (end_stop_code, start_stop_code);

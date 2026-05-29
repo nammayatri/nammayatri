@@ -75,6 +75,6 @@ instance B.Table PaymentTransactionT where
 
 type PaymentTransaction = PaymentTransactionT Identity
 
-$(enableKVPG ''PaymentTransactionT ['id] [['txnUUID], ['orderId]])
+$(enableKVPG ''PaymentTransactionT ['id] [['txnUUID], ['orderId], ['txnId]])
 
 $(mkTableInstancesGenericSchema ''PaymentTransactionT "payment_transaction")
