@@ -232,7 +232,7 @@ def discover_specs(specs_dir: Path = SPECS_DIR) -> List[dict]:
 
 
 _KNOWN_BUCKETS = frozenset({"ports", "inputs", "source", "env"})
-_KNOWN_SCALARS = frozenset({"destDir", "repoRoot"})
+_KNOWN_SCALARS = frozenset({"destDir", "repoRoot", "host"})
 
 
 def template(value: Any, ctx: Dict[str, Any]) -> Any:

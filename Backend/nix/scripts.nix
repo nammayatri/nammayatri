@@ -321,7 +321,7 @@ _:
               CADDY_PORTS_FILE="''${FLAKE_ROOT}/Backend/nix/services/ports.nix"
             fi
             mkdir -p "''${FLAKE_ROOT}/data"
-            nix-instantiate --eval --raw --impure --expr \
+            nix eval --raw --impure --expr \
               "import ''${FLAKE_ROOT}/Backend/nix/services/caddyfile.nix { ports = import $CADDY_PORTS_FILE; }" \
               > "''${FLAKE_ROOT}/data/Caddyfile"
             if [[ ! -s "''${FLAKE_ROOT}/data/Caddyfile" ]]; then

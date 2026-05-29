@@ -380,7 +380,7 @@ in
             "db-primary-replica".shutdown.signal = lib.mkForce 9;
           })
           (lib.mkIf (cfg.profile == "backend") (
-            let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" ];
+            let excluded = [ "caddy-reverse-proxy" "nammayatri-init" "cabal-build" "osrm-server" ];
             in lib.listToAttrs (map
               (n: lib.nameValuePair n {
                 depends_on."caddy-reverse-proxy".condition = "process_healthy";

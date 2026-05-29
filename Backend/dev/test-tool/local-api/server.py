@@ -1301,6 +1301,62 @@ def remote_clear_data(body: dict) -> dict:
     return {"session": session["id"]}
 
 
+def remote_cabal_clean(body: dict) -> dict:
+    """Run `cabal clean` inside the Backend directory to clear stale build artifacts.
+
+    Useful after a GHC panic or package-database corruption. Runs non-interactively;
+    no PTY needed. Localhost runs directly; remote hosts run it over SSH.
+    """
+    host = (body.get("host") or "localhost").strip()
+    user = (body.get("user") or "").strip()
+    port = int(body.get("port") or 22)
+    identity = (body.get("identityFile") or "").strip() or None
+    dev_name = (body.get("devName") or "").strip()
+
+    session = _remote_session_make("cabal-clean", host)
+    _remote_register(session)
+
+    inner = "cd Backend && nix develop .#backend -c cabal clean"
+
+    if _is_localhost(host):
+        argv = ["bash", "-lc", f"cd {PROJECT_ROOT} && {inner}"]
+    else:
+        if not user:
+            with session["lock"]:
+                session["exit_code"] = 2
+                session["finished_at"] = time.time()
+                session["buf"].append("[cabal-clean] error: 'user' is required for non-localhost host")
+            return {"session": session["id"], "error": "user required"}
+        entry = _register_dev_user(user, host, port, identity, dev_name)
+        remote_dir = entry["dir"]
+        remote_cmd = f"cd {shlex.quote(remote_dir)} && {inner}"
+        argv = _ssh_argv(user, host, port, identity, want_tty=False) + [remote_cmd]
+
+    try:
+        proc = subprocess.Popen(
+            argv,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            bufsize=0,
+        )
+    except FileNotFoundError as e:
+        with session["lock"]:
+            session["exit_code"] = 127
+            session["finished_at"] = time.time()
+            session["buf"].append(f"[cabal-clean] error: {e}")
+        return {"session": session["id"], "error": str(e)}
+
+    with session["lock"]:
+        session["proc"] = proc
+        session["running"] = True
+        session["buf"].append(f"[cabal-clean] {' '.join(argv)}")
+
+    threading.Thread(
+        target=_remote_pipe_reader, args=(session, proc.stdout), daemon=True
+    ).start()
+
+    return {"session": session["id"]}
+
 def remote_start(body: dict) -> dict:
     host = (body.get("host") or "localhost").strip()
     user = (body.get("user") or "").strip()
@@ -2247,6 +2303,11 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # POST /api/remote/clear-data
         if method == "POST" and path == "/api/remote/clear-data":
             self._send_json(remote_clear_data(self._read_json_body() or {}))
+            return True
+
+        # POST /api/remote/cabal-clean
+        if method == "POST" and path == "/api/remote/cabal-clean":
+            self._send_json(remote_cabal_clean(self._read_json_body() or {}))
             return True
 
         # POST /api/remote/input

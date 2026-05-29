@@ -14,6 +14,7 @@ import {
   remoteClearData,
   remoteSessions,
   remoteSyncCaddyPort,
+  remoteCabalClean,
   RemoteTarget,
 } from '../services/remote';
 import './RemoteStackPanel.css';
@@ -22,6 +23,7 @@ interface PanelState {
   deploySession?: string;
   startSession?: string;
   clearSession?: string;
+  cabalCleanSession?: string;
   startCols?: number;
   startRows?: number;
   status?: string;
@@ -60,7 +62,7 @@ const defaultTarget = (): RemoteTarget => ({
 export const RemoteStackPanel: React.FC = () => {
   const [target, setTarget] = useState<RemoteTarget>(loadStoredTarget);
   const [state, setState] = useState<PanelState>({});
-  const [busy, setBusy] = useState<'deploy' | 'start' | 'stop' | 'clear-data' | null>(null);
+  const [busy, setBusy] = useState<'deploy' | 'start' | 'stop' | 'clear-data' | 'cabal-clean' | null>(null);
   const [override] = useState<string | null>(getContextApiBaseOverride());
 
   const isLocalhost = !target.host || ['localhost', '127.0.0.1', '::1'].includes(target.host.trim());
@@ -95,6 +97,7 @@ export const RemoteStackPanel: React.FC = () => {
         const deploy = live.find(s => s.kind === 'deploy');
         const start = live.find(s => s.kind === 'start');
         const clear = live.find(s => s.kind === 'clear-data');
+        const cabalClean = live.find(s => s.kind === 'cabal-clean');
         setState(prev => ({
           ...prev,
           deploySession: prev.deploySession ?? deploy?.id,
@@ -102,6 +105,7 @@ export const RemoteStackPanel: React.FC = () => {
           startCols: prev.startCols ?? start?.cols,
           startRows: prev.startRows ?? start?.rows,
           clearSession: prev.clearSession ?? clear?.id,
+          cabalCleanSession: prev.cabalCleanSession ?? cabalClean?.id,
           status: start ? `mobility-stack-dev still running on ${start.host}` : prev.status,
         }));
       } catch {
@@ -149,6 +153,13 @@ export const RemoteStackPanel: React.FC = () => {
       code === 0
         ? { ...prev, clearSession: undefined, status: 'Clear-data complete.' }
         : { ...prev, status: `Clear-data exited (code ${code}).` },
+    ),
+  );
+  usePoller(state.cabalCleanSession, code =>
+    setState(prev =>
+      code === 0
+        ? { ...prev, cabalCleanSession: undefined, status: 'Cabal clean complete.' }
+        : { ...prev, status: `Cabal clean exited (code ${code}).` },
     ),
   );
 
@@ -252,6 +263,21 @@ export const RemoteStackPanel: React.FC = () => {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setState(prev => ({ ...prev, error: `Caddy port sync failed: ${msg}` }));
+    }
+  };
+
+  const onCabalClean = async () => {
+    setBusy('cabal-clean');
+    setState(prev => ({ ...prev, error: undefined, status: 'Running cabal clean…' }));
+    try {
+      const res = await remoteCabalClean(target);
+      if (res.error || !res.session) {
+        setState(prev => ({ ...prev, error: res.error || 'cabal clean failed', status: undefined }));
+      } else {
+        setState(prev => ({ ...prev, cabalCleanSession: res.session, status: 'cabal clean running…' }));
+      }
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -362,6 +388,13 @@ export const RemoteStackPanel: React.FC = () => {
         >
           Sync Caddy Port
         </button>
+        <button
+          onClick={onCabalClean}
+          disabled={!!busy || !hasDevName}
+          title="Run `cabal clean` in the Backend directory to clear stale build artifacts (fixes GHC panics / package-database corruption)"
+        >
+          {busy === 'cabal-clean' ? 'Cleaning…' : 'Cabal Clean'}
+        </button>
         <span className="rsp-spacer" />
         <button onClick={onUseRemoteContextApi} disabled={!state.startSession} title="Point the dashboard at this host's test-context-api (port 7082) and reload">
           Use this context-api
@@ -414,6 +447,16 @@ export const RemoteStackPanel: React.FC = () => {
             />
           </div>
         )}
+        {state.cabalCleanSession && (
+          <div className="rsp-terminal">
+            <div className="rsp-term-title">cabal-clean ({target.host})</div>
+            <Terminal
+              baseUrl={LOCAL_API_BASE}
+              pathPrefix="/api/remote"
+              attachSessionId={state.cabalCleanSession}
+            />
+          </div>
+        )}
         {state.startSession && (
           <div className="rsp-terminal">
             <div className="rsp-term-title">mobility-stack-dev ({target.host})</div>
@@ -424,7 +467,7 @@ export const RemoteStackPanel: React.FC = () => {
             />
           </div>
         )}
-        {!state.deploySession && !state.startSession && !state.clearSession && (
+        {!state.deploySession && !state.startSession && !state.clearSession && !state.cabalCleanSession && (
           <div className="rsp-empty">
             Configure a target above, then click Deploy and Start.
           </div>
