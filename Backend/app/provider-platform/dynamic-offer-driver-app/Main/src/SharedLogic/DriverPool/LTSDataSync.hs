@@ -4,10 +4,6 @@ module SharedLogic.DriverPool.LTSDataSync
     SetField (..),
     set,
     emptyUpdate,
-    -- Compile-time safe pool field update
-    PoolFieldUpdate,
-    mkPoolFieldUpdate,
-    runPoolFieldUpdate,
   )
 where
 
@@ -245,37 +241,3 @@ applyUpdate u d =
 applyField :: SetField a -> a -> a
 applyField Unchanged current = current
 applyField (Set newVal) _ = newVal
-
--- | A pool field update that bundles a DB write with its LTS sync.
--- You cannot execute the DB write without providing the LTS update.
---
--- ENFORCEMENT STRATEGY:
--- 1. All pool-relevant field updates MUST use runPoolFieldUpdate (not raw updateOneWithKV)
--- 2. The generated src-read-only functions (e.g. updateOnRide) should NOT be called directly
---    for pool fields — use the  wrappers from Extra files instead
--- 3. CI/pre-commit hook should grep for direct Se.Set on pool-relevant Beam fields
---    outside of approved wrapper functions to catch violations
---
--- Usage:
---   updateOnRide onRide driverId = runPoolFieldUpdate (cast driverId) $
---     mkPoolFieldUpdate
---       (updateOneWithKV [Se.Set BeamDI.onRide onRide, ...] [...])
---       (emptyUpdate {onRide = Set onRide})
-data PoolFieldUpdate m = PoolFieldUpdate
-  { _dbWrite :: m (),
-    _ltsUpdate :: DriverPoolDataUpdate
-  }
-
--- | Create a pool field update. Both DB write and LTS update are required.
-mkPoolFieldUpdate :: m () -> DriverPoolDataUpdate -> PoolFieldUpdate m
-mkPoolFieldUpdate = PoolFieldUpdate
-
--- | Execute a pool field update: runs the DB write, then syncs to LTS.
-runPoolFieldUpdate ::
-  (MonadFlow m, Log m, CacheFlow m r, Redis.HedisLTSFlowEnv r) =>
-  Id Driver ->
-  PoolFieldUpdate m ->
-  m ()
-runPoolFieldUpdate driverId (PoolFieldUpdate dbWrite ltsUpdate) = do
-  dbWrite
-  syncDriverPoolDataToLTS driverId ltsUpdate

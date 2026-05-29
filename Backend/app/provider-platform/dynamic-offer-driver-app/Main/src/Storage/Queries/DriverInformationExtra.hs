@@ -491,15 +491,12 @@ findOnRideDriversWithRideStartedByMerchantOpCityIds merchantOpCityIds limitVal o
     (Just limitVal)
     (Just offsetVal)
 
--- Wrappers for src-read-only functions with LTS sync
-
 updateOnRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Bool -> Id Person.Person -> m ()
 updateOnRide onRide driverId = do
   now <- getCurrentTime
-  LTSSync.runPoolFieldUpdate (cast driverId) $
-    LTSSync.mkPoolFieldUpdate
-      (updateOneWithKV [Se.Set BeamDI.onRide onRide, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)])
-      (LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide})
+  updateOneWithKV [Se.Set BeamDI.onRide onRide, Se.Set BeamDI.updatedAt now] [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  LTSSync.syncDriverPoolDataToLTS (cast driverId) $
+    LTSSync.emptyUpdate {LTSSync.onRide = LTSSync.Set onRide}
 
 updateOnRideAndLatestScheduledBookingAndPickup ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) =>
