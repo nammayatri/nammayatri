@@ -1,0 +1,3 @@
+UPDATE atlas_driver_offer_bpp.merchant_service_usage_config
+SET category_based_verification_priority_list = '{"TOTO_UDIN": ["Tten"], "TOTO": ["Idfy"], "CAR": ["Morth","HyperVergeRCDL","Idfy"], "AUTO_CATEGORY": ["Morth","HyperVergeRCDL","Idfy"], "MOTORCYCLE": ["Morth","HyperVergeRCDL","Idfy"], "TRUCK": ["Morth","HyperVergeRCDL","Idfy"], "BOAT": ["Morth","HyperVergeRCDL","Idfy"], "AMBULANCE": ["Morth","HyperVergeRCDL","Idfy"], "BUS": ["Morth","HyperVergeRCDL","Idfy"], "TRAIN": ["Morth","HyperVergeRCDL","Idfy"], "FLIGHT": ["Morth","HyperVergeRCDL","Idfy"]}'::jsonb
+WHERE merchant_operating_city_id In (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Pune');
