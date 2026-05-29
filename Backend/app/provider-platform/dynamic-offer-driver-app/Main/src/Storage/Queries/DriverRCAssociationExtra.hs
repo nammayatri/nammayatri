@@ -5,7 +5,6 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Text (toLower)
 import qualified Database.Beam as B
 import Domain.Types.DriverRCAssociation as DRCA
-import Domain.Types.FleetDriverAssociation as FleetDriverAssociation
 import Domain.Types.Person (Person)
 import Domain.Types.VehicleRegistrationCertificate
 import qualified EulerHS.Language as L
@@ -17,7 +16,6 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Common as SBC
 import qualified Storage.Beam.DriverRCAssociation as BeamDRCA
-import qualified Storage.Beam.FleetDriverAssociation as BeamFDA
 import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.FleetDriverAssociation ()
 import Storage.Queries.OrphanInstances.DriverRCAssociation ()
@@ -125,34 +123,6 @@ findUnlinkedRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id
 findUnlinkedRC (Id driverId) (Id rcId) = do
   now <- getCurrentTime
   findAllWithOptionsKV [Se.Is BeamDRCA.driverId $ Se.Eq driverId, Se.Is BeamDRCA.rcId $ Se.Eq rcId, Se.Is BeamDRCA.associatedTill $ Se.LessThan $ Just now] (Se.Desc BeamDRCA.associatedOn) Nothing Nothing
-
-mapping :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> m [(VehicleRegistrationCertificate, FleetDriverAssociation, DriverRCAssociation)]
-mapping fleetIdWanted mbLimit mbOffset = do
-  dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.limit_ (fromIntegral $ fromMaybe 100 mbLimit) $
-          B.offset_ (fromIntegral $ fromMaybe 0 mbOffset) $
-            do
-              vehicleRC' <- B.filter_' (\vehicleRC'' -> BeamVRC.fleetOwnerId vehicleRC'' B.==?. B.val_ fleetIdWanted) (B.all_ (SBC.vehicleRegistrationCertificate SBC.atlasDB))
-              fleetDriverAssn' <- B.join_' (SBC.fleetDriverAssociation SBC.atlasDB) (\fleetDriverAssn'' -> fleetDriverAssn''.fleetOwnerId B.==?. B.val_ (fromMaybe "" fleetIdWanted))
-              driverRCAssn' <- B.join_' (SBC.driverRCAssociation SBC.atlasDB) (\driverRCAssn'' -> BeamDRCA.driverId driverRCAssn'' B.==?. BeamFDA.driverId fleetDriverAssn')
-              pure (vehicleRC', fleetDriverAssn', driverRCAssn')
-  case res of
-    Right res' -> do
-      let vrc' = fmap fst' res'
-          fda' = fmap snd' res'
-          drca' = fmap thd' res'
-      vrc <- catMaybes <$> mapM fromTType' vrc'
-      fda <- catMaybes <$> mapM fromTType' fda'
-      drca <- catMaybes <$> mapM fromTType' drca'
-      pure $ zip3 vrc fda drca
-    Left _ -> pure []
-  where
-    fst' (x, _, _) = x
-    snd' (_, y, _) = y
-    thd' (_, _, z) = z
 
 -- Returns a structured result to facilitate association checks
 findValidAssociationsForDriverOrRC ::
