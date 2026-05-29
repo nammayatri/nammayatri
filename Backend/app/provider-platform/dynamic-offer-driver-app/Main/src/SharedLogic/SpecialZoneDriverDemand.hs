@@ -41,7 +41,7 @@ module SharedLogic.SpecialZoneDriverDemand
   )
 where
 
-import Control.Monad.Extra (mapMaybeM)
+import Control.Monad.Extra (mapMaybeM, partitionM)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
 import Data.List (partition, sortOn)
@@ -612,7 +612,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> " cooldown="
                 <> show cooldown
             eligible <- filterEligibleDrivers variant gateId gate.enableQueueFilter queueDriverIds
-            eligibleNearGate <- filterByGateProximity gate eligible
+            eligibleNearGate <- filterByGateProximity merchantId gate variant eligible
             logInfo $
               "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
                 <> " eligible="
@@ -658,30 +658,30 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- so the airport per-km fare lookup can match the right fare product. If parsing
       -- fails, fare calc is silently skipped (notification still sent without perKmFare).
       mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
+      mbVariant = DV.castServiceTierToVariant <$> mbServiceTier
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
   eligiblePriority <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter priorityDriverIds
-  eligiblePriorityNearGate <- filterByGateProximity gate eligiblePriority
-  priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
-  let remaining = max 0 (needed - priorityCount)
-  -- Fill remaining from LTS queue
-  queueCount <-
-    if remaining > 0
-      then do
-        let mbVariant = DV.castServiceTierToVariant <$> mbServiceTier
-        case mbVariant of
-          Nothing -> do
-            logWarning $ "forceNotifyDriverDemand: unable to parse vehicleType as service tier, skipping fare calc: " <> vehicleType
-            pure 0
-          Just variant -> do
+  case mbVariant of
+    Nothing -> do
+      logWarning $ "forceNotifyDriverDemand: unable to parse vehicleType as service tier, skipping fare calc: " <> vehicleType
+      pure 0
+    Just variant -> do
+      eligiblePriorityNearGate <- filterByGateProximity merchantId gate (show variant) eligiblePriority
+      priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
+      let remaining = max 0 (needed - priorityCount)
+      -- Fill remaining from LTS queue
+      queueCount <-
+        if remaining > 0
+          then do
             queueResp <- LTSFlow.getQueueDrivers specialLocationId (show variant)
             let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
                 -- Exclude priority drivers already processed
                 queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
             eligible <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter queueDriverIds
-            eligibleNearGate <- filterByGateProximity gate eligible
+            eligibleNearGate <- filterByGateProximity merchantId gate (show variant) eligible
             notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
-      else pure 0
-  pure (priorityCount + queueCount)
+          else pure 0
+      pure (priorityCount + queueCount)
 
 -- Common notification logic: create SpecialZoneQueueRequest entries and send FCM + GRPC
 notifyDrivers ::
@@ -1042,11 +1042,13 @@ filterByGateProximity ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
+  Id DM.Merchant -> -- merchant (for manualQueueRemove of drivers LTS has no location for)
   DGI.GateInfo -> -- target gate (where the request will be sent)
+  Text -> -- vehicleType (LTS queue key, threaded through to manualQueueRemove for stale drivers)
   [Id DP.Person] ->
   m [Id DP.Person]
-filterByGateProximity _ [] = pure []
-filterByGateProximity targetGate driverIds = do
+filterByGateProximity _ _ _ [] = pure []
+filterByGateProximity merchantId targetGate vehicleType driverIds = do
   cachedGates <- getCachedGatesForProximity targetGate.specialLocationId
   let otherQueueableGates = filter (\g -> g.gateId /= targetGate.id.getId && g.canQueueUpOnGate) cachedGates
       mbTargetCached = find (\g -> g.gateId == targetGate.id.getId) cachedGates
@@ -1065,6 +1067,7 @@ filterByGateProximity targetGate driverIds = do
       now <- getCurrentTime
       let isFresh dl = diffUTCTime now dl.coordinatesCalculatedAt <= intToNominalDiffTime stalenessThreshold.getSeconds
           (freshLocations, staleLocations) = partition isFresh driverLocations
+          locatedDriverIds = Set.fromList (map (.driverId) driverLocations)
       unless (null staleLocations) $
         logInfo $
           "filterByGateProximity dropped stale driver locations targetGate=" <> targetGate.id.getId
@@ -1072,22 +1075,40 @@ filterByGateProximity targetGate driverIds = do
             <> show stalenessThreshold.getSeconds
             <> " staleDriverIds="
             <> show (map (.driverId.getId) staleLocations)
+      forM_ staleLocations $ \dl ->
+        fork ("manualQueueRemoveStale-" <> dl.driverId.getId) $
+          void $
+            LTSFlow.manualQueueRemove
+              targetGate.specialLocationId.getId
+              vehicleType
+              dl.merchantId
+              dl.driverId
+              (Just "stale_driver_location")
       let locByDriver = Map.fromList $ map (\dl -> (dl.driverId, LatLong dl.lat dl.lon)) freshLocations
-          (kept, dropped) = partition (driverNotCommittedToOtherGate locByDriver mbTargetCached otherQueueableGates) driverIds
+      (kept, dropped) <-
+        flip partitionM driverIds $ \driverId ->
+          case Map.lookup driverId locByDriver of
+            Nothing -> do
+              unless (Set.member driverId locatedDriverIds) $
+                fork ("manualQueueRemoveNoLoc-" <> driverId.getId) $
+                  void $
+                    LTSFlow.manualQueueRemove
+                      targetGate.specialLocationId.getId
+                      vehicleType
+                      merchantId
+                      driverId
+                      (Just "no_driver_location")
+              pure False
+            Just loc -> do
+              let nearTarget = maybe False (isPointInOrNearGate loc gateProximityExclusionMeters) mbTargetCached
+                  nearOther = any (isPointInOrNearGate loc gateProximityExclusionMeters) otherQueueableGates
+              pure $ nearTarget || not nearOther
       unless (null dropped) $
         logInfo $
           "filterByGateProximity excluded drivers near other gate targetGate=" <> targetGate.id.getId
             <> " excluded="
             <> show (map (.getId) dropped)
       pure kept
-  where
-    driverNotCommittedToOtherGate locMap mbTargetCached otherGates driverId =
-      case Map.lookup driverId locMap of
-        Nothing -> False -- unknown location: don't penalise
-        Just loc ->
-          let nearTarget = maybe False (isPointInOrNearGate loc gateProximityExclusionMeters) mbTargetCached
-              nearOther = any (isPointInOrNearGate loc gateProximityExclusionMeters) otherGates
-           in nearTarget || not nearOther
 
 -- Default driver-location staleness threshold (2 minutes) used when the
 -- per-merchant-operating-city override is unset.
