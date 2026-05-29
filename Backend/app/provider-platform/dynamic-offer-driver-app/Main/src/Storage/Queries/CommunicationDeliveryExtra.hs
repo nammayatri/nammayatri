@@ -3,6 +3,7 @@
 
 module Storage.Queries.CommunicationDeliveryExtra where
 
+import Data.Time (Day, UTCTime (..), addDays)
 import qualified Domain.Types.Communication
 import qualified Domain.Types.CommunicationDelivery
 import qualified Domain.Types.Person
@@ -22,23 +23,36 @@ findByRecipientIdWithChannel ::
   Maybe Domain.Types.Communication.ChannelType ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Day ->
+  Maybe Day ->
   m [Domain.Types.CommunicationDelivery.CommunicationDelivery]
-findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset = do
+findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset mbFromDate mbToDate = do
   let limitVal = min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromMaybe 0 mbOffset
+      dateFilters = case (mbFromDate, mbToDate) of
+        (Just fromDate, Just toDate) ->
+          [ Se.Is Beam.createdAt $ Se.GreaterThanOrEq (UTCTime fromDate 0),
+            Se.Is Beam.createdAt $ Se.LessThan (UTCTime (addDays 1 toDate) 0)
+          ]
+        (Just fromDate, Nothing) ->
+          [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (UTCTime fromDate 0)]
+        (Nothing, Just toDate) ->
+          [Se.Is Beam.createdAt $ Se.LessThan (UTCTime (addDays 1 toDate) 0)]
+        _ -> []
   case mbChannel of
     Nothing ->
       findAllWithOptionsKV
-        [Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId)]
+        [Se.And $ [Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId)] <> dateFilters]
         (Se.Desc Beam.createdAt)
         (Just limitVal)
         (Just offsetVal)
     Just channel ->
       findAllWithOptionsKV
-        [ Se.And
+        [ Se.And $
             [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
               Se.Is Beam.channel $ Se.Eq channel
             ]
+              <> dateFilters
         ]
         (Se.Desc Beam.createdAt)
         (Just limitVal)

@@ -28,6 +28,8 @@ apis:
         - search: Text
         - limit: Int
         - offset: Int
+        - fromDate: Day
+        - toDate: Day
       auth: ApiAuthV2
       response:
         type: CommunicationListResponse

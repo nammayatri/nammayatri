@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Communication
 import qualified Dashboard.Common
+import qualified Data.Time.Calendar
 import qualified Domain.Action.Dashboard.Management.Communication
 import qualified Domain.Types.Merchant
 import qualified Environment
@@ -27,8 +28,8 @@ handler merchantId city = postCommunicationCreate merchantId city :<|> getCommun
 postCommunicationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Person -> API.Types.ProviderPlatform.Management.Communication.CreateCommunicationRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CreateCommunicationResponse)
 postCommunicationCreate a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.postCommunicationCreate a4 a3 a2 a1
 
-getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationListType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
-getCommunicationList a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationList a9 a8 a7 a6 a5 a4 a3 a2 a1
+getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationListType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
+getCommunicationList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationList a11 a10 a9 a8 a7 a6 a5 a4 a3 a2 a1
 
 getCommunicationInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationInfoResponse)
 getCommunicationInfo a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.Communication.getCommunicationInfo a3 a2 a1

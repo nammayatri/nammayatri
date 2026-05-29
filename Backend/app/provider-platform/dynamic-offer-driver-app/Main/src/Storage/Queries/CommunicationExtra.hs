@@ -6,6 +6,7 @@ module Storage.Queries.CommunicationExtra where
 import qualified Data.Aeson as Aeson
 import Data.Either (fromRight)
 import qualified Data.Text as T
+import Data.Time (Day, UTCTime (..), addDays)
 import qualified Database.Beam as B
 import qualified Domain.Types.Communication
 import qualified Domain.Types.Person
@@ -51,8 +52,10 @@ findBySenderIdWithFilters ::
   Maybe Int ->
   Maybe Int ->
   Maybe Domain.Types.Communication.ChannelType ->
+  Maybe Day ->
+  Maybe Day ->
   m [Domain.Types.Communication.Communication]
-findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOffset mbChannel = do
+findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOffset mbChannel mbFromDate mbToDate = do
   let limitVal = fromIntegral $ min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
   dbConf <- getReplicaBeamConfig
@@ -85,6 +88,14 @@ findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOf
                                in B.sqlBool_ (B.customExpr_ sqlExpr)
                           )
                           mbChannel
+                        B.&&?. maybe
+                          (B.sqlBool_ $ B.val_ True)
+                          (\fromDate -> B.sqlBool_ (comm.createdAt B.>=. B.val_ (UTCTime fromDate 0)))
+                          mbFromDate
+                        B.&&?. maybe
+                          (B.sqlBool_ $ B.val_ True)
+                          (\toDate -> B.sqlBool_ (comm.createdAt B.<. B.val_ (UTCTime (addDays 1 toDate) 0)))
+                          mbToDate
                   )
                   $ B.all_ (BeamCommon.communication BeamCommon.atlasDB)
   catMaybes <$> mapM fromTType' (fromRight [] res)
