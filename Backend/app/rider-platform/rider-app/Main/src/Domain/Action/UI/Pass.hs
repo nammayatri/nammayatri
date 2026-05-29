@@ -930,14 +930,16 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   let allActivePurchasedPasses =
         HM.elems $
           foldr
-            (\el acc ->
+            ( \el acc ->
                 case HM.lookup el.passType acc of
                   Just _ ->
                     case mbDeviceId of
                       Just deviceId | el.deviceId == deviceId -> HM.insert el.passType el acc
                       _ -> acc
                   Nothing -> HM.insert el.passType el acc
-            ) HM.empty updatedPassEntities
+            )
+            HM.empty
+            updatedPassEntities
 
   -- Always show all passes regardless of device. The deviceMismatch flag in
   -- PurchasedPassAPIEntity will inform the UI which passes need device switching.
