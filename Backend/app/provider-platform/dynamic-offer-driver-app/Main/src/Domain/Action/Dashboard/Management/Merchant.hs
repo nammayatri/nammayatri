@@ -70,6 +70,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
+    getMerchantCityList,
   )
 where
 
@@ -4586,3 +4587,12 @@ postMerchantMerchantDocumentDelete merchantShortId _opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   SMD.deleteMerchantDocument (cast merchant.id) (Id req.id)
   pure Success
+
+getMerchantCityList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.CityListResp
+getMerchantCityList merchantShortId _opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  operatingCities <- CQMOC.findAllByMerchantId merchant.id
+  pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}
