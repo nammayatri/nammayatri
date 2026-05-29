@@ -26,6 +26,23 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>Full Stack Dev Box</title>
+    <script>
+      // Suppress xterm.js v5 internal Viewport.syncScrollArea error.
+      // xterm's DI container resolves _renderService lazily; the first RAF
+      // fires before the service is registered, causing an uncaught TypeError
+      // that triggers the CRA dev-mode error overlay. This handler runs before
+      // the CRA bundle and uses stopImmediatePropagation() so the overlay
+      // listener never sees the error.
+      window.addEventListener('error', function(e) {
+        if (
+          e.message === "Cannot read properties of undefined (reading 'dimensions')" &&
+          e.error && e.error.stack && e.error.stack.indexOf('syncScrollArea') !== -1
+        ) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+        }
+      });
+    </script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

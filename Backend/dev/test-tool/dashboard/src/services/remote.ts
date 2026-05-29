@@ -28,7 +28,7 @@ export interface RegistryResponse {
   error?: string;
 }
 
-export type RemoteSessionKind = 'deploy' | 'start' | 'clear-data';
+export type RemoteSessionKind = 'deploy' | 'start' | 'clear-data' | 'cabal-clean';
 
 export interface RemoteStatus {
   id?: string;
@@ -84,3 +84,6 @@ export const remoteSessions = (): Promise<RemoteSessionSummary[]> =>
 
 export const remoteSyncCaddyPort = (t: RemoteTarget): Promise<RegistryResponse> =>
   json('/api/remote/sync-caddy-port', t);
+
+export const remoteCabalClean = (t: RemoteTarget): Promise<RemoteSessionResponse> =>
+  json('/api/remote/cabal-clean', t);

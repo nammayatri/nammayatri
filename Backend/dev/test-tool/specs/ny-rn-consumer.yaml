@@ -65,32 +65,6 @@ inputs:
       CLEVERTAP_TOKEN=NA
       CLEVERTAP_REGION=NA
     required: true
-  - key: GOOGLE_AD_MOB_ID
-    label: Google AD Mob ID (local.properties)
-    type: text
-    default: "ca-app-pub-3940256099942544~3347511713"
-    required: true
-  - key: MERCHANT_ID
-    label: Backend Merchant ID
-    type: select
-    options: [BRIDGE_FINLAND, NAMMA_YATRI, BHARAT_TAXI]
-    default: BRIDGE_FINLAND
-    required: true
-  - key: CONFIG_URL
-    label: Config URL
-    type: text
-    default: "http://localhost:8013/v2"
-    required: true
-  - key: LOG_URL
-    label: Log URL
-    type: text
-    default: "https://appmonitor.integ.moving.tech"
-    required: true
-  - key: GOOGLE_MAPS_API_KEY
-    label: Google Maps API key
-    type: text
-    default: "GOOGLE_MAPS_API_KEY"
-    required: false
 
 stages:
   - id: reset-emulator
@@ -264,9 +238,11 @@ stages:
       base_url="http://${host}:${ports.caddy}/rider-app/v2"
 
       # Patch App.tsx: replace the Firebase-derived baseUrl with our caddy URL.
+      # Also handles re-patching when App.tsx was already patched by a previous run.
       app_file="consumer/src/App.tsx"
       if [ -f "$app_file" ]; then
         sed -i.bak "s|const baseUrl = appConfig\.constants\.consumerBaseUrl;|const baseUrl = '$base_url';|" "$app_file"
+        sed -i.bak "s|const baseUrl = 'http://[^']*';|const baseUrl = '$base_url';|" "$app_file"
         rm -f "$app_file.bak"
         echo "patched App.tsx baseUrl → $base_url"
       fi

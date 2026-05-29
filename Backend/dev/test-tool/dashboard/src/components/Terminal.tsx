@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Terminal as XTerm } from 'xterm';
+import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import 'xterm/css/xterm.css';
+import '@xterm/xterm/css/xterm.css';
 import './Terminal.css';
 import { PROXY_BASE } from '../config';
 
@@ -69,6 +69,9 @@ export const Terminal: React.FC<TerminalProps> = ({
   const disposedRef = useRef(false);
 
   useEffect(() => {
+    // Reset disposed flag for this effect run (important when effect re-runs).
+    disposedRef.current = false;
+
     if (!containerRef.current) return;
 
     const term = new XTerm({
@@ -83,8 +86,32 @@ export const Terminal: React.FC<TerminalProps> = ({
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
-    term.open(containerRef.current);
-    try { fit.fit(); } catch { /* ignore */ }
+
+    // React StrictMode double-invokes effects (mount → unmount → remount).
+    // The Viewport constructor schedules setTimeout(()=>this.syncScrollArea()).
+    // On StrictMode unmount, term.dispose() clears _renderer.value to undefined.
+    // The old Viewport's setTimeout then fires after dispose and calls
+    // syncScrollArea → get dimensions() → _renderer.value.dimensions → crash
+    // ("Cannot read properties of undefined (reading 'dimensions')").
+    //
+    // Fix: open(), then immediately wrap syncScrollArea on the Viewport instance
+    // so any post-dispose calls are silently swallowed before they propagate.
+    try { term.open(containerRef.current); } catch { /* ignore sync throw */ }
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const vp = (term as any)._core?.viewport;
+      if (vp && typeof vp.syncScrollArea === 'function') {
+        const _orig = vp.syncScrollArea.bind(vp);
+        vp.syncScrollArea = (...args: unknown[]) => { try { _orig(...args); } catch { /* suppress */ } };
+      }
+    } catch { /* if _core/viewport aren't accessible, fall through */ }
+
+    // Defer the first fit() to the next animation frame so the flex container
+    // has settled its dimensions before FitAddon measures it.
+    requestAnimationFrame(() => {
+      if (!disposedRef.current) { try { fit.fit(); } catch { /* ignore */ } }
+    });
+
     termRef.current = term;
     fitRef.current = fit;
 
@@ -116,12 +143,7 @@ export const Terminal: React.FC<TerminalProps> = ({
         if (!sessionId) return;
         sessionRef.current = sessionId;
 
-        // The first fit() ran before onResize was registered (xterm fires
-        // resize synchronously during fit), so the PTY is still at whatever
-        // size remote_start created it with (default 120×32). Re-fit now that
-        // we have a session, and push the current geometry explicitly so the
-        // PTY (and any TUI like process-compose inside it) redraws to the
-        // real container width.
+        // Re-fit now that we have a session so the PTY gets the real geometry.
         try { fit.fit(); } catch { /* ignore */ }
         try {
           await fetch(`${apiBase}/resize`, {

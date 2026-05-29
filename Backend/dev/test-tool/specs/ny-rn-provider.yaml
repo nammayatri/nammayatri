@@ -44,21 +44,6 @@ inputs:
     default: |
       sdk.dir=
     required: true
-  - key: CAC_CONFIG_URL
-    label: CAC config URL
-    type: text
-    default: "http://localhost:8080/cac/provider"
-    required: true
-  - key: MERCHANT_ID_DRIVER
-    label: Driver merchant ID
-    type: text
-    default: "a7f3c8e2-4b5d-4c9a-8f6e-2d1a3b4c5d6e"
-    required: true
-  - key: MOENGAGE_APP_ID
-    label: MoEngage app ID
-    type: text
-    default: "MOENGAGE_DUMMY_APP_ID_0000000000"
-    required: false
 
 stages:
   - id: sync-source

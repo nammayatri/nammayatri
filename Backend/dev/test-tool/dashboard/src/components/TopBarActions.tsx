@@ -92,23 +92,37 @@ export const TopBarActions: React.FC = () => {
   // user's last pick to win over the server's default. Run once on mount.
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    let retryTimer: number | null = null;
+
+    const fetchEnvs = async (isFirstRun: boolean) => {
       const [ui, envsRes] = await Promise.all([
-        loadUiState(),
+        isFirstRun ? loadUiState() : Promise.resolve(null),
         fetch(`${CONTEXT_API}/api/config-sync/envs`).then(r => r.ok ? r.json() : { envs: [] }).catch(() => ({ envs: [] })),
       ]);
       if (cancelled) return;
-      if (Array.isArray(envsRes.envs)) setSyncEnvs(envsRes.envs);
-      const fromUi = typeof ui.syncFrom === 'string' ? ui.syncFrom : null;
-      if (fromUi) {
-        setSyncFrom(fromUi);
-      } else if (envsRes.default) {
-        setSyncFrom(envsRes.default);
+      if (Array.isArray(envsRes.envs) && envsRes.envs.length > 0) {
+        setSyncEnvs(envsRes.envs);
+        if (isFirstRun && ui) {
+          const fromUi = typeof ui.syncFrom === 'string' ? ui.syncFrom : null;
+          if (fromUi) {
+            setSyncFrom(fromUi);
+          } else if (envsRes.default) {
+            setSyncFrom(envsRes.default);
+          }
+          const ccUi = typeof ui.ccRef === 'string' ? ui.ccRef : null;
+          if (ccUi) setCcRef(ccUi);
+        }
+      } else {
+        // test-context-api not up yet — retry every 5s until it responds
+        if (!cancelled) retryTimer = window.setTimeout(() => fetchEnvs(false), 5000);
       }
-      const ccUi = typeof ui.ccRef === 'string' ? ui.ccRef : null;
-      if (ccUi) setCcRef(ccUi);
-    })();
-    return () => { cancelled = true; };
+    };
+
+    fetchEnvs(true);
+    return () => {
+      cancelled = true;
+      if (retryTimer !== null) window.clearTimeout(retryTimer);
+    };
   }, []);
 
   // On mount, fetch current status to detect a sync that was already running
