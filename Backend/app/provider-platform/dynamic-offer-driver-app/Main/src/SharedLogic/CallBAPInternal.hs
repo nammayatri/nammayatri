@@ -25,7 +25,6 @@ import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import Kernel.Utils.Dhall (FromDhall)
