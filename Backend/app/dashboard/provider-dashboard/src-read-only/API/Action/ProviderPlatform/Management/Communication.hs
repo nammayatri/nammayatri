@@ -10,6 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management
 import qualified API.Types.ProviderPlatform.Management.Communication
 import qualified Dashboard.Common
+import qualified Data.Time.Calendar
 import qualified Domain.Action.ProviderPlatform.Management.Communication
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
@@ -103,8 +104,8 @@ type GetCommunicationTemplate =
 postCommunicationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> API.Types.ProviderPlatform.Management.Communication.CreateCommunicationRequest -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CreateCommunicationResponse)
 postCommunicationCreate merchantShortId opCity apiTokenInfo personId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.postCommunicationCreate merchantShortId opCity apiTokenInfo personId req
 
-getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationListType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
-getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset personId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset personId
+getCommunicationList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationListType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationChannelType) -> Kernel.Prelude.Maybe (API.Types.ProviderPlatform.Management.Communication.CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationListResponse)
+getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset fromDate toDate personId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationList merchantShortId opCity apiTokenInfo listType channel domain search limit offset fromDate toDate personId
 
 getCommunicationInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Communication -> Environment.FlowHandler API.Types.ProviderPlatform.Management.Communication.CommunicationInfoResponse)
 getCommunicationInfo merchantShortId opCity apiTokenInfo communicationId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.Communication.getCommunicationInfo merchantShortId opCity apiTokenInfo communicationId

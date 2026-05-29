@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
+import qualified Data.Time.Calendar
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -254,6 +255,12 @@ type GetCommunicationList =
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
+      :> QueryParam
+           "fromDate"
+           Data.Time.Calendar.Day
+      :> QueryParam
+           "toDate"
+           Data.Time.Calendar.Day
       :> MandatoryQueryParam
            "personId"
            (Kernel.Types.Id.Id Dashboard.Common.Person)
@@ -322,7 +329,7 @@ type GetCommunicationTemplate =
 
 data CommunicationAPIs = CommunicationAPIs
   { postCommunicationCreate :: (Kernel.Types.Id.Id Dashboard.Common.Person -> CreateCommunicationRequest -> EulerHS.Types.EulerClient CreateCommunicationResponse),
-    getCommunicationList :: (Kernel.Prelude.Maybe (CommunicationListType) -> Kernel.Prelude.Maybe (CommunicationChannelType) -> Kernel.Prelude.Maybe (CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient CommunicationListResponse),
+    getCommunicationList :: (Kernel.Prelude.Maybe (CommunicationListType) -> Kernel.Prelude.Maybe (CommunicationChannelType) -> Kernel.Prelude.Maybe (CommunicationDomainType) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient CommunicationListResponse),
     getCommunicationInfo :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EulerHS.Types.EulerClient CommunicationInfoResponse),
     postCommunicationSend :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> SendCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
     putCommunicationEdit :: (Kernel.Types.Id.Id Dashboard.Common.Communication -> EditCommunicationRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),

@@ -26,6 +26,7 @@ import Data.Function (on)
 import Data.List (nub, nubBy)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TEnc
+import Data.Time (Day)
 import qualified Domain.Types.Communication as DComm
 import qualified Domain.Types.CommunicationDelivery as DDelivery
 import qualified Domain.Types.Merchant as DM
@@ -172,9 +173,11 @@ getCommunicationList ::
   Maybe Text ->
   Maybe Int ->
   Maybe Int ->
+  Maybe Day ->
+  Maybe Day ->
   Kernel.Types.Id.Id Dashboard.Common.Person ->
   Environment.Flow CommAPI.CommunicationListResponse
-getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSearch mbLimit mbOffset personId = do
+getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSearch mbLimit mbOffset mbFromDate mbToDate personId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let listType = fromMaybe CommAPI.LIST_SENT mbListType
   let senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
@@ -183,15 +186,15 @@ getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSea
   case listType of
     CommAPI.LIST_SENT -> do
       let domainFilter = toDomainDomain <$> mbDomain
-      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset domainChannel
+      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_SENT) domainFilter mbSearch mbLimit mbOffset domainChannel mbFromDate mbToDate
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_DRAFT -> do
-      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset domainChannel
+      comms <- QComm.findBySenderIdWithFilters senderId (Just DComm.ST_DRAFT) Nothing mbSearch mbLimit mbOffset domainChannel mbFromDate mbToDate
       let items = map mkSentListItem comms
       return $ CommAPI.CommunicationListResponse {communications = items, summary = Dashboard.Common.Summary {totalCount = length items, count = length items}}
     CommAPI.LIST_RECEIVED -> do
-      deliveries <- QDelivery.findByRecipientIdWithChannel recipientId domainChannel mbLimit mbOffset
+      deliveries <- QDelivery.findByRecipientIdWithChannel recipientId domainChannel mbLimit mbOffset mbFromDate mbToDate
       items <- mapM mkReceivedListItem deliveries
       let filtered = maybe items (\s -> filter (\item -> commMatchesSearch item.title item.body item.senderName s) items) mbSearch
       return $ CommAPI.CommunicationListResponse {communications = filtered, summary = Dashboard.Common.Summary {totalCount = length filtered, count = length filtered}}
