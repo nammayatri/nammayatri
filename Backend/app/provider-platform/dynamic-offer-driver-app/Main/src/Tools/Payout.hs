@@ -15,6 +15,7 @@
 module Tools.Payout
   ( createPayoutOrder,
     payoutOrderStatus,
+    getPayoutServiceFlowForMerchant,
     getCreatePayoutServiceFlow,
     getPayoutStatusServiceFlow,
     PayoutServiceNameOption (..),
@@ -131,6 +132,29 @@ getPayoutStatusServiceFlow ::
   Id DP.Person ->
   m (Payout.PayoutServiceFlow, DMSC.ServiceName, Maybe DDBA.DriverBankAccount)
 getPayoutStatusServiceFlow = getPayoutServiceFlow (.payoutOrderStatus)
+
+getPayoutServiceFlowForMerchant ::
+  ServiceFlow m r =>
+  (DMSUC.MerchantServiceUsageConfig -> Payout.PayoutService) ->
+  PayoutServiceNameOption ->
+  (PT.PayoutService -> DMSC.ServiceName) ->
+  Id DMOC.MerchantOperatingCity ->
+  m Payout.PayoutServiceFlow
+getPayoutServiceFlowForMerchant getCfg payoutServiceNameOption serviceType merchantOperatingCityId = do
+  payoutServiceNameRaw <- case payoutServiceNameOption of
+    MerchantServiceUsageConfigOption -> do
+      orgPaymentsConfig <- CMSUC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      pure $ serviceType (getCfg orgPaymentsConfig)
+    SubscriptionConfigOption serviceName -> do
+      subscriptionConfig <- do
+        CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing serviceName
+          >>= fromMaybeM (NoSubscriptionConfigForService merchantOperatingCityId.getId $ show serviceName)
+      pure $ fromMaybe (serviceType PT.Juspay) subscriptionConfig.payoutServiceName
+  case payoutServiceNameRaw of
+    DMSC.PayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
+    DMSC.RentalPayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
+    DMSC.RidePayoutService payoutService -> pure $ Payout.castPayoutServiceFlow payoutService
+    _ -> throwError $ InternalError "Unknown Service Name"
 
 -- flow differentiate between Stripe and Juspay
 getPayoutServiceFlow ::

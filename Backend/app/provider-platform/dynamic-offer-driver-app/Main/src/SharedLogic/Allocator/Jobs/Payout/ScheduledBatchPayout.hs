@@ -23,12 +23,15 @@ import Domain.Action.UI.DriverWallet
   )
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
+import Domain.Types.Extra.Plan
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.ScheduledPayoutConfig as DSPC
 import qualified Domain.Types.TransporterConfig as DTConf
+import qualified Kernel.External.Payout.Interface as Payout
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -51,6 +54,7 @@ import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
+import qualified Tools.Payout as TPayout
 
 --------------------------------------------------------------------------------
 -- Job entry point
@@ -158,7 +162,11 @@ processWalletPayouts config jobData = do
 
       -- Process drivers
       mbLastDriverId <- Redis.get driverCursorKey
-      eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId
+      payoutServiceFlow <- TPayout.getPayoutServiceFlowForMerchant (.createPayoutOrder) (TPayout.SubscriptionConfigOption PREPAID_SUBSCRIPTION) DEMSC.PayoutService merchantOpCityId
+      let isPayoutVpaRequired = case payoutServiceFlow of
+            Payout.JuspayFlow -> True
+            Payout.StripeFlow -> False
+      eligibleDriverInfos <- QDIE.findEligibleForScheduledPayout merchantOpCityId config.batchSize mbLastDriverId isPayoutVpaRequired
       unless (null eligibleDriverInfos) $ do
         let lastDriverId = (.driverId) $ last eligibleDriverInfos
         Redis.setExp driverCursorKey lastDriverId 86400
@@ -173,7 +181,7 @@ processWalletPayouts config jobData = do
 
       -- Process fleet owners
       mbLastFleetId <- Redis.get fleetCursorKey
-      eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId config.batchSize mbLastFleetId
+      eligibleFleetInfos <- QFOIE.findEligibleFleetOwnersForScheduledPayout merchantOpCityId config.batchSize mbLastFleetId isPayoutVpaRequired
       unless (null eligibleFleetInfos) $ do
         let lastFleetId = (.fleetOwnerPersonId) $ last eligibleFleetInfos
         Redis.setExp fleetCursorKey lastFleetId 86400

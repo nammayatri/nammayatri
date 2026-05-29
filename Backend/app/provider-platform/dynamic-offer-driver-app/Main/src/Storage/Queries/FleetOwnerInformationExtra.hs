@@ -255,16 +255,17 @@ findEligibleFleetOwnersForScheduledPayout ::
   Id DMOC.MerchantOperatingCity ->
   Int ->
   Maybe (Id DP.Person) ->
+  Bool ->
   m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
-findEligibleFleetOwnersForScheduledPayout merchantOpCityId batchSize mbLastPersonId =
+findEligibleFleetOwnersForScheduledPayout merchantOpCityId batchSize mbLastPersonId isPayoutVpaRequired =
   findAllWithOptionsKV
     [ Se.And $
         [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just merchantOpCityId.getId),
           Se.Is Beam.enabled $ Se.Eq True,
           Se.Is Beam.blocked $ Se.Eq False,
-          Se.Is Beam.payoutVpa $ Se.Not (Se.Eq Nothing),
           Se.Is Beam.isBlockedForScheduledPayout $ Se.Not (Se.Eq (Just True))
         ]
+          <> (if isPayoutVpaRequired then [Se.Is Beam.payoutVpa $ Se.Not (Se.Eq Nothing)] else [])
           <> maybe [] (\lastId -> [Se.Is Beam.fleetOwnerPersonId $ Se.GreaterThan (getId lastId)]) mbLastPersonId
     ]
     (Se.Asc Beam.fleetOwnerPersonId)
