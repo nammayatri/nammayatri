@@ -26,7 +26,6 @@ import qualified Data.Aeson as A
 import Data.Time (utctDay)
 import qualified Domain.Action.UI.DriverCoin as DriverCoin
 import Domain.Action.UI.DriverWallet (counterpartyFromRole, makePayoutEntryIdsKey)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM

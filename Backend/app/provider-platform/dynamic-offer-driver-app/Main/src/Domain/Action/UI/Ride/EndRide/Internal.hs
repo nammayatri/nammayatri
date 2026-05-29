@@ -38,7 +38,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
-    makeWalletRunningBalanceLockKey,
     makeSubscriptionRunningBalanceLockKey,
   )
 where
@@ -527,7 +526,8 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
               vatAbsorbed = rawTaxAmount - postTax
            in (postTax, max 0 (rawBaseFare - customerDiscountAmount), vatAbsorbed)
 
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+  let personId = fromMaybe ride.driverId ride.fleetOwnerId
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey personId.getId) 10 10 $ do
     isOnline <- do
       let forceOnline = fromMaybe False transporterConfig.driverWalletConfig.forceOnlineLedger
       -- Persist the computed ledger write mode on the booking for reconciliation
@@ -823,9 +823,6 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
       case commissionResult of
         Left err -> fromEitherM (\e -> InternalError ("Failed to create commission invoice: " <> show e)) (Left err)
         Right _ -> pure ()
-
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
 
 sendReferralFCM ::
   ( CacheFlow m r,

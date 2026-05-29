@@ -1,0 +1,53 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name postAdminRequestCreateBaseRide
+
+@fleetId = favorit-fleet-owner-0000000000000000
+@bookingId = 9c88878f-5e70-4954-adee-eb0d4efef172
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/adminRequest/create
+content-type: application/json
+token: {{juspay_admin}}
+
+{ "personId" : "{{fleetId}}",
+  "actionType": "LedgerAdjustment",
+  "adjustmentType": "Debit",
+  "referenceType": "BaseRide",
+  "referenceId": "{{bookingId}}",
+  "referenceTable": "BOOKING",
+  "amount": {"amount": 3, "currency": "INR"},
+  "source": "BuyerApp",
+  "description": "description"
+}
+
+###
+
+# @name postAdminRequestList
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/adminRequest/list
+content-type: application/json
+token: {{juspay_admin}}
+
+###
+
+# @name postAdminRequestRespond
+
+@adminRequestId = {{postAdminRequestList.response.body.adminRequests[0].adminRequestId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/adminRequest/{{adminRequestId}}/respond
+content-type: application/json
+token: {{operator}}
+
+{ "approve": true
+}

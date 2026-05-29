@@ -24,6 +24,6 @@ data SettlementFileInfo = SettlementFileInfo
 
 data SettlementFileStatus = PENDING | IN_PROGRESS | COMPLETED | FAILED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SettlementFileStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SettlementFileStatus)
 
-$(mkHttpInstancesForEnum (''SettlementFileStatus))
+$(mkHttpInstancesForEnum ''SettlementFileStatus)

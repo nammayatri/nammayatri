@@ -21,7 +21,6 @@ import Domain.Action.UI.DriverWallet
     counterpartyFromRole,
     initiateWalletPayout,
   )
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Merchant as DM

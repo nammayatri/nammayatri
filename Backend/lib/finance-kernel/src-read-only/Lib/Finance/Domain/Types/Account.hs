@@ -44,8 +44,8 @@ data CounterpartyType
   | LOYALTY_WALLET
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AccountStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AccountType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AccountType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CounterpartyType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CounterpartyType)
