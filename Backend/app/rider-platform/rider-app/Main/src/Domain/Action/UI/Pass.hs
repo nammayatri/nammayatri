@@ -930,12 +930,12 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
   let allActivePurchasedPasses =
         HM.elems $
           foldr
-            (\el acc -> do
+            (\el acc ->
                 case HM.lookup el.passType acc of
-                  Just pass ->
+                  Just _ ->
                     case mbDeviceId of
                       Just deviceId | el.deviceId == deviceId -> HM.insert el.passType el acc
-                      Nothing -> acc
+                      _ -> acc
                   Nothing -> HM.insert el.passType el acc
             ) HM.empty updatedPassEntities
 
