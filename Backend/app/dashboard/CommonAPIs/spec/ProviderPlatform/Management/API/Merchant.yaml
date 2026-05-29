@@ -1114,6 +1114,7 @@ types:
     - allowedVehicleVariant: Maybe [VehicleVariant]
     - autoSelectedVehicleVariant: Maybe [VehicleVariant]
     - defaultForVehicleVariant: Maybe [VehicleVariant]
+    - specialZoneQueueCalloutVariants: Maybe [VehicleVariant]
     - vehicleIconUrl: Maybe Text
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
@@ -1146,6 +1147,7 @@ types:
     - allowedVehicleVariant: [VehicleVariant]
     - autoSelectedVehicleVariant: [VehicleVariant]
     - defaultForVehicleVariant: [VehicleVariant]
+    - specialZoneQueueCalloutVariants: "[VehicleVariant]"
     - vehicleIconUrl: Text
     - driverRating: Maybe Centesimal
     - vehicleRating: Maybe Double
