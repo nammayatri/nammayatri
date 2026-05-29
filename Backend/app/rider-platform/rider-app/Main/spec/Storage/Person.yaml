@@ -231,6 +231,7 @@ Person:
     deviceToken: SecondaryKey
     customerReferralCode: SecondaryKey
     operatorBadgeToken: SecondaryKey
+    deviceId: SecondaryKey
 
   extraIndexes:
     - columns: [operatorBadgeToken, merchantId]

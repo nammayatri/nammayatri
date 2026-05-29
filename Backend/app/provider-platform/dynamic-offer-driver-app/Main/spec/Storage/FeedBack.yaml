@@ -18,6 +18,8 @@ Feedback:
 
   constraints:
     id: PrimaryKey
+    rideId: "!SecondaryKey" # forcing; queried in FeedbackExtra.findFeedbackFromRatings (rideId IN)
+    driverId: "!SecondaryKey" # forcing; high fan-out (1 feedback/ride -> grows per driver), monitor SET size
 
   extraOperations:
     - EXTRA_QUERY_FILE

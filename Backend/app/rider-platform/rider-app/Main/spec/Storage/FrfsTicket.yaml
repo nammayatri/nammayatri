@@ -859,6 +859,10 @@ FRFSRecon:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum <ReconStatus>
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <ReconStatus>
 
+  constraints:
+    id: PrimaryKey
+    frfsTicketBookingId: SecondaryKey
+
   queries:
     updateTOrderValueAndSettlementAmountById:
       kvFunction: updateWithKV
@@ -1087,6 +1091,8 @@ StopFare:
     startStopCode: PrimaryKey
     endStopCode: PrimaryKey
     category: PrimaryKey
+  extraIndexes:
+    - columns: [startStopCode, endStopCode]
   queries:
     findByRouteCode:
       kvFunction: findAllWithKV
@@ -1109,6 +1115,9 @@ StopFare:
       params: [amount]
       where:
         and: [farePolicyId, startStopCode, endStopCode, category]
+
+  extraOperations:
+    - GENERATE_INDEXES
 
 
 FRFSStageFare:
