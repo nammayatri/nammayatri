@@ -646,6 +646,14 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
   let cbConfig = PTCircuitBreaker.parseCircuitBreakerConfig (mbRiderConfig >>= (.ptCircuitBreakerConfig))
       ptMode = PTCircuitBreaker.vehicleCategoryToPTMode search.vehicleType
   observingFailures <- PTCircuitBreaker.checkObservingFailures ptMode PTCircuitBreaker.BookingAPI search.merchantOperatingCityId cbConfig
+  let routeFilteredQuotesWithCategories =
+        case search.routeCode of
+          Just searchRouteCode ->
+            let quoteRouteCode (quote, _) = (decodeFromText =<< quote.routeStationsJson :: Maybe [FRFSRouteStationsAPI]) >>= listToMaybe <&> (.code)
+                matchingQuotesWithCategories = filter (\qc -> quoteRouteCode qc == Just searchRouteCode) quotesWithCategories
+             in if null matchingQuotesWithCategories then quotesWithCategories else matchingQuotesWithCategories
+          Nothing -> quotesWithCategories
+  logInfo $ "getFrfsSearchQuote searchId=" <> searchId_.getId <> " requestedRouteCode=" <> show search.routeCode <> " totalQuotes=" <> show (length quotesWithCategories) <> " quotesAfterRouteFilter=" <> show (length routeFilteredQuotesWithCategories)
   sortedQuotesWithCategories <- case search.vehicleType of
     Spec.BUS -> do
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
@@ -658,7 +666,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
                 (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote1 quoteCategories1))
                 (maybe maxBound (JourneyUtils.tierRank cfgMap') (serviceTierTypeFromQuote quote2 quoteCategories2))
           )
-          quotesWithCategories
+          routeFilteredQuotesWithCategories
     _ ->
       return $
         sortBy
@@ -667,7 +675,7 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
                   mbAdultPrice2 = find (\category -> category.category == ADULT) quoteCategories2 <&> (.price)
                in compare (maybe 0 (.amount) mbAdultPrice1) (maybe 0 (.amount) mbAdultPrice2)
           )
-          quotesWithCategories
+          routeFilteredQuotesWithCategories
   mapM
     ( \(quote, quoteCategories) -> do
         let (routeStations :: Maybe [FRFSRouteStationsAPI], stations :: Maybe [FRFSStationAPI]) =
