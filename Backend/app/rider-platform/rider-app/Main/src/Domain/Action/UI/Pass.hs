@@ -214,9 +214,8 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         case mbPending of
           Just pendingPass -> do
             -- don't update device id if existing different device id pass is active or prebooked
-            when (pendingPass.status `notElem` [DPurchasedPass.Active, DPurchasedPass.PreBooked]) $ do
-              QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
-              logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
+            QPurchasedPass.updateDeviceIdById deviceId 0 pendingPass.id
+            logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
           Nothing -> return Nothing
 
@@ -928,7 +927,17 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
 
     return updatedPass
 
-  let allActivePurchasedPasses = updatedPassEntities
+  let allActivePurchasedPasses =
+        HM.elems $
+          foldr
+            (\el acc -> do
+                case HM.lookup el.passType acc of
+                  Just pass ->
+                    case mbDeviceId of
+                      Just deviceId | el.deviceId == deviceId -> HM.insert el.passType el acc
+                      Nothing -> acc
+                  Nothing -> HM.insert el.passType el acc
+            ) HM.empty updatedPassEntities
 
   -- Always show all passes regardless of device. The deviceMismatch flag in
   -- PurchasedPassAPIEntity will inform the UI which passes need device switching.
