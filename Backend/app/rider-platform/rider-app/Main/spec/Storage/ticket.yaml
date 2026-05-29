@@ -327,6 +327,7 @@ SpecialOccasion:
   constraints:
     id: PrimaryKey
     entityId: SecondaryKey
+    placeId: SecondaryKey
 
   queries:
     findSpecialOccasionByEntityIdAndDate:
@@ -554,7 +555,8 @@ SeatManagement:
 
   constraints:
     id: PrimaryKey
-    ticketServiceCategoryId: SecondaryKey
+    ticketServiceCategoryId: "CompositeSecondaryKey categoryDateGroup"
+    date: "CompositeSecondaryKey categoryDateGroup"
   queries:
     findByTicketServiceCategoryIdAndDate:
       kvFunction: findOneWithKV
@@ -714,6 +716,10 @@ TicketBookingService:
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     assignmentId: Maybe Text
+
+  constraints:
+    shortId: SecondaryKey
+    visitDate: "!SecondaryKey"
 
   beamType:
     vendorSplitDetails: Maybe Value

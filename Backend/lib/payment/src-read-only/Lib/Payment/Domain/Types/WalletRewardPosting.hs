@@ -9,6 +9,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.PersonWallet
+import qualified Tools.Beam.UtilsTH
 
 data WalletRewardPosting = WalletRewardPosting
   { cashAmount :: Kernel.Types.Common.HighPrecMoney,
@@ -25,6 +26,6 @@ data WalletRewardPosting = WalletRewardPosting
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data WalletPostingStatus = NEW | SUCCESS | FAILED deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data WalletPostingStatus = NEW | SUCCESS | FAILED deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''Lib.Payment.Domain.Types.WalletRewardPosting.WalletPostingStatus)
