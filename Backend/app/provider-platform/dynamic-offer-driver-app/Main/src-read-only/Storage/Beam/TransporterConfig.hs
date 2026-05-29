@@ -6,6 +6,7 @@ module Storage.Beam.TransporterConfig where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.TransporterConfig
@@ -95,6 +96,7 @@ data TransporterConfigT f = TransporterConfigT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     crossTravelCities :: B.C f [Kernel.Types.Beckn.City.City],
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    defaultOnboardingAs :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs)),
     dailyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dailyMinRidesForBlocking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     dailyMinRidesForNudging :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -321,8 +323,8 @@ instance B.Table TransporterConfigT where
 
 type TransporterConfig = TransporterConfigT Identity
 
-$(enableKVPG ''TransporterConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''TransporterConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstancesWithTModifier ''TransporterConfigT "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
+$(mkTableInstancesWithTModifier (''TransporterConfigT) "transporter_config" [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")])
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''TransporterConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''TransporterConfigT))

@@ -6,6 +6,7 @@ module Domain.Types.TransporterConfig (module Domain.Types.TransporterConfig, mo
 
 import Data.Aeson
 import Domain.Types.Common (UsageSafety (..))
+import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.MerchantPaymentMethod
 import Domain.Types.Extra.TransporterConfig as ReExport
 import qualified Domain.Types.Extra.TransporterConfig
@@ -107,6 +108,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     dailyOffenceSuspensionTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dashboardMediaFileUrlPattern :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     deactivateRCOnUnlink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    defaultOnboardingAs :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.OnboardingAs,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
     deleteDriverBankAccountWhenLinkToFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
