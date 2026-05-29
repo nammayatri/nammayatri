@@ -11,6 +11,8 @@
 #   ./run-tests.sh metro                              # Run all metro ticket booking suites
 #   ./run-tests.sh metro FRFS_Bangalore               # Run metro suites for Bangalore only
 #   ./run-tests.sh subway                             # Run all subway ticket booking suites
+#   ./run-tests.sh ophub                              # Run all operation hub suites
+#   ./run-tests.sh ophub NY_Bangalore                 # Run operation hub suites for Bangalore
 #   ./run-tests.sh --list                             # List available suites
 #   ./run-tests.sh --check                            # Check for stuck entities
 
@@ -48,6 +50,7 @@ INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
+OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -459,6 +462,7 @@ run_sms() {
     echo ""
     run_frfs "$SMS_DIR" "KALEYRA SMS" "${1:-}" "${2:-}"
 }
+run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -483,6 +487,7 @@ show_help() {
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
     echo "  fleet               Run fleet management suites (driver name, association)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
+    echo "  ophub               Run operation hub suites (hub requests, driver mobile search)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -580,6 +585,9 @@ case "${1:-}" in
         ;;
     sms|kaleyra)
         run_sms "${2:-}" "${3:-}"
+        ;;
+    ophub)
+        run_ophub "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

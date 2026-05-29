@@ -23,6 +23,7 @@ apis:
         - mbOffset: Int
         - mbDriverId: Text
         - mbMobileNumber: Text
+        - mbDriverMobileNumber: Text
         - mbOperationHubId: Id OperationHub
         - mbOperationHubName: Text
         - mbRegistrationNo: Text

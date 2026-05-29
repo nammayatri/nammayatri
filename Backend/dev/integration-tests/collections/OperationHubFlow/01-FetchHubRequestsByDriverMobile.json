@@ -1,0 +1,482 @@
+{
+  "info": {
+    "name": "Fetch Hub Requests by Driver Mobile Number",
+    "description": "End-to-end test: registers a fleet owner (creator) and a driver, creates an inspection request linking the driver, then verifies the new mbDriverMobileNumber query param correctly filters requests by the driver's mobile number — and that the existing mbMobileNumber (creator search) still works.\n\nPrerequisite: run setup-local-operation-hub.sql to seed the operation hub:\n  psql -h localhost -p 5434 -U atlas_driver_offer_bpp_user -d atlas_dev -f setup-local-operation-hub.sql",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_fleet_owner_number')) {",
+          "    var fleetNum  = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var driverNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_fleet_owner_number', fleetNum);",
+          "    pm.collectionVariables.set('_test_driver_number', driverNum);",
+          "    console.log('Test fleet owner (creator):', fleetNum, 'driver:', driverNum);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Fleet Owner Login OTP (Creator)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fleet owner login OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "console.log('Fleet V2 login response:', JSON.stringify(d));",
+              "var fid = d.personId || d.getId || d.id || (typeof d === 'string' ? d : null);",
+              "pm.environment.set('fleet_owner_id', fid);",
+              "pm.test('Fleet owner ID is set', function () { pm.expect(fid).to.not.be.null; });",
+              "console.log('Fleet Owner (Creator) ID:', fid);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"],
+          "query": [
+            { "key": "enabled", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - Fleet Owner Verify OTP (Creator)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\", \"otp\": \"{{login_otp}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "03 - Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Driver auth returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "04 - Driver OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Driver OTP verify returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device-driver\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "05 - Get All Operation Hubs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Get all hubs returns 200', function () { pm.response.to.have.status(200); });",
+              "var hubs = pm.response.json();",
+              "pm.test('At least one operation hub exists', function () { pm.expect(hubs.length).to.be.above(0); });",
+              "pm.environment.set('operation_hub_id', hubs[0].id);",
+              "console.log('Using operation hub:', hubs[0].id, hubs[0].name);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operation/getAllHubs",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operation", "getAllHubs"]
+        }
+      }
+    },
+    {
+      "name": "06 - Create Hub Request (Fleet Owner as Creator, DRIVER_ONBOARDING_INSPECTION)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Create hub request returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Request creation succeeds', function () { pm.expect(d.result).to.eql('Success'); });",
+              "console.log('Hub request created — creator (fleet owner):', pm.environment.get('fleet_owner_id'), 'driver:', pm.environment.get('driver_id'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"creatorId\": \"{{fleet_owner_id}}\",\n    \"operationHubId\": \"{{operation_hub_id}}\",\n    \"driverId\": \"{{driver_id}}\",\n    \"registrationNo\": null,\n    \"requestType\": \"DRIVER_ONBOARDING_INSPECTION\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/createRequest",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "createRequest"]
+        }
+      }
+    },
+    {
+      "name": "07 - Fetch Hub Requests by Driver Mobile Number (Match)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Retry-poll pattern: createWithKV writes to Redis KV, but findAllRequestsInRange",
+              "// reads from Postgres via getReplicaBeamConfig. Wait for KV drainer to flush.",
+              "if (!pm.collectionVariables.get('_07_attempt')) pm.collectionVariables.set('_07_attempt', '0');",
+              "var attempt = parseInt(pm.collectionVariables.get('_07_attempt')) || 0;",
+              "// Busy-wait 2s between polls (newman doesn't await setTimeout)",
+              "if (attempt > 0) { var t0 = Date.now(); while (Date.now() - t0 < 2000) {} }",
+              "else { var t0 = Date.now(); while (Date.now() - t0 < 2000) {} }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var attempt = parseInt(pm.collectionVariables.get('_07_attempt')) || 0;",
+              "console.log('Step 07 attempt', attempt + 1, ': got', d.requests ? d.requests.length : 0, 'requests');",
+              "",
+              "if (d.requests && d.requests.length > 0) {",
+              "  pm.collectionVariables.set('_07_attempt', '0');",
+              "  pm.test('Response has requests array', function () { pm.expect(d).to.have.property('requests'); });",
+              "  pm.test('At least one request returned', function () { pm.expect(d.requests.length).to.be.above(0); });",
+              "",
+              "  var driverId = pm.environment.get('driver_id');",
+              "  var match = d.requests.find(function(r) { return r.driverId === driverId; });",
+              "  pm.test('Request for our driver is found', function () { pm.expect(match).to.not.be.undefined; });",
+              "",
+              "  if (match) {",
+              "    pm.test('Request status is PENDING', function () { pm.expect(match.requestStatus).to.eql('PENDING'); });",
+              "    pm.test('Request type is DRIVER_ONBOARDING_INSPECTION', function () { pm.expect(match.requestType).to.eql('DRIVER_ONBOARDING_INSPECTION'); });",
+              "    pm.test('driverPhoneNo field is present', function () { pm.expect(match).to.have.property('driverPhoneNo'); });",
+              "    pm.test('driverPhoneNo matches driver number', function () {",
+              "      pm.expect(match.driverPhoneNo).to.eql(pm.collectionVariables.get('_test_driver_number'));",
+              "    });",
+              "    pm.test('operationHubId matches', function () {",
+              "      pm.expect(match.operationHubId).to.eql(pm.environment.get('operation_hub_id'));",
+              "    });",
+              "  }",
+              "} else if (attempt < 8) {",
+              "  pm.collectionVariables.set('_07_attempt', String(attempt + 1));",
+              "  postman.setNextRequest(pm.info.requestName);",
+              "} else {",
+              "  pm.collectionVariables.set('_07_attempt', '0');",
+              "  pm.test('At least one request returned (after 8 retries)', function () {",
+              "    pm.expect(d.requests.length).to.be.above(0);",
+              "  });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbDriverMobileNumber", "value": "{{_test_driver_number}}" },
+            { "key": "mbStatus", "value": "\"PENDING\"" },
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Fetch Hub Requests by Driver Mobile Number (No Match)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has requests array', function () { pm.expect(d).to.have.property('requests'); });",
+              "pm.test('No requests returned for non-existent driver mobile', function () {",
+              "  pm.expect(d.requests.length).to.eql(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbDriverMobileNumber=0000000000&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbDriverMobileNumber", "value": "0000000000" },
+            { "key": "mbStatus", "value": "\"PENDING\"" },
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Fetch Hub Requests by Creator Mobile Number (Backward Compat)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has requests array', function () { pm.expect(d).to.have.property('requests'); });",
+              "pm.test('At least one request returned via creator (fleet owner) mobile', function () {",
+              "  pm.expect(d.requests.length).to.be.above(0);",
+              "});",
+              "",
+              "var driverId = pm.environment.get('driver_id');",
+              "var match = d.requests.find(function(r) { return r.driverId === driverId; });",
+              "pm.test('Our driver request found via creator mobile search', function () {",
+              "  pm.expect(match).to.not.be.undefined;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbMobileNumber", "value": "{{_test_fleet_owner_number}}" },
+            { "key": "mbStatus", "value": "\"PENDING\"" },
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Fetch Hub Requests Without Mobile Filters (All Results)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has requests array', function () { pm.expect(d).to.have.property('requests'); });",
+              "pm.test('Response has summary', function () { pm.expect(d).to.have.property('summary'); });",
+              "pm.test('At least one request returned without mobile filter', function () {",
+              "  pm.expect(d.requests.length).to.be.above(0);",
+              "});",
+              "",
+              "// Verify response structure of each request",
+              "var req = d.requests[0];",
+              "pm.test('Request has id field', function () { pm.expect(req).to.have.property('id'); });",
+              "pm.test('Request has operationHubId', function () { pm.expect(req).to.have.property('operationHubId'); });",
+              "pm.test('Request has operationHubName', function () { pm.expect(req).to.have.property('operationHubName'); });",
+              "pm.test('Request has requestStatus', function () { pm.expect(req).to.have.property('requestStatus'); });",
+              "pm.test('Request has requestType', function () { pm.expect(req).to.have.property('requestType'); });",
+              "pm.test('Request has requestTime', function () { pm.expect(req).to.have.property('requestTime'); });",
+              "pm.test('Request has driverPhoneNo field', function () { pm.expect(req).to.have.property('driverPhoneNo'); });",
+              "pm.test('Request has creatorPhoneNo field', function () { pm.expect(req).to.have.property('creatorPhoneNo'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbStatus", "value": "\"PENDING\"" },
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "11 - Fetch Hub Requests with Both Mobile Filters",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fetch hub requests returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has requests array', function () { pm.expect(d).to.have.property('requests'); });",
+              "pm.test('At least one request when both mobile filters match the same request', function () {",
+              "  pm.expect(d.requests.length).to.be.above(0);",
+              "});",
+              "",
+              "var driverId = pm.environment.get('driver_id');",
+              "var match = d.requests.find(function(r) { return r.driverId === driverId; });",
+              "pm.test('Request found with both mobile filters', function () {",
+              "  pm.expect(match).to.not.be.undefined;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/operator/fetch/hubRequests?mbMobileNumber={{_test_fleet_owner_number}}&mbDriverMobileNumber={{_test_driver_number}}&mbStatus=\"PENDING\"&mbLimit=10&mbOffset=0",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "operator", "fetch", "hubRequests"],
+          "query": [
+            { "key": "mbMobileNumber", "value": "{{_test_fleet_owner_number}}" },
+            { "key": "mbDriverMobileNumber", "value": "{{_test_driver_number}}" },
+            { "key": "mbStatus", "value": "\"PENDING\"" },
+            { "key": "mbLimit", "value": "10" },
+            { "key": "mbOffset", "value": "0" }
+          ]
+        }
+      }
+    }
+  ]
+}
