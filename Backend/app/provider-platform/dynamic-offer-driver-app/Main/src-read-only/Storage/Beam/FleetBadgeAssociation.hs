@@ -31,6 +31,6 @@ instance B.Table FleetBadgeAssociationT where
 
 type FleetBadgeAssociation = FleetBadgeAssociationT Identity
 
-$(enableKVPG ''FleetBadgeAssociationT ['id] [['badgeId], ['badgeType], ['driverId], ['fleetOwnerId]])
+$(enableKVPG ''FleetBadgeAssociationT ['id] [['badgeId], ['driverId], ['fleetOwnerId]])
 
 $(mkTableInstances ''FleetBadgeAssociationT "fleet_badge_association")

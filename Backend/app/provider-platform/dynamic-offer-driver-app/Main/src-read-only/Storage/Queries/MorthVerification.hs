@@ -78,8 +78,8 @@ updateByPrimaryKey (Domain.Types.MorthVerification.MorthVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.docType docType,
-      Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
-      Se.Set Beam.documentNumberHash (documentNumber & hash),
+      Se.Set Beam.documentNumberEncrypted (unEncrypted . (.encrypted) $ documentNumber),
+      Se.Set Beam.documentNumberHash ((.hash) documentNumber),
       Se.Set Beam.driverDateOfBirth driverDateOfBirth,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.issueDateOnDoc issueDateOnDoc,
@@ -122,8 +122,8 @@ instance ToTType' Beam.MorthVerification Domain.Types.MorthVerification.MorthVer
   toTType' (Domain.Types.MorthVerification.MorthVerification {..}) = do
     Beam.MorthVerificationT
       { Beam.docType = docType,
-        Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
-        Beam.documentNumberHash = documentNumber & hash,
+        Beam.documentNumberEncrypted = unEncrypted . (.encrypted) $ documentNumber,
+        Beam.documentNumberHash = (.hash) documentNumber,
         Beam.driverDateOfBirth = driverDateOfBirth,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,

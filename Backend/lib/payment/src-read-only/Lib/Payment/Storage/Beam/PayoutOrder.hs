@@ -54,6 +54,6 @@ instance B.Table PayoutOrderT where
 
 type PayoutOrder = PayoutOrderT Identity
 
-$(enableKVPG ''PayoutOrderT ['id, 'orderId] [])
+$(enableKVPG ''PayoutOrderT ['id, 'orderId] [['id]])
 
 $(mkTableInstancesGenericSchema ''PayoutOrderT "payout_order")

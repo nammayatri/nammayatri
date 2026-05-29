@@ -91,6 +91,7 @@ FleetBookingAssignments:
   constraints:
     id: PrimaryKey
     mainAssignmentId: SecondaryKey
+    vehicleNo: "!SecondaryKey"
 
   queries:
     findAllByMainAssignmentId:

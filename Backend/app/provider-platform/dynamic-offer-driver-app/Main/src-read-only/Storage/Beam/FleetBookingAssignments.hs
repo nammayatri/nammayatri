@@ -40,6 +40,6 @@ instance B.Table FleetBookingAssignmentsT where
 
 type FleetBookingAssignments = FleetBookingAssignmentsT Identity
 
-$(enableKVPG ''FleetBookingAssignmentsT ['id] [['mainAssignmentId]])
+$(enableKVPG ''FleetBookingAssignmentsT ['id] [['mainAssignmentId], ['vehicleNo]])
 
 $(mkTableInstances ''FleetBookingAssignmentsT "fleet_booking_assignments")
