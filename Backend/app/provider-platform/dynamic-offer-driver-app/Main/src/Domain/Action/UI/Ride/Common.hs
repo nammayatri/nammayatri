@@ -265,7 +265,8 @@ buildRideEarnings lang labels booking ride fp = do
       tips = fromMaybe 0 ride.tipAmount
       cur = ride.currency
       amountPaidByCustomer = fare - discount + tips
-      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare} = labels
+      netDriverEarnings = fare - commission + tips
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblNetEarnings, lblFare} = labels
       cancellationDues = fromMaybe 0 fp.customerCancellationDues -- we will deccide where to fetch this ?
   let mkComp sec key mbLabel value applicable =
         if applicable
@@ -283,8 +284,9 @@ buildRideEarnings lang labels booking ride fp = do
           [ mkComp FareBreakup "AMOUNT_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
             mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
             mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
-            mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
-            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0)
+            mkComp FareBreakup "COMMISSION" lblCommission (if commission > 0 then negate commission else commission) (commission /= 0),
+            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0),
+            mkComp FareBreakup "NET_DRIVER_EARNINGS" lblNetEarnings netDriverEarnings True
           ]
   footnoteItems <- buildFootnotes lang booking ride fp
 
