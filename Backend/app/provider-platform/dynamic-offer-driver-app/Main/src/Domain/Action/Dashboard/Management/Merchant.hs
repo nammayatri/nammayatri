@@ -70,6 +70,7 @@ module Domain.Action.Dashboard.Management.Merchant
     filterUnboundedFareProducts,
     filterBoundedFareProductsFromSnapshot,
     buildFarePolicyUsageCount,
+    getMerchantCityList,
   )
 where
 
@@ -4593,3 +4594,12 @@ postMerchantConfigDebugLogUpdate merchantShortId city req = do
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just city)
   DebugLog.setJsonLogicDebugFlags (cast merchantOpCityId) req
   pure Success
+
+getMerchantCityList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Flow Common.CityListResp
+getMerchantCityList merchantShortId _opCity = do
+  merchant <- findMerchantByShortId merchantShortId
+  operatingCities <- CQMOC.findAllByMerchantId merchant.id
+  pure $ Common.CityListResp {Common.supportedCities = map (.city) operatingCities}
