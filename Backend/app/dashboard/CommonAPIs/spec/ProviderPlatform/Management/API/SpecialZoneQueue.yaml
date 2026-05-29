@@ -86,6 +86,7 @@ types:
 
   VehicleQueueStats:
     - vehicleType: Text
+    - specialZoneTierLabel: Text
     - totalInQueue: Int
     - inPickupZone: Int
     - outsidePickupZone: Int

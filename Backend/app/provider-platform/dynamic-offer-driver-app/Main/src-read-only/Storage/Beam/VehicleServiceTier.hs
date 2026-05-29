@@ -17,41 +17,42 @@ import qualified Kernel.Types.Time
 import Tools.Beam.UtilsTH
 
 data VehicleServiceTierT f = VehicleServiceTierT
-  { airConditionedThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    allowedAreas :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    allowedVehicleVariant :: (B.C f [Domain.Types.VehicleVariant.VehicleVariant]),
-    autoSelectedVehicleVariant :: (B.C f [Domain.Types.VehicleVariant.VehicleVariant]),
-    baseVehicleServiceTier :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    defaultForVehicleVariant :: (B.C f [Domain.Types.VehicleVariant.VehicleVariant]),
-    driverRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal)),
-    fareAdditionPerKmOverBaseServiceTier :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isAirConditioned :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isAirportRideEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isIntercityEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    isRentalsEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    longDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    luggageCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    name :: (B.C f Kernel.Prelude.Text),
-    oxygen :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    priority :: (B.C f Kernel.Prelude.Int),
-    scheduleBookingListEligibilityTags :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
-    seatingCapacity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    serviceTierType :: (B.C f Domain.Types.Common.ServiceTierType),
-    shortDescription :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    specialZone :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    stopFcmSuppressCount :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    stopFcmThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    vehicleAgeThreshold :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months)),
-    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
-    vehicleIconUrl :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    vehicleRating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    ventilator :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { airConditionedThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    allowedAreas :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    allowedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    autoSelectedVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    baseVehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    defaultForVehicleVariant :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    driverRating :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
+    fareAdditionPerKmOverBaseServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    id :: B.C f Kernel.Prelude.Text,
+    isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isAirportRideEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isIntercityEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isRentalsEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    longDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    luggageCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    name :: B.C f Kernel.Prelude.Text,
+    oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    priority :: B.C f Kernel.Prelude.Int,
+    scheduleBookingListEligibilityTags :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    seatingCapacity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    serviceTierType :: B.C f Domain.Types.Common.ServiceTierType,
+    shortDescription :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    specialZone :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    specialZoneQueueCalloutVariants :: B.C f [Domain.Types.VehicleVariant.VehicleVariant],
+    stopFcmSuppressCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    stopFcmThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    vehicleAgeThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
+    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    vehicleRating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    ventilator :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -61,6 +62,6 @@ instance B.Table VehicleServiceTierT where
 
 type VehicleServiceTier = VehicleServiceTierT Identity
 
-$(enableKVPG (''VehicleServiceTierT) [('id)] [])
+$(enableKVPG ''VehicleServiceTierT ['id] [])
 
-$(mkTableInstances (''VehicleServiceTierT) "vehicle_service_tier")
+$(mkTableInstances ''VehicleServiceTierT "vehicle_service_tier")

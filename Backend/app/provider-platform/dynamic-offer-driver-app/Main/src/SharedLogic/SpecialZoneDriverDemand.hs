@@ -38,13 +38,14 @@ module SharedLogic.SpecialZoneDriverDemand
     filterByGateProximity,
     clearAirportPerKmFareCacheForPolicy,
     getAirportPerKmFare,
+    getCalloutVariantsForTier,
   )
 where
 
 import Control.Monad.Extra (mapMaybeM, partitionM)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Types as AT
-import Data.List (partition, sortOn)
+import Data.List (nub, partition, sortOn)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
@@ -110,9 +111,9 @@ representativeAirportRideDurationSec = 30 * 60
 airportPerKmFareCacheTtlSec :: Int
 airportPerKmFareCacheTtlSec = 86400 -- 1 day
 
-mkAirportPerKmFareCacheKey :: Id SL.SpecialLocation -> DV.VehicleVariant -> Text
-mkAirportPerKmFareCacheKey slId variant =
-  "AirportPerKmFare:" <> slId.getId <> ":" <> T.pack (show variant)
+mkAirportPerKmFareCacheKey :: Id SL.SpecialLocation -> DVST.ServiceTierType -> Text
+mkAirportPerKmFareCacheKey slId serviceTier =
+  "AirportPerKmFare:" <> slId.getId <> ":" <> T.pack (show serviceTier)
 
 getAirportPerKmFare ::
   ( CacheFlow m r,
@@ -129,13 +130,13 @@ getAirportPerKmFare ::
   DVST.ServiceTierType -> -- driver's vehicle service tier
   m (Maybe HighPrecMoney)
 getAirportPerKmFare merchantId merchantOpCityId specialLocationId gateLatLong pickupGateId serviceTier = do
-  let driverVariant = DV.castServiceTierToVariant serviceTier
-      cacheKey = mkAirportPerKmFareCacheKey specialLocationId driverVariant
+  let cacheKey = mkAirportPerKmFareCacheKey specialLocationId serviceTier
   mbCached <- Redis.withCrossAppRedis $ Redis.safeGet @(Maybe HighPrecMoney) cacheKey
   case mbCached of
     Just cached -> pure cached
     Nothing -> do
-      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant
+      calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId.getId) (Just serviceTier) (T.pack $ show serviceTier)
+      mbFare <- computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId calloutVariants
       Redis.withCrossAppRedis $ Redis.setExp cacheKey mbFare airportPerKmFareCacheTtlSec
       pure mbFare
 
@@ -149,26 +150,11 @@ clearAirportPerKmFareCacheForPolicy ::
 clearAirportPerKmFareCacheForPolicy fpId = do
   fareProducts <- QFareProduct.findAllFareProductByFarePolicyId fpId
   let pickupProducts =
-        [ (fp.merchantOperatingCityId, fp.vehicleServiceTier, slId)
+        [ (fp.vehicleServiceTier, slId)
           | fp <- fareProducts,
             SL.Pickup slId _ <- [fp.area]
         ]
-      byCity =
-        Map.fromListWith (<>) [(cityId, [(tier, slId)]) | (cityId, tier, slId) <- pickupProducts]
-  cacheKeys <-
-    fmap concat . forM (Map.toList byCity) $ \(cityId, tierSlPairs) -> do
-      cityServiceTiers <- CQVST.findAllByMerchantOpCityId cityId Nothing Nothing
-      let variantsForTier tier =
-            [ v
-              | vst <- cityServiceTiers,
-                vst.serviceTierType == tier,
-                v <- vst.defaultForVehicleVariant
-            ]
-      pure
-        [ mkAirportPerKmFareCacheKey slId v
-          | (tier, slId) <- tierSlPairs,
-            v <- variantsForTier tier
-        ]
+      cacheKeys = [mkAirportPerKmFareCacheKey slId tier | (tier, slId) <- pickupProducts]
   Redis.runInMultiCloudRedisWrite $ Redis.withCrossAppRedis $ forM_ cacheKeys Redis.del
 
 computeAirportPerKmFare ::
@@ -182,18 +168,22 @@ computeAirportPerKmFare ::
   Id DMOC.MerchantOperatingCity ->
   LatLong ->
   Text ->
-  DV.VehicleVariant ->
+  [DV.VehicleVariant] -> -- callout variants
   m (Maybe HighPrecMoney)
-computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId driverVariant = do
+computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId calloutVariants = do
   cityServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing Nothing
   let eligibleServiceTiers =
         [ vst.serviceTierType
           | vst <- cityServiceTiers,
-            driverVariant `elem` vst.defaultForVehicleVariant
+            let vstCalloutVars =
+                  if null vst.specialZoneQueueCalloutVariants
+                    then vst.defaultForVehicleVariant
+                    else vst.specialZoneQueueCalloutVariants,
+            any (`elem` vstCalloutVars) calloutVariants
         ]
   if null eligibleServiceTiers
     then do
-      logError $ "No eligible service tiers found for driver variant " <> show driverVariant <> " in merchantOpCityId " <> show merchantOpCityId
+      logError $ "No eligible service tiers found for callout variants " <> show calloutVariants <> " in merchantOpCityId " <> show merchantOpCityId
       pure Nothing
     else do
       let searchSources = SharedFareProduct.getSearchSources False
@@ -542,6 +532,26 @@ runDemandCheckForVariants merchantOpCityId merchantId bookingId pickupZoneGateId
           -- guards) — we just don't want to double-count demand on retries.
           checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant (Just serviceTier) (Just DSZQR.App)
 
+-- | Look up the LTS queue callout variants for a service tier from the
+--   VehicleServiceTier config. Uses 'specialZoneQueueCalloutVariants' when
+--   non-empty; falls back to 'castServiceTierToVariant' for backward compat.
+getCalloutVariantsForTier ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe Text -> -- specialLocationId (for zone-specific VST override)
+  Maybe DVST.ServiceTierType ->
+  Text -> -- variant fallback text (parsed as VehicleVariant if serviceTier is Nothing)
+  m [DV.VehicleVariant]
+getCalloutVariantsForTier merchantOpCityId mbSlId mbServiceTier variantFallback =
+  case mbServiceTier of
+    Just st -> do
+      mbVst <- CQVST.findByServiceTierTypeAndCityId st merchantOpCityId Nothing mbSlId
+      let calloutVars = maybe [] (.specialZoneQueueCalloutVariants) mbVst
+      if null calloutVars
+        then pure [DV.castServiceTierToVariant st]
+        else pure calloutVars
+    Nothing -> pure $ maybeToList (readMaybe (T.unpack variantFallback))
+
 -- | Per-variant demand check. Triggered from Select once an estimate is chosen.
 --   Compares per-variant demand against the gate's demand threshold; when it's hit and
 --   committed supply (tracked via Redis) is below 'min', notifies top LTS-queue drivers
@@ -600,9 +610,13 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
           let needed = max 0 (maxThreshold - supplyCount)
           when (needed > 0) $ do
             let cooldown = fromMaybe 900 gate.notificationCooldownInSec
-            queueResp <- LTSFlow.getQueueDrivers specialLocationId variant
-            let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-                queueDriverIds = map (.driverId) sortedDrivers
+            calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier variant
+            logDebug $ "checkAndNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for variant=" <> variant
+            allSortedDrivers <- fmap concat $
+              forM calloutVariants $ \cv -> do
+                queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
+                pure $ sortOn (.queuePosition) queueResp.drivers
+            let queueDriverIds = nub $ map (.driverId) allSortedDrivers
             logInfo $
               "Notifying drivers gateId=" <> gateId <> " variant=" <> variant
                 <> " needed="
@@ -611,12 +625,9 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> show (length queueDriverIds)
                 <> " cooldown="
                 <> show cooldown
-            eligible <- filterEligibleDrivers variant gateId gate.enableQueueFilter queueDriverIds
-            eligibleNearGate <- filterByGateProximity merchantId gate variant eligible
+            eligibleNearGate <- filterInBatches 50 needed variant gateId gate.enableQueueFilter merchantId gate queueDriverIds
             logInfo $
-              "Eligible drivers after filter gateId=" <> gateId <> " variant=" <> variant
-                <> " eligible="
-                <> show (length eligible)
+              "Eligible drivers after batched filter gateId=" <> gateId <> " variant=" <> variant
                 <> " eligibleNearGate="
                 <> show (length eligibleNearGate)
                 <> " toNotify="
@@ -658,27 +669,28 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- so the airport per-km fare lookup can match the right fare product. If parsing
       -- fails, fare calc is silently skipped (notification still sent without perKmFare).
       mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
-      mbVariant = DV.castServiceTierToVariant <$> mbServiceTier
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
-  eligiblePriority <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter priorityDriverIds
-  case mbVariant of
-    Nothing -> do
-      logWarning $ "forceNotifyDriverDemand: unable to parse vehicleType as service tier, skipping fare calc: " <> vehicleType
+  (eligiblePriority, priorityVariantMap) <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter priorityDriverIds
+  calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier vehicleType
+  logDebug $ "forceNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for vehicleType=" <> vehicleType
+  if null calloutVariants
+    then do
+      logWarning $ "forceNotifyDriverDemand: no callout variants for vehicleType: " <> vehicleType
       pure 0
-    Just variant -> do
-      eligiblePriorityNearGate <- filterByGateProximity merchantId gate (show variant) eligiblePriority
+    else do
+      eligiblePriorityNearGate <- filterByGateProximity merchantId gate priorityVariantMap eligiblePriority
       priorityCount <- notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh eligiblePriorityNearGate
       let remaining = max 0 (needed - priorityCount)
       -- Fill remaining from LTS queue
       queueCount <-
         if remaining > 0
           then do
-            queueResp <- LTSFlow.getQueueDrivers specialLocationId (show variant)
-            let sortedDrivers = sortOn (.queuePosition) queueResp.drivers
-                -- Exclude priority drivers already processed
-                queueDriverIds = filter (`notElem` priorityDriverIds) $ map (.driverId) sortedDrivers
-            eligible <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter queueDriverIds
-            eligibleNearGate <- filterByGateProximity merchantId gate (show variant) eligible
+            allSortedDrivers <- fmap concat $
+              forM calloutVariants $ \cv -> do
+                queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
+                pure $ sortOn (.queuePosition) queueResp.drivers
+            let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
+            eligibleNearGate <- filterInBatches 50 remaining vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
             notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown triggerSource mbIsDemandHigh (take remaining eligibleNearGate)
           else pure 0
       pure (priorityCount + queueCount)
@@ -706,6 +718,7 @@ notifyDrivers ::
   Maybe Bool -> -- isDemandHigh override (Nothing => default True)
   [Id DP.Person] -> -- drivers to notify
   m Int
+notifyDrivers _ _ _ _ _ _ _ _ _ [] = pure 0
 notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbServiceTier cooldown mbTriggerSource mbIsDemandHigh driverIds = do
   let gateId = gate.id.getId
   mbSpecialLocation <- QSL.findById (Id specialLocationId)
@@ -821,6 +834,43 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
 --     of this, but the Active check tightens the race window between two
 --     near-concurrent notify calls).
 -- 'notifyDrivers' trusts this filter and skips its own busy-check.
+-- | Process queue drivers in batches of `batchSize`, filtering each batch for
+--   eligibility and gate proximity. Stops early once `needed` drivers are collected.
+filterInBatches ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r,
+    Forkable m,
+    HasField "gateNotifiedKeyShards" r Int
+  ) =>
+  Int -> -- batch size
+  Int -> -- needed count
+  Text -> -- vehicleType
+  Text -> -- gateId
+  Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter
+  Id DM.Merchant ->
+  DGI.GateInfo ->
+  [Id DP.Person] -> -- all queue driver IDs
+  m [Id DP.Person]
+filterInBatches batchSize needed vehicleType gateId mbFilterAirport merchantId gate allDriverIds = do
+  let batches = chunksOf batchSize allDriverIds
+  go [] batches
+  where
+    go acc [] = pure acc
+    go acc _ | length acc >= needed = pure (take needed acc)
+    go acc (batch : rest) = do
+      (eligible, variantMap) <- filterEligibleDrivers vehicleType gateId mbFilterAirport batch
+      nearGate <- filterByGateProximity merchantId gate variantMap eligible
+      go (acc <> nearGate) rest
+    chunksOf _ [] = []
+    chunksOf n xs = let (h, t) = splitAt n xs in h : chunksOf n t
+
 filterEligibleDrivers ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -834,8 +884,8 @@ filterEligibleDrivers ::
   Text -> -- gateId
   Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, vehicle.canSwitchToAirport must be Just True
   [Id DP.Person] ->
-  m [Id DP.Person]
-filterEligibleDrivers _ _ _ [] = pure []
+  m ([Id DP.Person], Map.Map (Id DP.Person) Text) -- (eligible drivers, driverId -> variant map)
+filterEligibleDrivers _ _ _ [] = pure ([], Map.empty)
 filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
   shards <- asks (.gateNotifiedKeyShards)
   now <- getCurrentTime
@@ -877,29 +927,32 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
               not info.canSwitchToAirport
           ]
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
-  let mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
+  vehicles <- QV.findAllByDriverIds driverIds
+  let driverVariantMap = Map.fromList [(v.driverId, show v.variant) | v <- vehicles]
+      mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
       vehicleAirportFilterEnabled = fromMaybe False (Map.lookup vehicleType =<< mbFilterAirport)
-  vehicleEligibleDriverIds <- case mbTier of
-    Nothing -> pure driverIds
-    Just tier -> do
-      vehicles <- QV.findAllByDriverIds driverIds
-      let eligibleSet =
-            Set.fromList
-              [ v.driverId
-                | v <- vehicles,
-                  tier `elem` v.selectedServiceTiers,
-                  not vehicleAirportFilterEnabled || v.enableForAirport == Just True
-              ]
-      pure $ filter (`Set.member` eligibleSet) driverIds
-  pure $
-    filter
-      ( \d ->
-          not (Set.member (cooldownKeyFor d) inCooldownKeys)
-            && not (Set.member d busyDrivers)
-            && not (Set.member d onRideDriversOrOfflineDrivers)
-            && not (Set.member d airportIneligibleDrivers)
-      )
-      vehicleEligibleDriverIds
+  let vehicleEligibleDriverIds = case mbTier of
+        Nothing -> driverIds
+        Just tier ->
+          let eligibleSet =
+                Set.fromList
+                  [ v.driverId
+                    | v <- vehicles,
+                      tier `elem` v.selectedServiceTiers,
+                      not vehicleAirportFilterEnabled || v.enableForAirport == Just True
+                  ]
+           in filter (`Set.member` eligibleSet) driverIds
+  pure
+    ( filter
+        ( \d ->
+            not (Set.member (cooldownKeyFor d) inCooldownKeys)
+              && not (Set.member d busyDrivers)
+              && not (Set.member d onRideDriversOrOfflineDrivers)
+              && not (Set.member d airportIneligibleDrivers)
+        )
+        vehicleEligibleDriverIds,
+      driverVariantMap
+    )
 
 -- | Cached snapshot of a queueable gate used for the proximity check. Carries the
 --   parsed pickup-zone polygon(s) so the in-memory filter can do point-in-polygon
@@ -1044,11 +1097,12 @@ filterByGateProximity ::
   ) =>
   Id DM.Merchant -> -- merchant (for manualQueueRemove of drivers LTS has no location for)
   DGI.GateInfo -> -- target gate (where the request will be sent)
-  Text -> -- vehicleType (LTS queue key, threaded through to manualQueueRemove for stale drivers)
+  Map.Map (Id DP.Person) Text -> -- driverId -> vehicleVariant map (from filterEligibleDrivers)
   [Id DP.Person] ->
   m [Id DP.Person]
 filterByGateProximity _ _ _ [] = pure []
-filterByGateProximity merchantId targetGate vehicleType driverIds = do
+filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
+  let getDriverVehicleVariant did = fromMaybe "" (Map.lookup did driverVariantMap)
   cachedGates <- getCachedGatesForProximity targetGate.specialLocationId
   let otherQueueableGates = filter (\g -> g.gateId /= targetGate.id.getId && g.canQueueUpOnGate) cachedGates
       mbTargetCached = find (\g -> g.gateId == targetGate.id.getId) cachedGates
@@ -1080,7 +1134,7 @@ filterByGateProximity merchantId targetGate vehicleType driverIds = do
           void $
             LTSFlow.manualQueueRemove
               targetGate.specialLocationId.getId
-              vehicleType
+              (getDriverVehicleVariant dl.driverId)
               dl.merchantId
               dl.driverId
               (Just "stale_driver_location")
@@ -1094,7 +1148,7 @@ filterByGateProximity merchantId targetGate vehicleType driverIds = do
                   void $
                     LTSFlow.manualQueueRemove
                       targetGate.specialLocationId.getId
-                      vehicleType
+                      (getDriverVehicleVariant driverId)
                       merchantId
                       driverId
                       (Just "no_driver_location")

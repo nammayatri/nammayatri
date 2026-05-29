@@ -87,6 +87,7 @@ instance Kernel.Types.HideSecrets.HideSecrets TriggerSpecialZoneQueueNotifyReq w
 
 data VehicleQueueStats = VehicleQueueStats
   { vehicleType :: Kernel.Prelude.Text,
+    specialZoneTierLabel :: Kernel.Prelude.Text,
     totalInQueue :: Kernel.Prelude.Int,
     inPickupZone :: Kernel.Prelude.Int,
     outsidePickupZone :: Kernel.Prelude.Int,
