@@ -616,6 +616,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: BackgroundVerificationService
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
+    totoVerificationPriorityList: "Maybe [VerificationService]"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -678,6 +679,7 @@ MerchantServiceUsageConfig:
     rectifyDistantPointsFailure: text
     backgroundVerification: text
     llmChatCompletion: character varying(30)
+    totoVerificationPriorityList: "text[]"
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -703,6 +705,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: "'OSRM'"
     llmChatCompletion: "'AzureOpenAI'"
     panVerificationService: "'HyperVerge'"
+    totoVerificationPriorityList: '''{"Tten"}'''
 
   queries:
     findByMerchantOpCityId:
@@ -1291,6 +1294,8 @@ TransporterConfig:
     enableManualDocumentStatusCheck: Maybe Bool
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
+    useCategoryBasedVerificationPriorityList: Maybe Bool
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1834,6 +1839,7 @@ TransporterConfig:
     allowAadhaarReupload: "false"
     allowDlReupload: "false"
     allowGstReupload: "false"
+    useCategoryBasedVerificationPriorityList: "true"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

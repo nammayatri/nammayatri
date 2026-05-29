@@ -300,6 +300,7 @@ data TransporterConfigT f = TransporterConfigT
     upgradeTierDropRetentionTime :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     upwardsRecomputeBuffer :: B.C f Kernel.Types.Common.HighPrecMeters,
     upwardsRecomputeBufferPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    useCategoryBasedVerificationPriorityList :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useDBForAnalytics :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     useOfferListCache :: B.C f Kernel.Prelude.Bool,
     useSilentFCMForForwardBatch :: B.C f Kernel.Prelude.Bool,

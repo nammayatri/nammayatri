@@ -161,11 +161,12 @@ verifyRC ::
   ) =>
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Bool ->
   Maybe [VerificationService] ->
   Maybe DVC.VehicleCategory ->
   VerifyRCReq ->
   m RCRespWithRemPriorityList
-verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
+verifyRC _ merchantOptCityId useCategoryBasedPriority mbRemPriorityList mbVehicleCategory req = do
   let (providerKey :: ProviderLookUpKey) = fromMaybe CAR $ getProviderKeyFromVehicleCategory mbVehicleCategory req.udinNo
   finalVerificationProviderPriorityList <-
     case mbRemPriorityList of
@@ -173,8 +174,15 @@ verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
         merchantServiceUsageConfig <-
           CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
             >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
-        let mbList = merchantServiceUsageConfig.categoryBasedVerificationPriorityList >>= Map.lookup (show providerKey)
-        fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.categoryBasedVerificationPriorityList) mbList
+        if useCategoryBasedPriority
+          then do
+            let mbList = merchantServiceUsageConfig.categoryBasedVerificationPriorityList >>= Map.lookup (show providerKey)
+            fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.categoryBasedVerificationPriorityList) mbList
+          else do
+            case providerKey of
+              TOTO_UDIN -> pure (fromMaybe [VT.Tten] merchantServiceUsageConfig.totoVerificationPriorityList)
+              TOTO -> pure [VT.Idfy]
+              _ -> pure merchantServiceUsageConfig.verificationProvidersPriorityList
       Just remPriorityList -> return remPriorityList
   mbToken' <-
     if providerKey == TOTO_UDIN && VT.Tten `elem` finalVerificationProviderPriorityList
