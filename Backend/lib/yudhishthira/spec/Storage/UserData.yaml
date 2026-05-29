@@ -15,6 +15,9 @@ UserData:
     batchNumber: Int
     userDataValue: Value
 
+  constraint:
+    userId: SecondaryKey
+
   sqlType:
     userDataValue: json
 

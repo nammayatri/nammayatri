@@ -12,14 +12,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data CrisReconT f = CrisReconT
-  { bppOrderId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    dateIst :: (B.C f Kernel.Prelude.Text),
-    fareAmount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    id :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { bppOrderId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dateIst :: B.C f Kernel.Prelude.Text,
+    fareAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    id :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table CrisReconT where
 
 type CrisRecon = CrisReconT Identity
 
-$(enableKVPG (''CrisReconT) [('id)] [])
+$(enableKVPG ''CrisReconT ['id] [['bppOrderId]])
 
-$(mkTableInstances (''CrisReconT) "cris_recon")
+$(mkTableInstances ''CrisReconT "cris_recon")

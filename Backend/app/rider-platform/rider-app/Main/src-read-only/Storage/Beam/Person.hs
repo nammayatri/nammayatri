@@ -121,6 +121,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG (''PersonT) [('id)] [[('customerReferralCode)], [('deviceToken)], [('emailHash)], [('mobileNumberHash)], [('operatorBadgeToken)], [('referralCode)]])
+$(enableKVPG ''PersonT ['id] [['customerReferralCode], ['deviceId], ['deviceToken], ['emailHash], ['mobileNumberHash], ['operatorBadgeToken], ['referralCode]])
 
-$(mkTableInstances (''PersonT) "person")
+$(mkTableInstances ''PersonT "person")
