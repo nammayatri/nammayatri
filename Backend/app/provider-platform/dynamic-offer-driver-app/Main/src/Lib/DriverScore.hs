@@ -368,7 +368,6 @@ getDriverStats _currency _distanceUnit (Just driverStats) driverId rideFare = do
   cancelledCount <-
     case driverStats.ridesCancelled of
       Nothing -> B.runInReplica $ BCRQ.findAllCancelledByDriverId driverId
-      -- Nothing -> BCRQ.findAllCancelledByDriverId driverId
       Just cancelledCount -> pure $ cancelledCount + 1
   earningMissed <-
     case driverStats.earningsMissed of

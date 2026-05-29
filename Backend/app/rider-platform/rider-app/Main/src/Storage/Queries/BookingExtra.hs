@@ -208,40 +208,6 @@ findByTransactionId transactionId =
 findByIdAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Booking -> Id Merchant -> m (Maybe Booking)
 findByIdAndMerchantId (Id bookingId) (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamB.id $ Se.Eq bookingId, Se.Is BeamB.merchantId $ Se.Eq merchantId]]
 
--- findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> m [Booking]
--- findAllByRiderId (Id personId) mbLimit mbOffset mbOnlyActive = do
---   let limit' = fmap fromIntegral $ mbLimit <|> Just 10
---       offset' = fmap fromIntegral $ mbOffset <|> Just 0
---   findAllWithOptionsKV [Se.And ([Se.Is BeamB.riderId $ Se.Eq personId] <> ([Se.Is BeamB.status $ Se.Not $ Se.In [DRB.COMPLETED, DRB.CANCELLED] | mbOnlyActive == Just True]))] (Se.Desc BeamB.createdAt) limit' offset'
-
-findCountByRiderIdAndStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> m Int
-findCountByRiderIdAndStatus (Id personId) status = do
-  dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-          B.filter_'
-            (\booking' -> (BeamB.riderId booking' B.==?. B.val_ personId) B.&&?. BeamB.status booking' B.==?. B.val_ status)
-            do
-              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
-
-findCountByRideIdStatusAndTime :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> UTCTime -> UTCTime -> m Int
-findCountByRideIdStatusAndTime (Id personId) status startTime endTime = do
-  dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-          B.filter_'
-            (\booking' -> (BeamB.riderId booking' B.==?. B.val_ personId) B.&&?. BeamB.status booking' B.==?. B.val_ status B.&&?. B.sqlBool_ (BeamB.createdAt booking' B.>=. B.val_ startTime) B.&&?. B.sqlBool_ (BeamB.createdAt booking' B.<. B.val_ endTime))
-            do
-              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-
-  pure $ either (const 0) (\r -> if null r then 0 else head r) res
-
 findCountByRideIdStatusAndVehicleServiceTierType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> [ServiceTierType] -> m Int
 findCountByRideIdStatusAndVehicleServiceTierType (Id personId) status vehicleServiceTierType =
   findAllWithKV
