@@ -51,7 +51,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux
+            host: x86_64-linux-ny-push-bpp
             arch: amd64
             name: Master Local Build
             continue-on-error: false
