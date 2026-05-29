@@ -67,6 +67,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantMerchantDocumentCreate,
     postMerchantMerchantDocumentUpdate,
     postMerchantMerchantDocumentDelete,
+    getMerchantCityList,
   )
 where
 
@@ -662,3 +663,11 @@ postMerchantMerchantDocumentDelete merchantShortId opCity apiTokenInfo req = do
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantMerchantDocumentDelete) req
+
+getMerchantCityList ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Flow Common.CityListResp
+getMerchantCityList merchantShortId opCity = do
+  let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantCityList)

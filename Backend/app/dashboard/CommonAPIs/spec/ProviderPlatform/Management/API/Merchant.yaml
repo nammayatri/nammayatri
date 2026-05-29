@@ -651,6 +651,11 @@ apis:
         type: DeleteMerchantDocumentReq
       response:
         type: APISuccess
+  - GET:
+      endpoint: /cityList
+      auth: NoAuth
+      response:
+        type: CityListResp
 
 types:
   MerchantUpdateReq:
@@ -1254,6 +1259,8 @@ types:
   DeleteMerchantDocumentReq:
     - id: Text
     - derive: "'HideSecrets"
+  CityListResp:
+    - supportedCities: [City]
 extraOperations:
   - EXTRA_API_TYPES_FILE
   - EXTRA_API_COMMON_TYPES_FILE
