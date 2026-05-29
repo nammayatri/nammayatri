@@ -44,6 +44,7 @@ data VehicleServiceTier = VehicleServiceTier
     serviceTierType :: Domain.Types.Common.ServiceTierType,
     shortDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
+    specialZoneQueueCalloutVariants :: [Domain.Types.VehicleVariant.VehicleVariant],
     stopFcmSuppressCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     stopFcmThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,

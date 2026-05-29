@@ -4336,6 +4336,7 @@ applyVehicleServiceTierUpdate existing req =
       DVST.allowedVehicleVariant = fromMaybe existing.allowedVehicleVariant req.allowedVehicleVariant,
       DVST.autoSelectedVehicleVariant = fromMaybe existing.autoSelectedVehicleVariant req.autoSelectedVehicleVariant,
       DVST.defaultForVehicleVariant = fromMaybe existing.defaultForVehicleVariant req.defaultForVehicleVariant,
+      DVST.specialZoneQueueCalloutVariants = fromMaybe existing.specialZoneQueueCalloutVariants req.specialZoneQueueCalloutVariants,
       DVST.vehicleIconUrl = case req.vehicleIconUrl of
         Nothing -> existing.vehicleIconUrl
         Just urlText -> parseBaseUrl urlText,
@@ -4448,6 +4449,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         vehicleAgeThreshold = req.vehicleAgeThreshold,
         isAirportRideEnabled = req.isAirportRideEnabled,
         specialZone = req.specialZone,
+        specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         createdAt = now,
         updatedAt = now
       }

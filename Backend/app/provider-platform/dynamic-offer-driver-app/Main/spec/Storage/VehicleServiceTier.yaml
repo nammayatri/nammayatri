@@ -39,6 +39,7 @@ VehicleServiceTier:
     allowedVehicleVariant: '[VehicleVariant]'
     autoSelectedVehicleVariant: '[VehicleVariant]'
     defaultForVehicleVariant: '[VehicleVariant]'
+    specialZoneQueueCalloutVariants: '[VehicleVariant]'
     vehicleIconUrl: Maybe BaseUrl
     priority: Int
     stopFcmThreshold: Maybe Int
@@ -52,6 +53,7 @@ VehicleServiceTier:
     allowedVehicleVariant: text[]
     defaultForVehicleVariant: text[]
     autoSelectedVehicleVariant: text[]
+    specialZoneQueueCalloutVariants: text[]
     driverRating: double precision
     vehicleIconUrl: character varying(255)
     allowedAreas: text[]
@@ -61,6 +63,7 @@ VehicleServiceTier:
     priority: '0'
     isEnabled: 'true'
     autoSelectedVehicleVariant: "'{}'"
+    specialZoneQueueCalloutVariants: "'{}'"
     allowedAreas: 'NULL'
   beamType:
     vehicleIconUrl: Maybe Text

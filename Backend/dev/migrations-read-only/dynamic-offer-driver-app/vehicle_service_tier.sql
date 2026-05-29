@@ -415,3 +415,27 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN is_airport_ri
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN special_zone json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ADD COLUMN special_zone_queue_callout_variants text[]  default '{}';
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_service_tier ALTER COLUMN special_zone_queue_callout_variants SET NOT NULL;
+
+
+------- SQL updates -------
+

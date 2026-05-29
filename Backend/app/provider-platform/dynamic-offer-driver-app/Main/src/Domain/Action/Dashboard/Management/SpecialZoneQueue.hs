@@ -37,6 +37,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
 import Tools.Error
 
@@ -101,31 +102,32 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
   -- Compute the queue-request lookback cutoff once, reused across all variants.
   now <- getCurrentTime
   let queueRequestCutoff = addUTCTime (negate (2 * 60 * 60)) now
-  -- Base variants + every variant the operator has explicitly configured on the gate
-  -- (via per-variant threshold maps). Without this the hardcoded list silently drops
-  -- custom variants like SUV_PLUS / TAXI_PLUS so their config never reaches the dashboard.
-  let baseVariants = ["SUV", "SEDAN", "HATCHBACK", "AUTO_RICKSHAW", "BIKE"]
-      configuredVariants =
-        concatMap Map.keys $
-          catMaybes [gate.minDriverThresholds, gate.maxDriverThresholds, gate.demandThresholds]
-      vehicleTypes = nub (baseVariants <> configuredVariants)
-  -- Build a map from driverId to DriverLocation for quick lookup
-  let tierList = catMaybes $ map (\vt -> readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType) vehicleTypes
-      uniqVariantsList = nub $ map castServiceTierToVariant tierList
+  -- Fetch VST configs for callout variant mapping.
+  cityServiceTiers <- CQVST.findAllByMerchantOpCityId _merchantOpCity.id Nothing (Just specialLocationId)
+  let -- Build callout variants per VST, fallback to castServiceTierToVariant
+      getCalloutVars vst =
+        if null vst.specialZoneQueueCalloutVariants
+          then [castServiceTierToVariant vst.serviceTierType]
+          else vst.specialZoneQueueCalloutVariants
+      uniqVariantsList = nub $ concatMap getCalloutVars cityServiceTiers
   uniqVariantsQueueList <- mapM (\vt' -> do resp <- LTSFlow.getQueueDrivers specialLocationId (show vt'); pure (vt', resp)) uniqVariantsList
   let uniqVariantsQueueMap = Map.fromList uniqVariantsQueueList
 
   let driverLocMap = Map.fromList $ map (\dl -> (dl.driverId.getId, dl)) driversNearGate
-  vehicleStats <- forM vehicleTypes $ \vt -> do
-    let variant = fmap castServiceTierToVariant (readMaybe (T.unpack vt) :: Maybe DVST.ServiceTierType)
-        mbQueueResp = variant >>= (`Map.lookup` uniqVariantsQueueMap)
+  vehicleStats <- forM cityServiceTiers $ \vst -> do
+    let vt = show vst.serviceTierType
+        calloutVars = getCalloutVars vst
+        queueResps = mapMaybe (\cv -> Map.lookup cv uniqVariantsQueueMap) calloutVars
+        -- Merge queue responses from all callout variants for this tier
+        mergedDrivers = concatMap (.drivers) queueResps
+        mergedQueueSize = sum $ map (.queueSize) queueResps
     -- Live demand (pending customer searches) and committed supply (drivers notified/accepted)
     mbDemandCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchDemandKey gateId vt)
     mbSupplyCount <- Redis.runInMasterCloudRedisCellWithCrossAppRedis $ Redis.get @Int (SpecialZoneDriverDemand.mkGateSearchSupplyKey gateId vt)
     -- Drivers who accepted the pickup notification and are en-route to the gate
     acceptedRequests <- QSZQR.findAllByGateIdStatusAndVehicleType queueRequestCutoff gateId DSZQR.Accepted vt
-    let totalInQueue = maybe 0 (.queueSize) mbQueueResp
-        queuedDriverIds = maybe [] (map (.driverId) . (.drivers)) mbQueueResp
+    let totalInQueue = mergedQueueSize
+        queuedDriverIds = map (.driverId) mergedDrivers
         -- Drivers that are both in this vehicle type's queue AND inside the pickup zone
         inPickupZone = length $ filter (`elem` pickupZoneDriverIds) queuedDriverIds
         outsidePickupZone = totalInQueue - inPickupZone
@@ -133,10 +135,11 @@ getSpecialZoneQueueQueueStats merchantShortId opCity gateId = do
         -- Check per-driver notified key to determine committedToPickup
         notifiedDriverIds = acceptedDriverIds -- drivers who accepted are committed
         -- Build per-driver details with location from the nearBy data
-        driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) (maybe [] (.drivers) mbQueueResp)
+        driverDetails = mapMaybe (mkDriverDetail driverLocMap pickupZoneDriverIds acceptedDriverIds notifiedDriverIds) mergedDrivers
     pure
       SZQT.VehicleQueueStats
         { vehicleType = vt,
+          specialZoneTierLabel = vst.name,
           totalInQueue = totalInQueue,
           inPickupZone = inPickupZone,
           outsidePickupZone = max 0 outsidePickupZone,

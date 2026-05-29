@@ -28,7 +28,7 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
 findAllByMerchantOpCityId merchantOperatingCityId = do
   findAllWithKV
     [ Se.And
@@ -52,7 +52,7 @@ findBaseServiceTierTypeByCategoryAndCityId vehicleCategory merchantOperatingCity
 
 findByMerchantOpCityIdForList ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.VehicleServiceTier.VehicleServiceTier]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.VehicleServiceTier.VehicleServiceTier])
 findByMerchantOpCityIdForList merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByServiceTierTypeAndCityId ::
@@ -88,7 +88,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
-      Se.Set Beam.allowedAreas ((Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText)) allowedAreas),
+      Se.Set Beam.allowedAreas (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas),
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
       Se.Set Beam.baseVehicleServiceTier baseVehicleServiceTier,
@@ -112,11 +112,12 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.shortDescription shortDescription,
       Se.Set Beam.specialZone (Kernel.Prelude.toJSON <$> specialZone),
+      Se.Set Beam.specialZoneQueueCalloutVariants specialZoneQueueCalloutVariants,
       Se.Set Beam.stopFcmSuppressCount stopFcmSuppressCount,
       Se.Set Beam.stopFcmThreshold stopFcmThreshold,
       Se.Set Beam.vehicleAgeThreshold vehicleAgeThreshold,
       Se.Set Beam.vehicleCategory vehicleCategory,
-      Se.Set Beam.vehicleIconUrl ((Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl),
+      Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleRating vehicleRating,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.updatedAt _now
@@ -125,12 +126,12 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
 
 instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.VehicleServiceTier where
   fromTType' (Beam.VehicleServiceTierT {..}) = do
-    vehicleIconUrl' <- ((Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))) vehicleIconUrl
+    vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditionedThreshold = airConditionedThreshold,
-            allowedAreas = ((Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText))) allowedAreas,
+            allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText) allowedAreas,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
             baseVehicleServiceTier = baseVehicleServiceTier,
@@ -155,6 +156,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
             serviceTierType = serviceTierType,
             shortDescription = shortDescription,
             specialZone = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< specialZone,
+            specialZoneQueueCalloutVariants = specialZoneQueueCalloutVariants,
             stopFcmSuppressCount = stopFcmSuppressCount,
             stopFcmThreshold = stopFcmThreshold,
             vehicleAgeThreshold = vehicleAgeThreshold,
@@ -170,7 +172,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
   toTType' (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = do
     Beam.VehicleServiceTierT
       { Beam.airConditionedThreshold = airConditionedThreshold,
-        Beam.allowedAreas = (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText)) allowedAreas,
+        Beam.allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
         Beam.baseVehicleServiceTier = baseVehicleServiceTier,
@@ -195,11 +197,12 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
         Beam.serviceTierType = serviceTierType,
         Beam.shortDescription = shortDescription,
         Beam.specialZone = Kernel.Prelude.toJSON <$> specialZone,
+        Beam.specialZoneQueueCalloutVariants = specialZoneQueueCalloutVariants,
         Beam.stopFcmSuppressCount = stopFcmSuppressCount,
         Beam.stopFcmThreshold = stopFcmThreshold,
         Beam.vehicleAgeThreshold = vehicleAgeThreshold,
         Beam.vehicleCategory = vehicleCategory,
-        Beam.vehicleIconUrl = (Kernel.Prelude.fmap showBaseUrl) vehicleIconUrl,
+        Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,
         Beam.vehicleRating = vehicleRating,
         Beam.ventilator = ventilator,
         Beam.createdAt = createdAt,
