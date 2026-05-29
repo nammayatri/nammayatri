@@ -24,3 +24,9 @@ ALTER TABLE atlas_app.payout_transaction ADD COLUMN merchant_operating_city_id t
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_name text ;
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_ifsc text ;
 ALTER TABLE atlas_app.payout_transaction ADD COLUMN beneficiary_account text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_transaction DROP CONSTRAINT payout_transaction_pkey;
+ALTER TABLE atlas_app.payout_transaction ADD PRIMARY KEY ( id);

@@ -60,7 +60,7 @@ PayoutOrder:
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
   constraints:
-    id: PrimaryKey
+    id: SecondaryKey
     orderId: PrimaryKey
   queries:
     findById:
@@ -121,7 +121,7 @@ PayoutTransaction:
     updatedAt: timestamp with time zone
   constraints:
     id: PrimaryKey
-    transactionRef: PrimaryKey
+    transactionRef: SecondaryKey
   beamFields:
     amount:
       currency: Maybe Currency

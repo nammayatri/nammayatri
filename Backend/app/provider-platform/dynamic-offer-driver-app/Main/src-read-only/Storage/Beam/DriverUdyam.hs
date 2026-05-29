@@ -36,6 +36,6 @@ instance B.Table DriverUdyamT where
 
 type DriverUdyam = DriverUdyamT Identity
 
-$(enableKVPG ''DriverUdyamT ['id] [['driverId]])
+$(enableKVPG ''DriverUdyamT ['id] [['driverId], ['udyamNumberHash]])
 
 $(mkTableInstances ''DriverUdyamT "driver_udyam")

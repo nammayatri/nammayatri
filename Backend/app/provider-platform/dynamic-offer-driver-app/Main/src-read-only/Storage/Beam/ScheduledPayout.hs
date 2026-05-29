@@ -38,6 +38,6 @@ instance B.Table ScheduledPayoutT where
 
 type ScheduledPayout = ScheduledPayoutT Identity
 
-$(enableKVPG ''ScheduledPayoutT ['id] [['rideId]])
+$(enableKVPG ''ScheduledPayoutT ['id] [['payoutTransactionId], ['rideId]])
 
 $(mkTableInstances ''ScheduledPayoutT "scheduled_payout")

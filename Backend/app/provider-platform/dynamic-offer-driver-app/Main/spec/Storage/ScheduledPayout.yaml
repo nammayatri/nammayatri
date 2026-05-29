@@ -30,6 +30,7 @@ ScheduledPayout:
   constraints:
     id: PrimaryKey
     rideId: SecondaryKey
+    payoutTransactionId: SecondaryKey
 
   queries:
     findById:

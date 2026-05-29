@@ -29,6 +29,6 @@ instance B.Table AppInstallsT where
 
 type AppInstalls = AppInstallsT Identity
 
-$(enableKVPG ''AppInstallsT ['id] [])
+$(enableKVPG ''AppInstallsT ['id] [['deviceToken]])
 
 $(mkTableInstances ''AppInstallsT "app_installs")

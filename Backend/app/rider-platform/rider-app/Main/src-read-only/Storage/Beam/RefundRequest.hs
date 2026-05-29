@@ -44,6 +44,6 @@ instance B.Table RefundRequestT where
 
 type RefundRequest = RefundRequestT Identity
 
-$(enableKVPG ''RefundRequestT ['id] [['orderId]])
+$(enableKVPG ''RefundRequestT ['id] [['orderId], ['refundsId]])
 
 $(mkTableInstances ''RefundRequestT "refund_request")

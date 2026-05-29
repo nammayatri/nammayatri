@@ -19,6 +19,7 @@ AppInstalls:
 
   constraints:
     id: PrimaryKey
+    deviceToken: "!SecondaryKey"
 
   beamType:
     bundleVersion: Maybe Text
