@@ -226,7 +226,9 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
     case fareProduct.tripCategory of
       DTC.OneWay v | v /= MeterRide -> do
         maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
-      _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
+      DTC.CrossCity v _ | v /= MeterRide -> do
+        maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
+      _ -> return Nothing
   mbFarePolicy' <- QFP.findById txnId fareProduct.farePolicyId
   case mbFarePolicy' of
     Nothing -> do
