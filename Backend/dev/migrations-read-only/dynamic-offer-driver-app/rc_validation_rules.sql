@@ -16,3 +16,7 @@ ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rc_validation_rules ADD COLUMN enable_for_airport boolean ;
+
+
+------- SQL updates -------
+

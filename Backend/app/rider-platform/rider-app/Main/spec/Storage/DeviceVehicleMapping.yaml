@@ -18,6 +18,7 @@ DeviceVehicleMapping:
   constraints:
     deviceId: PrimaryKey
     gtfsId: PrimaryKey
+    vehicleNo: SecondaryKey
 
   extraIndexes:
     - columns: [vehicleNo]

@@ -7,6 +7,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
 
 data PersonWallet = PersonWallet
   { cashAmount :: Kernel.Types.Common.HighPrecMoney,
