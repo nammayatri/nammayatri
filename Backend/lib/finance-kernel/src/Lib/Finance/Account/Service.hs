@@ -27,7 +27,6 @@ import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Account.Interface
-import Lib.Finance.Core.Money (roundAmount)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Error.Types
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
