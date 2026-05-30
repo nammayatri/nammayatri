@@ -23,13 +23,17 @@ where
 
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import qualified Data.ByteString.Lazy as LBS
 import Data.Functor ((<&>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (find, nub, partition, sort)
-import Data.Maybe (catMaybes, fromMaybe, listToMaybe)
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
+import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Action.UI.Location as DLocUI
 import qualified Domain.Types as DTC
@@ -225,7 +229,7 @@ data FareUIComponent = FareUIComponent
 
 data UiTranslationRaw
   = UiTrPlain Text
-  | UiTrByKey Text (HM.HashMap Text Text)
+  | UiTrByKey Text (HM.HashMap Text A.Value)
   deriving stock (Show, Generic)
 
 instance FromJSON UiTranslationRaw where
@@ -316,8 +320,13 @@ buildFootnotes lang booking ride fp = do
                 language = pack (show lang)
               }
       resp <- LYTU.runLogics logics logicInput
-      case A.fromJSON resp.result :: A.Result [FareUIComponentRaw] of
-        A.Success rawItems -> do
+      let rawValues = case A.fromJSON resp.result :: A.Result [A.Value] of
+            A.Success vs -> vs
+            A.Error _ -> [resp.result]
+          rawItems = mapMaybe (A.parseMaybe A.parseJSON) rawValues
+      if null rawItems
+        then pure []
+        else do
           let allKeys = nub $
                 flip concatMap rawItems $ \raw -> case raw.uiTranslation of
                   Just (UiTrByKey k _) -> [k]
@@ -331,8 +340,7 @@ buildFootnotes lang booking ride fp = do
                 HM.union
                   (HM.fromList [(t.messageKey, t.message) | t <- preferred])
                   (HM.fromList [(t.messageKey, t.message) | t <- fallbacks])
-          pure $ catMaybes $ map (resolveRawComponent txMap) rawItems
-        A.Error _ -> pure []
+          pure $ mapMaybe (resolveRawComponent txMap) rawItems
 
 resolveRawComponent :: HM.HashMap Text Text -> FareUIComponentRaw -> Maybe FareUIComponent
 resolveRawComponent txMap raw =
@@ -356,8 +364,18 @@ resolveUiTranslationFromMap txMap titleKey = \case
      in Just (substituteVars template vs)
   Nothing -> HM.lookup titleKey txMap
 
-substituteVars :: Text -> HM.HashMap Text Text -> Text
-substituteVars = HM.foldrWithKey (\k v acc -> T.replace ("{{" <> k <> "}}") v acc)
+substituteVars :: Text -> HM.HashMap Text A.Value -> Text
+substituteVars = HM.foldrWithKey (\k v acc -> T.replace ("{{" <> k <> "}}") (valueToText v) acc)
+
+valueToText :: A.Value -> Text
+valueToText = \case
+  A.String s -> s
+  A.Number n -> case Sci.floatingOrInteger n of
+    Right (i :: Integer) -> T.pack (show i)
+    Left (d :: Double) -> T.pack (show d)
+  A.Bool b -> if b then "true" else "false"
+  A.Null -> ""
+  other -> TE.decodeUtf8 . LBS.toStrict $ A.encode other
 
 resolveLabel ::
   (CacheFlow m r, EsqDBFlow m r) =>
