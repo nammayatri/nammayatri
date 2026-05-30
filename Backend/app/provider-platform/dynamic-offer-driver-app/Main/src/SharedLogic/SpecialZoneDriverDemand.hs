@@ -834,6 +834,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
 --     of this, but the Active check tightens the race window between two
 --     near-concurrent notify calls).
 -- 'notifyDrivers' trusts this filter and skips its own busy-check.
+
 -- | Process queue drivers in batches of `batchSize`, filtering each batch for
 --   eligibility and gate proximity. Stops early once `needed` drivers are collected.
 filterInBatches ::
