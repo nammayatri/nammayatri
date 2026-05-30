@@ -13,13 +13,11 @@ module Lib.Finance.Core.Money
     isZero,
     isPositive,
     isNegative,
-    roundAmount,
   )
 where
 
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
-import Kernel.Types.Price (roundHighPrecMoney)
 
 -- | MonetaryAmount represents money with currency and amount
 data MonetaryAmount = MonetaryAmount
@@ -63,8 +61,3 @@ isPositive m = m.amount > 0
 -- | Check if amount is negative
 isNegative :: MonetaryAmount -> Bool
 isNegative m = m.amount < 0
-
--- | Round a monetary amount to 2 decimal places.
--- Finance kernel always stores amounts at 2 decimal precision regardless of currency.
-roundAmount :: HighPrecMoney -> HighPrecMoney
-roundAmount = roundHighPrecMoney @HighPrecMoney 2

@@ -27,7 +27,6 @@ import Kernel.Types.Common ()
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
 import Lib.Finance.Account.Interface
-import Lib.Finance.Core.Money (roundAmount)
 import Lib.Finance.Domain.Types.Account
 import Lib.Finance.Error.Types
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
@@ -118,10 +117,10 @@ updateBalanceByDelta accountId delta = do
   case mbAccount of
     Nothing -> pure $ Left $ AccountError AccountNotFound (show accountId)
     Just account -> do
-      let roundedDelta = roundAmount delta
-          newBalance = roundAmount (account.balance + roundedDelta)
+      let newBalance = account.balance + delta
+      -- Check for negative balance on liability accounts
       when (account.accountType == Liability && newBalance < 0) $
-        pure ()
+        pure () -- Could enforce business rules here
       QAccount.updateBalance newBalance accountId
       pure $ Right newBalance
 
