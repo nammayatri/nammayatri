@@ -443,8 +443,8 @@ customerCancellationChargesCalculation booking ride riderDetails cancellationTyp
   transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId))) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   (cancellationDisToPickup, _mbLocation) <- getDistanceToPickup booking (Just ride)
   now <- getCurrentTime
-  driverQuote <- QDQ.findById (Id booking.quoteId) >>= fromMaybeM (QuoteNotFound booking.quoteId)
-  let estimatedTimeToPickup = secondsToNominalDiffTime driverQuote.durationToPickup
+  durationToPickup <- (maybe (fromMaybe 0 booking.dqDurationToPickup) (.durationToPickup)) <$> (QDQ.findById (Id booking.quoteId))
+  let estimatedTimeToPickup = secondsToNominalDiffTime durationToPickup
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
   let callAttemptByDriver = isJust mbCallStatus
   let _isArrivedAtPickup = case cancellationDisToPickup of
