@@ -851,6 +851,13 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
   -- bytes match — wrapping only one side would silently break "find my SET".
   cooldownHits <- Redis.mGetClusterWithKeys @Text cooldownKeys
   let inCooldownKeys = Set.fromList (map fst cooldownHits)
+      inCooldownDrivers = filter (\d -> Set.member (cooldownKeyFor d) inCooldownKeys) driverIds
+  logInfo $
+    "filterEligibleDrivers cooldown filter gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " input="
+      <> show (length driverIds)
+      <> " inCooldown="
+      <> show (map (.getId) inCooldownDrivers)
   -- Bulk DB: drivers with an Accepted (committed) or pending Active request.
   busyRows <- QSZQR.findAllByDriverIdsAndStatuses driverIds [DSZQR.Active, DSZQR.Accepted]
   let busyDrivers =
@@ -862,6 +869,10 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
                   else Nothing
             )
             busyRows
+  logInfo $
+    "filterEligibleDrivers busy filter (Active/Accepted) gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " busy="
+      <> show (map (.getId) (Set.toList busyDrivers))
   -- Bulk DB: drivers currently on a ride.
   driverInfos <- QDI.findAllByDriverIds (map (.getId) driverIds)
   let onRideDriversOrOfflineDrivers =
@@ -876,6 +887,14 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
             | info <- driverInfos,
               not info.canSwitchToAirport
           ]
+  logInfo $
+    "filterEligibleDrivers onRide/offline filter gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " onRideOrOffline="
+      <> show (map (.getId) (Set.toList onRideDriversOrOfflineDrivers))
+  logInfo $
+    "filterEligibleDrivers airport-ineligible (canSwitchToAirport=False) filter gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " airportIneligible="
+      <> show (map (.getId) (Set.toList airportIneligibleDrivers))
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
   let mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
       vehicleAirportFilterEnabled = fromMaybe False (Map.lookup vehicleType =<< mbFilterAirport)
@@ -891,15 +910,29 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
                   not vehicleAirportFilterEnabled || v.enableForAirport == Just True
               ]
       pure $ filter (`Set.member` eligibleSet) driverIds
-  pure $
-    filter
-      ( \d ->
-          not (Set.member (cooldownKeyFor d) inCooldownKeys)
-            && not (Set.member d busyDrivers)
-            && not (Set.member d onRideDriversOrOfflineDrivers)
-            && not (Set.member d airportIneligibleDrivers)
-      )
-      vehicleEligibleDriverIds
+  let vehicleIneligibleDrivers = filter (`notElem` vehicleEligibleDriverIds) driverIds
+  logInfo $
+    "filterEligibleDrivers vehicle service-tier/airport-switch filter gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " airportFilterEnabled="
+      <> show vehicleAirportFilterEnabled
+      <> " vehicleIneligible="
+      <> show (map (.getId) vehicleIneligibleDrivers)
+  let eligibleDrivers =
+        filter
+          ( \d ->
+              not (Set.member (cooldownKeyFor d) inCooldownKeys)
+                && not (Set.member d busyDrivers)
+                && not (Set.member d onRideDriversOrOfflineDrivers)
+                && not (Set.member d airportIneligibleDrivers)
+          )
+          vehicleEligibleDriverIds
+  logInfo $
+    "filterEligibleDrivers result gateId=" <> gateId <> " vehicleType=" <> vehicleType
+      <> " input="
+      <> show (length driverIds)
+      <> " eligible="
+      <> show (map (.getId) eligibleDrivers)
+  pure eligibleDrivers
 
 -- | Cached snapshot of a queueable gate used for the proximity check. Carries the
 --   parsed pickup-zone polygon(s) so the in-memory filter can do point-in-polygon
