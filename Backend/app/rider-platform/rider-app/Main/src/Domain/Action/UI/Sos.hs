@@ -376,7 +376,7 @@ createTicketForNewSos person ride riderConfig merchantId merchantOperatingCityId
                     Nothing
                     merchantShortId
                     rideCityCode
-            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
+            ticketResponse <- withTryCatch "createTicket:sosTrigger" (createSosTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) req.flow riderConfig.kaptureConfig.disposition kaptureQueue))
             case ticketResponse of
               Right ticketResponse' -> return (Just ticketResponse'.ticketId)
               Left _ -> return Nothing
@@ -402,7 +402,7 @@ createNonRideSupportTicket logTag flow person sosId' riderConfig = do
       kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
   ticketResponse <-
     withTryCatch logTag $
-      Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+      Ticket.createSosTicket person.merchantId person.merchantOperatingCityId $
         SIVR.mkTicket person phoneNumber dashboardSosUrl Nothing flow riderConfig.kaptureConfig.disposition kaptureQueue
   case ticketResponse of
     Right resp -> do
@@ -558,7 +558,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
               void $
                 withTryCatch "createTicket:sendSosTracking" $
                   withShortRetry $
-                    createTicket
+                    createSosTicket
                       person.merchantId
                       person.merchantOperatingCityId
                       (mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.AudioRecording (riderConfig.kaptureConfig.disposition) kaptureQueue)
@@ -1071,7 +1071,7 @@ postSosUpdateToRide (mbPersonId, merchantId) sosId UpdateToRideReq {..} = do
         -- No existing ticket: create fresh ticket and notify emergency contacts
         ticketResponse <-
           withTryCatch "createTicket:sosUpdateToRide" $
-            Ticket.createTicket person.merchantId person.merchantOperatingCityId $
+            Ticket.createSosTicket person.merchantId person.merchantOperatingCityId $
               SIVR.mkTicket person phoneNumber mediaLinks (Just rideInfo) SafetyDSos.SafetyFlow riderConfig.kaptureConfig.disposition kaptureQueue
         whenJust (either (const Nothing) (Just . (.ticketId)) ticketResponse) $ \newTicketId ->
           void $ SafetySos.updateSosTicketId sosDetails (Just newTicketId)

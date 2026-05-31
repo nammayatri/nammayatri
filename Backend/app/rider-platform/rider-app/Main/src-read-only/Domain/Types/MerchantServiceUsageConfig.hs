@@ -63,6 +63,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     payoutOrderStatus :: Kernel.External.Payout.Types.PayoutService,
     smsProvidersPriorityList :: [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: Kernel.External.Maps.Types.MapsService,
+    sosTicketService :: Kernel.Prelude.Maybe Kernel.External.Ticket.Types.IssueTicketService,
     updateAmountInPaymentIntent :: Kernel.External.Payment.Types.PaymentService,
     updatePaymentMethodInIntent :: Kernel.External.Payment.Types.PaymentService,
     updatedAt :: Kernel.Prelude.UTCTime,

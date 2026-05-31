@@ -63,6 +63,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
     smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
     snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
+    sosTicketService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Ticket.Types.IssueTicketService),
     updateAmountInPaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
     updatePaymentMethodInIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
