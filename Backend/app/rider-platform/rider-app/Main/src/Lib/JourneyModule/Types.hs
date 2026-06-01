@@ -891,7 +891,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
       estimatedChildPrice = find (\priceItem -> priceItem.categoryType == CHILD) fareParameters.priceItems <&> (.unitPrice)
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
-  journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
+  journeyLegInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsBooking booking) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails commencingHours fareParameters booking.totalPrice integratedBPPConfig
   isCancellable <- computeIsCancellable booking integratedBPPConfig
   return $
@@ -1074,24 +1074,75 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 -- safeDiv x 0 = x
 -- safeDiv x y = x / y
 
-getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, (Int, JMState.TrackingStatus, UTCTime))] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
-getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
+data LegRouteInfoFallback = LegRouteInfoFallback
+  { fallbackFromStationCode :: Maybe Text,
+    fallbackToStationCode :: Maybe Text,
+    fallbackRouteCode :: Maybe Text,
+    fallbackFromStationName :: Maybe Text,
+    fallbackToStationName :: Maybe Text,
+    fallbackFromStationAddress :: Maybe Text,
+    fallbackToStationAddress :: Maybe Text,
+    fallbackFromStationPoint :: Maybe LatLong,
+    fallbackToStationPoint :: Maybe LatLong,
+    fallbackRouteName :: Maybe Text
+  }
+
+mkFallbackFromFrfsBooking :: DFRFSBooking.FRFSTicketBooking -> LegRouteInfoFallback
+mkFallbackFromFrfsBooking booking =
+  LegRouteInfoFallback
+    { fallbackFromStationCode = Just booking.fromStationCode,
+      fallbackToStationCode = Just booking.toStationCode,
+      fallbackRouteCode = booking.routeCode,
+      fallbackFromStationName = booking.fromStationName,
+      fallbackToStationName = booking.toStationName,
+      fallbackFromStationAddress = booking.fromStationAddress,
+      fallbackToStationAddress = booking.toStationAddress,
+      fallbackFromStationPoint = booking.fromStationPoint,
+      fallbackToStationPoint = booking.toStationPoint,
+      fallbackRouteName = booking.routeName
+    }
+
+mkFallbackFromFrfsSearch :: FRFSSR.FRFSSearch -> LegRouteInfoFallback
+mkFallbackFromFrfsSearch search =
+  LegRouteInfoFallback
+    { fallbackFromStationCode = Just search.fromStationCode,
+      fallbackToStationCode = Just search.toStationCode,
+      fallbackRouteCode = search.routeCode,
+      fallbackFromStationName = search.fromStationName,
+      fallbackToStationName = search.toStationName,
+      fallbackFromStationAddress = search.fromStationAddress,
+      fallbackToStationAddress = search.toStationAddress,
+      fallbackFromStationPoint = search.fromStationPoint,
+      fallbackToStationPoint = search.toStationPoint,
+      fallbackRouteName = Nothing
+    }
+
+unknownLegRouteField :: Text
+unknownLegRouteField = "UNKNOWN"
+
+getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Maybe LegRouteInfoFallback -> [(RouteDetails, (Int, JMState.TrackingStatus, UTCTime))] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
+getLegRouteInfo mbFallback journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
   mapM transformJourneyRouteDetails journeyRouteDetailsWithTrackingStatuses
   where
     transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => (RouteDetails, (Int, JMState.TrackingStatus, UTCTime)) -> m LegRouteInfo
     transformJourneyRouteDetails (journeyRouteDetail, (_, trackingStatus, trackingStatusLastUpdatedAt)) = do
-      fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStopCode
-      toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStopCode
-      routeCode' <- fromMaybeM (InternalError "RouteCode is missing") (journeyRouteDetail.routeGtfsId <&> gtfsIdtoDomainCode)
-      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in fetchPossibleRoutes: " <> show fromStationCode')
-      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in fetchPossibleRoutes: " <> show toStationCode')
-      route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
-      validRoutes <- getRouteCodesFromTo fromStation.code toStation.code integratedBPPConfig
+      fromStationCode' <- resolveRequiredField "FromStationCode" journeyRouteDetail.fromStopCode (mbFallback >>= fallbackFromStationCode)
+      toStationCode' <- resolveRequiredField "ToStationCode" journeyRouteDetail.toStopCode (mbFallback >>= fallbackToStationCode)
+      routeCode' <- resolveRequiredField "RouteCode" (journeyRouteDetail.routeGtfsId <&> gtfsIdtoDomainCode) (mbFallback >>= fallbackRouteCode)
+      mbFromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig
+      when (isNothing mbFromStation) $ logError $ "From Station not found in getLegRouteInfo: " <> show fromStationCode'
+      mbToStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig
+      when (isNothing mbToStation) $ logError $ "To Station not found in getLegRouteInfo: " <> show toStationCode'
+      mbRoute <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode'
+      when (isNothing mbRoute) $ logError $ "Route not found in getLegRouteInfo: " <> show routeCode'
+      let originStop = buildStationAPI mbFromStation fromStationCode' (mbFallback >>= fallbackFromStationName) (mbFallback >>= fallbackFromStationAddress) (mbFallback >>= fallbackFromStationPoint)
+          destinationStop = buildStationAPI mbToStation toStationCode' (mbFallback >>= fallbackToStationName) (mbFallback >>= fallbackToStationAddress) (mbFallback >>= fallbackToStationPoint)
+      validRoutes <- getRouteCodesFromTo originStop.code destinationStop.code integratedBPPConfig
       return
         LegRouteInfo
-          { originStop = stationToStationAPI fromStation,
-            destinationStop = stationToStationAPI toStation,
-            routeCode = route.code,
+          { originStop,
+            destinationStop,
+            routeCode = maybe routeCode' (.code) mbRoute,
             subOrder = journeyRouteDetail.subLegOrder,
             platformNumber = journeyRouteDetail.fromStopPlatformCode,
             journeyStatus = Just $ JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
@@ -1099,12 +1150,31 @@ getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
             trackingStatusLastUpdatedAt,
             lineColor = journeyRouteDetail.routeColorName,
             lineColorCode = journeyRouteDetail.routeColorCode,
-            trainNumber = Just route.shortName,
+            trainNumber = (mbRoute <&> (.shortName)) <|> (mbFallback >>= fallbackRouteName),
             frequency = journeyRouteDetail.frequency,
             legStartTime = journeyRouteDetail.legStartTime,
             legEndTime = journeyRouteDetail.legEndTime,
             allAvailableRoutes = validRoutes
           }
+
+    resolveRequiredField fieldName primary fallback =
+      case primary <|> fallback of
+        Just v -> return v
+        Nothing -> do
+          logError $ fieldName <> " is missing in getLegRouteInfo (no value in RouteDetails or FRFS fallback), defaulting to " <> unknownLegRouteField
+          return unknownLegRouteField
+
+    buildStationAPI mbStation code' mbName mbAddress mbPoint =
+      FRFSStationAPI
+        { name = fromMaybe (fromMaybe unknownLegRouteField mbName) ((.name) <$> mbStation),
+          code = maybe code' (.code) mbStation,
+          lat = (mbStation >>= (.lat)) <|> (mbPoint <&> (\p -> p.lat)),
+          lon = (mbStation >>= (.lon)) <|> (mbPoint <&> (\p -> p.lon)),
+          address = (mbStation >>= (.address)) <|> mbAddress,
+          regionalName = mbStation >>= (.regionalName),
+          hindiName = mbStation >>= (.hindiName),
+          integratedBppConfigId = maybe (cast integratedBPPConfig.id) (cast . (.integratedBppConfigId)) mbStation
+        }
 
 computeIsCancellable ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>
@@ -1208,7 +1278,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
           then do return (Nothing, Nothing, [])
           else return (mkPriceAPIEntity . mkPrice Nothing <$> fallbackFare, Nothing, [])
 
-  journeyLegRouteInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
+  journeyLegRouteInfo' <- getLegRouteInfo (Just $ mkFallbackFromFrfsSearch frfsSearch) (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo mbQuote mbFareParameters quoteCategories categories journeyLegRouteInfo'
 
   return $
