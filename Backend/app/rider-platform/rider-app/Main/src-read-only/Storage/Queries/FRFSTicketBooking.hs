@@ -26,7 +26,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking] -> m ())
 createMany = traverse_ create
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m ([Domain.Types.FRFSTicketBooking.FRFSTicketBooking]))
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -173,7 +173,7 @@ updateTotalPriceById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.T
 updateTotalPriceById totalPrice id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+    [ Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.updatedAt _now
     ]
@@ -207,6 +207,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.customerCancelled customerCancelled,
       Se.Set Beam.discountedTickets discountedTickets,
       Se.Set Beam.driverId driverId,
+      Se.Set Beam.driverMobileNumber driverMobileNumber,
+      Se.Set Beam.driverName driverName,
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.failureReason failureReason,
       Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
@@ -252,6 +254,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.routeName routeName,
       Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
+      Se.Set Beam.seatSelectionType seatSelectionType,
       Se.Set Beam.serviceTierType serviceTierType,
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
@@ -262,7 +265,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.toStationLat ((.lat) <$> toStationPoint),
       Se.Set Beam.toStationLon ((.lon) <$> toStationPoint),
       Se.Set Beam.toStopIdx toStopIdx,
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) totalPrice),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) totalPrice),
       Se.Set Beam.price ((.amount) totalPrice),
       Se.Set Beam.tripId tripId,
       Se.Set Beam.validTill validTill,

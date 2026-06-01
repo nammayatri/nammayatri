@@ -55,6 +55,7 @@ data PersonT f = PersonT
     mobileNumberHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
     nyClubConsent :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     onboardedFromDashboard :: (B.C f Kernel.Prelude.Bool),
+    operatorBadgeToken :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     passwordHash :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash)),
     qrImageId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
@@ -75,6 +76,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG (''PersonT) [('id)] [[('alternateMobileNumberHash)], [('mobileNumberHash)]])
+$(enableKVPG (''PersonT) [('id)] [[('alternateMobileNumberHash)], [('mobileNumberHash)], [('operatorBadgeToken)]])
 
 $(mkTableInstances (''PersonT) "person")

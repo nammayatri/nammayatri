@@ -14,6 +14,7 @@
 
 module SharedLogic.CallBAPInternal where
 
+import qualified API.Types.UI.FRFSFleetOperator as FRFSFleetOperatorAPI
 import API.Types.UI.MeterRide
 import qualified API.Types.UI.PickupInstructions as PickupInstructions
 import qualified Data.HashMap.Strict as HM
@@ -387,3 +388,39 @@ getOfferDiscount apiKey internalUrl bppBookingId req = do
   logInfo $ "CallBAPInternal: Getting offer discount for bppBookingId: " <> bppBookingId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (offerDiscountClient (Just apiKey) bppBookingId req) "GetOfferDiscount" offerDiscountAPI
+
+-- FRFS Trip Manifest (proxy to rider-app only - needs FRFS ticket tables)
+
+-- GET /v2/frfs/trip/{tripId}/route/{routeId}/manifest - Get passenger manifest
+type FrfsTripManifestAPI =
+  "internal"
+    :> "frfs"
+    :> "trip"
+    :> Capture "tripId" Text
+    :> "route"
+    :> Capture "routeId" Text
+    :> "manifest"
+    :> Header "token" Text
+    :> Get '[JSON] FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
+
+frfsTripManifestClient :: Text -> Text -> Maybe Text -> EulerClient FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
+frfsTripManifestClient = client (Proxy @FrfsTripManifestAPI)
+
+frfsTripManifestAPI :: Proxy FrfsTripManifestAPI
+frfsTripManifestAPI = Proxy
+
+getFrfsTripManifest ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  m FRFSFleetOperatorAPI.FRFSTripPassengerManifestResp
+getFrfsTripManifest apiKey internalUrl tripId routeId = do
+  logInfo $ "CallBAPInternal: Getting FRFS trip manifest for tripId: " <> tripId <> ", routeId: " <> routeId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (frfsTripManifestClient tripId routeId (Just apiKey)) "GetFrfsTripManifest" frfsTripManifestAPI

@@ -64,6 +64,8 @@ type AlternateStopsByGtfsIdAndStopCodeAPI = "alternateStops" :> Capture "gtfs_id
 
 type RoutesServedTodayAPI = "routes-served-today" :> Get '[JSON] [RoutesServedTodayItem]
 
+type WaybillMetadataAPI = "waybill" :> Capture "gtfs_id" Text :> "metadata" :> Capture "waybill_no" Text :> Get '[JSON] WaybillMetadataResponse
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -151,6 +153,9 @@ nandiAlternateStopsByGtfsIdAndStopCodeAPI = Proxy
 nandiRoutesServedTodayAPI :: Proxy RoutesServedTodayAPI
 nandiRoutesServedTodayAPI = Proxy
 
+nandiWaybillMetadataAPI :: Proxy WaybillMetadataAPI
+nandiWaybillMetadataAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -237,6 +242,9 @@ getNandiAlternateStopsByGtfsIdAndStopCode = ET.client nandiAlternateStopsByGtfsI
 
 getNandiRoutesServedToday :: ET.EulerClient [RoutesServedTodayItem]
 getNandiRoutesServedToday = ET.client nandiRoutesServedTodayAPI
+
+getNandiWaybillMetadata :: Text -> Text -> ET.EulerClient WaybillMetadataResponse
+getNandiWaybillMetadata = ET.client nandiWaybillMetadataAPI
 
 type OperatorGetRowAPI = "internal" :> "operator" :> Capture "gtfs_id" Text :> "crud" :> Capture "table" Text :> QueryParam "column" Text :> Get '[JSON] Value
 
