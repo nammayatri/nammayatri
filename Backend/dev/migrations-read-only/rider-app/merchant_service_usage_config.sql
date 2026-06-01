@@ -104,3 +104,8 @@ ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN create_payout_ord
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN event_tracking_providers text[] ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.merchant_service_usage_config ADD COLUMN sos_ticket_service character varying(30) ;
