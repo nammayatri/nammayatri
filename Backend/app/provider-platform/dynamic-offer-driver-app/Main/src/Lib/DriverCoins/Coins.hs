@@ -530,11 +530,15 @@ getExpirationSeconds timeDiffFromUtc = do
   let expirationSeconds = round $ diffUTCTime (UTCTime (addDays 1 $ utctDay istTime) 0) istTime -- expire at 12:00 AM IST
   pure expirationSeconds
 
-incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r) => Id DP.Person -> Int -> Int -> m ()
 incrementValidRideCount driverId expirationPeriod incrementValue = do
   validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
   case validRideCountKeyExists of
-    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Just _ ->
+      void $
+        Hedis.runInMultiCloudRedisWrite $
+          Hedis.withCrossAppRedis $
+            Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
 
 mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
@@ -628,29 +632,39 @@ mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
 getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
-getValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
+getValidRideCountByDriverIdKey driverId =
+  Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
 
-setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
-setValidRideCountByDriverIdKey driverId expirationPeriod count = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
+setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r) => Id DP.Person -> Int -> Int -> m ()
+setValidRideCountByDriverIdKey driverId expirationPeriod count =
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $ do
+      void $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
+      Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
 
 mkOTPValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkOTPValidRideCountByDriverIdKey driverId = "DriverOTPValidRideCount:DriverId:" <> driverId.getId
 
 getOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
-getOTPValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
+getOTPValidRideCountByDriverIdKey driverId =
+  Hedis.withCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
 
-setOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
-setOTPValidRideCountByDriverIdKey driverId expirationPeriod count = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
+setOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r) => Id DP.Person -> Int -> Int -> m ()
+setOTPValidRideCountByDriverIdKey driverId expirationPeriod count =
+  Hedis.runInMultiCloudRedisWrite $
+    Hedis.withCrossAppRedis $ do
+      void $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
+      Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
 
-incrementOTPValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
+incrementOTPValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Hedis.HedisFlow m r) => Id DP.Person -> Int -> Int -> m ()
 incrementOTPValidRideCount driverId expirationPeriod incrementValue = do
   otpValidRideCountKeyExists <- getOTPValidRideCountByDriverIdKey driverId
   case otpValidRideCountKeyExists of
-    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Just _ ->
+      void $
+        Hedis.runInMultiCloudRedisWrite $
+          Hedis.withCrossAppRedis $
+            Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setOTPValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
 
 safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
