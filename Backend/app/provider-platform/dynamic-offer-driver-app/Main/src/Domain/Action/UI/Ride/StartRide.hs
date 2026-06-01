@@ -232,6 +232,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
         then logTagInfo "IffcoTokio driver insurance skipped" ("tripCategory=" <> show booking.tripCategory <> ", rideId=" <> ride.id.getId)
         else fork "IffcoTokio driver insurance" $ IffcoInsurance.triggerIffcoTokioInsurance driverId booking.providerId ride.merchantOperatingCityId
 
+      fork "Push Start Ride Metric" $ incrementRideStartCounter "startRide"
       -- Schedule payout for special zone rides if enabled
       let paymentInstrument = fromMaybe DMPM.Cash booking.paymentInstrument
       when

@@ -708,6 +708,8 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
 
     awaitAll [clearEditDestinationWayAndSnappedPointsFork, endRideTransactionFork, clearInterpolatedPointsFork, notifyCompleteToBAPFork, clearReachedStopLocationsFork]
 
+    fork "Push End Ride Metric" $ incrementRideEndCounter "endRide"
+
     return updRide
   driverRideRes <- do
     mbRideDetail <- QRD.findById finalUpdatedRide.id
