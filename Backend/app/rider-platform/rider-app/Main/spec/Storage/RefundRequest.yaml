@@ -27,6 +27,7 @@ RefundRequest:
     refundsId: Maybe (Id Refunds)
     refundsAmount: Maybe HighPrecMoney
     refundsTries: Int
+    deductFromDriver: Maybe Bool
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     evidenceS3Path: Maybe Text # TODO image size validation
@@ -43,8 +44,14 @@ RefundRequest:
       enum: "RIDE_FARE, CANCELLATION_FEE"
 
   queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
     findByOrderId:
       kvFunction: findOneWithKV
+      where: orderId
+    findAllByOrderId:
+      kvFunction: findAllWithKV
       where: orderId
     findByRefundsId:
       kvFunction: findOneWithKV
@@ -56,6 +63,7 @@ RefundRequest:
        - responseDescription
        - refundsAmount
        - refundsTries
+       - deductFromDriver
       where: id
     updateRefundIdAndStatus:
       kvFunction: updateOneWithKV
@@ -77,3 +85,4 @@ RefundRequest:
   extraOperations:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
+    - GENERATE_INDEXES

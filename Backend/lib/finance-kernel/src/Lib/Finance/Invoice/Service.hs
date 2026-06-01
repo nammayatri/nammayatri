@@ -368,6 +368,7 @@ invoiceTypeToTransactionType invoiceType = case invoiceType of
   RideCancellation -> Cancellation
   Commission -> BuyerCommission
   AggregatedCommission -> BuyerCommission
+  Refund -> CreditNote
 
 -- | Map invoiceType to DirectTax TransactionType (Direct Tax / TDS)
 invoiceTypeToDirectTransactionType :: InvoiceType -> DirectTax.TransactionType
@@ -377,6 +378,7 @@ invoiceTypeToDirectTransactionType invoiceType = case invoiceType of
   RideCancellation -> DirectTax.Cancellation
   Commission -> DirectTax.BuyerCommission
   AggregatedCommission -> DirectTax.BuyerCommission
+  Refund -> DirectTax.RideFare
 
 -- | SAC code mapping per transaction type
 sacCodeForTransactionType :: TransactionType -> Text
@@ -398,6 +400,7 @@ invoiceTypeToPurpose = \case
   RideCancellation -> purposeCancellation
   Commission -> purposeCommission
   AggregatedCommission -> purposeAggregatedCommission
+  Refund -> purposeRefund
 
 -- | Map DirectTax TransactionType to TDS section
 transactionTypeToTdsSection :: DirectTax.TransactionType -> Maybe Text
