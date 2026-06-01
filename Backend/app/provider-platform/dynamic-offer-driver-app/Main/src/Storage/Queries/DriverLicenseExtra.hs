@@ -6,6 +6,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Documents
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
 import qualified Sequelize as Se
@@ -16,8 +17,10 @@ import Storage.Queries.OrphanInstances.DriverLicense ()
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverLicense -> m ()
 upsert a@DriverLicense {..} = do
   res <- findOneWithKV [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
-  if isJust res
-    then
+  case res of
+    Just existingLicense -> do
+      when (existingLicense.driverId /= driverId) $ do
+        throwError $ InternalError $ "Driver ID mismatch for license: existing driver is " <> existingLicense.driverId.getId <> " but trying to update with " <> driverId.getId
       updateOneWithKV
         [ Se.Set BeamDL.driverDob driverDob,
           Se.Set BeamDL.driverName driverName,
@@ -29,7 +32,7 @@ upsert a@DriverLicense {..} = do
           Se.Set BeamDL.updatedAt updatedAt
         ]
         [Se.Is BeamDL.licenseNumberHash $ Se.Eq (a.licenseNumber & (.hash))]
-    else createWithKV a
+    Nothing -> createWithKV a
 
 findByDLNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> m (Maybe DriverLicense)
 findByDLNumber dlNumber = do
