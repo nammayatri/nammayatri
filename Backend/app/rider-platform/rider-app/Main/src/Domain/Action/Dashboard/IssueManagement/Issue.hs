@@ -57,11 +57,15 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Domain.Types.MediaFile
+import qualified IssueManagement.Storage.Queries.MediaFile as QMediaFile
+import IssueManagement.Tools.Error (MediaFileError (..))
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 
 dashboardIssueHandle :: DAI.ServiceHandle Environment.Flow
 dashboardIssueHandle = AUI.customerIssueHandle
@@ -151,9 +155,12 @@ postIssueComment (Kernel.Types.Id.ShortId merchantShortId) city issueReportId re
 getIssueMedia ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
   Environment.Flow Kernel.Prelude.Text
-getIssueMedia (Kernel.Types.Id.ShortId merchantShortId) _ = DIssue.issueFetchMedia (Kernel.Types.Id.ShortId merchantShortId)
+getIssueMedia (Kernel.Types.Id.ShortId merchantShortId) _ mediaFileId = do
+  mediaFile <- QMediaFile.findById mediaFileId >>= fromMaybeM (FileDoesNotExist mediaFileId.getId)
+  filePath <- mediaFile.s3FilePath & fromMaybeM (FileDoesNotExist mediaFileId.getId)
+  DIssue.issueFetchMedia (Kernel.Types.Id.ShortId merchantShortId) filePath
 
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

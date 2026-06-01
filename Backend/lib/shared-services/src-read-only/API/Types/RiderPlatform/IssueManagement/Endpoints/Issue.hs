@@ -16,6 +16,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.ServantMultipart
@@ -107,7 +108,7 @@ type PostIssueCommentHelper =
       :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
-type GetIssueMedia = ("media" :> MandatoryQueryParam "filePath" Kernel.Prelude.Text :> Get '[JSON] Kernel.Prelude.Text)
+type GetIssueMedia = ("media" :> MandatoryQueryParam "mediaFileId" (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) :> Get '[JSON] Kernel.Prelude.Text)
 
 type PostIssueTicketStatusCallBack = ("kapture" :> "ticketStatus" :> ReqBody '[JSON] Data.Aeson.Value :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
@@ -321,7 +322,7 @@ data IssueAPIs = IssueAPIs
     getIssueInfoV2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId IssueManagement.Domain.Types.Issue.IssueReport.IssueReport) -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.IssueInfoDRes,
     putIssueUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueUpdateByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueComment :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueAddCommentByUserReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getIssueMedia :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
+    getIssueMedia :: Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> EulerHS.Types.EulerClient Kernel.Prelude.Text,
     postIssueTicketStatusCallBack :: Data.Aeson.Value -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postIssueCategoryCreate :: IssueManagement.Common.Dashboard.Issue.CreateIssueCategoryReq -> EulerHS.Types.EulerClient IssueManagement.Common.Dashboard.Issue.CreateIssueCategoryRes,
     postIssueCategoryUpdate :: Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> IssueManagement.Common.Dashboard.Issue.UpdateIssueCategoryReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

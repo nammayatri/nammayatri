@@ -20,6 +20,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -50,7 +51,7 @@ putIssueUpdate a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboa
 postIssueComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueAddCommentByUserReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueComment a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.IssueManagement.Issue.postIssueComment a4 a3 a2 a1
 
-getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
+getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
 getIssueMedia a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.IssueManagement.Issue.getIssueMedia a3 a2 a1
 
 postIssueTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

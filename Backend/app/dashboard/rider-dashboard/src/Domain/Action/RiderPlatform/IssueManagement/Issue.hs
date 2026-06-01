@@ -56,6 +56,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
@@ -205,11 +206,11 @@ getIssueMedia ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   ApiTokenInfo ->
-  Kernel.Prelude.Text ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile ->
   Environment.Flow Kernel.Prelude.Text
-getIssueMedia merchantShortId opCity apiTokenInfo filePath = do
+getIssueMedia merchantShortId opCity apiTokenInfo mediaFileId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMedia) filePath
+  API.Client.RiderPlatform.IssueManagement.callIssueManagementAPI checkedMerchantId opCity (.issueDSL.getIssueMedia) mediaFileId
 
 postIssueTicketStatusCallBack ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

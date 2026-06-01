@@ -21,6 +21,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
@@ -342,8 +343,8 @@ putIssueUpdate merchantShortId opCity apiTokenInfo issueId req = withFlowHandler
 postIssueComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.IssueAddCommentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueComment merchantShortId opCity apiTokenInfo issueId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueComment merchantShortId opCity apiTokenInfo issueId req
 
-getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.Prelude.Text)
-getIssueMedia merchantShortId opCity apiTokenInfo filePath = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueMedia merchantShortId opCity apiTokenInfo filePath
+getIssueMedia :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile -> Environment.FlowHandler Kernel.Prelude.Text)
+getIssueMedia merchantShortId opCity apiTokenInfo mediaFileId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.getIssueMedia merchantShortId opCity apiTokenInfo mediaFileId
 
 postIssueTicketStatusCallBack :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Data.Aeson.Value -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postIssueTicketStatusCallBack merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.IssueManagement.Issue.postIssueTicketStatusCallBack merchantShortId opCity apiTokenInfo req

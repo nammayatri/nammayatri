@@ -171,7 +171,7 @@ apis:
       endpoint: /media
       auth: ApiAuthV2
       mandatoryQuery:
-        - filePath: Text
+        - mediaFileId: Id MediaFile
       response:
         type: Text
       migrate:
