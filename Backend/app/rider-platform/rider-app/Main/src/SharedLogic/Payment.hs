@@ -1024,7 +1024,7 @@ makeRefundPayment merchantId merchantOpCityId paymentMode refundReq = do
   let refundCall = TPayment.refundPayment merchantId merchantOpCityId paymentMode Nothing
   DPayment.refundPaymentService refundReq refundCall
 
--- | Unified refund status check. Replaces refreshStripeRefund.
+-- | Refresh status for the given Refunds row. Nothing in mbRefundsId = no attempt yet → no refresh.
 getRefundStatusForOrder ::
   ( EncFlow m r,
     EsqDBFlow m r,
@@ -1037,11 +1037,12 @@ getRefundStatusForOrder ::
   Id DMOC.MerchantOperatingCity ->
   Maybe DMPM.PaymentMode ->
   Id DOrder.PaymentOrder ->
+  Maybe (Id DRefunds.Refunds) ->
   m (Maybe Payment.RefundPaymentResp)
-getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId = do
+getRefundStatusForOrder merchantId merchantOpCityId paymentMode orderId mbRefundsId = do
   let getRefundStatusCall = TPayment.getRefundStatus merchantId merchantOpCityId paymentMode
       commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-  DPayment.getRefundStatusService orderId commonMerchantOperatingCityId getRefundStatusCall
+  DPayment.getRefundStatusService orderId mbRefundsId commonMerchantOperatingCityId getRefundStatusCall
 
 paymentErrorHandler ::
   ( EncFlow m r,

@@ -367,7 +367,10 @@ data RefundPaymentServiceReq = RefundPaymentServiceReq
     driverAccountId :: Maybe Payment.AccountId,
     email :: Maybe Text,
     amount :: Maybe HighPrecMoney,
-    retryIfFailed :: Bool
+    deductFromDriver :: Maybe Bool,
+    retryIfFailed :: Bool,
+    -- Nothing = fresh attempt; Just rid = retry that specific Refunds row (only when FAILED).
+    refundsId :: Maybe (Id Refunds)
   }
   deriving (Show, Eq, Generic)
 
@@ -615,6 +618,8 @@ createPaymentService merchantId mbMerchantOpCityId personId mbExistingOrderId mb
             }
 
 -- | Unified refund service. Replaces both createRefundService and initiateStripeRefundService.
+-- Caller must enforce any refund_request-level invariants (e.g. single-in-flight) before calling;
+-- this service only discriminates Stripe attempts via req.refundsId.
 refundPaymentService ::
   forall m r.
   ( EncFlow m r,
@@ -634,13 +639,20 @@ refundPaymentService req refundCall = do
   where
     processRefund :: DOrder.PaymentOrder -> m (Maybe PInterface.RefundPaymentResp)
     processRefund order = do
-      existingOrderRefunds <- HQRefunds.findLatestByOrderId order.shortId
-      case existingOrderRefunds of
+      mbExistingForThisAttempt <- case req.refundsId of
+        Nothing -> pure Nothing
+        Just rid -> HQRefunds.findById rid
+      case mbExistingForThisAttempt of
         Nothing -> initiateNewRefund order
-        Just latestRefunds ->
-          if req.retryIfFailed && latestRefunds.status == PInterface.REFUND_FAILURE
+        Just thisRefunds ->
+          -- Skip retry when Stripe accepted the prior attempt: the FAILED status is then a DB-side
+          -- anomaly (lost race with Stripe's response) and a fresh call would double-charge. Webhook
+          -- will reconcile.
+          if req.retryIfFailed
+            && thisRefunds.status == PInterface.REFUND_FAILURE
+            && isNothing thisRefunds.idAssignedByServiceProvider
             then initiateNewRefund order
-            else pure Nothing -- refund already exists and not retrying
+            else pure Nothing
     initiateNewRefund :: DOrder.PaymentOrder -> m (Maybe PInterface.RefundPaymentResp)
     initiateNewRefund order = do
       let refundAmount = fromMaybe order.amount req.amount
@@ -657,6 +669,7 @@ refundPaymentService req refundCall = do
                 paymentIntentId = Just order.paymentServiceOrderId,
                 driverAccountId = req.driverAccountId,
                 email = req.email,
+                deductFromDriver = req.deductFromDriver,
                 splitSettlementDetails = Nothing -- TODO: build from PaymentOrderSplit if needed
               }
       resp <- withTryCatch "refundCall:refundPaymentService" (refundCall refundReq)
@@ -674,8 +687,8 @@ refundPaymentService req refundCall = do
           HQRefunds.updateRefundStatus req.merchantOpCityId PInterface.REFUND_FAILURE refundsEntry mbAction
           pure Nothing
 
--- | Unified refund status check. Fetches latest refund for an order and refreshes
---   status from the payment gateway.
+-- | Refresh status from the payment gateway for a specific Stripe attempt.
+--   Caller passes the Refunds row id; Nothing means no attempt yet → no refresh.
 getRefundStatusService ::
   forall m r.
   ( EncFlow m r,
@@ -683,30 +696,32 @@ getRefundStatusService ::
     Finance.HasActorInfo m r
   ) =>
   Id DOrder.PaymentOrder ->
+  Maybe (Id Refunds) ->
   Id MerchantOperatingCity ->
   (Payment.GetRefundReq -> m PInterface.RefundPaymentResp) ->
   m (Maybe PInterface.RefundPaymentResp)
-getRefundStatusService orderId merchantOpCityId getRefundStatusCall = do
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
-  existingRefund <- HQRefunds.findLatestByOrderId order.shortId
-  case existingRefund of
+getRefundStatusService orderId mbRefundsId merchantOpCityId getRefundStatusCall = do
+  case mbRefundsId of
     Nothing -> pure Nothing
-    Just refund -> do
-      case refund.idAssignedByServiceProvider of
-        Nothing -> pure $ Just $ mkRespFromRefund refund
-        Just serviceProviderId -> do
-          let getReq = Payment.GetRefundReq {id = Payment.RefundId serviceProviderId, driverAccountId = ""}
-          resp <- withTryCatch "getRefundStatusCall" (getRefundStatusCall getReq)
-          case resp of
-            Right result -> do
-              now <- getCurrentTime
-              let newCompletedAt = calculateCompletedAt result.status now
-              HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt refund (Just "get refund status service")
-              -- Return the internal refunds.id (matches refundPaymentService);
-              pure $ Just result {PInterface.refundId = refund.id.getId}
-            Left err -> do
-              logError $ "Get refund status failed: " <> show err
-              pure $ Just $ mkRespFromRefund refund
+    Just rid -> do
+      _ <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderDoesNotExist orderId.getId)
+      HQRefunds.findById rid >>= \case
+        Nothing -> pure Nothing
+        Just refund -> case refund.idAssignedByServiceProvider of
+          Nothing -> pure $ Just $ mkRespFromRefund refund
+          Just serviceProviderId -> do
+            let getReq = Payment.GetRefundReq {id = Payment.RefundId serviceProviderId, driverAccountId = ""}
+            resp <- withTryCatch "getRefundStatusCall" (getRefundStatusCall getReq)
+            case resp of
+              Right result -> do
+                now <- getCurrentTime
+                let newCompletedAt = calculateCompletedAt result.status now
+                HQRefunds.updateRefundsEntryByStripeResponse merchantOpCityId (Just serviceProviderId) result.errorCode result.status refund.isApiCallSuccess newCompletedAt refund (Just "get refund status service")
+                -- Return the internal refunds.id (matches refundPaymentService);
+                pure $ Just result {PInterface.refundId = refund.id.getId}
+              Left err -> do
+                logError $ "Get refund status failed: " <> show err
+                pure $ Just $ mkRespFromRefund refund
   where
     mkRespFromRefund refund =
       PInterface.RefundPaymentResp

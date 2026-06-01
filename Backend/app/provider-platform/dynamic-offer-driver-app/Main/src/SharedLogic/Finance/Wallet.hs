@@ -122,6 +122,9 @@ module SharedLogic.Finance.Wallet
     walletReferenceDiscountsOnline,
     walletReferenceDiscountsCash,
     walletReferenceDeductedAtPaymentByPlatform,
+    walletReferenceRideRefund,
+    walletReferenceRideRefundDriverShare,
+    walletReferenceRideRefundCommissionShare,
     getRedeemableEntryIds,
     settleWalletEntries,
     getPayoutEligibilityData,
@@ -269,6 +272,17 @@ walletReferenceAirportEntryFee = "AirportEntryFee"
 
 walletReferenceWalletIncentive :: Text
 walletReferenceWalletIncentive = "WalletIncentive"
+
+-- | Refund reference types: Case 1 (platform absorbs) uses 'RideRefund';
+--   Case 2 (clawback) splits into driver + commission shares.
+walletReferenceRideRefund :: Text
+walletReferenceRideRefund = "RideRefund"
+
+walletReferenceRideRefundDriverShare :: Text
+walletReferenceRideRefundDriverShare = "RideRefundDriverShare"
+
+walletReferenceRideRefundCommissionShare :: Text
+walletReferenceRideRefundCommissionShare = "RideRefundCommissionShare"
 
 -- | Single source of truth: all wallet reference types that represent
 --   redeemable credit entries (i.e. entries that increase driver wallet balance

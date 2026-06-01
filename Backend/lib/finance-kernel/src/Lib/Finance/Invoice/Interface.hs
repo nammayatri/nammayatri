@@ -63,6 +63,7 @@ data LineItemDescription
   | CashbackOffer
   | VatInput
   | OfferDiscount
+  | RideRefund
   deriving (Eq, Ord, Show, Generic, ToJSON, FromJSON)
 
 -- | groupId is required for Fare/Tax (pairing); Nothing for Adjustment.

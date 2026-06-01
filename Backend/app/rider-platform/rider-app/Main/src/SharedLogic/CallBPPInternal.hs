@@ -561,6 +561,52 @@ populateTipAmount apiKey internalUrl bppRideId tipAmount = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (populateTipAmountClient bppRideId tipAmount (Just apiKey)) "PopulateTipAmount" populateTipAmountApi
 
+-- Best-effort (try-swallow): the BPP handler throws on failure, and on the APPROVED
+-- transition this fires before the Stripe refund, so a BPP outage must not abort the
+-- refund. Failures still log via the BPP_INTERNAL_API_ERROR counter.
+data RefundLedgerStatus = APPROVED | REFUNDED
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- | Field names are byte-identical to the BPP RefundLedgerReq so the two
+--   independently-defined Generic instances agree on the JSON wire.
+data RefundLedgerReq = RefundLedgerReq
+  { refundRequestId :: Text,
+    refundsAmount :: HighPrecMoney,
+    transactionAmount :: HighPrecMoney,
+    deductFromDriver :: Maybe Bool,
+    refundRequestStatus :: RefundLedgerStatus
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+type RefundLedgerAPI =
+  "internal"
+    :> Capture "rideId" Text
+    :> "refundLedger"
+    :> Header "token" Text
+    :> ReqBody '[JSON] RefundLedgerReq
+    :> Post '[JSON] APISuccess
+
+refundLedgerClient :: Text -> Maybe Text -> RefundLedgerReq -> EulerClient APISuccess
+refundLedgerClient = client refundLedgerApi
+
+refundLedgerApi :: Proxy RefundLedgerAPI
+refundLedgerApi = Proxy
+
+refundLedger ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  RefundLedgerReq ->
+  m ()
+refundLedger apiKey internalUrl bppRideId req = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (refundLedgerClient bppRideId (Just apiKey) req) "RefundLedger" refundLedgerApi
+
 type GetDeliveryImageAPI =
   "internal"
     :> "ride"

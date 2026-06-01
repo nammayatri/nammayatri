@@ -107,12 +107,9 @@ type API =
            "rideId"
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "refundRequest"
-      :> QueryParam
-           "refreshRefunds"
-           Kernel.Prelude.Bool
       :> Get
            '[JSON]
-           API.Types.UI.RidePayment.RefundRequestResp
+           API.Types.UI.RidePayment.RefundRequestListResp
       :<|> TokenAuth
       :> "payment"
       :> "getDueAmount"
@@ -233,10 +230,9 @@ getPaymentRefundRequest ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Ride.Ride ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Environment.FlowHandler API.Types.UI.RidePayment.RefundRequestResp
+    Environment.FlowHandler API.Types.UI.RidePayment.RefundRequestListResp
   )
-getPaymentRefundRequest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentRefundRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+getPaymentRefundRequest a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentRefundRequest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 getPaymentGetDueAmount :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler API.Types.UI.RidePayment.GetDueAmountResp)
 getPaymentGetDueAmount a1 = withFlowHandlerAPI $ Domain.Action.UI.RidePayment.getPaymentGetDueAmount (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)

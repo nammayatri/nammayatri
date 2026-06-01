@@ -419,10 +419,12 @@ fetchInvoicesByFilters merchantOpCityId mbFleetOwnerOrDriverId mbFrom mbInvoiceI
         let mbIssuedToId =
               case mbInvoiceType of
                 Just Ride -> Nothing
+                Just Refund -> Nothing
                 _ -> mbFleetOwnerOrDriverId
             mbSupplierId =
               case mbInvoiceType of
                 Just Ride -> mbFleetOwnerOrDriverId
+                Just Refund -> mbFleetOwnerOrDriverId
                 _ -> Nothing
         QFinanceInvoiceExtra.findByMerchantOpCityIdAndDateRange
           merchantOpCityId.getId
