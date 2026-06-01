@@ -365,6 +365,8 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
                 fromStopIdx = mbHoldCtxForAll <&> (\(_, f, _) -> f),
                 toStopIdx = mbHoldCtxForAll <&> (\(_, _, t) -> t),
                 cloudType = cloudType,
+                clientSdkVersion = rider.clientSdkVersion,
+                clientBundleVersion = rider.clientBundleVersion,
                 ..
               }
       QFRFSTicketBooking.create booking

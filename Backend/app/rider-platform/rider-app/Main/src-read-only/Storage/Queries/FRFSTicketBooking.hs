@@ -16,6 +16,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Version
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.FRFSTicketBookingExtra as ReExport
@@ -202,6 +203,8 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.cancellationCharges cancellationCharges,
       Se.Set Beam.cashbackPayoutOrderId cashbackPayoutOrderId,
       Se.Set Beam.cashbackStatus cashbackStatus,
+      Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
+      Se.Set Beam.clientSdkVersion (fmap Kernel.Utils.Version.versionToText clientSdkVersion),
       Se.Set Beam.cloudType cloudType,
       Se.Set Beam.conductorId conductorId,
       Se.Set Beam.customerCancelled customerCancelled,

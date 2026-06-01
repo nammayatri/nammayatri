@@ -579,6 +579,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (frfsVehicleCategoryToBecknVehicleCategory vehicleType_)}) >>= fromMaybeM (InternalError "Beckn Config not found")
   cloudType <- asks (.cloudType)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (fromStation, toStation) <- do
     fromStationInfo <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid from station id: " <> fromStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
     toStationInfo <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig >>= fromMaybeM (InvalidRequest $ "Invalid to station id: " <> toStationCode <> " or integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
@@ -619,6 +620,8 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             validTill = Just validTill,
             searchAsParentStops = searchAsParentStops,
             cloudType = cloudType,
+            clientSdkVersion = person.clientSdkVersion,
+            clientBundleVersion = person.clientBundleVersion,
             busLocationData = fromMaybe [] busLocationData,
             isSingleMode = Just isSingleMode,
             ..

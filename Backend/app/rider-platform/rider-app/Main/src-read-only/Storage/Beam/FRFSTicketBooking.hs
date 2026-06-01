@@ -33,6 +33,8 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     cancellationCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     cashbackPayoutOrderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cashbackStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.FRFSTicketBooking.CashbackStatus),
+    clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    clientSdkVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     conductorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     customerCancelled :: B.C f Kernel.Prelude.Bool,
