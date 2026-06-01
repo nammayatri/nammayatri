@@ -53,6 +53,7 @@ data PersonE e = Person
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     nyClubConsent :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardedFromDashboard :: Kernel.Prelude.Bool,
+    operatorBadgeToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
     qrImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -67,9 +68,9 @@ data PersonE e = Person
   }
   deriving (Generic)
 
-type Person = PersonE ('AsEncrypted)
+type Person = PersonE 'AsEncrypted
 
-type DecryptedPerson = PersonE ('AsUnencrypted)
+type DecryptedPerson = PersonE 'AsUnencrypted
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
@@ -111,6 +112,7 @@ instance EncryptedItem Person where
           mobileNumber = mobileNumber_,
           nyClubConsent = nyClubConsent entity,
           onboardedFromDashboard = onboardedFromDashboard entity,
+          operatorBadgeToken = operatorBadgeToken entity,
           passwordHash = passwordHash entity,
           qrImageId = qrImageId entity,
           reactBundleVersion = reactBundleVersion entity,
@@ -161,6 +163,7 @@ instance EncryptedItem Person where
             mobileNumber = mobileNumber_,
             nyClubConsent = nyClubConsent entity,
             onboardedFromDashboard = onboardedFromDashboard entity,
+            operatorBadgeToken = operatorBadgeToken entity,
             passwordHash = passwordHash entity,
             qrImageId = qrImageId entity,
             reactBundleVersion = reactBundleVersion entity,
@@ -183,20 +186,28 @@ instance EncryptedItem' Person where
 
 type Driver = Person
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | GIMS_EMAIL_PASSWORD deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Role
+  = DRIVER
+  | ADMIN
+  | FLEET_OWNER
+  | FLEET_BUSINESS
+  | OPERATOR
+  | BUS_CONDUCTOR
+  | BUS_DRIVER
+  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Role))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Role)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IdentifierType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IdentifierType)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''IdentifierType))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''IdentifierType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Gender))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum (''Gender))
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''Gender)

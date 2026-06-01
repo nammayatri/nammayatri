@@ -483,7 +483,9 @@ data DriverInformationRes = DriverInformationRes
     fleetReferralApplied :: Bool,
     operatorReferralApplied :: Bool,
     membershipId :: Maybe (Id DStclMembership.StclMembership),
-    createdAt :: UTCTime
+    createdAt :: UTCTime,
+    role :: SP.Role,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -569,7 +571,9 @@ data DriverEntityRes = DriverEntityRes
     nomineeRelationship :: Maybe Text,
     profilePhotoUploadedAt :: Maybe UTCTime,
     vehicleImageUploadedAt :: Maybe UTCTime,
-    subscriptionCreditBalance :: Maybe HighPrecMoney
+    subscriptionCreditBalance :: Maybe HighPrecMoney,
+    role :: SP.Role,
+    operatorBadgeToken :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1313,6 +1317,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) merchan
         nomineeName = driverInfo.nomineeName,
         nomineeRelationship = driverInfo.nomineeRelationship,
         subscriptionCreditBalance = subsCreditBalance,
+        role = person.role,
+        operatorBadgeToken = if person.role `elem` [SP.BUS_CONDUCTOR, SP.BUS_DRIVER] then person.operatorBadgeToken else Nothing,
         ..
       }
   where

@@ -1238,8 +1238,8 @@ data GimsTripInfo = GimsTripInfo
 data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
   { waybill_no :: Text,
     vehicle_number :: Text,
-    conductor_token :: Text,
-    driver_token :: Text,
+    conductor_token :: Maybe Text,
+    driver_token :: Maybe Text,
     history :: [GimsTripInfo],
     current :: Maybe GimsTripInfo,
     upcoming :: [GimsTripInfo]
@@ -1255,6 +1255,16 @@ data GimsOperationAnchor = GimsOperationAnchor
 
 instance HideSecrets GimsOperationAnchor where
   hideSecrets = identity
+
+data WaybillMetadataResponse = WaybillMetadataResponse
+  { waybill_no :: Text,
+    vehicle_no :: Text,
+    serviceType :: Text,
+    driver_id :: Maybe Text,
+    driverName :: Maybe Text,
+    driverMobileNumber :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 -- | Request body for the fleet-operator verify endpoint.
 -- Used to validate conductor badge token and device serial number.

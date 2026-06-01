@@ -2595,7 +2595,9 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
       vehicleLiveRouteInfo.depot
       (Just vehicleLiveRouteInfo.serviceType)
       journeyLeg.busConductorId
-      journeyLeg.busDriverId
+      (maybe journeyLeg.busDriverId (\driverId -> if T.null driverId then journeyLeg.busDriverId else Just driverId) booking.driverId)
+      booking.driverName
+      booking.driverMobileNumber
       legSearchId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
