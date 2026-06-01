@@ -34,6 +34,7 @@ packages:
   lib/beckn-services
   lib/payment
   lib/shared-services
+  lib/gtfs-data-server
   lib/location-updates
   lib/special-zone
   lib/scheduler

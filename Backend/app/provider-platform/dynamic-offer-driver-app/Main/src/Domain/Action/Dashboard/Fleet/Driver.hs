@@ -3613,7 +3613,8 @@ fetchOrCreatePerson moc req_ = do
             identifierType = Just DP.MOBILENUMBER,
             registrationLat = Nothing,
             registrationLon = Nothing,
-            otpChannel = Nothing
+            otpChannel = Nothing,
+            password = Nothing
           }
   mobileNumberHash <- getDbHash req_.driverPhoneNumber
   QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode mobileNumberHash moc.merchantId DP.DRIVER

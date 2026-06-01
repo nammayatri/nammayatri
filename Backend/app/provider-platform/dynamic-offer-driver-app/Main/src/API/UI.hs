@@ -28,6 +28,7 @@ import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.DriverSafetySettings as DriverSafetySettings
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
+import qualified API.Action.UI.FRFSFleetOperator as FRFSFleetOperator
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.FinanceInvoice as FinanceInvoice
 import qualified API.Action.UI.FleetOwnerList as FleetOwnerList
@@ -166,6 +167,7 @@ type API =
            :<|> CancellationReasonLookup.API
            :<|> QueueRank.API
            :<|> Aarokya.API
+           :<|> FRFSFleetOperator.API
        )
 
 handler :: FlowServer API
@@ -240,3 +242,4 @@ handler =
     :<|> CancellationReasonLookup.handler
     :<|> QueueRank.handler
     :<|> Aarokya.handler
+    :<|> FRFSFleetOperator.handler

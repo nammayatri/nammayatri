@@ -459,6 +459,8 @@ personRoleToCommRole DP.FLEET_OWNER = CommAPI.ROLE_FLEET_OWNER
 personRoleToCommRole DP.OPERATOR = CommAPI.ROLE_OPERATOR
 personRoleToCommRole DP.ADMIN = CommAPI.ROLE_ADMIN
 personRoleToCommRole DP.FLEET_BUSINESS = CommAPI.ROLE_FLEET_OWNER
+personRoleToCommRole DP.BUS_CONDUCTOR = CommAPI.ROLE_DRIVER
+personRoleToCommRole DP.BUS_DRIVER = CommAPI.ROLE_DRIVER
 
 buildRecipientItem ::
   (EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
