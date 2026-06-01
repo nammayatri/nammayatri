@@ -52,7 +52,7 @@ jobs:
           else
             echo "should_push_docker=false" >> $GITHUB_OUTPUT
           fi
-  build:
+  nix-build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
@@ -61,7 +61,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux
+            host: x86_64-linux-prod-hot-push
             arch: amd64
             name: Master Release Build
             continue-on-error: false
@@ -95,132 +95,110 @@ jobs:
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee build-log.txt
 
-      - name: Push to Cache
-        if: steps.check-conditions.outputs.should_build == 'true'
-        continue-on-error: true
-        env:
-          ATTIC_TOKEN: ${{ secrets.ATTIC_TOKEN }}
-          CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
-        run: |
-          PATHS=$(jq -r '.[].outPaths[]' ./result)
-          echo "Paths to push: $(echo "$PATHS" | wc -l)"
-
-          # Try attic, fall back to cachix on any failure
-          attic login cache-nixos-asia https://cache.nixos.asia "$ATTIC_TOKEN" && \
-            echo "$PATHS" | attic push cache-nixos-asia:oss --stdin && \
-            echo "✅ Pushed to attic" || \
-            { echo "⚠️ Attic failed, falling back to cachix..."; echo "$PATHS" | cachix push nammayatri; }
-
-      - name: Upload build log
-        if: steps.check-conditions.outputs.should_build == 'true'
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build-log.txt
-          retention-days: 1
-
       - name: Build And Push Docker image
         id: docker
         if: steps.check-conditions.outputs.should_build == 'true' && (matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux') && needs.check-conditions.outputs.should-push-docker == 'true'
         env:
           DOCKER_REGISTRY: ghcr.io
         run: |
-          nix build .#packages.${{ matrix.system }}.dockerImage
-    
+          nix build .#packages.${{ matrix.system }}.dockerImage --out-link ./docker-result
+
           BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag)"
           echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
-          gunzip -c ./result > image.tar || cp ./result image.tar
+          gunzip -c ./docker-result > image.tar || cp ./docker-result image.tar
           echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
-    
-  analyze-build-times:
-    name: Analyze Build Times
-    needs: [build, check-conditions]
+  
+  cabal-build:
+    name: ${{ matrix.name }}
+    needs: [nix-build, check-conditions]
+    continue-on-error: ${{ matrix.continue-on-error }}
     if: needs.check-conditions.outputs.should-proceed == 'true'
-    runs-on: x86_64-linux
+    strategy:
+      matrix:
+        include:
+          - system: x86_64-linux
+            host: x86_64-linux-prod-hot-push
+            arch: amd64
+            name: Prod Release Build
+            continue-on-error: false
+      fail-fast: false
+    runs-on: ${{ matrix.host }}
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download build logs
-        uses: actions/download-artifact@v4
-        with:
-          path: build-logs
-
-      - name: Run build log analysis
+      - name: Compute cache key
+        id: cache-key
         run: |
-          cd buildtime-analysis
-          python3 analyze_build_log.py ../build-logs/build-log/build-log.txt
+          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
+          echo "key=$KEY" >> $GITHUB_OUTPUT
 
-      - name: Run build visualization
+      - name: Restore cabal cache
         run: |
-          cd buildtime-analysis
-          python3 visualize_builds.py
+          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
+          KEY_FILE="$CACHE_ROOT/.cache-key-prod"
+          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
-      - name: Upload analysis artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-analysis-results
-          path: |
-            buildtime-analysis/build_analysis.json
-            buildtime-analysis/build_analysis_report.md
-            buildtime-analysis/dependency_analysis.json
-            buildtime-analysis/*.png
-            buildtime-analysis/*/*.png
-          retention-days: 7
+          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
+            echo "Cache key changed, busting dist-newstyle-prod and cabal store"
+            rm -rf "$CACHE_ROOT/dist-newstyle-prod"
+            rm -rf "$CACHE_ROOT/.cabal-dir"
+          fi
+
+          mkdir -p "$CACHE_ROOT/dist-newstyle-prod" "$CACHE_ROOT/.cabal-dir"
+          echo "$CURRENT_KEY" > "$KEY_FILE"
+          ln -sfn "$CACHE_ROOT/dist-newstyle-prod" Backend/dist-newstyle
+
+      - name: Build (incremental cabal)
+        run: |
+          set -o pipefail
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            cd Backend
+            cabal build all -f-Local 2>&1
+          " | while IFS= read -r line; do
+            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
+          done | tee prod-build-log.txt
+
+      - name: Collect binaries to staging
+        run: |
+          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
+          rm -rf "$STAGING"
+          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
+
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
+
+          for f in "$STAGING/bin/"*; do
+            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
+          done
+
+          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
+          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
+
+      - name: Build And Push Docker image
+        id: docker
+        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
+          DOCKER_REGISTRY: ghcr.io
+          DOCKER_TAG_PREFIX: "cabal-prod-"
+        run: |
+          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
+          nix build .#packages.${{ matrix.system }}.dockerImage --impure
 
-  # create-manifest:
-  #   needs: [build, check-conditions]
-  #   if: needs.check-conditions.outputs.should-push-docker == 'true'
-  #   env:
-  #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     BASE_IMAGE_NAME: ${{ needs.build.outputs.docker-image-name }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Create and push MultiArch manifest
-  #       run: |
-  #         echo "$GITHUB_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
 
-  #         # Check if both architecture-specific images exist
-  #         if docker manifest inspect "${BASE_IMAGE_NAME}-amd64" > /dev/null 2>&1 && \
-  #            docker manifest inspect "${BASE_IMAGE_NAME}-arm64" > /dev/null 2>&1; then
-  #           # Create the manifest
-  #           docker manifest create "$BASE_IMAGE_NAME" \
-  #               --amend "${BASE_IMAGE_NAME}-amd64" \
-  #               --amend "${BASE_IMAGE_NAME}-arm64"
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}
 
-  #           # Push the manifest
-  #           docker manifest push "$BASE_IMAGE_NAME"
-  #         else
-  #           echo "One or more architecture-specific images are missing"
-  #           exit 1
-  #         fi
-
-  #         docker logout ghcr.io
-
-
-  # The previous job would have already built for macOS but we must do it again
-  # from NixOS host (via remote builder protocol) so as to populate its local
-  # Nix store, and thus provide macOS binaries as part of our Nix cache.
-
-  # macos-build-for-cache:
-  #   runs-on: ${{ matrix.host }}
-  #   needs: [build, check-conditions]
-  #   if: github.ref == 'refs/heads/main'
-  #   strategy:
-  #     matrix:
-  #       system: [aarch64-darwin]
-  #       host: [x86_64-linux]
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-  #     - name: Build all flake outputs
-  #       run: |
-  #         om ci run --systems "${{ matrix.system }}" --no-link -- -v
+      - name: Cleanup staging dir
+        if: always()
+        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
