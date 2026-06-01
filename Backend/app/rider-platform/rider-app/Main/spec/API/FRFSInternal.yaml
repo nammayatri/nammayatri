@@ -1,0 +1,18 @@
+imports:
+  FRFSTripPassengerManifestResp: API.Types.UI.FRFSTicketService
+
+module: FRFSInternal
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /frfs/trip/{tripId}/route/{routeId}/manifest
+      auth: NoAuth
+      headers:
+        token: Text
+      params:
+        tripId: Text
+        routeId: Text
+      response:
+        type: "API.Types.UI.FRFSTicketService.FRFSTripPassengerManifestResp"

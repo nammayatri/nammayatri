@@ -48,7 +48,8 @@ auth merchantShortId opCity req = do
           name = req.name,
           email = Nothing,
           identifierType = Just SP.MOBILENUMBER,
-          otpChannel = Nothing
+          otpChannel = Nothing,
+          password = Nothing
         }
       Nothing
       Nothing
