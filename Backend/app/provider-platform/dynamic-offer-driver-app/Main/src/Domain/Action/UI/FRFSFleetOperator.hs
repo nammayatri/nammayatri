@@ -178,9 +178,9 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
   let gtfsId = DIBC.feedKey integratedBPPConfig
       anchor =
         GimsOperationAnchor
-          { conductor_token = req.conductorToken,
-            driver_token = req.driverToken,
-            vehicle_number = req.vehicleNumber
+          { gimsConductorId = req.gimsConductorId,
+            gimsDriverId = req.gimsDriverId,
+            vehicleNumber = req.vehicleNumber
           }
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let GimsCurrentOperationResp {waybill_no = wbNo, number_of_trips = numTrips} = gimsOps
@@ -207,7 +207,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
         void $ Hedis.del lockKey
         throwError $ InvalidRequest "No more trips available for this waybill"
       let nextTrip = currentTrip + 1
-          GimsOperationAnchor {conductor_token = ct, driver_token = dt, vehicle_number = vn} = anchor
+          GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         void $
           NandiFlow.gimsTripAction
@@ -215,11 +215,11 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             gtfsId
             GimsTripActionReq
               { action = GimsTripActionStart,
-                trip_number = Just nextTrip,
+                tripNumber = Just nextTrip,
                 timestamp = Just epochNow,
-                conductor_token = ct,
-                driver_token = dt,
-                vehicle_number = vn
+                gimsConductorId = ct,
+                gimsDriverId = dt,
+                vehicleNumber = vn
               }
         Hedis.setExp redisKey nextTrip 172800
         logInfo $ "FRFSFleetOperator: Trip start successful - trip " <> show nextTrip
@@ -240,7 +240,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
       when (currentTrip == 0) $ do
         void $ Hedis.del lockKey
         throwError $ InvalidRequest "No active trip to end"
-      let GimsOperationAnchor {conductor_token = ct, driver_token = dt, vehicle_number = vn} = anchor
+      let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         void $
           NandiFlow.gimsTripAction
@@ -248,11 +248,11 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             gtfsId
             GimsTripActionReq
               { action = GimsTripActionEnd,
-                trip_number = Just currentTrip,
+                tripNumber = Just currentTrip,
                 timestamp = Nothing,
-                conductor_token = ct,
-                driver_token = dt,
-                vehicle_number = vn
+                gimsConductorId = ct,
+                gimsDriverId = dt,
+                vehicleNumber = vn
               }
         logInfo $ "FRFSFleetOperator: Trip end successful - trip " <> show currentTrip
         return $
@@ -267,7 +267,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
       unless lockAcquired $ do
         logError $ "FRFSFleetOperator: Could not acquire lock for trip reset - " <> redisKey
         throwError $ InvalidRequest "Could not acquire lock for trip action"
-      let GimsOperationAnchor {conductor_token = ct, driver_token = dt, vehicle_number = vn} = anchor
+      let GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         void $
           NandiFlow.gimsTripAction
@@ -275,11 +275,11 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             gtfsId
             GimsTripActionReq
               { action = GimsTripActionReset,
-                trip_number = Nothing,
+                tripNumber = Nothing,
                 timestamp = Nothing,
-                conductor_token = ct,
-                driver_token = dt,
-                vehicle_number = vn
+                gimsConductorId = ct,
+                gimsDriverId = dt,
+                vehicleNumber = vn
               }
         void $ Hedis.del redisKey
         return $
@@ -300,7 +300,7 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
         void $ Hedis.del lockKey
         throwError $ InvalidRequest "No trip to rollback"
       let rolledBackTrip = currentTrip - 1
-          GimsOperationAnchor {conductor_token = ct, driver_token = dt, vehicle_number = vn} = anchor
+          GimsOperationAnchor {gimsConductorId = ct, gimsDriverId = dt, vehicleNumber = vn} = anchor
       flip finally (void $ Hedis.del lockKey) $ do
         void $
           NandiFlow.gimsTripAction
@@ -308,11 +308,11 @@ postFrfsFleetOperatorTripAction (_, _merchantId, merchantOpCityId) req = do
             gtfsId
             GimsTripActionReq
               { action = GimsTripActionStart,
-                trip_number = Just rolledBackTrip,
+                tripNumber = Just rolledBackTrip,
                 timestamp = Just epochNow,
-                conductor_token = ct,
-                driver_token = dt,
-                vehicle_number = vn
+                gimsConductorId = ct,
+                gimsDriverId = dt,
+                vehicleNumber = vn
               }
         Hedis.setExp redisKey rolledBackTrip 172800
         logInfo $ "FRFSFleetOperator: Trip rollback successful - trip " <> show rolledBackTrip
@@ -341,9 +341,9 @@ postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = d
   let gtfsId = DIBC.feedKey integratedBPPConfig
       anchor =
         GimsOperationAnchor
-          { conductor_token = req.conductorToken,
-            driver_token = req.driverToken,
-            vehicle_number = req.vehicleNumber
+          { gimsConductorId = req.gimsConductorId,
+            gimsDriverId = req.gimsDriverId,
+            vehicleNumber = req.vehicleNumber
           }
   gimsOps <- NandiFlow.gimsCurrentOperation baseUrl gtfsId anchor
   let configId = getId integratedBPPConfig.id
@@ -355,19 +355,19 @@ postFrfsFleetOperatorCurrentOperation (_, _merchantId, merchantOpCityId) req = d
       baseUrl
       gtfsId
       GimsCurrentTripDetailsReq
-        { previous_trip_number = prevTrip,
-          conductor_token = req.conductorToken,
-          driver_token = req.driverToken,
-          vehicle_number = req.vehicleNumber
+        { previousTripNumber = prevTrip,
+          gimsConductorId = req.gimsConductorId,
+          gimsDriverId = req.gimsDriverId,
+          vehicleNumber = req.vehicleNumber
         }
-  let GimsCurrentTripDetailsResp {waybill_no = wNo, vehicle_number = vNum, conductor_token = cToken, driver_token = dToken, history = hist, current = curr, upcoming = upc} = tripResp
+  let GimsCurrentTripDetailsResp {waybillNo = wNo, vehicleNumber = vNum, gimsConductorId = cToken, gimsDriverId = dToken, history = hist, current = curr, upcoming = upc} = tripResp
   return $
     FleetOperatorCurrentOperationResp
       { waybillNo = wNo,
         vehicleNumber = vNum,
         gtfsId = gtfsId,
-        conductorToken = cToken,
-        driverToken = dToken,
+        gimsConductorId = cToken,
+        gimsDriverId = dToken,
         history = map transformTripInfo hist,
         current = transformTripInfo <$> curr,
         upcoming = map transformTripInfo upc
