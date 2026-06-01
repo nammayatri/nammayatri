@@ -717,6 +717,10 @@ TicketBookingService:
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     assignmentId: Maybe Text
 
+  constraints:
+    shortId: SecondaryKey
+    visitDate: "!SecondaryKey"
+
   beamType:
     vendorSplitDetails: Maybe Value
   beamFields:

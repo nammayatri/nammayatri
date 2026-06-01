@@ -452,6 +452,7 @@ Image:
     id: PrimaryKey
     personId: SecondaryKey
     rcId: SecondaryKey
+    workflowTransactionId: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -977,6 +978,7 @@ DriverPanCard:
     id: PrimaryKey
     driverId: SecondaryKey
     panCardNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId1: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV

@@ -37,6 +37,6 @@ instance B.Table ImageT where
 
 type Image = ImageT Identity
 
-$(enableKVPG ''ImageT ['id] [['personId], ['rcId]])
+$(enableKVPG ''ImageT ['id] [['personId], ['rcId], ['workflowTransactionId]])
 
 $(mkTableInstances ''ImageT "image")
