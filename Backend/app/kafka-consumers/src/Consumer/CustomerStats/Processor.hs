@@ -25,10 +25,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import "config-pilot" Lib.ConfigPilot.Interface.Types (getConfig)
 import "sessionizer-metrics" Lib.SessionizerMetrics.Types.Event as E
 import "rider-app" SharedLogic.Person as SP
 import "rider-app" Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import "rider-app" Storage.ConfigPilot.Interface.Types (getConfig)
 import "rider-app" Storage.Queries.BookingCancellationReason as QBCR
 import "rider-app" Storage.Queries.PersonStats as QP
 import "rider-app" Tools.Error
