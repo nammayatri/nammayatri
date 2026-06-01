@@ -47,6 +47,10 @@ getOrBuildDriverPoolDataBatch driverIds = do
   unless (null toPersist) $ do
     logInfo $ "DriverPoolData migrations: backfilled " <> show (length toPersist) <> " entries"
     mapM_ setDriverPoolData toPersist
+    -- Clean up secondary cloud keys after writing migrated entries to primary,
+    -- so the driver doesn't end up with keys in both clouds.
+    let keysToDelete = map (driverPoolDataKey . (.driverId)) toPersist
+    Redis.withSecondaryLTSRedis $ Redis.delStandalone keysToDelete
 
   builtFromDB <-
     if null missing
