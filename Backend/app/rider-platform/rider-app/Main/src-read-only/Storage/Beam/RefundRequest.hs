@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 data RefundRequestT f = RefundRequestT
   { code :: B.C f Domain.Types.Extra.RefundRequest.RefundRequestCode,
     currency :: B.C f Kernel.Utils.Common.Currency,
+    deductFromDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     description :: B.C f Kernel.Prelude.Text,
     evidenceS3Path :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,

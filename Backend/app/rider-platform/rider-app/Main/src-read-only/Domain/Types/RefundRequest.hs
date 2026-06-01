@@ -23,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data RefundRequest = RefundRequest
   { code :: Domain.Types.Extra.RefundRequest.RefundRequestCode,
     currency :: Kernel.Utils.Common.Currency,
+    deductFromDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     description :: Kernel.Prelude.Text,
     evidenceS3Path :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest,

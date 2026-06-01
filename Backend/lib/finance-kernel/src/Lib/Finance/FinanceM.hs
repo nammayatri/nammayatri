@@ -41,8 +41,10 @@ module Lib.Finance.FinanceM
     -- * Combinators
     account,
     transfer,
+    transferWithMetadata,
     transfer_,
     transferPending,
+    transferPendingWithMetadata,
     transferAllowZero,
     transferWithoutAttribution,
     getEntryIds,
@@ -68,6 +70,7 @@ where
 import Control.Applicative ((<|>))
 import Control.Monad.Except (ExceptT, MonadError, runExceptT, throwError)
 import Control.Monad.State.Strict (MonadState, StateT, gets, modify', runStateT)
+import Data.Aeson (Value)
 import Domain.Types.Invoice (InvoiceType, IssuedToType)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -179,6 +182,7 @@ data AccountRole
   | SellerLiability
   | SellerRideCredit
   | SellerRevenue
+  | SellerExpense
   | GovtDirectAsset
   | GovtDirectExpense
   | ParkingFeeRecipient
@@ -413,6 +417,16 @@ roleToInput ctx = \case
         merchantId = ctx.merchantId,
         merchantOperatingCityId = ctx.merchantOpCityId
       }
+  SellerExpense ->
+    AccountInput
+      { accountType = Expense,
+        counterpartyType = Just SELLER,
+        counterpartyId = Just ctx.merchantId,
+        subLedger = Nothing,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
   GovtDirectAsset ->
     AccountInput
       { accountType = Asset,
@@ -509,7 +523,19 @@ transfer ::
   HighPrecMoney ->
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transfer fromRole toRole amount refType = do
+transfer fromRole toRole amount refType =
+  transferWithMetadata fromRole toRole amount refType Nothing
+
+-- | Like 'transfer' but attaches optional per-entry metadata (e.g. for dedup discriminator).
+transferWithMetadata ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  Maybe Value -> -- Optional metadata JSON
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferWithMetadata fromRole toRole amount refType mbMeta = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -527,7 +553,7 @@ transfer fromRole toRole amount refType = do
                 status = LE.SETTLED,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
-                metadata = Nothing,
+                metadata = mbMeta,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
                 settlementStatus = Nothing
@@ -615,7 +641,20 @@ transferPending ::
   HighPrecMoney ->
   Text -> -- Reference type
   FinanceM m (Maybe (Id LE.LedgerEntry))
-transferPending fromRole toRole amount refType = do
+transferPending fromRole toRole amount refType =
+  transferPendingWithMetadata fromRole toRole amount refType Nothing
+
+-- | Like 'transferPending' but attaches optional per-entry metadata (e.g. a
+--   dedup discriminator). Needed for PENDING entries that are matched/settled later.
+transferPendingWithMetadata ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  Maybe Value -> -- Optional metadata JSON
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferPendingWithMetadata fromRole toRole amount refType mbMeta = do
   ctx <- ask
   if amount <= 0 || not ctx.emitLedgerEntries
     then pure Nothing
@@ -633,7 +672,7 @@ transferPending fromRole toRole amount refType = do
                 status = LE.PENDING,
                 referenceType = refType,
                 referenceId = ctx.referenceId,
-                metadata = Nothing,
+                metadata = mbMeta,
                 merchantId = ctx.merchantId,
                 merchantOperatingCityId = ctx.merchantOpCityId,
                 settlementStatus = Nothing

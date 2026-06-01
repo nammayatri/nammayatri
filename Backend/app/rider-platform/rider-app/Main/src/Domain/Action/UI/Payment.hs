@@ -112,7 +112,6 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
 import Tools.Metrics
-import qualified Tools.Notifications as Notify
 import qualified Tools.Payment as Payment
 import qualified Tools.Wallet as TWallet
 
@@ -786,12 +785,7 @@ stripeWebhookAction merchantOperatingCityId resp respDump = do
           Nothing -> logInfo $ "No refund request found for update in webhook with refundsId: " <> refundsId.getId
           Just refundRequest -> do
             let updStatus = DRidePayment.castRefundRequestStatus refundInfo.status
-            unless (refundRequest.status == updStatus) $ do
-              QRefundRequest.updateRefundStatus updStatus refundRequest.id
-              let updRefundRequest = refundRequest{status = updStatus}
-              let rideId = cast @DOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
-              QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-              Notify.notifyRefunds updRefundRequest
+            DRidePayment.processRefundResult refundRequest updStatus Nothing
       pure Ack
     DPayment.OrderTxnWebhookData (_mbOrderShortId, orderTxn) -> do
       ackResp <- DPayment.stripeWebhookService commonMerchantOperatingCityId resp respDump stripeWebhookData

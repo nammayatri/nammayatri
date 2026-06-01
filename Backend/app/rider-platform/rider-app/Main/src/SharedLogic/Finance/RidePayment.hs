@@ -89,6 +89,7 @@ module SharedLogic.Finance.RidePayment
     ridePaymentRefTollFare,
     ridePaymentRefTollVAT,
     ridePaymentRefRideVatOnDiscount,
+    ridePaymentRefRideRefund,
 
     -- * Settlement reason constants
     settledReasonRidePayment,
@@ -115,6 +116,10 @@ module SharedLogic.Finance.RidePayment
     voidRidePaymentEntriesAndInvoice,
     createTipLedger,
     regenerateRideTipInvoice,
+    regenerateRefundInvoice,
+    createRefundRaisedLedger,
+    createRefundSucceededLedger,
+    refundSucceededAlreadyRecorded,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
@@ -135,6 +140,7 @@ module SharedLogic.Finance.RidePayment
 where
 
 import Control.Applicative ((<|>))
+import Data.Aeson ((.=))
 import qualified Data.Aeson as Aeson
 import Data.Foldable.Extra (findM)
 import qualified Data.List as List
@@ -142,6 +148,7 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Invoice (InvoiceType (Ride, RideCancellation))
 import qualified Domain.Types.Invoice as DInvType
 import qualified Domain.Types.Person
+import qualified "this" Domain.Types.RefundRequest as DRefundRequest
 import Kernel.Prelude
 import Kernel.Types.Common (Currency, HighPrecMoney)
 import Kernel.Types.Error (GenericError (InvalidRequest))
@@ -154,6 +161,7 @@ import qualified Lib.Finance.Invoice.Service as FInvoiceService
 import qualified Lib.Finance.Ledger.Service
 import qualified Lib.Finance.Storage.Beam.BeamFlow as BeamFlow
 import qualified Lib.Finance.Storage.Queries.Invoice as QInvoice
+import qualified Lib.Finance.Storage.Queries.InvoiceExtra as QInvoiceExtra
 
 -- ---------------------------------------------------------------------------
 -- Reference type constants (no hardcoded strings)
@@ -198,6 +206,9 @@ ridePaymentRefTollVAT = "TollVAT"
 --   BaseRide line.
 ridePaymentRefRideVatOnDiscount :: Text
 ridePaymentRefRideVatOnDiscount = "RideVatOnDiscount"
+
+ridePaymentRefRideRefund :: Text
+ridePaymentRefRideRefund = "RideRefund"
 
 -- ---------------------------------------------------------------------------
 -- Settlement reason constants
@@ -886,6 +897,88 @@ createTipLedger ctx tipAmount = do
       pure $ Left err
     Right (_, entryIds) -> pure $ Right entryIds
 
+-- ---------------------------------------------------------------------------
+-- 5. Refund ledger entries
+-- ---------------------------------------------------------------------------
+--
+-- SETTLED entries on each status transition: APPROVED = BuyerAsset → OwnerLiability,
+-- REFUNDED = OwnerLiability → BuyerAsset. Both share refType "RideRefund" + referenceId =
+-- rideId; metadata {refundRequestId, refundRequestStatus} dedups across sibling refunds.
+
+mkRefundMetadata :: Id DRefundRequest.RefundRequest -> DRefundRequest.RefundRequestStatus -> Aeson.Value
+mkRefundMetadata refundRequestId refundRequestStatus =
+  Aeson.object ["refundRequestId" .= refundRequestId.getId, "refundRequestStatus" .= refundRequestStatus]
+
+entryMatchesRefundStatus :: Id DRefundRequest.RefundRequest -> DRefundRequest.RefundRequestStatus -> LE.LedgerEntry -> Bool
+entryMatchesRefundStatus refundRequestId refundRequestStatus entry =
+  entry.metadata == Just (mkRefundMetadata refundRequestId refundRequestStatus)
+
+createRefundRaisedLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  Id DRefundRequest.RefundRequest ->
+  HighPrecMoney ->
+  m (Either FinanceError [Id LE.LedgerEntry])
+createRefundRaisedLedger ctx refundRequestId refundAmount = do
+  existing <- getEntriesByReference ridePaymentRefRideRefund ctx.referenceId
+  case List.find (entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED) existing of
+    Just e -> do
+      logInfo $ "Refund APPROVED ledger already written for refundRequest " <> refundRequestId.getId
+      pure $ Right [e.id]
+    Nothing -> do
+      result <-
+        runFinance ctx $
+          transferWithMetadata
+            BuyerAsset
+            OwnerLiability
+            refundAmount
+            ridePaymentRefRideRefund
+            (Just (mkRefundMetadata refundRequestId DRefundRequest.APPROVED))
+      case result of
+        Left err -> do
+          logError $ "Failed to create refund APPROVED ledger: " <> show err
+          pure $ Left err
+        Right (_, entryIds) -> pure $ Right entryIds
+
+createRefundSucceededLedger ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  FinanceCtx ->
+  Id DRefundRequest.RefundRequest ->
+  HighPrecMoney ->
+  m (Either FinanceError [Id LE.LedgerEntry])
+createRefundSucceededLedger ctx refundRequestId refundAmount = do
+  existing <- getEntriesByReference ridePaymentRefRideRefund ctx.referenceId
+  case List.find (entryMatchesRefundStatus refundRequestId DRefundRequest.REFUNDED) existing of
+    Just e -> do
+      logInfo $ "Refund REFUNDED ledger already written for refundRequest " <> refundRequestId.getId
+      pure $ Right [e.id]
+    Nothing -> do
+      result <-
+        runFinance ctx $
+          transferWithMetadata
+            OwnerLiability
+            BuyerAsset
+            refundAmount
+            ridePaymentRefRideRefund
+            (Just (mkRefundMetadata refundRequestId DRefundRequest.REFUNDED))
+      case result of
+        Left err -> do
+          logError $ "Failed to create refund REFUNDED ledger: " <> show err
+          pure $ Left err
+        Right (_, entryIds) -> pure $ Right entryIds
+
+-- | True once this refund's REFUNDED ledger entry exists — the authoritative
+--   "already processed" signal. Gates the one-shot REFUNDED side-effects (ledger,
+--   cumulative invoice, BPP call) against re-fires of the status-refresh hooks.
+refundSucceededAlreadyRecorded ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- rideId
+  Id DRefundRequest.RefundRequest ->
+  m Bool
+refundSucceededAlreadyRecorded rideId refundRequestId = do
+  existing <- getEntriesByReference ridePaymentRefRideRefund rideId
+  pure $ any (entryMatchesRefundStatus refundRequestId DRefundRequest.REFUNDED) existing
+
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
 --   'voidCancellationFeeLedger' / 'markDueCancellationFeeLedger' on failure.
@@ -1145,3 +1238,86 @@ regenerateRideTipInvoice rideId tipAmount = do
               FInvoiceService.updateInvoiceStatus priorInv.id FInvoice.Voided
               FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
               logInfo $ "regenerateRideTipInvoice: created RideTip invoice " <> newInv.id.getId <> " (replacing " <> priorInv.id.getId <> ") for ride " <> rideId
+
+-- | Maintains the running-cumulative refund invoice and creates on first refund, regenerates on subsequent partials.
+--   Each successful refund supersedes the prior refund invoice with a new
+--   single-line invoice for the running total (prior cumulative + this refund).
+--   The original ride invoice is never touched; at most one non-voided Refund
+--   invoice exists per ride. Must run exactly once per refund success — a second
+--   call for the same refund would double-count the cumulative.
+regenerateRefundInvoice ::
+  (BeamFlow.BeamFlow m r, MonadFlow m) =>
+  Text -> -- rideId
+  HighPrecMoney -> -- this refund's amount
+  m ()
+regenerateRefundInvoice rideId refundAmount = do
+  let activeStatuses = [FInvoice.Draft, FInvoice.Issued, FInvoice.Paid]
+  mbPriorRefund <- listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId (Just DInvType.Refund) activeStatuses (Just 1) (Just 0)
+  -- Header (customer/merchant/currency) is identical across a ride's invoices:
+  -- source it from the prior refund invoice, or the ride invoice on the first refund.
+  mbSource <- case mbPriorRefund of
+    Just priorRefund -> pure (Just priorRefund)
+    Nothing -> listToMaybe <$> QInvoiceExtra.findByReferenceIdWithOptions rideId Nothing activeStatuses (Just 1) (Just 0)
+  case mbSource of
+    Nothing -> logInfo $ "regenerateRefundInvoice: no source invoice for ride " <> rideId <> "; skipping refund invoice"
+    Just srcInv -> do
+      let priorCumulative = maybe 0 (.totalAmount) mbPriorRefund
+          newCumulative = priorCumulative + refundAmount
+          refundLineItem =
+            InvoiceLineItem
+              { description = "Refund",
+                descriptionType = Just RideRefund,
+                quantity = 1,
+                unitPrice = newCumulative,
+                lineTotal = newCumulative,
+                isExternalCharge = False,
+                groupId = Just "g-refund",
+                itemType = Just Fare
+              }
+      createRes <-
+        FInvoiceService.createInvoice
+          InvoiceInput
+            { invoiceType = DInvType.Refund,
+              paymentOrderId = srcInv.paymentOrderId,
+              issuedToType = srcInv.issuedToType,
+              issuedToId = srcInv.issuedToId,
+              issuedToName = srcInv.issuedToName,
+              issuedToAddress = srcInv.issuedToAddress,
+              issuedByType = srcInv.issuedByType,
+              issuedById = srcInv.issuedById,
+              issuedByName = srcInv.issuedByName,
+              issuedByAddress = srcInv.issuedByAddress,
+              supplierName = srcInv.supplierName,
+              supplierAddress = srcInv.supplierAddress,
+              supplierGSTIN = srcInv.supplierGSTIN,
+              supplierTaxNo = srcInv.supplierTaxNo,
+              supplierId = srcInv.supplierId,
+              merchantGstin = srcInv.merchantGstin,
+              referenceId = Just rideId,
+              gstinOfParty = Nothing,
+              panOfParty = Nothing,
+              panType = Nothing,
+              counterpartyId = srcInv.issuedToId,
+              tdsRateReason = Nothing,
+              tanOfDeductee = Nothing,
+              lineItems = [refundLineItem],
+              gstBreakdown = Nothing,
+              currency = srcInv.currency,
+              dueAt = srcInv.dueAt,
+              merchantId = srcInv.merchantId,
+              merchantOperatingCityId = srcInv.merchantOperatingCityId,
+              merchantShortId = srcInv.merchantId,
+              isVat = False,
+              issuedToTaxNo = Nothing,
+              issuedByTaxNo = Nothing,
+              paymentMode = srcInv.paymentMode,
+              periodStart = srcInv.periodStart,
+              periodEnd = srcInv.periodEnd
+            }
+          []
+      case createRes of
+        Left err -> logError $ "regenerateRefundInvoice: failed to create refund invoice for ride " <> rideId <> ": " <> show err
+        Right newInv -> do
+          whenJust mbPriorRefund $ \priorRefund -> FInvoiceService.updateInvoiceStatus priorRefund.id FInvoice.Voided
+          FInvoiceService.updateInvoiceStatus newInv.id FInvoice.Paid
+          logInfo $ "regenerateRefundInvoice: created cumulative refund invoice " <> newInv.id.getId <> " (total " <> show newCumulative <> ") for ride " <> rideId

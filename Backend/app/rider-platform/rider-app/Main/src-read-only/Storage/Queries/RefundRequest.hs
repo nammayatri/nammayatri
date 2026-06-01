@@ -22,6 +22,12 @@ import Storage.Queries.RefundRequestExtra as ReExport
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.RefundRequest.RefundRequest -> m ())
 create = createWithKV
 
+findAllByOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Domain.Types.RefundRequest.RefundRequest])
+findAllByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> m (Maybe Domain.Types.RefundRequest.RefundRequest))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m (Maybe Domain.Types.RefundRequest.RefundRequest))
 findByOrderId orderId = do findOneWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
 
@@ -32,14 +38,15 @@ findByRefundsId refundsId = do findOneWithKV [Se.Is Beam.refundsId $ Se.Eq (Kern
 
 updateRefundDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> m ())
-updateRefundDetails status responseDescription refundsAmount refundsTries id = do
+  (Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> m ())
+updateRefundDetails status responseDescription refundsAmount refundsTries deductFromDriver id = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.status status,
       Se.Set Beam.responseDescription responseDescription,
       Se.Set Beam.refundsAmount refundsAmount,
       Se.Set Beam.refundsTries refundsTries,
+      Se.Set Beam.deductFromDriver deductFromDriver,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
