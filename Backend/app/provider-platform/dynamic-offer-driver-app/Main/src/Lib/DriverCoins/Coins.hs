@@ -534,7 +534,7 @@ incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.
 incrementValidRideCount driverId expirationPeriod incrementValue = do
   validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
   case validRideCountKeyExists of
-    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
 
 mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
@@ -628,29 +628,29 @@ mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
 getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
-getValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
+getValidRideCountByDriverIdKey driverId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
 
 setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkValidRideCountByDriverIdKey driverId) expirationPeriod
 
 mkOTPValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkOTPValidRideCountByDriverIdKey driverId = "DriverOTPValidRideCount:DriverId:" <> driverId.getId
 
 getOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
-getOTPValidRideCountByDriverIdKey driverId = Hedis.withCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
+getOTPValidRideCountByDriverIdKey driverId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkOTPValidRideCountByDriverIdKey driverId)
 
 setOTPValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 setOTPValidRideCountByDriverIdKey driverId expirationPeriod count = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkOTPValidRideCountByDriverIdKey driverId) expirationPeriod
 
 incrementOTPValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 incrementOTPValidRideCount driverId expirationPeriod incrementValue = do
   otpValidRideCountKeyExists <- getOTPValidRideCountByDriverIdKey driverId
   case otpValidRideCountKeyExists of
-    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
+    Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkOTPValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setOTPValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
 
 safeIncrBy :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Integer -> Id DP.Person -> Seconds -> m ()
@@ -662,16 +662,16 @@ mkMetroRideCountByDriverIdKey :: Id DP.Person -> DCT.MetroRideType -> Text
 mkMetroRideCountByDriverIdKey driverId metroRideType = "DriverMetroRideCount:DriverId:" <> driverId.getId <> ":MetroRideType:" <> show metroRideType
 
 getMetroRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> m (Maybe Int)
-getMetroRideCountByDriverIdKey driverId metroRideType = Hedis.withCrossAppRedis $ Hedis.get (mkMetroRideCountByDriverIdKey driverId metroRideType)
+getMetroRideCountByDriverIdKey driverId metroRideType = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkMetroRideCountByDriverIdKey driverId metroRideType)
 
 setMetroRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> Int -> Int -> m ()
 setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod count = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkMetroRideCountByDriverIdKey driverId metroRideType) expirationPeriod
+  void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral count)
+  Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.expire (mkMetroRideCountByDriverIdKey driverId metroRideType) expirationPeriod
 
 incrementMetroRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> DCT.MetroRideType -> Int -> Int -> m ()
 incrementMetroRideCount driverId metroRideType expirationPeriod incrementValue = do
   metroRideCountKeyExists <- getMetroRideCountByDriverIdKey driverId metroRideType
   case metroRideCountKeyExists of
-    Just _ -> void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral incrementValue)
+    Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral incrementValue)
     Nothing -> setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod incrementValue
