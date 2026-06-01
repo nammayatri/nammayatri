@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.AppManagement.Payment
   ( getPaymentRefundRequestList,
     getPaymentRefundRequestInfo,
     postPaymentRefundRequestRespond,
+    postPaymentRefundRequestInitiate,
   )
 where
 
@@ -26,6 +27,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified "payment" Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
+import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaymentTransaction
 import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -74,22 +76,21 @@ mkRefundRequestItem DRefundRequest.RefundRequest {..} =
 getPaymentRefundRequestInfo ::
   ShortId DM.Merchant ->
   Context.City ->
-  Id DPaymentOrder.PaymentOrder ->
+  Id DRefundRequest.RefundRequest ->
   Maybe Bool ->
   Flow Common.RefundRequestInfoResp
-getPaymentRefundRequestInfo merchantShortId opCity orderId refreshRefunds = do
+getPaymentRefundRequestInfo merchantShortId opCity refundRequestId refreshRefunds = do
+  refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
   let refundRequestInfoHandler =
         DRidePayment.RefundRequestInfoHandler
-          { validateRefundRequestOwner = \refundRequest -> do
+          { validateRefundRequestOwner = \rr -> do
               merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
               merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-              unless (refundRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist orderId.getId),
+              unless (rr.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId),
             mkRefundRequestInfoResp = mkRefundRequestInfoResp,
-            fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist."), -- required only for admin
-            notifyRefunds = Notify.notifyRefunds
+            fetchRefunds = \refundsId -> (Just <$>) $ HQRefunds.findById refundsId >>= fromMaybeM (InvalidRequest $ "No refunds matches passed data \"" <> refundsId.getId <> "\" not exist.") -- required only for admin
           }
-  let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride orderId
-  DRidePayment.fetchPaymentRefundRequestInfo @Common.RefundRequestInfoResp refundRequestInfoHandler refreshRefunds rideId
+  DRidePayment.fetchPaymentRefundRequestInfo @Common.RefundRequestInfoResp refundRequestInfoHandler refreshRefunds refundRequest
 
 mkRefundRequestInfoResp ::
   DRefundRequest.RefundRequest ->
@@ -108,27 +109,28 @@ mkRefundRequestInfoResp DRefundRequest.RefundRequest {..} evidence refundStatus 
 postPaymentRefundRequestRespond ::
   ShortId DM.Merchant ->
   Context.City ->
-  Id DPaymentOrder.PaymentOrder ->
+  Id DRefundRequest.RefundRequest ->
   Common.RefundRequestRespondReq ->
   Flow Common.RefundRequestRespondResp
-postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
+postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
+  -- Resolve the row before acquiring the lock so the per-orderId key can be derived from it.
+  refundRequest <- QRefundRequest.findById refundRequestId >>= fromMaybeM (RefundRequestDoesNotExist refundRequestId.getId)
+  let orderId = refundRequest.orderId
   eResult <- Redis.whenWithLockRedisAndReturnValue (DRidePayment.refundRequestProccessingKey orderId) 60 $ do
     merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
     merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-    refundRequest <- QRefundRequest.findByOrderId orderId >>= fromMaybeM (RefundRequestDoesNotExist orderId.getId)
-    unless (refundRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist orderId.getId)
+    unless (refundRequest.merchantOperatingCityId == merchantOpCity.id) $ throwError (RefundRequestDoesNotExist refundRequestId.getId)
+    -- Currency-only check here; the amount bound is enforced cumulatively inside initiateRefunds.
     whenJust req.approvedAmount $ \approvedAmount -> do
       unless (approvedAmount.currency == refundRequest.currency) $
         throwError (InvalidRequest "Invalid currency")
-      if req.approve
-        then when (approvedAmount.amount > refundRequest.transactionAmount) $ do
-          throwError (InvalidRequest "Couldn't refund more than transaction amount")
-        else throwError (InvalidRequest "Approved amount not required if refund request wasn't approved")
+      unless req.approve $
+        throwError (InvalidRequest "Approved amount not required if refund request wasn't approved")
 
     case (refundRequest.status, req.approve) of
-      (DRefundRequest.OPEN, True) -> initiateRefunds merchantOpCity refundRequest
+      (DRefundRequest.OPEN, True) -> initiateRefunds refundRequest
       (DRefundRequest.OPEN, False) -> rejectRefunds refundRequest
-      (DRefundRequest.FAILED, True) -> initiateRetryRefunds merchantOpCity refundRequest -- initiate new attempt
+      (DRefundRequest.FAILED, True) -> initiateRetryRefunds refundRequest -- initiate new attempt
       (DRefundRequest.FAILED, False) -> rejectRefunds refundRequest
       (DRefundRequest.APPROVED, True) -> throwError (InvalidRequest "Refund request already approved")
       (DRefundRequest.APPROVED, False) -> throwError (InvalidRequest "Couldn't reject refund request as it's already approved and refunds initiated")
@@ -141,13 +143,13 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
       throwError (InvalidRequest "Order refund already in progress")
     Right result -> return result
   where
-    initiateRetryRefunds merchantOpCity refundRequest = do
+    initiateRetryRefunds refundRequest = do
       unless (req.retryRefunds == Just True) $
         throwError (InvalidRequest "Refund was failed. Set retryRefund flag for new attempt")
-      initiateRefunds merchantOpCity refundRequest
+      initiateRefunds refundRequest
 
-    initiateRefunds merchantOpCity refundRequest = do
-      logInfo $ "Refund request approved by admin: orderId: " <> orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
+    initiateRefunds refundRequest = do
+      logInfo $ "Refund request approved by admin: orderId: " <> refundRequest.orderId.getId <> ". Initiate refunds: refundsTries: " <> show (refundRequest.refundsTries + 1)
       let updRefundsAmount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount <|> Just refundRequest.transactionAmount
 
       -- amount can be updated only for retry case, because new Stripe refund object will be created
@@ -156,60 +158,108 @@ postPaymentRefundRequestRespond merchantShortId opCity orderId req = do
           unless (updRefundsAmount == Just existingRefundsAmount) $
             throwError (InvalidRequest $ "Could not change refunds amount, as refund already was initiated: current refunds amount: " <> show existingRefundsAmount)
 
-      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) refundRequest.id
+      -- Fetch siblings once for both checks below (single-in-flight + cumulative).
+      existingRequests <- QRefundRequest.findAllByOrderId refundRequest.orderId
+      when (any (\r -> r.status == DRefundRequest.APPROVED && r.id /= refundRequest.id) existingRequests) $
+        throwError (InvalidRequest $ "Another refund request is in flight for order: " <> refundRequest.orderId.getId)
+      whenJust updRefundsAmount $ \amt -> do
+        transaction <-
+          HQPaymentTransaction.findEarliestChargedTransactionByOrderId refundRequest.orderId
+            >>= fromMaybeM (InvalidRequest "No transaction found for refund")
+        DRidePayment.validateRefundAmount existingRequests (Just (PriceAPIEntity amt refundRequest.currency)) transaction
+
+      QRefundRequest.updateRefundDetails DRefundRequest.APPROVED req.responseDescription updRefundsAmount (refundRequest.refundsTries + 1) req.deductFromDriver refundRequest.id
 
       -- pass already updated refundRequest entry
       let updRefundRequest =
             refundRequest{status = DRefundRequest.APPROVED,
                           responseDescription = req.responseDescription,
                           refundsAmount = updRefundsAmount,
-                          refundsTries = refundRequest.refundsTries + 1
+                          refundsTries = refundRequest.refundsTries + 1,
+                          deductFromDriver = req.deductFromDriver
                          }
       let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
       Notify.notifyRefunds updRefundRequest
-      initiateRefundsApiCall merchantOpCity updRefundRequest
-
-    initiateRefundsApiCall merchantOpCity refundRequest = do
-      let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride refundRequest.orderId
-      ride <- QRideLite.findByIdLite rideId >>= fromMaybeM (RideNotFound rideId.getId)
-      booking <- QBookingLite.findByIdLite ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-      let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCity.id
-      let refundReq =
-            DPayment.RefundPaymentServiceReq
-              { orderId = refundRequest.orderId,
-                merchantOpCityId = commonMerchantOperatingCityId,
-                driverAccountId = Just driverAccountId,
-                email = Nothing,
-                amount = (req.approvedAmount <&> (.amount)) <|> refundRequest.requestedAmount,
-                retryIfFailed = fromMaybe False req.retryRefunds
-              }
-      SPayment.makeRefundPayment merchantOpCity.merchantId merchantOpCity.id booking.paymentMode refundReq >>= \case
-        Nothing -> do
-          logError $ "Failed to refund: orderId: " <> orderId.getId
-          QRefundRequest.updateRefundIdAndStatus refundRequest.refundsId DRefundRequest.FAILED refundRequest.id
-          let updRefundRequest = refundRequest{status = DRefundRequest.FAILED}
-          QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-          Notify.notifyRefunds updRefundRequest
-          pure Common.RefundRequestRespondResp {status = updRefundRequest.status, refundStatus = Nothing, errorCode = Nothing}
-        Just result -> do
-          let updStatus = DRidePayment.castRefundRequestStatus result.status
-              refundId = Id result.refundId
-          when (refundRequest.refundsId /= Just refundId || refundRequest.status /= updStatus) $
-            QRefundRequest.updateRefundIdAndStatus (Just refundId) updStatus refundRequest.id
-          when (refundRequest.status /= updStatus) $ do
-            let updRefundRequest = refundRequest{refundsId = Just refundId, status = updStatus}
-            QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
-            Notify.notifyRefunds updRefundRequest
-          -- Refund status tracked via Refunds table; ledger voided via webhook on success
-          pure Common.RefundRequestRespondResp {status = updStatus, refundStatus = Just result.status, errorCode = result.errorCode}
+      DRidePayment.processRefundRaised updRefundRequest
+      submitRefundToPaymentService updRefundRequest (fromMaybe False req.retryRefunds)
 
     rejectRefunds refundRequest = do
-      logInfo $ "Refund request rejected by admin: orderId: " <> orderId.getId
-      QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries refundRequest.id
+      logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
+      QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing refundRequest.id
       let updRefundRequest = refundRequest{status = DRefundRequest.REJECTED, responseDescription = req.responseDescription}
       let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
       Notify.notifyRefunds updRefundRequest
       pure Common.RefundRequestRespondResp {status = updRefundRequest.status, refundStatus = Nothing, errorCode = Nothing}
+
+submitRefundToPaymentService ::
+  DRefundRequest.RefundRequest ->
+  Bool ->
+  Flow Common.RefundRequestRespondResp
+submitRefundToPaymentService refundRequest retryIfFailed = do
+  let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride refundRequest.orderId
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+  let commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity refundRequest.merchantOperatingCityId
+  let refundReq =
+        DPayment.RefundPaymentServiceReq
+          { orderId = refundRequest.orderId,
+            merchantOpCityId = commonMerchantOperatingCityId,
+            driverAccountId = Just driverAccountId,
+            email = Nothing,
+            amount = refundRequest.refundsAmount,
+            deductFromDriver = refundRequest.deductFromDriver,
+            retryIfFailed = retryIfFailed,
+            -- targets THIS refund, so the payment lib's latest-by-order lookup doesn't
+            -- no-op the attempt when a prior sibling on the order already succeeded.
+            refundsId = refundRequest.refundsId
+          }
+  SPayment.makeRefundPayment refundRequest.merchantId refundRequest.merchantOperatingCityId booking.paymentMode refundReq >>= \case
+    Nothing -> do
+      logError $ "Failed to refund: orderId: " <> refundRequest.orderId.getId
+      DRidePayment.processRefundResult refundRequest DRefundRequest.FAILED refundRequest.refundsId
+      pure Common.RefundRequestRespondResp {status = DRefundRequest.FAILED, refundStatus = Nothing, errorCode = Nothing}
+    Just result -> do
+      let updStatus = DRidePayment.castRefundRequestStatus result.status
+          refundId = Id result.refundId
+      DRidePayment.processRefundResult refundRequest updStatus (Just refundId)
+      pure Common.RefundRequestRespondResp {status = updStatus, refundStatus = Just result.status, errorCode = result.errorCode}
+
+postPaymentRefundRequestInitiate ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id DRide.Ride ->
+  Common.RefundRequestInitiateReq ->
+  Flow Common.RefundRequestRespondResp
+postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
+  merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  let h =
+        DRidePayment.RefundRequestCreateHandler
+          { validateRefundRequester = \booking ->
+              unless (booking.merchantOperatingCityId == merchantOpCity.id) $ throwError (RideNotFound rideId.getId),
+            mkRefundRequestRow = \ctx -> do
+              DRidePayment.validateRefundAmount ctx.existingRequests req.requestedAmount ctx.transaction
+              let requestedAmount = req.requestedAmount <&> (.amount)
+                  refundsAmount = requestedAmount <|> Just ctx.transaction.amount
+                  refundsTries = 1 -- row is born post-approval, matching /respond's increment
+                  evidenceS3Path = Nothing -- no need as initiated by admin
+                  code = DRefundRequest.RefundRequestCode "ADMIN_INITIATED"
+                  description = fromMaybe "Admin-initiated refund" req.description
+              DRidePayment.buildRefundRequestRow
+                ctx
+                evidenceS3Path
+                code
+                description
+                requestedAmount
+                refundsAmount
+                refundsTries
+                DRefundRequest.APPROVED
+                req.deductFromDriver,
+            postCreate = \refundRequest -> do
+              Notify.notifyRefunds refundRequest
+              submitRefundToPaymentService refundRequest False
+          }
+  DRidePayment.createPaymentRefundRequest h rideId

@@ -51,6 +51,8 @@ types:
     evidence: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+  RefundRequestListResp:
+    refundRequests: "[RefundRequestResp]"
   DueAmountRide:
     rideId: Id Ride
     amount: HighPrecMoney
@@ -143,10 +145,8 @@ apis:
       auth: TokenAuth
       params:
         rideId: Id Ride
-      query:
-        refreshRefunds: Bool
       response:
-        type: RefundRequestResp
+        type: RefundRequestListResp
   - GET:
       endpoint: /payment/getDueAmount
       auth: TokenAuth

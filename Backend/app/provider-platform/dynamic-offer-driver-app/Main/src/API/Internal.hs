@@ -30,6 +30,7 @@ import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.QuoteRespond as QuoteRespond
+import qualified API.Internal.RefundLedger as RefundLedger
 import qualified API.Internal.ReportACIssue as ReportACIssue
 import qualified API.Internal.ReportIssue as ReportIssue
 import qualified API.Internal.Ride as Ride
@@ -64,6 +65,7 @@ type API =
            :<|> DriverCoordinates.API
            :<|> PickupInstruction.API
            :<|> PopulateTipAmount.API
+           :<|> RefundLedger.API
            :<|> Ride.API
            :<|> StopDetection.API
            :<|> Multimodal.API
@@ -107,6 +109,7 @@ handler env =
     :<|> DriverCoordinates.handler
     :<|> PickupInstruction.handler
     :<|> PopulateTipAmount.handler
+    :<|> RefundLedger.handler
     :<|> Ride.handler
     :<|> StopDetection.handler
     :<|> Multimodal.handler
