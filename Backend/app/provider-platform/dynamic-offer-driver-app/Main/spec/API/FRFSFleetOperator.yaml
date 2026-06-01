@@ -52,8 +52,8 @@ types:
 
   FleetOperatorTripActionReq:
     action: FleetOperatorTripAction
-    conductorToken: Maybe Text
-    driverToken: Maybe Text
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
     vehicleNumber: Maybe Text
     derive: "Show"
 
@@ -63,8 +63,8 @@ types:
     derive: "Show"
 
   FleetOperatorCurrentOperationReq:
-    conductorToken: Maybe Text
-    driverToken: Maybe Text
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
     vehicleNumber: Maybe Text
     derive: "Show"
 
@@ -72,8 +72,8 @@ types:
     waybillNo: Text
     vehicleNumber: Text
     gtfsId: Text
-    conductorToken: Maybe Text
-    driverToken: Maybe Text
+    gimsConductorId: Maybe Text
+    gimsDriverId: Maybe Text
     history: "[OperatorTripInfo]"
     current: Maybe OperatorTripInfo
     upcoming: "[OperatorTripInfo]"

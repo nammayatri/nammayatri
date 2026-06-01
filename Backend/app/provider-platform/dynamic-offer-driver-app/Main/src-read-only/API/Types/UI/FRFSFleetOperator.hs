@@ -51,14 +51,14 @@ data FRFSTripPassengerManifestResp = FRFSTripPassengerManifestResp {manifest :: 
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq {conductorToken :: Kernel.Prelude.Maybe Data.Text.Text, driverToken :: Kernel.Prelude.Maybe Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
+data FleetOperatorCurrentOperationReq = FleetOperatorCurrentOperationReq {gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text, gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text, vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
-  { conductorToken :: Kernel.Prelude.Maybe Data.Text.Text,
-    current :: Kernel.Prelude.Maybe OperatorTripInfo,
-    driverToken :: Kernel.Prelude.Maybe Data.Text.Text,
+  { current :: Kernel.Prelude.Maybe OperatorTripInfo,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
     gtfsId :: Data.Text.Text,
     history :: [OperatorTripInfo],
     upcoming :: [OperatorTripInfo],
@@ -70,8 +70,8 @@ data FleetOperatorCurrentOperationResp = FleetOperatorCurrentOperationResp
 
 data FleetOperatorTripActionReq = FleetOperatorTripActionReq
   { action :: Domain.Types.FleetOperatorTripAction.FleetOperatorTripAction,
-    conductorToken :: Kernel.Prelude.Maybe Data.Text.Text,
-    driverToken :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsConductorId :: Kernel.Prelude.Maybe Data.Text.Text,
+    gimsDriverId :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)

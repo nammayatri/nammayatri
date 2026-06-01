@@ -221,13 +221,34 @@ instance FromJSON GimsTripAction where
 
 data GimsTripActionReq = GimsTripActionReq
   { action :: GimsTripAction,
-    trip_number :: Maybe Int,
+    tripNumber :: Maybe Int,
     timestamp :: Maybe Int64,
-    conductor_token :: Maybe Text,
-    driver_token :: Maybe Text,
-    vehicle_number :: Maybe Text
+    gimsConductorId :: Maybe Text,
+    gimsDriverId :: Maybe Text,
+    vehicleNumber :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance FromJSON GimsTripActionReq where
+  parseJSON = withObject "GimsTripActionReq" $ \o ->
+    GimsTripActionReq
+      <$> o .: "action"
+      <*> o .:? "trip_number"
+      <*> o .:? "timestamp"
+      <*> o .:? "conductor_token"
+      <*> o .:? "driver_token"
+      <*> o .:? "vehicle_number"
+
+instance ToJSON GimsTripActionReq where
+  toJSON GimsTripActionReq {..} =
+    object
+      [ "action" .= action,
+        "trip_number" .= tripNumber,
+        "timestamp" .= timestamp,
+        "conductor_token" .= gimsConductorId,
+        "driver_token" .= gimsDriverId,
+        "vehicle_number" .= vehicleNumber
+      ]
 
 data GimsCurrentOperationResp = GimsCurrentOperationResp
   { waybill_no :: Text,
@@ -236,12 +257,29 @@ data GimsCurrentOperationResp = GimsCurrentOperationResp
   deriving (Generic, FromJSON, ToJSON, Show)
 
 data GimsCurrentTripDetailsReq = GimsCurrentTripDetailsReq
-  { previous_trip_number :: Int,
-    conductor_token :: Maybe Text,
-    driver_token :: Maybe Text,
-    vehicle_number :: Maybe Text
+  { previousTripNumber :: Int,
+    gimsConductorId :: Maybe Text,
+    gimsDriverId :: Maybe Text,
+    vehicleNumber :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance FromJSON GimsCurrentTripDetailsReq where
+  parseJSON = withObject "GimsCurrentTripDetailsReq" $ \o ->
+    GimsCurrentTripDetailsReq
+      <$> o .: "previous_trip_number"
+      <*> o .:? "conductor_token"
+      <*> o .:? "driver_token"
+      <*> o .:? "vehicle_number"
+
+instance ToJSON GimsCurrentTripDetailsReq where
+  toJSON GimsCurrentTripDetailsReq {..} =
+    object
+      [ "previous_trip_number" .= previousTripNumber,
+        "conductor_token" .= gimsConductorId,
+        "driver_token" .= gimsDriverId,
+        "vehicle_number" .= vehicleNumber
+      ]
 
 data GimsTripInfo = GimsTripInfo
   { trip_number :: Int,
@@ -269,22 +307,60 @@ instance FromJSON GimsTripInfo where
     return GimsTripInfo {..}
 
 data GimsCurrentTripDetailsResp = GimsCurrentTripDetailsResp
-  { waybill_no :: Text,
-    vehicle_number :: Text,
-    conductor_token :: Maybe Text,
-    driver_token :: Maybe Text,
+  { waybillNo :: Text,
+    vehicleNumber :: Text,
+    gimsConductorId :: Maybe Text,
+    gimsDriverId :: Maybe Text,
     history :: [GimsTripInfo],
     current :: Maybe GimsTripInfo,
     upcoming :: [GimsTripInfo]
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance FromJSON GimsCurrentTripDetailsResp where
+  parseJSON = withObject "GimsCurrentTripDetailsResp" $ \o ->
+    GimsCurrentTripDetailsResp
+      <$> o .: "waybill_no"
+      <*> o .: "vehicle_number"
+      <*> o .:? "conductor_token"
+      <*> o .:? "driver_token"
+      <*> o .: "history"
+      <*> o .:? "current"
+      <*> o .: "upcoming"
+
+instance ToJSON GimsCurrentTripDetailsResp where
+  toJSON GimsCurrentTripDetailsResp {..} =
+    object
+      [ "waybill_no" .= waybillNo,
+        "vehicle_number" .= vehicleNumber,
+        "conductor_token" .= gimsConductorId,
+        "driver_token" .= gimsDriverId,
+        "history" .= history,
+        "current" .= current,
+        "upcoming" .= upcoming
+      ]
 
 data GimsOperationAnchor = GimsOperationAnchor
-  { conductor_token :: Maybe Text,
-    driver_token :: Maybe Text,
-    vehicle_number :: Maybe Text
+  { gimsConductorId :: Maybe Text,
+    gimsDriverId :: Maybe Text,
+    vehicleNumber :: Maybe Text
   }
-  deriving (Generic, FromJSON, ToJSON, Show)
+  deriving (Generic, Show)
+
+instance FromJSON GimsOperationAnchor where
+  parseJSON = withObject "GimsOperationAnchor" $ \o ->
+    GimsOperationAnchor
+      <$> o .:? "conductor_token"
+      <*> o .:? "driver_token"
+      <*> o .:? "vehicle_number"
+
+instance ToJSON GimsOperationAnchor where
+  toJSON GimsOperationAnchor {..} =
+    object
+      [ "conductor_token" .= gimsConductorId,
+        "driver_token" .= gimsDriverId,
+        "vehicle_number" .= vehicleNumber
+      ]
 
 instance HideSecrets GimsOperationAnchor where
   hideSecrets = identity
