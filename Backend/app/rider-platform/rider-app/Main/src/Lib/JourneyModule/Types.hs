@@ -96,7 +96,6 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.Transformers.Booking as QTB
-import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
@@ -1103,17 +1102,17 @@ mkFallbackFromFrfsBooking booking =
     }
 
 mkFallbackFromFrfsSearch :: FRFSSR.FRFSSearch -> LegRouteInfoFallback
-mkFallbackFromFrfsSearch search =
+mkFallbackFromFrfsSearch frfsSearch =
   LegRouteInfoFallback
-    { fallbackFromStationCode = Just search.fromStationCode,
-      fallbackToStationCode = Just search.toStationCode,
-      fallbackRouteCode = search.routeCode,
-      fallbackFromStationName = search.fromStationName,
-      fallbackToStationName = search.toStationName,
-      fallbackFromStationAddress = search.fromStationAddress,
-      fallbackToStationAddress = search.toStationAddress,
-      fallbackFromStationPoint = search.fromStationPoint,
-      fallbackToStationPoint = search.toStationPoint,
+    { fallbackFromStationCode = Just frfsSearch.fromStationCode,
+      fallbackToStationCode = Just frfsSearch.toStationCode,
+      fallbackRouteCode = frfsSearch.routeCode,
+      fallbackFromStationName = frfsSearch.fromStationName,
+      fallbackToStationName = frfsSearch.toStationName,
+      fallbackFromStationAddress = frfsSearch.fromStationAddress,
+      fallbackToStationAddress = frfsSearch.toStationAddress,
+      fallbackFromStationPoint = frfsSearch.fromStationPoint,
+      fallbackToStationPoint = frfsSearch.toStationPoint,
       fallbackRouteName = Nothing
     }
 
