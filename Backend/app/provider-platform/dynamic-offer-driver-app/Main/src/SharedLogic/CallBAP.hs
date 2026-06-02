@@ -97,6 +97,7 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
+import qualified Domain.Types.VehicleVariant as DVehVar
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -385,6 +386,18 @@ rideAssignedCommon booking ride driver veh = do
             Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
+  let assignedTier = DVehVar.castVariantToServiceTier vehicle.variant
+      bookedTier = booking.vehicleServiceTier
+  (isTierUpgrade, assignedServiceTierType, assignedServiceTierName) <-
+    if assignedTier == bookedTier
+      then pure (False, Nothing, Nothing)
+      else do
+        mbAssignedCfg <- CQVST.findByServiceTierTypeAndCityIdInRideFlow assignedTier booking.merchantOperatingCityId [] Nothing
+        mbBookedCfg <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookedTier booking.merchantOperatingCityId [] Nothing
+        let isUpgrade = case (mbAssignedCfg, mbBookedCfg) of
+              (Just a, Just b) -> a.priority > b.priority
+              _ -> False
+        pure (isUpgrade, if isUpgrade then Just (show assignedTier) else Nothing, if isUpgrade then (.name) <$> mbAssignedCfg else Nothing)
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text

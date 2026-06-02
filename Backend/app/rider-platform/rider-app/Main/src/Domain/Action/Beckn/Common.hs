@@ -173,7 +173,9 @@ data BookingDetails = BookingDetails
     vehicleColor :: Maybe Text,
     vehicleModel :: Text,
     otp :: Text,
-    isInitiatedByCronJob :: Bool
+    isInitiatedByCronJob :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -426,6 +428,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
+        isTierUpgrade = Just isTierUpgrade,
+        assignedServiceTierName = assignedServiceTierName,
         ..
       }
 
