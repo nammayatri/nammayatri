@@ -573,7 +573,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
-            becknIssueId
+            becknIssueId,
+            ticketContext = Just TIT.IssueTicket
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
