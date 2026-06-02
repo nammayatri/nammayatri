@@ -394,8 +394,17 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Odometer Reading File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl filePath
+  fileEntity <- mkOdometerMediaEntry fileUrl filePath
+  QMediaFile.create fileEntity
+  fork "S3 Put Odometer Reading File" $
+    ( do
+        S3.put (T.unpack filePath) mediaFile
+        QMediaFile.updateStatusById MediaFile.COMPLETED fileEntity.id
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for odometer media file " <> fileEntity.id.getId <> ": " <> show e
+        QMediaFile.updateStatusById MediaFile.FAILED fileEntity.id
+  return $ UploadOdometerResp {fileId = cast fileEntity.id}
   where
     validateContentType = do
       case fileType of
@@ -406,22 +415,18 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
         S3.Image | reqContentType == "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-    createMediaEntry url filePath = do
-      fileEntity <- mkFile url
-      QMediaFile.create fileEntity
-      return $ UploadOdometerResp {fileId = cast $ fileEntity.id}
-      where
-        mkFile fileUrl = do
-          id <- generateGUID
-          now <- getCurrentTime
-          return $
-            MediaFile.MediaFile
-              { id,
-                _type = fileType,
-                url = fileUrl,
-                s3FilePath = Just filePath,
-                createdAt = now
-              }
+    mkOdometerMediaEntry url fp = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        MediaFile.MediaFile
+          { id,
+            _type = fileType,
+            url = url,
+            s3FilePath = Just fp,
+            status = Just MediaFile.PENDING,
+            createdAt = now
+          }
 
 uploadDeliveryImage ::
   Id DMOC.MerchantOperatingCity ->
@@ -443,10 +448,18 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Delivery Image File" $ S3.put (T.unpack filePath) mediaFile
   now <- getCurrentTime
-  fileId <- createMediaEntry fileUrl filePath now
-  let deliveryFileIds = fromMaybe [fileId] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileId]))
+  fileEntity <- mkDeliveryMediaEntry fileUrl filePath now
+  QMediaFile.create fileEntity
+  fork "S3 Put Delivery Image File" $
+    ( do
+        S3.put (T.unpack filePath) mediaFile
+        QMediaFile.updateStatusById MediaFile.COMPLETED fileEntity.id
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for delivery media file " <> fileEntity.id.getId <> ": " <> show e
+        QMediaFile.updateStatusById MediaFile.FAILED fileEntity.id
+  let deliveryFileIds = fromMaybe [fileEntity.id] (ride.deliveryFileIds <&> (\dFileIds -> dFileIds ++ [fileEntity.id]))
   QRide.updateDeliveryFileIds rideId deliveryFileIds now
   BP.notfyDeliveryImageUploadedToBAP booking ride
   return Success
@@ -457,21 +470,17 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
         "image/jpeg" -> pure "jpg"
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-    createMediaEntry url filePath now = do
-      fileEntity <- mkFile url
-      QMediaFile.create fileEntity
-      return fileEntity.id
-      where
-        mkFile fileUrl = do
-          id <- generateGUID
-          return $
-            MediaFile.MediaFile
-              { id,
-                _type = S3.Image,
-                url = fileUrl,
-                s3FilePath = Just filePath,
-                createdAt = now
-              }
+    mkDeliveryMediaEntry url fp now = do
+      id <- generateGUID
+      return $
+        MediaFile.MediaFile
+          { id,
+            _type = S3.Image,
+            url = url,
+            s3FilePath = Just fp,
+            status = Just MediaFile.PENDING,
+            createdAt = now
+          }
 
 arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess
 arrivedAtDestination rideId pt = do

@@ -18,11 +18,15 @@ import AWS.S3 (FileType (..))
 import Kernel.Prelude
 import Kernel.Types.Id
 
+data MediaFileUploadStatus = PENDING | COMPLETED | FAILED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data MediaFile = MediaFile
   { id :: Id MediaFile,
     _type :: FileType,
     url :: Text,
     s3FilePath :: Maybe Text,
+    status :: Maybe MediaFileUploadStatus,
     createdAt :: UTCTime
   }
   deriving (Generic, FromJSON, Eq, ToJSON, ToSchema, Show)

@@ -18,7 +18,8 @@ import Tools.Error
 getMediaMediaImage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id DMF.MediaFile -> Environment.Flow API.Types.ProviderPlatform.Management.Media.GetImageResponse)
 getMediaMediaImage _merchantShortId _opCity imageId = do
   mediaFile <- QMF.findById imageId >>= fromMaybeM (FileDoNotExist imageId.getId)
-  unless (mediaFile._type == Image) $ throwError $ InvalidRequest ("Only Image Media query allowed" <> imageId.getId)
+  unless (mediaFile._type == Image) $ throwError $ InvalidRequest ("Only Image Media query allowed: " <> imageId.getId)
+  when (mediaFile.status `elem` [Just DMF.PENDING, Just DMF.FAILED]) $ throwError $ InvalidRequest ("Media file is not available yet (status: " <> show mediaFile.status <> "): " <> imageId.getId)
   mediaFilePath <- mediaFile.s3FilePath & fromMaybeM (FileDoNotExist imageId.getId)
   image <- S3.get $ T.unpack mediaFilePath
   pure $ API.Types.ProviderPlatform.Management.Media.GetImageResponse image

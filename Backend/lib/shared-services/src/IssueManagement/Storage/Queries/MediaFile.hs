@@ -15,6 +15,7 @@
 
 module IssueManagement.Storage.Queries.MediaFile where
 
+import qualified Data.Text as DT
 import qualified Data.Time as T
 import IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Beam.MediaFile as BeamMF
@@ -34,6 +35,12 @@ findAllIn mfList = findAllWithKV [Is BeamMF.id $ In $ getId <$> mfList]
 deleteById :: BeamFlow m r => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Is BeamMF.id (Eq mediaFileId)]
 
+updateStatusById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Id MediaFile -> m ()
+updateStatusById newStatus (Id mediaFileId) =
+  updateWithKV
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus)]
+    [Is BeamMF.id $ Eq mediaFileId]
+
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do
     pure $
@@ -43,6 +50,7 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             _type = fileType,
             url = url,
             s3FilePath = s3FilePath,
+            status = status >>= readMaybe . DT.unpack,
             createdAt = T.localTimeToUTC T.utc createdAt
           }
 
@@ -53,5 +61,6 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.fileType = _type,
         BeamMF.url = url,
         BeamMF.s3FilePath = s3FilePath,
+        BeamMF.status = DT.pack . show <$> status,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
       }

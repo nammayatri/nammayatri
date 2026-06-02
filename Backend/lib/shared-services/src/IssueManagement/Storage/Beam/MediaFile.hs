@@ -25,6 +25,7 @@ data MediaFileT f = MediaFileT
     fileType :: B.C f FileType,
     url :: B.C f Text,
     s3FilePath :: B.C f (Maybe Text),
+    status :: B.C f (Maybe Text),
     createdAt :: B.C f LocalTime
   }
   deriving (Generic, B.Beamable)

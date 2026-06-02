@@ -101,7 +101,8 @@ resolveMediaFileIds (Just ids) = do
         map
           ( \mf ->
               CommAPI.CommunicationMediaFile
-                { url = mf.url,
+                { fileId = Just (Kernel.Types.Id.cast mf.id),
+                  url = mf.url,
                   fileType = show mf._type,
                   thumbnailUrl = Nothing
                 }
@@ -134,7 +135,7 @@ postCommunicationCreate merchantShortId opCity personId req = do
             domain = toDomainDomain req.domain,
             senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId,
             senderRole = toDomainSenderRole CommAPI.ROLE_ADMIN,
-            senderDisplayName = Nothing,
+            senderDisplayName = req.senderName,
             title = req.title,
             body = req.body,
             htmlBody = req.htmlBody,
@@ -233,7 +234,8 @@ getCommunicationInfo merchantShortId _opCity communicationId = do
         status = fromDomainStatus comm.status,
         deliverySummary = Just deliverySummary,
         createdAt = comm.createdAt,
-        updatedAt = comm.updatedAt
+        updatedAt = comm.updatedAt,
+        triggerType = Just (fromDomainTrigger comm.triggerType)
       }
 
 -- | Used when sending an existing draft communication to recipients.
@@ -948,6 +950,11 @@ fromDomainRecipientRole DDelivery.RR_DRIVER = CommAPI.ROLE_DRIVER
 fromDomainRecipientRole DDelivery.RR_FLEET_OWNER = CommAPI.ROLE_FLEET_OWNER
 fromDomainRecipientRole DDelivery.RR_OPERATOR = CommAPI.ROLE_OPERATOR
 fromDomainRecipientRole DDelivery.RR_ADMIN = CommAPI.ROLE_ADMIN
+
+fromDomainTrigger :: DComm.CommunicationTriggerType -> CommAPI.CommunicationTriggerType
+fromDomainTrigger DComm.TT_MANUAL = CommAPI.MANUAL
+fromDomainTrigger DComm.TT_SYSTEM = CommAPI.SYSTEM
+fromDomainTrigger DComm.TT_SCHEDULED = CommAPI.SCHEDULED
 
 toDomainCTA :: CommAPI.CTAButtonReq -> DComm.CTAButton
 toDomainCTA cta = DComm.CTAButton {label = cta.label, url = cta.url, linkType = cta.linkType}

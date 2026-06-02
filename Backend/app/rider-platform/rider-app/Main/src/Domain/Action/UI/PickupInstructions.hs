@@ -313,6 +313,7 @@ createMediaFileEntry fileUrl filePath = do
         _type = S3.Audio,
         url = fileUrl,
         s3FilePath = Just filePath,
+        status = Just DMF.COMPLETED,
         createdAt = now
       }
 

@@ -50,7 +50,9 @@ dependencies:
   - mtl
   - transformers
   - yudhishthira
+  - beckn-services
   - beckn-spec
+  - shared-services
 
 default-extensions:
   - ConstraintKinds
@@ -95,6 +97,7 @@ library:
     - CreateRequestUnitTests
     - EmailOtpUnitTests
     - MerchantDocumentUnitTests
+    - MediaFileUploadStatusUnitTests
 
 executables:
   hunit-tests:
