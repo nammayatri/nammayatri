@@ -172,3 +172,16 @@ updateVendorId driverFeeId oldVendorId newVendorId = do
           Se.Is Beam.vendorId $ Se.Eq oldVendorId
         ]
     ]
+
+updateAmount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> Text -> HighPrecMoney -> m ()
+updateAmount driverFeeId vendorId newAmount = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.amount (roundToTwoDecimalPlaces newAmount),
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.driverFeeId $ Se.Eq driverFeeId.getId,
+          Se.Is Beam.vendorId $ Se.Eq vendorId
+        ]
+    ]
