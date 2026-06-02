@@ -118,7 +118,7 @@ syncCancelledRide :: Maybe DBCR.CancellationSource -> Maybe DRide.Ride -> DB.Boo
 syncCancelledRide mbCancellationSource mbRide booking merchant = do
   cancellationSource <- maybe (fst <$> findCancellationInfo mbRide) pure mbCancellationSource
   handle (errHandler (mbRide <&> (.status)) booking.status "booking cancellation") $
-    CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource Nothing mbRide
+    CallBAP.sendBookingCancelledUpdateToBAP booking merchant cancellationSource Nothing Nothing mbRide
   pure $ Common.RideSyncRes Common.RIDE_CANCELLED "Success. Sent booking cancellation update to bap"
 
 fetchBookingCancelledInfo :: Maybe DRide.Ride -> Flow BookingCancelledInfo

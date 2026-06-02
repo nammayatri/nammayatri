@@ -286,7 +286,7 @@ function createExpectChain(val: any): any {
   const c: any = {};
 
   // Passthrough chainable words — return same object, no recursion
-  for (const word of ['to', 'be', 'have', 'that', 'is', 'and']) {
+  for (const word of ['to', 'be', 'have', 'that', 'is', 'and', 'at']) {
     Object.defineProperty(c, word, { get: () => c, configurable: true });
   }
   Object.defineProperty(c, 'not', {
@@ -373,9 +373,39 @@ function createExpectChain(val: any): any {
     return c;
   };
 
-  c.below = (n: number) => {
+  c.below = c.lessThan = (n: number) => {
     if (neg ? currentVal < n : currentVal >= n) {
       throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be below ${n}`);
+    }
+    return c;
+  };
+
+  c.most = (n: number) => {
+    if (neg ? currentVal <= n : currentVal > n) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be at most ${n}`);
+    }
+    return c;
+  };
+
+  c.least = (n: number) => {
+    if (neg ? currentVal >= n : currentVal < n) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be at least ${n}`);
+    }
+    return c;
+  };
+
+  c.closeTo = c.approximately = (expected: number, delta: number) => {
+    const pass = typeof currentVal === 'number' && Math.abs(currentVal - expected) <= delta;
+    if (neg ? pass : !pass) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be close to ${expected} ± ${delta}`);
+    }
+    return c;
+  };
+
+  c.within = (start: number, finish: number) => {
+    const pass = currentVal >= start && currentVal <= finish;
+    if (neg ? pass : !pass) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be within ${start}..${finish}`);
     }
     return c;
   };

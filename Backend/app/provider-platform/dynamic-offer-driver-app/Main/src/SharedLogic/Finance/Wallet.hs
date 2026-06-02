@@ -80,6 +80,10 @@ module SharedLogic.Finance.Wallet
     walletReferenceGSTCash,
     walletReferenceTDSDeductionCash,
     walletReferenceTDSDeductionCancellation,
+    walletReferenceOverdueCancellationCharge,
+    walletReferenceOverdueCancellationTax,
+    walletReferenceCancellationOverdueBenefit,
+    walletReferenceCancellationOverdueBenefitTax,
     walletReferenceTopup,
     walletReferencePayout,
     walletReferenceDriverCancellationCharges,
@@ -195,6 +199,18 @@ walletReferenceCustomerCancellationGST = "CustomerCancellationGST"
 walletReferenceTDSDeductionCancellation :: Text
 walletReferenceTDSDeductionCancellation = "TDSDeductionCancellation"
 
+walletReferenceOverdueCancellationCharge :: Text
+walletReferenceOverdueCancellationCharge = "OverdueCancellationCharge"
+
+walletReferenceOverdueCancellationTax :: Text
+walletReferenceOverdueCancellationTax = "OverdueCancellationTax"
+
+walletReferenceCancellationOverdueBenefit :: Text
+walletReferenceCancellationOverdueBenefit = "CancellationOverdueBenefit"
+
+walletReferenceCancellationOverdueBenefitTax :: Text
+walletReferenceCancellationOverdueBenefitTax = "CancellationOverdueBenefitTax"
+
 walletReferenceCommissionOnline :: Text
 walletReferenceCommissionOnline = "CommissionOnline"
 
@@ -259,6 +275,8 @@ walletCreditRefs =
     walletReferenceTDSDeductionOnline,
     walletReferenceTDSDeductionCash,
     walletReferenceTDSDeductionCancellation,
+    walletReferenceOverdueCancellationCharge,
+    walletReferenceOverdueCancellationTax,
     walletReferenceTopup,
     walletReferenceAirportCashRecharge,
     walletReferenceD2DReferral,

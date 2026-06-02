@@ -473,6 +473,7 @@ library
       SharedLogic.CallFRFSBPP
       SharedLogic.CallIGMBPP
       SharedLogic.Cancel
+      SharedLogic.CancellationFee
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId

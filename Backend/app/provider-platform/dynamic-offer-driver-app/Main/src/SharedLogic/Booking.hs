@@ -96,7 +96,7 @@ cancelBooking booking mbDriver transporter = do
         ((.id) <$> mbDriver)
 
     fork "cancelBooking - Notify BAP" $ do
-      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing mbRide
+      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing Nothing mbRide
     whenJust mbRide $ \ride ->
       case mbDriver of
         Nothing -> throwError (PersonNotFound ride.driverId.getId)

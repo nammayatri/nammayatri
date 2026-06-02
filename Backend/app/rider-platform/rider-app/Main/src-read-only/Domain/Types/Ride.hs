@@ -38,7 +38,6 @@ data RideE e = Ride
     cancellationChargesOnCancel :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeIfCancelled :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     cancellationFeeStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.CancellationFeeStatus,
-    cancellationFeeTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargeableDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
@@ -116,9 +115,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -137,7 +136,6 @@ instance EncryptedItem Ride where
           cancellationChargesOnCancel = cancellationChargesOnCancel entity,
           cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
           cancellationFeeStatus = cancellationFeeStatus entity,
-          cancellationFeeTax = cancellationFeeTax entity,
           chargeableDistance = chargeableDistance entity,
           clientBundleVersion = clientBundleVersion entity,
           clientConfigVersion = clientConfigVersion entity,
@@ -228,7 +226,6 @@ instance EncryptedItem Ride where
             cancellationChargesOnCancel = cancellationChargesOnCancel entity,
             cancellationFeeIfCancelled = cancellationFeeIfCancelled entity,
             cancellationFeeStatus = cancellationFeeStatus entity,
-            cancellationFeeTax = cancellationFeeTax entity,
             chargeableDistance = chargeableDistance entity,
             clientBundleVersion = clientBundleVersion entity,
             clientConfigVersion = clientConfigVersion entity,
@@ -332,16 +329,16 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CancellationFeeStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CancellationFeeStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverArrivalStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverArrivalStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PaymentStatus))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''DriverArrivalStatus)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''DriverArrivalStatus))

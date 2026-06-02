@@ -196,11 +196,15 @@
       },
       {
         "find": "http://beckn-nandi-master.atlas.svc.cluster.local:8080",
-        "replace": "https://api.sandbox.moving.tech/nandi"
+        "replace": "http://localhost:8080/nandi"
       },
       {
         "find": "http://gtfs-inmemory-data-server.nandi.svc.cluster.local:8000",
-        "replace": "https://api.sandbox.moving.tech/gtfs-inmemory"
+        "replace": "http://localhost:8080/gtfs-inmemory"
+      },
+      {
+        "find": "http://gtfs-inmemory-data-server.nandi.svc.cluster.local",
+        "replace": "http://localhost:8080/gtfs-inmemory"
       },
       {
         "find": "https://api.sandbox.beckn.juspay.in/dev/app/v1",
@@ -431,7 +435,7 @@
       },
       {
         "find": "http://beckn-nandi-bangalore-master.atlas.svc.cluster.local:8080",
-        "replace": "https://api.sandbox.moving.tech/nandi"
+        "replace": "http://localhost:8080/nandi"
       },
       {
         "find": "http://beckn-payment-mock-server-master.atlas.svc.cluster.local:8091",

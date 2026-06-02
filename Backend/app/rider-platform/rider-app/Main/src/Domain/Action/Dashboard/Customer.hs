@@ -18,7 +18,6 @@ module Domain.Action.Dashboard.Customer
     postCustomerUnblock,
     getCustomerList,
     getCustomerInfo,
-    postCustomerCancellationDuesSync,
     getCustomerCancellationDuesDetails,
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
@@ -185,21 +184,6 @@ buildCustomerListItem person = do
         blocked = person.blocked,
         paymentMode = person.paymentMode
       }
-
----------------------------------------------------------------------
-postCustomerCancellationDuesSync ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Id Common.Customer ->
-  Common.CustomerCancellationDuesSyncReq ->
-  Flow APISuccess
-postCustomerCancellationDuesSync merchantShortId _ customerId req = do
-  merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
-  let personId = cast @Common.Customer @DP.Person customerId
-  person <- runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mobNum <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
-  void $ CallBPPInternal.customerCancellationDuesSync merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId mobNum (fromMaybe "+91" person.mobileCountryCode) req.cancellationCharges req.cancellationChargesWithCurrency req.disputeChancesUsed req.paymentMadeToDriver person.currentCity
-  return Success
 
 getCustomerCancellationDuesDetails ::
   ShortId DM.Merchant ->

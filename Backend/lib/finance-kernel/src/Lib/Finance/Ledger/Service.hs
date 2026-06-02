@@ -47,11 +47,10 @@ module Lib.Finance.Ledger.Service
     -- * Payout-specific queries (efficient DB-level filtering)
     findCreditsByAccountAfterTime,
     findUnsettledByAccountBeforeTime,
-    findUnsettledByAccountBeforeTimeByStatuses,
 
     -- * Settlement reservation (Option A — DB-level in-flight guard)
     markEntriesAsProcessing,
-    revertProcessingEntriesToUnsettled,
+    markEntriesAsUnsettled,
 
     -- * Input types (re-export from Interface)
     module Lib.Finance.Ledger.Interface,
@@ -235,11 +234,15 @@ createReversal originalId reason = do
 
       QLedger.create reversal
 
-      -- Update account balances (reverse the original transaction)
+      -- Update account balances: undo the original's type-aware delta.
+      -- createEntryWithBalanceUpdate applies from +amount / to -amount for Asset|Expense
+      -- accounts and the opposite for the rest, so the reversal must invert exactly that
+      -- per account type (a flat from +/to - doubles Asset|Expense balances).
       mbFrom <- QAccount.findById original.fromAccountId
       mbTo <- QAccount.findById original.toAccountId
-      forM_ mbFrom $ \a -> QAccount.updateBalance (a.balance + original.amount) original.fromAccountId
-      forM_ mbTo $ \a -> QAccount.updateBalance (a.balance - original.amount) original.toAccountId
+      let isAssetOrExpenseAccount acc = acc.accountType == Account.Asset || acc.accountType == Account.Expense
+      forM_ mbFrom $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance - original.amount else a.balance + original.amount) original.fromAccountId
+      forM_ mbTo $ \a -> QAccount.updateBalance (if isAssetOrExpenseAccount a then a.balance + original.amount else a.balance - original.amount) original.toAccountId
 
       pure $ Right reversal
 
@@ -509,8 +512,13 @@ findCreditsByAccountAfterTime accountId from to =
   findAllWithKV
     [ Se.And
         [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
+          Se.Is BeamLE.status $ Se.Eq SETTLED,
           Se.Is BeamLE.timestamp $ Se.GreaterThanOrEq from,
-          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to
+          Se.Is BeamLE.timestamp $ Se.LessThanOrEq to,
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
         ]
     ]
 
@@ -530,31 +538,7 @@ findUnsettledByAccountBeforeTime accountId before =
               Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
             ],
           Se.Is BeamLE.timestamp $ Se.LessThan before,
-          Se.Or
-            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
-              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
-            ]
-        ]
-    ]
-
--- | Find unsettled entries (both credits and debits) for an account before a given time based on Status.
---   Returns entries where settlementStatus = UNSETTLED OR settlementStatus IS NULL,
---   Used for collecting redeemable entry IDs for payout settlement.
-findUnsettledByAccountBeforeTimeByStatuses ::
-  (BeamFlow.BeamFlow m r) =>
-  Id Account ->
-  UTCTime -> -- before (cutoff)
-  [EntryStatus] -> -- statuses
-  m [LedgerEntry]
-findUnsettledByAccountBeforeTimeByStatuses accountId before statuses =
-  findAllWithKV
-    [ Se.And
-        [ Se.Or
-            [ Se.Is BeamLE.toAccountId $ Se.Eq (getId accountId),
-              Se.Is BeamLE.fromAccountId $ Se.Eq (getId accountId)
-            ],
-          Se.Is BeamLE.timestamp $ Se.LessThan before,
-          Se.Is BeamLE.status $ Se.In statuses,
+          Se.Is BeamLE.status $ Se.Eq SETTLED,
           Se.Or
             [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just UNSETTLED),
               Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
@@ -620,12 +604,12 @@ markEntriesAsProcessing entryIds mbSettlementId = do
 --   Used when a payout submission fails (sync or via webhook) to release
 --   the reservation so the entries become eligible again.
 --   Only flips PROCESSING entries — PAID_OUT entries are not touched.
-revertProcessingEntriesToUnsettled ::
+markEntriesAsUnsettled ::
   (BeamFlow.BeamFlow m r) =>
   [Id LedgerEntry] ->
   m ()
-revertProcessingEntriesToUnsettled [] = pure ()
-revertProcessingEntriesToUnsettled entryIds = do
+markEntriesAsUnsettled [] = pure ()
+markEntriesAsUnsettled entryIds = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamLE.settlementStatus (Just UNSETTLED),
@@ -635,6 +619,9 @@ revertProcessingEntriesToUnsettled entryIds = do
     ]
     [ Se.And
         [ Se.Is BeamLE.id $ Se.In (map (.getId) entryIds),
-          Se.Is BeamLE.settlementStatus $ Se.Eq (Just PROCESSING)
+          Se.Or
+            [ Se.Is BeamLE.settlementStatus $ Se.Eq (Just PROCESSING),
+              Se.Is BeamLE.settlementStatus $ Se.Eq Nothing
+            ]
         ]
     ]

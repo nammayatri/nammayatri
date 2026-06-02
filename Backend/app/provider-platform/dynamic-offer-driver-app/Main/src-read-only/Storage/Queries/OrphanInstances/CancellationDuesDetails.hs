@@ -20,6 +20,10 @@ instance FromTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDe
       Just
         Domain.Types.CancellationDuesDetails.CancellationDuesDetails
           { cancellationAmount = cancellationAmount,
+            cancellationFee = cancellationFee,
+            cancellationFeeTax = cancellationFeeTax,
+            overdueCancellationCharge = overdueCancellationCharge,
+            overdueCancellationTax = overdueCancellationTax,
             createdAt = createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             id = Kernel.Types.Id.Id id,
@@ -35,6 +39,10 @@ instance ToTType' Beam.CancellationDuesDetails Domain.Types.CancellationDuesDeta
   toTType' (Domain.Types.CancellationDuesDetails.CancellationDuesDetails {..}) = do
     Beam.CancellationDuesDetailsT
       { Beam.cancellationAmount = cancellationAmount,
+        Beam.cancellationFee = cancellationFee,
+        Beam.cancellationFeeTax = cancellationFeeTax,
+        Beam.overdueCancellationCharge = overdueCancellationCharge,
+        Beam.overdueCancellationTax = overdueCancellationTax,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.id = Kernel.Types.Id.getId id,

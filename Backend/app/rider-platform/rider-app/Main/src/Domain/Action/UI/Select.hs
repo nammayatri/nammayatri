@@ -63,6 +63,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.ClickhouseV2 as CHV2
@@ -115,6 +116,8 @@ type SelectFlow m r c =
     EncFlow m r,
     CoreMetrics m,
     HasCoreMetrics r,
+    HasRequestId r,
+    ServiceFlow m r,
     HasShortDurationRetryCfg r c,
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
@@ -247,9 +250,6 @@ select2 personId estimateId req@DSelectReq {..} = do
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 
-  -- Check and capture pending payments BEFORE driver allocation
-  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
-    SPayment.capturePendingPaymentIfExists person merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
@@ -288,10 +288,12 @@ select2 personId estimateId req@DSelectReq {..} = do
       pure (journey', journeyLeg', True)
 
   -- Select Transaction
-  -- TODO :: This Delivery transaction still throws error inside, can be refactored later upon scale.
-  when (merchant.onlinePayment && paymentInstrument `notElem` [Just DMPM.Cash, Just DMPM.BoothOnline]) $ do
+  -- Check and capture pending payments BEFORE driver allocation
+  when merchant.onlinePayment $ do
     whenJust paymentMethodId $ \pmId ->
       SPayment.updateDefaultPersonPaymentMethodId person pmId -- Make payment method as default payment method for customer
+    SPayment.capturePendingPaymentIfExists person merchantOperatingCityId
+
   merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
   let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do

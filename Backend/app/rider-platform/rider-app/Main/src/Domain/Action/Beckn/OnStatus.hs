@@ -358,7 +358,6 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       isInsured = booking.isInsured
       insuredAmount = booking.insuredAmount
       cancellationChargesOnCancel = Nothing
-      cancellationFeeTax = Nothing
       pickupEtaLogicVersion = Nothing
       commission = booking.commission
       pickupSpeedInMPS = Nothing

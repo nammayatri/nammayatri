@@ -181,16 +181,16 @@ cancel req merchant booking mbActiveSearchTry = do
                   if validCustomerCancellation `elem` rideTags
                     then do
                       QRD.updateValidCancellationsCount riderId.getId
-                      (charges', mbTax) <- case ride.cancellationFeeIfCancelled of
-                        Just cancelCharges -> return (Just cancelCharges, ride.cancellationFeeTax)
+                      mbExistingCancellationDuesDetails <- QCDD.findByRideId ride.id
+                      (charges', mbTax, mbOverdueCharge, mbOverdueTax) <- case ride.cancellationFeeIfCancelled of
+                        Just cancelCharges -> return (Just cancelCharges, mbExistingCancellationDuesDetails >>= (.cancellationFeeTax), mbExistingCancellationDuesDetails >>= (.overdueCancellationCharge), mbExistingCancellationDuesDetails >>= (.overdueCancellationTax))
                         Nothing -> do
-                          (cancellationdues, tax, mbLogicVersion) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
+                          (cancellationdues, tax, _mbLogicVersion, overdueCharge, overdueTax) <- customerCancellationChargesCalculation booking ride riderDetails DCT.CancellationByCustomer bookingCR.reasonCode ride.cancellationChargesLogicVersion
                           case cancellationdues of
                             Just charges -> do
                               logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges <> " tax: " <> show tax)
-                              QRide.updateCancellationFeeIfCancelledField (Just charges) mbLogicVersion ride.id
-                              return (Just charges, tax)
-                            Nothing -> return (Nothing, Nothing)
+                              return (Just charges, tax, overdueCharge, overdueTax)
+                            Nothing -> return (Nothing, Nothing, overdueCharge, overdueTax)
                       let totalCharges = fromMaybe 0 charges' + fromMaybe 0 mbTax
                       QRD.updateCancellationDues (totalCharges + riderDetails.cancellationDues) riderId
                       when (totalCharges > 0) $ do
@@ -203,6 +203,10 @@ cancel req merchant booking mbActiveSearchTry = do
                                   rideId = ride.id,
                                   riderId = riderId,
                                   cancellationAmount = totalCharges,
+                                  cancellationFee = charges',
+                                  cancellationFeeTax = mbTax,
+                                  overdueCancellationCharge = mbOverdueCharge,
+                                  overdueCancellationTax = mbOverdueTax,
                                   currency = booking.currency,
                                   paymentStatus = DCDD.PENDING,
                                   createdAt = now,
@@ -211,16 +215,16 @@ cancel req merchant booking mbActiveSearchTry = do
                                   merchantOperatingCityId = Just ride.merchantOperatingCityId
                                 }
                         QCDD.create cancellationDuesDetails
-                      return (charges', mbTax)
-                    else return (Nothing, Nothing)
-                Nothing -> return (Nothing, Nothing)
-            Nothing -> return (Nothing, Nothing)
+                      return (charges', mbTax, mbOverdueCharge, mbOverdueTax)
+                    else return (Nothing, Nothing, Nothing, Nothing)
+                Nothing -> return (Nothing, Nothing, Nothing, Nothing)
+            Nothing -> return (Nothing, Nothing, Nothing, Nothing)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
-        (cancelCharges, cancelTax) <- case cancellationCharges of
+        (cancelChargesBase, cancelTax) <- case cancellationCharges of
           Left e -> do
             logError $ "Error in getting cancellation charges - " <> show e
             return (Nothing, Nothing)
-          Right (charges, tax) -> do
+          Right (charges, tax, _overdueCharge, _overdueTax) -> do
             let totalAmount = case charges of
                   Just c -> Just (c + fromMaybe 0 tax)
                   Nothing -> Nothing
@@ -229,23 +233,23 @@ cancel req merchant booking mbActiveSearchTry = do
                 logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation charges onCancel: " <> show totalAmount <> " base: " <> show charges <> " tax: " <> show tax)
                 QRide.updateCancellationChargesOnCancel totalAmount ride.cancellationChargesLogicVersion ride.id
               Nothing -> return ()
-            return ((\t -> Just PriceAPIEntity {amount = t, currency = booking.currency}) =<< totalAmount, tax)
+            return (charges, tax)
+        let cancellationTaxAmount = fromMaybe 0 cancelTax
+            -- base + tax kept separate; total built only here for the on_cancel CancellationTerm
+            cancelCharges = (\base -> PriceAPIEntity {amount = base + cancellationTaxAmount, currency = booking.currency}) <$> cancelChargesBase
 
         logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellationCharges: " <> show cancelCharges)
         logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
-        -- BPP-side: persist fee+tax on ride and create finance ledger entries
-        whenJust cancelCharges $ \fee -> do
+        -- BPP-side: create finance ledger entries from base + tax (no add-then-subtract)
+        whenJust cancelChargesBase $ \baseCancellation -> do
           whenJust mbRide $ \ride -> do
-            let cancellationTaxAmount = fromMaybe 0 cancelTax
-                baseCancellation = fee.amount - cancellationTaxAmount
-            QRide.updateCancellationFeeAndTax (Just baseCancellation) (Just cancellationTaxAmount) ride.id
             let isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-            when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && fee.amount > 0) $
-              createCancellationLedgerEntries booking ride fee cancellationTaxAmount transporterConfig
+            when ((isPrepaidSubscriptionAndWalletEnabled || transporterConfig.driverWalletConfig.enableDriverWallet) && baseCancellation + cancellationTaxAmount > 0) $
+              createCancellationLedgerEntries booking ride baseCancellation cancellationTaxAmount transporterConfig
 
         whenJust mbActiveSearchTry $ cancelSearch merchant.id
-        -- Reload ride by primary key to pick up persisted cancellationFee/cancellationFeeTax
+        -- Reload ride by primary key to pick up persisted cancellationChargesOnCancel
         updatedRide <- case mbRide of
           Just ride -> QRide.findById ride.id
           Nothing -> pure Nothing

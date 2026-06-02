@@ -118,10 +118,9 @@ updateNoOfTimesCanellationDuesPaid riderId = do
     ]
     [Se.Is BeamRD.id (Se.Eq riderId)]
 
-updateCancellationDuesPaymentInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Text -> m ()
-updateCancellationDuesPaymentInfo amountPaid riderId = do
+updateCancellationDuesPaymentInfo :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> RiderDetails -> m ()
+updateCancellationDuesPaymentInfo amountPaid riderDetails = do
   now <- getCurrentTime
-  riderDetails <- findOneWithKV [Se.Is BeamRD.id (Se.Eq riderId)] >>= fromMaybeM (RiderDetailsNotFound riderId)
   updateOneWithKV
     [ Se.Set BeamRD.cancellationDuesPaid (Just (riderDetails.cancellationDuesPaid + amountPaid)),
       Se.Set BeamRD.noOfTimesCanellationDuesPaid (Just (riderDetails.noOfTimesCanellationDuesPaid + 1)),
@@ -129,7 +128,7 @@ updateCancellationDuesPaymentInfo amountPaid riderId = do
       Se.Set BeamRD.cancellationDueRides (Just (max 0 (riderDetails.cancellationDueRides - 1))),
       Se.Set BeamRD.updatedAt now
     ]
-    [Se.Is BeamRD.id (Se.Eq riderId)]
+    [Se.Is BeamRD.id (Se.Eq riderDetails.id.getId)]
 
 updateNoOfTimesWaiveOffUsed :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
 updateNoOfTimesWaiveOffUsed riderId = do

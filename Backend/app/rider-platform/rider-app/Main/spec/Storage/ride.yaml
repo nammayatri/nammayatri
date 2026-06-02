@@ -83,7 +83,6 @@ Ride:
     vehicleColor: Maybe Text
     pickupSpeedInMPS : Maybe Double
     cancellationChargesOnCancel : Maybe HighPrecMoney
-    cancellationFeeTax: Maybe HighPrecMoney
     vehicleVariant: VehicleVariant|NoRelation
     vehicleServiceTierType: Maybe ServiceTierType
     otp: Text
@@ -357,10 +356,6 @@ Ride:
     updateCancellationChargesOnCancel:
       kvFunction: updateOneWithKV
       params: [cancellationChargesOnCancel]
-      where: id
-    updateCancellationFeeTax:
-      kvFunction: updateOneWithKV
-      params: [cancellationFeeTax]
       where: id
     updateCancellationFeeStatus:
       kvFunction: updateOneWithKV

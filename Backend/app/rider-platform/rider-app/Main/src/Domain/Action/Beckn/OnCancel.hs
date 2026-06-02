@@ -29,6 +29,7 @@ import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as SRide
 import qualified Domain.Types.RideStatus as SRide
 import Environment
@@ -41,6 +42,7 @@ import Kernel.Utils.Common
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
@@ -49,7 +51,8 @@ data OnCancelReq = BookingCancelledReq
     cancellationSource :: Maybe Text,
     cancellationFee :: Maybe PriceAPIEntity,
     cancellationFeeTax :: Maybe PriceAPIEntity,
-    cancellationReasonCode :: Maybe Text
+    cancellationReasonCode :: Maybe Text,
+    fareBreakups :: [Common.DFareBreakup]
   }
 
 data ValidatedOnCancelReq = ValidatedBookingCancelledReq
@@ -59,7 +62,8 @@ data ValidatedOnCancelReq = ValidatedBookingCancelledReq
     cancellationFee :: Maybe PriceAPIEntity,
     cancellationFeeTax :: Maybe PriceAPIEntity,
     mbRide :: Maybe SRide.Ride,
-    cancellationReasonCode :: Maybe Text
+    cancellationReasonCode :: Maybe Text,
+    fareBreakups :: [Common.DFareBreakup]
   }
 
 onCancel :: ValidatedOnCancelReq -> Flow ()
@@ -72,6 +76,9 @@ onCancel ValidatedBookingCancelledReq {..} = do
   let validCancellationReasonCodesForImmediateCharge = fromMaybe ["CUSTOMER_NO_SHOW"] riderConfig.validCancellationReasonCodesForImmediateCharge
   let immediateCharge = isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge
+  whenJust mbRide $ \ride -> do
+    fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
+    QFareBreakup.createMany fareBreakupEntries
   SharedCancel.releaseCancellationLock booking.transactionId
   where
     castCancellatonSource = \case
@@ -82,7 +89,7 @@ onSoftCancel :: ValidatedOnCancelReq -> Flow ()
 onSoftCancel ValidatedBookingCancelledReq {..} =
   case cancellationFee of
     Just fee -> do
-      let cancellationFeeToBeSettled = Just fee.amount
+      let cancellationFeeToBeSettled = Just (fee.amount + maybe 0 (.amount) cancellationFeeTax)
       whenJust mbRide $ \ride -> do
         let rideId = ride.id
         QRide.updateCancellationFeeIfCancelledField cancellationFeeToBeSettled rideId

@@ -915,6 +915,87 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setRunningStepId(null);
   }, [isRunning, steps, onLog]);
 
+  // Re-run from a given step through the end of the collection, reusing the
+  // current variable state (does NOT reset stores or re-run the collection
+  // prerequest) so it continues from where the prior run left off.
+  const rerunFromStep = useCallback(async (stepId: string) => {
+    if (isRunning) return;
+    const startIdx = visibleSteps.findIndex(s => s.id === stepId);
+    if (startIdx < 0) return;
+
+    abortRef.current = false;
+    setIsRunning(true);
+
+    // Clear states for this step and everything after it; keep earlier results.
+    setStepStates(prev => {
+      const next = { ...prev };
+      for (let i = startIdx; i < visibleSteps.length; i++) delete next[visibleSteps[i].id];
+      return next;
+    });
+
+    onLog('info', `-- Re-running from step ${startIdx + 1} (${visibleSteps[startIdx].name}) to end --`);
+
+    for (let stepIdx = startIdx; stepIdx < visibleSteps.length; stepIdx++) {
+      if (abortRef.current) break;
+      const step = visibleSteps[stepIdx];
+
+      setRunningStepId(step.id);
+      setStepStates(prev => ({ ...prev, [step.id]: { status: 'running' } }));
+      onLog('req', `${step.method} ${step.name}`);
+
+      const capture = await startStepCapture(selectedEnvType);
+      const result = await callPostmanStep(step, storesRef.current);
+      capture.done();
+      const durationMs = result.upstreamMs;
+      const { mockHits, serviceLogs } = await capture.result;
+      result.serviceLogs = serviceLogs;
+
+      if (result.skipped) {
+        setStepStates(prev => ({ ...prev, [step.id]: { status: 'skip', result, durationMs: 0, mockHits } }));
+        onLog('info', `SKIP ${step.name}`);
+        for (const line of result.consoleLogs) onLog('info', `  [script] ${line}`);
+        if (stepIdx < visibleSteps.length - 1) await interStepWait(abortRef);
+        continue;
+      }
+
+      const failed = result.assertions.some(a => !a.passed) || !!result.scriptError;
+      const status = failed ? 'fail' : 'pass';
+
+      setStepStates(prev => ({ ...prev, [step.id]: { status, result, durationMs, mockHits } }));
+
+      const logLevel = failed ? 'error' : 'success';
+      const assertSummary = result.assertions.length > 0
+        ? ` [${result.assertions.filter(a => a.passed).length}/${result.assertions.length} assertions]`
+        : '';
+      onLog(logLevel, `${status === 'pass' ? 'PASS' : 'FAIL'} ${step.name} (${durationMs}ms, ${result.status})${assertSummary}`, {
+        request: { method: step.method, url: result.resolvedUrl, body: result.resolvedBody, headers: result.resolvedHeaders },
+        response: { status: result.status, body: result.data, headers: result.responseHeaders },
+        serviceLogs: result.serviceLogs,
+      });
+
+      for (const line of result.consoleLogs) {
+        onLog('info', `  [script] ${line}`);
+      }
+
+      if (failed) {
+        if (result.scriptError) onLog('error', `  Script error: ${result.scriptError}`);
+        for (const a of result.assertions.filter(a => !a.passed)) {
+          onLog('error', `  Assertion failed: ${a.name} — ${a.error}`);
+        }
+        setExpandedSteps(prev => new Set(prev).add(step.id));
+        break;
+      }
+
+      if (stepIdx < visibleSteps.length - 1) {
+        await interStepWait(abortRef);
+      }
+    }
+
+    setIsRunning(false);
+    setRunningStepId(null);
+    onLog('info', '-- Re-run from step complete --');
+  }, [isRunning, visibleSteps, selectedEnvType, onLog]);
+
   const toggleStep = (id: string) => {
     setExpandedSteps(prev => {
       const next = new Set(prev);
@@ -1079,14 +1160,24 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                       </span>
                     )}
                     {state?.status === 'fail' && (
-                      <button
-                        className="cr-rerun-btn"
-                        onClick={e => { e.stopPropagation(); rerunStep(stepId); }}
-                        disabled={isRunning}
-                        title="Re-run this step"
-                      >
-                        ↻ Re-run
-                      </button>
+                      <>
+                        <button
+                          className="cr-rerun-btn"
+                          onClick={e => { e.stopPropagation(); rerunStep(stepId); }}
+                          disabled={isRunning}
+                          title="Re-run this step"
+                        >
+                          ↻ Re-run
+                        </button>
+                        <button
+                          className="cr-rerun-btn"
+                          onClick={e => { e.stopPropagation(); rerunFromStep(stepId); }}
+                          disabled={isRunning}
+                          title="Re-run from this step through the end of the collection (keeps current variable state)"
+                        >
+                          ↻↓ Re-run to end
+                        </button>
+                      </>
                     )}
                   </div>
                   {isExpanded && state?.result && (

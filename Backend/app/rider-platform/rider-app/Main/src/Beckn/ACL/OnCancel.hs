@@ -17,6 +17,7 @@ module Beckn.ACL.OnCancel
   )
 where
 
+import qualified Beckn.ACL.Common as ACLCommon
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
@@ -59,7 +60,6 @@ bookingCancelledEvent order = do
   bppBookingId <- order.orderId & fromMaybeM (InvalidRequest "order_id is not present in BookingCancelled Event.")
   let cancellationSource = order.orderCancellation >>= (.cancellationCancelledBy)
   let mbCancellationFee = order.orderCancellationTerms >>= listToMaybe >>= (.cancellationTermCancellationFee) >>= (.feeAmount)
-  let cancellationFeeAmount = mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText
   let cancellationFeeCurrency :: Maybe Currency = mbCancellationFee >>= (.priceCurrency) >>= readMaybe @Currency
   let cancellationReasonCode = order.orderCancellation >>= (.cancellationReason) >>= (.reasonDescriptor) >>= (.descriptorCode)
   -- Parse cancellation fee + tax from quotation breakup using parseProjectFareParamsBreakup
@@ -68,16 +68,19 @@ bookingCancelledEvent order = do
         order.orderQuote >>= (.quotationBreakup) <&> \breakups ->
           mapMaybe (\b -> (,) <$> b.quotationBreakupInnerTitle <*> (b.quotationBreakupInnerPrice >>= (.priceValue) >>= highPrecMoneyFromText)) breakups
       parsedBreakup = mbBreakupPairs >>= RD.parseProjectFareParamsBreakup
+      mbCancellationBase = (parsedBreakup <&> (.cancellationFeeTaxExclusive) >>= \v -> if v > 0 then Just v else Nothing) <|> (mbCancellationFee >>= (.priceValue) >>= highPrecMoneyFromText)
       mbCancellationTax = parsedBreakup <&> (.cancellationTax) >>= \v -> if v > 0 then Just v else Nothing
-      -- cancellationFee = total (base + tax) from CancellationTerm — used for Stripe charge & ride table
-      -- cancellationFeeTax = tax from breakup — used for ledger split & invoice
-      effectiveFee = cancellationFeeAmount <&> \feeAmount -> PriceAPIEntity feeAmount currency
+      -- cancellationFee = base (tax-exclusive) from breakup; cancellationFeeTax = tax from breakup.
+      -- BAP sums base + tax where the total is needed (Stripe charge, ride table) — no GST negation.
+      effectiveFee = mbCancellationBase <&> \amount -> PriceAPIEntity amount currency
       effectiveTax = mbCancellationTax <&> \taxAmount -> PriceAPIEntity taxAmount currency
+      fareBreakups = maybe [] (mapMaybe ACLCommon.mkDFareBreakup) (order.orderQuote >>= (.quotationBreakup))
   return $
     DOnCancel.BookingCancelledReq
       { bppBookingId = Id bppBookingId,
         cancellationSource = cancellationSource,
         cancellationFee = effectiveFee,
         cancellationFeeTax = effectiveTax,
-        cancellationReasonCode = cancellationReasonCode
+        cancellationReasonCode = cancellationReasonCode,
+        fareBreakups = fareBreakups
       }

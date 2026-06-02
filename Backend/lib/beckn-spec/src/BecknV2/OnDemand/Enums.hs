@@ -227,6 +227,9 @@ data QuoteBreakupTitle
   | CANCELLATION_TAX
   | PARKING_CHARGE_TAX_EXCLUSIVE
   | PARKING_CHARGE_TAX
+  | -- This ride's cancellation charge is distinct from CANCELLATION_CHARGES, which is a previous ride's carry-forward due.
+    RIDE_CANCELLATION_CHARGES
+  | RIDE_CANCELLATION_TAX
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

@@ -16,3 +16,11 @@ ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD PRIMARY KEY ( i
 
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_fee double precision ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN cancellation_fee_tax double precision ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_cancellation_charge double precision ;
+ALTER TABLE atlas_driver_offer_bpp.cancellation_dues_details ADD COLUMN overdue_cancellation_tax double precision ;

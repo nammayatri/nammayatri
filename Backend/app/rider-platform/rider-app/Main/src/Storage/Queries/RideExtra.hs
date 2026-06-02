@@ -22,7 +22,6 @@ import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
 import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
 import Domain.Types.RideStatus as Ride
@@ -630,10 +629,9 @@ findMostRecentRideForRider (Id personId) = do
           B.limit_ 1 $
             B.orderBy_ (\(_booking', ride') -> B.desc_ (BeamR.createdAt ride')) $
               B.filter_'
-                ( \(booking', _ride') ->
-                    (BeamB.riderId booking' B.==?. B.val_ personId)
-                      B.&&?. B.sqlBool_ (B.not_ (BeamB.paymentInstrument booking' `B.in_` (B.val_ <$> [Just DMPM.Cash, Just DMPM.BoothOnline])))
-                )
+                -- Include all payment instruments (incl. Cash/BoothOnline): cash rides can carry
+                -- overdue cancellation dues that must surface in getDueAmount and block new bookings.
+                (\(booking', _ride') -> BeamB.riderId booking' B.==?. B.val_ personId)
                 do
                   booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
                   ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\r -> BeamR.bookingId r B.==?. BeamB.id booking')

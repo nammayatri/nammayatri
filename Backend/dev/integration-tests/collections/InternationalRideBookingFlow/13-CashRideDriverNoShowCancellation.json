@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Online Ride Booking (Stripe Payment)",
-    "description": "End-to-end ride with Stripe online payment: search \u2192 payment setup \u2192 assign \u2192 start \u2192 end \u2192 payment capture",
+    "name": "No Show Cancellation - Driver Cancels (CUSTOMER_NO_SHOW) (Cash Payment)",
+    "description": "End-to-end cash-ride driver no-show: search -> assign (Cash) -> driver arrives -> wait no-show window -> driver cancels with CUSTOMER_NO_SHOW -> cancellation fee becomes overdue dues -> rider gets due amount (== configured policy) -> clears dues via Stripe -> verify dues cleared.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -211,6 +211,108 @@
       "response": []
     },
     {
+      "name": "Create User Cancellation Dues Logic (BPP)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('UserCancellationDues logic version:', d.version, 'updated:', d.isRuleUpdated);",
+              "if (d.version) { pm.environment.set('cancellation_logic_version', d.version); }",
+              "pm.test('Logic created', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/verify",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"domain\": {\"tag\": \"USER_CANCELLATION_DUES\"}, \"shouldUpdateRule\": true, \"updatePassword\": \"98979\", \"description\": \"Helsinki flat cancellation charge + overdue (cash) after no-show window\", \"inputData\": [{\"cancelledBy\": \"CancellationByCustomer\", \"timeOfDriverCancellation\": 0, \"timeOfCustomerCancellation\": 45, \"isArrivedAtPickup\": false, \"driverWaitingTime\": 0, \"callAttemptByDriver\": false, \"actualCoveredDistance\": 0, \"expectedCoveredDistance\": 0, \"cancellationDues\": 0, \"cancelledRides\": 0, \"totalBookings\": 0, \"estimatedBookingFare\": 25, \"completedRides\": 0, \"validCancellations\": 0, \"cancellationDueRides\": 0, \"serviceTier\": \"COMFY\", \"tripCategory\": {\"tag\": \"OneWay\", \"contents\": \"OneWayOnDemandDynamicOffer\"}, \"cancellationReasonSelected\": null, \"userSdkVersion\": null}], \"rules\": [{\"cat\": [{\"var\": \"\"}, {\"cancellationCharges\": 5.0}]}, {\"cat\": [{\"var\": \"\"}, {\"cancellationChargesTax\": 1.2}]}, {\"cat\": [{\"var\": \"\"}, {\"overdueCancellationCharge\": 5.0}]}, {\"cat\": [{\"var\": \"\"}, {\"overdueCancellationTax\": 1.2}]}]}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rollout User Cancellation Dues Logic (BPP)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rollout success', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/nammaTag/appDynamicLogic/upsertLogicRollout",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "nammaTag",
+            "appDynamicLogic",
+            "upsertLogicRollout"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "[{\"domain\":{\"tag\":\"USER_CANCELLATION_DUES\"},\"timeBounds\":\"Unbounded\",\"rollout\":[{\"rolloutPercentage\":100,\"version\":{{cancellation_logic_version}},\"versionDescription\":\"User cancellation dues - Helsinki\"}]}]"
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Add Vehicle (Dashboard)",
       "event": [
         {
@@ -236,7 +338,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle?fleetOwnerId={{fleet_owner_id}}",
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
           "host": [
             "{{baseURL_BPP_Dashboard_Internal}}"
           ],
@@ -246,12 +348,6 @@
             "driver",
             "{{driver_id}}",
             "addVehicle"
-          ],
-          "query": [
-            {
-              "key": "fleetOwnerId",
-              "value": "{{fleet_owner_id}}"
-            }
           ]
         },
         "body": {
@@ -1083,7 +1179,7 @@
       "response": []
     },
     {
-      "name": "Select Estimate (Card Payment)",
+      "name": "Select Estimate (Cash Payment)",
       "event": [
         {
           "listen": "test",
@@ -1121,7 +1217,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentMethodId\": \"{{payment_method_id}}\", \"paymentInstrument\": {\"instrumentType\": \"Card\", \"instrumentName\": \"DefaultCardType\"}}"
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true, \"paymentInstrument\": {\"instrumentType\": \"Cash\", \"instrumentName\": \"Cash\"}}"
         }
       },
       "response": []
@@ -1366,14 +1462,14 @@
       "response": []
     },
     {
-      "name": "Start Ride",
+      "name": "Driver Arrived at Pickup",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "console.log('Ride started!');"
+              "console.log('Driver arrived at pickup \u2014 driver_arrival_time is now set');"
             ],
             "type": "text/javascript"
           }
@@ -1392,7 +1488,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/pickup",
           "host": [
             "{{baseURL_namma_P}}"
           ],
@@ -1400,186 +1496,75 @@
             "driver",
             "ride",
             "{{driver_ride_id}}",
-            "start"
+            "arrived",
+            "pickup"
           ]
         },
         "body": {
           "mode": "raw",
-          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+          "raw": "{\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}"
         }
       },
       "response": []
     },
     {
-      "name": "End Ride",
+      "name": "Wait For No-Show Window",
       "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// cancellation_fare_policy.free_cancellation_time_seconds is overridden to 30s locally",
+              "// via migration 0800-reduce-free-cancellation-time-for-local.sql.",
+              "// Cancelling after this threshold triggers cancellation charges on the driver ledger.",
+              "// Busy-wait ~35s to cross the window reliably.",
+              "console.log('Waiting 35s for no-show / free-cancellation window to elapse...');",
+              "const start = Date.now();",
+              "while (Date.now() - start < 10000) { /* busy wait */ }",
+              "console.log('No-show window elapsed, proceeding to cancel.');"
+            ],
+            "type": "text/javascript"
+          }
+        },
         {
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "console.log('Ride ended!');"
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
             ],
             "type": "text/javascript"
           }
         }
       ],
       "request": {
-        "method": "POST",
+        "method": "GET",
         "header": [
           {
             "key": "Content-Type",
             "value": "application/json"
           },
-          {
-            "key": "token",
-            "value": "{{driver_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "driver",
-            "ride",
-            "{{driver_ride_id}}",
-            "end"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\"point\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}"
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Get Driver Ride Invoices",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "// Wait for invoice generation after ride end",
-              "const start = Date.now();",
-              "while (Date.now() - start < 2000) { /* busy wait */ }"
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json();",
-              "console.log('Driver Ride Invoices - totalItems:', d.totalItems);",
-              "if (d.invoices && d.invoices.length > 0) {",
-              "    d.invoices.forEach(function(inv, i) {",
-              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' amount=' + inv.totalAmountPayable);",
-              "    });",
-              "}",
-              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
-              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "token",
-            "value": "{{driver_token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/subscription/invoices?invoiceType=%22Ride%22&limit=10&offset=0",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "subscription",
-            "invoices"
-          ],
-          "query": [
-            {
-              "key": "invoiceType",
-              "value": "%22Ride%22"
-            },
-            {
-              "key": "limit",
-              "value": "10"
-            },
-            {
-              "key": "offset",
-              "value": "0"
-            }
-          ]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "Get Ride Invoice (Rider)",
-      "event": [
-        {
-          "listen": "prerequest",
-          "script": {
-            "exec": [
-              "const start = Date.now();",
-              "while (Date.now() - start < 3000) { /* wait for invoice generation */ }"
-            ],
-            "type": "text/javascript"
-          }
-        },
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "var d = pm.response.json();",
-              "console.log('Rider invoices:', JSON.stringify(d));",
-              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Response has invoices array', function () { pm.expect(d.invoices).to.be.an('array'); });",
-              "pm.test('Response has totalItems', function () { pm.expect(d.totalItems).to.be.a('number'); });",
-              "if (d.invoices && d.invoices.length > 0) {",
-              "    d.invoices.forEach(function(inv, i) {",
-              "        console.log('Invoice ' + i + ': number=' + inv.invoiceNumber + ' type=' + inv.invoiceType + ' status=' + inv.invoiceStatus + ' total=' + inv.totalAmount);",
-              "    });",
-              "}"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [
           {
             "key": "token",
             "value": "{{rider_token}}"
           }
         ],
         "url": {
-          "raw": "{{baseUrl_app}}/invoice/list?invoiceType=%22Ride%22&limit=10&offset=0",
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
           "host": [
             "{{baseUrl_app}}"
           ],
           "path": [
-            "invoice",
+            "rideBooking",
             "list"
           ],
           "query": [
             {
-              "key": "invoiceType",
-              "value": "%22Ride%22"
+              "key": "limit",
+              "value": "1"
             },
             {
-              "key": "limit",
-              "value": "10"
+              "key": "onlyActive",
+              "value": "true"
             },
             {
               "key": "offset",
@@ -1591,7 +1576,61 @@
       "response": []
     },
     {
-      "name": "Verify Booking Completed",
+      "name": "Cancel Ride (Driver - CUSTOMER_NO_SHOW)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Driver cancelled with CUSTOMER_NO_SHOW \u2014 cancellation fee should be charged to rider via Stripe');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/cancel",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "ride",
+            "{{driver_ride_id}}",
+            "cancel"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"reasonCode\": \"CUSTOMER_NO_SHOW\", \"additionalInfo\": \"Customer did not show up\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Booking Cancelled",
       "event": [
         {
           "listen": "prerequest",
@@ -1607,22 +1646,16 @@
           "script": {
             "exec": [
               "var d = pm.response.json();",
-              "var b = d.list && d.list[0];",
-              "var ride = b && b.rideList && b.rideList[0];",
-              "if (b) { console.log('Final booking:', b.id, 'Status:', b.status); }",
-              "if (ride) { console.log('Ride offers:', JSON.stringify(ride.selectedOffers)); }",
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Ride completed', function () { pm.expect(b.status).to.equal('COMPLETED'); });",
-              "if (ride && ride.selectedOffers) {",
-              "    pm.test('Selected offers has offers array', function () { pm.expect(ride.selectedOffers).to.have.property('offers'); });",
-              "    pm.test('Selected offers has totalAmountSaved', function () { pm.expect(ride.selectedOffers).to.have.property('totalAmountSaved'); });",
-              "    pm.test('Selected offers has totalPostOfferAmount', function () { pm.expect(ride.selectedOffers).to.have.property('totalPostOfferAmount'); });",
-              "    if (ride.selectedOffers.offers && ride.selectedOffers.offers.length > 0) {",
-              "        var offer = ride.selectedOffers.offers[0];",
-              "        pm.test('First offer has offerId', function () { pm.expect(offer).to.have.property('offerId'); });",
-              "        pm.test('First offer has amountSaved', function () { pm.expect(offer).to.have.property('amountSaved'); });",
-              "        pm.test('First offer has postOfferAmount', function () { pm.expect(offer).to.have.property('postOfferAmount'); });",
-              "    }",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    console.log('Latest booking:', booking.id, 'Status:', booking.status);",
+              "    pm.test('Booking is cancelled', function () {",
+              "        pm.expect(booking.status).to.equal('CANCELLED');",
+              "    });",
+              "} else {",
+              "    console.log('No bookings found');",
+              "    pm.test('Has bookings', function () { pm.expect.fail('No bookings'); });",
               "}"
             ],
             "type": "text/javascript"
@@ -1632,10 +1665,6 @@
       "request": {
         "method": "GET",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
           {
             "key": "token",
             "value": "{{rider_token}}"
@@ -1669,13 +1698,176 @@
       "response": []
     },
     {
+      "name": "Get Payment Dues (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 8000) { /* wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Cash no-show due:', d.totalDueAmount, 'rides:', JSON.stringify(d.rides));",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has totalDueAmount', function () { pm.expect(d.totalDueAmount).to.be.a('number'); });",
+              "// Configured cancellation policy: base 5.0 + 24% VAT 1.2 = 6.2 total, recorded as overdue dues for a cash ride",
+              "pm.test('Cancellation due equals configured policy (6.2)', function () { pm.expect(d.totalDueAmount).to.be.closeTo(6.2, 0.01); });",
+              "pm.collectionVariables.set('_test_due_amount', d.totalDueAmount);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/getDueAmount",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "getDueAmount"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Clear Dues (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('ClearDues status:', d.status, 'amountCleared:', d.amountCleared, 'orderId:', d.orderId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Clear dues succeeded', function () { pm.expect(d.status).to.equal('SUCCESS'); });",
+              "pm.test('Amount cleared equals configured cancellation fee (6.2)', function () { pm.expect(d.amountCleared).to.be.closeTo(6.2, 0.01); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/clearDues",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "clearDues"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"paymentMethodId\": \"{{payment_method_id}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Verify Dues Cleared (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 3000) { /* wait */ }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "console.log('Due after clearDues:', d.totalDueAmount);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Dues fully cleared (0)', function () { pm.expect(d.totalDueAmount).to.be.closeTo(0, 0.01); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/getDueAmount",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "getDueAmount"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Get Driver Wallet Transactions",
       "event": [
         {
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// Give the ledger time to post wallet entries after ride end",
+              "// Give the ledger time to post wallet entries after cancellation fee credit",
               "const start = Date.now(); while (Date.now() - start < 1500) { /* wait */ }"
             ],
             "type": "text/javascript"

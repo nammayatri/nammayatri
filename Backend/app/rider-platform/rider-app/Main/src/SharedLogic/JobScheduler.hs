@@ -324,6 +324,7 @@ data CancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData
   { bookingId :: Id Booking,
     personId :: Id Person,
     cancellationAmount :: PriceAPIEntity,
+    cancellationTax :: HighPrecMoney,
     rideId :: Id DRide.Ride
   }
   deriving (Generic, Show, FromJSON, ToJSON)

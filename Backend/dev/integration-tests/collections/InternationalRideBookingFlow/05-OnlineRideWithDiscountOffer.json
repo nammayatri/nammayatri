@@ -1017,6 +1017,46 @@
       "response": []
     },
     {
+      "name": "Make Payment Method Default",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/methods/{{payment_method_id}}/makeDefault",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "methods",
+            "{{payment_method_id}}",
+            "makeDefault"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Driver Location Update",
       "event": [
         {

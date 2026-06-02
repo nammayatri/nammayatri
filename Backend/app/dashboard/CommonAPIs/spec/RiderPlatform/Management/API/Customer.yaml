@@ -65,18 +65,6 @@ apis:
         type: CustomerInfoRes
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_INFO
-  - POST:
-      endpoint: /{customerId}/cancellationDuesSync
-      auth: ApiAuthV2
-      params:
-        customerId: Id Customer
-      request:
-        type: CustomerCancellationDuesSyncReq
-      response:
-        type: APISuccess
-      migrate:
-        endpoint: CustomerAPI CancellationDuesSyncCustomerEndpoint
-        userActionType: ApiAuth APP_BACKEND_MANAGEMENT CUSTOMERS CUSTOMER_CANCELLATION_DUES_SYNC
   - GET:
       name: GetCustomerCancellationDuesDetails
       endpoint:  /{customerId}/getCancellationDuesDetails
@@ -149,12 +137,6 @@ types:
     - safetyCenterDisabledOnDate: Maybe UTCTime
     - totalSosCount: Int
     - paymentMode: Maybe PaymentMode
-  CustomerCancellationDuesSyncReq:
-    - cancellationCharges: Maybe HighPrecMoney
-    - cancellationChargesWithCurrency: Maybe PriceAPIEntity
-    - disputeChancesUsed: Maybe Int
-    - paymentMadeToDriver: Bool
-    - derive: "'HideSecrets"
   CancellationDuesDetailsRes:
     - cancellationDues: PriceAPIEntity
     - cancellationDuesPaid: HighPrecMoney
