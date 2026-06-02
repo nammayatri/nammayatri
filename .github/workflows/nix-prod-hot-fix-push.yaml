@@ -63,7 +63,7 @@ jobs:
           - system: x86_64-linux
             host: x86_64-linux-prod-hot-push
             arch: amd64
-            name: Master Release Build
+            name: Nix Release Build
             continue-on-error: false
           # - system: aarch64-darwin
           #   host: aarch64-darwin
@@ -123,7 +123,7 @@ jobs:
           - system: x86_64-linux
             host: x86_64-linux-prod-hot-push
             arch: amd64
-            name: Prod Release Build
+            name: Cabal Release Build
             continue-on-error: false
       fail-fast: false
     runs-on: ${{ matrix.host }}
