@@ -29,7 +29,8 @@ data PersonStripeInfo = PersonStripeInfo
     idNumber :: Maybe (EncryptedHashed Text),
     companyName :: Maybe Text,
     fleetType :: Maybe DFOI.FleetType,
-    vatNumber :: Maybe Text
+    vatNumber :: Maybe Text, -- VAT number -> Stripe company[vat_id]
+    businessRegistrationNumber :: Maybe (EncryptedHashed Text) -- business reg no (Y-tunnus) -> Stripe company[tax_id]
   }
 
 newtype PersonRegisterBankAccountLinkHandle = PersonRegisterBankAccountLinkHandle
@@ -96,6 +97,7 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
       personStripeInfo <- h.fetchPersonStripeInfo
       personDob <- personStripeInfo.personDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       idNumber <- forM personStripeInfo.idNumber decrypt
+      businessRegistrationNumber <- forM personStripeInfo.businessRegistrationNumber decrypt
       ssnLast4 <-
         if merchantOpCity.country == Context.USA
           then do
@@ -113,7 +115,8 @@ getPersonRegisterBankAccountLink h mbPaymentMode person = do
               Just
                 Payment.CompanyConnectDetails
                   { name = companyName,
-                    taxId = personStripeInfo.vatNumber,
+                    taxId = businessRegistrationNumber, -- Y-tunnus -> company[tax_id]
+                    vatId = personStripeInfo.vatNumber, -- VAT -> company[vat_id]
                     address = personStripeInfo.address
                   }
           Nothing ->
