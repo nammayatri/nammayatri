@@ -94,6 +94,7 @@ dependencies:
   - warp
   - uuid
   - beckn-spec
+  - config-pilot
   - passetto-client
   - passetto-lib
   - behavior-engine
