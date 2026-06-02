@@ -297,6 +297,7 @@ createMediaEntry url fileType filePath = do
             _type = fileType,
             url = fileUrl,
             s3FilePath = Just filePath,
+            status = Just D.PENDING,
             createdAt = now
           }
 
@@ -325,8 +326,16 @@ issueMediaUpload' (personId, merchantId, merchantOperatingCityId) issueHandle Co
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" domain
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl fileType filePath
+  uploadRes <- createMediaEntry fileUrl fileType filePath
+  fork "S3 Put Issue Media File" $
+    ( do
+        S3.put (T.unpack filePath) mediaFile
+        QMF.updateStatusById D.COMPLETED uploadRes.fileId
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for issue media file " <> uploadRes.fileId.getId <> ": " <> show e
+        QMF.updateStatusById D.FAILED uploadRes.fileId
+  return uploadRes
   where
     validateContentType = do
       case fileType of
@@ -361,8 +370,16 @@ issueMediaUpload (personId, merchantId) issueHandle Common.IssueMediaUploadReq {
         config.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "issue"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 Put Issue Media File" $ S3.put (T.unpack filePath) mediaFile
-  createMediaEntry fileUrl fileType filePath
+  uploadRes <- createMediaEntry fileUrl fileType filePath
+  fork "S3 Put Issue Media File" $
+    ( do
+        S3.put (T.unpack filePath) mediaFile
+        QMF.updateStatusById D.COMPLETED uploadRes.fileId
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for issue media file " <> uploadRes.fileId.getId <> ": " <> show e
+        QMF.updateStatusById D.FAILED uploadRes.fileId
+  return uploadRes
   where
     validateContentType = do
       case fileType of
@@ -1116,7 +1133,11 @@ recreateIssueChats issueReport issueConfig mbRideInfoRes language identifier =
         IssueDescription -> pure $ mkChatDetail item.chatId item.timestamp Text USER (Just issueReport.description) Nothing Nothing Nothing
         MediaFile -> do
           mediaFile <- CQMF.findById (Id item.chatId) identifier >>= fromMaybeM (FileDoesNotExist item.chatId)
-          pure $ mkChatDetail item.chatId item.timestamp (mediaTypeToMessageType mediaFile._type) USER (Just mediaFile.url) Nothing Nothing Nothing
+          let mediaUrl = case mediaFile.status of
+                Just D.COMPLETED -> Just mediaFile.url
+                Nothing -> Just mediaFile.url
+                _ -> Nothing
+          pure $ mkChatDetail item.chatId item.timestamp (mediaTypeToMessageType mediaFile._type) USER mediaUrl Nothing Nothing Nothing
     )
     issueReport.chats
   where
@@ -1241,13 +1262,14 @@ toChatMessageItem identifier c = do
     mapM
       (\mfId -> CQMF.findById mfId identifier >>= fromMaybeM (FileDoesNotExist mfId.getId))
       c.mediaFileIds
+  let readyMediaFiles = filter (\mf -> mf.status == Just D.COMPLETED || isNothing mf.status) mediaFiles
   pure $
     Common.ChatMessageItem
       { messageId = c.id.getId,
         senderType = c.senderType,
         chatContentType = c.chatContentType,
         text = c.message,
-        mediaFiles = mediaFiles,
+        mediaFiles = readyMediaFiles,
         deliveredAt = Nothing,
         readAt = c.readAt,
         createdAt = c.createdAt
@@ -1261,10 +1283,13 @@ mkMediaFiles :: [D.MediaFile] -> [Common.MediaFile_]
 mkMediaFiles =
   foldr'
     ( \mediaFile mediaFileList -> do
-        case mediaFile._type of
-          S3.Audio -> Common.MediaFile_ S3.Audio mediaFile.url : mediaFileList
-          S3.Image -> Common.MediaFile_ S3.Image mediaFile.url : mediaFileList
-          _ -> mediaFileList
+        let isReady = mediaFile.status == Just D.COMPLETED || isNothing mediaFile.status
+        if isReady
+          then case mediaFile._type of
+            S3.Audio -> Common.MediaFile_ S3.Audio mediaFile.url : mediaFileList
+            S3.Image -> Common.MediaFile_ S3.Image mediaFile.url : mediaFileList
+            _ -> mediaFileList
+          else mediaFileList
     )
     []
 

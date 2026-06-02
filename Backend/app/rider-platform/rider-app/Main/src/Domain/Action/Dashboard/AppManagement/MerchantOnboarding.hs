@@ -44,7 +44,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM, throwError)
+import Kernel.Utils.Common (fromMaybeM, logError, throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -301,9 +301,18 @@ merchantOnboardingStepUploadFile _merchantShortId _opCity stepId payloadKey requ
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "merchant-onboarding"
           & T.replace "<FILE_PATH>" filePath
-  _ <- fork "S3 put file" $ S3.put (T.unpack filePath) documentFile
-  uploadFileRes <- createMediaEntry fileUrl fileType filePath
-  updateStepPayloadWithFileId step payloadKey uploadFileRes.fileId.getId
+  fileEntity <- buildMediaEntry fileUrl fileType filePath
+  MFQuery.create fileEntity
+  fork "S3 put file" $
+    ( do
+        S3.put (T.unpack filePath) documentFile
+        MFQuery.updateStatusById DMF.COMPLETED fileEntity.id
+        updateStepPayloadWithFileId step payloadKey (fileEntity.id.getId)
+    )
+      `catch` \(e :: SomeException) -> do
+        logError $ "S3 upload failed for onboarding media file " <> fileEntity.id.getId <> ": " <> show e
+        MFQuery.updateStatusById DMF.FAILED fileEntity.id
+  let uploadFileRes = API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse {fileId = Kernel.Types.Id.cast fileEntity.id}
   return uploadFileRes
   where
     updateStepPayloadWithFileId step_ payloadKey_ fileId_ = do
@@ -353,23 +362,19 @@ merchantOnboardingStepList _merchantShortId _opCity onboardingId requestorId mbR
   steps <- QMOS.findByMerchantOnboardingId onboarding.id.getId
   return steps
 
-createMediaEntry :: Text -> S3.FileType -> Text -> Environment.Flow API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse
-createMediaEntry url fileType filePath = do
-  fileEntity <- mkFile url
-  MFQuery.create fileEntity
-  return $ API.Types.Dashboard.AppManagement.MerchantOnboarding.UploadFileResponse {fileId = Kernel.Types.Id.cast $ fileEntity.id}
-  where
-    mkFile fileUrl = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        DMF.MediaFile
-          { id,
-            _type = fileType,
-            url = fileUrl,
-            s3FilePath = Just filePath,
-            createdAt = now
-          }
+buildMediaEntry :: Text -> S3.FileType -> Text -> Environment.Flow DMF.MediaFile
+buildMediaEntry url fileType filePath = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DMF.MediaFile
+      { id,
+        _type = fileType,
+        url = url,
+        s3FilePath = Just filePath,
+        status = Just DMF.PENDING,
+        createdAt = now
+      }
 
 merchantOnboardingGetFile :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Environment.Flow Domain.Types.MerchantOnboarding.GetFileResponse)
 merchantOnboardingGetFile _merchantShortId _opCity onboardingId fileId requestorId requestorRole = do
@@ -379,6 +384,8 @@ merchantOnboardingGetFile _merchantShortId _opCity onboardingId fileId requestor
   unless (onboarding.requestorId == reqId || reqRole `elem` [DMO.TICKET_DASHBOARD_ADMIN, DMO.TICKET_DASHBOARD_APPROVER]) $
     throwError $ InvalidRequest "RequestorId does not have access to this file"
   file <- MFQuery.findById (Kernel.Types.Id.Id fileId) >>= fromMaybeM (InvalidRequest "No file found")
+  when (file.status `elem` [Just DMF.PENDING, Just DMF.FAILED]) $
+    throwError $ InvalidRequest ("Media file is not available yet (status: " <> show file.status <> "): " <> fileId)
   filePath <- file.s3FilePath & fromMaybeM (FileDoNotExist fileId)
   base64File <- S3.get $ T.unpack filePath
   return $ Domain.Types.MerchantOnboarding.GetFileResponse {fileBase64 = base64File, fileType = show file._type}
