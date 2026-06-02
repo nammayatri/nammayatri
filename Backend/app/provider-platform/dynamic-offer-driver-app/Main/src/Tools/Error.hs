@@ -1259,6 +1259,7 @@ data DriverOnboardingError
   | ImageDocumentNumberMismatch Text Text
   | ImageExtractionFailed
   | ImageNotFound Text
+  | ImageAccessDenied Text
   | ImageNotValid Text
   | DriverAlreadyLinked
   | DLAlreadyLinked
@@ -1344,6 +1345,7 @@ instance IsBaseError DriverOnboardingError where
     ImageDocumentNumberMismatch a b -> Just $ "Document number \"" <> a <> "\" in image is not matching with input \"" <> b <> "\"."
     ImageExtractionFailed -> Just "Image extraction failed"
     ImageNotFound id_ -> Just $ "Image with imageId \"" <> id_ <> "\" not found."
+    ImageAccessDenied id_ -> Just $ "Access denied for image with imageId \"" <> id_ <> "\"."
     ImageNotValid id_ -> Just $ "Image with imageId \"" <> id_ <> "\" is not valid."
     DriverAlreadyLinked -> Just "Document is already linked with driver."
     DLAlreadyLinked -> Just "Driver License Is Already Linked With Another Driver."
@@ -1425,6 +1427,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageDocumentNumberMismatch _ _ -> "IMAGE_DOCUMENT_NUMBER_MISMATCH"
     ImageExtractionFailed -> "IMAGE_EXTRACTION_FAILED"
     ImageNotFound _ -> "IMAGE_NOT_FOUND"
+    ImageAccessDenied _ -> "IMAGE_ACCESS_DENIED"
     ImageNotValid _ -> "IMAGE_NOT_VALID"
     DriverAlreadyLinked -> "DRIVER_ALREADY_LINKED"
     DLAlreadyLinked -> "DL_ALREADY_LINKED"
@@ -1504,6 +1507,7 @@ instance IsHTTPError DriverOnboardingError where
     ImageDocumentNumberMismatch _ _ -> E400
     ImageExtractionFailed -> E400
     ImageNotFound _ -> E400
+    ImageAccessDenied _ -> E403
     ImageNotValid _ -> E400
     DriverAlreadyLinked -> E400
     DLAlreadyLinked -> E400

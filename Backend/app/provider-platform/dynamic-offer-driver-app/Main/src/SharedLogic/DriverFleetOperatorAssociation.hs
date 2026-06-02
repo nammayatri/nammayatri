@@ -4,6 +4,10 @@ module SharedLogic.DriverFleetOperatorAssociation
     endFleetAssociationsIfAllowed,
     makeFleetOperatorAssociation,
     makeDriverOperatorAssociation,
+    isAssociationBetweenTwoPerson,
+    checkFleetDriverAssociation,
+    checkFleetOperatorAssociation,
+    checkDriverOperatorAssociation,
   )
 where
 
@@ -193,3 +197,44 @@ makeDriverOperatorAssociation merchantId merchantOperatingCityId driverId operat
         createdAt = now,
         updatedAt = now
       }
+
+isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
+isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do
+  case (requestedPersonDetails.role, personDetails.role) of
+    (DP.OPERATOR, DP.DRIVER) -> checkFleetDriverAndDriverOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.FLEET_OWNER) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.FLEET_BUSINESS) -> checkFleetOperatorAssociation personDetails.id requestedPersonDetails.id
+    (DP.OPERATOR, DP.OPERATOR) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_OWNER, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_OWNER, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_OWNER, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_BUSINESS, DP.DRIVER) -> checkFleetDriverAssociation requestedPersonDetails.id personDetails.id
+    (DP.FLEET_BUSINESS, DP.FLEET_OWNER) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.FLEET_BUSINESS, DP.FLEET_BUSINESS) -> pure $ requestedPersonDetails.id.getId == personDetails.id.getId
+    (DP.ADMIN, _) -> return True
+    _ -> return True
+
+checkFleetDriverAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAssociation fleetId driverId = do
+  mbAssoc <- QFDA.findByDriverIdAndFleetOwnerId driverId fleetId.getId True
+  return $ isJust mbAssoc
+
+checkFleetOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetOperatorAssociation fleetId operatorId = do
+  mbAssoc <- QFOA.findByFleetIdAndOperatorId fleetId.getId operatorId.getId True
+  return $ isJust mbAssoc
+
+checkDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkDriverOperatorAssociation driverId operatorId = do
+  mbAssoc <- QDOA.findByDriverIdAndOperatorId driverId operatorId True
+  return $ isJust mbAssoc
+
+checkFleetDriverAndDriverOperatorAssociation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m Bool
+checkFleetDriverAndDriverOperatorAssociation driverId operatorId = do
+  isDriverOperatorAssociated <- checkDriverOperatorAssociation driverId operatorId
+  if isDriverOperatorAssociated
+    then return True
+    else do
+      QFDA.findByDriverId driverId True >>= \case
+        Just fleetDriverAssoc -> checkFleetOperatorAssociation (Id fleetDriverAssoc.fleetOwnerId) operatorId
+        Nothing -> return False

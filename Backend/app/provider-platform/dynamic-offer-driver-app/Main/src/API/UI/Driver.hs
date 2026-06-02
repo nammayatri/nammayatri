@@ -44,6 +44,7 @@ import qualified Domain.Types.Booking as DRB
 import Domain.Types.Common as DI
 import Domain.Types.DriverFee (DriverFeeStatus)
 import qualified Domain.Types.DriverHomeLocation as DDHL
+import qualified Domain.Types.Image as DImage
 import Domain.Types.Invoice (InvoicePaymentMode)
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -172,7 +173,8 @@ type API =
                            :> Post '[JSON] APISuccess
                            :<|> "media"
                              :> TokenAuth
-                             :> MandatoryQueryParam "filePath" Text
+                             :> QueryParam "filePath" Text
+                             :> QueryParam "imageId" (Id DImage.Image)
                              :> Get '[JSON] Text
                        )
               )
@@ -374,8 +376,8 @@ getStatsAllTime = withFlowHandlerAPI . DDriver.getStatsAllTime
 updateMetaData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
 
-fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> FlowHandler Text
-fetchDriverPhoto ids = withFlowHandlerAPI . DDriver.fetchDriverPhoto ids
+fetchDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id DImage.Image) -> FlowHandler Text
+fetchDriverPhoto ids mbFilePath mbImageId = withFlowHandlerAPI $ DDriver.fetchDriverPhoto ids mbFilePath mbImageId
 
 uploadDriverPhoto :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.DriverPhotoUploadReq -> FlowHandler APISuccess
 uploadDriverPhoto req = withFlowHandlerAPI . DDriver.driverPhotoUpload req

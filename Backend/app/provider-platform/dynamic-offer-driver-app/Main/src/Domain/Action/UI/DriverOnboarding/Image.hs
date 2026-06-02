@@ -20,6 +20,7 @@ module Domain.Action.UI.DriverOnboarding.Image
     validateImage,
     validateImageFile,
     getImage,
+    getImageWithAccessCheck,
     imageS3Lock,
     throwValidationError,
     convertHVStatusToValidationStatus,
@@ -54,6 +55,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified SharedLogic.DriverFleetOperatorAssociation as DFOA
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -377,3 +379,15 @@ getImage merchantId imageId = do
   case imageMetadata of
     Just img | img.merchantId == merchantId -> S3.get $ T.unpack img.s3Path
     _ -> pure T.empty
+
+getImageWithAccessCheck :: Id Person.Person -> Id DM.Merchant -> Id Domain.Image -> Flow Text
+getImageWithAccessCheck personId merchantId imageId = do
+  imageMetadata <- Query.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
+  unless (imageMetadata.merchantId == merchantId) $ throwError (ImageAccessDenied imageId.getId)
+  unless (imageMetadata.personId == personId) $ do
+    mbRequestor <- Person.findById personId
+    whenJust mbRequestor $ \requestor -> do
+      imageOwner <- Person.findById imageMetadata.personId >>= fromMaybeM (PersonDoesNotExist imageMetadata.personId.getId)
+      isValid <- DFOA.isAssociationBetweenTwoPerson requestor imageOwner
+      unless isValid $ throwError (ImageAccessDenied imageId.getId)
+  S3.get $ T.unpack imageMetadata.s3Path

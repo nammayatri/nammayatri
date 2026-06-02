@@ -54,6 +54,7 @@ OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
 AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
+DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -486,6 +487,7 @@ run_scheduler() {
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
+run_driver_image() { run_frfs "$DRIVER_IMAGE_DIR" "DRIVER IMAGE" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
@@ -555,6 +557,7 @@ show_help() {
     echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
     echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
     echo "  --setup             Seed toll dashboard access_matrix + provider-dashboard.sql"
+    echo "  driver-image        Run driver image fetch API tests"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -669,6 +672,9 @@ case "${1:-}" in
         ;;
     toll)
         run_toll "${2:-}" "${3:-}"
+        ;;
+    driver-image)
+        run_driver_image "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
