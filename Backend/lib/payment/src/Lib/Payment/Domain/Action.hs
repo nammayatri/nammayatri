@@ -2036,7 +2036,8 @@ mkPayoutOrderStatusRespFromPayout orderId pObj =
       refunds = Nothing,
       payments = Nothing,
       fulfillments = Nothing,
-      customerId = pObj.customerId
+      customerId = pObj.customerId,
+      merchantTopUpAmount = Nothing
     }
 
 txnStripeProccessingKey :: Text -> Text
@@ -2417,6 +2418,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
         createPayoutOrderResp.idAssignedByServiceProvider
         createPayoutOrderResp.transferStatus
         createPayoutOrderResp.transferId
+        createPayoutOrderResp.merchantTopUpAmount
       latestPayoutOrder <- QPayoutOrder.findByOrderId createPayoutServiceReq.orderId
       return (Just createPayoutOrderResp, latestPayoutOrder)
     Just existingPayoutOrder -> throwError $ PayoutOrderAlreadyExists (existingPayoutOrder.id.getId)
@@ -2456,6 +2458,7 @@ createPayoutService merchantId mbMerchantOpCityId _personId mbEntityIds mbEntity
             lastStatusCheckedAt = Nothing,
             pgBaseFee = Nothing,
             pgGst = Nothing,
+            merchantTopUpAmount = Nothing,
             createdAt = now,
             updatedAt = now,
             merchantOperatingCityId = getId <$> mbMerchantOpCityId
