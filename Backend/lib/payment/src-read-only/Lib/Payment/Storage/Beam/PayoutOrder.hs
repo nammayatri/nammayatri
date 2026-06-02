@@ -30,6 +30,7 @@ data PayoutOrderT f = PayoutOrderT
     lastStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantTopUpAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     mobileNoEncrypted :: B.C f Kernel.Prelude.Text,
     mobileNoHash :: B.C f Kernel.External.Encryption.DbHash,
     orderId :: B.C f Kernel.Prelude.Text,
