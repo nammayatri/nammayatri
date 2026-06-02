@@ -61,6 +61,7 @@ import qualified Domain.Types.TransporterConfig as DTMT
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
+import Domain.Utils (mapConcurrently)
 import Environment
 import EulerHS.Prelude ((+||), (||+))
 import Kernel.Beam.Functions as B
@@ -77,6 +78,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Kernel.Utils.DatastoreLatencyCalculator (withTimeAPI)
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithinRadius)
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -305,7 +307,7 @@ handler ValidatedDSearchReq {..} sReq = do
   localTime <- getLocalCurrentTime localTimeZoneSeconds
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOpCityId)
   (_, mbVersion) <- getAppDynamicLogic (cast merchantOpCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime Nothing Nothing
-  allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapM (\tripCategory -> getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
+  allFarePoliciesProduct <- combineFarePoliciesProducts <$> (mapConcurrently (\tripCategory -> withTimeAPI "endRide" "getAllFarePoliciesProduct" $ getAllFarePoliciesProduct merchant.id merchantOpCityId sReq.isDashboardRequest sReq.pickupLocation sReq.dropLocation sReq.fromSpecialLocationId sReq.toSpecialLocationId (Just (TransactionId (Id sReq.transactionId))) fromLocGeohashh toLocGeohash mbDistance mbDuration mbVersion tripCategory configVersionMap) possibleTripOption.tripCategories)
   when (null allFarePoliciesProduct.farePolicies) $ logError $ "No fare policies resolved for transactionId: " <> sReq.transactionId <> ", merchantOpCityId: " <> merchantOpCityId.getId <> ", tripCategories: " <> show possibleTripOption.tripCategories <> ", area: " <> show allFarePoliciesProduct.area <> ", specialLocationTag: " <> show allFarePoliciesProduct.specialLocationTag
   let mbAreaForVST =
         allFarePoliciesProduct.mbPickupDropArea
