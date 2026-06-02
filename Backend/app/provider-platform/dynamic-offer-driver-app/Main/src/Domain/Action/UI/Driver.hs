@@ -129,6 +129,7 @@ import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuratio
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
+import qualified Domain.Action.UI.DriverOnboarding.Image as ImageAction
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Action.UI.DriverReferral as DUR
 import qualified Domain.Action.UI.Merchant as DM
@@ -162,6 +163,7 @@ import qualified Domain.Types.FareParameters as Fare
 import Domain.Types.FarePolicy (DriverExtraFeeBounds (..))
 import qualified Domain.Types.FarePolicy as DFarePolicy
 import qualified Domain.Types.FleetDriverAssociation as FDA
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Invoice as Domain
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Location as DLoc
@@ -2224,8 +2226,13 @@ driverPhotoUpload (driverId, merchantId, merchantOpCityId) DriverPhotoUploadReq 
           _ -> throwError $ FileFormatNotSupported reqContentType
         _ -> throwError $ FileFormatNotSupported reqContentType
 
-fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Text -> Flow Text
-fetchDriverPhoto _ filePath = S3.get $ T.unpack filePath
+fetchDriverPhoto :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe (Id DImage.Image) -> Flow Text
+fetchDriverPhoto (personId, merchantId, _) mbFilePath mbImageId =
+  case mbImageId of
+    Just imageId -> ImageAction.getImageWithAccessCheck personId merchantId imageId
+    Nothing -> case mbFilePath of
+      Just filePath -> S3.get $ T.unpack filePath
+      Nothing -> throwError $ InvalidRequest "Either filePath or imageId must be provided"
 
 createMediaEntry :: Id SP.Person -> Common.AddLinkAsMedia -> Text -> ImageType -> Maybe VehicleRegistrationCertificate -> Flow APISuccess
 createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = do
