@@ -93,6 +93,7 @@ library
     , beckn-spec
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , dynamic-offer-driver-app
     , errors
@@ -181,6 +182,7 @@ executable kafka-consumers-exe
     , beckn-spec
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , errors
     , esqueleto
