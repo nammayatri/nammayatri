@@ -32,6 +32,7 @@ import Domain.Types.Ride
 import qualified Domain.Types.RideRoute as RI
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.Trip as Trip
+import Environment (RideEventsPublisherCfg)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -101,7 +102,8 @@ type LocationUpdateFlow m r c =
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasField "rideEventsPublisherCfg" r (Maybe RideEventsPublisherCfg)
   )
 
 getDeviationForPoint :: LatLong -> [LatLong] -> Meters

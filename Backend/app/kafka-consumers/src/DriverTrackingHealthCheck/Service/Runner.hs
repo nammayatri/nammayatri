@@ -14,8 +14,8 @@
 
 module DriverTrackingHealthCheck.Service.Runner where
 
--- import Consumer.LocationUpdate.Processor
-import Consumer.LocationUpdate.Types (DriverIdTokenKey)
+-- import Processor.LocationUpdate.Processor
+
 import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -33,6 +33,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Service
+import Processor.LocationUpdate.Types (DriverIdTokenKey)
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as DI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as SQP
 import "dynamic-offer-driver-app" Tools.Notifications

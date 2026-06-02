@@ -3,7 +3,7 @@
   Decodes CommunicationDeliveryDispatchPayload and calls driver app's processFleetCommunicationDeliveryPayload.
 -}
 
-module Consumer.FleetCommunication.Processor
+module Processor.FleetCommunication.Processor
   ( processFleetCommunicationDelivery,
   )
 where

@@ -12,26 +12,12 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Consumer.AvailabilityTime.Types where
+module Processor.LocationUpdate.Types where
 
-import Data.OpenApi
-import Data.Time
-import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Types (LatLong)
-import Kernel.Types.Id (Id)
+import Kernel.Prelude
 
-data DriverAvailability = DriverAvailability
-  { id :: Id DriverAvailability,
-    driverId :: DriverId,
-    merchantId :: MerchantId,
-    totalAvailableTime :: Int,
-    lastAvailableTime :: UTCTime,
-    bucketStartTime :: UTCTime,
-    bucketEndTime :: UTCTime,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Show)
+type DriverId = Text
 
 data RideStatus
   = ON_RIDE
@@ -55,14 +41,15 @@ data LocationUpdates = LocationUpdates
   }
   deriving (Generic, FromJSON, ToJSON, Show)
 
-type BucketTimePair = (UTCTime, UTCTime)
+newtype DriverIdTokenKey = DriverIdTokenKey
+  { driverId :: DriverId
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)
 
-type MerchantId = Text
-
-type DriverId = Text
-
-type LastAvailableTime = UTCTime
-
-type SecondsActiveInBucket = Integer
-
-type AvailabilityBucket = Map BucketTimePair (SecondsActiveInBucket, LastAvailableTime)
+-- | Wire format used by the Redis-Stream transport. Bundles the location
+-- update with the driver id (which Kafka carries in the message key).
+data LocationEntry = LocationEntry
+  { driverId :: DriverId,
+    locationUpdate :: LocationUpdates
+  }
+  deriving (Generic, FromJSON, ToJSON, Show)

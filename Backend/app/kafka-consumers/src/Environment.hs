@@ -14,10 +14,12 @@
 
 module Environment where
 
+import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe, show)
 import Kafka.Consumer
 import Kernel.External.Encryption (EncTools)
+import Kernel.External.Types (SchedulerType)
 import qualified Kernel.Prelude
 import qualified Kernel.Prelude as Kernel
 import Kernel.Sms.Config (SmsConfig)
@@ -30,17 +32,19 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
-import Kernel.Types.SlidingWindowCounters
-import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common (CacConfig, CacheConfig)
 import Kernel.Utils.Dhall
 import Kernel.Utils.IOLogging
 import Kernel.Utils.Servant.Client
 import Kernel.Utils.Shutdown
+import Lib.SessionizerMetrics.Prometheus.Internal (EventCounterMetric, registerEventRequestCounterMetric)
+import Lib.SessionizerMetrics.Types.Event (EventStreamMap)
 import Passetto.Client (PassettoContext)
 import Passetto.Lib (mkPassettoContextAuto)
+import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import System.Environment (lookupEnv)
+import Transporter.RedisStream.Types (RedisStreamCfg)
 import Prelude (show)
 
 data ConsumerConfig = ConsumerConfig
@@ -73,18 +77,19 @@ instance FromDhall ConsumerConfig where
         Nothing -> noAutoCommit
         Just v -> autoCommit (Millis $ fromIntegral v)
 
-data ConsumerType = LOCATION_UPDATE | AVAILABILITY_TIME | BROADCAST_MESSAGE | PERSON_STATS | FLEET_COMMUNICATION_DISPATCH deriving (Generic, FromDhall, Read, Eq)
+data ConsumerType = LOCATION_UPDATE | BROADCAST_MESSAGE | FLEET_COMMUNICATION_DISPATCH | RIDE_EVENTS_CONSUMER deriving (Generic, FromDhall, Read, Eq)
 
 type ConsumerRecordD = ConsumerRecord (Maybe ByteString) (Maybe ByteString)
 
 instance Show ConsumerType where
-  show AVAILABILITY_TIME = "availability-time"
   show BROADCAST_MESSAGE = "broadcast-message"
-  show PERSON_STATS = "person-stats"
   show LOCATION_UPDATE = "location-update"
   show FLEET_COMMUNICATION_DISPATCH = "fleet-communication-dispatch"
+  show RIDE_EVENTS_CONSUMER = "ride-events-consumer"
 
-type Seconds' = Integer
+-- | Which transport a given Dhall deployment uses. Each consumer-type Dhall
+-- file picks one; switching is a config change, not a code change.
+data TransportKind = Kafka | RedisStream deriving (Generic, FromDhall, Read, Eq, Show)
 
 type Flow = FlowR AppEnv
 
@@ -100,11 +105,8 @@ data AppCfg = AppCfg
     hedisNonCriticalClusterCfg :: HedisCfg,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
-    dumpEvery :: Seconds,
+    transport :: TransportKind,
     kafkaConsumerCfg :: ConsumerConfig,
-    timeBetweenUpdates :: Seconds',
-    availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
-    granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
     cacheConfig :: CacheConfig,
     cacConfig :: CacConfig,
@@ -125,14 +127,23 @@ data AppCfg = AppCfg
     consumerStartTime :: Maybe Integer,
     consumerEndTime :: Maybe Integer,
     inMemConfig :: CF.InMemConfig,
-    smsCfg :: SmsConfig
+    smsCfg :: SmsConfig,
+    redisStreamCfg :: Maybe RedisStreamCfg,
+    ltsCfg :: LT.LocationTrackingeServiceConfig,
+    eventStreamMap :: [EventStreamMap],
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
+    maxShards :: Int,
+    jobInfoMap :: M.Map Text Bool,
+    blackListedJobs :: [Text],
+    shortDurationRetryCfg :: RetryCfg
   }
   deriving (Generic, FromDhall)
 
 data AppEnv = AppEnv
   { hedisCfg :: HedisCfg,
     consumerType :: ConsumerType,
-    dumpEvery :: Seconds,
+    transport :: TransportKind,
     hostname :: Maybe Text,
     hedisEnv :: HedisEnv,
     ltsHedisEnv :: HedisEnv,
@@ -144,9 +155,6 @@ data AppEnv = AppEnv
     cutOffHedisCluster :: Bool,
     hedisMigrationStage :: Bool,
     kafkaConsumerCfg :: ConsumerConfig,
-    timeBetweenUpdates :: Seconds',
-    availabilityTimeWindowOption :: SWC.SlidingWindowOptions,
-    granualityPeriodType :: PeriodType,
     loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     esqDBEnv :: EsqDBEnv,
@@ -179,7 +187,17 @@ data AppEnv = AppEnv
     inMemEnv :: CF.InMemEnv,
     url :: Maybe Text,
     smsCfg :: SmsConfig,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    redisStreamCfg :: Maybe RedisStreamCfg,
+    ltsCfg :: LT.LocationTrackingeServiceConfig,
+    eventStreamMap :: [EventStreamMap],
+    eventRequestCounter :: EventCounterMetric,
+    schedulerSetName :: Text,
+    schedulerType :: SchedulerType,
+    maxShards :: Int,
+    jobInfoMap :: M.Map Text Bool,
+    blackListedJobs :: [Text],
+    shortDurationRetryCfg :: RetryCfg
   }
   deriving (Generic)
 
@@ -236,6 +254,7 @@ buildAppEnv AppCfg {..} consumerType = do
       Right env -> pure (Just env)
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   coreMetrics <- Metrics.registerCoreMetricsContainer
+  eventRequestCounter <- registerEventRequestCounterMetric
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg secondaryKafkaProducerCfg
