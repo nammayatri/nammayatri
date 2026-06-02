@@ -962,6 +962,21 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
         if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
+      -- Local (non-intercity) bundle, scoped to what the rider actually asked for.
+      -- Cuts wasted DB/ML work for categories the rider didn't pick.
+      localBundleForPreference = case dsReq.riderPreferredOption of
+        DRPO.OneWay ->
+          if isScheduled
+            then [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer]
+            else [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer]
+        DRPO.Rental ->
+          [Rental OnDemandStaticOffer]
+            <> [Rental RideOtp | not isScheduled]
+        DRPO.Ambulance ->
+          [Ambulance OneWayOnDemandDynamicOffer | not isScheduled]
+        DRPO.Delivery ->
+          [Delivery OneWayOnDemandDynamicOffer | not isScheduled]
+        _ -> []
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
           then [OneWay MeterRide]
@@ -977,9 +992,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
                       else do
                         [InterCity OneWayOnDemandStaticOffer destinationTravelCityName]
                           <> (if not isScheduled then [InterCity OneWayRideOtp destinationTravelCityName, InterCity OneWayOnDemandDynamicOffer destinationTravelCityName] else [])
-                  else do
-                    [Rental OnDemandStaticOffer]
-                      <> (if not isScheduled then [OneWay OneWayRideOtp, OneWay OneWayOnDemandDynamicOffer, Ambulance OneWayOnDemandDynamicOffer, Rental RideOtp, Delivery OneWayOnDemandDynamicOffer] else [OneWay OneWayRideOtp, OneWay OneWayOnDemandStaticOffer])
+                  else localBundleForPreference
               Nothing ->
                 [Rental OnDemandStaticOffer]
                   <> [Rental RideOtp | not isScheduled]
