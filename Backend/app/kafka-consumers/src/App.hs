@@ -14,9 +14,9 @@
 
 module App (startKafkaConsumer, runDriverHealthcheck) where
 
-import qualified Consumer.Flow as CF
 import Control.Concurrent hiding (threadDelay)
 import Data.Function
+import "dynamic-offer-driver-app" Domain.Types.Message (MessageDict)
 import DriverTrackingHealthCheck.API
 import qualified DriverTrackingHealthCheck.Service.Runner as Service
 import Environment
@@ -24,7 +24,6 @@ import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as L
 import qualified EulerHS.Runtime as R
-import qualified Kafka.Consumer as Consumer
 import Kernel.Beam.Connection.Flow (prepareConnectionRider)
 import Kernel.Beam.Connection.Types (ConnectionConfigRider (..))
 import qualified Kernel.Beam.Types as KBT
@@ -39,25 +38,35 @@ import qualified Kernel.Utils.FlowLogging as L
 import qualified Kernel.Utils.Servant.Server as Server
 import Kernel.Utils.Shutdown
 import Network.Wai.Handler.Warp
+import qualified Processor.BroadcastMessage.Processor as BMProcessor
+import qualified Processor.FleetCommunication.Processor as FCProcessor
+import qualified Processor.LocationUpdate.Processor as LCProcessor
+import qualified Processor.LocationUpdate.Types as LU
+import qualified Processor.RideEvents.Processor as RideEventsProcessor
 import Servant
 import System.Environment (lookupEnv)
 import SystemConfigsOverride as QSC hiding (id)
+import qualified Transporter.Kafka.Flow as KafkaFlow
+import qualified Transporter.RedisStream.Flow as RSFlow
 
 startKafkaConsumer :: IO ()
 startKafkaConsumer = do
-  consumerType :: ConsumerType <- read . fromMaybe "AVAILABILITY_TIME" <$> lookupEnv "CONSUMER_TYPE"
-  configFile <- CF.getConfigNameFromConsumertype consumerType
+  consumerType :: ConsumerType <- read . fromMaybe "RIDE_EVENTS_CONSUMER" <$> lookupEnv "CONSUMER_TYPE"
+  configFile <- KafkaFlow.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
+  -- LOCATION_UPDATE is the only consumer that also runs the driver health-check
+  -- HTTP server in the same process. Both transport paths get it.
   when (consumerType == LOCATION_UPDATE) (void $ forkIO $ runDriverHealthcheck appCfg appEnv)
-  startConsumerWithEnv appCfg appEnv
+  startConsumer appCfg appEnv
 
-startConsumerWithEnv :: AppCfg -> AppEnv -> IO ()
-startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
-  kafkaConsumer <- newKafkaConsumer
+-- | Bootstrap the EulerHS flow runtime + DB/Redis connections, then hand off
+-- to whichever transport is configured.
+startConsumer :: AppCfg -> AppEnv -> IO ()
+startConsumer appCfg appEnv = do
   let loggerRuntime = L.getEulerLoggerRuntime appEnv.hostname appEnv.loggerConfig
   R.withFlowRuntime (Just loggerRuntime) $ \flowRt' -> do
-    managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty -- default manager is created
+    managers <- managersFromManagersSettings appCfg.httpClientOptions.timeoutMs mempty
     let flowRt = flowRt' {L._httpClientManagers = managers}
     runFlow
       flowRt
@@ -84,13 +93,67 @@ startConsumerWithEnv appCfg appEnv@AppEnv {..} = do
             threadDelay (appCfg.kvConfigUpdateFrequency * 1000000)
         )
       pure flowRt
-    CF.runConsumer flowRt'' appEnv consumerType kafkaConsumer
-  where
-    newKafkaConsumer =
-      either (error . ("Unable to open a kafka consumer: " <>) . show) id
-        <$> Consumer.newConsumer
-          (kafkaConsumerCfg.consumerProperties)
-          (Consumer.topics kafkaConsumerCfg.topicNames)
+    case appEnv.transport of
+      Kafka -> startKafkaTransport flowRt'' appEnv
+      RedisStream -> startRedisStreamTransport flowRt'' appEnv
+
+------------------------------------------------------------
+-- Kafka transport dispatch
+------------------------------------------------------------
+
+startKafkaTransport :: L.FlowRuntime -> AppEnv -> IO ()
+startKafkaTransport flowRt appEnv = do
+  kc <- KafkaFlow.newKafkaConsumer appEnv
+  case appEnv.consumerType of
+    RIDE_EVENTS_CONSUMER ->
+      KafkaFlow.runPerEvent flowRt appEnv kc $ \event _key ->
+        RideEventsProcessor.processRideEnded event
+    BROADCAST_MESSAGE ->
+      KafkaFlow.runPerEvent flowRt appEnv kc BMProcessor.broadcastMessage
+    FLEET_COMMUNICATION_DISPATCH ->
+      KafkaFlow.runPerEvent flowRt appEnv kc $ \payload _key ->
+        FCProcessor.processFleetCommunicationDelivery payload
+    LOCATION_UPDATE -> do
+      let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
+          batchSize = maybe 100 (fromIntegral . (.batchSize)) appEnv.healthCheckAppCfg
+      KafkaFlow.runBatch flowRt appEnv kc batchSize $ \batch ->
+        LCProcessor.processLocationData enabledCityIds batch
+
+------------------------------------------------------------
+-- Redis-Stream transport dispatch
+------------------------------------------------------------
+
+startRedisStreamTransport :: L.FlowRuntime -> AppEnv -> IO ()
+startRedisStreamTransport flowRt appEnv = do
+  cfg <-
+    appEnv.redisStreamCfg
+      & maybe (error "RedisStream transport selected but redisStreamCfg is missing from dhall config") pure
+  let instanceName = fromMaybe "kafka-consumers" appEnv.hostname
+  case appEnv.consumerType of
+    RIDE_EVENTS_CONSUMER ->
+      RSFlow.run flowRt appEnv cfg instanceName RideEventsProcessor.processRideEnded
+    BROADCAST_MESSAGE ->
+      RSFlow.run flowRt appEnv cfg instanceName $ \BroadcastEntry {messageDict, driverId} ->
+        BMProcessor.broadcastMessage messageDict driverId
+    FLEET_COMMUNICATION_DISPATCH ->
+      RSFlow.run flowRt appEnv cfg instanceName FCProcessor.processFleetCommunicationDelivery
+    LOCATION_UPDATE -> do
+      let enabledCityIds = maybe [] (.enabledMerchantCityIds) appEnv.healthCheckAppCfg
+      RSFlow.runBatch flowRt appEnv cfg instanceName $ \(entries :: [LU.LocationEntry]) ->
+        LCProcessor.processLocationData enabledCityIds (map (\e -> (e.locationUpdate, e.driverId)) entries)
+
+-- | Wire format for BROADCAST_MESSAGE on the Redis-Stream transport.
+-- Kafka carries the driver id in the message key; for RedisStream we bundle
+-- it with the payload.
+data BroadcastEntry = BroadcastEntry
+  { messageDict :: MessageDict,
+    driverId :: Text
+  }
+  deriving (Generic, FromJSON)
+
+------------------------------------------------------------
+-- Health-check sidecar (LOCATION_UPDATE only)
+------------------------------------------------------------
 
 runDriverHealthcheck :: AppCfg -> AppEnv -> IO ()
 runDriverHealthcheck appCfg appEnv = do

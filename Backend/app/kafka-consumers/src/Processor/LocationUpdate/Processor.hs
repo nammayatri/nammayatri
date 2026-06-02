@@ -12,12 +12,11 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Consumer.LocationUpdate.Processor
+module Processor.LocationUpdate.Processor
   ( processLocationData,
   )
 where
 
-import qualified Consumer.AvailabilityTime.Types as T
 import qualified Data.HashMap.Strict as HM
 import Data.Time
 import Data.Time.Clock.POSIX
@@ -26,6 +25,7 @@ import Environment
 import EulerHS.Prelude hiding (toStrict)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Utils.Logging (logDebug)
+import qualified Processor.LocationUpdate.Types as T
 
 processLocationData :: [Text] -> [(T.LocationUpdates, T.DriverId)] -> Flow ()
 processLocationData enabledMerchantCityIds locationData = do

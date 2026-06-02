@@ -96,6 +96,15 @@ dependencies:
   - beckn-spec
   - passetto-client
   - passetto-lib
+  - behavior-engine
+  - behavior-tracker
+  - location-updates
+  - scheduler
+  - special-zone-a
+  - yudhishthira
+  - async
+  - unliftio
+  - utils
 
 ghc-options:
   - -Wall

@@ -382,6 +382,7 @@ library
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
       Domain.Types.DriverWallet
+      Domain.Types.Event.RideEndedEvent
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
       Domain.Types.Extra.DriverFee
@@ -551,6 +552,7 @@ library
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
       SharedLogic.Ride
+      SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade

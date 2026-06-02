@@ -27,21 +27,21 @@ flag Local
 library
   exposed-modules:
       App
-      Consumer.AvailabilityTime.Processor
-      Consumer.AvailabilityTime.Storage.Beam.Tables
-      Consumer.AvailabilityTime.Storage.Queries
-      Consumer.AvailabilityTime.Storage.Tables
-      Consumer.AvailabilityTime.Types
-      Consumer.BroadcastMessage.Processor
-      Consumer.CustomerStats.Processor
-      Consumer.FleetCommunication.Processor
-      Consumer.Flow
-      Consumer.LocationUpdate.Processor
-      Consumer.LocationUpdate.Types
       DriverTrackingHealthCheck.API
       DriverTrackingHealthCheck.Service.Runner
       Environment
+      Processor.BroadcastMessage.Processor
+      Processor.FleetCommunication.Processor
+      Processor.LocationUpdate.Processor
+      Processor.LocationUpdate.Types
+      Processor.RideEvents.Handlers
+      Processor.RideEvents.Idempotency
+      Processor.RideEvents.InternalHelpers
+      Processor.RideEvents.Processor
       SystemConfigsOverride
+      Transporter.Kafka.Flow
+      Transporter.RedisStream.Flow
+      Transporter.RedisStream.Types
   other-modules:
       Paths_kafka_consumers
   hs-source-dirs:
@@ -86,11 +86,14 @@ library
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql
     , beam-postgres
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , cereal
     , containers
@@ -100,6 +103,7 @@ library
     , euler-hs
     , hedis
     , hw-kafka-client
+    , location-updates
     , mobility-core
     , monad-control
     , openapi3
@@ -111,17 +115,22 @@ library
     , record-dot-preprocessor
     , record-hasfield
     , rider-app
+    , scheduler
     , sequelize
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , special-zone-a
     , streamly
     , template-haskell
     , text
     , time
+    , unliftio
     , unordered-containers
+    , utils
     , uuid
     , warp
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
@@ -174,11 +183,14 @@ executable kafka-consumers-exe
   ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
+    , async
     , base >=4.7 && <5
     , beam-core
     , beam-mysql
     , beam-postgres
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , cereal
     , containers
@@ -188,6 +200,7 @@ executable kafka-consumers-exe
     , hedis
     , hw-kafka-client
     , kafka-consumers
+    , location-updates
     , mobility-core
     , monad-control
     , openapi3
@@ -198,17 +211,22 @@ executable kafka-consumers-exe
     , postgresql-simple
     , record-dot-preprocessor
     , record-hasfield
+    , scheduler
     , sequelize
     , servant-openapi3
     , servant-server
     , sessionizer-metrics
+    , special-zone-a
     , streamly
     , template-haskell
     , text
     , time
+    , unliftio
     , unordered-containers
+    , utils
     , uuid
     , warp
+    , yudhishthira
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4

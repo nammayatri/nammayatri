@@ -20,6 +20,7 @@ module Domain.Action.UI.Ride.EndRide
     CronJobEndRideReq (..),
     EndRideResp (..),
     EndRideFlow,
+    RideInterpolationData (..),
     callBasedEndRide,
     buildEndRideHandle,
     driverEndRide,
@@ -29,8 +30,6 @@ module Domain.Action.UI.Ride.EndRide
 where
 
 import qualified Beckn.OnDemand.Utils.Common as BODUC
-import qualified Data.Aeson as A
-import Data.Either.Extra (eitherToMaybe)
 -- import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Data.HashMap.Strict as HM
 import Data.Maybe (listToMaybe)
@@ -55,11 +54,9 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RD
 import qualified Domain.Types.TransporterConfig as DTConf
-import qualified Domain.Types.Yudhishthira as Y
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pi)
 import Kernel.Beam.Functions (runInMasterDbAndRedis)
-import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps
 import qualified Kernel.External.Maps.Interface.Types as Maps
@@ -81,19 +78,13 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common hiding (Days)
 import Kernel.Utils.DatastoreLatencyCalculator
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
-import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
-import qualified Lib.BehaviorTracker.Snapshot as BTSnap
-import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.LocationUpdates.Internal as LocUpdInternal
 import Lib.Scheduler.Environment (JobCreator)
 import qualified Lib.Types.SpecialLocation as SL
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Lib.Yudhishthira.Types as Yudhishthira
-import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -121,7 +112,6 @@ import qualified Storage.Queries.RideDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.StopInformation as QSI
 import qualified Toll.SharedLogic.TollsDetector as TollsDetector
-import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Maps as TM
 import qualified Tools.Notifications as TN
@@ -540,10 +530,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
                           _ ->
                             (updRide.tollCharges, updRide.tollNames, updRide.tollIds, Nothing)
 
-                fork "ride-interpolation" $ do
-                  interpolatedPoints <- getInterpolatedPoints updRide.driverId
-                  let rideInterpolationData = RideInterpolationData {interpolatedPoints = interpolatedPoints, rideId = updRide.id}
-                  when (isJust updRide.driverDeviatedToTollRoute && tollConfidence == Just Sure && ((maybe True (== 0) tollCharges && isJust updRide.estimatedTollCharges) || fromMaybe False (((,) <$> tollCharges <*> updRide.estimatedTollCharges) <&> \(tollCharges', estimatedTollCharges') -> tollCharges' /= estimatedTollCharges'))) $ pushToKafka rideInterpolationData "ride-interpolated-waypoints" updRide.id.getId
+                -- Ride-interpolation Kafka push moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
                 let ride = updRide{tollCharges = tollCharges, tollNames = tollNames, tollIds = tollIds, tollConfidence = tollConfidence, distanceCalculationFailed = Just distanceCalculationFailed}
 
@@ -602,18 +589,14 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
           CallBasedReq callBasedReq -> Just callBasedReq.requestor
           _ -> Nothing
     mbDriver <- maybe (QP.findById driverId) (pure . Just) mbDriverFromReq
-    mbRiderDetails <- join <$> (QRiderDetails.findById `mapM` booking.riderId)
     riderBlockedForCoins <- QRiderDetails.isRiderFlaggedForCoinZero booking.riderId
-    let mbDriverMobileHash = (.hash) <$> (mbDriver >>= (.mobileNumber))
-        mbRiderMobileHash = (.hash) . (.mobileNumber) <$> mbRiderDetails
-        isDriverSameAsCustomer = isJust mbDriverMobileHash && isJust mbRiderMobileHash && mbDriverMobileHash == mbRiderMobileHash
-        merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
-        rideDurationSeconds = maybe 0 (\tStart -> max 0 $ roundToIntegral (diffUTCTime now tStart)) updRide'.tripStartTime
+    let merchantLocalDay = utctDay $ addUTCTime (secondsToNominalDiffTime thresholdConfig.timeDiffFromUtc) now
     priorRidesSameCustomer <- QRide.countPriorCompletedRidesWithSameCustomer (cast driverId) booking.riderId updRide'.id merchantLocalDay thresholdConfig.sameRiderDriverRideCountLookbackDays
     let shouldBlockCoinsForSameRiderFlow = riderBlockedForCoins || priorRidesSameCustomer > thresholdConfig.sameRiderDriverRideCountThreshold
     when shouldBlockCoinsForSameRiderFlow $ QRiderDetails.flagRiderForCoinZero booking.riderId
-    newRideTags <- withTryCatch "computeNammaTags:RideEnd" (LYDL.computeNammaTagsWithDebugLog LYDL.Driver (cast booking.merchantOperatingCityId) Yudhishthira.RideEnd (Just booking.transactionId) (Y.EndRideTagData updRide' booking isDriverSameAsCustomer shouldBlockCoinsForSameRiderFlow rideDurationSeconds))
-    let updRide = updRide' {DRide.rideTags = ride.rideTags <> eitherToMaybe newRideTags}
+    -- Namma-tags computation moved to kafka-consumers RIDE_EVENTS_CONSUMER. Tags are
+    -- written back to the ride asynchronously by the handler.
+    let updRide = updRide'
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
@@ -643,56 +626,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
             DC.incrementOTPValidRideCount driverId expirationPeriod 1
             DC.driverCoinsEvent driverId mbDriver booking.providerId booking.merchantOperatingCityId (DCT.EndRide (isJust booking.disabilityTag) (booking.coinsRewardedOnGoldTierRide) updRide metroRideType DCT.OTPRideTrip) (Just ride.id.getId) ride.vehicleVariant (Just booking.vehicleServiceTier) (Just booking.configInExperimentVersions)
 
-    -- GPS Toll Behavior Check - evaluate if driver intentionally turned off GPS on toll route
-    when thresholdConfig.enableGpsTollBehavior $ do
-      fork "GpsTollBehavior Check" $ do
-        let isTollRide = isJust updRide.estimatedTollCharges || isJust updRide.tollCharges
-            gpsTurnedOff = fromMaybe False updRide.driverGpsTurnedOff
-        when isTollRide $ do
-          logInfo $ "GPS toll behavior check for DriverId: " <> driverId.getId <> ", RideId: " <> updRide.id.getId
-          let windowDays = fromMaybe 15 thresholdConfig.gpsTollBehaviorWindowDays
-              counterConfig =
-                BTT.CounterConfig
-                  { windowSizeDays = 30,
-                    counters = [BTT.ACTION_COUNT],
-                    periods = [BTT.mkPeriodConfig "window" (toInteger windowDays)]
-                  }
-          eventTime <- getCurrentTime
-          let actionEvent =
-                BTT.ActionEvent
-                  { entityType = BTT.DRIVER,
-                    entityId = driverId.getId,
-                    actionType = "GPS_TOLL_BAD_BEHAVIOR",
-                    merchantOperatingCityId = booking.merchantOperatingCityId.getId,
-                    flowContext = A.object [],
-                    eventData =
-                      A.object
-                        [ "estimatedTollCharges" A..= updRide.estimatedTollCharges,
-                          "estimatedTollNames" A..= updRide.estimatedTollNames,
-                          "estimatedTollIds" A..= updRide.estimatedTollIds,
-                          "detectedTollCharges" A..= updRide.tollCharges,
-                          "detectedTollNames" A..= updRide.tollNames,
-                          "detectedTollIds" A..= updRide.tollIds,
-                          "gpsTurnedOffInCurrentRide" A..= gpsTurnedOff
-                        ],
-                    timestamp = eventTime
-                  }
-              entityState = A.object []
-              fetchRules = \domain -> do
-                localTime <- getLocalCurrentTime thresholdConfig.timeDiffFromUtc
-                getAppDynamicLogic (cast booking.merchantOperatingCityId) domain localTime Nothing Nothing
-          snapshot <- BTSnap.buildSnapshot counterConfig actionEvent entityState
-          output <- BEOrch.orchestrate snapshot LYDL.Driver (cast booking.merchantOperatingCityId) LYT.GPS_TOLL_BEHAVIOR fetchRules
-          logInfo $ "GPS Toll Behavior evaluation result: consequences=" <> show (length output.consequences) <> ", communications=" <> show (length output.communications)
-          let dispatchCtx =
-                BehaviorDispatch.DispatchContext
-                  { merchantId = booking.providerId,
-                    merchantOperatingCityId = booking.merchantOperatingCityId,
-                    counterConfig = Just counterConfig,
-                    actionEvent = Just actionEvent
-                  }
-          BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
-          BehaviorDispatch.handleCommunications driverId output.communications
+    -- GPS toll-behavior check moved to kafka-consumers RIDE_EVENTS_CONSUMER.
 
     computeEligibleUpgradeTiers ride thresholdConfig
     mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do

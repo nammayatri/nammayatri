@@ -76,6 +76,15 @@ import Tools.Metrics
 import TransactionLogs.Types hiding (ONDC)
 import qualified UrlShortner.Common as UrlShortner
 
+-- | Publisher-side config for the Redis-Stream ride-events pipeline.
+-- shardCount MUST match the consumer-side shardCount and is effectively
+-- immutable post-launch (raising N strands in-flight entries on old shards).
+data RideEventsPublisherCfg = RideEventsPublisherCfg
+  { streamPrefix :: Text,
+    shardCount :: Int
+  }
+  deriving (Generic, FromDhall, Show)
+
 data AppCfg = AppCfg
   { esqDBCfg :: EsqDBConfig,
     esqDBReplicaCfg :: EsqDBConfig,
@@ -184,7 +193,8 @@ data AppCfg = AppCfg
     blackListedJobs :: [Text],
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
-    enableLtsPoolDataForPooling :: Bool
+    enableLtsPoolDataForPooling :: Bool,
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic, FromDhall)
 
@@ -312,7 +322,8 @@ data AppEnv = AppEnv
     ttenTokenCacheExpiry :: Seconds,
     masterCloudProxyConfig :: MCF.MasterCloudProxyConfig,
     masterCloudForwarderManager :: Http.Manager,
-    enableLtsPoolDataForPooling :: Bool
+    enableLtsPoolDataForPooling :: Bool,
+    rideEventsPublisherCfg :: Maybe RideEventsPublisherCfg
   }
   deriving (Generic)
 
