@@ -216,9 +216,15 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         $ throwError $ DocumentAlreadyValidated (show imageType)
 
       imagePath <- createPath personId.getId merchantId.getId imageType fileExtension
-      fork "S3 Put Image" do
-        Redis.withLockRedis (imageS3Lock imagePath) 5 $
-          S3.put (T.unpack imagePath) image
+      s3Result <-
+        withTryCatch "S3:put:uploadImage" $
+          Redis.withLockRedis (imageS3Lock imagePath) 5 $
+            S3.put (T.unpack imagePath) image
+      case s3Result of
+        Left err -> do
+          logError $ "Image upload failed to S3:" <> show err
+          throwError $ InternalError ("Image upload failed. Please try again")
+        Right _ -> pure ()
       imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
       Query.create imageEntity
 
