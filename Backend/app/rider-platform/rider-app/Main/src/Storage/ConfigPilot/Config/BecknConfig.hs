@@ -10,10 +10,11 @@ import qualified Domain.Types.BecknConfig as DBC
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import Storage.ConfigPilot.Interface.Getter
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.BecknConfig as SQBC
 
 data BecknConfigDimensions = BecknConfigDimensions
@@ -36,11 +37,11 @@ instance ConfigDimensions BecknConfigDimensions where
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
     let mId = a.merchantId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
       cfgs <- SQBC.findByMerchantId (Just (Id mId))
       let filtered = filterByDimensions a cfgs
       let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
+      mapM (\configWrapper -> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG BecknConfig) (Id mocId)) configWrappers
   filterByDimensions dims cfgs =
     let foundCfg = filter matchesDimsMocId cfgs
      in if null foundCfg

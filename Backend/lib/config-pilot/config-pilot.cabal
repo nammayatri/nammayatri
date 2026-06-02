@@ -23,6 +23,7 @@ library
   exposed-modules:
       Lib.ConfigPilot.Config.CommonConfig
       Lib.ConfigPilot.Interface.Getter
+      Lib.ConfigPilot.Interface.Setter
       Lib.ConfigPilot.Interface.Types
   other-modules:
       Paths_config_pilot
