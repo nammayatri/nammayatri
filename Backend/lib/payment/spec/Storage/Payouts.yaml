@@ -42,6 +42,7 @@ PayoutOrder:
     retriedOrderId : Maybe Text
     pgBaseFee : Maybe HighPrecMoney
     pgGst : Maybe HighPrecMoney
+    merchantTopUpAmount : Maybe HighPrecMoney
   beamFields:
     amount:
       currency: Maybe Currency

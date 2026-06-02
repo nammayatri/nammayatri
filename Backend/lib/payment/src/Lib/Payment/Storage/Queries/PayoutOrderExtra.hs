@@ -93,8 +93,9 @@ updatePostCreateFieldsSafely ::
   Maybe Text ->
   Maybe Payout.TransferStatus ->
   Maybe Payout.TransferId ->
+  Maybe HighPrecMoney ->
   m ()
-updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbAccountDetailsType mbPgBaseFee mbPgGst idAssignedByServiceProvider transferStatus transferId = do
+updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbAccountDetailsType mbPgBaseFee mbPgGst idAssignedByServiceProvider transferStatus transferId mbMerchantTopUpAmount = do
   now <- getCurrentTime
   -- Update status only if still in initial placeholder state.
   updateWithKV
@@ -105,7 +106,8 @@ updatePostCreateFieldsSafely orderId status mbResponseCode mbResponseMessage mbA
       Se.Set Beam.updatedAt now,
       Se.Set Beam.idAssignedByServiceProvider idAssignedByServiceProvider,
       Se.Set Beam.transferStatus transferStatus,
-      Se.Set Beam.transferId (transferId <&> (.getTransferId))
+      Se.Set Beam.transferId (transferId <&> (.getTransferId)),
+      Se.Set Beam.merchantTopUpAmount mbMerchantTopUpAmount
     ]
     [ Se.And
         [ Se.Is Beam.orderId $ Se.Eq orderId,
