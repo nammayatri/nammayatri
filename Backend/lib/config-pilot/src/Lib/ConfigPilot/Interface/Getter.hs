@@ -1,6 +1,6 @@
 -- | Config getter: re-exports getConfig for external use.
 module Lib.ConfigPilot.Interface.Getter
-  ( getConfigImplWith,
+  ( getConfigImpl,
     invalidateConfigInMem,
     configPilotInMemKey,
     PersonIdKey (..),
@@ -21,12 +21,13 @@ import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
 import Kernel.Types.CacheFlow (HasInMemEnv)
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, throwError)
+import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, throwError)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
+import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
+import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
+import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra as CADLE
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified Lib.Yudhishthira.Types.AppDynamicLogicElement as LYT
-import qualified Lib.Yudhishthira.Types.AppDynamicLogicRollout as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 
 -- | Key for storing personId in EulerHS option local context.
@@ -43,27 +44,23 @@ data TxnIdKey = TxnIdKey
 
 instance OptionEntity TxnIdKey Text
 
--- | Core config-fetching logic, parameterised over the two Yudhishthira
--- query functions so that this module does not need @BeamFlow@ / @HasSchemaName@.
--- Each app provides a thin wrapper that passes the concrete query functions
--- (with orphan @HasSchemaName@ instances in scope).
-getConfigImplWith ::
+-- | Core config-fetching logic. Requires 'HasYudhishthiraTablesSchema' so that
+-- callers must have the app-level orphan @HasSchemaName@ instances in scope.
+getConfigImpl ::
   forall configTypeDimensions b m r.
-  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
-  (Id LYT.MerchantOperatingCity -> LYT.LogicDomain -> m [LYT.AppDynamicLogicRollout]) ->
-  (Maybe Int -> Maybe Int -> LYT.LogicDomain -> [Int] -> m [LYT.AppDynamicLogicElement]) ->
+  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, BeamFlow.BeamFlow m r) =>
   configTypeDimensions ->
   LYT.Config b ->
   LYT.LogicDomain ->
   Id LYT.MerchantOperatingCity ->
   m b
-getConfigImplWith findActiveRollouts findElementsByDomainAndVersions _dimensions wrappedConfig logicDomain merchantOpCityId = do
+getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
   mTxnId <- L.getOptionLocal TxnIdKey
   activeElementVersions <-
     case mTxnId of
       Just txnId -> getTxnIdStickyVersions txnId
       Nothing -> getActiveRolloutVersionsWithToss
-  allActiveElements <- findElementsByDomainAndVersions Nothing Nothing logicDomain activeElementVersions
+  allActiveElements <- CADLE.findByDomainAndVersions Nothing Nothing logicDomain activeElementVersions
   let baseLogics = map (.logic) allActiveElements
   resp <- LYTU.runLogics baseLogics wrappedConfig
   case A.fromJSON resp.result of
@@ -82,7 +79,7 @@ getConfigImplWith findActiveRollouts findElementsByDomainAndVersions _dimensions
           pure versions
 
     getActiveRolloutVersionsWithToss = do
-      allActiveRollouts <- findActiveRollouts merchantOpCityId logicDomain
+      allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
       let nonBaseRollouts = filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
       let cumulativeRollouts = buildCumulativeRollouts nonBaseRollouts
       toss <- getRandomInRange (1, 100 :: Int)
