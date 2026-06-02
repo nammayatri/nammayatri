@@ -52,11 +52,6 @@ updateCancellationFeeStatus cancellationFeeStatus id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.cancellationFeeStatus cancellationFeeStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationFeeTax :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFeeTax cancellationFeeTax id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationFeeTax cancellationFeeTax, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateDestinationReachedAt :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateDestinationReachedAt destinationReachedAt id = do
   _now <- getCurrentTime

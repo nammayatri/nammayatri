@@ -110,13 +110,11 @@ module SharedLogic.Finance.RidePayment
     getPayoutEligibilityData,
     reserveCashbackEntriesForPayout,
     releaseCashbackEntriesReservation,
-    markCashbackEntriesAsDue,
     markCashbackEntriesAsPaidOut,
     voidRidePaymentLedger,
     voidRidePaymentEntriesAndInvoice,
     createTipLedger,
     regenerateRideTipInvoice,
-    createCancellationFeeLedger,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
@@ -636,19 +634,18 @@ getPayoutEligibilityData counterparty personId = do
   case mbAccount of
     Nothing -> pure (0, [])
     Just Account {id = accountId, balance = walletBalance} -> do
-      unsettledDueEntries <-
-        Lib.Finance.Ledger.Service.findUnsettledByAccountBeforeTimeByStatuses accountId now [LE.DUE, LE.SETTLED]
-      let entriesWithNet = map (\e -> (e, netAmountForAccount accountId e)) unsettledDueEntries
+      unsettledEntries <- Lib.Finance.Ledger.Service.findUnsettledByAccountBeforeTime accountId now
+      let entriesWithNet = map (\e -> (e, netAmountForAccount accountId e)) unsettledEntries
           totalNet = sum (map snd entriesWithNet)
       when (walletBalance < totalNet) $ do
         logError $
           "Wallet balance less than net amount for person: " <> personId.getId
             <> " wallet balance: "
             <> show walletBalance
-            <> " unsettled due entries net amount: "
+            <> " unsettled entries net amount: "
             <> show totalNet
-            <> " unsettled due entries: "
-            <> show (map (\e -> (e.id, e.amount)) unsettledDueEntries)
+            <> " unsettled entries: "
+            <> show (map (\e -> (e.id, e.amount)) unsettledEntries)
         throwError $ InvalidRequest "Wallet balance less than net amount"
       pure (walletBalance, entriesWithNet)
 
@@ -680,19 +677,8 @@ releaseCashbackEntriesReservation ::
   [Id LE.LedgerEntry] ->
   m ()
 releaseCashbackEntriesReservation entryIds = do
-  Lib.Finance.Ledger.Service.revertProcessingEntriesToUnsettled entryIds
+  Lib.Finance.Ledger.Service.markEntriesAsUnsettled entryIds
   logInfo $ "Released cashback entries reservation (" <> show (length entryIds) <> " entries reverted to UNSETTLED)"
-
--- | Mark cashback ledger entries as DUE after a failed payout submission.
---   Used to flag the original cashback accrual entries so a future retry
---   knows they still need to be paid out.
-markCashbackEntriesAsDue ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
-  [Id LE.LedgerEntry] ->
-  m ()
-markCashbackEntriesAsDue entryIds = do
-  forM_ entryIds $ \eid -> Lib.Finance.Ledger.Service.updateEntryStatus eid LE.DUE
-  logInfo $ "Marked " <> show (length entryIds) <> " cashback entries as DUE"
 
 -- | Called after a successful payout submission (and on the Juspay webhook
 --   replay) for a RIDE_OFFER_CASHBACK payout. Posts the drain transfer
@@ -899,74 +885,6 @@ createTipLedger ctx tipAmount = do
       logError $ "Failed to create tip ledger: " <> show err
       pure $ Left err
     Right (_, entryIds) -> pure $ Right entryIds
-
--- ---------------------------------------------------------------------------
--- 5. Cancellation fee ledger entries
--- ---------------------------------------------------------------------------
-
--- | Create ledger entries for cancellation fee. 3-leg pass-through, SETTLED
---   immediately (cash already captured via payment intent). Same online
---   rider-obligation shape as ride-fare.
-createCancellationFeeLedger ::
-  (BeamFlow.BeamFlow m r, MonadFlow m) =>
-  FinanceCtx ->
-  HighPrecMoney -> -- cancellationFee (without GST)
-  HighPrecMoney -> -- cancellationGST
-  m (Either FinanceError (Maybe (Id FInvoice.Invoice), [Id LE.LedgerEntry]))
-createCancellationFeeLedger ctx cancellationFee cancellationGST = do
-  result <- runFinance ctx $ do
-    transfer_ BuyerAsset OwnerLiability cancellationFee ridePaymentRefCancellationFee
-    transfer_ BuyerAsset OwnerLiability cancellationGST ridePaymentRefCancellationGST
-    transfer_ BuyerExternal BuyerAsset cancellationFee ridePaymentRefCancellationFee
-    transfer_ BuyerExternal BuyerAsset cancellationGST ridePaymentRefCancellationGST
-    transfer_ OwnerLiability BuyerExternal cancellationFee ridePaymentRefCancellationFee
-    transfer_ OwnerLiability BuyerExternal cancellationGST ridePaymentRefCancellationGST
-    -- Invoice for cancellation
-    invoice
-      InvoiceConfig
-        { invoiceType = RideCancellation,
-          issuedToType = DInvType.RIDER,
-          issuedToId = ctx.counterpartyId,
-          issuedToName = Nothing,
-          issuedToAddress = ctx.fromLocationAddress,
-          referenceId = Just ctx.referenceId,
-          lineItems =
-            filter
-              (\li -> li.lineTotal > 0)
-              [ InvoiceLineItem
-                  { description = "Cancellation Fee",
-                    descriptionType = Just CancellationFee,
-                    quantity = 1,
-                    unitPrice = cancellationFee,
-                    lineTotal = cancellationFee,
-                    isExternalCharge = False,
-                    groupId = Just "g-cancel",
-                    itemType = Just Fare
-                  },
-                InvoiceLineItem
-                  { description = "Cancellation Fee VAT",
-                    descriptionType = Just CancellationFeeVat,
-                    quantity = 1,
-                    unitPrice = cancellationGST,
-                    lineTotal = cancellationGST,
-                    isExternalCharge = False,
-                    groupId = Just "g-cancel",
-                    itemType = Just Tax
-                  }
-              ],
-          gstBreakdown = Nothing,
-          isVat = False,
-          issuedToTaxNo = Nothing,
-          issuedByTaxNo = Nothing,
-          paymentMode = Just "ONLINE", -- BAP cancellation fee is settled via Stripe at this point
-          periodStart = Nothing,
-          periodEnd = Nothing
-        }
-  case result of
-    Left err -> do
-      logError $ "Failed to create cancellation fee ledger: " <> show err
-      pure $ Left err
-    Right (mbInvoiceId, entryIds) -> pure $ Right (mbInvoiceId, entryIds)
 
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or

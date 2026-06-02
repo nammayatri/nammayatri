@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, sandbox_proxy
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -105,8 +105,9 @@ ROUTES = [
     ("/mmi",         mmi,         "mmi"),
     ("/nextbillion", nextbillion, "nextbillion"),
     ("/gridline",    gridline,    "gridline"),
-    ("/nandi",       transit,     "transit"),
-    ("/gtfs",        transit,     "transit"),
+    ("/nandi",         sandbox_proxy, "nandi"),
+    ("/gtfs-inmemory", sandbox_proxy, "gtfs_inmemory"),
+    ("/gtfs",          transit,       "transit"),
     ("/hyperverge",  hyperverge,  "hyperverge"),
     ("/gullak",      gullak,      "gullak"),
     ("/openai",      openai,      "openai"),
@@ -1065,6 +1066,24 @@ class MockHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _raw(self, status, content_type, body, extra_headers=None):
+        if isinstance(body, str):
+            body = body.encode()
+        try:
+            self._captured_status = status
+            self._captured_response_body = _truncate_for_hit(body)
+            self._captured_response_headers = {"Content-Type": content_type, "Content-Length": str(len(body))}
+        except Exception:
+            pass
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        if extra_headers:
+            for k, v in extra_headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 

@@ -104,6 +104,7 @@ import qualified SharedLogic.BehaviourManagement.CustomerCancellationRate as CCR
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CancellationFee as CancellationFee
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
@@ -206,6 +207,7 @@ data ValidatedRideAssignedReq = ValidatedRideAssignedReq
     isFreeRide :: Bool,
     vehicleAge :: Maybe Months,
     onlinePaymentParameters :: Maybe OnlinePaymentParameters,
+    driverAccountId :: Maybe Payment.AccountId,
     previousRideEndPos :: Maybe LatLong,
     booking :: DRB.Booking,
     bppUri :: Maybe BaseUrl,
@@ -397,7 +399,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         feedbackSkipped = False,
         tollConfidence = Nothing,
         distanceUnit = booking.distanceUnit,
-        driverAccountId = req.onlinePaymentParameters <&> (.driverAccountId),
+        driverAccountId = req.driverAccountId,
         paymentStatus = DRide.NotInitiated,
         refundRequestStatus = Nothing,
         vehicleAge = req.vehicleAge,
@@ -419,7 +421,6 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
         cancellationChargesOnCancel = Nothing,
-        cancellationFeeTax = Nothing,
         pickupEtaLogicVersion = Nothing,
         -- Commission is provider-side data, calculated on BPP. On BAP side, it remains Nothing.
         -- If commission is needed on BAP, it should be calculated here or received from BPP.
@@ -1347,9 +1348,8 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
       QBPL.makeAllInactiveByBookingId booking.id
       checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do
-    void $ QRide.updateCancellationChargesOnCancel (maybe Nothing (Just . (.amount)) cancellationFee) ride.id
-    void $ QRide.updateCancellationFeeTax ((.amount) <$> cancellationFeeTax) ride.id
-    whenJust cancellationFee $ \_ ->
+    whenJust cancellationFee $ \fee -> do
+      QRide.updateCancellationChargesOnCancel (Just (fee.amount + maybe 0 (.amount) cancellationFeeTax)) ride.id
       QRide.updateCancellationFeeStatus (Just DRide.PENDING) ride.id
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
@@ -1370,109 +1370,37 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
           logDebug $ "[CancellationSettlement] immediateCharge=" <> show immediateCharge <> " paymentInstrument=" <> show currentPaymentInstrument
           mobileNumber <- mapM decrypt personD.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
           let countryCode = fromMaybe "+91" personD.mobileCountryCode
-              doSyncCancellationFee = do
-                when (isNothing ride.cancellationFeeIfCancelled) $
-                  QRide.updateCancellationFeeIfCancelledField (Just fee.amount) ride.id
+              syncCancellationLedger action =
                 void $
-                  CallBPPInternal.customerCancellationDuesSync
-                    merchantD.driverOfferApiKey
-                    merchantD.driverOfferBaseUrl
-                    merchantD.driverOfferMerchantId
-                    mobileNumber
-                    countryCode
-                    (Just fee.amount)
-                    (Just fee)
-                    Nothing
-                    True
-                    merchantOpCity.city
-                logDebug $ "Customer cancellation dues synced for booking: " <> show booking.id
-          let cancellationGST = maybe 0 (.amount) cancellationFeeTax
-              cancellationBase = fee.amount - cancellationGST
-          void $ withTryCatch "doSyncCancellationFee" doSyncCancellationFee
+                  withTryCatch "syncCancellationLedger" $
+                    CallBPPInternal.customerCancellationDuesSync
+                      merchantD.driverOfferApiKey
+                      merchantD.driverOfferBaseUrl
+                      merchantD.driverOfferMerchantId
+                      mobileNumber
+                      countryCode
+                      merchantOpCity.city
+                      action
+                      ride.bppRideId.getId
+          let cancellationTax = maybe 0 (.amount) cancellationFeeTax
+              cancellationBase = fee.amount
           if immediateCharge
             then case currentPaymentInstrument of
-              DMPM.Card _ -> do
-                (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking personD
-                driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
-                let createPaymentIntentServiceReq =
-                      DPayment.CreatePaymentIntentServiceReq
-                        { amount = fee.amount,
-                          applicationFeeAmount = 0,
-                          discountAmount = 0,
-                          offerId = Nothing,
-                          currency = fee.currency,
-                          customer = customerPaymentId,
-                          paymentMethod = paymentMethodId,
-                          receiptEmail = Nothing,
-                          driverAccountId
-                        }
-                -- Step 1: Cancel existing ride payment intent FIRST (voids RideFare entries only)
-                logDebug $ "[CancellationSettlement] Cancelling existing ride payment intent for rideId=" <> ride.id.getId
-                void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode ride.id
-                -- Step 2: Create pending cancellation ledger AFTER cancel so it isn't voided
-                logDebug $ "[CancellationSettlement] Creating pending cancellation ledger for rideId=" <> ride.id.getId
-                ledgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationGST
-                let mbCancelInvoiceId = case ledgerResp of
-                      Right (inv, _) -> inv
-                      _ -> Nothing
-                -- Step 3: Create new payment intent for cancellation fee (wrapped to catch Stripe errors)
-                logDebug $ "[CancellationSettlement] Creating cancellation payment intent amount=" <> show fee.amount <> " currency=" <> show fee.currency
-                let cancellationLedgerInfo =
-                      SPayment.RidePaymentLedgerInfo
-                        { rideFare = 0,
-                          gstAmount = 0,
-                          tollFare = 0,
-                          tollVatAmount = 0,
-                          parkingCharge = 0,
-                          parkingChargeVat = 0,
-                          platformFee = 0,
-                          offerDiscountAmount = 0,
-                          cashbackPayoutAmount = 0,
-                          rideVatAbsorbedOnDiscount = 0,
-                          cancellationCharge = cancellationBase,
-                          cancellationTax = cancellationGST,
-                          financeCtx = ledgerCtx
-                        }
-                eitherMbIntent <-
-                  withTryCatch "[CancellationSettlement] makePaymentIntent" $
-                    SPayment.makePaymentIntent personD.merchantId personD.merchantOperatingCityId booking.paymentMode personD.id (Just ride.id) Nothing DOrder.RideHailing createPaymentIntentServiceReq (Just cancellationLedgerInfo)
-                let markDueOnFailure = case ledgerResp of
-                      Right (_inv, entryIds) ->
-                        RidePaymentFinance.markEntriesAsDue entryIds
-                      _ -> return ()
-                case eitherMbIntent of
-                  Left err -> do
-                    logError $ "[CancellationSettlement] Stripe error creating cancellation intent, marking DUE: " <> show err
-                    markDueOnFailure
-                  Right mbCancellationPaymentIntentResp ->
-                    case mbCancellationPaymentIntentResp of
-                      Nothing -> logDebug $ "[CancellationSettlement] Cancellation payment intent skipped (zero effective amount) for booking: " <> show booking.id
-                      Just cancellationPaymentIntentResp -> do
-                        logDebug $ "[CancellationSettlement] Charging cancellation payment intent: " <> cancellationPaymentIntentResp.paymentIntentId
-                        offerStatsInput <- SPayment.buildOfferStatsInput personD
-                        -- Step 4: chargePaymentIntent internally settles ledger entries
-                        eitherCaptured <-
-                          withTryCatch "[CancellationSettlement] chargePaymentIntent" $
-                            SPayment.chargePaymentIntent booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing cancellationPaymentIntentResp.paymentIntentId ride.id RidePaymentFinance.settledReasonRidePayment booking.riderId offerStatsInput
-                        case eitherCaptured of
-                          Right True -> do
-                            RidePaymentFinance.markCancellationFeeInvoicePaid mbCancelInvoiceId
-                            logDebug "[CancellationSettlement] Captured, invoice marked Paid"
-                          _ -> do
-                            logError $ "[CancellationSettlement] Charge failed for PI: " <> cancellationPaymentIntentResp.paymentIntentId
-                            markDueOnFailure
+              DMPM.Card _ ->
+                CancellationFee.settleCancellationFeeViaStripe booking ride personD cancellationBase cancellationTax fee.currency syncCancellationLedger
               _ -> do
                 -- Cash/UPI: void any unsettled ride-fare entries before creating cancellation entries
                 void $ RidePaymentFinance.voidRidePaymentEntriesAndInvoice ride.id.getId
                 -- Create pending cancellation entries then mark as DUE for later collection
-                cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationGST
+                cashLedgerResp <- RidePaymentFinance.createPendingCancellationFeeLedger ledgerCtx cancellationBase cancellationTax
                 case cashLedgerResp of
                   Right (_mbInvoiceId, pendingEntryIds) ->
                     RidePaymentFinance.markEntriesAsDue pendingEntryIds
                   _ -> return ()
+                syncCancellationLedger CallBPPInternal.OverdueCancellationLedger
             else do
               let scheduleAfter = riderConfig.cancellationPaymentDelay
-                  cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, rideId = ride.id}
+                  cancelExecutePaymentIntentJobData = CancelExecutePaymentIntentJobData {bookingId = booking.id, personId = booking.riderId, cancellationAmount = fee, cancellationTax = cancellationTax, rideId = ride.id}
               logDebug $ "Scheduling cancel execute payment intent job for order: " <> show scheduleAfter
               createJobIn @_ @'CancelExecutePaymentIntent (Just booking.merchantId) (Just booking.merchantOperatingCityId) scheduleAfter (cancelExecutePaymentIntentJobData :: CancelExecutePaymentIntentJobData)
         (_, Just ride) -> do

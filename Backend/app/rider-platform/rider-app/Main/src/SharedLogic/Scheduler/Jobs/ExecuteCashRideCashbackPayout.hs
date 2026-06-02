@@ -172,5 +172,4 @@ submitCashbackPayout person payoutVpa payoutConfig cashbackEntries totalAmount =
           <> show totalAmount
     PayoutRequest.PayoutFailed _ err -> do
       RidePaymentFinance.releaseCashbackEntriesReservation originalEntryIds
-      RidePaymentFinance.markCashbackEntriesAsDue originalEntryIds
       logError $ "Cashback payout submission failed for person=" <> person.id.getId <> ": " <> err

@@ -682,12 +682,15 @@ sendBookingCancelledUpdateToBAP ::
   DRB.Booking ->
   DM.Merchant ->
   SRBCR.CancellationSource ->
-  Maybe PriceAPIEntity ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
   Maybe DRide.Ride ->
   m ()
-sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFee mbRide = do
+sendBookingCancelledUpdateToBAP booking transporter cancellationSource cancellationFeeBase cancellationFeeTax mbRide = do
   mbBookingCancellationReason <- QBCR.findByBookingId booking.id
   let cancellationReasonCode = mbBookingCancellationReason >>= (.reasonCode) <&> (\(DCR.CancellationReasonCode code) -> code)
+      -- base + tax kept separate by callers; total built only here for the CancellationTerm
+      cancellationFee = cancellationFeeBase <&> \base -> PriceAPIEntity {amount = base + fromMaybe 0 cancellationFeeTax, currency = booking.currency}
   let bookingCancelledBuildReqV2 = ACL.BookingCancelledBuildReqV2 ACL.DBookingCancelledReqV2 {cancellationReasonCode, ..}
   retryConfig <- asks (.longDurationRetryCfg)
   bookingCancelledMsgV2 <- ACL.buildOnCancelMessageV2 transporter booking.bapCity booking.bapCountry (show Enums.CANCELLED) bookingCancelledBuildReqV2 Nothing

@@ -15,6 +15,10 @@ import qualified Tools.Beam.UtilsTH
 
 data CancellationDuesDetails = CancellationDuesDetails
   { cancellationAmount :: Kernel.Types.Common.HighPrecMoney,
+    cancellationFee :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    cancellationFeeTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    overdueCancellationTax :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     id :: Kernel.Types.Id.Id Domain.Types.CancellationDuesDetails.CancellationDuesDetails,

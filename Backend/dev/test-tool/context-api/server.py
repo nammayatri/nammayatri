@@ -2211,6 +2211,12 @@ def get_finance_earnings(schema, counterparty_id=None):
             WHERE fa.counterparty_type IN ('DRIVER', 'FLEET_OWNER')
               AND fa.account_type IN ('Liability', 'Control')
               AND le.status = 'SETTLED'
+              -- Ignore reversals: drop both the reversal entries and the originals they reversed
+              AND le.reversal_of IS NULL
+              AND le.id NOT IN (
+                SELECT rev.reversal_of FROM {schema}.finance_ledger_entry rev
+                WHERE rev.reversal_of IS NOT NULL
+              )
               {driver_filter}
             GROUP BY le.reference_type
             ORDER BY total DESC

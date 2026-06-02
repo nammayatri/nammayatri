@@ -40,13 +40,6 @@ updateCancellationChargesOnCancel cancellationChargesOnCancel cancellationCharge
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateCancellationFeeAndTax ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateCancellationFeeAndTax cancellationFee cancellationFeeTax id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.cancellationFee cancellationFee, Se.Set Beam.cancellationFeeTax cancellationFeeTax, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateCancellationFeeIfCancelledField ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())

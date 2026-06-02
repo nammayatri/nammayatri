@@ -6,7 +6,6 @@ module Domain.Action.RiderPlatform.Management.Customer
     postCustomerBlock,
     postCustomerUnblock,
     getCustomerInfo,
-    postCustomerCancellationDuesSync,
     getCustomerCancellationDuesDetails,
     postCustomerUpdateSafetyCenterBlocking,
     postCustomerPersonNumbers,
@@ -71,19 +70,6 @@ getCustomerInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Ker
 getCustomerInfo merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.getCustomerInfo) customerId
-
-postCustomerCancellationDuesSync ::
-  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
-  Kernel.Types.Beckn.Context.City ->
-  ApiTokenInfo ->
-  Kernel.Types.Id.Id Dashboard.Common.Customer ->
-  API.Types.RiderPlatform.Management.Customer.CustomerCancellationDuesSyncReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postCustomerCancellationDuesSync merchantShortId opCity apiTokenInfo customerId req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
-  SharedLogic.Transaction.withTransactionStoring transaction $
-    API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.customerDSL.postCustomerCancellationDuesSync) customerId req
 
 getCustomerCancellationDuesDetails :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Customer -> Environment.Flow API.Types.RiderPlatform.Management.Customer.CancellationDuesDetailsRes
 getCustomerCancellationDuesDetails merchantShortId opCity apiTokenInfo customerId = do

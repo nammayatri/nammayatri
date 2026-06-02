@@ -48,6 +48,14 @@ create fareParameters = do
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FareParameters -> m (Maybe FareParameters)
 findById (Id fareParametersId) = findOneWithKV [Se.Is BeamFP.id $ Se.Eq fareParametersId]
 
+updateCancellationCharges :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe HighPrecMoney -> Maybe HighPrecMoney -> Id FareParameters -> m ()
+updateCancellationCharges cancellationFeeTaxExclusive cancellationTax (Id fareParametersId) =
+  updateOneWithKV
+    [ Se.Set BeamFP.cancellationFeeTaxExclusive cancellationFeeTaxExclusive,
+      Se.Set BeamFP.cancellationTax cancellationTax
+    ]
+    [Se.Is BeamFP.id $ Se.Eq fareParametersId]
+
 findAllIn :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id FareParameters] -> m [FareParameters]
 findAllIn fareParametersIds = findAllWithKV [Se.Is BeamFP.id $ Se.In $ getId <$> fareParametersIds]
 

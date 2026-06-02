@@ -1,5 +1,6 @@
 module SharedLogic.Payment where
 
+import qualified API.Types.UI.RidePayment as APIRidePayment
 import qualified Beckn.ACL.Cancel as ACL
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Utils as Utils
@@ -39,6 +40,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import Lib.Finance.FinanceM (FinanceCtx (..))
 import qualified Lib.Finance.Storage.Beam.BeamFlow as FinanceBeamFlow
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -50,6 +52,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Wallet.Service as LoyaltyWalletSvc
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
@@ -57,9 +60,11 @@ import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -1035,32 +1040,6 @@ paymentErrorHandler booking exec = do
       dCancelRes <- DCancel.cancel booking Nothing req SBCR.ByApplication
       void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes req.reallocate
 
-makeCxCancellationPayment ::
-  ( MonadFlow m,
-    EncFlow m r,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
-  ) =>
-  Id Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Maybe DMPM.PaymentMode ->
-  DOrder.PaymentServiceType ->
-  Payment.PaymentIntentId ->
-  HighPrecMoney ->
-  Id Person.Person ->
-  DPayment.OfferStatsInput ->
-  UTCTime ->
-  m Bool
-makeCxCancellationPayment merchantId merchantOpCityId paymentMode paymentServiceType paymentIntentId cancellationAmount _personId offerStatsInput rideCreatedAt = do
-  let capturePaymentIntentCall = TPayment.capturePaymentIntent merchantId merchantOpCityId paymentMode
-      getPaymentIntentCall = TPayment.getPaymentIntent merchantId merchantOpCityId paymentMode
-      commonMerchantOperatingCityId = cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOpCityId
-      applyOfferCall = TPayment.offerApply merchantId merchantOpCityId Nothing paymentServiceType Nothing Nothing
-  useDomainOffers <- TPayment.useDomainOffers merchantId merchantOpCityId Nothing paymentServiceType
-  DPayment.updateForCXCancelPaymentIntentService commonMerchantOperatingCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancellationAmount offerStatsInput useDomainOffers applyOfferCall rideCreatedAt
-
 validatePaymentInstrument :: (MonadThrow m, Log m) => Merchant.Merchant -> Maybe DMPM.PaymentInstrument -> Maybe Payment.PaymentMethodId -> m ()
 validatePaymentInstrument merchant mbPaymentInstrument mbPaymentMethodId = do
   if merchant.onlinePayment
@@ -1109,14 +1088,240 @@ paymentJobExecLockKey rideId = "PaymentJobExec:RideId-" <> rideId
 -- | Capture pending payment before allowing new ride.
 -- Finds rides with uncaptured payment (Initiated or NotInitiated), attempts capture.
 -- Success -> allow new ride. Failure -> block ride; user can retry via Get Dues / Clear Dues.
--- | Check for PENDING ledger entries on most recent ride and block new ride if found.
---   Uses finance-kernel LedgerEntry instead of PaymentInvoice.
+filterPendingDuesEntries :: [LE.LedgerEntry] -> [Text] -> [LE.LedgerEntry]
+filterPendingDuesEntries entries excludedRefTypes =
+  entries
+    & filter (\e -> e.status == LE.DUE)
+    & filter (\e -> e.referenceType `notElem` excludedRefTypes)
+
+getDuesForPerson ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    CacheFlow m r,
+    FinanceBeamFlow.BeamFlow m r
+  ) =>
+  Person.Person ->
+  m APIRidePayment.GetDueAmountResp
+getDuesForPerson person = do
+  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let excludedPurposes = fromMaybe [] (riderConfig >>= (.duesExcludedPaymentPurposes))
+  mbLatestRideBooking <- QRide.findMostRecentRideForRider person.id
+  case mbLatestRideBooking of
+    Nothing -> pure noDues
+    Just (ride, _) -> do
+      pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries ride.id.getId
+      let filteredEntries = filterPendingDuesEntries pendingEntries excludedPurposes
+      if null filteredEntries
+        then pure noDues
+        else do
+          let totalAmount = sum $ map (.amount) filteredEntries
+              currency = Kernel.Prelude.head filteredEntries & (.currency)
+          logInfo $
+            "AUDIT: Get Dues - person_id: " <> person.id.getId
+              <> ", ride_id: "
+              <> ride.id.getId
+              <> ", due_invoices: "
+              <> show (length filteredEntries)
+              <> ", total_amount: "
+              <> show totalAmount
+          pure $
+            APIRidePayment.GetDueAmountResp
+              { rides = [APIRidePayment.DueAmountRide {rideId = ride.id, amount = totalAmount}],
+                totalDueAmount = totalAmount,
+                rideFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefRideFare filteredEntries,
+                gstDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefGST filteredEntries,
+                tollFareDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollFare filteredEntries,
+                tollVatDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefTollVAT filteredEntries,
+                platformFeeDue = RidePaymentFinance.sumByRefType RidePaymentFinance.ridePaymentRefPlatformFee filteredEntries,
+                currency = Just currency
+              }
+  where
+    noDues =
+      APIRidePayment.GetDueAmountResp
+        { rides = [],
+          totalDueAmount = 0,
+          rideFareDue = 0,
+          gstDue = 0,
+          tollFareDue = 0,
+          tollVatDue = 0,
+          platformFeeDue = 0,
+          currency = Nothing
+        }
+
+getDefaultPaymentMethodForDues ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Person.Person ->
+  m Payment.PaymentMethodId
+getDefaultPaymentMethodForDues p = do
+  let paymentMode = fromMaybe DMPM.LIVE p.paymentMode
+  paymentCustomer <- QPaymentCustomer.findByPersonIdAndPaymentMode (Just p.id) (Just paymentMode) >>= fromMaybeM (InvalidRequest "No payment customer found.")
+  paymentCustomer.defaultPaymentMethodId & fromMaybeM (InvalidRequest "No default payment method found. Please provide a payment method.")
+
+clearDuesForPerson ::
+  ( MakePaymentIntentConstraints m r c,
+    EsqDBReplicaFlow m r,
+    CoreMetrics m,
+    HasRequestId r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Person.Person ->
+  APIRidePayment.GetDueAmountResp ->
+  Currency ->
+  Payment.PaymentMethodId ->
+  m APIRidePayment.ClearDuesResp
+clearDuesForPerson person duesResp currency paymentMethodId = do
+  rideId <- listToMaybe duesResp.rides <&> (.rideId) & fromMaybeM (InvalidRequest "No ride id found")
+  Redis.withWaitAndLockRedis (paymentJobExecLockKey rideId.getId) 10 20 $ do
+    ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+    pendingEntries <- RidePaymentFinance.findDueRidePaymentEntries rideId.getId
+    booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+    mbRideOfferEntity' <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
+    let debtDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity'
+    (customerPaymentId, _) <- getCustomerAndPaymentMethod booking person
+    driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
+    email <- mapM decrypt person.email
+    let debtApplicationFeeAmount = fromMaybe 0 ride.commission
+    let createPaymentIntentServiceReq =
+          DPayment.CreatePaymentIntentServiceReq
+            { amount = duesResp.totalDueAmount,
+              applicationFeeAmount = debtApplicationFeeAmount,
+              discountAmount = debtDiscountAmount,
+              offerId = Nothing,
+              currency = currency,
+              customer = customerPaymentId,
+              paymentMethod = paymentMethodId,
+              receiptEmail = email,
+              driverAccountId
+            }
+    let debtLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
+        debtLedgerInfo =
+          mkRidePaymentLedgerInfo
+            (duesResp.rideFareDue - duesResp.platformFeeDue)
+            duesResp.gstDue
+            duesResp.tollFareDue
+            duesResp.tollVatDue
+            0
+            0
+            duesResp.platformFeeDue
+            debtDiscountAmount
+            0
+            0
+            0
+            0
+            debtLedgerCtx
+    paymentIntentResp <-
+      makePaymentIntent
+        person.merchantId
+        booking.merchantOperatingCityId
+        booking.paymentMode
+        person.id
+        (Just rideId)
+        Nothing
+        DOrder.RideHailing
+        createPaymentIntentServiceReq
+        (Just debtLedgerInfo)
+        >>= fromMaybeM (InternalError "Payment order expired, please try again")
+    logInfo $
+      "AUDIT: Debt settlement for ride " <> rideId.getId
+        <> ", amount: "
+        <> show duesResp.totalDueAmount
+        <> ", pending_entries: "
+        <> show (length pendingEntries)
+    captureResult <-
+      withTryCatch "clearDuesForPerson:chargePaymentIntent" $ do
+        offerStatsInput <- buildOfferStatsInput person
+        chargePaymentIntent
+          person.merchantId
+          booking.merchantOperatingCityId
+          booking.paymentMode
+          DOrder.RideHailing
+          paymentIntentResp.paymentIntentId
+          rideId
+          RidePaymentFinance.settledReasonDebtSettlement
+          booking.riderId
+          offerStatsInput
+    case captureResult of
+      Right True -> do
+        QRide.markPaymentStatus Ride.Completed rideId
+        whenJust ride.cancellationChargesOnCancel $ \_ -> do
+          mbMerchant <- CQM.findById person.merchantId
+          mbMobileNumber <- mapM decrypt person.mobileNumber
+          case (mbMerchant, mbMobileNumber) of
+            (Just merchant, Just mobileNumber) ->
+              void $
+                withTryCatch "clearDuesForPerson:syncCancellationLedger" $
+                  CallBPPInternal.customerCancellationDuesSync
+                    merchant.driverOfferApiKey
+                    merchant.driverOfferBaseUrl
+                    merchant.driverOfferMerchantId
+                    mobileNumber
+                    (fromMaybe "+91" person.mobileCountryCode)
+                    person.currentCity
+                    CallBPPInternal.SettleCancellationLedger
+                    ride.bppRideId.getId
+            _ -> logError $ "clearDuesForPerson: skipping cancellation ledger sync, missing merchant or mobile number for rideId: " <> rideId.getId
+        logInfo $
+          "AUDIT: Debt settlement CAPTURED - order_id: " <> paymentIntentResp.orderId.getId
+            <> ", amount: "
+            <> show duesResp.totalDueAmount
+            <> ", settled_entries: "
+            <> show (length pendingEntries)
+        pure $
+          APIRidePayment.ClearDuesResp
+            { orderId = Just paymentIntentResp.orderId,
+              status = APIRidePayment.SUCCESS,
+              amountCleared = duesResp.totalDueAmount,
+              currency = currency,
+              ridesCleared = [rideId],
+              errorMessage = Nothing
+            }
+      Right False -> do
+        logError $ "AUDIT: Debt settlement FAILED - order_id: " <> paymentIntentResp.orderId.getId <> ", ride_id: " <> rideId.getId
+        pure $
+          APIRidePayment.ClearDuesResp
+            { orderId = Just paymentIntentResp.orderId,
+              status = APIRidePayment.FAILED,
+              amountCleared = 0,
+              currency = currency,
+              ridesCleared = [],
+              errorMessage = Just "Payment failed. Please try again."
+            }
+      Left (err :: SomeException) -> do
+        let userFriendlyMessage = mapPaymentErrorToUserMessage (show err)
+        logError $
+          "AUDIT: Debt settlement EXCEPTION - order_id: " <> paymentIntentResp.orderId.getId
+            <> ", ride_id: "
+            <> rideId.getId
+            <> ", error: "
+            <> show err
+            <> " (parent invoices remain unsettled)"
+        pure $
+          APIRidePayment.ClearDuesResp
+            { orderId = Just paymentIntentResp.orderId,
+              status = APIRidePayment.FAILED,
+              amountCleared = 0,
+              currency = currency,
+              ridesCleared = [],
+              errorMessage = Just userFriendlyMessage
+            }
+  where
+    mapPaymentErrorToUserMessage :: Text -> Text
+    mapPaymentErrorToUserMessage errMsg
+      | "insufficient" `T.isInfixOf` T.toLower errMsg = "Payment failed due to insufficient funds. Please check your payment method."
+      | "declined" `T.isInfixOf` T.toLower errMsg = "Payment was declined by your bank. Please try a different payment method."
+      | "expired" `T.isInfixOf` T.toLower errMsg = "Payment method has expired. Please update your payment method."
+      | "invalid" `T.isInfixOf` T.toLower errMsg = "Invalid payment method. Please check your payment details."
+      | "timeout" `T.isInfixOf` T.toLower errMsg = "Payment request timed out. Please try again."
+      | "network" `T.isInfixOf` T.toLower errMsg = "Network error occurred. Please check your connection and try again."
+      | otherwise = "Payment failed. Please try again or contact support if the issue persists."
+
 capturePendingPaymentIfExists ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EncFlow m r,
-    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasShortDurationRetryCfg r c,
     HasKafkaProducer r,
     FinanceBeamFlow.BeamFlow m r
   ) =>

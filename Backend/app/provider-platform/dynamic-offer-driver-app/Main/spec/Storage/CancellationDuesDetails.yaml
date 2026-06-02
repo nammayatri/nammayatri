@@ -17,6 +17,10 @@ CancellationDuesDetails:
     rideId : Id Ride
     riderId : Id RiderDetails
     cancellationAmount : HighPrecMoney
+    cancellationFee : Maybe HighPrecMoney
+    cancellationFeeTax : Maybe HighPrecMoney
+    overdueCancellationCharge : Maybe HighPrecMoney
+    overdueCancellationTax : Maybe HighPrecMoney
     currency : Currency
     paymentStatus : CancellationDuesPaymentStatus
     createdAt : UTCTime

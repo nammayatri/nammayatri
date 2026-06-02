@@ -59,12 +59,17 @@ instance Default UserCancellationDuesData where
 
 data UserCancellationDuesResult = UserCancellationDuesResult
   { cancellationCharges :: HighPrecMoney,
-    cancellationChargesTax :: Maybe HighPrecMoney
+    cancellationChargesTax :: Maybe HighPrecMoney,
+    overdueCancellationCharge :: Maybe HighPrecMoney,
+    overdueCancellationTax :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
 instance Default UserCancellationDuesResult where
-  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = Nothing}
+  def = UserCancellationDuesResult {cancellationCharges = 0, cancellationChargesTax = Nothing, overdueCancellationCharge = Nothing, overdueCancellationTax = Nothing}
+
+data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
 data UserCancellationDuesWaiveOffData = UserCancellationDuesWaiveOffData
   { cancellationDues :: HighPrecMoney,

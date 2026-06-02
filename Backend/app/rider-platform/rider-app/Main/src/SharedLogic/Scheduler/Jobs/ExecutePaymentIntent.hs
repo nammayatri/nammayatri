@@ -35,6 +35,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.CancellationFee as CancellationFee
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
@@ -168,6 +169,7 @@ cancelExecutePaymentIntentJob ::
     EsqDBReplicaFlow m r,
     SchedulerFlow r,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasShortDurationRetryCfg r c,
     HasKafkaProducer r
   ) =>
@@ -179,33 +181,27 @@ cancelExecutePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       personId = jobData.personId
       rideId = jobData.rideId
       cancellationAmount = jobData.cancellationAmount
+      cancellationTax = jobData.cancellationTax
   logDebug "Cancelling payment intent"
   booking <- runInReplica $ QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   merchantOpCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  -- Lookup order via Redis-stored ledger entry IDs or by direct ID cast
-  mbOrderId <- SPayment.getOrderIdForRide rideId
-  orderId <- mbOrderId & fromMaybeM (PaymentOrderNotFound rideId.getId)
-  order <- QOrder.findById orderId >>= fromMaybeM (PaymentOrderNotFound orderId.getId)
   let mobileCountryCode = person.mobileCountryCode
   mobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (PersonFieldNotPresent "mobileNumber")
   when (isNothing ride.cancellationFeeIfCancelled) $ do
     QRide.updateCancellationFeeIfCancelledField (Just cancellationAmount.amount) rideId
-  offerStatsInput <- SPayment.buildOfferStatsInput person
-  paymentCharged <- SPayment.makeCxCancellationPayment booking.merchantId booking.merchantOperatingCityId booking.paymentMode DOrder.RideHailing order.paymentServiceOrderId cancellationAmount.amount booking.riderId offerStatsInput ride.createdAt
-  when paymentCharged $ QRide.markPaymentStatus DRide.Completed rideId
-  void $
-    CallBPPInternal.customerCancellationDuesSync
-      (merchant.driverOfferApiKey)
-      (merchant.driverOfferBaseUrl)
-      (merchant.driverOfferMerchantId)
-      mobileNumber
-      (fromMaybe "+91" mobileCountryCode)
-      (Just cancellationAmount.amount)
-      (Just cancellationAmount)
-      Nothing
-      True
-      (merchantOpCity.city)
+  let syncCancellationLedger action =
+        void $
+          CallBPPInternal.customerCancellationDuesSync
+            merchant.driverOfferApiKey
+            merchant.driverOfferBaseUrl
+            merchant.driverOfferMerchantId
+            mobileNumber
+            (fromMaybe "+91" mobileCountryCode)
+            merchantOpCity.city
+            action
+            ride.bppRideId.getId
+  CancellationFee.settleCancellationFeeViaStripe booking ride person cancellationAmount.amount cancellationTax cancellationAmount.currency syncCancellationLedger
   return Complete

@@ -314,13 +314,14 @@ type CustomerCancellationDuesSyncAPI =
     :> ReqBody '[JSON] CustomerCancellationDuesSyncReq
     :> Post '[JSON] APISuccess
 
+data CancellationLedgerAction = SettleCancellationLedger | OverdueCancellationLedger
+  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
+
 data CustomerCancellationDuesSyncReq = CustomerCancellationDuesSyncReq
   { customerMobileNumber :: Text,
     customerMobileCountryCode :: Text,
-    cancellationCharges :: Maybe HighPrecMoney,
-    cancellationChargesWithCurrency :: Maybe PriceAPIEntity,
-    disputeChancesUsed :: Maybe Int,
-    paymentMadeToDriver :: Bool
+    cancellationLedgerAction :: CancellationLedgerAction,
+    bppRideId :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -341,15 +342,13 @@ customerCancellationDuesSync ::
   Text ->
   Text ->
   Text ->
-  Maybe HighPrecMoney ->
-  Maybe PriceAPIEntity ->
-  Maybe Int ->
-  Bool ->
   Context.City ->
+  CancellationLedgerAction ->
+  Text ->
   m APISuccess
-customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode cancellationCharges cancellationChargesWithCurrency disputeChancesUsed paymentMadeToDriver merchantCity = do
+customerCancellationDuesSync apiKey internalUrl merchantId phoneNumber countryCode merchantCity cancellationLedgerAction bppRideId = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationCharges cancellationChargesWithCurrency disputeChancesUsed paymentMadeToDriver)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesSyncClient merchantId merchantCity (Just apiKey) (CustomerCancellationDuesSyncReq phoneNumber countryCode cancellationLedgerAction bppRideId)) "CustomerCancellationDuesSync" customerCancellationDuesSyncApi
 
 -- DEPRECATED
 type ReportACIssueAPI =

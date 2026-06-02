@@ -261,8 +261,9 @@ buildRideEarnings ::
   DRB.Booking ->
   DRide.Ride ->
   DFareParams.FareParameters ->
+  Maybe DFareParams.FareParameters ->
   m RideEarnings
-buildRideEarnings lang labels booking ride fp = do
+buildRideEarnings lang labels booking ride estimatedFareParam finalFareParam = do
   let fare = fromMaybe booking.estimatedFare ride.fare
       discount = fromMaybe 0 ride.discountAmount
       commission = fromMaybe 0 ride.commission
@@ -270,7 +271,7 @@ buildRideEarnings lang labels booking ride fp = do
       cur = ride.currency
       amountPaidByCustomer = fare - discount + tips
       EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare} = labels
-      cancellationDues = fromMaybe 0 fp.customerCancellationDues -- we will deccide where to fetch this ?
+      cancellationDues = fromMaybe 0 (finalFareParam >>= (.customerCancellationDues))
   let mkComp sec key mbLabel value applicable =
         if applicable
           then
@@ -290,7 +291,7 @@ buildRideEarnings lang labels booking ride fp = do
             mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
             mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0)
           ]
-  footnoteItems <- buildFootnotes lang booking ride fp
+  footnoteItems <- buildFootnotes lang booking ride estimatedFareParam finalFareParam
 
   pure RideEarnings {fareBreakup = fareBreakupItems, footnotes = footnoteItems}
 
@@ -300,13 +301,13 @@ buildFootnotes ::
   DRB.Booking ->
   DRide.Ride ->
   DFareParams.FareParameters ->
+  Maybe DFareParams.FareParameters ->
   m [FareUIComponent]
-buildFootnotes lang booking ride fp = do
+buildFootnotes lang booking ride estimatedFareParams finalFareParams = do
   (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.RIDE_FOOTNOTES_DISPLAY ride.createdAt Nothing Nothing
   if null logics
     then pure []
     else do
-      mbRideFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
       let waitingTimeSeconds = case (ride.tripStartTime, ride.driverArrivalTime) of
             (Just startT, Just arrivalT) -> Just (round (diffUTCTime startT arrivalT))
             _ -> Nothing
@@ -314,8 +315,8 @@ buildFootnotes lang booking ride fp = do
             RFN.RideFootnotesLogicInput
               { ride = ride,
                 booking = booking,
-                rideFareParams = mbRideFareParams,
-                bookingFareParams = fp,
+                rideFareParams = finalFareParams,
+                bookingFareParams = estimatedFareParams,
                 waitingTimeSeconds = waitingTimeSeconds,
                 language = pack (show lang)
               }
@@ -426,15 +427,16 @@ mkDriverRideRes ::
   Maybe Text ->
   m DriverRideRes
 mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
-  let fareParams = booking.fareParams
-      estimatedBaseFareGross = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
+  let estimatedFareParams = booking.fareParams
+      estimatedBaseFareGross = fareSum (estimatedFareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
       estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission)
-      estimatedBaseFareGrossV2 = fareSum fareParams Nothing
+      estimatedBaseFareGrossV2 = fareSum estimatedFareParams Nothing
       estimatedBaseFareV2 = max 0 (estimatedBaseFareGrossV2 - estimatedCommission)
       rideCommission = fromMaybe 0 ride.commission
       rideTipsAmount = fromMaybe 0 ride.tipAmount
       computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission + rideTipsAmount)) <$> ride.fare
+  finalFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -470,7 +472,7 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
             Nothing -> Nothing
 
   mbRideEarningsVal <- case mbEarningsLabels of
-    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride fareParams
+    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride estimatedFareParams finalFareParams
     Nothing -> pure Nothing
 
   return $
@@ -496,8 +498,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         estimatedBaseFareWithCurrencyV2 = PriceAPIEntity (roundAmountByCurrency' ride.currency estimatedBaseFareV2) ride.currency,
         estimatedDistance = booking.estimatedDistance,
         estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
-        driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
-        driverSelectedFareWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0.0 fareParams.driverSelectedFare,
+        driverSelectedFare = roundToIntegral $ fromMaybe 0.0 estimatedFareParams.driverSelectedFare,
+        driverSelectedFareWithCurrency = flip PriceAPIEntity estimatedFareParams.currency $ fromMaybe 0.0 estimatedFareParams.driverSelectedFare,
         actualRideDistance = ride.traveledDistance,
         actualRideDistanceWithUnit = convertHighPrecMetersToDistance ride.distanceUnit ride.traveledDistance,
         createdAt = ride.createdAt,
@@ -512,8 +514,8 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         chargeableDistance = ride.chargeableDistance,
         chargeableDistanceWithUnit = convertMetersToDistance ride.distanceUnit <$> ride.chargeableDistance,
         exoPhone = maybe booking.primaryExophone (\exophone -> if not exophone.isPrimaryDown then exophone.primaryPhone else exophone.backupPhone) mbExophone,
-        customerExtraFee = roundToIntegral <$> fareParams.customerExtraFee,
-        customerExtraFeeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.customerExtraFee,
+        customerExtraFee = roundToIntegral <$> estimatedFareParams.customerExtraFee,
+        customerExtraFeeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.customerExtraFee,
         bapName = bapMetadata <&> (.name),
         bapLogo = bapMetadata >>= (.logoUrl),
         disabilityTag = booking.disabilityTag,
@@ -528,14 +530,14 @@ mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mb
         payerVpa = driverInfo >>= (.payerVpa),
         autoPayStatus = driverInfo >>= (.autoPayStatus),
         isFreeRide = ride.isFreeRide,
-        customerCancellationDues = fromMaybe 0 fareParams.customerCancellationDues,
-        estimatedTollCharges = fareParams.tollCharges,
-        parkingCharge = fareParams.parkingCharge,
+        customerCancellationDues = fromMaybe 0 estimatedFareParams.customerCancellationDues,
+        estimatedTollCharges = estimatedFareParams.tollCharges,
+        parkingCharge = estimatedFareParams.parkingCharge,
         tollCharges = ride.tollCharges,
         tollConfidence = ride.tollConfidence,
-        customerCancellationDuesWithCurrency = flip PriceAPIEntity fareParams.currency $ fromMaybe 0 fareParams.customerCancellationDues,
-        estimatedTollChargesWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.tollCharges,
-        parkingChargeWithCurrency = flip PriceAPIEntity fareParams.currency <$> fareParams.parkingCharge,
+        customerCancellationDuesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency $ fromMaybe 0 estimatedFareParams.customerCancellationDues,
+        estimatedTollChargesWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.tollCharges,
+        parkingChargeWithCurrency = flip PriceAPIEntity estimatedFareParams.currency <$> estimatedFareParams.parkingCharge,
         tollChargesWithCurrency = flip PriceAPIEntity ride.currency <$> ride.tollCharges,
         startOdometerReading = ride.startOdometerReading,
         endOdometerReading = ride.endOdometerReading,

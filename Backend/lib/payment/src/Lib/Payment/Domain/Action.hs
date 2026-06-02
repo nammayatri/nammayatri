@@ -29,7 +29,6 @@ module Lib.Payment.Domain.Action
     createExecutionService,
     buildSDKPayload,
     createRefundService,
-    updateForCXCancelPaymentIntentService,
     chargePaymentIntentService,
     createPayoutService,
     PayoutStatusServiceReq (..),
@@ -260,36 +259,6 @@ cancelPaymentIntentService merchantOpCityId rideId cancelPaymentIntentCall = do
           let updStatus = Payment.castToTransactionStatus paymentIntentResp.status
           QOrder.updateStatus existingOrder.id existingOrder.paymentServiceOrderId updStatus
           HQTransaction.updateStatusAndError merchantOpCityId transaction updStatus Nothing Nothing (Just "cancel payment intent service")
-
-updateForCXCancelPaymentIntentService ::
-  forall m r c.
-  ( EncFlow m r,
-    BeamFlow m r,
-    HasShortDurationRetryCfg r c
-  ) =>
-  Id MerchantOperatingCity ->
-  DOrder.PaymentServiceType ->
-  Payment.PaymentIntentId ->
-  (Payment.PaymentIntentId -> HighPrecMoney -> HighPrecMoney -> m ()) ->
-  (Payment.PaymentIntentId -> m Payment.CreatePaymentIntentResp) ->
-  HighPrecMoney ->
-  OfferStatsInput ->
-  Bool -> -- useDomainOffers
-  (PInterface.OfferApplyReq -> m PInterface.OfferApplyResp) ->
-  UTCTime ->
-  m Bool
-updateForCXCancelPaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall cancelTransactionAmount offerStatsInput useDomainOffers applyOfferCall rideCreatedAt = do
-  transaction <- HQTransaction.findByTxnId paymentIntentId >>= fromMaybeM (InternalError $ "No transaction found while update payment intent: " <> paymentIntentId)
-  let newApplicationFeeAmount = transaction.applicationFeeAmount -- not changing application fee amount
-  updateOldTransaction newApplicationFeeAmount transaction
-  chargePaymentIntentService merchantOpCityId paymentServiceType paymentIntentId capturePaymentIntentCall getPaymentIntentCall offerStatsInput useDomainOffers applyOfferCall rideCreatedAt
-  where
-    updateOldTransaction newApplicationFeeAmount transaction = do
-      let newOrderAmount = cancelTransactionAmount -- changing whole amount with cancellation
-      logInfo $ "Updated order amount on cancel: " <> paymentIntentId <> "; amount: " <> show newOrderAmount
-      logInfo $ "Updated transaction amount on cancel: " <> paymentIntentId <> "; amount: " <> show cancelTransactionAmount <> "; applicationFeeAmount: " <> show newApplicationFeeAmount
-      QOrder.updateAmountAndPaymentIntentId transaction.orderId newOrderAmount paymentIntentId
-      HQTransaction.updateAmount merchantOpCityId transaction cancelTransactionAmount newApplicationFeeAmount (Just "update for cancel payment intent service")
 
 chargePaymentIntentService ::
   forall m r c.
