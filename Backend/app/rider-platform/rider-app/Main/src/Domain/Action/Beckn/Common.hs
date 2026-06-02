@@ -535,7 +535,7 @@ rideAssignedReqHandler req = do
             }
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
-        Just OnlinePaymentParameters {..} -> do
+        Just OnlinePaymentParameters {driverAccountId = onlineDriverAccountId, ..} -> do
           let createPaymentIntentServiceReq =
                 DPayment.CreatePaymentIntentServiceReq
                   { amount = booking.estimatedFare.amount,
@@ -546,7 +546,7 @@ rideAssignedReqHandler req = do
                     customer = customerPaymentId,
                     paymentMethod = paymentMethodId,
                     receiptEmail = email,
-                    driverAccountId
+                    driverAccountId = onlineDriverAccountId
                   }
           -- Lookup existing order for retry handling via Redis-stored ledger entry IDs
           mbExistingOrderId <- SPayment.getOrderIdForRide ride.id
