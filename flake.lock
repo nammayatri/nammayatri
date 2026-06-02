@@ -1777,11 +1777,11 @@
     "json-logic-hs": {
       "flake": false,
       "locked": {
-        "lastModified": 1779290761,
-        "narHash": "sha256-LkUlCIdGoER9wofLSG48d/PAnO/ERVZdDR6RBqBPqck=",
+        "lastModified": 1780415936,
+        "narHash": "sha256-I5UaWmMOdMAjyDv1Tr1wIIi+SwF5FsnrJAoqVIddkgA=",
         "owner": "nammayatri",
         "repo": "json-logic-hs",
-        "rev": "47b310e539e5e0c63b0c1d447b6db4dd4d78f68c",
+        "rev": "90393a4a87dc252f4f245c3c215acd6e4c4abe90",
         "type": "github"
       },
       "original": {
