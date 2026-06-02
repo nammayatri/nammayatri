@@ -100,10 +100,11 @@ findAllByOwnerAndServiceNameWithPagination ::
   SubscriptionOwnerType ->
   ServiceNames ->
   Maybe SubscriptionPurchaseStatus ->
+  Maybe DVC.VehicleCategory ->
   Maybe Int ->
   Maybe Int ->
   m [SubscriptionPurchase]
-findAllByOwnerAndServiceNameWithPagination ownerId ownerType serviceName mbStatus limit offset =
+findAllByOwnerAndServiceNameWithPagination ownerId ownerType serviceName mbStatus mbVehicleCategory limit offset =
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is Beam.ownerId $ Se.Eq ownerId,
@@ -111,6 +112,7 @@ findAllByOwnerAndServiceNameWithPagination ownerId ownerType serviceName mbStatu
             Se.Is Beam.serviceName $ Se.Eq serviceName
           ]
             <> [Se.Is Beam.status $ Se.Eq status | Just status <- [mbStatus]]
+            <> [Se.Is Beam.vehicleCategory $ Se.Eq (Just vc) | Just vc <- [mbVehicleCategory]]
         )
     ]
     (Se.Desc Beam.createdAt)
