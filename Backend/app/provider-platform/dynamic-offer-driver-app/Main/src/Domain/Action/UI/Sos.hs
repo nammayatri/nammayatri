@@ -183,7 +183,8 @@ mkTicket person phoneNumber mediaLinks info flow disposition queue =
       rideDescription = Just info,
       disposition = disposition,
       queue = queue,
-      becknIssueId = Nothing
+      becknIssueId = Nothing,
+      ticketContext = Just Ticket.SOSAlert
     }
   where
     sosIssueDescription = \case

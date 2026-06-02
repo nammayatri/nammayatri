@@ -131,7 +131,8 @@ mkTicket person phoneNumber mediaLinks mbInfo flow disposition queue = do
       rideDescription = mbInfo,
       disposition,
       queue,
-      becknIssueId = Nothing
+      becknIssueId = Nothing,
+      ticketContext = Just Ticket.SOSAlert
     }
   where
     issueDescription = case flow of

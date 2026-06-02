@@ -147,7 +147,8 @@ safetyCheckSupport (personId, _merchantId) req = do
             personId = person.id.getId,
             classification = Ticket.CUSTOMER,
             rideDescription = Just rideDesc,
-            becknIssueId = Nothing
+            becknIssueId = Nothing,
+            ticketContext = Just Ticket.SOSAlert
           }
 
 buildDBIssue :: MonadFlow m => Id Person.Person -> SendIssueReq -> Id Merchant.Merchant -> m DIssue.Issue
@@ -187,6 +188,7 @@ mkTicket issue person phoneNumber disposition queue deleteAccountCategory = do
         personId = person.id.getId,
         classification = Ticket.CUSTOMER,
         rideDescription = Just rideDesc,
+        ticketContext = Just Ticket.IssueTicket,
         becknIssueId = Nothing
       }
 
