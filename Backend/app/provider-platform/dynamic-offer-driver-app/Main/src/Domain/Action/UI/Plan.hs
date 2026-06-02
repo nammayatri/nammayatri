@@ -271,9 +271,19 @@ subscriptionPurchaseList (driverId, _merchantId, merchantOperatingCityId) mbLimi
   let (ownerType, ownerId) = if DCommon.checkFleetOwnerRole person.role then (DSP.FLEET_OWNER, person.id.getId) else (DSP.DRIVER, person.id.getId)
   let limit = Just $ fromMaybe 10 mbLimit
       offset = Just $ fromMaybe 0 mbOffset
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  let isolationEnabled = fromMaybe False transporterConfig.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled
+  mbVehicleCategory <-
+    if isolationEnabled
+      then do
+        subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION
+        case subscriptionConfig of
+          Just cfg -> Just <$> getVehicleCategory (cast driverId) cfg
+          Nothing -> pure Nothing
+      else pure Nothing
   purchases <-
     B.runInReplica $
-      QSPE.findAllByOwnerAndServiceNameWithPagination ownerId ownerType PREPAID_SUBSCRIPTION mbStatus limit offset
+      QSPE.findAllByOwnerAndServiceNameWithPagination ownerId ownerType PREPAID_SUBSCRIPTION mbStatus mbVehicleCategory limit offset
   currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId) purchases
   return $ SubscriptionPurchaseListRes {list = currentPlanResList}
 
