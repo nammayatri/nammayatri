@@ -9,11 +9,12 @@ import qualified Domain.Types.FRFSConfig as DFRFS
 import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSConfig as SCFRFS
-import Storage.ConfigPilot.Interface.Getter
 
 data FRFSConfigDimensions = FRFSConfigDimensions
   { merchantOperatingCityId :: Text
@@ -31,7 +32,7 @@ instance ConfigDimensions FRFSConfigDimensions where
   getConfigType _ = FRFSConfig
   getConfigList a = do
     let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
+    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
       cfg <- SCFRFS.findByMerchantOperatingCityId (Id mocId) (Just [])
       let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-      getConfigImpl a configWrapper (LYT.RIDER_CONFIG FRFSConfig) (Id mocId)
+      LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG FRFSConfig) (Id mocId)

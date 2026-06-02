@@ -664,8 +664,6 @@ library
       Storage.ConfigPilot.Config.RiderConfig
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
       Storage.ConfigPilot.Config.VehicleConfig
-      Storage.ConfigPilot.Interface.Getter
-      Storage.ConfigPilot.Interface.Setter
       Storage.GraphqlQueries.Client
       Storage.GraphqlQueries.RouteStopTimeTable
       Storage.GraphqlQueries.Types

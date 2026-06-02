@@ -96,6 +96,7 @@ library
     , behavior-tracker
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , dynamic-offer-driver-app
     , errors
@@ -193,6 +194,7 @@ executable kafka-consumers-exe
     , behavior-tracker
     , bytestring
     , cereal
+    , config-pilot
     , containers
     , errors
     , esqueleto
