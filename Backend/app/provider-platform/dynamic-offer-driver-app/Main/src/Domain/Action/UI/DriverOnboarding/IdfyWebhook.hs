@@ -52,6 +52,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
@@ -246,6 +247,7 @@ handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVe
 handleIdfySourceDown person retryFunc verificationReq = do
   unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
   mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
+  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   rcNum <- decrypt verificationReq.documentNumber
   flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
     \priorityList -> do
