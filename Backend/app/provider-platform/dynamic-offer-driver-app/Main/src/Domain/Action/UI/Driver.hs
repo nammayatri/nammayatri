@@ -2974,12 +2974,13 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
   if transporterConfig.disableListScheduledBookingAPI
     then pure $ ScheduledBookingRes []
     else do
+      driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       driverInfo <- runInReplica $ QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
       let isDriverOnline = driverInfo.mode `elem` [Just DriverInfo.ONLINE, Just DriverInfo.SILENT]
       mbDLoc' <- do
         case (mbDLoc, isDriverOnline) of
           (Just dLoc, _) -> pure $ Just dLoc
-          (Nothing, True) -> getCurrentDriverLocUsingLTS personId
+          (Nothing, True) -> getCurrentDriverLocUsingLTS driver
           _ -> pure Nothing
       case (mbFromDay, mbToDay, mbDLoc') of
         (Just from, Just to, Just dLoc) -> do
@@ -2987,7 +2988,6 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           case driverInfo.latestScheduledBooking of
             Just _ -> pure $ ScheduledBookingRes []
             Nothing -> do
-              driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
               serviceTierItems <- fetchVehicleTierForDriverWithUsageRestriction False (Just driverInfo) Nothing Nothing Nothing personId cityId
               let availableServiceTierItems = map fst $ filter (not . snd) serviceTierItems
               let availableServiceTiers = (.serviceTierType) <$> availableServiceTierItems
@@ -3007,9 +3007,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
                 else return $ ScheduledBookingRes []
         _ -> pure $ ScheduledBookingRes []
   where
-    getCurrentDriverLocUsingLTS driverId = do
-      mbPerson <- runInReplica $ QPerson.findById driverId
-      result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocationByCloudType [driverId] (mbPerson >>= (.cloudType))
+    getCurrentDriverLocUsingLTS person = do
+      result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocationByCloudType [person.id] person.cloudType
       return $ case result of
         Left _ -> Nothing
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}

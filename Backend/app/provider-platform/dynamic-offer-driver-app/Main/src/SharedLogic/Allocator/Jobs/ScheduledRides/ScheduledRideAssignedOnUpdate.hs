@@ -177,7 +177,6 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated driver/vehicle/booking/latestScheduledPickup/transporterConfig is Nothing."
         (True, DRide.UPCOMING, _) -> do
           now <- getCurrentTime
-          mbDriver <- runInReplica $ QP.findById driverId
           mbActiveRide <- QRide.getActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
           mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
@@ -198,7 +197,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
             Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocationByCloudType [driverId] (mbDriver >>= (.cloudType))
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocationByCloudType [driverId] (mbActiveRide >>= (.cloudType))
                 case driverLocations of
                   Left _err -> do
                     return Nothing
