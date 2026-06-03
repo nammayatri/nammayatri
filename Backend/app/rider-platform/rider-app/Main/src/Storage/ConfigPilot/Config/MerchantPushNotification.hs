@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.MerchantPushNotification as DMPN
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -30,9 +29,11 @@ instance ConfigDimensions MerchantPushNotificationDimensions where
   type ConfigTypeOf MerchantPushNotificationDimensions = 'MerchantPushNotification
   type ConfigValueTypeOf MerchantPushNotificationDimensions = [DMPN.MerchantPushNotification]
   getConfigType _ = MerchantPushNotification
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfgs <- SQMPN.findAllByMerchantOpCityId (Id mocId)
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantPushNotification) (Id mocId)) configWrappers
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG MerchantPushNotification)
+      (Id a.merchantOperatingCityId)
+      (SQMPN.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
+      []
+      Nothing

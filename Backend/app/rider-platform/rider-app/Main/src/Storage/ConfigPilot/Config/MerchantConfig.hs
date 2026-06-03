@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.MerchantConfig as DMC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -30,9 +29,11 @@ instance ConfigDimensions MerchantConfigDimensions where
   type ConfigTypeOf MerchantConfigDimensions = 'MerchantConfig
   type ConfigValueTypeOf MerchantConfigDimensions = [DMC.MerchantConfig]
   getConfigType _ = MerchantConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfgs <- SCMC.findAllByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) cfgs
-      mapM (\configWrapper -> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantConfig) (Id mocId)) configWrappers
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG MerchantConfig)
+      (Id a.merchantOperatingCityId)
+      (SCMC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+      []
+      Nothing

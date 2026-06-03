@@ -22,6 +22,7 @@ source-repository head
 library
   exposed-modules:
       Lib.ConfigPilot.Config.CommonConfig
+      Lib.ConfigPilot.Config.GetterInternal
       Lib.ConfigPilot.Interface.Getter
       Lib.ConfigPilot.Interface.Setter
       Lib.ConfigPilot.Interface.Types
