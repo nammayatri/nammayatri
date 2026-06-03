@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.FRFSConfig as DFRFS
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -30,9 +29,12 @@ instance ConfigDimensions FRFSConfigDimensions where
   type ConfigTypeOf FRFSConfigDimensions = 'FRFSConfig
   type ConfigValueTypeOf FRFSConfigDimensions = Maybe DFRFS.FRFSConfig
   getConfigType _ = FRFSConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfg <- SCFRFS.findByMerchantOperatingCityId (Id mocId) (Just [])
-      let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-      LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG FRFSConfig) (Id mocId)
+  getConfigList a =
+    listToMaybe
+      <$> CR.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG FRFSConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> SCFRFS.findByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+        ([] :: [CR.DimMatcher FRFSConfigDimensions DFRFS.FRFSConfig])
+        Nothing

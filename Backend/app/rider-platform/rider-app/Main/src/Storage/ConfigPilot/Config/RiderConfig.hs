@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.RiderConfig as DRC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -30,12 +29,12 @@ instance ConfigDimensions RiderDimensions where
   type ConfigTypeOf RiderDimensions = 'RiderConfig
   type ConfigValueTypeOf RiderDimensions = Maybe DRC.RiderConfig
   getConfigType _ = RiderConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfg <- QRC.findByMerchantOperatingCityId (Id mocId)
-      case cfg of
-        Nothing -> pure Nothing
-        Just c -> do
-          let configWrapper = LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}
-          Just <$> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG RiderConfig) (Id mocId)
+  getConfigList a =
+    listToMaybe
+      <$> CR.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG RiderConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> QRC.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
+        ([] :: [CR.DimMatcher RiderDimensions DRC.RiderConfig])
+        Nothing

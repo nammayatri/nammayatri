@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -30,9 +29,12 @@ instance ConfigDimensions MerchantServiceUsageConfigDimensions where
   type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfig
   type ConfigValueTypeOf MerchantServiceUsageConfigDimensions = Maybe DMSUC.MerchantServiceUsageConfig
   getConfigType _ = MerchantServiceUsageConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfg <- CQMSUC.findByMerchantOperatingCityId (Id mocId)
-      let configWrapper = LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}
-      LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG MerchantServiceUsageConfig) (Id mocId)
+  getConfigList a =
+    listToMaybe
+      <$> CR.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG MerchantServiceUsageConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> CQMSUC.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
+        ([] :: [CR.DimMatcher MerchantServiceUsageConfigDimensions DMSUC.MerchantServiceUsageConfig])
+        Nothing
