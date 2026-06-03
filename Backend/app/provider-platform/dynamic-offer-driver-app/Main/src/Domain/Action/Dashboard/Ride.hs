@@ -521,9 +521,8 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
-  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverLocation <- do
-    driverLocations <- LF.driversLocationByCloudType [driverId] driver.cloudType
+    driverLocations <- LF.driversLocationByCloudType [driverId] ride.cloudType
     return $ listToMaybe driverLocations
 
   mbBCReason <-
