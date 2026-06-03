@@ -1172,7 +1172,7 @@ createChatMessage personId issueReportId identifier req = do
             merchantId = issueReport.merchantId
           }
   QCM.create chatMsg
-  pure (toChatMessageItem chatMsg)
+  toChatMessageItem identifier chatMsg
 
 -- | Fetches chat messages on an issue ordered by createdAt ascending.
 -- Optionally filters to messages strictly newer than @since@. Used by both
@@ -1181,17 +1181,18 @@ listChatMessages ::
   BeamFlow m r =>
   Id Person ->
   Id D.IssueReport ->
+  Identifier ->
   Maybe UTCTime ->
   Maybe Int ->
   m [Common.ChatMessageItem]
-listChatMessages personId issueReportId mbSince mbLimit = do
+listChatMessages personId issueReportId identifier mbSince mbLimit = do
   issueReport <-
     QIR.findById issueReportId
       >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   unless (issueReport.personId == personId) $
     throwError (InvalidRequest "This issue does not belong to the caller.")
   messages <- QCM.findChatMessagesAfter issueReportId mbSince mbLimit
-  pure $ map toChatMessageItem messages
+  mapM (toChatMessageItem identifier) messages
 
 -- | Rider marks operator messages as read up to a given timestamp.
 markChatRead ::
@@ -1233,18 +1234,23 @@ getChatState personId issueReportId = do
         [] -> Nothing
   pure $ Common.ChatStateRes {unread, latestMessageAt = latestAt}
 
-toChatMessageItem :: DCM.ChatMessage -> Common.ChatMessageItem
-toChatMessageItem c =
-  Common.ChatMessageItem
-    { messageId = c.id.getId,
-      senderType = c.senderType,
-      chatContentType = c.chatContentType,
-      text = c.message,
-      mediaFileIds = c.mediaFileIds,
-      deliveredAt = Nothing,
-      readAt = c.readAt,
-      createdAt = c.createdAt
-    }
+toChatMessageItem :: BeamFlow m r => Identifier -> DCM.ChatMessage -> m Common.ChatMessageItem
+toChatMessageItem identifier c = do
+  mediaFiles <-
+    mapM
+      (\mfId -> CQMF.findById mfId identifier >>= fromMaybeM (FileDoesNotExist mfId.getId))
+      c.mediaFileIds
+  pure $
+    Common.ChatMessageItem
+      { messageId = c.id.getId,
+        senderType = c.senderType,
+        chatContentType = c.chatContentType,
+        text = c.message,
+        mediaFiles = mediaFiles,
+        deliveredAt = Nothing,
+        readAt = c.readAt,
+        createdAt = c.createdAt
+      }
 
 mkIssueOption :: (D.IssueOption, Maybe D.IssueTranslation) -> Text
 mkIssueOption (issueOption, issueOptionTranslation) =

@@ -405,6 +405,7 @@ postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportI
     city
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
+    Common.CUSTOMER
     req
 
 getIssueChatMessages ::
@@ -420,6 +421,7 @@ getIssueChatMessages (Kernel.Types.Id.ShortId merchantShortId) city issueReportI
     city
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
+    Common.CUSTOMER
     mbSince
     mbLimit
 
