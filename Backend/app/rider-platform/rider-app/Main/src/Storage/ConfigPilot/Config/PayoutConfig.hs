@@ -8,9 +8,8 @@ where
 import qualified Domain.Types.PayoutConfig as DPC
 import Domain.Types.VehicleCategory (VehicleCategory)
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -34,16 +33,14 @@ instance ConfigDimensions PayoutDimensions where
   type ConfigTypeOf PayoutDimensions = 'PayoutConfig
   type ConfigValueTypeOf PayoutDimensions = [DPC.PayoutConfig]
   getConfigType _ = PayoutConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfgs <- CPC.findAllByMerchantOpCityId (Id mocId) (Just [])
-      let filtered = filterByDimensions a cfgs
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG PayoutConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDims cfgs
-    where
-      matchesDims c =
-        maybe True (\vc -> c.vehicleCategory == Just vc) dims.vehicleCategory
-          && maybe True (\en -> c.isPayoutEnabled == en) dims.isPayoutEnabled
-          && maybe True (\pe -> c.payoutEntity == pe) dims.payoutEntity
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG PayoutConfig)
+      (Id a.merchantOperatingCityId)
+      (CPC.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
+      [ CR.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),
+        CR.DimMatcher (.isPayoutEnabled) (Just . (.isPayoutEnabled)) (==),
+        CR.DimMatcher (.payoutEntity) (Just . (.payoutEntity)) (==)
+      ]
+      Nothing

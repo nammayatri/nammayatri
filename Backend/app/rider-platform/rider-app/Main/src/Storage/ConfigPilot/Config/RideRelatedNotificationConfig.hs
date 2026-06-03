@@ -7,9 +7,8 @@ where
 
 import qualified Domain.Types.RideRelatedNotificationConfig as DRRN
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as LibCPGetter
+import qualified Lib.ConfigPilot.Interface.Getter as CR
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
@@ -31,14 +30,11 @@ instance ConfigDimensions RideRelatedNotificationConfigDimensions where
   type ConfigTypeOf RideRelatedNotificationConfigDimensions = 'RideRelatedNotificationConfig
   type ConfigValueTypeOf RideRelatedNotificationConfigDimensions = [DRRN.RideRelatedNotificationConfig]
   getConfigType _ = RideRelatedNotificationConfig
-  getConfigList a = do
-    let mocId = a.merchantOperatingCityId
-    IM.withInMemCache (LibCPGetter.configPilotInMemKey a) 3600 $ do
-      cfgs <- SCRRN.findAllByMerchantOperatingCityId (Id mocId) (Just [])
-      let filtered = filterByDimensions a cfgs
-      let configWrappers = map (\cfg -> LYT.Config {config = cfg, extraDimensions = Nothing, identifier = 0}) filtered
-      mapM (\configWrapper -> LibCPGetter.getConfigImpl a configWrapper (LYT.RIDER_CONFIG RideRelatedNotificationConfig) (Id mocId)) configWrappers
-  filterByDimensions dims cfgs = filter matchesDims cfgs
-    where
-      matchesDims c =
-        maybe True (\tde -> c.timeDiffEvent == tde) dims.timeDiffEvent
+  getConfigList a =
+    CR.resolveConfigList
+      a
+      (LYT.RIDER_CONFIG RideRelatedNotificationConfig)
+      (Id a.merchantOperatingCityId)
+      (SCRRN.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+      [CR.DimMatcher (.timeDiffEvent) (Just . (.timeDiffEvent)) (==)]
+      Nothing
