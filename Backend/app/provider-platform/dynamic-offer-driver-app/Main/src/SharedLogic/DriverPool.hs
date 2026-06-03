@@ -374,7 +374,9 @@ getCurrentWindowAvailability ::
   ( Redis.HedisFlow m r,
     EsqDBFlow m r,
     CacheFlow m r,
-    FromJSON a
+    FromJSON a,
+    ToJSON a,
+    Num a
   ) =>
   Id DMOC.MerchantOperatingCity ->
   Id DP.Driver ->
