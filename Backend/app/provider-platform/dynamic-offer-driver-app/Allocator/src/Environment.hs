@@ -43,7 +43,8 @@ import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common
 import Kernel.Types.Flow
-import Kernel.Utils.App (lookupDeploymentVersion)
+import Kernel.Types.Version (CloudType)
+import Kernel.Utils.App (lookupCloudType, lookupDeploymentVersion)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall (FromDhall)
 import Kernel.Utils.IOLogging
@@ -145,7 +146,8 @@ data HandlerEnv = HandlerEnv
     kafkaClickhouseEnv :: ClickhouseEnv,
     ttenTokenCacheExpiry :: Seconds,
     emailServiceConfig :: EmailServiceConfig,
-    enableLtsPoolDataForPooling :: Bool
+    enableLtsPoolDataForPooling :: Bool,
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -154,6 +156,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let AppCfg {..} = appCfg
   hostname <- fmap cs <$> lookupEnv "POD_NAME" :: IO (Maybe Text)
   version <- lookupDeploymentVersion
+  cloudType <- Just <$> lookupCloudType
   loggerEnv <- prepareLoggerEnv appCfg.loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv appCfg.esqDBCfg loggerEnv
   eventRequestCounter <- registerEventRequestCounterMetric
