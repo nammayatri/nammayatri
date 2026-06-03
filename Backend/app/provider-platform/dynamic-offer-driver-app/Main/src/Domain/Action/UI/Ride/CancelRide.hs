@@ -50,6 +50,7 @@ import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import Lib.Scheduler (SchedulerType)
@@ -99,6 +100,7 @@ cancelRideHandle ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     TranslateFlow m r,
     LT.HasLocationService m r,
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     HasShortDurationRetryCfg r c,
     EventStreamFlow m r,
