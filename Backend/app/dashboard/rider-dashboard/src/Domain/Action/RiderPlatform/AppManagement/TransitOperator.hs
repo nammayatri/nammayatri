@@ -5,6 +5,7 @@ module Domain.Action.RiderPlatform.AppManagement.TransitOperator
     transitOperatorGetAllRows,
     transitOperatorDeleteRow,
     transitOperatorUpsertRow,
+    transitOperatorUpsertRows,
     transitOperatorGetServiceTypes,
     transitOperatorGetRoutes,
     transitOperatorGetDepots,
@@ -35,6 +36,8 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.TransitOperator
 import qualified "beckn-spec" BecknV2.OnDemand.Enums
 import qualified Dashboard.Common
 import qualified Data.Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -48,6 +51,13 @@ import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
+
+-- Strips the plaintext 'password' field before writing to the transaction log.
+-- Hashing only happens in rider-app, so at this layer the request still contains plaintext.
+stripPasswordForLog :: Data.Aeson.Value -> Data.Aeson.Value
+stripPasswordForLog (Data.Aeson.Object obj) = Data.Aeson.Object (KeyMap.delete (Key.fromText "password") (fmap stripPasswordForLog obj))
+stripPasswordForLog (Data.Aeson.Array arr) = Data.Aeson.Array (fmap stripPasswordForLog arr)
+stripPasswordForLog v = v
 
 transitOperatorGetRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorGetRow merchantShortId opCity apiTokenInfo column table vehicleCategory = do
@@ -68,7 +78,7 @@ transitOperatorDeleteRow merchantShortId opCity apiTokenInfo table vehicleCatego
 transitOperatorUpsertRow :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> Data.Aeson.Value -> Environment.Flow SharedLogic.External.Nandi.Types.NandiRow)
 transitOperatorUpsertRow merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just (stripPasswordForLog req))
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorUpsertRow) toRegen table vehicleCategory req)
 
 transitOperatorGetServiceTypes :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> BecknV2.OnDemand.Enums.VehicleCategory -> Environment.Flow [SharedLogic.External.Nandi.Types.ServiceType])
@@ -185,3 +195,9 @@ transitOperatorUpsertDeviceVehicleMapping merchantShortId opCity apiTokenInfo re
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (Dashboard.Common.addMultipartBoundary "XXX00XXX" . (.transitOperatorDSL.transitOperatorUpsertDeviceVehicleMapping)) req)
+
+transitOperatorUpsertRows :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> SharedLogic.External.Nandi.Types.NandiTable -> BecknV2.OnDemand.Enums.VehicleCategory -> [Data.Aeson.Value] -> Environment.Flow [SharedLogic.External.Nandi.Types.NandiRow])
+transitOperatorUpsertRows merchantShortId opCity apiTokenInfo toRegen table vehicleCategory req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just (stripPasswordForLog (toJSON req)))
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.transitOperatorDSL.transitOperatorUpsertRows) toRegen table vehicleCategory req)

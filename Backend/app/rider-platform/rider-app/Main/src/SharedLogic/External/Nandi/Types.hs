@@ -5,6 +5,7 @@ module SharedLogic.External.Nandi.Types where
 import qualified BecknV2.FRFS.Enums
 import Control.Lens ((?~))
 import Data.Aeson
+import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Types (Parser, parseEither)
 import Data.OpenApi (OpenApiType (..), ToParamSchema (..), enum_, toParamSchema, type_)
 import qualified Data.Text as T
@@ -478,6 +479,8 @@ data NandiEmployeeRow = NandiEmployeeRow
     driving_license_expiry :: Maybe Text,
     driving_license_number :: Maybe Text,
     email :: Maybe Text,
+    email_hash :: Maybe Text,
+    password_hash :: Maybe Text,
     father_name :: Maybe Text,
     first_name :: Text,
     gender :: Maybe Text,
@@ -493,7 +496,13 @@ data NandiEmployeeRow = NandiEmployeeRow
     organization_id :: Int64,
     gtfs_id :: Text
   }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+  deriving (Generic, FromJSON, ToSchema, Show)
+
+instance ToJSON NandiEmployeeRow where
+  toJSON row =
+    case genericToJSON defaultOptions row of
+      Object obj -> Object (KM.delete "email_hash" (KM.delete "password_hash" obj))
+      other -> other
 
 data NandiEntityRow = NandiEntityRow
   { entity_id :: Int64,

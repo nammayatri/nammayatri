@@ -1,7 +1,7 @@
 module SharedLogic.External.Nandi.Flow where
 
 import BecknV2.FRFS.Enums
-import Data.Aeson (Value (Object))
+import Data.Aeson (Value (..))
 import qualified Data.Aeson.KeyMap as KeyMap
 import Data.Aeson.Types (parseEither)
 import qualified Data.Text as T
@@ -207,6 +207,21 @@ operatorUpsertRow baseUrl gtfsId table toRegen body = do
           _ -> body
   val <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertRow gtfsId (nandiTableToText table) bodyWithRegen) "operatorUpsertRow" NandiAPI.operatorUpsertRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ROW_API") baseUrl)
   either (throwError . InternalError . T.pack) pure (decodeNandiRow table val)
+
+operatorUpsertRows :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> NandiTable -> Maybe Text -> [Value] -> m [NandiRow]
+operatorUpsertRows baseUrl gtfsId table toRegen bodies = do
+  let regenList = maybe [] (filter (not . T.null) . T.splitOn ",") toRegen
+      addRegen body = case regenList of
+        [] -> body
+        _ -> case body of
+          Object obj -> Object (KeyMap.insert "to_regen" (toJSON regenList) obj)
+          _ -> body
+      batchBody = toJSON (map addRegen bodies)
+  -- GIMS accepts both a single object and an array at the same endpoint; reusing operatorUpsertRowAPI intentionally
+  vals <- withShortRetry $ callAPI baseUrl (NandiAPI.postOperatorUpsertRow gtfsId (nandiTableToText table) batchBody) "operatorUpsertRows" NandiAPI.operatorUpsertRowAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_OPERATOR_UPSERT_ROWS_API") baseUrl)
+  case vals of
+    Array rows -> either (throwError . InternalError . T.pack) pure (mapM (decodeNandiRow table) (toList rows))
+    _ -> throwError $ InternalError "operatorUpsertRows: expected array response from GIMS"
 
 operatorServiceTypes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, HasRequestId r) => BaseUrl -> Text -> m [ServiceType]
 operatorServiceTypes baseUrl gtfsId =
