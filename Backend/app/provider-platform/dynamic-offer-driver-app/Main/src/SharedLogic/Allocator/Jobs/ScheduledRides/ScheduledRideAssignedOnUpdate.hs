@@ -127,9 +127,29 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               mbCurrentDriverLocation <- do
                 driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
                 case driverLocations of
-                  Left _err -> do
+                  Left err -> do
+                    logError $
+                      "ScheduledRideAssignedOnUpdate: driversLocation LTS API failed for driverId "
+                        <> driverId.getId
+                        <> ", rideId "
+                        <> rideId.getId
+                        <> ", bookingId "
+                        <> bookingId.getId
+                        <> ": "
+                        <> show err
                     return Nothing
-                  Right locations -> return $ listToMaybe locations
+                  Right locations -> do
+                    when (null locations) $
+                      logError $
+                        "ScheduledRideAssignedOnUpdate: driversLocation LTS API returned empty list for driverId "
+                          <> driverId.getId
+                          <> ", rideId "
+                          <> rideId.getId
+                          <> ", bookingId "
+                          <> bookingId.getId
+                          <> ", locations: "
+                          <> show locations
+                    pure $ listToMaybe locations
               case mbCurrentDriverLocation of
                 (Just dloc) -> do
                   let currentDriverLocation = LatLong {lat = dloc.lat, lon = dloc.lon}
