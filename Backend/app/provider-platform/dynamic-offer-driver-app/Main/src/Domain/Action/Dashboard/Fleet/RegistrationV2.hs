@@ -528,7 +528,8 @@ postRegistrationV2RegisterBankAccountLink _merchantShortId _opCity mbFleetOwnerI
               idNumber = fleetOwnerInfo.stripeIdNumber,
               companyName = fleetOwnerInfo.fleetName,
               fleetType = Just fleetOwnerInfo.fleetType,
-              vatNumber = fleetOwnerInfo.vatNumber
+              vatNumber = fleetOwnerInfo.vatNumber,
+              businessRegistrationNumber = fleetOwnerInfo.businessLicenseNumber
             }
   let fleetRegisterBankAccountLinkHandle = SPBA.PersonRegisterBankAccountLinkHandle {fetchPersonStripeInfo}
   castFleetBankAccountLinkResp <$> SPBA.getPersonRegisterBankAccountLink fleetRegisterBankAccountLinkHandle paymentMode fleetOwner
