@@ -1,117 +1,78 @@
--- | Config getter: re-exports getConfig for external use.
+{-# LANGUAGE ExistentialQuantification #-}
+
 module Lib.ConfigPilot.Interface.Getter
-  ( getConfigImpl,
-    invalidateConfigInMem,
-    configPilotInMemKey,
-    PersonIdKey (..),
+  ( DimMatcher (..),
+    resolveConfigList,
     TxnIdKey (..),
+    PersonIdKey (..),
+    invalidateConfigInMem,
   )
 where
 
-import Data.Aeson ((.=))
-import qualified Data.Aeson as A
-import Data.Time (timeToTimeOfDay, utctDayTime)
-import qualified EulerHS.Language as L
-import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
-import Kernel.Randomizer
-import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
-import Kernel.Tools.Metrics.CoreMetrics.Types (CoreMetrics)
-import Kernel.Types.CacheFlow (HasInMemEnv)
-import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, MonadFlow, getCurrentTime, throwError)
+import Lib.ConfigPilot.Config.GetterInternal (PersonIdKey (..), TxnIdKey (..), configPilotInMemKey, getConfigImpl, invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (ConfigDimensions (..))
 import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as BeamFlow
-import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout as CADLR
-import qualified Lib.Yudhishthira.Storage.Queries.AppDynamicLogicElementExtra as CADLE
-import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
-import Lib.Yudhishthira.Types.ConfigPilot (ConfigType)
 
--- | Key for storing personId in EulerHS option local context.
-data PersonIdKey = PersonIdKey
-  deriving stock (Generic, Typeable, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON)
+-- | Pairs a dims-side extractor with a cfg-side extractor and a custom equality
+-- function for optional secondary-key filtering.
+--
+-- When the dims extractor returns 'Nothing' the filter is skipped (pass-all).
+-- When it returns 'Just x', the cfg extractor must return 'Just y' where
+-- @eqFn x y@ holds for the record to pass.
+--
+-- Examples:
+--   Non-Maybe cfg field:  @DimMatcher (.callService)    (Just . (.callService)) (==)@
+--   Maybe cfg field:      @DimMatcher (.vehicleCategory) (.vehicleCategory)     (==)@
+--   Custom equality:      @DimMatcher (.domain) (Just . (.domain)) (\a b -> Text.toLower a == Text.toLower b)@
+data DimMatcher dims cfg
+  = forall a.
+    DimMatcher
+      (dims -> Maybe a)
+      (cfg -> Maybe a)
+      (a -> a -> Bool)
 
-instance OptionEntity PersonIdKey Text
-
--- | Key for storing txnId in EulerHS option local context.
-data TxnIdKey = TxnIdKey
-  deriving stock (Generic, Typeable, Show, Eq)
-  deriving anyclass (ToJSON, FromJSON)
-
-instance OptionEntity TxnIdKey Text
-
--- | Core config-fetching logic. Requires 'HasYudhishthiraTablesSchema' so that
--- callers must have the app-level orphan @HasSchemaName@ instances in scope.
-getConfigImpl ::
-  forall configTypeDimensions b m r.
-  (ConfigDimensions configTypeDimensions, FromJSON b, ToJSON b, BeamFlow.BeamFlow m r) =>
-  configTypeDimensions ->
-  LYT.Config b ->
+-- | One-stop resolver for list-valued configs keyed by 'MerchantOperatingCity'.
+--
+-- Handles fetch → filter → wrap → dynamic-logic in one call.
+-- Pass @[]@ for @matchers@ when no secondary-key filtering is needed.
+--
+-- The caller applies the primary key to the fetch action directly
+-- (avoids phantom-type mismatch between lib and app @Id@ types):
+--
+-- > getConfigList a =
+-- >   resolveConfigList a (LYT.RIDER_CONFIG MyConfig) (Id a.merchantOperatingCityId)
+-- >     (MyQuery.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+-- >     []
+resolveConfigList ::
+  forall dims cfg m r.
+  ( ConfigDimensions dims,
+    FromJSON cfg,
+    ToJSON cfg,
+    Typeable cfg,
+    Show cfg,
+    BeamFlow.BeamFlow m r
+  ) =>
+  dims ->
   LYT.LogicDomain ->
   Id LYT.MerchantOperatingCity ->
-  m b
-getConfigImpl _dimensions wrappedConfig logicDomain merchantOpCityId = do
-  mTxnId <- L.getOptionLocal TxnIdKey
-  activeElementVersions <-
-    case mTxnId of
-      Just txnId -> getTxnIdStickyVersions txnId
-      Nothing -> getActiveRolloutVersionsWithToss
-  allActiveElements <- CADLE.findByDomainAndVersions Nothing Nothing logicDomain activeElementVersions
-  let baseLogics = map (.logic) allActiveElements
-  resp <- LYTU.runLogics baseLogics wrappedConfig
-  case A.fromJSON resp.result of
-    A.Success (cfg :: LYT.Config b) -> pure cfg.config
-    A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+  m [cfg] ->
+  [DimMatcher dims cfg] ->
+  -- | Optional fallback matchers: used when primary matchers yield no results.
+  Maybe [DimMatcher dims cfg] ->
+  m [cfg]
+resolveConfigList dims logicDomain mocId fetch matchers fallback =
+  IM.withInMemCache (configPilotInMemKey dims) 3600 $ do
+    cfgs <- fetch
+    let applyMatchers ms = filter (\c -> all (matchesDim dims c) ms) cfgs
+    let filtered = case (applyMatchers matchers, fallback) of
+          ([], Just fb) -> applyMatchers fb
+          (results, _) -> results
+    let wrappers = map (\c -> LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}) filtered
+    mapM (\w -> getConfigImpl dims w logicDomain mocId) wrappers
   where
-    mkTxnIdConfigStickyKey txnId = "sticky_config_versions:" <> txnId <> ":" <> show logicDomain
-
-    getTxnIdStickyVersions txnId = do
-      mVersions <- Hedis.get (mkTxnIdConfigStickyKey txnId)
-      case mVersions of
-        Just versions -> pure versions
-        Nothing -> do
-          versions <- getActiveRolloutVersionsWithToss
-          Hedis.setExp (mkTxnIdConfigStickyKey txnId) versions 7200
-          pure versions
-
-    getActiveRolloutVersionsWithToss = do
-      allActiveRollouts <- CADLR.findActiveByMerchantOpCityAndDomain merchantOpCityId logicDomain
-      let nonBaseRollouts = filter (\r -> r.isBaseVersion /= Just True) allActiveRollouts
-      let cumulativeRollouts = buildCumulativeRollouts nonBaseRollouts
-      toss <- getRandomInRange (1, 100 :: Int)
-      let selectedRollout = find (\(_, cumulativePerc) -> toss <= cumulativePerc) cumulativeRollouts
-      let baseRollout = find (\rollout -> rollout.isBaseVersion == Just True) allActiveRollouts
-      let selectedRollouts = maybeToList (fst <$> selectedRollout) <> maybeToList baseRollout
-      pure $ (.version) <$> selectedRollouts
-    buildCumulativeRollouts rollouts =
-      snd $
-        foldl'
-          ( \(prevPerc, acc) rollout ->
-              let newPerc = prevPerc + rollout.percentageRollout
-               in (newPerc, acc <> [(rollout, newPerc)])
-          )
-          (0, [])
-          rollouts
-
--- | Build the in-mem cache key from dimensions. Uses 'dimensionsCacheKey' so
--- that every field in the dimensions record is automatically included.
-configPilotInMemKey :: ConfigDimensions a => a -> [Text]
-configPilotInMemKey dims = ["ConfigPilot", show (getConfigType dims), dimensionsCacheKey dims]
-
--- | Invalidate the in-mem cache for a config type across all pods.
--- Sets a Redis key that the background cleanup thread reads to clear matching in-mem entries.
-invalidateConfigInMem :: (MonadFlow m, CacheFlow m r, CoreMetrics m, HasInMemEnv r) => ConfigType -> m ()
-invalidateConfigInMem cfgType = do
-  let keyPrefix :: Text = "ConfigPilot:" <> show cfgType
-  now <- getCurrentTime
-  let val = A.object ["forceCleanupTimestamp" .= timeOfDayFromUTCTime now, "forceCleanupKeyPrefix" .= keyPrefix]
-  Hedis.setExp "inmem:force:cleanup:timeofday" val 600
-  IM.refreshInMem keyPrefix -- This one does clear using the shudhi sidecar, above is a fallback for thread running in this project for cleanup after TTL
-  where
-    timeOfDayFromUTCTime t =
-      let dayTime = utctDayTime t
-       in timeToTimeOfDay dayTime
+    matchesDim dims' c (DimMatcher getDimVal getCfgVal eqFn) =
+      maybe True (\dv -> maybe False (eqFn dv) (getCfgVal c)) (getDimVal dims')
