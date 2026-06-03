@@ -1510,10 +1510,10 @@ MorthVerification:
       documentNumberEncrypted: Text
       documentNumberHash: DbHash
   fromTType:
-    documentNumber: EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash|E
+    documentNumber: EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash|E
   toTType:
-    documentNumberEncrypted: (documentNumber <&> unEncrypted . (.encrypted))|E
-    documentNumberHash: (documentNumber <&> (.hash))|E
+    documentNumberEncrypted: (unEncrypted . (.encrypted) $ documentNumber)|E
+    documentNumberHash: ((.hash) documentNumber)|E
   queries:
     findById:
       kvFunction: findOneWithKV
