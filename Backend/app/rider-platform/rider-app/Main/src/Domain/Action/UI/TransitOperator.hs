@@ -4,6 +4,7 @@
 module Domain.Action.UI.TransitOperator where
 
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import Domain.Action.UI.TransitOperator.Validation (preprocessUpsertBody, preprocessUpsertBodyAtIdx)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant (Merchant)
 import Environment (Flow)
@@ -18,10 +19,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
 import qualified Tools.MultiModal as MM
 
--- | Resolve the OTPRest base URL and gtfsId (feedKey) from merchant details.
---   Finds MerchantOperatingCity by shortId and city.
---   Then finds IntegratedBPPConfig by merchantOperatingCityId, vehicleCategory and MULTIMODAL.
---   Returns (BaseUrl, gtfsId)
 resolveBaseUrlAndGtfsId :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow (BaseUrl, Text)
 resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory = do
   merchantOpCity <-
@@ -52,8 +49,20 @@ transitOperatorDeleteRowUtil merchantShortId city vehicleCategory table pkValue 
 
 transitOperatorUpsertRowUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Text -> Value -> Flow NandiRow
 transitOperatorUpsertRowUtil merchantShortId city vehicleCategory table toRegen body = do
+  processedBody <- preprocessUpsertBody table body
   (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
-  NandiFlow.operatorUpsertRow baseUrl gtfsId table toRegen body
+  NandiFlow.operatorUpsertRow baseUrl gtfsId table toRegen processedBody
+
+transitOperatorUpsertRowsUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> NandiTable -> Maybe Text -> [Value] -> Flow [NandiRow]
+transitOperatorUpsertRowsUtil merchantShortId city vehicleCategory table toRegen bodies = do
+  when (length bodies > 500) $
+    throwError $ InvalidRequest "Batch size exceeds maximum of 500 rows per request"
+  if null bodies
+    then pure []
+    else do
+      processedBodies <- zipWithM (preprocessUpsertBodyAtIdx table) [0 ..] bodies
+      (baseUrl, gtfsId) <- resolveBaseUrlAndGtfsId merchantShortId city vehicleCategory
+      NandiFlow.operatorUpsertRows baseUrl gtfsId table toRegen processedBodies
 
 transitOperatorGetServiceTypesUtil :: ShortId Merchant -> Context.City -> BecknSpec.VehicleCategory -> Flow [ServiceType]
 transitOperatorGetServiceTypesUtil merchantShortId city vehicleCategory = do
