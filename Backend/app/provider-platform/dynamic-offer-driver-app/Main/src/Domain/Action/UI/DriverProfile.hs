@@ -169,7 +169,7 @@ postDriverProfileUpdateAuthDataVerifyOTP (mbPersonId, merchantId, _) req = do
         Just code -> pure code
         _ -> throwError $ InvalidRequest "Country code not found. Please try again."
       mobileNumberHash <- getDbHash storedMobileNumber
-      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRole storedCountryCode mobileNumberHash merchantId SP.DRIVER
+      mobileNumberExists <- QPersonExtra.findByMobileNumberAndMerchantAndRoleFromDb storedCountryCode mobileNumberHash merchantId SP.DRIVER
       whenJust mobileNumberExists $ \existing ->
         when (existing.id /= personId) $ throwError (InvalidRequest "Phone number already registered")
       encMobileNumber <- encrypt storedMobileNumber

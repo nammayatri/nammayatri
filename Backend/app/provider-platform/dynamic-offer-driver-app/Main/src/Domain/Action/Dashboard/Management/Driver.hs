@@ -559,7 +559,7 @@ postDriverUpdatePhoneNumber merchantShortId opCity reqDriverId req = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   phoneNumberHash <- getDbHash req.newPhoneNumber
-  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchantAndRole req.newCountryCode phoneNumberHash merchant.id DP.DRIVER
+  mbLinkedPerson <- QPerson.findByMobileNumberAndMerchantAndRoleFromDb req.newCountryCode phoneNumberHash merchant.id DP.DRIVER
   whenJust mbLinkedPerson $ \linkedPerson -> do
     if linkedPerson.id == driver.id
       then throwError $ InvalidRequest "Person already have the same mobile number"

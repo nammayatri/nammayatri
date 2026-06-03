@@ -2445,8 +2445,9 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   whenJust req.mobileNo $ \reqMobileNo -> do
     mobileNumberHash <- getDbHash reqMobileNo
     let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
-    person <- QPerson.findByMobileNumberAndMerchantAndRole (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id driver.role
-    when (isJust person) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
+    person <- QPerson.findByMobileNumberAndMerchantAndRoleFromDb (fromMaybe countryCodeFallback req.mobileCountryCode) mobileNumberHash merchant.id driver.role
+    whenJust person $ \existing ->
+      when (existing.id /= personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
   whenJust req.email $ \reqEmail -> do
     person <- QPerson.findByEmailAndMerchantIdAndRole (Just reqEmail) merchant.id driver.role
     when (isJust person) $ throwError (EmailAlreadyLinked reqEmail)
@@ -4489,7 +4490,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
           mobileNumberHash <- getDbHash reqMobileNo
           let countryCodeFallback = P.getCountryMobileCode merchantOpCity.country
               countryCode = fromMaybe countryCodeFallback req.mobileCountryCode
-          existingByMobile <- QPerson.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id driver.role
+          existingByMobile <- QPerson.findByMobileNumberAndMerchantAndRoleFromDb countryCode mobileNumberHash merchant.id driver.role
           whenJust existingByMobile $ \existing ->
             when (existing.id /= personId) $ throwError (MobileNumberAlreadyLinked reqMobileNo)
           encNewPhoneNumber <- encrypt reqMobileNo

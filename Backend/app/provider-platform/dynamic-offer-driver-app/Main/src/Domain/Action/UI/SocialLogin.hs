@@ -146,7 +146,7 @@ postSocialUpdateProfile (mbPersonId, merchantId, _) req = do
     Just mobileNumber -> do
       mobileNumberHash <- getDbHash mobileNumber
       let countryCode = fromMaybe "+91" req.mobileCountryCode
-      PQ.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchantId SP.DRIVER >>= \case
+      PQ.findByMobileNumberAndMerchantAndRoleFromDb countryCode mobileNumberHash merchantId SP.DRIVER >>= \case
         Just existingPerson
           | personId /= existingPerson.id ->
             throwError $ DriverMobileAlreadyExists (show req.mobileNumber)
