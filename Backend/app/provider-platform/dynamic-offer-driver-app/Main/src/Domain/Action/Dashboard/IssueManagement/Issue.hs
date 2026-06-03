@@ -175,6 +175,7 @@ postIssueChatMessage (Kernel.Types.Id.ShortId merchantShortId) city issueReportI
     city
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
+    Common.DRIVER
     req
 
 getIssueChatMessages ::
@@ -190,6 +191,7 @@ getIssueChatMessages (Kernel.Types.Id.ShortId merchantShortId) city issueReportI
     city
     (Kernel.Types.Id.cast issueReportId)
     dashboardIssueHandle
+    Common.DRIVER
     mbSince
     mbLimit
 

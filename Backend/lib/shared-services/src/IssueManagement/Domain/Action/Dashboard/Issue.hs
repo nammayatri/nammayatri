@@ -1989,9 +1989,10 @@ sendDashboardChatMessage ::
   Context.City ->
   Id DIR.IssueReport ->
   ServiceHandle m ->
+  Identifier ->
   Common.SendChatMessageByUserReq ->
   m CommonUI.ChatMessageItem
-sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle req = do
+sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle identifier req = do
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   now <- getCurrentTime
@@ -2025,7 +2026,7 @@ sendDashboardChatMessage merchantShortId opCity issueReportId issueHandle req = 
     case result of
       Right _ -> pure ()
       Left err -> logError $ "sendDashboardChatMessage: sendChatNotification failed " <> show err
-  pure $ UIR.toChatMessageItem chatMsg
+  UIR.toChatMessageItem identifier chatMsg
 
 listDashboardChatMessages ::
   ( Esq.EsqDBReplicaFlow m r,
@@ -2035,14 +2036,15 @@ listDashboardChatMessages ::
   Context.City ->
   Id DIR.IssueReport ->
   ServiceHandle m ->
+  Identifier ->
   Maybe UTCTime ->
   Maybe Int ->
   m [CommonUI.ChatMessageItem]
-listDashboardChatMessages merchantShortId opCity issueReportId issueHandle mbSince mbLimit = do
+listDashboardChatMessages merchantShortId opCity issueReportId issueHandle identifier mbSince mbLimit = do
   issueReport <- QIR.findById issueReportId >>= fromMaybeM (IssueReportDoesNotExist issueReportId.getId)
   _merchantOpCity <- checkMerchantCityAccess merchantShortId opCity issueReport Nothing issueHandle
   messages <- B.runInReplica $ QCM.findChatMessagesAfter issueReportId mbSince mbLimit
-  pure $ map UIR.toChatMessageItem messages
+  mapM (UIR.toChatMessageItem identifier) messages
 
 markDashboardChatRead ::
   ( Esq.EsqDBReplicaFlow m r,
