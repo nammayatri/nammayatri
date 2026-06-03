@@ -303,6 +303,7 @@ library
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
+      Domain.Action.UI.Offers
       Domain.Action.UI.ParkingBooking
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
@@ -864,6 +865,7 @@ library
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
+      API.Action.UI.Offers
       API.Action.UI.ParkingBooking
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass

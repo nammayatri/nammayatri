@@ -29,6 +29,7 @@ import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.NearbyBuses as NearbyBuses
 import qualified API.Action.UI.NearbyDrivers as NearbyDrivers
 import qualified API.Action.UI.NyRegularSubscription as NYRegular
+import qualified API.Action.UI.Offers as Offers
 import qualified API.Action.UI.PartnerBookingStatement as PartnerBookingStatement
 import qualified API.Action.UI.PassDetails as PassDetails
 import qualified API.Action.UI.PickupInstructions as PickupInstructions
@@ -156,6 +157,7 @@ type API =
            :<|> PickupInstructions.API
            :<|> RiderPreferences.API
            :<|> NYRegular.API
+           :<|> Offers.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
            :<|> Pass.API
@@ -239,6 +241,7 @@ handler =
     :<|> PickupInstructions.handler
     :<|> RiderPreferences.handler
     :<|> NYRegular.handler
+    :<|> Offers.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
     :<|> Pass.handler

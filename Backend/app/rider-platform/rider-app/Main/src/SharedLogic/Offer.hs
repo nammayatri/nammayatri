@@ -17,7 +17,7 @@ import qualified Domain.Types.SearchRequest as SSR
 import qualified Domain.Types.Yudhishthira as Y
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Payment.Interface.Types as Payment
-import Kernel.External.Types (ServiceFlow)
+import Kernel.External.Types (Language (ENGLISH), ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
@@ -39,6 +39,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.BookingExtra as QBooking
@@ -331,6 +332,44 @@ mkOfferRespAPIEntity mbFareCtx offer@Payment.OfferResp {..} = do
         estimatedPostOfferAmount = postOfferAmount
       }
 
+-- | Replace each offer's display text (title/description/tnc) with the rider's
+-- language translation from the shared `translations` table, keyed by OFFER_*.
+-- Falls back to the offer's base text when no translation row exists.
+translateOfferListResp ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Language ->
+  Payment.OfferListResp ->
+  m Payment.OfferListResp
+translateOfferListResp merchantOperatingCityId language Payment.OfferListResp {..} = do
+  translatedOffers <- mapM (translateOffer merchantOperatingCityId language) offerResp
+  pure Payment.OfferListResp {offerResp = translatedOffers, ..}
+
+translateOffer ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Language ->
+  Payment.OfferResp ->
+  m Payment.OfferResp
+translateOffer merchantOperatingCityId language Payment.OfferResp {..} = do
+  mbTitle <- getTranslation "title"
+  mbDescription <- getTranslation "description"
+  mbTnc <- getTranslation "tnc"
+  let translatedDescription =
+        Payment.OfferDescription
+          { sponsoredBy = offerDescription.sponsoredBy,
+            title = maybe offerDescription.title (Just . (.message)) mbTitle,
+            description = maybe offerDescription.description (Just . (.message)) mbDescription,
+            tnc = maybe offerDescription.tnc (Just . (.message)) mbTnc
+          }
+  pure Payment.OfferResp {offerDescription = translatedDescription, ..}
+  where
+    getTranslation field =
+      CQTranslations.findByMerchantOpCityIdMessageKeyLanguageWithInMemcache merchantOperatingCityId (mkOfferMessageKey offerId field) language
+
+mkOfferMessageKey :: Text -> Text -> Text
+mkOfferMessageKey offerId field = "OFFER_" <> offerId <> "_" <> field
+
 mkOfferListReq :: (MonadFlow m, EncFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, EsqDBFlow m r) => Person.Person -> Price -> m Payment.OfferListReq
 mkOfferListReq person price = do
   now <- getCurrentTime
@@ -412,9 +451,11 @@ offerListWithBasket merchantId personId merchantOperatingCityId paymentServiceTy
       let mbRideData = mkRideData <$> mbRide
           mbBookingData = mkBookingData <$> mbBooking
           mbSearchReqData = mkSearchRequestData <$> mbSearchReq
+          language = fromMaybe ENGLISH person.language
       forM offersByProduct $ \(productId, offersForProduct) -> do
         filteredOffers <- applyOffersFraudChecks merchantOperatingCityId offersForProduct mbRide mbBooking mbSearchReq mbRideData mbBookingData mbSearchReqData isMultipleOrNoDeviceIdExist isDriverNumberSameAsCustomer personOfferStats mbPersonStats person.hasTakenValidRide person.totalRidesCount
-        pure (productId, filteredOffers)
+        translatedOffers <- translateOfferListResp merchantOperatingCityId language filteredOffers
+        pure (productId, translatedOffers)
     else do
       let totalAmount = sum $ map ((.amount) . snd) products
           currency = maybe INR ((.currency) . snd) (listToMaybe products)

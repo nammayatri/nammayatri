@@ -1,0 +1,16 @@
+imports:
+  OfferRespAPIEntity: SharedLogic.Offer
+  HighPrecMoney: Kernel.Types.Common
+
+module: Offers
+
+types: {}
+
+apis:
+  - GET:
+      endpoint: /offers/list
+      auth: TokenAuth
+      query:
+        - amount: HighPrecMoney
+      response:
+        type: "[OfferRespAPIEntity]"
