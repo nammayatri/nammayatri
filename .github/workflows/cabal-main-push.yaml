@@ -1,9 +1,10 @@
-name: Nix CI (Cabal Push Main)
+name: Cabal CI (Main Push)
 
 on:
   push:
     branches:
       - "main"
+      - "test-build"
   workflow_dispatch:
 
 permissions:
@@ -22,8 +23,8 @@ jobs:
         id: evaluate
         run: |
           echo "should_proceed=true" >> $GITHUB_OUTPUT
-
-  master-build:
+  
+  cabal-build:
     name: ${{ matrix.name }}
     needs: [check-conditions]
     continue-on-error: ${{ matrix.continue-on-error }}
@@ -34,7 +35,7 @@ jobs:
           - system: x86_64-linux
             host: x86_64-linux
             arch: amd64
-            name: Cabal Unoptimized Build
+            name: Cabal Unoptimized Master Release Build
             continue-on-error: false
       fail-fast: false
     runs-on: ${{ matrix.host }}
@@ -50,41 +51,41 @@ jobs:
 
       - name: Restore cabal cache
         run: |
-          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
-          KEY_FILE="$CACHE_ROOT/.cache-key-local"
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}
+          KEY_FILE="$CACHE_ROOT/.cache-key-unoptimized"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle-local and cabal store"
-            rm -rf "$CACHE_ROOT/dist-newstyle-local"
+            echo "Cache key changed, busting dist-newstyle and cabal store"
+            rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle-local" "$CACHE_ROOT/.cabal-dir"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
           echo "$CURRENT_KEY" > "$KEY_FILE"
-          ln -sfn "$CACHE_ROOT/dist-newstyle-local" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
 
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}/.cabal-dir
             cd Backend
-            cabal build all -f+Local 2>&1
+            cabal build all 2>&1
           " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
           done | tee master-build-log.txt
 
       - name: Collect binaries to staging
         run: |
-          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
+          STAGING=$HOME/ny-staging/${{ github.run_id }}
           rm -rf "$STAGING"
           mkdir -p "$STAGING/bin" "$STAGING/opt/app"
 
           find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
 
           for f in "$STAGING/bin/"*; do
-            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
+            ln -sf "../../bin/$(basename "$f")" "$STAGING/opt/app/$(basename "$f")"
           done
 
           cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
@@ -98,12 +99,12 @@ jobs:
           path: master-build-log.txt
           retention-days: 1
 
-      - name: Build And Push Docker image (Master Local mode)
+      - name: Build And Push Docker image
         id: docker
         if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
         env:
           DOCKER_REGISTRY: ghcr.io
-          DOCKER_TAG_PREFIX: "cabal-master-"
+          DOCKER_TAG_PREFIX: "master-"
         run: |
           export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
           nix build .#packages.${{ matrix.system }}.dockerImage --impure
@@ -119,3 +120,42 @@ jobs:
       - name: Cleanup staging dir
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}
+  
+  cabal-build-times:
+    name: Analyze Cabal Build Times
+    needs: [cabal-build, check-conditions]
+    if: needs.check-conditions.outputs.should-proceed == 'true'
+    runs-on: x86_64-linux
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download master build logs
+        uses: actions/download-artifact@v4
+        with:
+          path: master-build-logs
+
+      - name: Run build log analysis
+        run: |
+          cd buildtime-analysis
+          python3 analyze_build_log.py ../master-build-logs/master-build-log/master-build-log.txt
+
+      - name: Run build visualization
+        run: |
+          cd buildtime-analysis
+          python3 visualize_builds.py
+
+      - name: Upload analysis artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-build-analysis-results
+          path: |
+            buildtime-analysis/build_analysis.json
+            buildtime-analysis/build_analysis_report.md
+            buildtime-analysis/dependency_analysis.json
+            buildtime-analysis/*.png
+            buildtime-analysis/*/*.png
+          retention-days: 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

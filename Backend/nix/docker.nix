@@ -22,14 +22,14 @@ in
                 nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
                 buildInputs =
                   config.haskellProjects.default.outputs.devShell.buildInputs
-                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client ];
+                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client pkgs.libsodium ];
                 src = /. + localBinariesPath;
               } ''
               cp -r $src $out
               chmod -R +w $out/bin
               for exe in $out/bin/*; do
                 wrapProgram "$exe" \
-                  --set LD_LIBRARY_PATH "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
+                  --prefix LD_LIBRARY_PATH : "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib:${pkgs.libsodium}/lib"
               done
             ''
           else self'.packages.nammayatri;

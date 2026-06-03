@@ -123,5 +123,24 @@
         '';
       });
     };
+
+    pre-push-build = {
+      enable = true;
+      name = "pre-push-build";
+      description = "Incremental cabal build of changed packages + their dependents before pushing (reuses Backend/dist-newstyle so a prior local build makes it a no-op)";
+      stages = [ "push" ];
+      pass_filenames = false;
+      files = "^Backend/(.*\\.(hs|cabal|yaml)|cabal\\.project)$";
+      entry = lib.getExe (pkgs.writeShellApplication {
+        name = "pre-push-build";
+        text = ''
+          if [ -w /dev/tty ]; then
+            exec >/dev/tty 2>&1
+          fi
+          echo ">> pre-push: incremental cabal build all — verifying changed packages + dependents (live output below)"
+          nix develop .#backend --command bash -c "cd Backend && cabal build all"
+        '';
+      });
+    };
   };
 }
