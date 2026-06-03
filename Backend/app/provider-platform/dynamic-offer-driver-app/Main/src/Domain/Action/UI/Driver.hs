@@ -3008,7 +3008,8 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
         _ -> pure $ ScheduledBookingRes []
   where
     getCurrentDriverLocUsingLTS driverId = do
-      result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocation [driverId]
+      mbPerson <- runInReplica $ QPerson.findById driverId
+      result <- withTryCatch "driversLocation:getCurrentDriverLocUsingLTS" $ LTF.driversLocationByCloudType [driverId] (mbPerson >>= (.cloudType))
       return $ case result of
         Left _ -> Nothing
         Right locations -> listToMaybe locations >>= \x -> Just LatLong {lat = x.lat, lon = x.lon}

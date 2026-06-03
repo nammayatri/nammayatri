@@ -68,6 +68,7 @@ import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Lib.Finance.Domain.Types.Account
 import Lib.Finance.Domain.Types.DirectTaxTransaction ()
@@ -498,6 +499,7 @@ rideInfo ::
     EsqDBFlow m r,
     BeamFlow m r,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     CH.HasClickhouseEnv CH.ATLAS_KAFKA m,
     HasShortDurationRetryCfg r c
   ) =>
@@ -519,8 +521,9 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
 
   riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
   riderDetails <- runInReplica $ QRiderDetails.findById riderId >>= fromMaybeM (RiderDetailsNotFound rideId.getId)
+  driver <- runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   mDriverLocation <- do
-    driverLocations <- LF.driversLocation [driverId]
+    driverLocations <- LF.driversLocationByCloudType [driverId] driver.cloudType
     return $ listToMaybe driverLocations
 
   mbBCReason <-
