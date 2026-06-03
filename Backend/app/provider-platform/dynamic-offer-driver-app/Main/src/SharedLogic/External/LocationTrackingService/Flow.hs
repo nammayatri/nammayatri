@@ -161,7 +161,16 @@ driversLocation driverIds = do
       callAPI url (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") url)
   logDebug $ "lts driversLocation: " <> show driversLocationRes
-  return driversLocationRes
+  case (driversLocationRes, ltsCfg.secondaryUrl) of
+    ([], Just secondaryUrl) -> do
+      logDebug "driversLocation: primary returned empty, trying secondary URL"
+      fallbackRes <-
+        withShortRetry $
+          callAPI secondaryUrl (DriversLocationAPI.driversLocation req) "driversLocation" DriversLocationAPI.locationTrackingServiceAPI
+            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVERS_LOCATION_API") secondaryUrl)
+      logDebug $ "lts driversLocation fallback: " <> show fallbackRes
+      return fallbackRes
+    _ -> return driversLocationRes
 
 driverLocation :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DR.Ride -> Id DM.Merchant -> Id DP.Person -> m DriverLocationResp
 driverLocation rideId merchantId driverId = do
@@ -177,7 +186,16 @@ driverLocation rideId merchantId driverId = do
       callAPI url (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
         >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") url)
   logDebug $ "lts driverLocation: " <> show driverLocationRes
-  return driverLocationRes
+  case (driverLocationRes.loc, ltsCfg.secondaryUrl) of
+    ([], Just secondaryUrl) -> do
+      logDebug "driverLocation: primary returned empty, trying secondary URL"
+      fallbackRes <-
+        withShortRetry $
+          callAPI secondaryUrl (DriverLocationAPI.driverLocation rideId req) "driverLocation" DriverLocationAPI.locationTrackingServiceAPI
+            >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_DRIVER_LOCATION_API") secondaryUrl)
+      logDebug $ "lts driverLocation fallback: " <> show fallbackRes
+      return fallbackRes
+    _ -> return driverLocationRes
 
 blockDriverLocationsTill :: (CoreMetrics m, MonadFlow m, HasLocationService m r, HasShortDurationRetryCfg r c, HasRequestId r, MonadReader r m) => Id DM.Merchant -> Id DP.Person -> UTCTime -> m APISuccess
 blockDriverLocationsTill merchantId driverId blockTill = do
