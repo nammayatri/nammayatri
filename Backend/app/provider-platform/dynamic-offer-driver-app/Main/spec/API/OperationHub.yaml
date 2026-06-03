@@ -34,6 +34,7 @@ types:
     requestType: RequestType
     requestStatus: RequestStatus
     requestTime: UTCTime
+    pendingChallanCount: Maybe Int
 apis:
   - GET:
       endpoint: /operation/getAllHubs
@@ -58,6 +59,7 @@ apis:
         - mbReqType: RequestType
         - mbRcNo: Text
         - mbDriverId: Id Person
+        - refreshChallanCount: Bool
       auth: TokenAuth PROVIDER_TYPE
       response:
         type: OperationHubRequestsResp
