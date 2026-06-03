@@ -8,6 +8,7 @@ import qualified Domain.Action.UI.DriverOffer as UDriverOffer
 import qualified Domain.Action.UI.InterCityDetails as DInterCityDetails
 import qualified Domain.Action.UI.RentalDetails as DRentalDetails
 import qualified Domain.Action.UI.SpecialZoneQuote as USpecialZoneQuote
+import Domain.SharedLogic.RideDiscount (isProjectedFareParamTag)
 import Domain.Types.BppDetails as DBppDetails
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import Domain.Types.Quote
@@ -76,7 +77,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           discountWithCurrency = mkPriceAPIEntity <$> discount,
           vehicleVariant = vehicleServiceTierType,
           customerOffers = Nothing,
-          quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
+          quoteFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkQuoteBreakupAPIEntity <$> quoteBreakupList),
           vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
           ..
         }
