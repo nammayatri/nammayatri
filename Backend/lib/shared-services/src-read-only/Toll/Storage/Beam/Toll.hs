@@ -9,21 +9,21 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Kernel.Utils.ComputeIntersection
+import qualified Toll.Domain.Types.TollGate
 
 data TollT f = TollT
-  { id :: (B.C f Kernel.Prelude.Text),
-    isAutoRickshawAllowed :: (B.C f Kernel.Prelude.Bool),
-    isTwoWheelerAllowed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
-    name :: (B.C f Kernel.Prelude.Text),
-    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency)),
-    price :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    tollEndGates :: (B.C f [Kernel.Utils.ComputeIntersection.LineSegment]),
-    tollStartGates :: (B.C f [Kernel.Utils.ComputeIntersection.LineSegment]),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Kernel.Prelude.Text,
+    isAutoRickshawAllowed :: B.C f Kernel.Prelude.Bool,
+    isTwoWheelerAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    name :: B.C f Kernel.Prelude.Text,
+    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    price :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tollEndGates :: B.C f [Toll.Domain.Types.TollGate.TollGate],
+    tollStartGates :: B.C f [Toll.Domain.Types.TollGate.TollGate],
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table TollT where
 
 type Toll = TollT Identity
 
-$(enableKVPG (''TollT) [('id)] [])
+$(enableKVPG ''TollT ['id] [])
 
-$(mkTableInstancesGenericSchema (''TollT) "toll")
+$(mkTableInstancesGenericSchema ''TollT "toll")

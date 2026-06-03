@@ -115,9 +115,11 @@ library
       SMS.API
       SMS.Domain
       SMS.Types
+      Toll.Domain.Types.TollGate
       Toll.SharedLogic.TollsDetector
       Toll.Storage.BeamFlow
       Toll.Storage.CachedQueries.Toll
+      Toll.Storage.Queries.TollExtra
       UrlShortner.Common
       UrlShortner.Types
       API.Types.ProviderPlatform.IssueManagement
@@ -144,6 +146,7 @@ library
       Safety.Storage.Queries.Sos
       Toll.Domain.Types.Toll
       Toll.Storage.Beam.Toll
+      Toll.Storage.Queries.OrphanInstances.Toll
       Toll.Storage.Queries.Toll
   other-modules:
       Tools.Beam.UtilsTH
@@ -208,6 +211,7 @@ library
     , external
     , extra
     , generic-lens
+    , geojson
     , hspec
     , http-client
     , lens

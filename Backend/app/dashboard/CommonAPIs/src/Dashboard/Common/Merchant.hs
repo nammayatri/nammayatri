@@ -933,6 +933,111 @@ newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {u
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+---- Toll ----------------------------------------------------------------
+
+data LatLongAPIEntity = LatLongAPIEntity
+  { lat :: Double,
+    lon :: Double
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data LineSegmentAPIEntity = LineSegmentAPIEntity
+  { start :: LatLongAPIEntity,
+    end :: LatLongAPIEntity
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- | Dashboard wire format: GeoJSON LineString or Polygon geometry objects only.
+-- Legacy LineSegment gates may still exist in DB; list returns them as GeoJSON LineString.
+data TollGateAPIEntity
+  = LineStringGateAPIEntity Text
+  | PolyGateAPIEntity Text
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToSchema)
+
+instance ToJSON TollGateAPIEntity where
+  toJSON (LineStringGateAPIEntity geoJson) =
+    case decodeStrict (encodeUtf8 geoJson) of
+      Just v -> v
+      Nothing -> object ["type" .= ("LineString" :: Text)]
+  toJSON (PolyGateAPIEntity geoJson) =
+    case decodeStrict (encodeUtf8 geoJson) of
+      Just v -> v
+      Nothing -> object ["type" .= ("Polygon" :: Text)]
+
+instance FromJSON TollGateAPIEntity where
+  parseJSON v =
+    parseGeoLineString v
+      <|> parseGeoPolygon v
+    where
+      parseGeoLineString = withObject "TollGateAPIEntity" $ \o -> do
+        gateType <- o .: "type"
+        unless (gateType == ("LineString" :: Text)) $
+          fail "Expected GeoJSON LineString toll gate"
+        pure . LineStringGateAPIEntity $
+          decodeUtf8 . BL.toStrict . encode $ Object o
+
+      parseGeoPolygon = withObject "TollGateAPIEntity" $ \o -> do
+        gateType <- o .: "type"
+        unless (gateType == ("Polygon" :: Text)) $
+          fail "Expected GeoJSON Polygon toll gate"
+        pure . PolyGateAPIEntity $
+          decodeUtf8 . BL.toStrict . encode $ Object o
+
+data UpsertTollReq = UpsertTollReq
+  { name :: Text,
+    price :: HighPrecMoney,
+    currency :: Currency,
+    tollStartGates :: [TollGateAPIEntity],
+    tollEndGates :: [TollGateAPIEntity],
+    isAutoRickshawAllowed :: Bool,
+    isTwoWheelerAllowed :: Maybe Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertTollReq where
+  hideSecrets = identity
+
+data TollAPIEntity = TollAPIEntity
+  { id :: Text,
+    name :: Text,
+    price :: HighPrecMoney,
+    currency :: Currency,
+    tollStartGates :: [TollGateAPIEntity],
+    tollEndGates :: [TollGateAPIEntity],
+    isAutoRickshawAllowed :: Bool,
+    isTwoWheelerAllowed :: Maybe Bool,
+    merchantId :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UpsertTollCsvReq = UpsertTollCsvReq
+  { file :: Kernel.Prelude.FilePath,
+    upsertInDriverApp :: Maybe Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets UpsertTollCsvReq where
+  hideSecrets = identity
+
+instance FromMultipart Tmp UpsertTollCsvReq where
+  fromMultipart form = do
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    let upsertInDriverApp = either (const Nothing) (readMaybe . T.unpack) $ lookupInput "upsertInDriverApp" form
+    return $ UpsertTollCsvReq csvFile upsertInDriverApp
+
+instance ToMultipart Tmp UpsertTollCsvReq where
+  toMultipart form =
+    MultipartData
+      (maybe [] (\val -> [Input "upsertInDriverApp" (T.pack $ show val)]) form.upsertInDriverApp)
+      [FileData "file" (T.pack form.file) "" form.file]
+
 --- Upsert driver pool config using csv file ----
 
 newtype UpsertDriverPoolConfigCsvReq = UpsertDriverPoolConfigCsvReq {file :: Kernel.Prelude.FilePath}

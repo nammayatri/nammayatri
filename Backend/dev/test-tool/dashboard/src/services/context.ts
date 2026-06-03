@@ -188,6 +188,90 @@ export async function triggerConfigSync(fromEnv: string, forceFetch = false): Pr
   }
 }
 
+const TOLL_COLLECTION_DIRS = new Set(['TollRideFlow', 'TollConfigFlow']);
+
+export function isTollCollectionDir(directory: string): boolean {
+  return TOLL_COLLECTION_DIRS.has(directory);
+}
+
+async function waitForConfigSyncDone(timeoutMs = 600000): Promise<{ ok: boolean; error?: string }> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const st = await fetchConfigSyncStatus();
+    if (!st) {
+      await new Promise(r => setTimeout(r, 2000));
+      continue;
+    }
+    if (!st.running) {
+      if (st.exit_code === 0 && !st.error) return { ok: true };
+      return { ok: false, error: st.error ?? `config-sync exit ${st.exit_code ?? 'unknown'}` };
+    }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  return { ok: false, error: 'config-sync timed out' };
+}
+
+/** test-context-api without the toll seed routes (405 / 404). */
+function isMissingSeedEndpoint(status?: number): boolean {
+  return status === 405 || status === 404;
+}
+
+/** Re-apply Backend/dev/local-testing-data/*.sql (includes toll-dashboard-access.sql). */
+export async function reapplyLocalTestingData(): Promise<{ ok: boolean; error?: string }> {
+  let lastError = 'seed endpoint not available';
+  for (const method of ['post', 'get'] as const) {
+    try {
+      const resp = await axios[method](`${CONTEXT_API}/api/local-testing-data/reapply`, {}, { timeout: 120000 });
+      if (resp.data?.ok) return { ok: true };
+      lastError = resp.data?.error ?? 'reapply failed';
+    } catch (e: any) {
+      if (isMissingSeedEndpoint(e?.response?.status)) continue;
+      return { ok: false, error: e?.response?.data?.error ?? String(e) };
+    }
+  }
+  return { ok: false, error: lastError };
+}
+
+export async function seedTollDashboardAccess(
+  syncEnv = 'master',
+  options: { skipConfigSync?: boolean } = {},
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
+  let lastError = 'seed endpoint not available';
+  for (const method of ['post', 'get'] as const) {
+    try {
+      const resp = await axios[method](`${CONTEXT_API}/api/integration-tests/seed-toll-dashboard`, {}, { timeout: 15000 });
+      const data = resp.data as { ok?: boolean; files?: { name: string; ok: boolean; error?: string }[] };
+      if (data?.ok) return { ok: true };
+      const failed = (data?.files ?? []).filter(f => !f.ok).map(f => `${f.name}: ${f.error ?? 'failed'}`).join('; ');
+      return { ok: false, error: failed || 'seed failed' };
+    } catch (e: any) {
+      if (isMissingSeedEndpoint(e?.response?.status)) {
+        lastError = e?.response?.data?.error ?? lastError;
+        continue;
+      }
+      return { ok: false, error: e?.response?.data?.error ?? String(e) };
+    }
+  }
+
+  const reapply = await reapplyLocalTestingData();
+  if (reapply.ok) return { ok: true };
+
+  // Config-sync already ran in this session — local-testing-data should include toll access.
+  if (options.skipConfigSync) {
+    return { ok: false, error: reapply.error ?? lastError, skipped: true };
+  }
+
+  const trig = await triggerConfigSync(syncEnv, false);
+  if (!trig.started) {
+    return {
+      ok: false,
+      error: trig.error ?? reapply.error ?? lastError,
+      skipped: true,
+    };
+  }
+  return waitForConfigSyncDone();
+}
+
 export async function fetchCollections(): Promise<CollectionGroup[]> {
   try {
     const resp = await axios.get(`${CONTEXT_API}/api/collections`, { timeout: 5000 });

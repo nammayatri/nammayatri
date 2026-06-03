@@ -8,7 +8,7 @@ import qualified Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Kernel.Utils.ComputeIntersection
+import qualified Toll.Domain.Types.TollGate
 import qualified Tools.Beam.UtilsTH
 
 data Toll = Toll
@@ -17,8 +17,8 @@ data Toll = Toll
     isTwoWheelerAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     price :: Kernel.Types.Common.Price,
-    tollEndGates :: [Kernel.Utils.ComputeIntersection.LineSegment],
-    tollStartGates :: [Kernel.Utils.ComputeIntersection.LineSegment],
+    tollEndGates :: [Toll.Domain.Types.TollGate.TollGate],
+    tollStartGates :: [Toll.Domain.Types.TollGate.TollGate],
     merchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,

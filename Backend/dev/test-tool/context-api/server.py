@@ -303,6 +303,46 @@ _config_sync_state = {
 _config_sync_lock = threading.Lock()
 
 
+TOLL_DASHBOARD_ACCESS_SQL = (
+    PROJECT_ROOT / "Backend" / "dev" / "local-testing-data" / "toll-dashboard-access.sql"
+)
+PROVIDER_DASHBOARD_SEED_SQL = (
+    PROJECT_ROOT / "Backend" / "dev" / "local-testing-data" / "provider-dashboard.sql"
+)
+
+
+def _execute_sql_file(path: Path) -> tuple[bool, str | None]:
+    """Run one SQL file in a single autocommit connection. Returns (ok, error)."""
+    if not path.is_file():
+        return False, f"file not found: {path}"
+    import psycopg2
+    try:
+        conn = psycopg2.connect(**DB_CONFIG)
+        conn.autocommit = True
+        try:
+            with conn.cursor() as cur:
+                cur.execute(path.read_text())
+        finally:
+            conn.close()
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def seed_toll_dashboard_access() -> dict:
+    """Idempotent toll dashboard access_matrix + provider-dashboard token/merchant_access."""
+    results: dict[str, object] = {"ok": True, "files": []}
+    for label, sql_path in (
+        ("toll-dashboard-access", TOLL_DASHBOARD_ACCESS_SQL),
+        ("provider-dashboard", PROVIDER_DASHBOARD_SEED_SQL),
+    ):
+        ok, err = _execute_sql_file(sql_path)
+        results["files"].append({"name": label, "ok": ok, "error": err})
+        if not ok:
+            results["ok"] = False
+    return results
+
+
 def _apply_local_testing_data():
     """Apply Backend/dev/local-testing-data/*.sql after config-sync + feature-migrations.
     These files seed test users/admin tokens etc. They were moved out of postgres
@@ -3286,6 +3326,18 @@ class ContextHandler(BaseHTTPRequestHandler):
             self._send_json({"started": True, "from": from_env, "forceFetch": force_fetch})
             return True
 
+        if method in ("GET", "POST") and path == "/api/integration-tests/seed-toll-dashboard":
+            self._send_json(seed_toll_dashboard_access())
+            return True
+
+        if method in ("GET", "POST") and path == "/api/local-testing-data/reapply":
+            try:
+                _apply_local_testing_data()
+                self._send_json({"ok": True})
+            except Exception as e:
+                self._send_json({"ok": False, "error": str(e)}, 500)
+            return True
+
         if method == "GET" and path == "/api/control-center/status":
             with _control_center_lock:
                 st = dict(_control_center_state)
@@ -4262,6 +4314,8 @@ class ContextHandler(BaseHTTPRequestHandler):
         _post_allowed = {
             "/api/metrics/push", "/api/webhook/run-all", "/metrics/push", "/webhook/run-all",
             "/api/db/update", "/api/db/select",
+            "/api/integration-tests/seed-toll-dashboard",
+            "/api/local-testing-data/reapply",
         }
         if method != "GET" and not path.startswith("/proxy/") and path not in _post_allowed:
             self._send_json({"error": "method not allowed"}, 405)

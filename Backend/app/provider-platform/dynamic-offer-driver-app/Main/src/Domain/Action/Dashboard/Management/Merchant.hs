@@ -31,6 +31,10 @@ module Domain.Action.Dashboard.Management.Merchant
     deleteMerchantSpecialLocationDelete,
     postMerchantSpecialLocationGatesUpsert,
     deleteMerchantSpecialLocationGatesDelete,
+    postMerchantConfigTollUpsert,
+    getMerchantConfigTollList,
+    postMerchantTollUpsert,
+    deleteMerchantTollDelete,
     getMerchantConfigCommon,
     postMerchantConfigCommonUpdate,
     getMerchantConfigDriverPool,
@@ -179,6 +183,8 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import SharedLogic.TollDashboard
+import qualified SharedLogic.TollUpsert as TU
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.MerchantDocument ()
@@ -226,6 +232,10 @@ import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
 import qualified Storage.Queries.VehicleServiceTier as QVST
 import qualified Storage.Queries.WhiteListOrg as QWLO
+import qualified Toll.Domain.Types.Toll as Toll
+import qualified Toll.Storage.CachedQueries.Toll as CQToll
+import qualified Toll.Storage.Queries.Toll as QToll
+import qualified Toll.Storage.Queries.TollExtra as QTollExtra
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -3127,6 +3137,58 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   SLU.upsertSpecialLocationsFromCsv opCity merchantOpCity req.file req.locationGeoms req.gateGeoms
+
+---------------------------------------------------------------------
+-- Toll
+---------------------------------------------------------------------
+postMerchantConfigTollUpsert :: ShortId DM.Merchant -> Context.City -> Common.UpsertTollCsvReq -> Flow Common.APISuccessWithUnprocessedEntities
+postMerchantConfigTollUpsert merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  TU.upsertTollsFromCsv opCity merchantOpCity req.file
+
+getMerchantConfigTollList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow [Common.TollAPIEntity]
+getMerchantConfigTollList merchantShortId opCity mbLimit mbOffset = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  tolls <- CQToll.findAllTollsByMerchantOperatingCity merchantOpCity.id.getId
+  pure $ map tollToAPIEntity $ applyPagination mbLimit mbOffset tolls
+
+postMerchantTollUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id Toll.Toll) -> Common.UpsertTollReq -> Flow APISuccess
+postMerchantTollUpsert merchantShortId opCity mbTollId request = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  mbExisting <- maybe (return Nothing) QToll.findByPrimaryKey mbTollId
+  whenJust mbExisting $ \toll ->
+    when (toll.merchantOperatingCityId /= Just merchantOpCity.id.getId) $
+      throwError $ InvalidRequest "Toll does not belong to this merchant operating city"
+  tollId <- maybe generateGUID (return . (.id)) mbExisting
+  now <- getCurrentTime
+  let toll =
+        mkTollFromUpsertReq
+          request
+          tollId
+          now
+          merchantOpCity.id.getId
+          merchant.id.getId
+          mbExisting
+  void $
+    if isJust mbExisting
+      then QToll.updateByPrimaryKey toll
+      else QToll.create toll
+  invalidateTollCache merchantOpCity.id.getId
+  pure Success
+
+deleteMerchantTollDelete :: ShortId DM.Merchant -> Context.City -> Id Toll.Toll -> Flow APISuccess
+deleteMerchantTollDelete merchantShortId opCity tollId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  toll <- QToll.findByPrimaryKey tollId >>= fromMaybeM (InvalidRequest "Toll with given id not found")
+  when (toll.merchantOperatingCityId /= Just merchantOpCity.id.getId) $
+    throwError $ InvalidRequest "Toll does not belong to this merchant operating city"
+  QTollExtra.deleteById tollId
+  invalidateTollCache merchantOpCity.id.getId
+  pure Success
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------
 postMerchantSpecialLocationUpsert :: ShortId DM.Merchant -> Context.City -> Maybe (Id SL.SpecialLocation) -> Common.UpsertSpecialLocationReqT -> Flow APISuccess

@@ -6,8 +6,8 @@ Toll:
   fields:
     id : Id Toll
     name: Text
-    tollStartGates : "[LineSegment]"
-    tollEndGates : "[LineSegment]"
+    tollStartGates : "[TollGate]"
+    tollEndGates : "[TollGate]"
     isAutoRickshawAllowed : Bool
     isTwoWheelerAllowed : Maybe Bool
     price: Price
@@ -41,6 +41,9 @@ Toll:
       kvFunction: findAllWithKV
       where:
         eq: [merchantOperatingCityId]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
   defaultQueryTypeConstraint: "(Toll.Storage.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
