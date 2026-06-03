@@ -300,7 +300,7 @@ data ChatMessageItem = ChatMessageItem
     senderType :: DCM.ChatSenderType,
     chatContentType :: DCM.ChatContentType,
     text :: Text,
-    mediaFileIds :: [Id MediaFile],
+    mediaFiles :: [MediaFile],
     deliveredAt :: Maybe UTCTime,
     readAt :: Maybe UTCTime,
     createdAt :: UTCTime

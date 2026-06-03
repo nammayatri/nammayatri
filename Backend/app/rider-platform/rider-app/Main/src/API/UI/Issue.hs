@@ -647,7 +647,7 @@ getChatMessages ::
   Maybe Int ->
   FlowHandler [Common.ChatMessageItem]
 getChatMessages (personId, _) issueReportId mbSince mbLimit =
-  withFlowHandlerAPI $ Common.listChatMessages (cast personId) issueReportId mbSince mbLimit
+  withFlowHandlerAPI $ Common.listChatMessages (cast personId) issueReportId CUSTOMER mbSince mbLimit
 
 postChatRead ::
   (Id SP.Person, Id DM.Merchant) ->
