@@ -1,0 +1,70 @@
+name: Update Version and Create PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      run:
+        description: "Run the workflow manually"
+        required: false
+      app_type:
+        description: "Type of the application"
+        required: true
+        default: "driver"
+        options:
+          - customer
+          - driver
+
+jobs:
+  update_version:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: Frontend/android-native
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install requests # Add any other dependencies required for your script
+
+      - name: Run Python script to update version
+        run: python updateVersion.py ${{ github.event.inputs.app_type }}
+
+      - name: Set commit message based on app_type
+        id: set-commit-message
+        run: |
+          if [ "${{ github.event.inputs.app_type }}" == "driver" ]; then
+            echo "::set-output name=commit_message::[RELEASE-APK-DRIVER] Initiating apk generation"
+          else
+            echo "::set-output name=commit_message::[RELEASE-APK] Initiating apk generation"
+          fi
+
+      # - name: Commit changes
+      #   run: |
+      #     git config --global user.name 'GitHub Actions'
+      #     git config --global user.email 'actions@users.noreply.github.com'
+      #     git add .
+      #     git commit -m "Update versionCode and versionName"
+      #     git push
+
+      # - name: Rebase release-apk-to-prod branch with main
+      #   run: |
+      #     git checkout release-apk-to-prod
+      #     git pull origin main
+      #     git push origin release-apk-to-prod
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: apk-to-prod
+          title: "[BOT]Update versionCode and versionName"
+          body: "Automated pull request to update versionCode and versionName."
+          delete-branch: true
+          commit-message: "${{ steps.set-commit-message.outputs.commit_message }}"
