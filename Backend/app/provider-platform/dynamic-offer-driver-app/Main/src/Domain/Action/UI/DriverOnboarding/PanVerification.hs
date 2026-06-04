@@ -61,11 +61,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -178,7 +179,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   where
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
-      documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.PanCard CAR Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
+      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq

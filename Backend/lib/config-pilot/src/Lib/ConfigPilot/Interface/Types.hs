@@ -94,6 +94,9 @@ data SConfigType (cfg :: ConfigType) where
   SBecknConfig :: SConfigType 'BecknConfig
   SMerchantServiceConfig :: SConfigType 'MerchantServiceConfig
   SExophone :: SConfigType 'Exophone
+  SScheduledPayoutConfig :: SConfigType 'ScheduledPayoutConfig
+  SReminderConfig :: SConfigType 'ReminderConfig
+  STagActionNotificationConfig :: SConfigType 'TagActionNotificationConfig
 
 deriving instance Show (SConfigType cfg)
 

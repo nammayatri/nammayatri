@@ -59,15 +59,16 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
 import SharedLogic.Analytics as Analytics
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
@@ -426,7 +427,7 @@ buildRC :: VerificationFlow m r => Id DTM.Merchant -> Id DMOC.MerchantOperatingC
 buildRC merchantId merchantOperatingCityId input failedRules = do
   now <- getCurrentTime
   id <- generateGUID
-  rCConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOperatingCityId DVC.VehicleRegistrationCertificate (fromMaybe DVC.CAR input.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
+  rCConfigs <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just DVC.VehicleRegistrationCertificate, vehicleCategory = Just (fromMaybe DVC.CAR input.vehicleCategory)}) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOperatingCityId.getId (show DVC.VehicleRegistrationCertificate))
   mEncryptedRC <- encrypt `mapM` input.registrationNumber
   let mbFitnessExpiry = input.fitnessUpto <|> input.permitValidityUpto <|> Just (UTCTime (TO.fromOrdinalDate 1900 1) 0)
   mbRC <- case (mEncryptedRC, mbFitnessExpiry) of

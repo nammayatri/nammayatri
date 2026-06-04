@@ -231,6 +231,7 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
@@ -276,7 +277,6 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.DriverPoolConfig as SCDPC
-import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BapMetadata as CQSM
@@ -290,6 +290,7 @@ import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DailyStats as CHDS
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingExtra as QBE
 import qualified Storage.Queries.DailyStats as SQDS
@@ -1007,7 +1008,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
       finally
         ( do
             merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-            goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+            goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
             unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
             driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
             unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -1042,7 +1043,7 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
 
 deactivateGoHomeFeature :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> m APISuccess.APISuccess
 deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
-  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId)))
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   let driverId = cast personId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
@@ -1060,7 +1061,7 @@ deactivateGoHomeFeature (personId, _, merchantOpCityId) = do
 
 addHomeLocation :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> AddHomeLocationReq -> m APISuccess.APISuccess
 addHomeLocation (driverId, merchantId, merchantOpCityId) req = do
-  cfg <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  cfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (cfg.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -1090,7 +1091,7 @@ buildDriverHomeLocation driverId req = do
 
 updateHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> UpdateHomeLocationReq -> m APISuccess.APISuccess
 updateHomeLocation (driverId, merchantId, merchantOpCityId) homeLocationId req = do
-  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -1125,7 +1126,7 @@ getHomeLocations (driverId, _, _) = do
 
 deleteHomeLocation :: (CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> m APISuccess.APISuccess
 deleteHomeLocation (driverId, _, merchantOpCityId) driverHomeLocationId = do
-  goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
   unless driverInfo.enabled $ throwError DriverAccountDisabled
@@ -1660,7 +1661,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
   let driverReferralApplied = isJust driverInfo.referredByDriverId
       fleetReferralApplied = isJust driverInfo.referredByFleetOwnerId
       operatorReferralApplied = isJust driverInfo.referredByOperatorId
-  CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast id))) >>= \cfg ->
+  getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId) >>= \cfg ->
     return $
       DriverInformationRes
         { organization = DM.makeMerchantAPIEntity merchant,

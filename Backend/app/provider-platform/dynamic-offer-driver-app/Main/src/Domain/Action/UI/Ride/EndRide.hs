@@ -83,6 +83,7 @@ import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.LocationUpdates as LocUpd
@@ -103,7 +104,6 @@ import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
 import Storage.Beam.Toll ()
-import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.TransporterConfig as QTC
 import qualified Storage.CachedQueries.DomainDiscountConfig as CQDDC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
@@ -111,6 +111,7 @@ import qualified Storage.CachedQueries.Merchant as MerchantS
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverInformation as QDI
@@ -389,7 +390,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
       toLocation <- booking.toLocation & fromMaybeM (InvalidRequest "Trip end location is required")
       pure (getCoordinates toLocation, Nothing, DRide.CallBased)
 
-  goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
+  goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> booking.merchantOperatingCityId.getId)
   ghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
 
   homeLocationReached' <-

@@ -52,6 +52,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error (PersonError (PersonDoesNotExist), TransporterError (TransporterConfigNotFound))
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -67,6 +68,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
@@ -77,7 +79,6 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Reminder as QReminder
-import qualified Storage.Queries.ReminderConfig as QReminderConfig
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehiclePUC as QVPUC
@@ -204,7 +205,7 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
       logInfo $ "Processing reminder " <> reminderId.getId <> " of type " <> show reminder.documentType <> " for driver " <> reminder.driverId.getId
 
-      mbReminderConfig <- QReminderConfig.findByMerchantOpCityIdAndDocumentType merchantOpCityId reminder.documentType
+      mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just reminder.documentType})
 
       -- Process based on document type
       case mbReminderConfig of

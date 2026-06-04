@@ -61,10 +61,11 @@ import Kernel.Types.Validation
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as QODC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DriverInfo
 import qualified Storage.Queries.DriverLicense as Query
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -136,7 +137,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
   now <- getCurrentTime
-  documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
+  documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR req.vehicleCategory)}) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
   let regexRules = VC.getRegexRulesFromDocumentConfig documentVerificationConfig
       hasRegexRules = not (null regexRules)
   if hasRegexRules
@@ -388,7 +389,7 @@ onVerifyDL verificationReq output serviceName = do
             _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyDL. Name of provider : " <> show serviceName)
           pure Ack
         else do
-          documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DTO.DriverLicense (fromMaybe CAR verificationReq.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
+          documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR verificationReq.vehicleCategory)}) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DTO.DriverLicense))
           onVerifyDLHandler person output.licenseNumber (output.t_validity_to <|> output.nt_validity_to) output.covs output.driverName output.dob documentVerificationConfig verificationReq.documentImageId1 verificationReq.documentImageId2 verificationReq.nameOnCard Nothing verificationReq.vehicleCategory
           pure Ack
 

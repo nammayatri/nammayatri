@@ -50,12 +50,13 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverGstinExtra as DGQueryExtra
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -200,14 +201,13 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         if DCommon.checkFleetOwnerRole person.role
           then do
             fodvc <-
-              CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+              getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate})
                 >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure fodvc.checkExtraction
           else do
             dvc <-
-              CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing
+              listToMaybe <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, vehicleCategory = Nothing})
                 >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
-                  . listToMaybe
             pure dvc.checkExtraction
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =

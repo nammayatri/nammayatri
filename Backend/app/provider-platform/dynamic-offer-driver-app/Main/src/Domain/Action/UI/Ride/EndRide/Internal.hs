@@ -102,6 +102,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Common hiding (getCurrentTime)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
@@ -133,15 +134,15 @@ import qualified SharedLogic.ScheduledNotifications as SN
 import Storage.Beam.Toll ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.PlanExtra as CQP
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -295,7 +296,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   when (validRide && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))) $ updateLeaderboardZScore booking ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   now <- getCurrentTime
-  rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
+  rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.END_TIME})
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
 
 processEndRideFinance ::
@@ -1148,7 +1149,7 @@ updateLeaderboardZScore booking ride = do
     updateLeaderboardZScore' :: (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, CacheFlow m r) => LConfig.LeaderBoardType -> m ()
     updateLeaderboardZScore' leaderBoardType = do
       currentTime <- getCurrentTime
-      leaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyTypeInRideFlow leaderBoardType booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "Leaderboard configs not present")
+      leaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, leaderBoardType = Just leaderBoardType}) >>= fromMaybeM (InternalError "Leaderboard configs not present")
       when leaderBoardConfig.isEnabled $ do
         let rideDate = getCurrentDate currentTime
             (fromDate, toDate) = calculateFromDateToDate leaderBoardType rideDate

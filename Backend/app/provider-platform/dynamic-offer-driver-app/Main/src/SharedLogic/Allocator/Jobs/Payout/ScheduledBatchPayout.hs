@@ -37,6 +37,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PR
@@ -47,10 +48,10 @@ import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
 
 --------------------------------------------------------------------------------
 -- Job entry point
@@ -77,7 +78,7 @@ sendScheduledBatchPayout Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
       category = jobData.payoutCategory
 
   -- Load config
-  mbConfig <- QSPC.findByMerchantOpCityIdAndCategory merchantOpCityId category
+  mbConfig <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, isEnabled = Nothing, payoutCategory = Just category})
   case mbConfig of
     Nothing -> do
       logWarning $ "No ScheduledPayoutConfig found for " <> show category <> " in city " <> merchantOpCityId.getId

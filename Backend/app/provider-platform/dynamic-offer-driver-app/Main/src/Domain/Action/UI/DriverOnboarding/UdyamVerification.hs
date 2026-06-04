@@ -32,10 +32,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding (VerificationReqRecord)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverUdyam as DUQuery
 import qualified Storage.Queries.DriverUdyamExtra as DUQueryExtra
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -77,7 +78,7 @@ verifyUdyam (personId, merchantOpCityId) req = do
         when (person.role `elem` map (.role) otherPersonDetails) $ throwError UdyamAlreadyLinked
     _ -> pure ()
   cfg <-
-    CQFODVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.UDYAMCertificate Nothing
+    getOneConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.UDYAMCertificate})
       >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.UDYAMCertificate))
   if cfg.doStrictVerifcation
     then verifyUdyamFlow person merchantOpCityId req.uamNumber req.imageId1

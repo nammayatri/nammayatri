@@ -21,8 +21,9 @@ import Kernel.Types.SlidingWindowCounters (PeriodType (Days))
 import Kernel.Utils.Common (addUTCTime, fromMaybeM, getLocalCurrentTime)
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.SlidingWindowCounters (incrementPeriod)
-import qualified Storage.Cac.GoHomeConfig as CGHC
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import Storage.Queries.DriverGoHomeRequest as QDGR
 import Storage.Queries.Ride as Ride
 import Tools.Error (GenericError (..))
@@ -33,7 +34,7 @@ makeGoHomeReqKey = pack . ("CachedQueries:GoHomeRequest-driverId:" <>) . show
 
 getDriverGoHomeRequestInfo :: (CacheFlow m r, MonadFlow m, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Maybe GoHomeConfig -> m CachedGoHomeRequest
 getDriverGoHomeRequestInfo driverId merchantOpCityId goHomeCfg = do
-  ghCfg <- maybe (CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))) return goHomeCfg
+  ghCfg <- maybe (getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)) return goHomeCfg
   let initCnt = ghCfg.startCnt
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   let ghkey = makeGoHomeReqKey driverId
@@ -143,7 +144,7 @@ increaseDriverGoHomeRequestCount merchantOpCityId driverId = do
 
 setDriverGoHomeIsOnRideStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Driver -> Id DMOC.MerchantOperatingCity -> Bool -> m (Maybe (Id DriverGoHomeRequest))
 setDriverGoHomeIsOnRideStatus driverId merchantOpCityId status = do
-  ghCfg <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+  ghCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> merchantOpCityId.getId)
   if ghCfg.enableGoHome
     then do
       currTime <- getLocalCurrentTime =<< ((SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))

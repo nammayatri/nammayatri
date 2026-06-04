@@ -53,11 +53,12 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.DriverOnboarding
 import Storage.Cac.TransporterConfig
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.DriverRCAssociation as QDRCA
 import qualified Storage.Queries.FleetRCAssociationExtra as FRCA
 import qualified Storage.Queries.Image as Query
@@ -152,7 +153,7 @@ validateImageHandler ::
 validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merchantOpCityId) req@ImageValidateRequest {..} = do
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let merchantId = person.merchantId
-  docConfigs <- maybe (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing) pure mbDocConfigs
+  docConfigs <- maybe (getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Nothing})) pure mbDocConfigs
   -- Only restrict when rolesAllowedToUploadDocument is non-empty; Nothing or [] means all roles allowed
   -- When mbUploaderRole is Nothing (e.g. admin not at BPP), allow; only check when uploader role is known
   whenJust (listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)) $ \allowedRoles ->

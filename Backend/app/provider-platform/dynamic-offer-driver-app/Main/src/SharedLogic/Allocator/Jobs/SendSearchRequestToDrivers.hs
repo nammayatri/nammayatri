@@ -37,6 +37,7 @@ import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
 import SharedLogic.Allocator (AllocatorJobType (..))
@@ -52,8 +53,8 @@ import SharedLogic.GoogleTranslate (TranslateFlow)
 import qualified SharedLogic.SearchTry as SST
 import qualified SharedLogic.Type as SLT
 import Storage.Cac.DriverPoolConfig (getDriverPoolConfig)
-import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.Quote as QQuote
@@ -110,7 +111,7 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   searchReq <- B.runInReplica $ QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound (searchReq.providerId.getId))
   driverPoolConfig <- getDriverPoolConfig searchReq.merchantOperatingCityId searchTry.vehicleServiceTier searchTry.tripCategory (fromMaybe SL.Default searchReq.area) jobData.estimatedRideDistance searchTry.searchRepeatType searchTry.searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
-  goHomeCfg <- CGHC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId)))
+  goHomeCfg <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> searchReq.merchantOperatingCityId.getId)
   tripQuoteDetailsWithoutUpgrades <- do
     let estimateIds = if length searchTry.estimateIds == 0 then [searchTry.estimateId] else searchTry.estimateIds
     estimateIds `forM` \estimateId -> do

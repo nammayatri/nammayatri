@@ -55,6 +55,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.DatastoreLatencyCalculator
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.LocationUpdates as LocUpd
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -74,7 +75,7 @@ import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
@@ -214,7 +215,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
             return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
           else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
-      rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME})
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
 
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)

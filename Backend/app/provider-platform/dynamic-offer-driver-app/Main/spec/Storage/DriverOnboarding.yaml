@@ -674,6 +674,9 @@ DocumentVerificationConfig:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.DocumentVerificationConfig
+    filterDimensions:
+      - documentType
+      - vehicleCategory
 
 VehiclePermit:
   tableName: vehicle_permit
@@ -1232,6 +1235,7 @@ FleetOwnerDocumentVerificationConfig:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+    filterDimensions: [documentType]
 
 AadhaarCard:
   tableName: aadhaar_card

@@ -2195,3 +2195,10 @@ ScheduledPayoutConfig:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
+
+  configPilot:
+    configType: ScheduledPayoutConfig
+    fetchQuery: findAllByMerchantOpCityId
+    returnType: List
+    queryModule: Storage.Queries.ScheduledPayoutConfig
+    filterDimensions: [isEnabled, payoutCategory]

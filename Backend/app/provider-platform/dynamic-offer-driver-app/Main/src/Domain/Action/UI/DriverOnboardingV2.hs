@@ -60,6 +60,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import SharedLogic.DriverOnboarding
@@ -79,9 +80,9 @@ import qualified SharedLogic.PersonBankAccount as SPBA
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
@@ -162,14 +163,15 @@ getOnboardingConfigs' ::
 getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandatory mbOnlyVehicle = do
   mbMerchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
   let verificationProvidersPriorityList = (.verificationProvidersPriorityList) <$> mbMerchantServiceUsageConfig
-  cabConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.CAR Nothing
-  autoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AUTO_CATEGORY Nothing
-  bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE Nothing
-  ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE Nothing
-  truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK Nothing
-  boatConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BOAT Nothing
-  busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS Nothing
-  totoConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TOTO Nothing
+  let mkDims cat = DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just cat}
+  cabConfigsRaw <- getConfig (mkDims DVC.CAR)
+  autoConfigsRaw <- getConfig (mkDims DVC.AUTO_CATEGORY)
+  bikeConfigsRaw <- getConfig (mkDims DVC.MOTORCYCLE)
+  ambulanceConfigsRaw <- getConfig (mkDims DVC.AMBULANCE)
+  truckConfigsRaw <- getConfig (mkDims DVC.TRUCK)
+  boatConfigsRaw <- getConfig (mkDims DVC.BOAT)
+  busConfigsRaw <- getConfig (mkDims DVC.BUS)
+  totoConfigsRaw <- getConfig (mkDims DVC.TOTO)
   cabConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
   autoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
   bikeConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage verificationProvidersPriorityList) (SDO.filterVehicleDocuments bikeConfigsRaw mbOnlyVehicle)

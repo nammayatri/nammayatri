@@ -182,6 +182,7 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Finance.Domain.Types.Account (CounterpartyType (..))
 import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
@@ -202,7 +203,6 @@ import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -218,6 +218,7 @@ import qualified Storage.Clickhouse.Person as CHPerson
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Clickhouse.VehicleRegistrationCertificate as CHVRC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.Booking as QRB
@@ -2357,7 +2358,7 @@ postDriverFleetVehicleEdit merchantShortId opCity requestorId _mbFleetOwnerId _m
   rcIdText <- mbRcId & fromMaybeM (InvalidRequest "rcId is required")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  vrcConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DDoc.VehicleRegistrationCertificate Nothing
+  vrcConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DDoc.VehicleRegistrationCertificate, vehicleCategory = Nothing})
   when (any (\cfg -> cfg.isImageValidationRequired || cfg.doStrictVerifcation) vrcConfigs) $
     throwError (InvalidRequest "Fleet vehicle edit requires isImageValidationRequired and doStrictVerifcation to be false")
   rc <- RCQuery.findById (Id rcIdText) >>= fromMaybeM (RCNotFound rcIdText)

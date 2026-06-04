@@ -701,13 +701,17 @@ library
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig
+      Storage.ConfigPilot.Config.GoHomeConfig
       Storage.ConfigPilot.Config.LeaderBoardConfigs
       Storage.ConfigPilot.Config.MerchantMessage
       Storage.ConfigPilot.Config.MerchantPushNotification
       Storage.ConfigPilot.Config.MerchantServiceUsageConfig
       Storage.ConfigPilot.Config.Overlay
       Storage.ConfigPilot.Config.PayoutConfig
+      Storage.ConfigPilot.Config.ReminderConfig
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
+      Storage.ConfigPilot.Config.ScheduledPayoutConfig
+      Storage.ConfigPilot.Config.TagActionNotificationConfig
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal

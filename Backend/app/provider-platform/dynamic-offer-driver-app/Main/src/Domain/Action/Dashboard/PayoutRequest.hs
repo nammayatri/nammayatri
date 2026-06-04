@@ -27,6 +27,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Payment.API.Payout (VerifyVpaFlow (..))
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
@@ -37,6 +38,7 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.ScheduledPayoutConfig as QSPC
@@ -157,7 +159,7 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  mbExisting <- QSPC.findByMerchantOpCityIdAndCategory merchantOpCity.id req.payoutCategory
+  mbExisting <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, isEnabled = Nothing, payoutCategory = Just req.payoutCategory})
   case mbExisting of
     Just existing -> do
       now <- getCurrentTime

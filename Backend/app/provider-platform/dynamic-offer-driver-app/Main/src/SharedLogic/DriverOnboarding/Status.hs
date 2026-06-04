@@ -71,14 +71,15 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (HasField)
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
-import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CQFODVC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
@@ -251,7 +252,7 @@ checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig lang
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
   now <- getCurrentTime
   let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity, entityImages, transporterConfig, now}
-  allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+  allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing})
   let skipMessages = True -- Skip translations, only need status check for inspection
   vehicleDocumentsUnverified <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs skipMessages
   vehicleDoc <-
@@ -310,7 +311,7 @@ refreshVehicleDocsVerificationStatusForRC mbTransporterConfig rcId = do
         language = merchantOperatingCity.language
         onlyMandatoryDocs = Just True
         skipMessages = True
-    allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOperatingCity.id Nothing
+    allDocumentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, documentType = Nothing, vehicleCategory = Nothing})
     vehicleDocuments <- fetchVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language (Just registrationNo) onlyMandatoryDocs skipMessages
     let newVehicleStatus =
           Just $
@@ -441,8 +442,8 @@ buildVehicleDocsContext person entityImagesInfo language onlyMandatoryDocs skipM
   let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
   allDocVerificationConfigs <-
     if isFleetRole person.role
-      then Left <$> CQFODVC.findAllByMerchantOpCityId merchantOpCityId Nothing
-      else Right <$> CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
+      then Left <$> getConfig (FleetOwnerDocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing})
+      else Right <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
   let driverDocConfigs = fromRight [] allDocVerificationConfigs :: [DVC.DocumentVerificationConfig]
   vehicleDocumentsUnverified <-
     if isFleetRole person.role

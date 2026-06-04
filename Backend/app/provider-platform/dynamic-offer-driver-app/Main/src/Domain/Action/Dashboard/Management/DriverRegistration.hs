@@ -112,6 +112,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Finance.Storage.Queries.IndirectTaxTransactionExtra as QIndirectTaxExtra
 import qualified Lib.Finance.Storage.Queries.Invoice as QFinanceInvoice
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -123,11 +124,11 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as CCT
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
@@ -532,7 +533,7 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let docType = mapDocumentType req.imageType
-  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId docType Nothing
+  docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just docType, vehicleCategory = Nothing})
   -- Nothing or empty list = no role restriction (all allowed); non-empty = only those roles can upload (enforced in validateImageHandler)
   let mbRolesAllowed = listToMaybe docConfigs >>= (.rolesAllowedToUploadDocument)
   let isRoleRestricted = case mbRolesAllowed of Nothing -> False; Just roles -> not (Kernel.Prelude.null roles)
@@ -716,7 +717,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
               pure True
             else pure False
         DP.DRIVER -> do
-          mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVCat.CAR Nothing
+          mbVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR})
           let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
             transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -1745,7 +1746,7 @@ castReqTypeToDomain = \case
 
 handleMandatoryDocRejection :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DP.Person -> DVC.DocumentType -> Id DImage.Image -> Flow ()
 handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType imageId = do
-  docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentType merchantOperatingCityId docType Nothing
+  docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just docType, vehicleCategory = Nothing})
   let isMandatory = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
   when isMandatory $ do
     transporterConfig <- CCT.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)

@@ -47,6 +47,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -61,9 +62,9 @@ import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -217,7 +218,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           ]
 
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
-      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent})
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 releaseLien ::
