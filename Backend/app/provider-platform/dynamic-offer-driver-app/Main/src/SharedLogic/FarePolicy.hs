@@ -19,7 +19,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
 import Data.Ord (comparing)
-import Data.Text as T hiding (elem, find, null)
+import Data.Text as T hiding (elem, find, null, map)
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
 import qualified Domain.Types as DTC
@@ -31,6 +31,7 @@ import qualified Domain.Types.FarePolicy as FarePolicyD
 import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.FareProduct as FareProduct
 import Domain.Types.Merchant
+import Domain.Types.TransporterConfig (TransporterConfig)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -175,9 +176,15 @@ getFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDista
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and mbBaseVariantCarFareProduct : " <> show mbBaseVariantCarFareProduct
       baseVariantFareAmountCar <- getBaseVariantFarePolicy mbFromlocaton mbFromlocaton merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName (SL.pickupSpecialZoneIdFromArea areaName)
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and baseVariantFareAmountCar : " <> show baseVariantFareAmountCar
-      fp <- getFullFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar mbAppDynamicLogicVersion mbSpecialLocName (SL.pickupSpecialZoneIdFromArea areaName) fareProduct configsInExperimentVersions >>= fromMaybeM NoFarePolicy
+      fp <- getFullFarePolicy mbFromlocaton mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime baseVariantFareAmountCar mbAppDynamicLogicVersion mbSpecialLocName (SL.pickupSpecialZoneIdFromArea areaName) fareProduct configsInExperimentVersions [] Nothing (Just mbVehicleServiceTierItem) >>= fromMaybeM NoFarePolicy
       logInfo $ "Dynamic Pricing debugging getFarePolicyWithArea txnId: " <> show txnId <> " and getFullFarePolicy : " <> show fp
       return fp
+
+-- Dynamic-pricing congestion/QAR is only computed for on-demand one-way trips
+-- (mirrors the 'DTC.OneWay v | v /= MeterRide' guard in 'getFullFarePolicy').
+isDynamicPricingTripCategory :: DTC.TripCategory -> Bool
+isDynamicPricingTripCategory (DTC.OneWay v) = v /= MeterRide
+isDynamicPricingTripCategory _ = False
 
 getAllFarePoliciesProduct :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Id Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> LatLong -> Maybe LatLong -> Maybe (Id SL.SpecialLocation) -> Maybe (Id SL.SpecialLocation) -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> DTC.TripCategory -> [LYT.ConfigVersionMap] -> m FarePoliciesProduct
 getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mbToLocation mbFromSpecialLocationId mbToSpecialLocationId txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion tripCategory configsInExperimentVersions = do
@@ -187,7 +194,25 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
     return . getFareProduct allFareProducts
       =<< CQVST.findBaseServiceTierTypeByCategoryAndCityIdInRideFlow (Just DVC.CAR) merchantOpCityId configsInExperimentVersions ((.getId) <$> mbFromSpecialLocationId)
   baseVariantFareAmountCar <- getBaseVariantFarePolicy (Just fromlocaton) mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions allFareProducts.specialLocationName ((.getId) <$> mbFromSpecialLocationId)
-  farePolicies <- catMaybes <$> mapConcurrently (\fareProduct -> getFullFarePolicy (Just fromlocaton) mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar mbAppDynamicLogicVersion allFareProducts.specialLocationName ((.getId) <$> mbFromSpecialLocationId) fareProduct configsInExperimentVersions) allFareProducts.fareProducts
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId txnId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  -- Resolve each fareProduct's vehicle-service-tier item once and reuse it for
+  -- both the per-vehicleCategory dynamic-pricing inputs and inside
+  -- 'getFullFarePolicy', so the (cached) lookup isn't repeated per service tier.
+  resolvedFareProducts <- forM allFareProducts.fareProducts $ \fareProduct -> (fareProduct,) <$> CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier merchantOpCityId configsInExperimentVersions ((.getId) <$> mbFromSpecialLocationId)
+  -- Pre-resolve the dynamic-pricing Redis inputs once for the whole search: the
+  -- congestion/rain/toss part is shared and the QAR/supply-demand part is fetched
+  -- per distinct vehicleCategory, so service tiers sharing a category don't
+  -- re-hit Redis. Skipped (falls back to per-tier fetch) when dynamic pricing
+  -- isn't applicable for this search.
+  dpInputsList <-
+    case (transporterConfig.isDynamicPricingQARCalEnabled == Just True && isDynamicPricingTripCategory tripCategory, mbDistance) of
+      (True, Just distance) -> do
+        now <- getCurrentTime
+        let geohash = fromMaybe (fromMaybe "" $ T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (fromlocaton.lat, fromlocaton.lon)) mbFromLocGeohash
+            vehicleCategories = map (\(_, mbItem) -> maybe Nothing (.vehicleCategory) mbItem) resolvedFareProducts
+        buildDynamicPricingInputs now geohash mbToLocGeohash distance.getMeters merchantOpCityId.getId vehicleCategories
+      _ -> pure []
+  farePolicies <- catMaybes <$> mapConcurrently (\(fareProduct, mbVehicleServiceTierItem) -> getFullFarePolicy (Just fromlocaton) mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar mbAppDynamicLogicVersion allFareProducts.specialLocationName ((.getId) <$> mbFromSpecialLocationId) fareProduct configsInExperimentVersions dpInputsList (Just transporterConfig) (Just mbVehicleServiceTierItem)) resolvedFareProducts
   return $
     FarePoliciesProduct
       { farePolicies,
@@ -200,7 +225,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
 
 getBaseVariantFarePolicy :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Id DMOC.MerchantOperatingCity -> Maybe FareProduct.FareProduct -> Maybe CacKey -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe Int -> [LYT.ConfigVersionMap] -> Maybe Text -> Maybe Text -> m (Maybe HighPrecMoney)
 getBaseVariantFarePolicy mbFromLocation mbToLocation merchantOpCityId mbBaseVariantCarFareProduct txnId mbFromLocGeohash mbToLocGeohash mbDistance mbDuration mbAppDynamicLogicVersion configsInExperimentVersions mbSpecialLocName mbSpecialZoneId = do
-  mbBaseVariantFarePolicy <- join <$> traverse (\fareProduct -> getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing Nothing mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct configsInExperimentVersions) mbBaseVariantCarFareProduct
+  mbBaseVariantFarePolicy <- join <$> traverse (\fareProduct -> getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing Nothing mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct configsInExperimentVersions [] Nothing Nothing) mbBaseVariantCarFareProduct
   case mbBaseVariantFarePolicy of
     Just baseVariantFullFarePolicy -> do
       parameters <- calculateFareParametersForFarePolicy baseVariantFullFarePolicy mbDistance mbDuration merchantOpCityId
@@ -213,11 +238,11 @@ getFareProduct :: FareProduct.FareProducts -> Maybe DVST.VehicleServiceTier -> M
 getFareProduct _ Nothing = Nothing
 getFareProduct fareProducts (Just vehicleServiceTier) = List.find (\fareProduct -> fareProduct.vehicleServiceTier == vehicleServiceTier.serviceTierType) fareProducts.fareProducts
 
-getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> m (Maybe FarePolicyD.FullFarePolicy)
-getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct configsInExperimentVersions = do
-  transporterConfig <- CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)
+getFullFarePolicy :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, BeamFlow m r, CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m, HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal], HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], ClickhouseFlow m r) => Maybe LatLong -> Maybe LatLong -> Maybe Text -> Maybe Text -> Maybe Meters -> Maybe Seconds -> Maybe CacKey -> Maybe UTCTime -> Maybe HighPrecMoney -> Maybe Int -> Maybe Text -> Maybe Text -> FareProduct.FareProduct -> [LYT.ConfigVersionMap] -> [(Maybe DVC.VehicleCategory, DynamicPricingInputs)] -> Maybe TransporterConfig -> Maybe (Maybe DVST.VehicleServiceTier) -> m (Maybe FarePolicyD.FullFarePolicy)
+getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId mbBookingStartTime mbBaseVaraintCarPrice mbAppDynamicLogicVersion mbSpecialLocName mbSpecialZoneId fareProduct configsInExperimentVersions dpInputsList mbTransporterConfig mbPreResolvedVSTItem = do
+  transporterConfig <- maybe (CTC.findByMerchantOpCityId fareProduct.merchantOperatingCityId txnId >>= fromMaybeM (TransporterConfigNotFound fareProduct.merchantOperatingCityId.getId)) pure mbTransporterConfig
   mbVehicleServiceTierItem <-
-    CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId configsInExperimentVersions mbSpecialZoneId
+    maybe (CQVST.findByServiceTierTypeAndCityIdInRideFlow fareProduct.vehicleServiceTier fareProduct.merchantOperatingCityId configsInExperimentVersions mbSpecialZoneId) pure mbPreResolvedVSTItem
   let whiteListedGeohashes = fromMaybe [] transporterConfig.dpWhiteListedGeohash
       blackListedGeohashes = fromMaybe [] transporterConfig.dpBlackListedGeohash
   now <- getCurrentTime
@@ -285,7 +310,11 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
         then do
           logInfo $ "Calling DynamicPricing 1" <> show localTimeZoneSeconds <> show fromLocGeohash <> show mbToLocGeohash <> show fareProduct.vehicleServiceTier <> show mbDistance <> show mbDuration <> show transporterConfig.isDynamicPricingQARCalEnabled <> show transporterConfig.qarCalRadiusInKm <> show mbAppDynamicLogicVersion <> show fareProduct.merchantOperatingCityId
-          getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing
+          let vehicleCategory = maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem
+              mbDpInputs = lookup vehicleCategory dpInputsList
+          case mbDpInputs of
+            Just dpInputs -> getCongestionChargeMultiplierFromModel' (Just dpInputs) localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier vehicleCategory mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbSpecialLocName mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId mbDuration Nothing
+            Nothing -> pure Nothing
         else return Nothing
     -- calculateCongestionChargeViaML :: ( MonadFlow m,
     --     CacheFlow m r,
@@ -914,6 +943,184 @@ localTimeToDayOfWeekAndHour localTime =
       hourOfDay = todHour $ localTimeOfDay localTime
    in (dayWeek, hourOfDay)
 
+-- | First-Just short-circuit over a list of monadic lookups: runs each action
+-- in order and stops as soon as one yields 'Just', skipping the remaining IO.
+firstJustIO :: Monad m => [m (Maybe a)] -> m (Maybe a)
+firstJustIO [] = pure Nothing
+firstJustIO (x : xs) = x >>= maybe (firstJustIO xs) (pure . Just)
+
+-- | Congestion multipliers are pre-aggregated averages written by the
+-- CongestionChargeAvg allocator job. Read them most-specific-first and stop at
+-- the first level that has a value: geohash+distanceBin -> geohash -> city.
+getCongestionMultiplier ::
+  (MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Text ->
+  Text ->
+  m (Maybe Double, Maybe Double)
+getCongestionMultiplier geohash distanceBin cityId = do
+  (congestionMultiplier :: Maybe Double) <-
+    firstJustIO
+      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin geohash distanceBin,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash geohash,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity cityId
+      ]
+  (congestionMultiplierPast :: Maybe Double) <-
+    firstJustIO
+      [ Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast geohash distanceBin,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast geohash,
+        Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast cityId
+      ]
+  return (congestionMultiplier, congestionMultiplierPast)
+
+-- | Quote-Acceptance-Ratio (acceptance / demand) over a sliding pair of 15-min
+-- time buckets, computed from atomic INCR counters. All geohash-level keys
+-- share a '{geohash}' cluster hash tag, so the four key families (demand /
+-- acceptance, distance-binned / not) across the three buckets are fetched in a
+-- single 'mGetCluster'. The hierarchy geohash+distanceBin -> geohash -> city is
+-- applied in memory; the city level (a separate slot) is only fetched when both
+-- the current and past QAR are still missing. current = buckets N + N-1,
+-- past = buckets N-1 + N-2; a level contributes only when its demand count > 4.
+getActualQAR ::
+  (MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Maybe DVC.VehicleCategory ->
+  Text ->
+  Int ->
+  Text ->
+  m (Maybe Double, Maybe Double)
+getActualQAR now vehicleCategory geohash distance cityId = do
+  let timeN = now
+      timeN_1 = addUTCTime (-900) now
+      timeN_2 = addUTCTime (-1800) now
+      mbDistance = Just distance
+      demDistN = mkDemandGeohashCounter timeN vehicleCategory geohash mbDistance
+      demDistN_1 = mkDemandGeohashCounter timeN_1 vehicleCategory geohash mbDistance
+      demDistN_2 = mkDemandGeohashCounter timeN_2 vehicleCategory geohash mbDistance
+      accDistN = mkAcceptanceGeohashCounter timeN vehicleCategory geohash mbDistance
+      accDistN_1 = mkAcceptanceGeohashCounter timeN_1 vehicleCategory geohash mbDistance
+      accDistN_2 = mkAcceptanceGeohashCounter timeN_2 vehicleCategory geohash mbDistance
+      demGhN = mkDemandGeohashCounter timeN vehicleCategory geohash Nothing
+      demGhN_1 = mkDemandGeohashCounter timeN_1 vehicleCategory geohash Nothing
+      demGhN_2 = mkDemandGeohashCounter timeN_2 vehicleCategory geohash Nothing
+      accGhN = mkAcceptanceGeohashCounter timeN vehicleCategory geohash Nothing
+      accGhN_1 = mkAcceptanceGeohashCounter timeN_1 vehicleCategory geohash Nothing
+      accGhN_2 = mkAcceptanceGeohashCounter timeN_2 vehicleCategory geohash Nothing
+      geohashKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demGhN, demGhN_1, demGhN_2, accGhN, accGhN_1, accGhN_2]
+  geohashCounts <- HM.fromList <$> Hedis.withCrossAppRedis (Hedis.mGetClusterWithKeys @Int geohashKeys)
+  let cnt counts key = HM.lookupDefault 0 key counts
+      qar counts demKeys accKeys =
+        let demandCount = sum (map (cnt counts) demKeys)
+            acceptanceCount = sum (map (cnt counts) accKeys)
+         in if demandCount > 4 then Just (fromIntegral acceptanceCount / fromIntegral demandCount) else Nothing
+      distCurrent = qar geohashCounts [demDistN, demDistN_1] [accDistN, accDistN_1]
+      ghCurrent = qar geohashCounts [demGhN, demGhN_1] [accGhN, accGhN_1]
+      distPast = qar geohashCounts [demDistN_1, demDistN_2] [accDistN_1, accDistN_2]
+      ghPast = qar geohashCounts [demGhN_1, demGhN_2] [accGhN_1, accGhN_2]
+      currentQAR = distCurrent <|> ghCurrent
+      pastQAR = distPast <|> ghPast
+  if isJust currentQAR && isJust pastQAR
+    then return (currentQAR, pastQAR)
+    else do
+      let demCityN = mkDemandVehicleCategoryCity timeN vehicleCategory cityId
+          demCityN_1 = mkDemandVehicleCategoryCity timeN_1 vehicleCategory cityId
+          demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vehicleCategory cityId
+          accCityN = mkAcceptanceVehicleCategoryCity timeN vehicleCategory cityId
+          accCityN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vehicleCategory cityId
+          accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vehicleCategory cityId
+          cityKeys = [demCityN, demCityN_1, demCityN_2, accCityN, accCityN_1, accCityN_2]
+      cityCounts <- HM.fromList <$> Hedis.withCrossAppRedis (Hedis.mGetClusterWithKeys @Int cityKeys)
+      let cityCurrent = qar cityCounts [demCityN, demCityN_1] [accCityN, accCityN_1]
+          cityPast = qar cityCounts [demCityN_1, demCityN_2] [accCityN_1, accCityN_2]
+      return (currentQAR <|> cityCurrent, pastQAR <|> cityPast)
+
+-- | All Redis-derived inputs (plus the random toss) that the dynamic-pricing
+-- logic consumes. congestion / rain / toss are independent of vehicleCategory;
+-- QAR and supply-demand are keyed by it. Splitting the fetch this way lets the
+-- search path resolve the shared part once and the per-category part once per
+-- distinct vehicleCategory, instead of re-hitting Redis for every service tier.
+data DynamicPricingInputs = DynamicPricingInputs
+  { actualQAR :: Maybe Double,
+    actualQARPast :: Maybe Double,
+    mbSupplyDemandRatioFromLoc :: Maybe Double,
+    mbSupplyDemandRatioToLoc :: Maybe Double,
+    congestionMultiplier :: Maybe Double,
+    congestionMultiplierPast :: Maybe Double,
+    mbRainStatus :: Maybe Text,
+    toss :: Int
+  }
+
+-- vehicleCategory-independent inputs: congestion (geohash+distanceBin), rain
+-- (geohash) and the per-request random toss. Fetched once per search.
+fetchSharedDynamicPricingInputs ::
+  (MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Text ->
+  Text ->
+  m (Maybe Double, Maybe Double, Maybe Text, Int)
+fetchSharedDynamicPricingInputs geohash distanceBin cityId = do
+  (congestionMultiplier, congestionMultiplierPast) <- getCongestionMultiplier geohash distanceBin cityId
+  mbRainStatus <- Hedis.withCrossAppRedis $ Hedis.get $ mkRainStatusKey geohash
+  toss <- getRandomInRange (1, 100 :: Int)
+  pure (congestionMultiplier, congestionMultiplierPast, mbRainStatus, toss)
+
+-- vehicleCategory-dependent inputs: QAR and the supply-demand ratios.
+fetchCategoryDynamicPricingInputs ::
+  (MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Text ->
+  Maybe Text ->
+  Int ->
+  Text ->
+  Maybe DVC.VehicleCategory ->
+  m (Maybe Double, Maybe Double, Maybe Double, Maybe Double)
+fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory = do
+  (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory geohash distance cityId
+  mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory
+  mbSupplyDemandRatioToLoc <- join <$> traverse (\g -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash g vehicleCategory) mbToLocGeohash
+  pure (actualQAR, actualQARPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc)
+
+mkDynamicPricingInputs ::
+  (Maybe Double, Maybe Double, Maybe Text, Int) ->
+  (Maybe Double, Maybe Double, Maybe Double, Maybe Double) ->
+  DynamicPricingInputs
+mkDynamicPricingInputs (congestionMultiplier, congestionMultiplierPast, mbRainStatus, toss) (actualQAR, actualQARPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc) =
+  DynamicPricingInputs {..}
+
+-- Single-vehicleCategory resolution, used on the single-tier (endRide / quote)
+-- paths where there is nothing to dedup against.
+resolveDynamicPricingInputs ::
+  (MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Text ->
+  Maybe Text ->
+  Int ->
+  Text ->
+  Maybe DVC.VehicleCategory ->
+  m DynamicPricingInputs
+resolveDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory = do
+  shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
+  categoryInputs <- fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory
+  pure $ mkDynamicPricingInputs shared categoryInputs
+
+-- Deduped resolution for a whole search: the shared part is fetched once and
+-- the per-category part once per distinct vehicleCategory. The result is a
+-- lookup list passed into 'getCongestionChargeMultiplierFromModel'' per tier.
+buildDynamicPricingInputs ::
+  (MonadFlow m, CacheFlow m r) =>
+  UTCTime ->
+  Text ->
+  Maybe Text ->
+  Int ->
+  Text ->
+  [Maybe DVC.VehicleCategory] ->
+  m [(Maybe DVC.VehicleCategory, DynamicPricingInputs)]
+buildDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategories = do
+  shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
+  forM (List.nub vehicleCategories) $ \vehicleCategory -> do
+    categoryInputs <- fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory
+    pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)
+
 getCongestionChargeMultiplierFromModel' ::
   ( MonadFlow m,
     CacheFlow m r,
@@ -922,6 +1129,7 @@ getCongestionChargeMultiplierFromModel' ::
     CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m,
     ClickhouseFlow m r
   ) =>
+  Maybe DynamicPricingInputs ->
   Seconds ->
   Maybe LatLong ->
   Maybe Text ->
@@ -938,44 +1146,39 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Seconds ->
   Maybe Seconds ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration = do
+getCongestionChargeMultiplierFromModel' mbDpInputs timeDiffFromUtc (Just _fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) _radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   logInfo $ "Calling DynamicPricing" <> show fromLocGeohash
   now <- getCurrentTime
-  let radius = fromMaybe 3.0 radius'
   let distanceInKm = int2Double distance / 1000.0
-  let distanceBin = getDistanceBin distance
-  let estimatedDurationInH = int2Double duration / 3600.0
-  let pastTimeInterval = addUTCTime (-900) now
-  let speedKmh = if estimatedDurationInH == 0.0 then 0.0 else distanceInKm / estimatedDurationInH
-  toss <- getRandomInRange (1, 100 :: Int)
-  mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash fromLocGeohash vehicleCategory
-  -- mbActualQARFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin vehicleCategory
-  mbActualQARFromLocGeohashDistance <- getQARWithDistance now vehicleCategory distance radius fromLocation
-  -- mbActualQARFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohash fromLocGeohash vehicleCategory
-  mbActualQARFromLocGeohash <- getQARVehicleCategory now vehicleCategory radius fromLocation
-  mbActualQARFromLocGeohash2xRadius <- getQARVehicleCategory now vehicleCategory (2 * radius) fromLocation
-  mbActualQARCity <- getQARVehicleCategoryCity now vehicleCategory merchantOperatingCityId.getId
-  -- mbActualQARCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCity merchantOperatingCityId.getId vehicleCategory
-  -- mbActualQARFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin vehicleCategory
-  -- mbActualQARFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashPast fromLocGeohash vehicleCategory
-  -- mbActualQARCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCityPast merchantOperatingCityId.getId vehicleCategory
-  mbActualQARFromLocGeohashDistancePast <- getQARWithDistance pastTimeInterval vehicleCategory distance radius fromLocation
-  mbActualQARFromLocGeohashPast <- getQARVehicleCategory pastTimeInterval vehicleCategory radius fromLocation
-  mbActualQARCityPast <- getQARVehicleCategoryCity pastTimeInterval vehicleCategory merchantOperatingCityId.getId
-  mbCongestionFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash fromLocGeohash
-  mbCongestionFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin
-  mbCongestionCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity merchantOperatingCityId.getId
-  mbCongestionFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast fromLocGeohash
-  (mbRainStatus :: Maybe Text) <- Hedis.withCrossAppRedis $ Hedis.get $ mkRainStatusKey fromLocGeohash
-  logInfo $ "Calling DynamicPricing" <> show mbRainStatus
-  mbCongestionFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin
-  mbCongestionCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast merchantOperatingCityId.getId
-  let actualQAR = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARFromLocGeohash2xRadius <|> mbActualQARCity
-  let actualQARPast = mbActualQARFromLocGeohashDistancePast <|> mbActualQARFromLocGeohashPast <|> mbActualQARCityPast
-  let congestionMultiplier = mbCongestionFromLocGeohashDistance <|> mbCongestionFromLocGeohash <|> mbCongestionCity
-  let congestionMultiplierPast = mbCongestionFromLocGeohashDistancePast <|> mbCongestionFromLocGeohashPast <|> mbCongestionCityPast
-  mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash vehicleCategory) toLocGeohash
+      estimatedDurationInH = int2Double duration / 3600.0
+      speedKmh = if estimatedDurationInH == 0.0 then 0.0 else distanceInKm / estimatedDurationInH
+  -- All Redis-derived inputs (QAR, supply-demand, congestion, rain) plus the
+  -- random toss. On the search path these are precomputed once per
+  -- vehicleCategory in 'getAllFarePoliciesProduct' and passed in via 'mbDpInputs';
+  -- on the single-tier paths we resolve them here for this vehicleCategory.
+  DynamicPricingInputs {..} <- maybe (resolveDynamicPricingInputs now fromLocGeohash toLocGeohash distance merchantOperatingCityId.getId vehicleCategory) pure mbDpInputs
+
+  -- 'getActualQAR'/'getCongestionMultiplier' already resolve the
+  -- geohash+distanceBin -> geohash -> city hierarchy internally and return the
+  -- single winning current/past value. The granular per-level fields of
+  -- 'CongestionChargeData' (and the model) are no longer computed separately, so
+  -- we record the resolved values under the geohash-level fields (the natural
+  -- representative) and leave the rest 'Nothing'. These feed the
+  -- record-wildcards below.
+  let mbActualQARFromLocGeohash = actualQAR
+      mbActualQARFromLocGeohashPast = actualQARPast
+      mbActualQARFromLocGeohashDistance = Nothing
+      mbActualQARFromLocGeohashDistancePast = Nothing
+      mbActualQARCity = Nothing
+      mbActualQARCityPast = Nothing
+      mbCongestionFromLocGeohash = congestionMultiplier
+      mbCongestionFromLocGeohashPast = congestionMultiplierPast
+      mbCongestionFromLocGeohashDistance = Nothing
+      mbCongestionFromLocGeohashDistancePast = Nothing
+      mbCongestionCity = Nothing
+      mbCongestionCityPast = Nothing
+
   (allLogics, mbVersion) <- getAppDynamicLogic (cast merchantOperatingCityId) LYT.DYNAMIC_PRICING_UNIFIED localTime (Just dynamicPricingLogicVersion) Nothing
   let estimatedDurationInS = fmap (\(Seconds s) -> s) mbEstimatedDuration
       actualDurationInS = fmap (\(Seconds s) -> s) mbActualDuration
@@ -1064,7 +1267,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
                       driverExtraFeeBounds = Nothing,
                       ..
                     }
-getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
+getCongestionChargeMultiplierFromModel' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ = return Nothing
 
 data CongestionChargeDetailsModel = CongestionChargeDetailsModel
   { dpVersion :: Maybe Text,

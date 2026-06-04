@@ -222,7 +222,7 @@ buildEndRideHandle merchantId merchantOpCityId rideId = do
         sendDashboardSms = Sms.sendDashboardSms,
         uiDistanceCalculation = QRide.updateUiDistanceCalculation,
         getCongestionChargeOnEndRide = \timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier mbDist mbDur mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur ->
-          FarePolicy.getCongestionChargeMultiplierFromModel' timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
+          FarePolicy.getCongestionChargeMultiplierFromModel' Nothing timeDiff mbFromLoc mbFromGeohash mbToGeohash svcTier Nothing mbDist mbDur (Just True) mbRadius mbSpecialLoc mbDpVersion mocId mbEstDur mbActDur
       }
 
 -- Helper function to get driver number from Person record
