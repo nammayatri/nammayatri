@@ -97,7 +97,6 @@ import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.ServiceTierType as DST
 import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
-import qualified Domain.Types.VehicleVariant as DVehVar
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions
@@ -386,18 +385,19 @@ rideAssignedCommon booking ride driver veh = do
             Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
-  let assignedTier = DVehVar.castVariantToServiceTier vehicle.variant
-      bookedTier = booking.vehicleServiceTier
-  (isTierUpgrade, assignedServiceTierType, assignedServiceTierName) <-
-    if assignedTier == bookedTier
-      then pure (False, Nothing, Nothing)
-      else do
-        mbAssignedCfg <- CQVST.findByServiceTierTypeAndCityIdInRideFlow assignedTier booking.merchantOperatingCityId [] Nothing
-        mbBookedCfg <- CQVST.findByServiceTierTypeAndCityIdInRideFlow bookedTier booking.merchantOperatingCityId [] Nothing
-        let isUpgrade = case (mbAssignedCfg, mbBookedCfg) of
-              (Just a, Just b) -> a.priority > b.priority
-              _ -> False
-        pure (isUpgrade, if isUpgrade then Just (show assignedTier) else Nothing, if isUpgrade then (.name) <$> mbAssignedCfg else Nothing)
+  let bookedTier = booking.vehicleServiceTier
+  cityTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId [] Nothing
+  let mbBookedCfg = DL.find (\t -> t.serviceTierType == bookedTier) cityTiers
+      eligibleTiers = filter (\t -> vehicle.variant `elem` t.allowedVehicleVariant) cityTiers
+      mbAssignedCfg = case eligibleTiers of
+        [] -> Nothing
+        xs -> Just $ DL.maximumBy (\a b -> compare a.priority b.priority) xs
+      isTierUpgrade = fromMaybe False $ do
+        a <- mbAssignedCfg
+        b <- mbBookedCfg
+        pure (a.priority > b.priority)
+      assignedServiceTierType = if isTierUpgrade then (show . (.serviceTierType)) <$> mbAssignedCfg else Nothing
+      assignedServiceTierName = if isTierUpgrade then (.name) <$> mbAssignedCfg else Nothing
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text
