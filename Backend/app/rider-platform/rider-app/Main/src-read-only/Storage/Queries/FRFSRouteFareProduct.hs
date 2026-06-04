@@ -25,7 +25,7 @@ createMany = traverse_ create
 
 findByRouteCode ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct])
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct]))
 findByRouteCode routeCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And

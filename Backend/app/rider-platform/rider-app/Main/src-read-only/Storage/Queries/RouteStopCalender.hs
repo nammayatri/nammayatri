@@ -24,7 +24,7 @@ createMany = traverse_ create
 
 findByTripIds ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.RouteStopCalender.RouteStopCalender])
+  ([Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable] -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.RouteStopCalender.RouteStopCalender]))
 findByTripIds tripId integratedBppConfigId = do
   findAllWithKV
     [ Se.And

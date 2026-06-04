@@ -30,9 +30,9 @@ data DriverUdyamE e = DriverUdyam
   }
   deriving (Generic)
 
-type DriverUdyam = DriverUdyamE 'AsEncrypted
+type DriverUdyam = DriverUdyamE ('AsEncrypted)
 
-type DecryptedDriverUdyam = DriverUdyamE 'AsUnencrypted
+type DecryptedDriverUdyam = DriverUdyamE ('AsUnencrypted)
 
 instance EncryptedItem DriverUdyam where
   type Unencrypted DriverUdyam = (DecryptedDriverUdyam, HashSalt)
