@@ -36,7 +36,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux
+            host: x86_64_main_push
             arch: amd64
             name: Cabal Unoptimized Master Release Build
             continue-on-error: false
