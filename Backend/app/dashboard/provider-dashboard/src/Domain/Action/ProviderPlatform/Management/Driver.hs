@@ -60,6 +60,8 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
     postDriverTdsRateUpdate,
+    getDriverAirportPreference,
+    postDriverAirportPreference,
   )
 where
 
@@ -401,3 +403,14 @@ postDriverTdsRateUpdate merchantShortId opCity apiTokenInfo req = do
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   T.withTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverTdsRateUpdate) req
+
+getDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.AirportPreferenceRes)
+getDriverAirportPreference merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverAirportPreference) driverId
+
+postDriverAirportPreference :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.AirportPreferenceReq -> Environment.Flow APISuccess)
+postDriverAirportPreference merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
+  T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAirportPreference) driverId req)
