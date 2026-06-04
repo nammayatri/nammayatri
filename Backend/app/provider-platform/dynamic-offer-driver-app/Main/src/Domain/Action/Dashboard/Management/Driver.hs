@@ -64,6 +64,8 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverVehicleAppendSelectedServiceTiers,
     postDriverVehicleUpsertSelectedServiceTiers,
     postDriverUpdateRCInvalidStatusByRCNumber,
+    getDriverAirportPreference,
+    postDriverAirportPreference,
   )
 where
 
@@ -87,6 +89,7 @@ import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
@@ -1500,3 +1503,30 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
       case readMaybe (T.unpack tierText) of
         Just tier -> Right tier
         Nothing -> Left $ "Invalid service tier: " <> tierText
+
+getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.AirportPreferenceRes
+getDriverAirportPreference merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  serviceTiers <- DriverOnboardingV2.getDriverVehicleServiceTiers (Just personId, merchant.id, driver.merchantOperatingCityId)
+  pure Common.AirportPreferenceRes {canSwitchToAirport = serviceTiers.canSwitchToAirport}
+
+postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow APISuccess
+postDriverAirportPreference merchantShortId opCity driverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  QDriverInfo.updateAirportSwitch req.canSwitchToAirport personId
+  now <- getCurrentTime
+  let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) Nothing now
+  let withoutTag = Yudhishthira.removeTagNameValue driver.driverTag airportDisabledTag
+  let updatedTags = if req.canSwitchToAirport then withoutTag else withoutTag <> [airportDisabledTag]
+  unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
+    QPerson.updateDriverTag (Just updatedTags) personId
+  logTagInfo "dashboard -> updateAirportPreference : " (show personId)
+  pure Success
