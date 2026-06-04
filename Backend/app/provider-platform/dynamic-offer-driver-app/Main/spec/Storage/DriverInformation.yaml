@@ -157,10 +157,10 @@ DriverInformation:
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
-    address: Maybe Text
-    addressDocumentType: Maybe AddressDocumentType
-    nomineeName: Maybe Text
-    nomineeRelationship: Maybe Text
+    address: Maybe Text # deprecated: moved to driver_identity_info;
+    addressDocumentType: Maybe AddressDocumentType # deprecated: moved to driver_identity_info;
+    nomineeName: Maybe Text # deprecated: moved to driver_identity_info;
+    nomineeRelationship: Maybe Text # deprecated: moved to driver_identity_info;
 
   default:
     active: "false"
