@@ -16,11 +16,13 @@ module Storage.CachedQueries.VendorSplitDetails
   ( create,
     createMany,
     findAllByAreaIncludingDefaultAndCityAndVariant,
+    findAllByCityAndPlan,
   )
 where
 
 import Data.List (nub)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Plan as DPlan
 import qualified Domain.Types.VehicleVariant as DVehicleVariant
 import qualified Domain.Types.VendorSplitDetails as DVSD
 import Kernel.Prelude
@@ -67,3 +69,28 @@ makeAreaIncludingDefaultAndCityAndVariantKey mbArea merchantOperatingCityId vehi
     <> Kernel.Types.Id.getId merchantOperatingCityId
     <> ":VehicleVariant-"
     <> show vehicleVariant
+
+findAllByCityAndPlan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id DPlan.Plan ->
+  m [DVSD.VendorSplitDetails]
+findAllByCityAndPlan merchantOperatingCityId planId = do
+  Hedis.safeGet (makeCityAndPlanKey merchantOperatingCityId planId) >>= \case
+    Just a -> pure a
+    Nothing ->
+      ( \dataToBeCached -> do
+          expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+          Hedis.setExp (makeCityAndPlanKey merchantOperatingCityId planId) dataToBeCached expTime
+      )
+        /=<< Queries.findAllByCityAndPlan merchantOperatingCityId (Just (Kernel.Types.Id.getId planId))
+
+makeCityAndPlanKey ::
+  Id DMOC.MerchantOperatingCity ->
+  Id DPlan.Plan ->
+  Text
+makeCityAndPlanKey merchantOperatingCityId planId =
+  "driverOfferCachedQueries:VendorSplitDetails:CityAndPlan:MerchantOperatingCityId-"
+    <> Kernel.Types.Id.getId merchantOperatingCityId
+    <> ":PlanId-"
+    <> Kernel.Types.Id.getId planId

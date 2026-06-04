@@ -185,3 +185,7 @@ updateAmount driverFeeId vendorId newAmount = do
           Se.Is Beam.vendorId $ Se.Eq vendorId
         ]
     ]
+
+deleteAllByDriverFeeId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> m ()
+deleteAllByDriverFeeId driverFeeId =
+  deleteWithKV [Se.Is Beam.driverFeeId $ Se.Eq driverFeeId.getId]
