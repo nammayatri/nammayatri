@@ -1,0 +1,197 @@
+{
+  "info": {
+    "name": "DriverProfileNomineeFlow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "E2E for the DriverIdentityInfo cohort: nominee+address moved off driver_information. Random driver per run (idempotent, repeatable on any device). Covers full update (incl. addressState), migrated read, and partial-merge."
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "  var rNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "  pm.collectionVariables.set('_test_driver_number', rNum);",
+          "}",
+          "// mock-server auto-skip (per Rules.md): skip mock-only requests on non-Local envs",
+          "var envType = pm.environment.get('envType') || 'Local';",
+          "var url = (pm.request && pm.request.url) ? pm.request.url.toString() : '';",
+          "var mockUrl = pm.environment.get('mockServerUrl') || '__no_mock__';",
+          "if (envType !== 'Local' && url.indexOf(mockUrl) !== -1 && pm.execution && pm.execution.skipRequest) {",
+          "  pm.execution.skipRequest();",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_driver_number",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.expect(d.authId, 'authId').to.be.a('string');",
+              "pm.collectionVariables.set('driver_authId', d.authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device-nominee\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.expect(d.token, 'token').to.be.a('string');",
+              "pm.collectionVariables.set('driver_token', d.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Nominee And Address (Full)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/profile",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nomineeName\": \"Asha Devi\", \"nomineeRelationship\": \"Spouse\", \"nomineeDob\": \"1990-05-15\", \"address\": \"12 MG Road, Bangalore, Karnataka 560001\", \"addressDocumentType\": \"Passport\", \"addressState\": \"Karnataka\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('update 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('nomineeName echoed', function(){ pm.expect(d.nomineeName).to.eql('Asha Devi'); });",
+              "pm.test('nomineeRelationship echoed', function(){ pm.expect(d.nomineeRelationship).to.eql('Spouse'); });",
+              "pm.test('nomineeDob set', function(){ pm.expect(d.nomineeDob).to.eql('1990-05-15'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Profile (Migrated Read)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/profile"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('get 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('nominee from new table', function(){ pm.expect(d.nomineeName).to.eql('Asha Devi'); pm.expect(d.nomineeRelationship).to.eql('Spouse'); });",
+              "pm.test('nomineeDob from new table', function(){ pm.expect(d.nomineeDob).to.eql('1990-05-15'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Partial Update (Name Only)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseURL_namma_P}}/driver/profile",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"nomineeName\": \"Asha Updated\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('partial update 200', function(){ pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('name updated', function(){ pm.expect(d.nomineeName).to.eql('Asha Updated'); });",
+              "pm.test('relationship preserved (merge over current)', function(){ pm.expect(d.nomineeRelationship).to.eql('Spouse'); });",
+              "pm.test('dob preserved', function(){ pm.expect(d.nomineeDob).to.eql('1990-05-15'); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

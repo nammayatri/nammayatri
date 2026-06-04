@@ -500,6 +500,7 @@ library
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
+      SharedLogic.DriverIdentityInfo
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.Status
@@ -1167,6 +1168,7 @@ library
       Domain.Types.DriverGstin
       Domain.Types.DriverGullakAssociation
       Domain.Types.DriverHomeLocation
+      Domain.Types.DriverIdentityInfo
       Domain.Types.DriverInformation
       Domain.Types.DriverIntelligentPoolConfig
       Domain.Types.DriverLicense
@@ -1351,6 +1353,7 @@ library
       Storage.Beam.DriverGstin
       Storage.Beam.DriverGullakAssociation
       Storage.Beam.DriverHomeLocation
+      Storage.Beam.DriverIdentityInfo
       Storage.Beam.DriverInformation
       Storage.Beam.DriverIntelligentPoolConfig
       Storage.Beam.DriverLicense
@@ -1540,6 +1543,7 @@ library
       Storage.Queries.DriverGstin
       Storage.Queries.DriverGullakAssociation
       Storage.Queries.DriverHomeLocation
+      Storage.Queries.DriverIdentityInfo
       Storage.Queries.DriverInformation
       Storage.Queries.DriverIntelligentPoolConfig
       Storage.Queries.DriverLicense
@@ -1641,6 +1645,7 @@ library
       Storage.Queries.OrphanInstances.DriverGoHomeRequest
       Storage.Queries.OrphanInstances.DriverGstin
       Storage.Queries.OrphanInstances.DriverHomeLocation
+      Storage.Queries.OrphanInstances.DriverIdentityInfo
       Storage.Queries.OrphanInstances.DriverInformation
       Storage.Queries.OrphanInstances.DriverLicense
       Storage.Queries.OrphanInstances.DriverOperatorAssociation
