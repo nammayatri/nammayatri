@@ -15,3 +15,8 @@ ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD PRIMARY KEY ( area, 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN max_vendor_fee_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vendor_split_details ADD COLUMN daily_plan_id text ;

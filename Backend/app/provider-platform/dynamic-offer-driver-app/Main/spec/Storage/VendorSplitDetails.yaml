@@ -20,6 +20,7 @@ VendorSplitDetails:
     splitType : SplitType
     splitValue : Double
     maxVendorFeeAmount : Maybe HighPrecMoney
+    dailyPlanId : Maybe Text
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -36,3 +37,7 @@ VendorSplitDetails:
         and:
           - in: [area]
           - eq: [merchantOperatingCityId, vehicleVariant]
+    findAllByCityAndPlan:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, dailyPlanId]

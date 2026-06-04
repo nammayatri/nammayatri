@@ -69,6 +69,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQP
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import Storage.Queries.DriverFee as QDF
 import Storage.Queries.DriverInformation (updatePendingPayment, updateSubscription)
 import Storage.Queries.DriverPlan as QDPlan
@@ -166,6 +167,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             isMemberEligibleForOffers <- SPayment.checkDriverMembership (cast driverFee.driverId) driverFee.merchantOperatingCityId plan.serviceName (Just subscriptionConfigs)
             (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
               calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFeeWithPenalties waiveOffPercentage waiveOffMode waiveOffValidTill isMemberEligibleForOffers
+            when (totalFee /= 0 && fromMaybe False subscriptionConfigs.isVendorSplitEnabled && fromMaybe False subscriptionConfigs.enableDailyPlanVendorSplit) $
+              recomputeVendorFeesForPlan driverFee.id plan driverFee.merchantOperatingCityId
             ---------------------------------------------------------------------
             ------------- update driver fee with offer and plan details ---------
             let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -531,7 +534,7 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
       totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
-  vendorFees <- QVF.findAllByDriverFeeId driverFee.id
+  vendorFees <- runInMasterDbAndRedis $ QVF.findAllByDriverFeeId driverFee.id
   splittedFeesWithRespectiveVendorFee <- splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed vendorFees now
   case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
@@ -971,3 +974,25 @@ updateCancellationPenaltyAccumulationFees serviceName transporterConfig merchant
           amountWithGst = penaltyAmount * 1.18
       QDF.moveCancellationPenaltyToPaymentPending penalty.id amountWithGst
   logInfo $ "updateCancellationPenaltyAccumulationFees: Processed cancellation penalty status changes for service: " <> show serviceName <> " merchant: " <> merchantId.getId <> " operatingCity: " <> merchantOperatingCityId.getId
+
+recomputeVendorFeesForPlan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DriverFee ->
+  Plan ->
+  Id MerchantOperatingCity ->
+  m ()
+recomputeVendorFeesForPlan driverFeeId plan cityId = do
+  planSplits <- CQVSD.findAllByCityAndPlan cityId plan.id
+  unless (null planSplits) $ do
+    now <- getCurrentTime
+    QVF.deleteAllByDriverFeeId driverFeeId
+    forM_ planSplits $ \vsd -> do
+      let amount = maybe (HighPrecMoney (toRational vsd.splitValue)) (min (HighPrecMoney (toRational vsd.splitValue))) vsd.maxVendorFeeAmount
+      QVF.create
+        DVF.VendorFee
+          { amount = SPayment.roundToTwoDecimalPlaces amount,
+            driverFeeId = driverFeeId,
+            vendorId = vsd.vendorId,
+            createdAt = now,
+            updatedAt = now
+          }
