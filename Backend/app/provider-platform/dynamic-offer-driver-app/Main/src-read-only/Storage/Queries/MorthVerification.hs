@@ -101,7 +101,7 @@ instance FromTType' Beam.MorthVerification Domain.Types.MorthVerification.MorthV
       Just
         Domain.Types.MorthVerification.MorthVerification
           { docType = docType,
-            documentNumber = EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash,
+            documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
             driverDateOfBirth = driverDateOfBirth,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
