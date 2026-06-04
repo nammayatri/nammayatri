@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 
 data VendorSplitDetailsT f = VendorSplitDetailsT
   { area :: B.C f Lib.Types.SpecialLocation.Area,
+    dailyPlanId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     maxVendorFeeAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     merchantOperatingCityId :: B.C f Data.Text.Text,
     splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
