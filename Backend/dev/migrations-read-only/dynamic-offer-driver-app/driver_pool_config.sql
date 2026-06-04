@@ -93,3 +93,43 @@ ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ALTER COLUMN pool_sorting_
 
 
 ALTER TABLE atlas_driver_offer_bpp.driver_pool_config ADD COLUMN enable_priority_tag_split boolean ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

@@ -700,3 +700,43 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN sync_search_dispatch_config jsonb 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

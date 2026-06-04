@@ -24,50 +24,50 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
-  { aadhaarVerificationService :: B.C f Kernel.External.AadhaarVerification.AadhaarVerificationService,
-    autoComplete :: B.C f Kernel.External.Maps.Types.MapsService,
-    cancelPaymentIntent :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService),
-    capturePaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
-    createEphemeralKeys :: B.C f Kernel.External.Payment.Types.PaymentService,
-    createPaymentCustomer :: B.C f Kernel.External.Payment.Types.PaymentService,
-    createPaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
-    createPayoutOrder :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
-    createRefunds :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService),
-    createSetupIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    deleteCard :: B.C f Kernel.External.Payment.Types.PaymentService,
-    enableDashboardSms :: B.C f Kernel.Prelude.Bool,
-    eventTrackingProviders :: B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService]),
-    getCardList :: B.C f Kernel.External.Payment.Types.PaymentService,
-    getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
-    getDistancesForCancelRide :: B.C f Kernel.External.Maps.Types.MapsService,
-    getDistancesForScheduledRides :: B.C f Kernel.External.Maps.Types.MapsService,
-    getExophone :: B.C f Kernel.External.Call.Types.CallService,
-    getFirstPickupRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
-    getFrfsAutocompleteDistances :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
-    getInstructionRoute :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
-    getMultiModalService :: B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService),
-    getMultimodalWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService),
-    getPickupRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
-    getPlaceDetails :: B.C f Kernel.External.Maps.Types.MapsService,
-    getPlaceName :: B.C f Kernel.External.Maps.Types.MapsService,
-    getRefunds :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService),
-    getRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
-    getTripRoutes :: B.C f Kernel.External.Maps.Types.MapsService,
-    initiateCall :: B.C f Kernel.External.Call.Types.CallService,
-    insuranceService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Insurance.Types.InsuranceService),
-    issueTicketService :: B.C f Kernel.External.Ticket.Types.IssueTicketService,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    notifyPerson :: B.C f Kernel.External.Notification.Types.NotificationService,
-    payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService),
-    smsProvidersPriorityList :: B.C f [Kernel.External.SMS.Types.SmsService],
-    snapToRoad :: B.C f Kernel.External.Maps.Types.MapsService,
-    updateAmountInPaymentIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
-    updatePaymentMethodInIntent :: B.C f Kernel.External.Payment.Types.PaymentService,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    useFraudDetection :: B.C f Kernel.Prelude.Bool,
-    whatsappProvidersPriorityList :: B.C f [Kernel.External.Whatsapp.Types.WhatsappService]
+  { aadhaarVerificationService :: (B.C f Kernel.External.AadhaarVerification.AadhaarVerificationService),
+    autoComplete :: (B.C f Kernel.External.Maps.Types.MapsService),
+    cancelPaymentIntent :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService)),
+    capturePaymentIntent :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    createEphemeralKeys :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    createPaymentCustomer :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    createPaymentIntent :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    createPayoutOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService)),
+    createRefunds :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService)),
+    createSetupIntent :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    deleteCard :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    enableDashboardSms :: (B.C f Kernel.Prelude.Bool),
+    eventTrackingProviders :: (B.C f (Kernel.Prelude.Maybe [Kernel.External.EventTracking.EventTrackingService])),
+    getCardList :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    getDistances :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getDistancesForCancelRide :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getDistancesForScheduledRides :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getExophone :: (B.C f Kernel.External.Call.Types.CallService),
+    getFirstPickupRoute :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService)),
+    getFrfsAutocompleteDistances :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService)),
+    getInstructionRoute :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService)),
+    getMultiModalService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.MultiModal.Types.MultiModalService)),
+    getMultimodalWalkDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Types.MapsService)),
+    getPickupRoutes :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getPlaceDetails :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getPlaceName :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getRefunds :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Types.PaymentService)),
+    getRoutes :: (B.C f Kernel.External.Maps.Types.MapsService),
+    getTripRoutes :: (B.C f Kernel.External.Maps.Types.MapsService),
+    initiateCall :: (B.C f Kernel.External.Call.Types.CallService),
+    insuranceService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Insurance.Types.InsuranceService)),
+    issueTicketService :: (B.C f Kernel.External.Ticket.Types.IssueTicketService),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    notifyPerson :: (B.C f Kernel.External.Notification.Types.NotificationService),
+    payoutOrderStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Types.PayoutService)),
+    smsProvidersPriorityList :: (B.C f [Kernel.External.SMS.Types.SmsService]),
+    snapToRoad :: (B.C f Kernel.External.Maps.Types.MapsService),
+    updateAmountInPaymentIntent :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    updatePaymentMethodInIntent :: (B.C f Kernel.External.Payment.Types.PaymentService),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    useFraudDetection :: (B.C f Kernel.Prelude.Bool),
+    whatsappProvidersPriorityList :: (B.C f [Kernel.External.Whatsapp.Types.WhatsappService])
   }
   deriving (Generic, B.Beamable)
 
@@ -77,8 +77,8 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
+$(enableKVPG (''MerchantServiceUsageConfigT) [('merchantOperatingCityId)] [])
 
-$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
+$(mkTableInstances (''MerchantServiceUsageConfigT) "merchant_service_usage_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''MerchantServiceUsageConfigT))

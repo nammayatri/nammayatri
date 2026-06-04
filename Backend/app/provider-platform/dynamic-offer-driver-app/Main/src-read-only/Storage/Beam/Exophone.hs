@@ -14,16 +14,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ExophoneT f = ExophoneT
-  { backupPhone :: B.C f Data.Text.Text,
-    callService :: B.C f Kernel.External.Call.Types.CallService,
-    exophoneType :: B.C f Domain.Types.Exophone.ExophoneType,
-    id :: B.C f Data.Text.Text,
-    isPrimaryDown :: B.C f Kernel.Prelude.Bool,
-    merchantId :: B.C f Data.Text.Text,
-    merchantOperatingCityId :: B.C f Data.Text.Text,
-    primaryPhone :: B.C f Data.Text.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { backupPhone :: (B.C f Data.Text.Text),
+    callService :: (B.C f Kernel.External.Call.Types.CallService),
+    exophoneType :: (B.C f Domain.Types.Exophone.ExophoneType),
+    id :: (B.C f Data.Text.Text),
+    isPrimaryDown :: (B.C f Kernel.Prelude.Bool),
+    merchantId :: (B.C f Data.Text.Text),
+    merchantOperatingCityId :: (B.C f Data.Text.Text),
+    primaryPhone :: (B.C f Data.Text.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table ExophoneT where
 
 type Exophone = ExophoneT Identity
 
-$(enableKVPG ''ExophoneT ['id] [['backupPhone], ['primaryPhone]])
+$(enableKVPG (''ExophoneT) [('id)] [[('backupPhone)], [('primaryPhone)]])
 
-$(mkTableInstances ''ExophoneT "exophone")
+$(mkTableInstances (''ExophoneT) "exophone")
