@@ -8,6 +8,11 @@ on:
       - "prodHotPush-BPP"
   workflow_dispatch:
 
+# Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
@@ -61,16 +66,11 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-prod-hot-push
             arch: amd64
-            name: Master Release Build
+            name: Nix Optimized Prod Release Build
             continue-on-error: false
-          # - system: aarch64-darwin
-          #   host: aarch64-darwin
-          #   name: Mac Cache Server
-          #   continue-on-error: false
       fail-fast: false
-    runs-on: ${{ matrix.host }}
+    runs-on: x86_64_${{ github.ref_name }}_push
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
@@ -111,94 +111,3 @@ jobs:
           # crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}-${{ matrix.arch }}" use this for multi arch builds, not needed for now
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
-  
-  cabal-build:
-    name: ${{ matrix.name }}
-    needs: [nix-build, check-conditions]
-    continue-on-error: ${{ matrix.continue-on-error }}
-    if: needs.check-conditions.outputs.should-proceed == 'true'
-    strategy:
-      matrix:
-        include:
-          - system: x86_64-linux
-            host: x86_64-linux-prod-hot-push
-            arch: amd64
-            name: Prod Release Build
-            continue-on-error: false
-      fail-fast: false
-    runs-on: ${{ matrix.host }}
-    outputs:
-      docker-image-name: ${{ steps.docker.outputs.base_image }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Compute cache key
-        id: cache-key
-        run: |
-          KEY=$(cat flake.lock Backend/cabal.project | sha256sum | cut -c1-16)
-          echo "key=$KEY" >> $GITHUB_OUTPUT
-
-      - name: Restore cabal cache
-        run: |
-          CACHE_ROOT=$HOME/ny-cabal-cache/${RUNNER_NAME}
-          KEY_FILE="$CACHE_ROOT/.cache-key-prod"
-          CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
-
-          if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle-prod and cabal store"
-            rm -rf "$CACHE_ROOT/dist-newstyle-prod"
-            rm -rf "$CACHE_ROOT/.cabal-dir"
-          fi
-
-          mkdir -p "$CACHE_ROOT/dist-newstyle-prod" "$CACHE_ROOT/.cabal-dir"
-          echo "$CURRENT_KEY" > "$KEY_FILE"
-          ln -sfn "$CACHE_ROOT/dist-newstyle-prod" Backend/dist-newstyle
-
-      - name: Build (incremental cabal)
-        run: |
-          set -o pipefail
-          nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-cache/${RUNNER_NAME}/.cabal-dir
-            cd Backend
-            cabal build all -f-Local 2>&1
-          " | while IFS= read -r line; do
-            printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
-          done | tee prod-build-log.txt
-
-      - name: Collect binaries to staging
-        run: |
-          STAGING=$HOME/ny-staging/$GITHUB_RUN_ID
-          rm -rf "$STAGING"
-          mkdir -p "$STAGING/bin" "$STAGING/opt/app"
-
-          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1) && !seen[$NF]++ {print}' | xargs -I{} cp {} "$STAGING/bin/"
-
-          for f in "$STAGING/bin/"*; do
-            ln -sf "$f" "$STAGING/opt/app/$(basename "$f")"
-          done
-
-          cp -rT Backend/dhall-configs "$STAGING/opt/app/dhall-configs"
-          cp -rT Backend/swagger "$STAGING/opt/app/swagger"
-
-      - name: Build And Push Docker image
-        id: docker
-        if: matrix.system == 'x86_64-linux' || matrix.system == 'aarch64-linux'
-        env:
-          DOCKER_REGISTRY: ghcr.io
-          DOCKER_TAG_PREFIX: "cabal-prod-"
-        run: |
-          export LOCAL_BINARIES_PATH=$HOME/ny-staging/${{ github.run_id }}
-          nix build .#packages.${{ matrix.system }}.dockerImage --impure
-
-          BASE_IMAGE="$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageName --impure):$(nix eval --raw .#packages.${{ matrix.system }}.dockerImage.imageTag --impure)"
-          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
-
-          gunzip -c ./result > image.tar || cp ./result image.tar
-          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
-          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
-          crane auth logout ${DOCKER_REGISTRY}
-
-      - name: Cleanup staging dir
-        if: always()
-        run: rm -rf $HOME/ny-staging/${{ github.run_id }}
