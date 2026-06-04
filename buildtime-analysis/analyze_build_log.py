@@ -345,13 +345,190 @@ class BuildAnalyzer:
         print(f"\n💾 Detailed analysis exported to: {filename}")
 
 
+class CabalBuildAnalyzer(BuildAnalyzer):
+    """Analyzer for incremental ``cabal build all`` logs (timestamped per line).
+
+    Cabal logs look different from the Nix/devour logs the base class handles:
+      * build phases:   ``Building library for <pkg>-<ver>..`` /
+                        ``Building executable '<exe>' for <pkg>-<ver>..``
+      * module compiles:``[ n of m] Compiling <Module> ( <src>, <.../ghc-X/<pkg>-<ver>/.../M.o> )``
+                        Only a subset of compile lines carry the output path, which is the
+                        only per-line package tag (cabal builds packages in parallel, so the
+                        bare ``[ n of m] Compiling <Module>`` lines cannot be attributed). The
+                        path-tagged compiles get per-module timing; the rest are counted only.
+      * linking:        ``Linking <.../ghc-X/<pkg>-<ver>/.../<exe>> ...``
+
+    Per-package build time = earliest build/configure phase for the package ->
+    its ``Linking`` line (or, lacking one, its last path-tagged compile). Pure-library
+    packages that emit neither are recorded with an unknown end (``incomplete``), the same
+    convention the Nix analyzer uses.
+    """
+
+    PKG_FROM_PATH = re.compile(r'ghc-[0-9.]+/([A-Za-z0-9-]+)-\d+(?:\.\d+)+/')
+
+    def parse_log(self):
+        print("📊 Parsing cabal build log...")
+
+        ts_pattern = re.compile(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)')
+        phase_pattern = re.compile(
+            r"^(?:Configuring|Preprocessing|Building)\s+"
+            r"(?:library|executable\s+'[^']+'|foreign library\s+'[^']+'|"
+            r"test suite\s+'[^']+'|benchmark\s+'[^']+')\s+for\s+"
+            r"(\S+)-\d+(?:\.\d+)+\.\."
+        )
+        compile_pattern = re.compile(r'\[\s*\d+\s+of\s+\d+\]\s+Compiling\s+(\S+)')
+        linking_pattern = re.compile(r'^Linking\s+\S+')
+        plan_pattern = re.compile(r'^-\s+\S+-\d+(?:\.\d+)+\s+\(')
+
+        starts = {}    # pkg -> earliest datetime (build/configure phase)
+        ends = {}      # pkg -> latest datetime (Linking or path-tagged compile)
+        current = {}   # pkg -> {'timestamp', 'module'} for path-tagged module timing
+        last_timestamp = None
+        total_compiles = 0
+        path_compiles = 0
+        planned = 0
+
+        def close_module(pkg, end_time, overwrite=True):
+            prev = current.get(pkg)
+            if not prev:
+                return
+            key = f"{pkg}:{prev['module']}"
+            if not overwrite and key in self.module_compilations:
+                return
+            duration = (end_time - prev['timestamp']).total_seconds()
+            self.module_compilations[key] = {
+                'package': pkg,
+                'module': prev['module'],
+                'start_time': prev['timestamp'].isoformat(),
+                'end_time': end_time.isoformat(),
+                'duration_seconds': duration,
+                'duration_human': self.format_duration(duration),
+            }
+
+        with open(self.log_file, 'r') as f:
+            for line in f:
+                line = line.rstrip('\n')
+                if not line:
+                    continue
+
+                ts_match = ts_pattern.match(line)
+                if not ts_match:
+                    continue
+                timestamp = self.parse_timestamp(ts_match.group(1))
+                if not timestamp:
+                    continue
+                last_timestamp = timestamp
+                content = line[ts_match.end():].lstrip()
+
+                # Build plan entry, e.g. "- rider-app-0.1.0.0 (lib) (configuration changed)"
+                if plan_pattern.match(content):
+                    planned += 1
+                    continue
+
+                # Package build phase
+                m = phase_pattern.match(content)
+                if m:
+                    pkg = m.group(1)
+                    if pkg not in starts or timestamp < starts[pkg]:
+                        starts[pkg] = timestamp
+                    self.events_count += 1
+                    continue
+
+                # Module compilation
+                if '] Compiling ' in content:
+                    cm = compile_pattern.search(content)
+                    if cm:
+                        total_compiles += 1
+                        self.compilation_count += 1
+                        pm = self.PKG_FROM_PATH.search(content)
+                        if pm:
+                            pkg = pm.group(1)
+                            path_compiles += 1
+                            if pkg not in ends or timestamp > ends[pkg]:
+                                ends[pkg] = timestamp
+                            close_module(pkg, timestamp)
+                            current[pkg] = {'timestamp': timestamp, 'module': cm.group(1)}
+                    continue
+
+                # Linking marks the end of an executable component
+                if linking_pattern.match(content):
+                    pm = self.PKG_FROM_PATH.search(content)
+                    if pm:
+                        pkg = pm.group(1)
+                        if pkg not in ends or timestamp > ends[pkg]:
+                            ends[pkg] = timestamp
+                        close_module(pkg, timestamp, overwrite=False)
+                        current.pop(pkg, None)
+                        self.events_count += 1
+                    continue
+
+        # Assemble per-package build durations
+        for pkg, start in starts.items():
+            end = ends.get(pkg)
+            if end and end >= start:
+                duration = (end - start).total_seconds()
+                self.builds[pkg] = {
+                    'start_time': start.isoformat(),
+                    'end_time': end.isoformat(),
+                    'duration_seconds': duration,
+                    'duration_human': self.format_duration(duration),
+                }
+            else:
+                self.builds[pkg] = {
+                    'start_time': start.isoformat(),
+                    'end_time': None,
+                    'duration_seconds': 0,
+                    'duration_human': 'unknown (lib-only, no link/path marker)',
+                    'incomplete': True,
+                }
+
+        self.cache_stats['local_build'] = {'count': len(self.builds)}
+
+        timed = sum(1 for b in self.builds.values() if not b.get('incomplete'))
+        print(f"✅ Parsed {len(self.builds)} packages ({timed} with full timing)")
+        print(f"✅ Parsed {total_compiles} module compilations "
+              f"({path_compiles} path-tagged & individually timed)")
+        if planned:
+            print(f"✅ Build plan listed {planned} components")
+
+
+def detect_log_format(log_file, max_lines=500):
+    """Sniff whether a timestamped build log is a Nix/devour log or a cabal log."""
+    ts = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s*')
+    nix_hits = 0
+    cabal_hits = 0
+    try:
+        with open(log_file, 'r') as f:
+            for i, line in enumerate(f):
+                if i >= max_lines:
+                    break
+                c = ts.sub('', line.rstrip('\n'))
+                if ("building '/nix/store" in c
+                        or 'post-installation fixup' in c
+                        or re.search(r'>\s+\[\s*\d+\s+of', c)):
+                    nix_hits += 1
+                if (c.startswith('Build profile:')
+                        or c.startswith('In order, the following will be built')
+                        or c.startswith('Configuring library for')
+                        or c.startswith('Configuring executable')
+                        or c.startswith('Building library for')
+                        or c.startswith('Building executable ')):
+                    cabal_hits += 1
+    except OSError:
+        pass
+    return 'cabal' if cabal_hits > nix_hits else 'nix'
+
+
 def main():
     if len(sys.argv) != 2:
         print("Usage: python3 analyze_build_log.py <build_log_file>")
         sys.exit(1)
 
     log_file = sys.argv[1]
-    analyzer = BuildAnalyzer(log_file)
+    log_format = detect_log_format(log_file)
+    print(f"🔎 Detected log format: {log_format}")
+
+    analyzer = CabalBuildAnalyzer(log_file) if log_format == 'cabal' else BuildAnalyzer(log_file)
 
     try:
         analyzer.parse_log()

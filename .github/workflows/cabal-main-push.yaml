@@ -55,7 +55,7 @@ jobs:
 
       - name: Restore cabal cache
         run: |
-          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
           KEY_FILE="$CACHE_ROOT/.cache-key-unoptimized"
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
@@ -74,7 +74,7 @@ jobs:
           echo "RUNNER_NAME      = $RUNNER_NAME"
           echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
           echo "pwd              = $(pwd)"
-          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
           echo "cache dir        = $CACHE_ROOT"
           echo "dist-newstyle size at START:"; du -sh "$CACHE_ROOT/dist-newstyle" 2>/dev/null || echo "  (absent/empty)"
           echo "build dirs already present:"; ls "$CACHE_ROOT/dist-newstyle/build" 2>/dev/null | head || echo "  none"
@@ -83,7 +83,7 @@ jobs:
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
-            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}/.cabal-dir
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
             cd Backend
             echo \"GHC libdir: \$(ghc --print-libdir)\"
             echo '--- cabal dry-run (what it plans to rebuild) ---'
