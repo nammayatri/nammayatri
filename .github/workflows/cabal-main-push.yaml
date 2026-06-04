@@ -7,6 +7,10 @@ on:
       - "test-build"
   workflow_dispatch:
 
+concurrency:
+  group: cabal-build-${{ github.ref_name }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: write
@@ -65,12 +69,26 @@ jobs:
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
 
+      - name: Cache diagnostics
+        run: |
+          echo "RUNNER_NAME      = $RUNNER_NAME"
+          echo "GITHUB_WORKSPACE = $GITHUB_WORKSPACE"
+          echo "pwd              = $(pwd)"
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}
+          echo "cache dir        = $CACHE_ROOT"
+          echo "dist-newstyle size at START:"; du -sh "$CACHE_ROOT/dist-newstyle" 2>/dev/null || echo "  (absent/empty)"
+          echo "build dirs already present:"; ls "$CACHE_ROOT/dist-newstyle/build" 2>/dev/null | head || echo "  none"
+
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${{ github.ref_name }}/.cabal-dir
             cd Backend
+            echo \"GHC libdir: \$(ghc --print-libdir)\"
+            echo '--- cabal dry-run (what it plans to rebuild) ---'
+            cabal build all --dry-run 2>&1 | tail -20
+            echo '--- real build ---'
             cabal build all 2>&1
           " | while IFS= read -r line; do
             printf '%s %s\n' "$(date -u '+%Y-%m-%dT%H:%M:%S.%NZ')" "$line"
