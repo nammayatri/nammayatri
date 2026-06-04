@@ -1446,17 +1446,18 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
             let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
             allVendorSplitDetails <- CQVSD.findAllByAreaIncludingDefaultAndCityAndVariant booking.area merchantOpCityId vehicleVariant
+            let allVendorSplitDetailsExcludingDailyPlan = DL.filter (\d -> isNothing d.dailyPlanId) allVendorSplitDetails
             let vendorSplitDetails = case booking.area of
                   Just area ->
-                    let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
+                    let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetailsExcludingDailyPlan
                         baseAreaDetails =
                           if null areaDetails && hasGateId area
-                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetails
+                            then DL.filter (\detail -> detail.area == stripGateId area) allVendorSplitDetailsExcludingDailyPlan
                             else areaDetails
                      in if null baseAreaDetails
-                          then DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+                          then DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
                           else baseAreaDetails
-                  Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+                  Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetailsExcludingDailyPlan
             unless (null vendorSplitDetails) $ do
               let vendorData = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.maxVendorFeeAmount)) vendorSplitDetails
                   -- Pass vendor fee along with its maxVendorFeeAmount limit for cumulative validation

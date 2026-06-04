@@ -76,6 +76,7 @@ SubscriptionConfig:
     manualPaymentLinkRateLimitExpirySeconds: Maybe Data.Time.NominalDiffTime
     vendorMigrationMappings: "Maybe [VendorMigrationMapping]"
     enableOffersForMembers: Bool
+    enableDailyPlanVendorSplit: Maybe Bool
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_vendor_split_details_daily_plan_vendor ON atlas_driver_offer_bpp.vendor_split_details USING btree (merchant_operating_city_id, daily_plan_id, vendor_id) WHERE daily_plan_id IS NOT NULL;

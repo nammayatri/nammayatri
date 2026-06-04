@@ -30,6 +30,7 @@ data SubscriptionConfigT f = SubscriptionConfigT
     defaultCityVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     disabledVariantsForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant]),
     enableCityBasedFeeSwitch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableDailyPlanVendorSplit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOffersForMembers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableServiceUsageChargeDefault :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     eventsEnabledForWebhook :: B.C f (Kernel.Prelude.Maybe [Domain.Types.WebhookExtra.WebhookEvent]),
