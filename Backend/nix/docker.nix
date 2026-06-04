@@ -19,17 +19,14 @@ in
           then
             pkgs.runCommand "nammayatri-local"
               {
-                nativeBuildInputs = [ pkgs.autoPatchelfHook pkgs.makeWrapper ];
-                buildInputs =
-                  config.haskellProjects.default.outputs.devShell.buildInputs
-                  ++ [ config.haskellProjects.default.outputs.finalPackages.cac_client pkgs.libsodium ];
+                nativeBuildInputs = [ pkgs.makeWrapper ];
                 src = /. + localBinariesPath;
               } ''
               cp -r $src $out
               chmod -R +w $out/bin
               for exe in $out/bin/*; do
                 wrapProgram "$exe" \
-                  --prefix LD_LIBRARY_PATH : "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib:${pkgs.libsodium}/lib"
+                  --prefix LD_LIBRARY_PATH : "${config.haskellProjects.default.outputs.finalPackages.cac_client}/lib"
               done
             ''
           else self'.packages.nammayatri;
