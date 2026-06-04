@@ -66,12 +66,11 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64-linux-prod-hot-push
             arch: amd64
             name: Nix Optimized Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: ${{ matrix.host }}
+    runs-on: x86_64_${{ github.ref_name }}_push
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
