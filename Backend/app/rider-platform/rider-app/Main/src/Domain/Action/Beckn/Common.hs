@@ -529,7 +529,7 @@ rideAssignedReqHandler req = do
             { id = guid,
               entityId = booking.id.getId,
               entityType = DFareBreakup.BOOKING,
-              amount = mkPrice (Just booking.estimatedFare.currency) (-bookingDiscountAmount),
+              amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
               description = "OFFER_DISCOUNT"
             }
       -- Create payment intent for online payments, capture orderId for invoice creation
@@ -801,7 +801,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
                 Just existingTicketId ->
                   void $
                     withTryCatch "updateTicket:autoConvertSos" $
-                      Ticket.updateTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, subStatus = TIT.IN, rideDescription = Just rideInfo, issueDetails = Nothing}
+                      Ticket.updateSosTicket person.merchantId person.merchantOperatingCityId TIT.UpdateTicketReq {comment = "SOS converted from non-ride to ride", ticketId = existingTicketId, status = TIT.Pending, rideDescription = Just rideInfo, issueDetails = Nothing}
                 Nothing -> do
                   let trackLink = case riderConfig.sosTrackingLink of
                         Just sosLink -> Text.replace "{#vp#}" "sosTracking" sosLink <> sos.id.getId
@@ -1112,7 +1112,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               { id = guid,
                 entityId = ride.id.getId,
                 entityType = DFareBreakup.RIDE,
-                amount = mkPrice (Just totalFare.currency) (-rideDiscountAmount),
+                amount = mkPrice (Just totalFare.currency) (- rideDiscountAmount),
                 description = "OFFER_DISCOUNT"
               }
           ]

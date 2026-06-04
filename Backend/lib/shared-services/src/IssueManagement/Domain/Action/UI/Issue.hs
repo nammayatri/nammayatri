@@ -573,7 +573,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             personId = person.id.getId,
             classification = castIdentifierToClassification identifier,
             rideDescription = Just info,
-            becknIssueId
+            becknIssueId,
+            ticketContext = Just TIT.IssueTicket
           }
 
     buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
@@ -822,7 +823,7 @@ updateIssueStatus (personId, merchantId, merchantOpCityId) issueReportId mbLangu
           REOPENED -> do
             QIR.updateIssueReopenedCount issueReportId (issueReport.reopenedCount + 1)
             QIR.updateStatusAssignee issueReport.id (Just status) issueReport.assignee
-            updateTicketStatus issueReport TIT.CRS merchantId merchantOpCityId issueHandle "Ticket reopened"
+            updateTicketStatus issueReport TIT.Reopened merchantId merchantOpCityId issueHandle "Ticket reopened"
             issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (InternalError "IssueConfigNotFound")
             issueMessageTranslation <- mapM (\messageId -> CQIM.findByIdAndLanguage messageId language identifier) issueConfig.onIssueReopenMsgs
             let issueMessages = mkIssueMessageList (sequence issueMessageTranslation) language issueConfig mbRideInfoRes
@@ -841,7 +842,7 @@ updateTicketStatus ::
     BeamFlow m r
   ) =>
   D.IssueReport ->
-  TIT.SubStatus ->
+  TIT.TicketStatus ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   ServiceHandle m ->
@@ -854,7 +855,7 @@ updateTicketStatus issueReport status merchantId merchantOperatingCityId issueHa
       ticketResponse <-
         withTryCatch
           "updateTicket:updateIssue"
-          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, subStatus = status, rideDescription = Nothing, issueDetails = Nothing})
+          (issueHandle.updateTicket merchantId merchantOperatingCityId TIT.UpdateTicketReq {comment = comment, ticketId = ticketId, status = status, rideDescription = Nothing, issueDetails = Nothing})
       case ticketResponse of
         Left err -> logTagInfo "Update Ticket API failed - " $ show err
         Right _ -> return ()
