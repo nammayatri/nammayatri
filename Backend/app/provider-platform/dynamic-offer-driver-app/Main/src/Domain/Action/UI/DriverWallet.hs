@@ -545,11 +545,9 @@ loadPayoutContext mbPersonId merchantId mocId = do
   pure PayoutContext {..}
 
 -- | Validate that wallet payouts are enabled for this merchant.
-ensurePayoutsEnabled :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => PayoutContext -> m ()
-ensurePayoutsEnabled ctx = do
-  merchant <- CQM.findById ctx.merchantId >>= fromMaybeM (MerchantNotFound ctx.merchantId.getId)
-  let isPrepaidAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  unless (isPrepaidAndWalletEnabled && ctx.transporterConfig.driverWalletConfig.enableWalletPayout) $ -- TODO :: This also can be (||), but not changing it for now.
+ensurePayoutsEnabled :: (MonadFlow m) => PayoutContext -> m ()
+ensurePayoutsEnabled ctx =
+  unless ctx.transporterConfig.driverWalletConfig.enableWalletPayout $
     throwError $ InvalidRequest "Payouts are disabled"
 
 -- | Check that the driver hasn't exceeded the maximum daily payout count.
@@ -605,6 +603,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     (nonRedeemable, redeemableIds, merchantTransferAmt) <- case mbAccountId of
       Nothing -> pure (0, [], 0)
       Just accountId -> getPayoutEligibilityData accountId cutoff now
+    logInfo $ "Payout eligibility for driver " <> ctx.driverId.getId <> ": walletBalance=" <> show walletBalance <> ", nonRedeemable=" <> show nonRedeemable <> ", redeemableEntryIds=" <> show redeemableIds
     let payoutableBalance = walletBalance - nonRedeemable
     ensureMinimumPayoutAmount ctx payoutableBalance
     initiateWalletPayout ctx payoutableBalance PR.INSTANT Nothing (Just cutoff) (map (.getId) redeemableIds) merchantTransferAmt
