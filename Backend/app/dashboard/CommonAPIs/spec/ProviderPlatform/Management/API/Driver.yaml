@@ -597,6 +597,24 @@ apis:
       response:
         type: APISuccess
 
+  - GET: # GetAirportPreferenceAPI
+      endpoint: /{driverId}/airportPreference
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: AirportPreferenceRes
+
+  - POST: # SetAirportPreferenceAPI
+      endpoint: /{driverId}/airportPreference
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: AirportPreferenceReq
+      response:
+        type: APISuccess
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -831,6 +849,11 @@ types:
   UpdateDriverMerchantReq:
     - newMerchantId: Id Merchant
     - newMerchantOperatingCityId: Id MerchantOperatingCity
+    - derive: "'HideSecrets"
+  AirportPreferenceRes:
+    - canSwitchToAirport: Maybe Bool
+  AirportPreferenceReq:
+    - canSwitchToAirport: Bool
     - derive: "'HideSecrets"
 
 extraOperations:
