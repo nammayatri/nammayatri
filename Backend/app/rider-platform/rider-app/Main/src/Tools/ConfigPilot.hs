@@ -40,9 +40,9 @@ import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.MerchantServiceConfig as SQMSC
 import qualified Storage.Queries.UiRiderConfig as SQU
@@ -53,10 +53,10 @@ returnConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYTU.LogicDomain
 returnConfigs cfgType merchantOpCityId merchantId opCity = do
   case cfgType of
     LYTU.RIDER_CONFIG LYTU.RiderConfig -> do
-      riderCfg <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       return LYTU.TableDataResp {configs = map A.toJSON (maybeToList riderCfg)}
     LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
-      payoutCfg <- getConfigList (PayoutDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      payoutCfg <- getConfigList (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing, payoutEntity = Nothing})
       return LYTU.TableDataResp {configs = map A.toJSON payoutCfg}
     LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
       rideRelatedNotificationCfg <- getConfigList (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, timeDiffEvent = Nothing})

@@ -141,7 +141,7 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DeviceVehicleMapping as QDeviceVehicleMapping
 import qualified Storage.Queries.Estimate as QEstimate
@@ -716,7 +716,7 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
           }
     Nothing -> do
       personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
       let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
           journeyOptionsSortingType = fromMaybe DMP.MOST_RELEVANT riderConfig.journeyOptionsSortingType
           busTransitTypes = fromMaybe [Spec.ORDINARY, Spec.EXPRESS, Spec.SPECIAL, Spec.AC, Spec.NON_AC, Spec.EXECUTIVE] riderConfig.busTransitTypes
@@ -888,7 +888,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute mbNew
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let vehicleTypes =
         case mbVehicleType of
           Just BUS -> [Enums.BUS]
@@ -933,7 +933,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
   let vehicleTypes =
         case mbVehicleType of
           Just BUS -> [Enums.BUS]
@@ -1517,7 +1517,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (fromMaybe Enums.METRO $ JM.multiModalTravelModeToBecknVehicleCategory reqJourneyLeg.mode) DIBC.MULTIMODAL
   riderConfig <-
-    getConfig (RiderDimensions {merchantOperatingCityId = reqJourneyLeg.merchantOperatingCityId.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = reqJourneyLeg.merchantOperatingCityId.getId})
       >>= fromMaybeM (RiderConfigDoesNotExist reqJourneyLeg.merchantOperatingCityId.getId)
 
   (newLeg, mbSourceStation, mbDestStation) <- processChangeStops journey reqJourneyLeg integratedBPPConfig riderConfig
@@ -1818,7 +1818,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
     ( do
         person <- authenticate mbPersonId
         integratedBPPConfig <- fromMaybeM (InvalidRequest "Integrated BPP config not found") =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
-        riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound person.merchantOperatingCityId.getId)
         let routeServiceabilityContext =
               RouteServiceabilityContext
                 { integratedBPPConfig,
@@ -2006,7 +2006,7 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
 
     getValidSingleModeRoute :: RouteServiceabilityContext -> Text -> Text -> Environment.Flow MultiModalTypes.MultiModalRoute
     getValidSingleModeRoute routeServiceabilityContext srcCode' destCode' = do
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = routeServiceabilityContext.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = routeServiceabilityContext.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound routeServiceabilityContext.merchantOperatingCityId.getId)
       (sourceLatLong', destLatLong') <- extractSourceDestLatLng srcCode' destCode' routeServiceabilityContext
       let transitRoutesReq =
             MultiModalTypes.GetTransitRoutesReq
@@ -2368,7 +2368,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
 
   -- Get rider config to check source of service tier
-  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
 
   frfsQuotesAndCategories <-
     case (req.journeyId, req.legOrder) of
@@ -2538,7 +2538,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (mbPersonId, merchantId) jou
           JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
         else pure vehicleLiveRouteInfo
     Nothing -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber Nothing >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journey.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   let routeStations :: Maybe [FRFSTicketService.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
   case mbServiceTier of
@@ -2705,7 +2705,7 @@ postMultimodalUpdateBusLocation (mbPersonId, _) mbBusOTP req = do
       (listToMaybe deviceMappings)
 
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = personCityInfo.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
 
   now <- getCurrentTime
 

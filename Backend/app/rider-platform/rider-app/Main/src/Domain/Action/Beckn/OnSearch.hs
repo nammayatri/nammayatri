@@ -96,7 +96,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
@@ -303,7 +303,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId

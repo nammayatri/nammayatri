@@ -48,7 +48,7 @@ import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.CallbackRequest as QCallback
 import qualified Storage.Queries.Issue as Queries
 import qualified Storage.Queries.Person as QP
@@ -101,7 +101,7 @@ sendIssue (personId, merchantId) request = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   ticketRequest <- mkTicket newIssue person phoneNumber merchant.kaptureDisposition riderConfig.kaptureQueue riderConfig.kaptureConfig.deleteAccountCategory
   ticketResponse <- withTryCatch "createTicket:sendIssue" (createTicket person.merchantId person.merchantOperatingCityId ticketRequest)
   case ticketResponse of
@@ -117,7 +117,7 @@ safetyCheckSupport (personId, _merchantId) req = do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let moCityId = person.merchantOperatingCityId
   phoneNumber <- mapM decrypt person.mobileNumber
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moCityId.getId)
   void $ QRide.updateSafetyCheckStatus ride.id $ Just req.isSafe
   let kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
   ticketRequest <- ticketReq ride person phoneNumber req.description riderConfig.kaptureConfig.disposition kaptureQueue

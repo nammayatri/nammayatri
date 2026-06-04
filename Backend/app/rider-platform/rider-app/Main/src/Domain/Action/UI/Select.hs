@@ -91,7 +91,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
@@ -243,7 +243,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   isValueAddNP <- CQVNP.isValueAddNP estimate.providerId
   phoneNumber <- bool (pure Nothing) (getPhoneNo person) isValueAddNP
   searchRequest <- QSearchRequest.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
 

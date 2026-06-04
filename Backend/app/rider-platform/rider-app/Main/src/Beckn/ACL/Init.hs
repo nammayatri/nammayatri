@@ -30,7 +30,7 @@ import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
 buildInitReqV2 ::
@@ -40,7 +40,7 @@ buildInitReqV2 ::
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = moc.id.getId, merchantId = res.merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId)
   let action = Context.INIT
   let domain = Context.MOBILITY

@@ -86,7 +86,7 @@ import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
@@ -199,7 +199,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
     estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier)
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
         defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
@@ -258,7 +258,7 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
 getOffers :: SSR.SearchRequest -> Flow [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
   case searchRequest.toLocation of
     Just _ -> do
@@ -347,7 +347,7 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   mbSearchReq <- runInReplica $ QSR.findById searchRequestId
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId})
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map

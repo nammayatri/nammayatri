@@ -668,6 +668,13 @@ DocumentVerificationConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  configPilot:
+    configType: DocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.DocumentVerificationConfig
+
 VehiclePermit:
   tableName: vehicle_permit
   fields:
@@ -1219,6 +1226,13 @@ FleetOwnerDocumentVerificationConfig:
       where:
         and: [merchantOperatingCityId, role]
 
+  configPilot:
+    configType: FleetOwnerDocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
+
 AadhaarCard:
   tableName: aadhaar_card
   fields:
@@ -1492,15 +1506,6 @@ MorthVerification:
     requestId: SecondaryKey
     docType: SecondaryKey
     documentNumberHash: "!SecondaryKey"
-  beamFields:
-    documentNumber:
-      documentNumberEncrypted: Text
-      documentNumberHash: DbHash
-  fromTType:
-    documentNumber: EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash|E
-  toTType:
-    documentNumberEncrypted: (documentNumber <&> unEncrypted . (.encrypted))|E
-    documentNumberHash: (documentNumber <&> (.hash))|E
   queries:
     findById:
       kvFunction: findOneWithKV

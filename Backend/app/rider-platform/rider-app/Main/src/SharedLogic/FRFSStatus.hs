@@ -60,7 +60,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person as CQPerson
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -258,7 +258,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking withPaymentStatusR
                                     }
                           buildFRFSTicketBookingStatusAPIRes booking quoteCategories paymentObj
         when (isMultiModalBooking && paymentBookingStatus == FRFSTicketService.SUCCESS) $ do
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
           allFrfsBecknConfigs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just "FRFS", vehicleCategory = Nothing})
           let initTTLs = map (.initTTLSec) allFrfsBecknConfigs
           let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
