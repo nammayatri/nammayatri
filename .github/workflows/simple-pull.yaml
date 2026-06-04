@@ -1,0 +1,46 @@
+name: Simple CI Pull
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - "main"
+      - "prodHotPush-Common"
+      - "prodHotPush-BAP"
+      - "prodHotPush-BPP"
+  workflow_dispatch:
+
+# Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  check-conditions:
+    if: github.event_name == 'pull_request' && github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    outputs:
+      should-proceed: ${{ steps.evaluate.outputs.should_proceed }}
+    steps:
+      - name: Apply labels
+        if: github.event_name == 'pull_request' && github.event.action != 'closed'
+        uses: actions/labeler@v4
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Check global conditions
+        id: evaluate
+        run: |
+          if [[ "${{ github.event.pull_request.merged }}" == "true" ||
+                "${{ github.event_name }}" != "pull_request" ||
+                "${{ github.event.action }}" != "closed" ]]; then
+            echo "should_proceed=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+          fi
