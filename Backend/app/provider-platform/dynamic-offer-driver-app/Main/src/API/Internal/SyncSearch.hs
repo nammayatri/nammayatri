@@ -14,7 +14,6 @@
 
 module API.Internal.SyncSearch (API, handler) where
 
-import qualified Beckn.ACL.OnSearch as ACL
 import qualified Beckn.ACL.Search as ACL
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified Beckn.Types.Core.Taxi.API.Search as Search
@@ -27,15 +26,13 @@ import qualified Domain.Types.Merchant as DM
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Storage.Hedis as Redis
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.ValueAddNP as VNP
-import TransactionLogs.PushLogs
 
 type API = Search.SyncSearchAPI
 
@@ -67,23 +64,9 @@ syncSearch merchantIdRaw mbToken reqV2 = withFlowHandlerAPI $ do
     msgId <- Utils.getMessageId context
     country <- Utils.getContextCountry context
 
-    let processSync = do
-          validatedSReq <- DSearch.validateRequest merchant dSearchReq
-          fork "sync_search received pushing ondc logs" $
-            void $ pushLogs "sync_search" (toJSON reqV2) validatedSReq.merchant.id.getId "MOBILITY"
-          let bppId = validatedSReq.merchant.subscriberId.getShortId
-          bppUri <- Utils.mkBppUri transporterId.getId
-          dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
-          isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
-          let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
-          let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
-          onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
-          logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
-          pure onSearchReq
-    res <- Redis.whenWithLockRedisAndReturnValue (syncSearchLockKey transactionId transporterId.getId) 60 processSync
-    case res of
-      Right onSearchReq -> pure onSearchReq
-      Left _ -> throwError $ InternalError $ "Concurrent sync_search detected for txn " <> transactionId
-
-syncSearchLockKey :: Text -> Text -> Text
-syncSearchLockKey txnId mId = "Driver:SyncSearch:Txn-" <> txnId <> ":" <> mId
+    isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
+    unless isFirst $
+      throwError $ InternalError $ "Search already processed by beckn for txn " <> transactionId
+    (_, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "sync_search" (toJSON reqV2)
+    logTagInfo "SyncSearchV2 Internal Flow" $ "Returning OnSearch inline:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
+    pure onSearchReq

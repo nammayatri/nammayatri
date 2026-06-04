@@ -24,6 +24,7 @@ module Domain.Action.Beckn.Search
     validateRequest,
     buildEstimate,
     getIsInterCity,
+    searchTxnDedupKey,
   )
 where
 
@@ -1157,3 +1158,6 @@ transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
       { commissionCharges = Nothing,
         ..
       }
+
+searchTxnDedupKey :: Text -> Text -> Text
+searchTxnDedupKey txnId mId = "Driver:Search:TxnDedup-" <> txnId <> ":" <> mId
