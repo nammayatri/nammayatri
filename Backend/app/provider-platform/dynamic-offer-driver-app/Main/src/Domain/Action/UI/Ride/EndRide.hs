@@ -321,7 +321,7 @@ endRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) do
             Redis.unlockRedis mkLockKey
             logDebug $ "End ride for RideId: " <> rideId.getId <> " Unlocked"
         )
-    else throwError (InternalError $ "End ride inprogress")
+    else throwError (InvalidRequest "End ride already in progress for this ride")
   where
     withLockRideId = do
       isLocked <- Redis.tryLockRedis mkLockKey 60
