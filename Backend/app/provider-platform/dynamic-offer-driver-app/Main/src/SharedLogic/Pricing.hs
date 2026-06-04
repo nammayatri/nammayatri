@@ -79,6 +79,43 @@ mkAcceptanceVehicleCategoryWithDistanceBin :: UTCTime -> Maybe DVC.VehicleCatego
 mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory (Just distance) = "acceptance_VC_" <> show vehicleCategory <> "_dB_" <> (getDistanceBin distance) <> "_time_" <> (buildTimeBucket time)
 mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory Nothing = mkAcceptanceVehicleCategory time vehicleCategory
 
+-- Atomic INCR-counter keys for demand/acceptance, keyed by geohash.
+-- The geohash is wrapped in '{}' so it acts as a redis-cluster hash tag:
+-- every key for a given geohash hashes to the same slot, which lets the read
+-- side fetch all of them (demand/acceptance, distance-binned or not, across
+-- time buckets) in a single 'mGetCluster' round-trip.
+mkDemandGeohashCounter :: UTCTime -> Maybe DVC.VehicleCategory -> Text -> Maybe Int -> Text
+mkDemandGeohashCounter time vehicleCategory geohash (Just distance) = "demand_VC_" <> show vehicleCategory <> "_dB_" <> getDistanceBin distance <> "_gh_{" <> geohash <> "}_time_" <> buildTimeBucket time
+mkDemandGeohashCounter time vehicleCategory geohash Nothing = "demand_VC_" <> show vehicleCategory <> "_gh_{" <> geohash <> "}_time_" <> buildTimeBucket time
+
+mkAcceptanceGeohashCounter :: UTCTime -> Maybe DVC.VehicleCategory -> Text -> Maybe Int -> Text
+mkAcceptanceGeohashCounter time vehicleCategory geohash (Just distance) = "acceptance_VC_" <> show vehicleCategory <> "_dB_" <> getDistanceBin distance <> "_gh_{" <> geohash <> "}_time_" <> buildTimeBucket time
+mkAcceptanceGeohashCounter time vehicleCategory geohash Nothing = "acceptance_VC_" <> show vehicleCategory <> "_gh_{" <> geohash <> "}_time_" <> buildTimeBucket time
+
+-- Bumps the atomic demand/acceptance counters used by 'getActualQAR': the
+-- geohash counter (and its distance-binned variant, when a distance is known)
+-- plus the city-level counter. Each key is given a 1h TTL so stale time buckets
+-- self-expire. Intended to be run inside a 'fork' off the hot search/quote path.
+incrDynamicPricingCounter ::
+  (MonadFlow m, CacheFlow m r) =>
+  (UTCTime -> Maybe DVC.VehicleCategory -> Text -> Maybe Int -> Text) ->
+  (UTCTime -> Maybe DVC.VehicleCategory -> Text -> Text) ->
+  UTCTime ->
+  Maybe DVC.VehicleCategory ->
+  Maybe Text ->
+  Maybe Int ->
+  Text ->
+  m ()
+incrDynamicPricingCounter mkGeohashCounter mkCityCounter time vehicleCategory mbGeohash mbDistance cityId = do
+  incrWithTtl $ mkCityCounter time vehicleCategory cityId
+  whenJust mbGeohash $ \geohash -> do
+    incrWithTtl $ mkGeohashCounter time vehicleCategory geohash Nothing
+    whenJust mbDistance $ \_ -> incrWithTtl $ mkGeohashCounter time vehicleCategory geohash mbDistance
+  where
+    incrWithTtl key = Hedis.withCrossAppRedis $ do
+      void $ Hedis.incr key
+      void $ Hedis.expire key 3600
+
 mkCongestionVehicleCategory :: UTCTime -> Maybe DVC.VehicleCategory -> Text
 mkCongestionVehicleCategory time vehicleCategory = "congestion_VC_" <> show vehicleCategory <> "_time_" <> (buildTimeBucket time)
 

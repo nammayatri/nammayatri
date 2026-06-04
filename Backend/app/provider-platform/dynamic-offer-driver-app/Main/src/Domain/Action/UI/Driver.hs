@@ -117,7 +117,6 @@ import Data.Maybe (listToMaybe)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Text.Encoding (decodeUtf8)
-import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Calendar
 import Data.Time.Calendar.WeekDate
@@ -1881,13 +1880,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       deploymentVersion <- asks (.version)
       transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
       if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
-        then do
-          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (sd.searchTryId.getId))]
-          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryWithDistanceBin now sd.vehicleCategory ((.getMeters) <$> searchReq.estimatedDistance)) 3600
-          void $ Redis.withCrossAppRedis $ Redis.geoAdd (mkAcceptanceVehicleCategory now sd.vehicleCategory) [(searchReq.fromLocation.lon, searchReq.fromLocation.lat, TE.encodeUtf8 (sd.searchTryId.getId))]
-          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategory now sd.vehicleCategory) 3600
-          void $ Redis.withCrossAppRedis $ Redis.incr (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId)
-          void $ Redis.withCrossAppRedis $ Redis.expire (mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.merchantOperatingCityId.getId) 3600
+        then fork "updateDynamicPricingAcceptanceCounters" $
+          incrDynamicPricingCounter mkAcceptanceGeohashCounter mkAcceptanceVehicleCategoryCity now sd.vehicleCategory searchReq.fromLocGeohash ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
         else pure ()
       driverQuoteExpirationSeconds <- asks (.driverQuoteExpirationSeconds)
       let estimatedFare = fareSum fareParams $ Just sd.conditionalCharges
