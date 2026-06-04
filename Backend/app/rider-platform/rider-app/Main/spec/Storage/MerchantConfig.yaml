@@ -62,7 +62,10 @@ MerchantConfig:
       '{"period":20, "periodType":"Minutes"}'
     enabled: "True"
 
-
-
-
+  configPilot:
+    configType: MerchantConfig
+    fetchQuery: findAllByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.MerchantConfig
 

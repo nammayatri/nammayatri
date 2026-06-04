@@ -68,7 +68,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.SMS as Sms
 import qualified UrlShortner.Common as UrlShortner
@@ -232,7 +232,7 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
           }
   where
     getAppUrl mocId = do
-      riderCfg <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
       pure riderCfg.appUrl
     -- "Area, City" or whichever of the two is present. Empty if neither is set.
     shortDestination addr =

@@ -274,6 +274,13 @@ MerchantMessage:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
 
+  configPilot:
+    configType: MerchantMessage
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.MerchantMessage
+
 LlmPrompt:
   derives: Generic,Show,'UsageSafety
   types:
@@ -525,6 +532,13 @@ Overlay:
       where:
         and: [ merchantOperatingCityId, overlayKey, language, udf1, vehicleCategory ]
 
+  configPilot:
+    configType: Overlay
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.Overlay
+
 # LeaderBoardConfigs:
 #   derives: "Generic,ToJSON,FromJSON,ToSchema"
 #   types:
@@ -733,6 +747,12 @@ MerchantServiceUsageConfig:
       kvFunction: updateWithKV
       where: merchantOperatingCityId
       params: [ snapToRoadProvidersList ]
+
+  configPilot:
+    configType: MerchantServiceUsageConfig
+    fetchQuery: findByMerchantOpCityId
+    returnType: Maybe
+    queryModule: Storage.CachedQueries.Merchant.MerchantServiceUsageConfig
 
 DriverIntelligentPoolConfig:
   derives: Generic,Show,'UsageSafety
@@ -1986,6 +2006,13 @@ MerchantPushNotification:
       where:
         and: [ merchantOperatingCityId, key, tripCategory ]
 
+  configPilot:
+    configType: MerchantPushNotification
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.MerchantPushNotification
+
 RideRelatedNotificationConfig:
   tableName: ride_related_notification_config
   derives: "Generic,Show,ToJSON,FromJSON,Eq"
@@ -2025,6 +2052,15 @@ RideRelatedNotificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [ merchantOperatingCityId, timeDiffEvent ]
+
+  configPilot:
+    configType: RideRelatedNotificationConfig
+    fetchQuery: findAllByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.RideRelatedNotificationConfig
+    filterDimensions:
+      - timeDiffEvent
 
 PayoutConfig:
   tableName: payout_config
@@ -2100,6 +2136,16 @@ PayoutConfig:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+  configPilot:
+    configType: PayoutConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.Merchant.PayoutConfig
+    filterDimensions:
+      - vehicleCategory
+      - isPayoutEnabled
 
 ScheduledPayoutConfig:
   tableName: scheduled_payout_config

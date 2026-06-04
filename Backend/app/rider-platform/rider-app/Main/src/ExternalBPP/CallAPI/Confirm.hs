@@ -25,7 +25,7 @@ import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 import qualified UrlShortner.Common as UrlShortner
@@ -80,7 +80,7 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       return $ Right ()
     _ -> do
       let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-      mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
       let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
       let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 

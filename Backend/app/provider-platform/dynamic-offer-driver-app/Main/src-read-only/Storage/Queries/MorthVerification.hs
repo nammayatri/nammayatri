@@ -78,8 +78,8 @@ updateByPrimaryKey (Domain.Types.MorthVerification.MorthVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.docType docType,
-      Se.Set Beam.documentNumberEncrypted (((documentNumber <&> unEncrypted . (.encrypted)))),
-      Se.Set Beam.documentNumberHash ((documentNumber <&> (.hash))),
+      Se.Set Beam.documentNumberEncrypted (((documentNumber & unEncrypted . encrypted))),
+      Se.Set Beam.documentNumberHash ((documentNumber & hash)),
       Se.Set Beam.driverDateOfBirth driverDateOfBirth,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.issueDateOnDoc issueDateOnDoc,
@@ -101,7 +101,7 @@ instance FromTType' Beam.MorthVerification Domain.Types.MorthVerification.MorthV
       Just
         Domain.Types.MorthVerification.MorthVerification
           { docType = docType,
-            documentNumber = EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash,
+            documentNumber = EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash,
             driverDateOfBirth = driverDateOfBirth,
             driverId = Kernel.Types.Id.Id driverId,
             id = Kernel.Types.Id.Id id,
@@ -122,8 +122,8 @@ instance ToTType' Beam.MorthVerification Domain.Types.MorthVerification.MorthVer
   toTType' (Domain.Types.MorthVerification.MorthVerification {..}) = do
     Beam.MorthVerificationT
       { Beam.docType = docType,
-        Beam.documentNumberEncrypted = ((documentNumber <&> unEncrypted . (.encrypted))),
-        Beam.documentNumberHash = (documentNumber <&> (.hash)),
+        Beam.documentNumberEncrypted = ((documentNumber & unEncrypted . encrypted)),
+        Beam.documentNumberHash = (documentNumber & hash),
         Beam.driverDateOfBirth = driverDateOfBirth,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,

@@ -34,7 +34,7 @@ import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import Storage.Beam.Sos ()
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QP
 import Tools.Error
@@ -76,7 +76,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
   Hedis.setExp (personRedisKey personId) maxBookingTime 43200
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedBookingsCreatedAt
@@ -164,7 +164,7 @@ checkSafetyCenterDisabled person safetySettings = do
         then return True
         else do
           now <- getCurrentTime
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do

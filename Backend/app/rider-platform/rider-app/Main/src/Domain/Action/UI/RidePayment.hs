@@ -46,8 +46,8 @@ import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -670,7 +670,7 @@ getPaymentGetDueAmount ::
 getPaymentGetDueAmount (mbPersonId, _) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] -- No config = don't exclude anything
         Just textList -> textList -- Reference type strings used directly for filtering
@@ -744,7 +744,7 @@ postPaymentClearDues (mbPersonId, merchantId) req = do
   currency <- duesResp.currency & fromMaybeM (InvalidRequest "Currency required when dues present")
 
   -- 2. Get failed invoices to link as parents (same exclusion as Get Dues: config-based)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let _excludedPurposes = case riderConfig >>= (.duesExcludedPaymentPurposes) of
         Nothing -> [] :: [Text] -- No config = don't exclude anything
         Just textList -> textList -- Reference type strings used directly for filtering
@@ -1017,7 +1017,7 @@ triggerPendingCashRideCashbackPayoutJob person = do
     Right _ -> pure ()
   where
     schedulePayoutJob = do
-      mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
       case mbPayoutConfig of
         Nothing ->
           logError $ "No payout config found for cashback payout trigger; person=" <> person.id.getId
