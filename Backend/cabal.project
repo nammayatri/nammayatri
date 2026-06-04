@@ -6,26 +6,13 @@ packages:
   app/rider-platform/rider-app-drainer
   app/rider-platform/rider-app/Main
   app/rider-platform/rider-app/Scheduler
-  app/rider-platform/rider-app/search-result-aggregator
-  app/mocks/sms
-  app/mocks/fcm
   app/dashboard/rider-dashboard
   app/dashboard/provider-dashboard
   app/dashboard/Lib
-  app/unified-dashboard
   app/dashboard/CommonAPIs
-  app/example-service
   app/special-zone
   app/sdk-event-pipeline
-  app/mocks/rider-platform
   app/kafka-consumers
-  app/mocks/idfy
-  app/rider-platform/public-transport-rider-platform/Main
-  app/rider-platform/public-transport-rider-platform/search-consumer
-  app/mocks/public-transport-provider-platform
-  app/mocks/google
-  app/utils/route-extractor
-  app/utils/image-api-helper
   lib/passetto-lib
   lib/beckn-spec
   lib/beckn-services
@@ -38,7 +25,6 @@ packages:
   lib/sessionizer-metrics
   lib/yudhishthira
   lib/finance-kernel
-  test
   lib/producer
   lib/utils
   lib/external
@@ -48,7 +34,6 @@ packages:
   lib/consequence-engine
   lib/communication-engine
   lib/behavior-engine
-  hunit-tests
 -- ## 6 parallel jobs by default.
 --
 -- # since we now use "-j4" in "ghc-options" for all packages,

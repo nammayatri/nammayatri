@@ -211,15 +211,8 @@ in
         "dynamic-offer-driver-drainer-exe"
         "driver-offer-allocator-exe"
         "rider-app-scheduler-exe"
-        "image-api-helper-exe"
-        "mock-fcm-exe"
-        "mock-google-exe"
-        "mock-idfy-exe"
-        "mock-sms-exe"
         "producer-exe"
-        "search-result-aggregator-exe"
         "kafka-consumers-exe"
-        "unified-dashboard-exe"
       ];
 
       # In non-backend profiles (e.g. testDashboard) every haskell process is
@@ -1238,41 +1231,8 @@ in
               };
             };
 
-            image-api-helper-exe = {
-              environment.SERVICE_PORT = toString ports.image-api-helper;
-            };
-
-            mock-fcm-exe = {
-              environment.SERVICE_PORT = toString ports.mock-fcm;
-            };
-
-            mock-google-exe = {
-              environment.SERVICE_PORT = toString ports.mock-google;
-            };
-
-            mock-idfy-exe = {
-              environment.SERVICE_PORT = toString ports.mock-idfy;
-            };
-
-            mock-sms-exe = {
-              environment.SERVICE_PORT = toString ports.mock-sms;
-            };
-
             producer-exe = {
               environment.METRICS_PORT = toString ports.producer-metrics;
-            };
-
-            unified-dashboard-exe = {
-              environment = {
-                SERVICE_PORT = toString ports.unified-dashboard;
-                METRICS_PORT = toString ports.unified-dashboard-metrics;
-                RIDER_APP_PORT = toString ports.rider-app;
-                DRIVER_APP_PORT = toString ports.dynamic-offer-driver-app;
-              };
-            };
-
-            search-result-aggregator-exe = {
-              environment.SERVICE_PORT = toString ports.search-result-aggregator;
             };
           }
         ];
