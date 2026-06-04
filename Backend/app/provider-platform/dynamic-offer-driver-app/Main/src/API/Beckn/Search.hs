@@ -14,7 +14,6 @@
 
 module API.Beckn.Search (API, handler) where
 
-import qualified Beckn.ACL.OnSearch as ACL
 import qualified Beckn.ACL.Search as ACL
 import qualified Beckn.OnDemand.Utils.Callback as Callback
 import qualified Beckn.OnDemand.Utils.Common as Utils
@@ -23,7 +22,6 @@ import qualified Beckn.Types.Core.Taxi.API.Search as Search
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified Data.Aeson.Text as A
-import Data.List.Extra (notNull)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Domain.Action.Beckn.Search as DSearch
@@ -35,7 +33,6 @@ import Kernel.External.BapHostRedirect (shouldRedirectBapHost)
 import qualified Kernel.Prelude as Kernel
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Ack
-import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
@@ -43,11 +40,10 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Servant hiding (throwError)
+import qualified SharedLogic.SearchRequestProcessing as SRP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.ValueAddNP as VNP
-import TransactionLogs.PushLogs
 
 type API =
   Capture "merchantId" (Id DM.Merchant)
@@ -109,24 +105,13 @@ search transporterId authResult gatewayAuthResult reqV2 = withFlowHandlerBecknAP
         msgId <- Utils.getMessageId context
         country <- Utils.getContextCountry context
 
-        Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-          validatedSReq <- DSearch.validateRequest merchant dSearchReq
-          fork "search received pushing ondc logs" do
-            void $ pushLogs "search" (toJSON reqV2) validatedSReq.merchant.id.getId "MOBILITY"
-          let bppId = validatedSReq.merchant.subscriberId.getShortId
-          bppUri <- Utils.mkBppUri transporterId.getId
-          fork "search request processing" $
-            Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
-              dSearchResWithQuotes <- DSearch.handler validatedSReq dSearchReq
-              internalEndPointHashMap <- asks (.internalEndPointHashMap)
-
-              isValueAddNP <- VNP.isValueAddNP dSearchReq.bapId
-              let dSearchResWihoutQuotes = dSearchResWithQuotes {DSearch.quotes = []}
-              -- in case of non value-add-np transactions, when quotes are present, setting them empty to avoid sending quotes to BAP.
-              let dSearchRes = bool dSearchResWihoutQuotes dSearchResWithQuotes isValueAddNP
-
-              when ((notNull dSearchRes.quotes && isValueAddNP) || null dSearchRes.quotes) $ do
-                onSearchReq <- ACL.mkOnSearchRequest dSearchRes Context.ON_SEARCH Context.MOBILITY msgId txnId bapUri (Just bppId) (Just bppUri) city country isValueAddNP
+        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (DSearch.searchTxnDedupKey transactionId transporterId.getId) 60 True
+        when isFirst $
+          Redis.whenWithLockRedis (searchLockKey dSearchReq.messageId transporterId.getId) 60 $
+            fork "search request processing" $
+              Redis.whenWithLockRedis (searchProcessingLockKey dSearchReq.messageId transporterId.getId) 60 $ do
+                (dSearchRes, onSearchReq) <- SRP.processSearchRequest merchant dSearchReq transporterId msgId txnId bapUri city country "search" (toJSON reqV2)
+                internalEndPointHashMap <- asks (.internalEndPointHashMap)
                 let context' = onSearchReq.onSearchReqContext
                 logTagInfo "SearchV2 API Flow" $ "Sending OnSearch:-" <> TL.toStrict (A.encodeToLazyText onSearchReq)
                 void $

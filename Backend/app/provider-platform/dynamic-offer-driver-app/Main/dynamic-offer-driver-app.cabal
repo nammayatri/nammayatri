@@ -557,6 +557,7 @@ library
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
+      SharedLogic.SearchRequestProcessing
       SharedLogic.SearchTry
       SharedLogic.SearchTryLocker
       SharedLogic.SpecialLocationUpsert
