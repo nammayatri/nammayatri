@@ -3331,9 +3331,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   mbFareProducts <-
     if shouldReplicateFareProducts
       then
-        CQFProduct.findAllFareProductByMerchantOpCityIdAndArea newMerchantOperatingCityId SL.Default >>= \case
+        CQFProduct.findAllFareProductByMerchantOpCityId newMerchantOperatingCityId >>= \case
           [] -> do
-            fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityIdAndArea baseOperatingCityId SL.Default
+            fareProducts <- CQFProduct.findAllFareProductByMerchantOpCityId baseOperatingCityId
             newFareProducts <- mapM (buildFareProduct newMerchantId newMerchantOperatingCityId) fareProducts
             return $ Just newFareProducts
           _ -> return Nothing

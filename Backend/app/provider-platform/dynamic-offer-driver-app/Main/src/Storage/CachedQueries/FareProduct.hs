@@ -132,22 +132,6 @@ makeBoundedFareProductByMerchantVariantAreaKey :: Id MerchantOperatingCity -> [S
 makeBoundedFareProductByMerchantVariantAreaKey merchantOpCityId searchSources tripCategory serviceTier area = "driver-offer:CachedQueries:Bounded:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":SearchSource-" <> show searchSources <> ":ServiceTier-" <> show serviceTier <> ":Area-" <> show area <> ":TripCategory-" <> show tripCategory
 
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-findAllFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r, Esq.EsqDBFlow m r) => Id MerchantOperatingCity -> SL.Area -> m [FareProduct]
-findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area) >>= \case
-    Just a -> pure a
-    Nothing -> cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area /=<< Queries.findAllFareProductByMerchantOpCityIdAndArea merchantOpCityId area True
-
-cacheFareProductByMerchantOpCityIdAndArea :: (CacheFlow m r) => Id MerchantOperatingCity -> SL.Area -> [FareProduct] -> m ()
-cacheFareProductByMerchantOpCityIdAndArea merchantOpCityId area fareProducts = do
-  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area) fareProducts expTime
-
-makeFareProductByMerchantOpCityIdAndAreaKey :: Id MerchantOperatingCity -> SL.Area -> Text
-makeFareProductByMerchantOpCityIdAndAreaKey merchantOpCityId area = "driver-offer:CachedQueries:FareProduct:MerchantOpCityId-" <> getId merchantOpCityId <> ":Area-" <> show area
-
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 updateFarePolicyId :: (Esq.EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id FarePolicy -> Id FareProduct -> m ()
 updateFarePolicyId = Queries.updateFarePolicyId
 

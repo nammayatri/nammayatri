@@ -41,18 +41,6 @@ findAllFareProductByMerchantOpCityId merchantOperatingCityId enabled = do
         ]
     ]
 
-findAllFareProductByMerchantOpCityIdAndArea ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Kernel.Prelude.Bool -> m [Domain.Types.FareProduct.FareProduct])
-findAllFareProductByMerchantOpCityIdAndArea merchantOperatingCityId area enabled = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
-          Se.Is Beam.area $ Se.Eq area,
-          Se.Is Beam.enabled $ Se.Eq enabled
-        ]
-    ]
-
 findAllUnboundedByMerchantOpCityIdVariantArea ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Lib.Types.SpecialLocation.Area -> Domain.Types.Common.TripCategory -> Domain.Types.Common.ServiceTierType -> Kernel.Types.TimeBound.TimeBound -> Kernel.Prelude.Bool -> [Domain.Types.FareProduct.SearchSource] -> m [Domain.Types.FareProduct.FareProduct])

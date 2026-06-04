@@ -67,11 +67,6 @@ FareProduct:
       where:
         and: [farePolicyId]
 
-    findAllFareProductByMerchantOpCityIdAndArea:
-      kvFunction: findAllWithKV
-      where:
-        and: [merchantOperatingCityId, area, enabled]
-
   sqlType:
     vehicleVariant: character varying (60)
     merchantOperatingCityId: character (36)
