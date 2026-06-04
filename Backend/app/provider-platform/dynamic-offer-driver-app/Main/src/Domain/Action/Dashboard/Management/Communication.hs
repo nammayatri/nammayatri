@@ -41,7 +41,6 @@ import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.SMS.Interface as SmsInterface
 import Kernel.Sms.Config (SmsConfig)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer (produceMessage)
@@ -58,7 +57,6 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Queries.Communication as QComm
 import qualified Storage.Queries.CommunicationDelivery as QDelivery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -388,7 +386,7 @@ getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperat
         drivers <-
           case (mbFleetOwnerId, mbOperatorId) of
             (Just fleetOwnerId, _) -> do
-              pairs <- B.runInReplica $ QFDA.findAllActiveDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch (Just True)
+              pairs <- B.runInReplica $ QFDA.findAllDriverByFleetOwnerId fleetOwnerId (Just limit) (Just offset) mbSearchDbHash mbSearch mbSearch
               pure $ map (\(_, person) -> person) pairs
             (_, Just operatorId) -> do
               assocs <- QFOA.findAllActiveByOperatorId operatorId
@@ -969,33 +967,23 @@ getCommunicationTemplate ::
 getCommunicationTemplate merchantShortId opCity apiDomain apiChannel = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOpCityId >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  if SmsInterface.TwillioSms `elem` merchantServiceUsageConfig.smsProvidersPriorityList
-    then
-      pure
-        CommAPI.CommunicationTemplateResponse
-          { templateId = "",
-            messageBody = "",
-            templateName = Nothing
-          }
-    else do
-      let mmDomain :: DMM.MessageDomain
-          mmDomain =
-            case apiDomain of
-              CommAPI.COMM_FLEET -> DMM.FLEET
-              CommAPI.COMM_RIDE_HAILING -> DMM.RIDE_HAILING
-              CommAPI.COMM_GENERAL -> DMM.GENERAL
-          mmChannel :: DMM.MediaChannel
-          mmChannel =
-            case apiChannel of
-              CommAPI.CH_SMS -> DMM.SMS
-              CommAPI.CH_WHATSAPP -> DMM.WHATSAPP
-              _ -> DMM.SMS -- fallback for unsupported channels
-      mbTemplate <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just mmDomain) (Just mmChannel)
-      template <- fromMaybeM (InvalidRequest "Template not found for given domain & channel") mbTemplate
-      pure
-        CommAPI.CommunicationTemplateResponse
-          { templateId = template.templateId,
-            messageBody = template.message,
-            templateName = template.templateName
-          }
+  let mmDomain :: DMM.MessageDomain
+      mmDomain =
+        case apiDomain of
+          CommAPI.COMM_FLEET -> DMM.FLEET
+          CommAPI.COMM_RIDE_HAILING -> DMM.RIDE_HAILING
+          CommAPI.COMM_GENERAL -> DMM.GENERAL
+      mmChannel :: DMM.MediaChannel
+      mmChannel =
+        case apiChannel of
+          CommAPI.CH_SMS -> DMM.SMS
+          CommAPI.CH_WHATSAPP -> DMM.WHATSAPP
+          _ -> DMM.SMS -- fallback for unsupported channels
+  mbTemplate <- QMM.findByMerchantOpCityIdDomainAndChannel merchantOpCityId (Just mmDomain) (Just mmChannel)
+  template <- fromMaybeM (InvalidRequest "Template not found for given domain & channel") mbTemplate
+  pure
+    CommAPI.CommunicationTemplateResponse
+      { templateId = template.templateId,
+        messageBody = template.message,
+        templateName = template.templateName
+      }
