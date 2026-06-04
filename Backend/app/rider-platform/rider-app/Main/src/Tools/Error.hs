@@ -489,7 +489,7 @@ instance IsHTTPError RouteError where
     RouteFareNotFound _ _ _ -> "ROUTE_FARE_NOT_FOUND"
 
   toHttpCode = \case
-    RouteNotFound _ -> E500
+    RouteNotFound _ -> E404
     RouteDoesNotExist _ -> E400
     RouteFareNotFound _ _ _ -> E500
     RouteMappingDoesNotExist _ _ _ -> E500
