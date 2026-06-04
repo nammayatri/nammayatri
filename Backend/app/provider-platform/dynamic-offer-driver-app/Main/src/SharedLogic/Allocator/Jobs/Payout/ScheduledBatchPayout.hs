@@ -49,7 +49,6 @@ import SharedLogic.Finance.Wallet
 import Storage.Beam.Payment ()
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIE
 import qualified Storage.Queries.Person as QPerson
@@ -150,8 +149,7 @@ processWalletPayouts config jobData = do
   let merchantId = jobData.merchantId
       merchantOpCityId = jobData.merchantOperatingCityId
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  let walletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && transporterConfig.driverWalletConfig.enableWalletPayout -- TODO :: This also can be (||), but not changing it for now.
+  let walletEnabled = transporterConfig.driverWalletConfig.enableWalletPayout
   if not walletEnabled
     then do
       logInfo "Wallet payouts disabled at transporter level"
