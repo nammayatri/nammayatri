@@ -13,13 +13,14 @@ imports:
 module: Sos
 types:
   TriggerApi:
-    enum: "POLICE,KAPTURE"
+    enum: "POLICE,KAPTURE,SUPPORT_TICKET"
     derive: "HttpInstance"
 
   SosRes:
     sosId: Id Sos
     externalSOSSuccess: Maybe Bool
-    kaptureTicketId: Maybe Text
+    ticketId: Maybe Text
+    kaptureTicketId: Maybe Text # DEPRECATED: use ticketId; kept for backward compat until frontend migrates
 
   SosDetailsRes:
     sos: Maybe Sos

@@ -122,6 +122,7 @@ notifyErrorToSupport person merchantId merchantOpCityId driverPhone _ errs = do
           personId = person.id.getId,
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
+          ticketContext = Just Ticket.IssueTicket,
           becknIssueId = Nothing
         }
 

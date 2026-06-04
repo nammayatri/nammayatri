@@ -103,5 +103,6 @@ safetyWebhookHandler merchantShortId mbOpCity secret val = do
           classification = Ticket.DRIVER,
           rideDescription = Nothing,
           queue = tConfig.kaptureQueue,
-          becknIssueId = Nothing
+          becknIssueId = Nothing,
+          ticketContext = Just Ticket.IssueTicket
         }
