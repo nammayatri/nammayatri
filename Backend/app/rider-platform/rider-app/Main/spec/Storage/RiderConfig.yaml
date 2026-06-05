@@ -553,5 +553,12 @@ RiderConfig:
     invoiceConfig: "json"
     syncSearchDispatchConfig: "jsonb"
 
+  configPilot:
+    configType: RiderConfig
+    fetchQuery: findByMerchantOperatingCityId
+    returnType: Maybe
+    configDomain: RIDER_CONFIG
+    queryModule: Storage.CachedQueries.Merchant.RiderConfig
+
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE

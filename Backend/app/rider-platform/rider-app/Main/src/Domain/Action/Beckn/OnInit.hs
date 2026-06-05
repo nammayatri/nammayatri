@@ -38,7 +38,7 @@ import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.Person as QP
 import Tools.Error
@@ -133,7 +133,7 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
@@ -219,7 +219,7 @@ buildOnInitResFromBooking bookingId = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderDimensions decRider.merchantOperatingCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions decRider.merchantOperatingCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails

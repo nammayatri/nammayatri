@@ -84,9 +84,9 @@ data ProviderLookUpKey
   | BUS
   | TRAIN
   | FLIGHT
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Eq, (Ord), (Show), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 

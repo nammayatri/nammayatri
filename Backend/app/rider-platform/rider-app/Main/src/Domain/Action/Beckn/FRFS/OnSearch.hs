@@ -57,7 +57,7 @@ import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQVSR
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
@@ -308,7 +308,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
     _ -> do
       case journeyLeg.mode of
         DTripTypes.Bus -> do
-          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId})
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId})
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           let cfgMap' = SFU.adjustCfgMapForPreferredTier journeyLeg.userPreferredServiceTier cfgMap
           let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)

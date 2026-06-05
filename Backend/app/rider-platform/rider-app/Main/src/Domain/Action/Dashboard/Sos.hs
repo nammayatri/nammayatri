@@ -47,7 +47,7 @@ import qualified SharedLogic.Ride as SRide
 import qualified SharedLogic.SosLocationTracking as SOSLocation
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
 import Tools.Auth
@@ -70,7 +70,7 @@ getSosDetails merchantShortId opCity sosId = do
   mbMerchantOpCity <- case sos.merchantOperatingCityId of
     Just cityId -> CQMOC.findById (Kernel.Types.Id.cast cityId)
     Nothing -> CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
@@ -169,7 +169,7 @@ callExternalSOS sosId mbComments = do
   merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
-  riderConfig <- getConfig (RiderDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do

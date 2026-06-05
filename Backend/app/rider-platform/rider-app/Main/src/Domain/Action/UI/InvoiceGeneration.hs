@@ -35,7 +35,7 @@ import Lib.Yudhishthira.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.Booking as SB
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBE
 import qualified Storage.Queries.Person as QPerson
 import System.Directory (doesFileExist)
@@ -236,7 +236,7 @@ generateAndEmailInvoice invoiceId person bookingAPIEntities merchantId email = d
   merchantOperatingCityId <- case bookingAPIEntities of
     (firstBooking : _) -> return firstBooking.merchantOperatingCityId
     [] -> throwError $ InvalidRequest "No bookings provided for invoice generation" -- This should never happen as we validate bookings exist
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
 
   -- Get fromEmail from rider config (use emailOtpConfig if available, otherwise default)
   let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig

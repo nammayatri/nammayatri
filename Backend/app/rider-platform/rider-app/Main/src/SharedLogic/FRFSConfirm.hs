@@ -62,7 +62,7 @@ import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Seat as QSeat
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -88,7 +88,7 @@ confirmAndUpsertBooking personId quote selectedQuoteCategories crisSdkResponse i
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   riderConfig <-
-    getConfig (RiderDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBppConfig.merchantOperatingCityId.getId})
       >>= fromMaybeM
         (RiderConfigNotFound $ "merchantOpCityid: " <> integratedBppConfig.merchantOperatingCityId.getId)
   isMultiInitAllowed <-

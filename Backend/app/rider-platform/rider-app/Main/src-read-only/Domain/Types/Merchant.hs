@@ -66,7 +66,7 @@ data MerchantD (s :: UsageSafety) = Merchant
   }
   deriving (Generic, Show)
 
-type Merchant = MerchantD 'Safe
+type Merchant = MerchantD ('Safe)
 
 instance FromJSON (MerchantD 'Unsafe)
 

@@ -979,6 +979,14 @@ FRFSConfig:
     isFRFSTestingEnabled: Kernel.Prelude.Just|I
     canUpdateExistingPaymentOrder: Kernel.Prelude.Just|I
 
+  configPilot:
+    configType: FRFSConfig
+    fetchQuery: findByMerchantOperatingCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: Maybe
+    configDomain: RIDER_CONFIG
+    queryModule: Storage.CachedQueries.FRFSConfig
+
 FRFSCancellationConfig:
   tableName: frfs_cancellation_config
   derives: "Generic,Show,FromJSON,ToJSON,Eq"

@@ -48,8 +48,8 @@ import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
 import qualified Storage.CachedQueries.Merchant as CQM
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -804,7 +804,7 @@ triggerPendingCashRideCashbackPayoutJob person = do
     Right _ -> pure ()
   where
     schedulePayoutJob = do
-      mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
       case mbPayoutConfig of
         Nothing ->
           logError $ "No payout config found for cashback payout trigger; person=" <> person.id.getId

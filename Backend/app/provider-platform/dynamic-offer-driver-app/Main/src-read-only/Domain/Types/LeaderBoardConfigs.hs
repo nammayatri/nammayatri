@@ -29,4 +29,4 @@ data LeaderBoardConfigs = LeaderBoardConfigs
 
 data LeaderBoardType = WEEKLY | DAILY | MONTHLY deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''LeaderBoardType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''LeaderBoardType))

@@ -128,9 +128,9 @@ import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingExtra as QRBE
@@ -648,7 +648,7 @@ rideAssignedReqHandler req = do
       notifyRideRelatedNotificationOnEvent booking ride now DRN.RIDE_ASSIGNED
       notifyRideRelatedNotificationOnEvent booking ride now DRN.PICKUP_TIME
 
-      riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
         fork "Sending Dashboard Ride Flow Booking Details" $ do
           sendRideBookingDetailsViaWhatsapp booking.riderId ride booking riderConfig
@@ -731,7 +731,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just DRN.START_TIME})
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonDoesNotExist booking.riderId.getId)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   fork "convert pending non-ride sos to ride sos on ride start" $ convertNonRideSosToRide person riderConfig
   unless isInitiatedByCronJob $ do
     fork "notify emergency contacts" $ Notify.notifyRideStartToEmergencyContacts booking ride
@@ -939,7 +939,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
         case minTripDistanceForReferralCfg of
           Just distance -> updRide.chargeableDistance >= Just distance && not person.hasTakenValidRide
           Nothing -> True
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   fork "update first ride info" $ do
     mbPersonFirstRideInfo <- QCP.findByPersonIdAndVehicleCategory booking.riderId $ Just (Utils.mapServiceTierToCategory booking.vehicleServiceTierType)
     case mbPersonFirstRideInfo of
@@ -1087,7 +1087,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
 
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   when (ridePayoutAmount > 0) $ do
-    payoutCfg <- getOneConfig (PayoutDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+    payoutCfg <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
     case payoutCfg of
       Just payoutConfig -> do
         let cashbackPayoutJobData = ExecuteCashRideCashbackPayoutJobData {personId = person.id}
@@ -1355,7 +1355,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee cancel
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
     fork "mark pending sos as not resolved on ride cancel" $
       SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError "RiderConfig not found")
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError "RiderConfig not found")
   fork "Cancellation Settlement" $ do
     whenJust cancellationFee $ \fee -> do
       logDebug $ "[CancellationSettlement] cancellationFee present: " <> show fee.amount <> " immediateCharge=" <> show immediateCharge <> " settleCancellationFeeBeforeNextRide=" <> show riderConfig.settleCancellationFeeBeforeNextRide <> " mbRide=" <> show (fmap (.id) mbRide)
@@ -1736,7 +1736,7 @@ customerReferralPayout ::
 customerReferralPayout ride currency isValidRide riderConfig person_ merchantId merchantOperatingCityId = do
   let vehicleCategory = DV.castVehicleVariantToVehicleCategory ride.vehicleVariant
   logDebug $ "Ride End referral payout : vehicleCategory : " <> show vehicleCategory <> " isValidRide: " <> show isValidRide
-  mbPayoutConfig <- getOneConfig (PayoutDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing, payoutEntity = Nothing})
   case mbPayoutConfig of
     Just payoutConfig -> do
       whenJust person_.referredByCustomer $ \referredByCustomerId -> do

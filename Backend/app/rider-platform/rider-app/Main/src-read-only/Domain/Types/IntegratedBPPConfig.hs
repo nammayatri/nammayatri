@@ -33,7 +33,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
 
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
@@ -42,10 +42,10 @@ data ProviderConfig
   | CMRLV2 Domain.Types.Extra.IntegratedBPPConfig.CMRLV2Config
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
-  deriving (Generic, FromJSON, ToJSON, Eq, Show)
+  deriving (Generic, (FromJSON), (ToJSON), (Eq), (Show))
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PlatformType))
 
-$(Kernel.Utils.TH.mkToHttpInstanceForEnum ''PlatformType)
+$(Kernel.Utils.TH.mkToHttpInstanceForEnum (''PlatformType))
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PlatformType))

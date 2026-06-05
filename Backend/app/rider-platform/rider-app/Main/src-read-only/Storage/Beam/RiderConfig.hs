@@ -207,8 +207,8 @@ instance B.Table RiderConfigT where
 
 type RiderConfig = RiderConfigT Identity
 
-$(enableKVPG ''RiderConfigT ['merchantOperatingCityId] [['frfsMetricsApiKey]])
+$(enableKVPG (''RiderConfigT) [('merchantOperatingCityId)] [[('frfsMetricsApiKey)]])
 
-$(mkTableInstances ''RiderConfigT "rider_config")
+$(mkTableInstances (''RiderConfigT) "rider_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''RiderConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''RiderConfigT))

@@ -15,18 +15,18 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RideRelatedNotificationConfigT f = RideRelatedNotificationConfigT
-  { eventTime :: B.C f Domain.Types.RideRelatedNotificationConfig.EventTime,
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    notificationKey :: B.C f Kernel.Prelude.Text,
-    notificationType :: B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType,
-    onBookingStatus :: B.C f Domain.Types.BookingStatus.BookingStatus,
-    onScheduledBooking :: B.C f Kernel.Prelude.Bool,
-    timeDiff :: B.C f Kernel.Types.Common.Seconds,
-    timeDiffEvent :: B.C f Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { eventTime :: (B.C f Domain.Types.RideRelatedNotificationConfig.EventTime),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    notificationKey :: (B.C f Kernel.Prelude.Text),
+    notificationType :: (B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType),
+    onBookingStatus :: (B.C f Domain.Types.BookingStatus.BookingStatus),
+    onScheduledBooking :: (B.C f Kernel.Prelude.Bool),
+    timeDiff :: (B.C f Kernel.Types.Common.Seconds),
+    timeDiffEvent :: (B.C f Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -36,8 +36,8 @@ instance B.Table RideRelatedNotificationConfigT where
 
 type RideRelatedNotificationConfig = RideRelatedNotificationConfigT Identity
 
-$(enableKVPG ''RideRelatedNotificationConfigT ['id, 'merchantOperatingCityId] [])
+$(enableKVPG (''RideRelatedNotificationConfigT) [('id), ('merchantOperatingCityId)] [])
 
-$(mkTableInstances ''RideRelatedNotificationConfigT "ride_related_notification_config")
+$(mkTableInstances (''RideRelatedNotificationConfigT) "ride_related_notification_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''RideRelatedNotificationConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''RideRelatedNotificationConfigT))

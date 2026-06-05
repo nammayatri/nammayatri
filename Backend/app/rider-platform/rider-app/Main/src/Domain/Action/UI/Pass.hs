@@ -79,7 +79,7 @@ import qualified Storage.CachedQueries.Pass as CQPass
 import qualified Storage.CachedQueries.PassCategory as CQPassCategory
 import qualified Storage.CachedQueries.PassType as CQPassType
 import qualified Storage.CachedQueries.Translations as QT
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.PassCategoryExtra as QPassCategory
 import qualified Storage.Queries.PassDetails as QPassDetails
 import qualified Storage.Queries.PassExtra as QPass
@@ -997,7 +997,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       then do
         case (passVerifyReq.currentLat, passVerifyReq.currentLon) of
           (Just lat, Just lon) -> do
-            riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+            riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
             case integratedBPPConfigs of
               [] -> throwAndReleaseSlot (PassVerificationFailed purchasedPassId.getId "No integrated BPP config available for auto activation")
               (nearbyConfig : _) -> do
@@ -1056,7 +1056,7 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
       case mbStudentPassDetails of
         Nothing -> pure $ Just DPassVerifyTransaction.NOT_VERIFIED
         Just passDetails -> do
-          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           pure $ Just $ verifyStudentPass passDetails vehicleInfo.routeCode routeStopMapping riderConfig
     _ -> pure Nothing
 

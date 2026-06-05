@@ -31,12 +31,12 @@ findByImageId documentImageId = do findOneWithKV [Se.Is Beam.documentImageId $ S
 
 findByRcId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ([Domain.Types.VehicleInsurance.VehicleInsurance]))
 findByRcId limit offset rcId = do findAllWithOptionsKV [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId)] (Se.Desc Beam.createdAt) limit offset
 
 findByRcIdAndDriverId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.VehicleInsurance.VehicleInsurance])
+  (Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.VehicleInsurance.VehicleInsurance]))
 findByRcIdAndDriverId rcId driverId = do findAllWithKV [Se.And [Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId), Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
@@ -64,8 +64,8 @@ updateByPrimaryKey (Domain.Types.VehicleInsurance.VehicleInsurance {..}) = do
       Se.Set Beam.issueDate issueDate,
       Se.Set Beam.limitsOfLiability limitsOfLiability,
       Se.Set Beam.policyExpiry policyExpiry,
-      Se.Set Beam.policyNumberEncrypted (policyNumber & unEncrypted . encrypted),
-      Se.Set Beam.policyNumberHash (policyNumber & hash),
+      Se.Set Beam.policyNumberEncrypted (((policyNumber & unEncrypted . encrypted))),
+      Se.Set Beam.policyNumberHash ((policyNumber & hash)),
       Se.Set Beam.policyProvider policyProvider,
       Se.Set Beam.rcId (Kernel.Types.Id.getId rcId),
       Se.Set Beam.rejectReason rejectReason,
