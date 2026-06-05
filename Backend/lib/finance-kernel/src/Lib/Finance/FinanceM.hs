@@ -174,6 +174,7 @@ data AccountRole
   | OwnerLiability
   | OwnerExpense
   | OwnerControl
+  | OwnerAsset
   | GovtIndirect
   | GovtDirect
   | GovtExpense
@@ -321,6 +322,16 @@ roleToInput ctx = \case
   OwnerExpense ->
     AccountInput
       { accountType = Expense,
+        counterpartyType = Just ctx.counterpartyType,
+        counterpartyId = Just ctx.counterpartyId,
+        subLedger = Nothing,
+        currency = ctx.currency,
+        merchantId = ctx.merchantId,
+        merchantOperatingCityId = ctx.merchantOpCityId
+      }
+  OwnerAsset ->
+    AccountInput
+      { accountType = Asset,
         counterpartyType = Just ctx.counterpartyType,
         counterpartyId = Just ctx.counterpartyId,
         subLedger = Nothing,

@@ -564,7 +564,7 @@ populateTipAmount apiKey internalUrl bppRideId tipAmount = do
 -- Best-effort (try-swallow): the BPP handler throws on failure, and on the APPROVED
 -- transition this fires before the Stripe refund, so a BPP outage must not abort the
 -- refund. Failures still log via the BPP_INTERNAL_API_ERROR counter.
-data RefundLedgerStatus = APPROVED | REFUNDED
+data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 -- | Field names are byte-identical to the BPP RefundLedgerReq so the two

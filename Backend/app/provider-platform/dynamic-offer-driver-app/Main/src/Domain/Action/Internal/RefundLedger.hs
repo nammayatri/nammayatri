@@ -28,7 +28,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.Finance (AccountRole (..), FinanceCtx, roundAmount, runFinance, transferPendingWithMetadata, transferWithMetadata)
+import Lib.Finance (AccountRole (..), FinanceCtx, runFinance, transferPendingWithMetadata, transferWithMetadata)
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry as LE
 import qualified Lib.Finance.Invoice.Interface as InvoiceI
@@ -45,7 +45,7 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 -- | Defined here because rider-app's RefundRequestStatus can't be cross-imported.
-data RefundLedgerStatus = APPROVED | REFUNDED
+data RefundLedgerStatus = APPROVED | REFUNDED | FAILED
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 -- | Field names must match the BAP-side request verbatim (Generic JSON wire).
@@ -58,9 +58,8 @@ data RefundLedgerReq = RefundLedgerReq
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
--- | APPROVED writes the PENDING leg(s); REFUNDED settles them (or writes fresh
---   SETTLED if missing). Idempotent via per-transition lock + metadata dedup; a
---   ledger-write failure throws so the caller redelivers.
+-- | APPROVED → pending leg(s); REFUNDED → settle them; FAILED → void them.
+--   Idempotent via per-transition lock + metadata dedup; throws on write failure.
 refundLedger :: Id Ride -> RefundLedgerReq -> Maybe Text -> Flow APISuccess
 refundLedger rideId req apiKey = do
   ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
@@ -73,7 +72,7 @@ refundLedger rideId req apiKey = do
     transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
     mbDriver <- QPerson.findById ride.driverId
     mbDriverInfo <- QDI.findById (cast ride.driverId)
-    -- online cab only; the clawback leg reverses OwnerLiability, credited only on online rides
+    -- online cab only; the clawback leg debits OwnerExpense (driver's share).
     ctx <- Wallet.buildFinanceCtx booking ride mbDriver Nothing mbDriverInfo transporterConfig True
     let referenceId = booking.id.getId
         deductFromDriver = fromMaybe True req.deductFromDriver -- default: clawback
@@ -81,23 +80,28 @@ refundLedger rideId req apiKey = do
     existing <- getRefundEntries referenceId
     case req.refundRequestStatus of
       APPROVED ->
-        unless (any (entryMatchesRefundStatus req.refundRequestId APPROVED) existing) $
+        -- Skip VOIDED legs so a retry re-raises fresh; a live leg de-dups a re-fire.
+        unless (any (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing) $
           postLegs ctx Pending (mkRefundMetadata req.refundRequestId APPROVED) legs req.refundRequestId
       REFUNDED -> do
-        -- alreadyDone is True when there's already evidence of a prior successful REFUNDED processing for this refund
-        -- either via a REFUNDED-tagged entry (recovery path was done) or via APPROVED-tagged entries that are no longer PENDING (normal path was done).
-        -- On a genuine first run, neither is true, so the invoice gets written. On any re-fire, one is true, so the invoice is skipped.
-        let approvedEntries = filter (entryMatchesRefundStatus req.refundRequestId APPROVED) existing
+        -- alreadyDone = a REFUNDED entry exists OR the APPROVED leg(s) are already settled — either
+        -- way success already ran, so skip the invoice. Live (non-voided) APPROVED legs only.
+        let approvedEntries = filter (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing
             alreadyDone =
               any (entryMatchesRefundStatus req.refundRequestId REFUNDED) existing
                 || (not (null approvedEntries) && not (any (\e -> e.status == LE.PENDING) approvedEntries))
         if not (null approvedEntries)
           then forM_ (filter (\e -> e.status == LE.PENDING) approvedEntries) $ \e -> LedgerSvc.settleEntry e.id
-          else
+          else -- refund APPROVED internal bpp call miss. creating settled leg entries directly with metadata status REFUNDED.
+
             unless (any (entryMatchesRefundStatus req.refundRequestId REFUNDED) existing) $
               postLegs ctx Settled (mkRefundMetadata req.refundRequestId REFUNDED) legs req.refundRequestId
         -- regenerate the fleet/driver-visible cumulative refund invoice, once per refund
         unless alreadyDone $ regenerateRefundInvoice ctx booking req.refundsAmount
+      FAILED ->
+        -- Failed: void the pending APPROVED leg(s). Only PENDING → idempotent.
+        forM_ (filter (\e -> e.status == LE.PENDING && entryMatchesRefundStatus req.refundRequestId APPROVED e) existing) $ \e ->
+          LedgerSvc.voidEntry e.id "RefundFailed"
   pure Success
 
 data PostMode = Pending | Settled
@@ -122,11 +126,11 @@ refundLegs deductFromDriver req ride
     let commission = fromMaybe 0 ride.commission
         platformShare =
           if req.transactionAmount > 0
-            then roundAmount (commission * req.refundsAmount / req.transactionAmount)
+            then roundAmountByCurrency' ride.currency (commission * req.refundsAmount / req.transactionAmount)
             else 0
-        driverShare = roundAmount (req.refundsAmount - platformShare)
-     in [ (OwnerLiability, BuyerExternal, driverShare, Wallet.walletReferenceRideRefundDriverShare),
-          (SellerRevenue, BuyerExternal, platformShare, Wallet.walletReferenceRideRefundCommissionShare)
+        driverShare = roundAmountByCurrency' ride.currency (req.refundsAmount - platformShare)
+     in [ (OwnerExpense, BuyerExternal, driverShare, Wallet.walletReferenceRideRefundDriverShare),
+          (SellerExpense, BuyerExternal, platformShare, Wallet.walletReferenceRideRefundCommissionShare)
         ]
   | otherwise = [(SellerExpense, BuyerExternal, req.refundsAmount, Wallet.walletReferenceRideRefund)]
 
