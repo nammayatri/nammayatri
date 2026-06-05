@@ -56,7 +56,7 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
   if shouldPushToKafkaOnly dbModel _dontEnableDbTables && not dbUpdateObject.forceDrainToDB
     then return $ Right entryId
     else do
-      let updateQuery = getUpdateQueryForTable _jsonRepairModels dbUpdateObject
+      let updateQuery = getUpdateQueryForTable dbUpdateObject
       case updateQuery of
         Just query -> do
           result <- EL.runIO $ try $ executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 query)
@@ -75,8 +75,8 @@ runUpdateQuery updateDataEntries dbUpdateObject = do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)
           return $ Left entryId
 
-getUpdateQueryForTable :: [Text] -> DBUpdateObject -> Maybe Text
-getUpdateQueryForTable jsonRepairModels DBUpdateObject {dbModel, contents, mappings} = do
+getUpdateQueryForTable :: DBUpdateObject -> Maybe Text
+getUpdateQueryForTable DBUpdateObject {dbModel, contents, mappings} = do
   let DBUpdateObjectContent setClauses whereClause = contents
   let schema = SchemaName $ T.pack currentSchemaName
-  generateUpdateQuery jsonRepairModels UpdateQuery {..}
+  generateUpdateQuery UpdateQuery {..}
