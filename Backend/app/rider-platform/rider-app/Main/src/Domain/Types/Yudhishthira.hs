@@ -21,7 +21,6 @@ import qualified Domain.Types.RecentLocation as DRecentLocation
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import qualified Domain.Types.Trip as DTrip
-import qualified Domain.Types.TripTerms as DTripTerms
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -239,7 +238,6 @@ data BookingData = BookingData
     status :: DBookingStatus.BookingStatus,
     transactionId :: Text,
     tripCategory :: Maybe DCommon.TripCategory,
-    tripTerms :: Maybe DTripTerms.TripTerms,
     updatedAt :: UTCTime,
     vehicleCategory :: Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     vehicleIconUrl :: Maybe BaseUrl,

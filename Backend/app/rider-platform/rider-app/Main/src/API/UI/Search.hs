@@ -43,6 +43,7 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.OnSearch as DOnSearch
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
 import qualified Domain.Action.UI.Quote as DQuote
@@ -292,7 +293,7 @@ dispatchSearchToBpp merchantId req dSearchRes mbEnableSyncSearch = do
     then do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show (encode becknTaxiReqV2))
-      fork "search cabs" . withShortRetry $
+      fork "search cabs" $
         void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
       awaitSyncSearchWithTimeout dSearchRes becknTaxiReqV2
     else do
@@ -328,13 +329,17 @@ trySyncSearch dSearchRes becknTaxiReqV2 = do
       logInfo $ "sync_search succeeded for txn " <> txnId <> "; processing inline"
       eProc <- withTryCatch "processOnSearchInline" $ BeckOnSearch.processOnSearchInline onSearchReq
       case eProc of
-        Right _ -> do
-          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotes dSearchRes.searchRequest.id Nothing
+        Right (Just onSearchResult) -> do
+          let DOnSearch.OnSearchResult {searchRequest, estimates, quotes, riderConfig} = onSearchResult
+          eQuotes <- withTryCatch "getQuotesInline" $ DQuote.getQuotesFromInMemory searchRequest estimates quotes riderConfig
           case eQuotes of
-            Right quotes -> pure (Just quotes)
+            Right quotesRes -> pure (Just quotesRes)
             Left e -> do
-              logError $ "Inline getQuotes failed for txn " <> txnId <> ": " <> T.pack (show e)
+              logError $ "Inline getQuotesFromInMemory failed for txn " <> txnId <> ": " <> T.pack (show e)
               pure Nothing
+        Right Nothing -> do
+          logInfo $ "Inline OnSearch produced no in-memory result for txn " <> txnId <> "; falling back to poll"
+          pure Nothing
         Left e -> do
           logError $ "Inline OnSearch processing failed for txn " <> txnId <> ": " <> T.pack (show e)
           pure Nothing

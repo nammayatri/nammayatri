@@ -41,9 +41,9 @@ import qualified Domain.Types.VehicleSeatLayoutMapping as DVSLM
 import Environment
 import EulerHS.Prelude (safeHead)
 import Kernel.External.Encryption
-import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
+import Kernel.External.MasterCloudForward (HasMasterCloudForwarder)
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
 import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
@@ -115,7 +115,6 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
@@ -965,10 +964,11 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
           let busDriverId =
                 maybe
                   journeyLeg.busDriverId
-                  (\driverId ->
-                     if Text.null driverId
-                       then journeyLeg.busDriverId
-                       else Just driverId)
+                  ( \driverId ->
+                      if Text.null driverId
+                        then journeyLeg.busDriverId
+                        else Just driverId
+                  )
                   booking.driverId
 
           mbQuote <- QFRFSQuote.findById booking.quoteId

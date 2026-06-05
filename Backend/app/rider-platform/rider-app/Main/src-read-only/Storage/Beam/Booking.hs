@@ -116,7 +116,6 @@ data BookingT f = BookingT
     supplierTaxNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     riderTransactionId :: B.C f Kernel.Prelude.Text,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
-    tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory),
     vehicleIconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

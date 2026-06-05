@@ -1,10 +1,12 @@
 module Storage.Queries.Transformers.Quote where
 
+import qualified Data.Aeson as A
+import qualified Data.Text as T
 import Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
 import Domain.Types.Quote as DQ
 import qualified Domain.Types.Quote
-import qualified Domain.Types.TripTerms
+import qualified Domain.Types.QuoteBreakup as DQB
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common
@@ -14,9 +16,9 @@ import Kernel.Utils.Common
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
+import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
-import qualified Storage.Queries.TripTerms as QTT
 
 fromQuoteDetails :: Domain.Types.Quote.QuoteDetails -> (FareProductType, Kernel.Prelude.Maybe Kernel.Types.Common.Distance, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text, Kernel.Prelude.Maybe Kernel.Prelude.Text)
 fromQuoteDetails quoteDetails =
@@ -102,9 +104,6 @@ toQuoteDetails fareProductType mbTripCategory distanceToNearestDriver rentalDeta
       res <- maybe (pure Nothing) (QueryDO.findById . Id) driverOfferId'
       maybe (pure Nothing) (pure . Just . DQ.DeliveryDetails) res
 
-getTripTerms :: (CoreMetrics m, MonadFlow m, CoreMetrics m, CacheFlow m r, EsqDBFlow m r, MonadReader r m) => Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms)
-getTripTerms tripTermsId = if isJust tripTermsId then QTT.findById'' (Id (fromJust tripTermsId)) else pure Nothing
-
 backfillMOCId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Text -> m (Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
 backfillMOCId mocId merchantId =
   case mocId of
@@ -141,4 +140,56 @@ mkTollChargesInfo tollCharges tollNames currency =
       DQ.TollChargesInfo
         { tollCharges = mkPriceWithDefault (Just tollCharges') currency (round tollCharges' :: Money),
           tollNames = tollNames'
+        }
+
+-- | Slim shape persisted in the quote.quote_breakup_list_json column.
+-- The full domain 'QuoteBreakup' carries id, quoteId, merchant/mocId, and
+-- timestamps which are regenerated from the parent on read; only title and
+-- price round-trip through JSON.
+data QuoteBreakupItem = QuoteBreakupItem
+  { title :: Text,
+    price :: Price
+  }
+  deriving (Generic, Show)
+
+instance A.ToJSON QuoteBreakupItem
+
+instance A.FromJSON QuoteBreakupItem
+
+-- | toTType: serialise the in-memory list into the new JSON column.
+-- Returns Nothing for an empty list so the column stays NULL.
+encodeQuoteBreakupList :: [DQB.QuoteBreakup] -> Maybe A.Value
+encodeQuoteBreakupList [] = Nothing
+encodeQuoteBreakupList xs = Just . A.toJSON $ map toItem xs
+  where
+    toItem qb = QuoteBreakupItem {title = qb.title, price = qb.price}
+
+-- | fromTType loader: prefer the JSON column; fall back to the legacy
+-- quote_breakup table query when the column is NULL or fails to parse.
+-- 'now' is used to fill the synthetic createdAt/updatedAt on items
+-- materialised from the JSON column; downstream consumers in this codebase
+-- only read title and price.
+loadQuoteBreakupList ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe A.Value ->
+  Text ->
+  m [DQB.QuoteBreakup]
+loadQuoteBreakupList Nothing qId = QQB.findAllByQuoteIdT qId
+loadQuoteBreakupList (Just v) qId =
+  case A.fromJSON v :: A.Result [QuoteBreakupItem] of
+    A.Success items -> do
+      now <- getCurrentTime
+      pure $ zipWith (fromItem now) [0 :: Int ..] items
+    A.Error _ -> QQB.findAllByQuoteIdT qId
+  where
+    fromItem now idx item =
+      DQB.QuoteBreakup
+        { id = Id (qId <> "-bi-" <> T.pack (show idx)),
+          quoteId = qId,
+          title = item.title,
+          price = item.price,
+          merchantId = Nothing,
+          merchantOperatingCityId = Nothing,
+          createdAt = now,
+          updatedAt = now
         }

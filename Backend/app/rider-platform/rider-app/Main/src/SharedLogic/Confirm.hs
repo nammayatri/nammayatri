@@ -426,7 +426,6 @@ buildBooking merchant riderId searchRequest bppQuoteId quote fromLoc mbToLoc exo
           estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
           bookingDetails,
           isPetRide = fromMaybe False searchRequest.isPetRide,
-          tripTerms = quote.tripTerms,
           merchantId = searchRequest.merchantId,
           merchantOperatingCityId = searchRequest.merchantOperatingCityId,
           specialLocationTag = quote.specialLocationTag,

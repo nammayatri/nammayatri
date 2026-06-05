@@ -47,8 +47,6 @@ data RiderConfig = RiderConfig
     cancellationRateThresholdMonthly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    collectMMIRouteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     csAlertTriggerDelay :: Kernel.Prelude.NominalDiffTime,
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

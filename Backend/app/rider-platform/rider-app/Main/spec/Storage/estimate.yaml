@@ -7,7 +7,6 @@ imports:
   Centesimal: Kernel.Types.Common
   LatLong: Kernel.External.Maps
   ServiceTierType: Domain.Types.ServiceTierType
-  TripTerms: Domain.Types.TripTerms
   PrettyShow: Kernel.Utils.GenericPretty
   Money: Kernel.Types.Common
   Currency: Kernel.Types.Common
@@ -20,6 +19,7 @@ imports:
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
   VehicleCategory : BecknV2.OnDemand.Enums
+  Value: Data.Aeson
 
 Estimate:
   tableName: estimate
@@ -98,7 +98,6 @@ Estimate:
     vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool
     itemId : Text
-    tripTerms : Maybe TripTerms
     estimateBreakupList : "[EstimateBreakup]"
     nightShiftInfo : Maybe NightShiftInfo
     businessDiscountInfo : Maybe BusinessDiscountInfo
@@ -131,7 +130,6 @@ Estimate:
     smartTipReason: Maybe Text
     isInsured: Bool
     qar : Maybe Double
-    estimateTags: Maybe [Text]
     insuredAmount: Maybe Text
     selectedOfferId: Maybe Text
     isMultimodalSearch: Maybe Bool
@@ -161,9 +159,6 @@ Estimate:
     distanceUnit:
       distanceUnit: Maybe DistanceUnit
 
-    tripTerms:
-      tripTermsId: Maybe Text
-
     nightShiftInfo:
       nightShiftCharge : Maybe Money
       nightShiftChargeAmount : Maybe HighPrecMoney
@@ -186,7 +181,8 @@ Estimate:
     waitingCharges:
       waitingChargePerMin: Maybe Money
       waitingChargePerMinAmount: Maybe HighPrecMoney
-    estimateBreakupList: {}
+    estimateBreakupList:
+      estimateBreakupListJson: Maybe Value
 
   beamType:
     discount: Maybe HighPrecMoney
@@ -209,9 +205,8 @@ Estimate:
     businessDiscountInfo: mkBusinessDiscountInfo businessDiscount businessDiscountPercentage currency|E
     personalDiscountInfo: mkPersonalDiscountInfo personalDiscount personalDiscountPercentage currency|E
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
-    estimateBreakupList: Storage.Queries.EstimateBreakup.findAllByEstimateIdT (Kernel.Types.Id.Id id)|EM
+    estimateBreakupList: Storage.Queries.Transformers.Estimate.loadEstimateBreakupList estimateBreakupListJson (Kernel.Types.Id.Id id)|EM
     waitingCharges: Domain.Types.Estimate.WaitingCharges $ Kernel.Types.Common.mkPriceWithDefault waitingChargePerMinAmount currency <$> waitingChargePerMin|E
-    tripTerms: mKTripTerms|M
     providerUrl: parseBaseUrl|MI
     discount: Kernel.Types.Common.mkPrice currency <$> discount|E
     estimatedFare: Kernel.Types.Common.mkPrice currency estimatedFare|E
@@ -236,7 +231,6 @@ Estimate:
     discount: (discount <&> (.amount))|E
     currency: (Kernel.Prelude.Just $ (.currency) estimatedFare)|E
     providerUrl: showBaseUrl|I
-    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
     businessDiscount: (businessDiscountInfo <&> ((.amount) . (.businessDiscount)))|E
@@ -261,6 +255,7 @@ Estimate:
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     isInsured: Kernel.Prelude.Just isInsured|E
+    estimateBreakupListJson: Storage.Queries.Transformers.Estimate.encodeEstimateBreakupList estimateBreakupList|E
 
   sqlType:
     estimatedFare: numeric(30,10)
@@ -271,7 +266,6 @@ Estimate:
     providerName: character varying(255)
     providerMobileNumber: character varying(255)
     vehicleVariant: character varying(255)
-    tripTermsId: character varying(36)
     minTotalFare: numeric(30,2)
     maxTotalFare: numeric(30,2)
     driversLocation: "text[]"
@@ -282,6 +276,7 @@ Estimate:
     estimatedPickupDuration: integer
     tipOptions: integer[]
     boostSearchPreSelectionServiceTierConfig: text[]
+    estimateBreakupListJson: "json"
 
   queries:
     findById:

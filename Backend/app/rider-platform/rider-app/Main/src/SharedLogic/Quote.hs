@@ -66,7 +66,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
    in QuoteAPIEntity
         { agencyName = bppDetails.name,
           agencyNumber = Just providerNum,
-          tripTerms = maybe [] (.descriptions) tripTerms,
+          tripTerms = [],
           quoteDetails = mkQuoteAPIDetails (tollChargesInfo <&> (mkPriceAPIEntity . (.tollCharges))) quoteDetails,
           estimatedFare = estimatedFare.amountInt,
           estimatedTotalFare = estimatedTotalFare.amountInt,

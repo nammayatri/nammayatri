@@ -17,7 +17,6 @@ imports:
   BookingStatus: Domain.Types.BookingStatus
   Quote: Domain.Types.Quote
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
-  TripTerms: Domain.Types.TripTerms
   PaymentStatus: Domain.Types.Extra.Booking
   BaseUrl: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
@@ -221,7 +220,6 @@ Booking:
     isAirConditioned: Maybe Bool
     isDashboardRequest: Maybe Bool
     bookingDetails: BookingDetails
-    tripTerms: Maybe TripTerms
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     specialLocationTag: Maybe Text
@@ -290,8 +288,6 @@ Booking:
       parcelQuantity: Maybe Int
     fromLocation:
       fromLocationId: Maybe Text
-    tripTerms:
-      tripTermsId: Maybe Text
     estimatedFare:
       currency: Maybe Currency
       estimatedFare: HighPrecMoney
@@ -310,7 +306,6 @@ Booking:
     providerUrl: Text
     estimatedTotalFare: HighPrecMoney
     currency: Maybe Currency
-    tripTermsId: Maybe Text
     isScheduled: Maybe Bool
     isBookingUpdated: Maybe Bool
     merchantOperatingCityId: Maybe Text
@@ -349,7 +344,6 @@ Booking:
     providerName: character varying(255)
     providerUrl: character varying(255)
     fareProductType: character varying(255)
-    tripTermsId: character(36)
     rentalSlabId: character(36)
     merchantId: character(36)
     quoteId: character(36)
@@ -407,7 +401,6 @@ Booking:
     discount: (discount <&> (.amount))|E
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
     currency: (Just $ (.currency) estimatedFare)|E
-    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     isScheduled: (Just isScheduled)|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     clientOsType: clientDevice <&> (.deviceType)|E
@@ -440,7 +433,6 @@ Booking:
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
     fromLocation: (fst toBookingDetailsAndFromLocation')|E
     bookingDetails: (snd toBookingDetailsAndFromLocation')|E
-    tripTerms: if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing|EM
     merchantOperatingCityId: Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId|EM
     initialPickupLocation: Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')|EM
     estimatedFare: (Kernel.Types.Common.mkPrice currency estimatedFare)|E

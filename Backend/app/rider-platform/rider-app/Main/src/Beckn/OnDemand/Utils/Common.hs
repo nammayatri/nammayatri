@@ -43,8 +43,9 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BlackListOrg as QBlackList
-import qualified Storage.CachedQueries.VehicleConfig as CQVC
 import qualified Storage.CachedQueries.WhiteListOrg as QWhiteList
+import Storage.ConfigPilot.Config.VehicleConfig (VehicleConfigDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
 
 mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m KP.BaseUrl
@@ -423,8 +424,13 @@ checkWhitelisted merchantId merchantOperatingCityId subscriberId = do
 isNotWhiteListed :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Domain -> Id DM.Merchant -> Id MOC.MerchantOperatingCity -> m Bool
 isNotWhiteListed subscriberId domain merchantId merchantOperatingCityId = QWhiteList.findBySubscriberIdDomainMerchantIdAndMerchantOperatingCityId (ShortId subscriberId) domain merchantId merchantOperatingCityId <&> isNothing
 
-getBlackListedVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id BecknConfig -> Text -> m [Enums.VehicleCategory]
-getBlackListedVehicles becknConfigId subscriberId = do
-  vehicleConfigs <- CQVC.findAllByBecknConfigId becknConfigId
+getBlackListedVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id MOC.MerchantOperatingCity -> Id BecknConfig -> Text -> m [Enums.VehicleCategory]
+getBlackListedVehicles merchantOperatingCityId becknConfigId subscriberId = do
+  vehicleConfigs <-
+    getConfig
+      VehicleConfigDimensions
+        { merchantOperatingCityId = merchantOperatingCityId.getId,
+          becknConfigId = becknConfigId.getId
+        }
   let blackListedVehicles = filter (\vc -> subscriberId `elem` vc.blackListedSubscribers) vehicleConfigs
   pure $ mapMaybe (\blv -> mapTextToVehicle blv.category) blackListedVehicles

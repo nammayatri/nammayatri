@@ -326,7 +326,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         initialPickupLocation = SLoc.makeLocationAPIEntity booking.initialPickupLocation,
         rideList = rides,
         hasNightIssue = hasNightIssue,
-        tripTerms = fromMaybe [] $ booking.tripTerms <&> (.descriptions),
+        tripTerms = [],
         estimatedFareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> estimatedFareBreakups),
         fareBreakup = filter (not . isProjectedFareParamTag . (.description)) (DAFareBreakup.mkFareBreakupAPIEntity <$> fareBreakups),
         rideScheduledTime = booking.startTime,

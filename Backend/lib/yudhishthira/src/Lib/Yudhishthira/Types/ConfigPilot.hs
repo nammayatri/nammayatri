@@ -52,6 +52,8 @@ data ConfigType
   | BecknConfig
   | MerchantServiceConfig
   | Exophone
+  | InsuranceConfig
+  | VehicleConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ConfigType)

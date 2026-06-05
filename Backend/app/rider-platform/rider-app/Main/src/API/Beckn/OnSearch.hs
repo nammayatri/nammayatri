@@ -45,15 +45,21 @@ onSearch ::
   OnSearch.OnSearchReqV2 ->
   FlowHandler AckResponse
 onSearch _ reqV2 = withFlowHandlerBecknAPI do
-  processOnSearchPayload reqV2 ProcessAsync
+  void $ processOnSearchPayload reqV2 ProcessAsync
   pure Ack
 
 data ProcessingMode = ProcessSync | ProcessAsync
 
-processOnSearchInline :: OnSearch.OnSearchReqV2 -> Flow ()
+-- | Sync inline processing: runs the full on_search pipeline on the calling
+-- thread and returns the in-memory snapshot (searchRequest, estimates, quotes,
+-- riderConfig) so a sync caller can build a GetQuotesRes without re-reading
+-- from DB. Returns 'Nothing' when the on_search was discarded (e.g. a duplicate
+-- callback already handled, an unparseable payload, or a non-applicable
+-- request like a disability-tagged off-us search).
+processOnSearchInline :: OnSearch.OnSearchReqV2 -> Flow (Maybe DOnSearch.OnSearchResult)
 processOnSearchInline reqV2 = processOnSearchPayload reqV2 ProcessSync
 
-processOnSearchPayload :: OnSearch.OnSearchReqV2 -> ProcessingMode -> Flow ()
+processOnSearchPayload :: OnSearch.OnSearchReqV2 -> ProcessingMode -> Flow (Maybe DOnSearch.OnSearchResult)
 processOnSearchPayload reqV2 mode = do
   transactionId <- Utils.getTransactionId reqV2.onSearchReqContext
   L.setOptionLocal TxnIdKey transactionId
@@ -64,22 +70,34 @@ processOnSearchPayload reqV2 mode = do
     mbDOnSearchReq <- TaxiACL.buildOnSearchReqV2 reqV2
     messageId <- Utils.getMessageIdText reqV2.onSearchReqContext
 
-    whenJust mbDOnSearchReq $ \request -> do
-      let bppSubId = request.providerInfo.providerId
-      Redis.whenWithLockRedis (onSearchLockKey messageId bppSubId) 60 $ do
-        validatedRequest <- DOnSearch.validateRequest request searchRequest
-        isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId bppSubId) (30 :: Int) (True :: Bool)
-        if not isFirst
-          then logInfo $ "OnSearch already persisted for txn " <> transactionId <> " subId:" <> bppSubId <> "; skipping duplicate"
-          else do
-            fork "on search received pushing ondc logs" do
-              void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"
-            let runProcessing =
-                  Redis.whenWithLockRedis (onSearchProcessingLockKey messageId bppSubId) 60 $
-                    DOnSearch.onSearch transactionId validatedRequest
-            case mode of
-              ProcessAsync -> fork "on search processing" runProcessing
-              ProcessSync -> runProcessing
+    case mbDOnSearchReq of
+      Nothing -> pure Nothing
+      Just request -> do
+        let bppSubId = request.providerInfo.providerId
+        eOuter <- Redis.whenWithLockRedisAndReturnValue (onSearchLockKey messageId bppSubId) 60 $ do
+          validatedRequest <- DOnSearch.validateRequest request searchRequest
+          isFirst <- Redis.withCrossAppRedis $ Redis.setNxExpire (onSearchHandledKey transactionId bppSubId) (30 :: Int) (True :: Bool)
+          if not isFirst
+            then do
+              logInfo $ "OnSearch already persisted for txn " <> transactionId <> " subId:" <> bppSubId <> "; skipping duplicate"
+              pure Nothing
+            else do
+              fork "on search received pushing ondc logs" do
+                void $ pushLogs "on_search" (toJSON reqV2) validatedRequest.merchant.id.getId "MOBILITY"
+              let runProcessing =
+                    Redis.whenWithLockRedisAndReturnValue (onSearchProcessingLockKey messageId bppSubId) 60 $
+                      DOnSearch.onSearch transactionId validatedRequest
+              case mode of
+                ProcessAsync -> do
+                  fork "on search processing" $ void runProcessing
+                  pure Nothing
+                ProcessSync ->
+                  runProcessing >>= \case
+                    Right mRes -> pure mRes
+                    Left () -> pure Nothing
+        case eOuter of
+          Right mRes -> pure mRes
+          Left () -> pure Nothing
 
 onSearchLockKey :: Text -> Text -> Text
 onSearchLockKey msgId bppSubscriberId = "Customer:OnSearch:MessageId-" <> msgId <> "-bppSubscriberId-" <> bppSubscriberId

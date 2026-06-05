@@ -25,9 +25,12 @@ import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.EstimateBreakup as BeamEB
 
-create :: (MonadFlow m, EsqDBFlow m r) => EstimateBreakup -> m ()
-create = createWithKV
-
+-- 'create' was dropped — the postgres estimate_breakup table is no longer
+-- written from the search path; breakups now ride inline in
+-- estimate.estimate_breakup_list_json. The FromTType' / ToTType' instances
+-- and 'findAllByEstimateIdT' below are kept so legacy rows can still be
+-- read as a fallback by 'Storage.Queries.Transformers.Estimate.loadEstimateBreakupList'
+-- and by the Clickhouse breakup-table query in EstimateBP.hs.
 findAllByEstimateIdT :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m [EstimateBreakup]
 findAllByEstimateIdT (Id estimateId) = findAllWithKVAndConditionalDB [Se.Is BeamEB.estimateId $ Se.Eq estimateId] Nothing
 

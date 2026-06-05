@@ -30,6 +30,7 @@ module Domain.Action.Beckn.OnSearch
     BreakupPriceInfo (..),
     NightShiftInfo (..),
     WaitingChargesInfo (..),
+    OnSearchResult (..),
     onSearch,
     validateRequest,
     buildQuoteBreakUp,
@@ -41,7 +42,6 @@ where
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
-import Data.Aeson as A
 import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
@@ -58,7 +58,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.NyRegularInstanceLog as DNyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -68,7 +67,6 @@ import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
-import qualified Domain.Types.TripTerms as DTripTerms
 import Domain.Types.VehicleVariant
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -80,29 +78,22 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
--- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
-import qualified SharedLogic.EstimateTags as SEST
-import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
-import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
-import qualified Tools.DynamicLogic as DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.EventTracking as ET
@@ -124,6 +115,16 @@ data ValidatedOnSearchReq = ValidatedOnSearchReq
     searchRequest :: SearchRequest,
     merchant :: DMerchant.Merchant,
     paymentMethodsInfo :: [DMPM.PaymentMethodInfo]
+  }
+
+-- | In-memory snapshot returned by onSearch so a sync caller can synthesize a
+-- GetQuotesRes without re-reading from DB or re-acquiring the estimate-build
+-- Redis lock. See Search.hs trySyncSearch for the sync path.
+data OnSearchResult = OnSearchResult
+  { searchRequest :: SearchRequest,
+    estimates :: [DEstimate.Estimate],
+    quotes :: [DQuote.Quote],
+    riderConfig :: Maybe DRiderConfig.RiderConfig
   }
 
 data ProviderInfo = ProviderInfo
@@ -296,7 +297,7 @@ validateRequest DOnSearchReq {..} searchRequest = do
 onSearch ::
   Text ->
   ValidatedOnSearchReq ->
-  Flow ()
+  Flow (Maybe OnSearchResult)
 onSearch transactionId ValidatedOnSearchReq {..} = do
   Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
@@ -307,32 +308,20 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
   becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
-  blackListedVehicles <- Utils.getBlackListedVehicles becknConfig.id providerInfo.providerId
+  blackListedVehicles <- Utils.getBlackListedVehicles searchRequest.merchantOperatingCityId becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
-      pure ()
+      pure Nothing
     else do
       deploymentVersion <- asks (.version)
-      person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
-      localTime <- getLocalCurrentTime 19800
-      estimates' <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
-      autoPrice <- getAutoPrice estimates'
-      nonACPrice <- getNonACPrice estimates'
-      cabQar <- getCabQar estimates'
-      autoQar <- getAutoQar estimates'
-      let userType = case personVehicleCategory person of
-            Just Enums.AUTO_RICKSHAW -> Just SEST.AUTO
-            Just Enums.CAB -> Just SEST.CAB
-            _ -> Nothing
-
-      -- let estimateTagsData = map (getEstimateTagsData autoQar cabQar autoPrice nonACPrice userType) estimates
-      estimates <- traverse (getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime searchRequest.merchantOperatingCityId) estimates'
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription)
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
-      forM_ estimates $ \est -> do
-        triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
+      fork "triggerEstimateEvents" $
+        forM_ estimates $ \est ->
+          triggerEstimateEvent EstimateEventData {estimate = est, personId = searchRequest.riderId, merchantId = searchRequest.merchantId}
       unless (null estimates) $
         fork "event_tracking: user_request_quotes" $
           ET.trackEvent searchRequest.merchantId searchRequest.merchantOperatingCityId (ET.UserRequestedQuotes (getId searchRequest.riderId) (length estimates))
@@ -359,6 +348,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
               updateNyRegularInstanceLogStatus searchRequest.id.getId
 
         when shouldAutoSelectFinal $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
+
+      pure $ Just OnSearchResult {searchRequest, estimates, quotes, riderConfig}
   where
     isReservedRideSearch :: DSearchReq.SearchRequest -> Bool
     isReservedRideSearch searchReq =
@@ -486,11 +477,17 @@ buildEstimate ::
   m DEstimate.Estimate
 buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSelectionServiceTiersConfig EstimateInfo {..} = do
   uid <- generateGUID
-  tripTerms <- buildTripTerms descriptions
   let vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType
   let boostSearchPreSelectionServiceTier = find (\boostSearchConfig -> boostSearchConfig.vehicle == vehicleServiceTierType) boostSearchPreSelectionServiceTiersConfig
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
-  insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
+  insuranceConfig <-
+    getConfig
+      InsuranceConfigDimensions
+        { merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId,
+          merchantId = searchRequest.merchantId.getId,
+          tripCategory = tripCategory,
+          vehicleCategory = DV.castVehicleVariantToVehicleCategory vehicleVariant
+        }
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate
@@ -548,7 +545,6 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         boostSearchPreSelectionServiceTierConfig = (Just . (.orderArray)) =<< boostSearchPreSelectionServiceTier,
         vehicleCategory = Just vehicleCategory,
         qar = qar,
-        estimateTags = Nothing,
         selectedOfferId = Nothing,
         ..
       }
@@ -564,7 +560,6 @@ buildQuote ::
   m DQuote.Quote
 buildQuote requestId providerInfo now searchRequest deploymentVersion QuoteInfo {..} = do
   uid <- generateGUID
-  tripTerms <- buildTripTerms descriptions
   quoteBreakupList' <- buildQuoteBreakUp quoteBreakupList uid searchRequest.merchantId searchRequest.merchantOperatingCityId
   quoteDetails' <- case quoteDetails of
     OneWayDetails oneWayDetails ->
@@ -659,18 +654,6 @@ buildRentalDetails distanceUnit RentalQuoteDetails {..} = do
         ..
       }
 
-buildTripTerms ::
-  MonadFlow m =>
-  [Text] ->
-  m (Maybe DTripTerms.TripTerms)
-buildTripTerms [] = pure Nothing
-buildTripTerms descriptions = do
-  id <- generateGUID
-  now <- getCurrentTime
-  let createdAt = now
-      updatedAt = now
-  pure . Just $ DTripTerms.TripTerms {..}
-
 buildEstimateBreakUp ::
   MonadFlow m =>
   [EstimateBreakupInfo] ->
@@ -719,64 +702,3 @@ buildQuoteBreakUp quotesItems quoteId merchantId merchantOperatingCityId =
             updatedAt = now,
             ..
           }
-
--- getEstimateTags :: SEST.EstimateTagsData ->  Flow (Maybe [Text])
-getTaggedEstimate ::
-  Maybe Double ->
-  Maybe Double ->
-  Maybe HighPrecMoney ->
-  Maybe HighPrecMoney ->
-  Maybe SEST.UserType ->
-  UTCTime ->
-  Id DMerchantOperatingCity.MerchantOperatingCity ->
-  DEstimate.Estimate ->
-  Flow DEstimate.Estimate
-getTaggedEstimate autoQar cabQar autoPrice nonACPrice userType localTime mocId estimate = do
-  let logicInput =
-        SEST.EstimateTagsData
-          { autoQAR = autoQar,
-            cabQAR = cabQar,
-            autoPrice = autoPrice,
-            cabPrice = nonACPrice,
-            userType = userType,
-            vehicleCategory = estimate.vehicleCategory,
-            vehicleServiceTierType = estimate.vehicleServiceTierType
-          }
-  (allLogics, _mbVersion) <- DynamicLogic.getAppDynamicLogic (cast mocId) LYT.ESTIMATE_TAGS localTime Nothing Nothing
-  response <- withTryCatch "runLogics:EstimateTags" $ LYDL.runLogicsWithDebugLog LYDL.Rider (cast mocId) LYT.ESTIMATE_TAGS Nothing allLogics logicInput
-  res <- case response of
-    Left e -> do
-      logError $ "Error in running EstimateTagsLogics - " <> show e <> " - " <> show logicInput <> " - " <> show allLogics
-      return (Just [])
-    Right resp -> do
-      case (A.fromJSON resp.result :: Result SEST.EstimateTagsResult) of
-        A.Success result -> do
-          logTagInfo ("estimateTags-" <> getId estimate.id) ("result.tags: " <> show result.tags)
-          return (Just result.tags)
-        A.Error e -> do
-          logError $ "Error in parsing EstimateTagsResult - " <> show e <> " - " <> show resp.result <> " - " <> show logicInput <> " - " <> show allLogics
-          return Nothing
-  return $ estimate{estimateTags = res}
-
-getAutoPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
-getAutoPrice estimates = do
-  let autoPrice = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates
-  pure $ autoPrice <&> (.totalFareRange.maxFare.amount)
-
-getNonACPrice :: [DEstimate.Estimate] -> Flow (Maybe HighPrecMoney)
-getNonACPrice estimates = do
-  let nonACPrice = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates
-  pure $ nonACPrice <&> (.totalFareRange.maxFare.amount)
-
-getAutoQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
-getAutoQar estimates = do
-  let autoQar = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.AUTO_RICKSHAW) estimates
-  pure $ autoQar >>= (.qar)
-
-getCabQar :: [DEstimate.Estimate] -> Flow (Maybe Double)
-getCabQar estimates = do
-  let cabQar = listToMaybe $ filter (\estimate -> estimate.vehicleServiceTierType == DVST.TAXI) estimates
-  pure $ cabQar >>= (.qar)
-
-personVehicleCategory :: Person.Person -> Maybe Enums.VehicleCategory
-personVehicleCategory person = SLS.mostFrequent person.lastUsedVehicleCategories

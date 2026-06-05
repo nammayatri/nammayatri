@@ -21,7 +21,6 @@ import qualified Domain.Types.Quote
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
-import qualified Domain.Types.TripTerms
 import qualified Kernel.External.Payment.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -110,7 +109,6 @@ data Booking = Booking
     supplierTaxNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
-    tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
