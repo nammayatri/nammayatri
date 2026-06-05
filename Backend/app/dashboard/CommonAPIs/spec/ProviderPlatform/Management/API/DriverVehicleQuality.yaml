@@ -62,6 +62,7 @@ types:
     - vehicleCapacity: Maybe Int
     - vehicleRating: Maybe Double
     - vehicleRatingRemark: Maybe Text
+    - canSwitchToAirport: Maybe Bool
   FeedbackBadgeCount:
     - badge: Text
     - badgeCount: Int
