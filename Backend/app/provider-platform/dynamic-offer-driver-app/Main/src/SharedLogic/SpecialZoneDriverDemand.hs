@@ -794,7 +794,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
             logDebug $ "checkAndNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for variant=" <> variant
             allSortedDrivers <- fmap concat $
               forM calloutVariants $ \cv -> do
-                queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
+                queueResp <- measuringDurationToLog INFO ("checkAndNotifyDriverDemand.getQueueDrivers cv=" <> show cv) $ LTSFlow.getQueueDrivers specialLocationId (show cv)
                 pure $ sortOn (.queuePosition) queueResp.drivers
             let queueDriverIds = nub $ map (.driverId) allSortedDrivers
             logInfo $
@@ -805,7 +805,7 @@ checkAndNotifyDriverDemand merchantOpCityId merchantId gate variant mbServiceTie
                 <> show (length queueDriverIds)
                 <> " cooldown="
                 <> show cooldown
-            eligibleNearGate <- filterInBatches 50 needed variant gateId gate.enableQueueFilter merchantId gate queueDriverIds
+            eligibleNearGate <- filterInBatches 50 needed specialLocationId variant gateId gate.enableQueueFilter merchantId gate queueDriverIds
             logInfo $
               "Eligible drivers after batched filter gateId=" <> gateId <> " variant=" <> variant
                 <> " eligibleNearGate="
@@ -852,7 +852,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
       -- fails, fare calc is silently skipped (notification still sent without perKmFare).
       mbServiceTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
   -- Filter priority drivers through eligibility checks (cooldown, skip count, accepted state)
-  (eligiblePriority, priorityVariantMap) <- filterEligibleDrivers vehicleType gateId gate.enableQueueFilter priorityDriverIds
+  (eligiblePriority, priorityVariantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId gate.enableQueueFilter priorityDriverIds
   calloutVariants <- getCalloutVariantsForTier merchantOpCityId (Just specialLocationId) mbServiceTier vehicleType
   logDebug $ "forceNotifyDriverDemand calloutVariants=" <> show calloutVariants <> " for vehicleType=" <> vehicleType
   if null calloutVariants
@@ -869,7 +869,7 @@ forceNotifyDriverDemand merchantOpCityId merchantId gate vehicleType needed mbPr
           then do
             allSortedDrivers <- fmap concat $
               forM calloutVariants $ \cv -> do
-                queueResp <- LTSFlow.getQueueDrivers specialLocationId (show cv)
+                queueResp <- measuringDurationToLog INFO ("forceNotifyDriverDemand.getQueueDrivers cv=" <> show cv) $ LTSFlow.getQueueDrivers specialLocationId (show cv)
                 pure $ sortOn (.queuePosition) queueResp.drivers
             let queueDriverIds = nub $ filter (`notElem` priorityDriverIds) $ map (.driverId) allSortedDrivers
             eligibleNearGate <- filterInBatches 50 remaining specialLocationId vehicleType gateId gate.enableQueueFilter merchantId gate queueDriverIds
@@ -1041,6 +1041,7 @@ filterInBatches ::
   ) =>
   Int -> -- batch size
   Int -> -- needed count
+  Text ->
   Text -> -- vehicleType
   Text -> -- gateId
   Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter
@@ -1048,14 +1049,14 @@ filterInBatches ::
   DGI.GateInfo ->
   [Id DP.Person] -> -- all queue driver IDs
   m [Id DP.Person]
-filterInBatches batchSize needed vehicleType gateId mbFilterAirport merchantId gate allDriverIds = do
+filterInBatches batchSize needed specialLocationId vehicleType gateId mbFilterAirport merchantId gate allDriverIds = do
   let batches = chunksOf batchSize allDriverIds
   go [] batches
   where
     go acc [] = pure acc
     go acc _ | length acc >= needed = pure (take needed acc)
     go acc (batch : rest) = do
-      (eligible, variantMap) <- filterEligibleDrivers vehicleType gateId mbFilterAirport batch
+      (eligible, variantMap) <- filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport batch
       nearGate <- filterByGateProximity merchantId gate variantMap eligible
       go (acc <> nearGate) rest
     chunksOf _ [] = []
@@ -1068,15 +1069,21 @@ filterEligibleDrivers ::
     EsqDBFlow m r,
     Esq.EsqDBReplicaFlow m r,
     Forkable m,
+    CoreMetrics m,
+    HasLocationService m r,
+    HasShortDurationRetryCfg r c,
+    HasRequestId r,
     HasField "gateNotifiedKeyShards" r Int
   ) =>
+  Id DM.Merchant -> -- merchant (for manualQueueRemove of on-ride/offline drivers)
+  Text -> -- specialLocationId
   Text -> -- vehicleType
   Text -> -- gateId
   Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, vehicle.canSwitchToAirport must be Just True
   [Id DP.Person] ->
   m ([Id DP.Person], Map.Map (Id DP.Person) Text) -- (eligible drivers, driverId -> variant map)
-filterEligibleDrivers _ _ _ [] = pure ([], Map.empty)
-filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
+filterEligibleDrivers _ _ _ _ _ [] = pure ([], Map.empty)
+filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAirport driverIds = do
   shards <- asks (.gateNotifiedKeyShards)
   now <- getCurrentTime
   let cooldownKeyFor d = mkGateDriverNotifiedKey shards gateId d.getId
@@ -1089,10 +1096,10 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
   -- write side (notifyDrivers' 'bulkShardedRedisBatch' + 'setExpMany') is also
   -- un-wrapped, so reader and writer apply the same 'keyModifier' and the
   -- bytes match — wrapping only one side would silently break "find my SET".
-  cooldownHits <- Redis.mGetClusterWithKeys @Text cooldownKeys
+  cooldownHits <- measuringDurationToLog INFO ("filterEligibleDrivers.mGetCooldown n=" <> show (length driverIds)) $ Redis.mGetClusterWithKeys @Text cooldownKeys
   let inCooldownKeys = Set.fromList (map fst cooldownHits)
   -- Bulk DB: drivers with an Accepted (committed) or pending Active request.
-  busyRows <- QSZQR.findAllByDriverIdsAndStatuses driverIds [DSZQR.Active, DSZQR.Accepted]
+  busyRows <- measuringDurationToLog INFO ("filterEligibleDrivers.findBusyRequests n=" <> show (length driverIds)) $ QSZQR.findAllByDriverIdsAndStatuses driverIds [DSZQR.Active, DSZQR.Accepted]
   let busyDrivers =
         Set.fromList $
           mapMaybe
@@ -1103,7 +1110,7 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
             )
             busyRows
   -- Bulk DB: drivers currently on a ride.
-  driverInfos <- QDI.findAllByDriverIds (map (.getId) driverIds)
+  driverInfos <- measuringDurationToLog INFO ("filterEligibleDrivers.findDriverInfos n=" <> show (length driverIds)) $ QDI.findAllByDriverIds (map (.getId) driverIds)
   let onRideDriversOrOfflineDrivers =
         Set.fromList
           [ info.driverId
@@ -1117,8 +1124,9 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
               not info.canSwitchToAirport
           ]
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
-  vehicles <- QV.findAllByDriverIds driverIds
+  vehicles <- measuringDurationToLog INFO ("filterEligibleDrivers.findVehicles n=" <> show (length driverIds)) $ QV.findAllByDriverIds driverIds
   let driverVariantMap = Map.fromList [(v.driverId, show v.variant) | v <- vehicles]
+      getDriverVehicleVariant did = fromMaybe "" (Map.lookup did driverVariantMap)
       mbTier = readMaybe (T.unpack vehicleType) :: Maybe DVST.ServiceTierType
       vehicleAirportFilterEnabled = fromMaybe False (Map.lookup vehicleType =<< mbFilterAirport)
   let vehicleEligibleDriverIds = case mbTier of
@@ -1132,17 +1140,38 @@ filterEligibleDrivers vehicleType gateId mbFilterAirport driverIds = do
                       not vehicleAirportFilterEnabled || v.enableForAirport == Just True
                   ]
            in filter (`Set.member` eligibleSet) driverIds
-  pure
-    ( filter
-        ( \d ->
-            not (Set.member (cooldownKeyFor d) inCooldownKeys)
-              && not (Set.member d busyDrivers)
-              && not (Set.member d onRideDriversOrOfflineDrivers)
-              && not (Set.member d airportIneligibleDrivers)
-        )
-        vehicleEligibleDriverIds,
-      driverVariantMap
-    )
+      eligibleDrivers =
+        filter
+          ( \d ->
+              not (Set.member (cooldownKeyFor d) inCooldownKeys)
+                && not (Set.member d busyDrivers)
+                && not (Set.member d onRideDriversOrOfflineDrivers)
+                && not (Set.member d airportIneligibleDrivers)
+          )
+          vehicleEligibleDriverIds
+      -- Drivers with no business sitting in the special-zone queue — on a ride,
+      -- offline, or not airport-eligible — are evicted in the background. Cooldown /
+      -- pending-Active drivers are only *temporarily* ineligible and stay in place.
+      -- Scoped to this batch's input set so we never touch drivers we didn't fetch
+      -- info for; dedup by driverId (on-ride/offline reason wins) so each driver is
+      -- removed at most once even when it matches both conditions.
+      reasonForQueueRemoval d
+        | Set.member d onRideDriversOrOfflineDrivers = Just ("on_ride_or_offline" :: Text)
+        | Set.member d airportIneligibleDrivers = Just "cannot_switch_to_airport"
+        | otherwise = Nothing
+      toRemoveWithReason = mapMaybe (\d -> (,) d <$> reasonForQueueRemoval d) driverIds
+  unless (null toRemoveWithReason) $ do
+    logInfo $ "filterEligibleDrivers removing ineligible drivers from queue specialLocationId=" <> specialLocationId <> " count=" <> show (length toRemoveWithReason)
+    fork "removeIneligibleFromQueue" $
+      forM_ toRemoveWithReason $ \(driver, reason) ->
+        void $
+          LTSFlow.manualQueueRemove
+            specialLocationId
+            (getDriverVehicleVariant driver)
+            merchantId
+            driver
+            (Just reason)
+  pure (eligibleDrivers, driverVariantMap)
 
 -- | Fetch all gates of a special location with their parsed pickup-zone polygons.
 --   1-hour in-memory cache keyed by specialLocationId; gate polygons are admin-edited
@@ -1195,13 +1224,13 @@ filterByGateProximity ::
 filterByGateProximity _ _ _ [] = pure []
 filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
   let getDriverVehicleVariant did = fromMaybe "" (Map.lookup did driverVariantMap)
-  cachedGates <- getCachedGatesForProximity targetGate.specialLocationId
+  cachedGates <- measuringDurationToLog INFO "filterByGateProximity.getCachedGates" $ getCachedGatesForProximity targetGate.specialLocationId
   let otherQueueableGates = filter (\g -> g.gateId /= targetGate.id.getId && g.canQueueUpOnGate) cachedGates
       mbTargetCached = find (\g -> g.gateId == targetGate.id.getId) cachedGates
   if null otherQueueableGates
     then pure driverIds
     else do
-      driverLocations <- LTSFlow.driversLocation driverIds
+      driverLocations <- measuringDurationToLog INFO ("filterByGateProximity.driversLocation n=" <> show (length driverIds)) $ LTSFlow.driversLocation driverIds
       stalenessThreshold <-
         case targetGate.merchantOperatingCityId of
           Just mocId ->

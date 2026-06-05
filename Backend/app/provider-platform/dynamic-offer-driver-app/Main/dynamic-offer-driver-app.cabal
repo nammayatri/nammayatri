@@ -1843,6 +1843,7 @@ library
     , gtfs-data-server
     , hashable
     , haskell-cac
+    , hedis
     , hex-text
     , hspec
     , http-client
@@ -1991,6 +1992,7 @@ executable dynamic-offer-driver-app-exe
     , geohash ==1.0.1
     , hashable
     , haskell-cac
+    , hedis
     , hex-text
     , hspec
     , http-client
