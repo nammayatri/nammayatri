@@ -89,7 +89,6 @@ import qualified Domain.Action.Dashboard.Driver.Notification as DDN
 import qualified Domain.Action.UI.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
-import qualified Domain.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
@@ -1505,14 +1504,10 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
         Nothing -> Left $ "Invalid service tier: " <> tierText
 
 getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.AirportPreferenceRes
-getDriverAirportPreference merchantShortId opCity driverId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+getDriverAirportPreference _merchantShortId _opCity driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
-  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  serviceTiers <- DriverOnboardingV2.getDriverVehicleServiceTiers (Just personId, merchant.id, driver.merchantOperatingCityId)
-  pure Common.AirportPreferenceRes {canSwitchToAirport = serviceTiers.canSwitchToAirport}
+  driverInfo <- B.runInReplica $ QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
+  pure Common.AirportPreferenceRes {canSwitchToAirport = Just driverInfo.canSwitchToAirport}
 
 postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow APISuccess
 postDriverAirportPreference merchantShortId opCity driverId req = do

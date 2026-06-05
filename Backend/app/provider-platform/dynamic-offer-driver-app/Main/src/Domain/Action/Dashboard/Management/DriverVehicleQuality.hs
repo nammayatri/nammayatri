@@ -25,6 +25,7 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
@@ -131,13 +132,12 @@ postDriverVehicleQualityUpdateVehicleRating merchantShortId opCity req = do
   pure APISuccess.Success
 
 buildQualityResp ::
-  (EncFlow m r) =>
   Day ->
   [DVeh.Vehicle] ->
   [DStats.DriverStats] ->
   [DFB.FeedbackBadge] ->
   DP.Person ->
-  m Common.DriverVehicleQualityResp
+  Environment.Flow Common.DriverVehicleQualityResp
 buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
   let mbVehicle = find (\v -> v.driverId == person.id) vehicles
       mbStats = find (\ds -> ds.driverId == cast person.id) driverStatsList
@@ -145,6 +145,7 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
       vehicleAgeInMonths = mbVehicle >>= (.mYManufacturing) >>= \mfgDate -> Just $ fromIntegral (diffDays today mfgDate) `div` 30
   phoneNo <- mapM decrypt person.mobileNumber
   let driverName = person.firstName <> maybe "" (" " <>) person.lastName
+  driverInfo <- B.runInReplica $ QDI.findById (cast person.id) >>= fromMaybeM DriverInfoNotFound
   pure
     Common.DriverVehicleQualityResp
       { driverId = cast person.id,
@@ -165,5 +166,6 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
         vehicleName = mbVehicle >>= (.vehicleName),
         vehicleCapacity = mbVehicle >>= (.capacity),
         vehicleRating = mbVehicle >>= (.vehicleRating),
-        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark)
+        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark),
+        canSwitchToAirport = Just driverInfo.canSwitchToAirport
       }
