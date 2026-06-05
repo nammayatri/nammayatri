@@ -37,8 +37,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import Kernel.Utils.Error
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Merchant as SMerchant
-import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 
 data DriversInfo = DriversInfo
@@ -69,7 +70,7 @@ getDailyDriverLeaderBoard (personId, merchantId, merchantOpCityId) day = do
   distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
   let currentDate = RideEndInt.getCurrentDate now
       dateDiff = diffDays currentDate day
-  dailyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.DAILY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  dailyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.DAILY}) >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless dailyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = fromIntegral dailyLeaderBoardConfig.numberOfSets
   when (dateDiff > numberOfSets - 1 || dateDiff < 0) $
@@ -93,7 +94,7 @@ getWeeklyDriverLeaderBoard (personId, merchantId, merchantOpCityId) fromDate toD
       (reqWeekNumber, reqDayIndex) = sundayStartWeek fromDate
       (lastWeekOfYear, _) = sundayStartWeek $ getLastDayOfYear $ getYearFromDay fromDate
   let weekDiff = (currWeekNumber - reqWeekNumber + lastWeekOfYear) `mod` lastWeekOfYear
-  weeklyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.WEEKLY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  weeklyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.WEEKLY}) >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless weeklyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   let numberOfSets = weeklyLeaderBoardConfig.numberOfSets
   when (weekDiff > numberOfSets - 1 || weekDiff < 0) $ throwError $ InvalidRequest "Week outside Range"
@@ -107,7 +108,7 @@ getMonthlyDriverLeaderBoard (personId, merchantId, merchantOpCityId) month = do
   let currentDay = RideEndInt.getCurrentDate now
       fromDate = fromGregorian (getYearFromDay currentDay) month 1
       monthDiff = RideEndInt.getMonth currentDay - month
-  monthlyLeaderBoardConfig <- QLeaderConfig.findLeaderBoardConfigbyType LConfig.MONTHLY merchantOpCityId Nothing >>= fromMaybeM (InternalError "Leaderboard configs not present")
+  monthlyLeaderBoardConfig <- getOneConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = merchantOpCityId.getId, leaderBoardType = Just LConfig.MONTHLY}) >>= fromMaybeM (InternalError "Leaderboard configs not present")
   unless monthlyLeaderBoardConfig.isEnabled . throwError $ InvalidRequest "Leaderboard Not Available"
   when ((monthDiff < 0 && 12 + monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) || monthDiff > monthlyLeaderBoardConfig.numberOfSets - 1) $ throwError $ InvalidRequest "Month outside Range"
   getDriverListFromLeaderBoard (personId, merchantId, merchantOpCityId) fromDate fromDate monthDiff monthlyLeaderBoardConfig distanceUnit

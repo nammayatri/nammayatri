@@ -84,9 +84,10 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.GovtDataRC ()
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 import Tools.Metrics (CoreMetrics)
 
@@ -98,7 +99,7 @@ verifyDL ::
   m VerifyDLResp
 verifyDL _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyDL req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
@@ -126,7 +127,7 @@ verifyGstAsync ::
   m VerifyGstAsyncResp
 verifyGstAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyGstAsync req
 
@@ -138,7 +139,7 @@ verifyPanAsync ::
   m VerifyPanAsyncResp
 verifyPanAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyPanAsync req -- TODO: Using first element of priority list as of now would be soon replacing this with a proper fallback implementation.
 
@@ -150,7 +151,7 @@ verifyUdyamAadhaarAsync ::
   m VerifyUdyamAadhaarAsyncResp
 verifyUdyamAadhaarAsync _ merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.verificationProvidersPriorityList) (listToMaybe merchantServiceUsageConfig.verificationProvidersPriorityList) >>= \provider -> callService merchantOpCityId provider Verification.verifyUdyamAadhaarAsync req
 
@@ -171,7 +172,7 @@ verifyRC _ merchantOptCityId mbRemPriorityList mbVehicleCategory req = do
     case mbRemPriorityList of
       Nothing -> do
         merchantServiceUsageConfig <-
-          CQMSUC.findByMerchantOpCityId merchantOptCityId Nothing
+          getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOptCityId.getId})
             >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOptCityId.getId)
         let mbList = merchantServiceUsageConfig.categoryBasedVerificationPriorityList >>= Map.lookup (show providerKey)
         fromMaybeM (InternalError $ "Providers not configured in the priority list !!!!!" <> show merchantServiceUsageConfig.categoryBasedVerificationPriorityList) mbList
@@ -346,7 +347,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   callService merchantOpCityId (getCfg merchantServiceUsageConfig) func req
 

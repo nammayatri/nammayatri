@@ -1908,6 +1908,12 @@ TransporterConfig:
     - EXTRA_QUERY_FILE
     - EXTRA_DOMAIN_TYPE_FILE
 
+  configPilot:
+    configType: TransporterConfig
+    fetchQuery: getTransporterConfigFromDB
+    returnType: Maybe
+    queryModule: Storage.CachedQueries.Merchant.TransporterConfig
+
 MerchantServiceConfig:
   derives: Generic,Show,'UsageSafety
   fields:
@@ -2195,3 +2201,10 @@ ScheduledPayoutConfig:
     findAllByMerchantOpCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
+
+  configPilot:
+    configType: ScheduledPayoutConfig
+    fetchQuery: findAllByMerchantOpCityId
+    returnType: List
+    queryModule: Storage.Queries.ScheduledPayoutConfig
+    filterDimensions: [isEnabled, payoutCategory]

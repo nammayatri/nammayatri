@@ -156,6 +156,9 @@ import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
+-- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
+
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -165,8 +168,6 @@ import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
--- still needed for BatchSplitByPickupDistance, OnRideRadiusConfig
-
 import qualified MerchantDocuments.Domain.Action.UI.MerchantDocument as SMD
 import qualified MerchantDocuments.Domain.Types.MerchantDocument as DMD
 import qualified Registry.Beckn.Interface as RegistryIF
@@ -189,7 +190,6 @@ import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.GoHomeConfig as CGHC
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.FareProduct as CQFProduct
@@ -206,6 +206,12 @@ import qualified Storage.CachedQueries.Plan as CQPlan
 import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.GoHomeConfig (GoHomeConfigDimensions (..))
+import Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.CancellationFarePolicy as QCFP
 import qualified Storage.Queries.FarePolicy.DriverExtraFeeBounds as QFPEFB
@@ -306,7 +312,7 @@ getMerchantConfigCommon :: ShortId DM.Merchant -> Context.City -> Flow Common.Me
 getMerchantConfigCommon merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $ mkMerchantCommonConfigRes config
 
 mkMerchantCommonConfigRes :: DTC.TransporterConfig -> Common.MerchantCommonConfigRes
@@ -338,7 +344,7 @@ postMerchantConfigCommonUpdate merchantShortId opCity req = do
   runRequestValidation Common.validateMerchantCommonConfigUpdateReq req
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let updConfig =
         config{pickupLocThreshold = mkDistanceField config.pickupLocThreshold req.pickupLocThresholdWithUnit req.pickupLocThreshold,
                dropLocThreshold = mkDistanceField config.dropLocThreshold req.dropLocThresholdWithUnit req.dropLocThreshold,
@@ -963,11 +969,7 @@ getMerchantConfigOnboardingDocument :: ShortId DM.Merchant -> Context.City -> Ma
 getMerchantConfigOnboardingDocument merchantShortId opCity mbReqDocumentType mbCategory = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  configs <- case (mbReqDocumentType, mbCategory) of
-    (Nothing, Nothing) -> CQDVC.findAllByMerchantOpCityId merchantOpCityId (Just [])
-    (Just reqDocumentType, Nothing) -> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId (castDocumentType reqDocumentType) (Just [])
-    (Nothing, Just category) -> CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId category (Just [])
-    (Just reqDocumentType, Just category) -> maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (castDocumentType reqDocumentType) category (Just [])
+  configs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = castDocumentType <$> mbReqDocumentType, vehicleCategory = mbCategory})
 
   pure $ mkDocumentVerificationConfigRes <$> configs
 
@@ -1076,7 +1078,7 @@ postMerchantConfigOnboardingDocumentUpdate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   let documentType = castDocumentType reqDocumentType
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just []) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
+  config <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory}) >>= fromMaybeM (DocumentVerificationConfigDoesNotExist merchantOpCityId.getId $ show documentType)
   let updConfig =
         config{checkExtraction = maybe config.checkExtraction (.value) req.checkExtraction,
                checkExpiry = maybe config.checkExpiry (.value) req.checkExpiry,
@@ -1180,7 +1182,7 @@ postMerchantConfigOnboardingDocumentCreate merchantShortId opCity reqDocumentTyp
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let documentType = castDocumentType reqDocumentType
-  mbConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId documentType reqCategory (Just [])
+  mbConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType, vehicleCategory = Just reqCategory})
   whenJust mbConfig $ \_ -> throwError (DocumentVerificationConfigAlreadyExists merchantOpCityId.getId $ show documentType)
   newConfig <- buildDocumentVerificationConfig merchant.id merchantOpCityId documentType req
   _ <- CQDVC.create newConfig
@@ -1286,7 +1288,7 @@ getMerchantServiceUsageConfig ::
 getMerchantServiceUsageConfig merchantShortId opCity = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  config <- CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  config <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   pure $ mkServiceUsageConfigRes config
 
 mkServiceUsageConfigRes :: DMSUC.MerchantServiceUsageConfig -> Common.ServiceUsageConfigRes
@@ -1316,7 +1318,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId opCity req = do
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{getDistances = fromMaybe merchantServiceUsageConfig.getDistances req.getDistances,
@@ -1349,7 +1351,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId opCity req = do
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let updMerchantServiceUsageConfig =
         merchantServiceUsageConfig{smsProvidersPriorityList = req.smsProvidersPriorityList
@@ -2699,7 +2701,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
 
           newId <- generateGUID
           finalFarePolicy <- mergeFarePolicy newId firstFarePolicy
-          mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId})
           let baseFares = getAllBaseFaresFromFarePolicy finalFarePolicy
               minBaseFare = mbTransporterConfig >>= (.minBaseFare)
               allowUpdate = fromMaybe True (mbTransporterConfig >>= (.allowFarePolicyUpdateBelowMinBaseFare))
@@ -3349,18 +3351,18 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- go home config
   mbGoHomeConfig <-
-    withTryCatch "GoHomeConfig:findByMerchantOpCityId:postMerchantConfigOperatingCityCreate" (CGHC.findByMerchantOpCityId newMerchantOperatingCityId Nothing) >>= \case
-      Left _ -> do
-        goHomeConfig <- CGHC.findByMerchantOpCityId baseOperatingCityId Nothing
+    getConfig (GoHomeConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
+      Just _ -> return Nothing
+      Nothing -> do
+        goHomeConfig <- getConfig (GoHomeConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest $ "GoHome Config not found for MerchantOperatingCity: " <> baseOperatingCityId.getId)
         let newGoHomeConfig = buildGoHomeConfig newMerchantId newMerchantOperatingCityId now goHomeConfig
         return $ Just newGoHomeConfig
-      Right _ -> return Nothing
 
   -- leader board configs
   mbLeaderBoardConfig <-
-    CQLBC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
+    getConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, leaderBoardType = Nothing}) >>= \case
       [] -> do
-        leaderBoardConfigs <- CQLBC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
+        leaderBoardConfigs <- getConfig (LeaderBoardConfigsDimensions {merchantOperatingCityId = baseOperatingCityId.getId, leaderBoardType = Nothing})
         newLeaderBoardConfigs <- mapM (buildLeaderBoardConfig newMerchantId newMerchantOperatingCityId) leaderBoardConfigs
         return $ Just newLeaderBoardConfigs
       _ -> return Nothing
@@ -3394,9 +3396,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- merchant service usage config
   mbMerchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
       Nothing -> do
-        merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
+        merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Merchant Service Usage Config not found")
         let newMerchantServiceUsageConfig = buildMerchantServiceUsageConfig newMerchantId newMerchantOperatingCityId now merchantServiceUsageConfig
         return $ Just newMerchantServiceUsageConfig
       _ -> return Nothing
@@ -3421,27 +3423,27 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- onboarding document config
   mbDocumentVerificationConfigs <-
-    CQDVC.findAllByMerchantOpCityId newMerchantOperatingCityId (Just []) >>= \case
+    getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing}) >>= \case
       [] -> do
-        documentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId baseOperatingCityId (Just [])
+        documentVerificationConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, documentType = Nothing, vehicleCategory = Nothing})
         let newDocumentVerificationConfigs = map (buildNewDocumentVerificationConfig newMerchantId newMerchantOperatingCityId now) documentVerificationConfigs
         return $ Just newDocumentVerificationConfigs
       _ -> return Nothing
 
   -- payout config
   mbPayoutConfigs <-
-    CPC.findAllByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getConfig (PayoutConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing}) >>= \case
       [] -> do
-        payoutConfigs <- CPC.findAllByMerchantOpCityId baseOperatingCityId Nothing
+        payoutConfigs <- getConfig (PayoutConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Nothing})
         let newPayoutConfigs = map (buildPayoutConfig newMerchantId newMerchantOperatingCityId now) payoutConfigs
         return $ Just newPayoutConfigs
       _ -> return Nothing
 
   -- transporter config
   mbTransporterConfig <-
-    CTC.findByMerchantOpCityId newMerchantOperatingCityId Nothing >>= \case
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
       Nothing -> do
-        transporterConfig <- CTC.findByMerchantOpCityId baseOperatingCityId Nothing >>= fromMaybeM (InvalidRequest "Transporter Config not found")
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Transporter Config not found")
         let newTransporterConfig = buildTransporterConfig newMerchantId newMerchantOperatingCityId now transporterConfig
         return $ Just newTransporterConfig
       Just _ -> return Nothing
@@ -4123,7 +4125,7 @@ configureBecknNetworkFailover merchant req = do
 
 configureMessageProviderFailover :: DMOC.MerchantOperatingCity -> Common.ConfigFailoverReq -> Flow ()
 configureMessageProviderFailover merchantOperatingCity req = do
-  merchantServiceUsageConfig <- CQMSUC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCity.id.getId)
   case req.priorityOrder of
     Just priorityOrder -> do
       let smsProviders = fromMaybe merchantServiceUsageConfig.smsProvidersPriorityList (nonEmpty priorityOrder.smsProviders)
@@ -4153,7 +4155,7 @@ postMerchantPayoutConfigUpdate :: ShortId DM.Merchant -> Context.City -> Common.
 postMerchantPayoutConfigUpdate merchantShortId city req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id req.vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just req.vehicleCategory, isPayoutEnabled = Nothing}) >>= fromMaybeM (PayoutConfigNotFound (show req.vehicleCategory) merchantOpCity.id.getId)
   QPC.updateConfigValues req payoutConfig merchantOpCity.id
   CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
   pure Success

@@ -4,6 +4,7 @@
 
 module Storage.ConfigPilot.Config.FleetOwnerDocumentVerificationConfig (FleetOwnerDocumentVerificationConfigDimensions (..)) where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig as DT
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -15,7 +16,8 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as SQ
 
 data FleetOwnerDocumentVerificationConfigDimensions = FleetOwnerDocumentVerificationConfigDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    documentType :: Maybe Domain.Types.DocumentVerificationConfig.DocumentType
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -34,5 +36,6 @@ instance ConfigDimensions FleetOwnerDocumentVerificationConfigDimensions where
       (LYT.DRIVER_CONFIG FleetOwnerDocumentVerificationConfig)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
-      ([] :: [LCP.DimMatcher FleetOwnerDocumentVerificationConfigDimensions DT.FleetOwnerDocumentVerificationConfig])
+      [ LCP.DimMatcher (.documentType) (Just . (.documentType)) (==)
+      ]
       Nothing

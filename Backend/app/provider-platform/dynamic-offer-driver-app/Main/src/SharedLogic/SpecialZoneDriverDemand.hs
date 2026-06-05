@@ -68,6 +68,7 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
@@ -79,8 +80,8 @@ import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import qualified Storage.Cac.FarePolicy as CQFP
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -253,7 +254,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId dri
           representativeDuration = Seconds representativeAirportRideDurationSec
       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
       distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
-      mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       now <- getCurrentTime
       fareParams <-
         SFC.calculateFareParameters
@@ -1051,7 +1052,7 @@ filterByGateProximity targetGate driverIds = do
       stalenessThreshold <-
         case targetGate.merchantOperatingCityId of
           Just mocId ->
-            CTC.findByMerchantOpCityId (cast mocId :: Id DMOC.MerchantOperatingCity) Nothing
+            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId})
               <&> maybe
                 driverLocationStalenessThresholdSecondsDefault
                 (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))

@@ -20,8 +20,9 @@ import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Environment
 import EulerHS.Prelude hiding (id, state)
 import Kernel.Types.Id
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Auth
 
 listCities :: Id DM.Merchant -> Flow [DTC.CityRes]
@@ -30,7 +31,7 @@ listCities mId = do
   mapM mkCityRes merchantOperatingCities
   where
     mkCityRes MerchantOperatingCity {..} = do
-      mbTransporterConfig <- SCTC.findByMerchantOpCityId id Nothing
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = id.getId})
       return $
         DTC.CityRes
           { code = city,

@@ -43,3 +43,5 @@ LeaderBoardConfigs:
     fetchQueryArgs: "(Just [])"
     returnType: List
     queryModule: Storage.CachedQueries.Merchant.LeaderBoardConfig
+    filterDimensions:
+      - leaderBoardType

@@ -44,6 +44,7 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
@@ -51,10 +52,10 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
-import Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
-import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
@@ -266,7 +267,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
 
 offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
 offerListCache merchantId driverId merchantOpCityId serviceName req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
@@ -462,7 +463,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId mocId
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   let paymentServiceName = DMSC.AirportReachargeService merchantServiceUsageConfig.createBankAccount
   (orderId, orderShortId) <- handleExistingOrder mbExistingOrderId

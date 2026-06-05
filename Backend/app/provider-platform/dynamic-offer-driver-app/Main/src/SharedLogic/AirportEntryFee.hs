@@ -27,6 +27,7 @@ import Kernel.Storage.Esqueleto as Esq
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, fromEitherM, fromMaybeM, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (GovtIndirect, OwnerLiability, ParkingFeeRecipient),
     CounterpartyType (DRIVER),
@@ -37,7 +38,7 @@ import Lib.Finance
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified SharedLogic.FareCalculator as FareCalculator
 import qualified SharedLogic.Finance.Wallet as Wallet
-import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Tools.Error
 
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
@@ -79,7 +80,7 @@ deductAirportEntryFeeAtEndRide ride booking = do
   totalFee <- requiredEntryFeeForBooking booking
   when (totalFee > 0) $ do
     transporterConfig <-
-      findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
     -- Derive the mode from the booking's payment method rather than hardcoding.
     isOnline <- Wallet.resolveIsOnlineFromBooking booking

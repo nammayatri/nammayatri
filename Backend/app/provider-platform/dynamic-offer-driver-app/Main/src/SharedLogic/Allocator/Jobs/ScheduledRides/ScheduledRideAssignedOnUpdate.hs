@@ -32,6 +32,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Allocator
@@ -42,7 +43,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QP
@@ -116,7 +117,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbDriver <- runInReplica $ QP.findById driverId
           mbBooking <- QBooking.findById bookingId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId})
           let mbScheduledPickupTime = driverInfo.latestScheduledBooking
           case (mbDriver, mbVehicle, mbBooking, mbtransporterConfig, mbScheduledPickupTime) of
             (Just driver, Just vehicle, Just booking, Just transporterConfig, Just scheduledPickupTime) -> do
@@ -177,7 +178,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           now <- getCurrentTime
           mbActiveRide <- QRide.getActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId})
           result <- runMaybeT $ do
             activeRide <- MaybeT $ return mbActiveRide
             scheduledPickup <- MaybeT $ return (driverInfo.latestScheduledPickup)

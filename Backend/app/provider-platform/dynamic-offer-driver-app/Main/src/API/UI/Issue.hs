@@ -25,11 +25,12 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.Person as QP
@@ -37,7 +38,6 @@ import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
 import qualified Tools.Ticket as TT
-import Utils.Common.Cac.KeyNameConstants
 
 type API =
   "issue" :> TokenAuth :> IA.IssueAPI
@@ -293,8 +293,8 @@ castUpdateTicket :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> TIT
 castUpdateTicket merchantId merchantOperatingCityId = TT.updateTicket (cast merchantId) (cast merchantOperatingCityId)
 
 buildMerchantConfig :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Maybe (Id Common.Person) -> Flow Common.MerchantConfig
-buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
-  transporterConfig <- CCT.findByMerchantOpCityId (cast merchantOpCityId) mkCacKey >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+buildMerchantConfig _merchantId merchantOpCityId _mbPersonId = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   appBackendBapInternal <- asks (.appBackendBapInternal)
   return
     Common.MerchantConfig
@@ -308,8 +308,6 @@ buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
         sensitiveWords = Nothing,
         sensitiveWordsForExactMatch = Nothing
       }
-  where
-    mkCacKey = fmap (DriverId . cast) mbPersonId
 
 issueReportDriverList :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Language -> FlowHandler Common.IssueReportListRes
 issueReportDriverList (driverId, merchantId, merchantOpCityId) language = withFlowHandlerAPI $ Common.issueReportList (cast driverId, cast merchantId, cast merchantOpCityId) language driverIssueHandle Common.DRIVER
