@@ -201,7 +201,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, Generic, ToJSON, FromJSON, Eq)
+  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -256,8 +256,8 @@ data SpecialVehicleNotificationConfig = SpecialVehicleNotificationConfig {notifi
 data StudentPassVerifyConfig = StudentPassVerifyConfig {distanceThresholdMeters :: Kernel.Types.Common.Meters, minMatchingStops :: Kernel.Prelude.Int, validityDurationDays :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSFlow)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSFlow))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ExternalSOSTriggerSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ExternalSOSTriggerSource))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))

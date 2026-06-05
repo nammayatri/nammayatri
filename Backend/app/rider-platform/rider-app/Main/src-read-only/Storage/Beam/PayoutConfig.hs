@@ -17,26 +17,26 @@ import qualified Kernel.Utils.Common
 import Tools.Beam.UtilsTH
 
 data PayoutConfigT f = PayoutConfigT
-  { batchLimit :: B.C f Kernel.Prelude.Int,
-    currency :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency),
-    expand :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand),
-    id :: B.C f Kernel.Prelude.Text,
-    isPayoutEnabled :: B.C f Kernel.Prelude.Bool,
-    maxPayoutReferralForADay :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    maxRetryCount :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    orderType :: B.C f Kernel.Prelude.Text,
-    payoutEntity :: B.C f Domain.Types.PayoutConfig.PayoutEntity,
-    referralRewardAmountPerRide :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    referredByRewardAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    remark :: B.C f Kernel.Prelude.Text,
-    scheduleCashbackPayoutAfter :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    thresholdPayoutAmountPerPerson :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
-    timeDiff :: B.C f Kernel.Types.Common.Seconds,
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { batchLimit :: (B.C f Kernel.Prelude.Int),
+    currency :: (B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Currency)),
+    expand :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Interface.Types.Expand)),
+    id :: (B.C f Kernel.Prelude.Text),
+    isPayoutEnabled :: (B.C f Kernel.Prelude.Bool),
+    maxPayoutReferralForADay :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    maxRetryCount :: (B.C f Kernel.Prelude.Int),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    orderType :: (B.C f Kernel.Prelude.Text),
+    payoutEntity :: (B.C f Domain.Types.PayoutConfig.PayoutEntity),
+    referralRewardAmountPerRide :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    referredByRewardAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    remark :: (B.C f Kernel.Prelude.Text),
+    scheduleCashbackPayoutAfter :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    thresholdPayoutAmountPerPerson :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
+    timeDiff :: (B.C f Kernel.Types.Common.Seconds),
+    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -46,8 +46,8 @@ instance B.Table PayoutConfigT where
 
 type PayoutConfig = PayoutConfigT Identity
 
-$(enableKVPG ''PayoutConfigT ['id] [])
+$(enableKVPG (''PayoutConfigT) [('id)] [])
 
-$(mkTableInstances ''PayoutConfigT "payout_config")
+$(mkTableInstances (''PayoutConfigT) "payout_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance ''PayoutConfigT)
+$(Domain.Types.UtilsTH.mkCacParseInstance (''PayoutConfigT))

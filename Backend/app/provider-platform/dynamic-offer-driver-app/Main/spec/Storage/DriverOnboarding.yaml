@@ -673,6 +673,13 @@ DocumentVerificationConfig:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+  configPilot:
+    configType: DocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.DocumentVerificationConfig
+
 VehiclePermit:
   tableName: vehicle_permit
   fields:
@@ -1229,6 +1236,13 @@ FleetOwnerDocumentVerificationConfig:
       kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, role]
+
+  configPilot:
+    configType: FleetOwnerDocumentVerificationConfig
+    fetchQuery: findAllByMerchantOpCityId
+    fetchQueryArgs: "(Just [])"
+    returnType: List
+    queryModule: Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
 
 AadhaarCard:
   tableName: aadhaar_card

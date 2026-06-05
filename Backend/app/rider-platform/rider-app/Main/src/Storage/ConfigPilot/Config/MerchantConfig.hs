@@ -1,19 +1,18 @@
-{-# OPTIONS_GHC -Wno-orphans -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.MerchantConfig
-  ( MerchantConfigDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..)) where
 
-import qualified Domain.Types.MerchantConfig as DMC
+import qualified Domain.Types.MerchantConfig as DT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as CR
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.CachedQueries.MerchantConfig as SCMC
+import qualified Storage.CachedQueries.MerchantConfig as SQ
 
 data MerchantConfigDimensions = MerchantConfigDimensions
   { merchantOperatingCityId :: Text
@@ -27,13 +26,13 @@ instance ConfigTypeInfo 'MerchantConfig where
 
 instance ConfigDimensions MerchantConfigDimensions where
   type ConfigTypeOf MerchantConfigDimensions = 'MerchantConfig
-  type ConfigValueTypeOf MerchantConfigDimensions = [DMC.MerchantConfig]
+  type ConfigValueTypeOf MerchantConfigDimensions = [DT.MerchantConfig]
   getConfigType _ = MerchantConfig
   getConfigList a =
-    CR.resolveConfigList
+    LCP.resolveConfigList
       a
       (LYT.RIDER_CONFIG MerchantConfig)
       (Id a.merchantOperatingCityId)
-      (SCMC.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
-      []
+      (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
+      ([] :: [LCP.DimMatcher MerchantConfigDimensions DT.MerchantConfig])
       Nothing

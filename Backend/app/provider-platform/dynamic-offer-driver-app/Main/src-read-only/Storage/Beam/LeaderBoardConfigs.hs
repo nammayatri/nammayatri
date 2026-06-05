@@ -14,18 +14,18 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data LeaderBoardConfigsT f = LeaderBoardConfigsT
-  { id :: B.C f Data.Text.Text,
-    isEnabled :: B.C f Kernel.Prelude.Bool,
-    leaderBoardExpiry :: B.C f Kernel.Types.Common.Seconds,
-    leaderBoardLengthLimit :: B.C f Kernel.Prelude.Int,
-    leaderBoardType :: B.C f Domain.Types.LeaderBoardConfigs.LeaderBoardType,
-    merchantId :: B.C f Data.Text.Text,
-    merchantOperatingCityId :: B.C f Data.Text.Text,
-    numberOfSets :: B.C f Kernel.Prelude.Int,
-    useOperatingCityBasedLeaderBoard :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    zScoreBase :: B.C f Kernel.Prelude.Int,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { id :: (B.C f Data.Text.Text),
+    isEnabled :: (B.C f Kernel.Prelude.Bool),
+    leaderBoardExpiry :: (B.C f Kernel.Types.Common.Seconds),
+    leaderBoardLengthLimit :: (B.C f Kernel.Prelude.Int),
+    leaderBoardType :: (B.C f Domain.Types.LeaderBoardConfigs.LeaderBoardType),
+    merchantId :: (B.C f Data.Text.Text),
+    merchantOperatingCityId :: (B.C f Data.Text.Text),
+    numberOfSets :: (B.C f Kernel.Prelude.Int),
+    useOperatingCityBasedLeaderBoard :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    zScoreBase :: (B.C f Kernel.Prelude.Int),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -35,6 +35,6 @@ instance B.Table LeaderBoardConfigsT where
 
 type LeaderBoardConfigs = LeaderBoardConfigsT Identity
 
-$(enableKVPG ''LeaderBoardConfigsT ['id] [])
+$(enableKVPG (''LeaderBoardConfigsT) [('id)] [])
 
-$(mkTableInstances ''LeaderBoardConfigsT "leader_board_configs")
+$(mkTableInstances (''LeaderBoardConfigsT) "leader_board_configs")
