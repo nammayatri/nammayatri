@@ -32,14 +32,15 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id as Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.API.Payout as PayoutAPI
 import qualified Lib.Payment.API.Payout.Types as PayoutTypes
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PayoutOrder
 import qualified Lib.Payment.Domain.Types.PayoutRequest as PayoutRequest
 import Servant (ServerT, (:<|>) (..))
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.RiderDetails as QRD
@@ -71,7 +72,7 @@ resolveMerchantOpCityAndTz ::
 resolveMerchantOpCityAndTz merchantShortId opCity = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCity.id.getId)
   pure (merchant, merchantOpCity, secondsToMinutes transporterConfig.timeDiffFromUtc)
 
 -- | Resolves merchant + operating-city + transporter config once per request

@@ -101,6 +101,10 @@ fetchConfigOnEventAndFunctionBasis eventType eventFunction (Id merchantId) (Id m
 getCoinInfo :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> m [CoinsConfig]
 getCoinInfo (Id merchantId) = findAllWithKV [Se.Is BeamDC.merchantId $ Se.Eq merchantId]
 
+findAllByMerchantOptCityId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m [CoinsConfig]
+findAllByMerchantOptCityId (Id merchantOptCityId) =
+  findAllWithKV [Se.Is BeamDC.merchantOptCityId $ Se.Eq merchantOptCityId]
+
 getActiveCoinConfigs :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTV.VehicleCategory -> m [CoinsConfig]
 getActiveCoinConfigs (Id merchantId) (Id merchantOptCityId) vehicleCategory = do
   findAllWithKV

@@ -4,6 +4,7 @@
 
 module Storage.ConfigPilot.Config.LeaderBoardConfigs (LeaderBoardConfigsDimensions (..)) where
 
+import qualified Domain.Types.LeaderBoardConfigs
 import qualified Domain.Types.LeaderBoardConfigs as DT
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -15,7 +16,8 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.Merchant.LeaderBoardConfig as SQ
 
 data LeaderBoardConfigsDimensions = LeaderBoardConfigsDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    leaderBoardType :: Maybe Domain.Types.LeaderBoardConfigs.LeaderBoardType
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -34,5 +36,6 @@ instance ConfigDimensions LeaderBoardConfigsDimensions where
       (LYT.DRIVER_CONFIG LeaderBoardConfig)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
-      ([] :: [LCP.DimMatcher LeaderBoardConfigsDimensions DT.LeaderBoardConfigs])
+      [ LCP.DimMatcher (.leaderBoardType) (Just . (.leaderBoardType)) (==)
+      ]
       Nothing

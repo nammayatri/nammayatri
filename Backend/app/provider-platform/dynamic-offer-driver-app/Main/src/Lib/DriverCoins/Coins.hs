@@ -60,6 +60,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
@@ -67,9 +68,9 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
 import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import qualified SharedLogic.Finance.Wallet as SLFW
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
+import Storage.ConfigPilot.Config.CoinsConfig (CoinsConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
@@ -83,7 +84,6 @@ import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.DynamicLogic as TDL
 import qualified Tools.Notifications as Notify
 import Tools.Utils
-import Utils.Common.Cac.KeyNameConstants
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
 
@@ -163,7 +163,7 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
         DCT.EndRide {tripCategoryType} -> tripCategoryType
         _ -> DCT.DynamicOfferTrip
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
   logDebug $ "Driver stats present: " <> show (isJust mbDriverStats)
   -- fetch driver fleet here
@@ -184,7 +184,28 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
   if fromMaybe False transporterConfig.enableDirectWalletIncentives
     then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
     else do
-      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbServiceTierType tripCatType mbConfigVersionMap
+      let baseDims =
+            CoinsConfigDimensions
+              { merchantOptCityId = merchantOpCityId.getId,
+                eventName = Just (show eventType),
+                merchantId = Just merchantId.getId,
+                active = Just True,
+                vehicleCategory = Just vehCategory,
+                tripCategoryType = Just tripCatType,
+                eventFunction = Nothing,
+                configId = Nothing,
+                serviceTierType = Nothing
+              }
+      -- Try with serviceTierType first, fall back to Nothing (mirrors old CachedQueries logic)
+      coinConfiguration <- do
+        result <- case mbServiceTierType of
+          Just stt -> do
+            res <- getConfig (baseDims {serviceTierType = Just stt})
+            if null res then pure [] else pure res
+          Nothing -> pure []
+        if null result
+          then getConfig baseDims
+          else return result
       let applicableCoinConfiguration =
             if null incentiveCohortFunctions
               then coinConfiguration
@@ -427,7 +448,7 @@ updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP
 updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
   now <- getCurrentTime
   uuid <- generateGUIDText
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currentBalance <- getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
   let expiryTime =
         if currentBalance < 0

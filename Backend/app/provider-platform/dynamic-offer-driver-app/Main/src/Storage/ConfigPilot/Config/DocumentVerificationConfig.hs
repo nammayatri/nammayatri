@@ -4,7 +4,9 @@
 
 module Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..)) where
 
+import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DT
+import qualified Domain.Types.VehicleCategory
 import Kernel.Prelude
 import Kernel.Types.Id
 import qualified Lib.ConfigPilot.Interface.Getter as LCP
@@ -15,7 +17,9 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SQ
 
 data DocumentVerificationConfigDimensions = DocumentVerificationConfigDimensions
-  { merchantOperatingCityId :: Text
+  { merchantOperatingCityId :: Text,
+    documentType :: Maybe Domain.Types.DocumentVerificationConfig.DocumentType,
+    vehicleCategory :: Maybe Domain.Types.VehicleCategory.VehicleCategory
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -34,5 +38,7 @@ instance ConfigDimensions DocumentVerificationConfigDimensions where
       (LYT.DRIVER_CONFIG DocumentVerificationConfig)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
-      ([] :: [LCP.DimMatcher DocumentVerificationConfigDimensions DT.DocumentVerificationConfig])
+      [ LCP.DimMatcher (.documentType) (Just . (.documentType)) (==),
+        LCP.DimMatcher (.vehicleCategory) (Just . (.vehicleCategory)) (==)
+      ]
       Nothing

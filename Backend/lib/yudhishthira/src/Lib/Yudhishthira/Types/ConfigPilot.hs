@@ -54,6 +54,9 @@ data ConfigType
   | Exophone
   | InsuranceConfig
   | VehicleConfig
+  | ScheduledPayoutConfig
+  | ReminderConfig
+  | TagActionNotificationConfig
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Enum, Bounded, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ConfigType)

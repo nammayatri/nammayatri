@@ -35,7 +35,8 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
-import qualified Storage.Cac.TransporterConfig as CCT
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- What it is:
 -- Entire city is divided into geohashes, whenever we encounter a search, we increase the frequency and whenver a booking happens
@@ -76,7 +77,7 @@ getDriverDemandHotspots ::
     Flow GetDemandHotspotsResp
   )
 getDriverDemandHotspots (_, _, merchantOpCityId) = do
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
       if configs.enableDemandHotspots

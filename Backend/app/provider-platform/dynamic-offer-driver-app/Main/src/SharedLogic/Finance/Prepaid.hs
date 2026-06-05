@@ -40,6 +40,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.Common (Currency (..), HighPrecMoney)
 import Kernel.Types.Id
 import Kernel.Utils.Common (HasRequestId, addUTCTime, fork, getCurrentTime, logError, logInfo, withTryCatch)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
 import qualified Lib.Finance.Domain.Types.Invoice as FInvoice
 import qualified Lib.Finance.Domain.Types.LedgerEntry
@@ -47,7 +48,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
-import qualified Storage.Cac.TransporterConfig as SCT
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
@@ -857,7 +858,7 @@ handleSubscriptionExpiry purchase = do
     when (purchase.ownerType == DSP.DRIVER) $
       void $
         withTryCatch "decrementOperatorTotalActiveDriversOnSubscriptionExpiry" $ do
-          mbTransporterConfig <- SCT.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId})
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
 
