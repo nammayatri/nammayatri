@@ -572,6 +572,7 @@ library
       Storage.Beam.Coins.CoinHistory
       Storage.Beam.Coins.CoinsConfig
       Storage.Beam.Common
+      Storage.Beam.Communication
       Storage.Beam.FareParameters
       Storage.Beam.FareParameters.FareParametersAmbulanceDetails
       Storage.Beam.FareParameters.FareParametersInterCityDetails
@@ -712,8 +713,6 @@ library
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.CommonDriverOnboardingDocumentsExtra
-      Storage.Queries.CommunicationDeliveryExtra
-      Storage.Queries.CommunicationExtra
       Storage.Queries.DailyStatsExtra
       Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
@@ -1123,8 +1122,6 @@ library
       Domain.Types.CancellationReason
       Domain.Types.Client
       Domain.Types.CommonDriverOnboardingDocuments
-      Domain.Types.Communication
-      Domain.Types.CommunicationDelivery
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DigilockerVerification
@@ -1306,8 +1303,6 @@ library
       Storage.Beam.CancellationReason
       Storage.Beam.Client
       Storage.Beam.CommonDriverOnboardingDocuments
-      Storage.Beam.Communication
-      Storage.Beam.CommunicationDelivery
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DigilockerVerification
@@ -1494,8 +1489,6 @@ library
       Storage.Queries.CancellationReason
       Storage.Queries.Client
       Storage.Queries.CommonDriverOnboardingDocuments
-      Storage.Queries.Communication
-      Storage.Queries.CommunicationDelivery
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DigilockerVerification
@@ -1600,8 +1593,6 @@ library
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationDuesDetails
       Storage.Queries.OrphanInstances.CancellationReason
-      Storage.Queries.OrphanInstances.Communication
-      Storage.Queries.OrphanInstances.CommunicationDelivery
       Storage.Queries.OrphanInstances.DailyStats
       Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig

@@ -32,3 +32,10 @@ ALTER TABLE atlas_driver_offer_bpp.communication ADD COLUMN template_id characte
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.communication ADD COLUMN template_name character varying (255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.communication ALTER COLUMN sender_id TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.communication ALTER COLUMN merchant_operating_city_id TYPE text;
+ALTER TABLE atlas_driver_offer_bpp.communication ALTER COLUMN merchant_id TYPE text;

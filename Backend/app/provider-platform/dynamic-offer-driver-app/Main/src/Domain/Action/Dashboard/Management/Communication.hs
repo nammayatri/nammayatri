@@ -27,8 +27,6 @@ import Data.List (nub, nubBy)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TEnc
 import Data.Time (Day)
-import qualified Domain.Types.Communication as DComm
-import qualified Domain.Types.CommunicationDelivery as DDelivery
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -48,17 +46,21 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
+import Kernel.Types.Id (Id (..), getId)
 import qualified Kernel.Types.Id
 import Kernel.Types.Predicate (MaxLength (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import qualified Lib.CommunicationEngine.Domain.Types.Communication as DComm
+import qualified Lib.CommunicationEngine.Domain.Types.CommunicationDelivery as DDelivery
+import qualified Lib.CommunicationEngine.Storage.Queries.Communication as QComm
+import qualified Lib.CommunicationEngine.Storage.Queries.CommunicationDelivery as QDelivery
+import Storage.Beam.Communication ()
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.Communication as QComm
-import qualified Storage.Queries.CommunicationDelivery as QDelivery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOA
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -90,7 +92,7 @@ data CommunicationDeliveryDispatchPayload = CommunicationDeliveryDispatchPayload
 -- | Resolve mediaFileIds to mediaUrls JSON. Returns Nothing if no ids; Just (toJSON [...]) otherwise.
 resolveMediaFileIds ::
   (BeamFlow m r, MonadFlow m) =>
-  Maybe [Kernel.Types.Id.Id Dashboard.Common.File] ->
+  Maybe [Id Dashboard.Common.File] ->
   m (Maybe Aeson.Value)
 resolveMediaFileIds Nothing = pure Nothing
 resolveMediaFileIds (Just []) = pure $ Just (Aeson.toJSON ([] :: [CommAPI.CommunicationMediaFile]))
@@ -113,7 +115,7 @@ resolveMediaFileIds (Just ids) = do
 postCommunicationCreate ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Person ->
+  Id Dashboard.Common.Person ->
   CommAPI.CreateCommunicationRequest ->
   Environment.Flow CommAPI.CreateCommunicationResponse
 postCommunicationCreate merchantShortId opCity personId req = do
@@ -129,10 +131,10 @@ postCommunicationCreate merchantShortId opCity personId req = do
       comm =
         DComm.Communication
           { id = commId,
-            merchantId = merchant.id,
-            merchantOperatingCityId = merchantOpCityId,
+            merchantId = merchant.id.getId,
+            merchantOperatingCityId = merchantOpCityId.getId,
             domain = toDomainDomain req.domain,
-            senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId,
+            senderId = getId (Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId),
             senderRole = toDomainSenderRole CommAPI.ROLE_ADMIN,
             senderDisplayName = Nothing,
             title = req.title,
@@ -154,7 +156,7 @@ postCommunicationCreate merchantShortId opCity personId req = do
   QComm.create comm
   unless isDraft $ do
     recipients <- resolveRecipientIds merchant merchantOpCity req.recipientIds req.selectAll req.selectAllRoles req.fleetOwnerId req.operatorId
-    dispatchToRecipients merchant.id merchantOpCityId comm recipients now
+    dispatchToRecipients (getId merchant.id) (getId merchantOpCityId) comm recipients now
     QComm.updateStatusById DComm.ST_SENT commId
   let responseStatus = if isDraft then CommAPI.CS_DRAFT else CommAPI.CS_SENT
   return $
@@ -175,12 +177,12 @@ getCommunicationList ::
   Maybe Int ->
   Maybe Day ->
   Maybe Day ->
-  Kernel.Types.Id.Id Dashboard.Common.Person ->
+  Id Dashboard.Common.Person ->
   Environment.Flow CommAPI.CommunicationListResponse
 getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSearch mbLimit mbOffset mbFromDate mbToDate personId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
   let listType = fromMaybe CommAPI.LIST_SENT mbListType
-  let senderId = Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId
+  let senderId = getId (Kernel.Types.Id.cast @Dashboard.Common.Person @DP.Person personId)
       recipientId = senderId
       domainChannel = toDomainChannel <$> mbChannel
   case listType of
@@ -203,7 +205,7 @@ getCommunicationList merchantShortId _opCity mbListType mbChannel mbDomain mbSea
 getCommunicationInfo ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Id Dashboard.Common.Communication ->
   Environment.Flow CommAPI.CommunicationInfoResponse
 getCommunicationInfo merchantShortId _opCity communicationId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
@@ -240,7 +242,7 @@ getCommunicationInfo merchantShortId _opCity communicationId = do
 postCommunicationSend ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Id Dashboard.Common.Communication ->
   CommAPI.SendCommunicationRequest ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postCommunicationSend merchantShortId opCity communicationId req = do
@@ -254,7 +256,7 @@ postCommunicationSend merchantShortId opCity communicationId req = do
   now <- getCurrentTime
   recipients <- resolveRecipientIds merchant merchantOpCity req.recipientIds req.selectAll req.selectAllRoles req.fleetOwnerId req.operatorId
   QComm.updateStatusById DComm.ST_SENDING commId
-  dispatchToRecipients merchant.id merchantOpCityId comm recipients now
+  dispatchToRecipients (getId merchant.id) (getId merchantOpCityId) comm recipients now
   QComm.updateStatusById DComm.ST_SENT commId
   return Kernel.Types.APISuccess.Success
 
@@ -262,7 +264,7 @@ postCommunicationSend merchantShortId opCity communicationId req = do
 putCommunicationEdit ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Id Dashboard.Common.Communication ->
   CommAPI.EditCommunicationRequest ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 putCommunicationEdit merchantShortId _opCity communicationId req = do
@@ -273,7 +275,7 @@ putCommunicationEdit merchantShortId _opCity communicationId req = do
   let effectiveChannels = maybe comm.channels (map toDomainChannel) req.channels
       effectiveTitle = fromMaybe comm.title req.title
       effectiveBody = fromMaybe comm.body req.body
-  validateChannelLimits comm.merchantOperatingCityId effectiveChannels effectiveTitle effectiveBody
+  validateChannelLimits (Id comm.merchantOperatingCityId) effectiveChannels effectiveTitle effectiveBody
   mediaUrlsJson <- resolveMediaFileIds req.mediaFileIds
   QComm.updateCommunication
     commId
@@ -289,7 +291,7 @@ putCommunicationEdit merchantShortId _opCity communicationId req = do
 deleteCommunicationDelete ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Id Dashboard.Common.Communication ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 deleteCommunicationDelete merchantShortId _opCity communicationId = do
   _merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
@@ -304,7 +306,7 @@ deleteCommunicationDelete merchantShortId _opCity communicationId = do
 getCommunicationDeliveryStatus ::
   Kernel.Types.Id.ShortId DM.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  Kernel.Types.Id.Id Dashboard.Common.Communication ->
+  Id Dashboard.Common.Communication ->
   Maybe CommAPI.CommunicationChannelType ->
   Maybe CommAPI.CommunicationDeliveryStatusType ->
   Maybe Int ->
@@ -342,7 +344,7 @@ getCommunicationRecipients ::
   Environment.Flow CommAPI.RecipientsResponse
 getCommunicationRecipients merchantShortId opCity mbRole mbFleetOwnerId mbOperatorId mbSearch _mbSelectAll mbLimit mbOffset = do
   merchant <- CQM.findByShortId merchantShortId >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
-  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> getId merchant.id <> "-city-" <> show opCity)
   let limit = min 100 . fromMaybe 20 $ mbLimit
       offset = fromMaybe 0 mbOffset
   mbSearchDbHash <- getDbHash `traverse` mbSearch
@@ -427,7 +429,7 @@ personMatchesSearch p s =
    in T.toLower s `T.isInfixOf` T.toLower fullName
         || maybe False (T.isInfixOf s) p.maskedMobileDigits
 
-validateChannelLimits :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> [DComm.ChannelType] -> Text -> Text -> m ()
+validateChannelLimits :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [DComm.ChannelType] -> Text -> Text -> m ()
 validateChannelLimits merchantOpCityId channels title body = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   whenJust transporterConfig.communicationChannelCharLimits $ \limits ->
@@ -585,9 +587,9 @@ filterPersonIdsByMerchantAndOpCity ids merchant merchantOpCity =
   if null ids
     then pure []
     else do
-      persons <- QPerson.getDriversByIdIn (map Kernel.Types.Id.Id ids)
+      persons <- QPerson.getDriversByIdIn (map Id ids)
       let inScope p =
-            p.merchantId == merchant.id
+            p.merchantId.getId == getId merchant.id
               && p.merchantOperatingCityId == merchantOpCity.id
       pure $ map (\p -> p.id.getId) $ filter inScope persons
 
@@ -609,7 +611,7 @@ validateRecipientsInScope recipientIds merchant merchantOpCity mbFleetOwnerId mb
         throwError (InvalidRequest "One or more recipient IDs not found")
       forM persons $ \person -> do
         let id_ = person.id.getId
-        unless (person.merchantId == merchant.id && person.merchantOperatingCityId == merchantOpCity.id) $
+        unless (getId person.merchantId == getId merchant.id && getId person.merchantOperatingCityId == getId merchantOpCity.id) $
           throwError (InvalidRequest $ "Recipient " <> id_ <> " is not in merchant/operating city scope")
         case (mbFleetOwnerId, mbOperatorId) of
           (Just fleetOwnerId, _) -> do
@@ -620,7 +622,7 @@ validateRecipientsInScope recipientIds merchant merchantOpCity mbFleetOwnerId mb
                   throwError (InvalidRequest $ "Driver " <> id_ <> " is not under fleet " <> fleetOwnerId)
                 pure (id_, DDelivery.RR_DRIVER)
               DP.OPERATOR -> do
-                assoc <- QFOA.findByFleetOwnerIdAndOperatorId (Kernel.Types.Id.Id fleetOwnerId) person.id True
+                assoc <- QFOA.findByFleetOwnerIdAndOperatorId (Id fleetOwnerId) person.id True
                 unless (isJust assoc) $
                   throwError (InvalidRequest $ "Operator " <> id_ <> " is not associated with fleet " <> fleetOwnerId)
                 pure (id_, DDelivery.RR_OPERATOR)
@@ -635,7 +637,7 @@ validateRecipientsInScope recipientIds merchant merchantOpCity mbFleetOwnerId mb
                   throwError (InvalidRequest $ "Driver " <> id_ <> " is not under operator " <> operatorId)
                 pure (id_, DDelivery.RR_DRIVER)
               DP.FLEET_OWNER -> do
-                assoc <- QFOA.findByFleetOwnerIdAndOperatorId person.id (Kernel.Types.Id.Id operatorId) True
+                assoc <- QFOA.findByFleetOwnerIdAndOperatorId person.id (Id operatorId) True
                 unless (isJust assoc) $
                   throwError (InvalidRequest $ "Fleet owner " <> id_ <> " is not under operator " <> operatorId)
                 pure (id_, DDelivery.RR_FLEET_OWNER)
@@ -669,8 +671,8 @@ ensureWebChannel channels =
     else CommAPI.CH_WEB : channels
 
 dispatchToRecipients ::
-  Kernel.Types.Id.Id DM.Merchant ->
-  Kernel.Types.Id.Id DMOC.MerchantOperatingCity ->
+  Text ->
+  Text ->
   DComm.Communication ->
   [RecipientWithRole] ->
   UTCTime ->
@@ -686,7 +688,7 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
                 communicationId = comm.id,
                 merchantId = merchantId,
                 merchantOperatingCityId = merchantOpCityId,
-                recipientId = Kernel.Types.Id.Id recipientIdText,
+                recipientId = recipientIdText,
                 recipientRole,
                 channel = channel,
                 status = DDelivery.DS_PENDING,
@@ -709,19 +711,19 @@ dispatchToRecipients merchantId merchantOpCityId comm recipients now = do
       else do
         let payload =
               CommunicationDeliveryDispatchPayload
-                { deliveryId = delivery.id.getId,
-                  communicationId = comm.id.getId,
+                { deliveryId = getId delivery.id,
+                  communicationId = getId comm.id,
                   channel = delivery.channel,
-                  recipientId = delivery.recipientId.getId,
-                  merchantId = merchantId.getId,
-                  merchantOperatingCityId = merchantOpCityId.getId,
+                  recipientId = delivery.recipientId,
+                  merchantId = merchantId,
+                  merchantOperatingCityId = merchantOpCityId,
                   title = comm.title,
                   body = comm.body,
                   htmlBody = comm.htmlBody,
                   templateId = comm.templateId,
                   templateName = comm.templateName
                 }
-        produceMessage (topic, Just $ TEnc.encodeUtf8 delivery.id.getId) payload
+        produceMessage (topic, Just $ TEnc.encodeUtf8 (getId delivery.id)) payload
 
 -- | Process a fleet communication delivery from Kafka payload (called by consumer).
 -- Sends via the appropriate channel and updates delivery status to SENT or FAILED.
@@ -742,7 +744,7 @@ processFleetCommunicationDeliveryPayload ::
   CommunicationDeliveryDispatchPayload ->
   m ()
 processFleetCommunicationDeliveryPayload payload = do
-  let deliveryId = Kernel.Types.Id.Id payload.deliveryId
+  let deliveryId = Id payload.deliveryId
   result <- try @_ @SomeException $ dispatchFromPayload payload
   case result of
     Right _ -> QDelivery.updateStatusById DDelivery.DS_SENT deliveryId
@@ -765,9 +767,9 @@ dispatchFromPayload ::
   CommunicationDeliveryDispatchPayload ->
   m ()
 dispatchFromPayload p = do
-  let recipientId = Kernel.Types.Id.Id p.recipientId
-      merchantId = Kernel.Types.Id.Id p.merchantId
-      merchantOpCityId = Kernel.Types.Id.Id p.merchantOperatingCityId
+  let recipientId = Id p.recipientId
+      merchantId = Id p.merchantId
+      merchantOpCityId = Id p.merchantOperatingCityId
   case p.channel of
     DComm.CH_PUSH -> do
       person <- QPerson.findById recipientId >>= fromMaybeM (InvalidRequest $ "Recipient not found: " <> Kernel.Types.Id.getId recipientId)
@@ -863,7 +865,7 @@ mkDeliveryStatusItem :: DDelivery.CommunicationDelivery -> CommAPI.DeliveryStatu
 mkDeliveryStatusItem d =
   CommAPI.DeliveryStatusItem
     { id = Kernel.Types.Id.getId d.id,
-      recipientId = Kernel.Types.Id.getId d.recipientId,
+      recipientId = d.recipientId,
       recipientName = Nothing,
       recipientRole = fromDomainRecipientRole d.recipientRole,
       channel = fromDomainChannel d.channel,
