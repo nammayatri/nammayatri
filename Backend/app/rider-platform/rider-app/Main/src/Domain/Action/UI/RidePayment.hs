@@ -756,7 +756,7 @@ processRefundSucceeded refundRequest = do
             Nothing
             Nothing
             (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
-    void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id amount
+    void $ RidePaymentFinance.createRefundSucceededLedger ctx refundRequest.id
     RidePaymentFinance.regenerateRefundInvoice rideId.getId amount
     merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
     CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
@@ -768,10 +768,28 @@ processRefundSucceeded refundRequest = do
           refundRequestStatus = CallBPPInternal.REFUNDED
         }
 
--- | Apply an async Stripe result to an APPROVED refund_request. Updates status +
---   ride refundRequestStatus update + notification, then dispatches REFUNDED-phase side-effects.
---   FAILED has no side-effects. Idempotency-guarded: a re-fire with the same status
---   is a no-op. Shared by the 3 hooks (Dashboard approve/retry immediate response, Stripe webhook, /info refresh).
+-- | APPROVED→FAILED: void the pending refund legs on both BAP and BPP (no invoice — none until
+--   success). Idempotent; processRefundResult only calls this on a genuine status transition.
+processRefundFailed :: DRefundRequest.RefundRequest -> Environment.Flow ()
+processRefundFailed refundRequest = do
+  let rideId = Kernel.Types.Id.cast @DPaymentOrder.PaymentOrder @Domain.Types.Ride.Ride refundRequest.orderId
+  ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+  let amount = fromMaybe refundRequest.transactionAmount refundRequest.refundsAmount
+  RidePaymentFinance.voidRefundRaisedLedger rideId.getId refundRequest.id
+  merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
+  CallBPPInternal.refundLedger merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId $
+    CallBPPInternal.RefundLedgerReq
+      { refundRequestId = refundRequest.id.getId,
+        refundsAmount = amount,
+        transactionAmount = refundRequest.transactionAmount,
+        deductFromDriver = refundRequest.deductFromDriver,
+        refundRequestStatus = CallBPPInternal.FAILED
+      }
+
+-- | Apply an async Stripe result to an APPROVED refund_request: update status + notify, then
+--   dispatch side-effects — REFUNDED settles + invoices, FAILED voids (BAP + BPP). Idempotent
+--   (re-fire with same status is a no-op). Shared by all 3 hooks (approve/retry, webhook, /info).
 processRefundResult ::
   DRefundRequest.RefundRequest ->
   DRefundRequest.RefundRequestStatus ->
@@ -787,6 +805,7 @@ processRefundResult refundRequest updStatus mbRefundsId =
     let updRefundRequest = refundRequest{status = updStatus, refundsId = mbRefundsId <|> refundRequest.refundsId}
     Notify.notifyRefunds updRefundRequest
     when (updStatus == DRefundRequest.REFUNDED) $ processRefundSucceeded updRefundRequest
+    when (updStatus == DRefundRequest.FAILED) $ processRefundFailed updRefundRequest
 
 fetchEvidenceFromS3 :: DRefundRequest.RefundRequest -> Environment.Flow (Maybe Text)
 fetchEvidenceFromS3 refundRequest = forM refundRequest.evidenceS3Path $ \evidenceS3Path -> do
