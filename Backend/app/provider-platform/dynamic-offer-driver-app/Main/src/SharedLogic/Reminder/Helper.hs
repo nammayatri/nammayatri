@@ -57,8 +57,8 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CCT
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DocumentReminderHistory as QDRH
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAExtra
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -103,7 +103,7 @@ getReminderConfigIfEnabled driverId merchantOpCityId documentType = do
   mbPerson <- QPerson.findById driverId
   case mbPerson of
     Just person | person.role == DP.DRIVER -> do
-      mbTransporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       case mbTransporterConfig >>= (.reminderSystemEnabled) of
         Just True -> do
           mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType})

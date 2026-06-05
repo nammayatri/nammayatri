@@ -29,10 +29,11 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.Merchant as SMerchant
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -139,7 +140,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
     throwError DisputeChancesOrCancellationDuesHasToBeNull
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
   SMerchant.checkCurrencies merchantOperatingCity.currency [req.cancellationChargesWithCurrency]
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   riderDetails <- QRD.findByMobileNumberHashAndMerchant numberHash merchant.id >>= fromMaybeM (RiderDetailsDoNotExist "Mobile Number" req.customerMobileNumber)
   case (reqCancellationCharges, req.disputeChancesUsed) of
     (Just amountPaid, Nothing) -> do

@@ -65,6 +65,7 @@ class
 
 -- | Singleton: bridges term-level ConfigType to type-level (used in FindRequest).
 data SConfigType (cfg :: ConfigType) where
+  STransporterConfig :: SConfigType 'TransporterConfig
   SDriverPoolConfig :: SConfigType 'DriverPoolConfig
   SRiderConfig :: SConfigType 'RiderConfig
   SFRFSConfig :: SConfigType 'FRFSConfig

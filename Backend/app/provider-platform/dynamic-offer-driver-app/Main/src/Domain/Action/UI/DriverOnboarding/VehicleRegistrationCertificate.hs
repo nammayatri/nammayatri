@@ -109,10 +109,10 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import SharedLogic.Reminder.Helper (createReminder)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
@@ -138,7 +138,6 @@ import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
 import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data DriverVehicleDetails = DriverVehicleDetails
   { vehicleManufacturer :: Text,
@@ -295,7 +294,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
 
   let isTtenCertificate = isJust req.udinNumber
   documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.VehicleRegistrationCertificate, vehicleCategory = Just (fromMaybe DVC.CAR req.vehicleCategory)}) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless isTtenCertificate $ do
     let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
         hasRegexRules = not (null regexRules)
@@ -429,7 +428,7 @@ makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> person
 
 isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.validNameComparePercentage of
     Just percentage -> do
       resp <- Verification.nameCompare merchantId merchantOpCityId req
@@ -600,7 +599,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
       mbUnladdenWeight = rcVerificationResponse.unladdenWeight
   mbFleetOwnerId <- maybe (pure Nothing) (Redis.safeGet . makeFleetOwnerKey) rcVerificationResponse.registrationNumber
   now <- getCurrentTime
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   rcValidationRules <- findByCityId person.merchantOperatingCityId
   let rcValidationReq = RCValidationReq {mYManufacturing = convertTextToDay (rcVerificationResponse.mYManufacturing <> Just "-01"), fuelType = rcVerificationResponse.fuelType, vehicleClass = rcVerificationResponse.vehicleClass, manufacturer = rcVerificationResponse.manufacturer, model = rcVerificationResponse.manufacturerModel}
   let lang = fromMaybe ENGLISH person.language
@@ -875,7 +874,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
     DAQuery.updateRcErrorMessage driverId rc.id "Can't perform activate/inactivate operations on invalid RC!"
     throwError (InvalidRequest "Can't perform activate/inactivate operations on invalid RC!")
   now <- getCurrentTime
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
     then do
       validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
@@ -1017,7 +1016,7 @@ invalidateRCAndRemoveVehicleForReminder ::
   m ()
 invalidateRCAndRemoveVehicleForReminder rcId driverId merchantOpCityId reason = do
   rc <- RCQuery.findById rcId >>= fromMaybeM (RCNotFound rcId.getId)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mActiveAssociation <- DAQuery.findActiveAssociationByRC rc.id True
   case mActiveAssociation of
     Just assoc | assoc.driverId == driverId -> do
@@ -1034,7 +1033,7 @@ deleteRC :: (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
 deleteRC (driverId, _, merchantOpCityId) DeleteRCReq {..} isOldFlow = do
   rc <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   mAssoc <- DAQuery.findActiveAssociationByRC rc.id True
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case (mAssoc, isOldFlow) of
     (Just assoc, False) -> do
       when (assoc.driverId == driverId) $ do

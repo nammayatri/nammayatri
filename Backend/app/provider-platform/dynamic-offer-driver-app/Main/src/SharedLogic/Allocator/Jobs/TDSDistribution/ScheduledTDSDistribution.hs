@@ -25,13 +25,14 @@ import Email.Types (EmailServiceConfig)
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.TDSDistributionPdfFile as QPdfFile
 import qualified Storage.Queries.TDSDistributionRecord as QTDS
@@ -76,7 +77,7 @@ scheduledTDSDistribution Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
   logInfo $ "Starting TDS Distribution job for merchant: " <> merchantId.getId
 
   -- Fetch tdsFromEmail from TransporterConfig
-  transporterConfig <- SCTC.findByMerchantOpCityId opCityId Nothing >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
   fromEmail <- case transporterConfig.tdsFromEmail of
     Just e -> pure e
     Nothing -> do

@@ -32,10 +32,11 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as ST
 import qualified SharedLogic.Allocator as Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as QTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Feedback as QFeedback
 import qualified Storage.Queries.FeedbackBadge as QFeedbackBadge
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadgeExtra
@@ -47,7 +48,7 @@ saveFeedbackFormResult :: FeedbackFormReq -> Flow APISuccess
 saveFeedbackFormResult feedbackFormReq = do
   let rideId = feedbackFormReq.rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  config <- QTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  config <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let shouldSendPN = maybe False (.enableFeedbackNotification) config.feedbackNotificationConfig
   let allowNotificationOnEmptyBadge = maybe False (.allowNotificationOnEmptyBadge) config.feedbackNotificationConfig
   case feedbackFormReq.badges of

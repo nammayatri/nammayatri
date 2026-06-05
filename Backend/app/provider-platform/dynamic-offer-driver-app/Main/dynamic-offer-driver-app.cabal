@@ -697,6 +697,7 @@ library
       Storage.Clickhouse.SubscriptionPurchase
       Storage.Clickhouse.Vehicle
       Storage.Clickhouse.VehicleRegistrationCertificate
+      Storage.ConfigPilot.Config.CoinsConfig
       Storage.ConfigPilot.Config.DocumentVerificationConfig
       Storage.ConfigPilot.Config.DriverPoolConfig
       Storage.ConfigPilot.Config.Exophone
@@ -712,6 +713,7 @@ library
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
       Storage.ConfigPilot.Config.ScheduledPayoutConfig
       Storage.ConfigPilot.Config.TagActionNotificationConfig
+      Storage.ConfigPilot.Config.TransporterConfig
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal

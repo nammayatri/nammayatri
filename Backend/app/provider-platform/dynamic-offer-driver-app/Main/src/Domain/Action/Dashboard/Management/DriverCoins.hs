@@ -42,13 +42,14 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.DriverCoins.Coins as Coins
 import Lib.DriverCoins.Types
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Person as Person
@@ -61,7 +62,7 @@ postDriverCoinsBulkUploadCoins :: ShortId DM.Merchant -> Context.City -> Common.
 postDriverCoinsBulkUploadCoins merchantShortId opCity Common.BulkUploadCoinsReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   updateCoinResults <- mapM (\Common.DriverIdListWithCoins {..} -> bulkUpdateByDriverId merchant.id merchantOpCityId (Id driverId :: Id SP.Person) BulkUploadFunction coins bulkUploadTitle expirationTime transporterConfig Nothing) driverIdListWithCoins
@@ -134,7 +135,7 @@ postDriverCoinsBulkUploadCoinsV2 :: ShortId DM.Merchant -> Context.City -> Commo
 postDriverCoinsBulkUploadCoinsV2 merchantShortId opCity Common.BulkUploadCoinsReqV2 {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   SMerchant.checkCurrencies merchantOpCity.currency $ driverIdListWithCoins <&> (.amountWithCurrency)
@@ -209,7 +210,7 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
   let driverId = cast @Common.Driver @SP.Driver reqDriverId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   coinBalance_ <- Coins.getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
@@ -268,7 +269,7 @@ postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity reqDriverId Common
   let driverId = cast @Common.Driver @SP.Driver reqDriverId
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   unless (transporterConfig.coinFeature) $
     throwError $ CoinServiceUnavailable merchant.id.getId
   mbStats <- QDriverStats.findByPrimaryKey driverId

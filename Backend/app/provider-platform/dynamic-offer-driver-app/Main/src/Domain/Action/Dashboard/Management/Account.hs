@@ -19,8 +19,9 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (GenericError (InternalError), PersonError (PersonDoesNotExist))
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (fromMaybeM, throwError)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person ()
 import qualified Storage.Queries.Person as QP
@@ -76,7 +77,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
   when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
     let defaultDocsVerificationStatus =
           if transporterConfig.enableManualDocumentStatusCheck == Just True
             then Just DDVS.ADMIN_PENDING

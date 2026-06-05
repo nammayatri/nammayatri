@@ -123,12 +123,12 @@ import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
@@ -720,7 +720,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           mbVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just (mapDocumentType docType), vehicleCategory = Just DVCat.CAR})
           let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
-            transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+            transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
             Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
           pure False
         _ -> pure False
@@ -766,7 +766,7 @@ postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> Context.City -> Id Co
 postDriverRegistrationRegisterRc merchantShortId opCity driverId_ req@Common.RegisterRCReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   isFleetOwner <- QFOI.findByPrimaryKey (cast driverId_)
   let (vehicleDetailsToPass, vehicleCategoryToPass, vehicleClassToPass) =
         if transporterConfig.allowDashboardToPassVehicleDetails == Just True
@@ -945,7 +945,7 @@ castMgmtResponseStatus = \case
 approveAndUpdateRC :: Common.RCApproveDetails -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow ()
 approveAndUpdateRC req merchantId merchantOpCityId = do
   let imageId = Id req.documentImageId.getId
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mbRc <- QRC.findByImageId imageId
   -- Fallback for re-upload-after-reject: the VRC row's documentImageId still
   -- points at the prior (rejected) image, so findByImageId misses it. Look up
@@ -1156,7 +1156,7 @@ approveAndUpdateInsurance req@Common.VInsuranceApproveDetails {..} mId mOpCityId
             (Just insurance.policyExpiry)
             Nothing
         _ -> do
-          transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+          transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
           case transporterConfig.createDocumentRequired of
             Just True -> throwError (InternalError "Provide all the details for creating insurance document: policyNumber, policyExpiry, policyProvider, rcNumber")
             _ -> pure ()
@@ -1386,7 +1386,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         (Just updatedDL.licenseExpiry)
         Nothing
     Nothing -> do
-      transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
       case transporterConfig.createDocumentRequired of
         Just True -> do
           dlNumber <- req.driverLicenseNumber & fromMaybeM (InvalidRequest "driverLicenseNumber is required for creating DL document")
@@ -1545,7 +1545,7 @@ approveAndUpdatePan req mId mOpCityId = do
   whenJust mbExistingPan $ \existingPan ->
     when (existingPan.verificationStatus == VALID) $
       throwError $ DocumentAlreadyValidated "PanCard"
-  transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -1605,7 +1605,7 @@ approveAndUpdateAadhaar req mId mOpCityId = do
   whenJust aadhaarInfo $ \aadhaarInfoData ->
     when (aadhaarInfoData.verificationStatus == VALID) $
       throwError $ DocumentAlreadyValidated "Aadhaar"
-  transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
   aadhaarHash <- getDbHash req.aadhaarNumber
   encryptedAadhaar <- encrypt req.aadhaarNumber
   case transporterConfig.allowDuplicateAadhaar of
@@ -1749,7 +1749,7 @@ handleMandatoryDocRejection _merchantId merchantOperatingCityId driverId docType
   docConfigs <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Just docType, vehicleCategory = Nothing})
   let isMandatory = Kernel.Prelude.any (\cfg -> fromMaybe cfg.isMandatory cfg.isMandatoryForEnabling) docConfigs
   when isMandatory $ do
-    transporterConfig <- CCT.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     let isVehicleDoc = docType `elem` SDO.defaultVehicleDocumentTypes
         separateEnablement = transporterConfig.separateDriverVehicleEnablement == Just True
     if isVehicleDoc
@@ -2060,7 +2060,7 @@ handleRejectRequest rejectReq merchantId merchantOperatingCityId = do
 
     isDashboardSmsEnabled :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> m Bool
     isDashboardSmsEnabled merchantOpCityId =
-      CCT.findByMerchantOpCityId merchantOpCityId Nothing
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
         >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         <&> (.enableDashboardSms)
 

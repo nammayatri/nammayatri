@@ -37,7 +37,7 @@ import qualified Lib.Payment.Payout.Registration as Registration
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson
@@ -113,7 +113,7 @@ refundRegistrationAmount merchantShortId opCity req = do
 
   -- Get payout call
   let vehicleCategory = DV.AUTO_CATEGORY
-  payoutConfig <- CPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
   let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCity.id driverId mbPersonBankAccount
 
   -- Delegate to lib — it looks up PaymentOrder for amount + VPA, checks idempotency
