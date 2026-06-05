@@ -16,6 +16,7 @@ module Domain.Action.UI.Quote
   ( GetQuotesRes (..),
     OfferRes (..),
     getQuotes,
+    getQuotesFromInMemory,
     estimateBuildLockKey,
     processActiveBooking,
     mkQAPIEntityList,
@@ -32,6 +33,7 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.Map.Strict as Map
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
@@ -44,17 +46,16 @@ import Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import Domain.Types.BppDetails (BppDetails)
 import Domain.Types.CancellationReason
+import qualified Domain.Types.Estimate as DEstimate
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.QuoteBreakup as DQB
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
+import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RiderPreferredOption as DRPO
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as SSR
@@ -192,31 +193,59 @@ getQuotes searchRequestId mbAllowMultiple = do
     activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
     whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
   logDebug $ "search Request is : " <> show searchRequest
+  let lockKey = estimateBuildLockKey searchRequestId.getId
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+    quoteList <- QQuote.findAllBySRId searchRequest.id
+    estimateList <- QEstimate.findAllBySRId searchRequest.id
+    buildGetQuotesRes searchRequest estimateList quoteList riderConfig
+
+-- | Sync-path entry: builds GetQuotesRes from in-memory estimates/quotes
+-- produced by 'Domain.Action.Beckn.OnSearch.onSearch'. Skips the Redis
+-- estimate-build lock and the duplicate reads of searchRequest, estimates,
+-- quotes, and riderConfig that the polling 'getQuotes' performs.
+getQuotesFromInMemory ::
+  SSR.SearchRequest ->
+  [DEstimate.Estimate] ->
+  [SQuote.Quote] ->
+  Maybe DRC.RiderConfig ->
+  Flow GetQuotesRes
+getQuotesFromInMemory searchRequest estimateList quoteList mbRiderConfig = do
+  activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId searchRequest.riderId
+  whenJust activeBooking $ \booking -> processActiveBooking booking searchRequest.isDashboardRequest OnSearch
+  buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig
+
+buildGetQuotesRes ::
+  SSR.SearchRequest ->
+  [DEstimate.Estimate] ->
+  [SQuote.Quote] ->
+  Maybe DRC.RiderConfig ->
+  Flow GetQuotesRes
+buildGetQuotesRes searchRequest estimateList quoteList mbRiderConfig = do
   journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
   let mostFrequentVehicleCategory = SLS.mostFrequent person.lastUsedVehicleServiceTiers
-  let lockKey = estimateBuildLockKey searchRequestId.getId
-  Redis.withLockRedisAndReturnValue lockKey 5 $ do
-    offers <- getOffers searchRequest
-    estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier)
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
-
-    let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
-        defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
-        mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
-        estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
-        sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
-    return $
-      GetQuotesRes
-        { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
-          toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
-          stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
-          quotes = sortedQuotes,
-          estimates,
-          paymentMethods = [],
-          allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
-          journey = journeyData
-        }
+      isReferredRide = isJust searchRequest.driverIdentifier
+      enableRideHailingOffers = maybe False (.enableRideHailingOffers) mbRiderConfig
+  providerLookup <- buildProviderLookup estimateList quoteList
+  offers <- getOffers searchRequest enableRideHailingOffers providerLookup quoteList
+  estimates' <- getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList
+  let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) mbRiderConfig
+      defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) mbRiderConfig
+      mbUserConfig = mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig
+      estimates = estimatesSorting estimates' mbUserConfig defaultServiceTierOrderConfig
+      sortedQuotes = quotesSorting offers mbUserConfig defaultServiceTierOrderConfig
+  return $
+    GetQuotesRes
+      { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
+        toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+        stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
+        quotes = sortedQuotes,
+        estimates,
+        paymentMethods = [],
+        allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
+        journey = journeyData
+      }
 
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> Maybe Bool -> CancellationStage -> m ()
 processActiveBooking booking mbIsDashBoardRequest cancellationStage = do
@@ -255,76 +284,90 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
   DBooking.AmbulanceDetails _ -> True
   _ -> False
 
-getOffers :: SSR.SearchRequest -> Flow [OfferRes]
-getOffers searchRequest = do
+-- | Resolve BppDetails + isValueAddNP per unique providerId across the
+-- estimates and quotes lists. One Redis hit per (providerId × source) instead
+-- of one per quote/estimate.
+buildProviderLookup ::
+  [DEstimate.Estimate] ->
+  [SQuote.Quote] ->
+  Flow (HM.HashMap Text (BppDetails, Bool))
+buildProviderLookup estimateList quoteList = do
+  let uniqProviderIds = nub $ ((.providerId) <$> estimateList) <> ((.providerId) <$> quoteList)
+  entries <- forM uniqProviderIds $ \bppId -> do
+    bpp <- CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY)
+    v <- CQVAN.isValueAddNP bppId
+    pure (bppId, (bpp, v))
+  pure $ HM.fromList entries
+
+lookupProvider :: HM.HashMap Text (BppDetails, Bool) -> Text -> Flow (BppDetails, Bool)
+lookupProvider providerLookup bppId =
+  case HM.lookup bppId providerLookup of
+    Just v -> pure v
+    Nothing -> throwError $ InternalError $ "BPP details not found for providerId:-" <> bppId
+
+getOffers :: SSR.SearchRequest -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [SQuote.Quote] -> Flow [OfferRes]
+getOffers searchRequest enableRideHailingOffers providerLookup quoteList0 = do
   logDebug $ "search Request is : " <> show searchRequest
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
-  let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
-  case searchRequest.toLocation of
-    Just _ -> do
-      quoteList <- sortByNearestDriverDistance <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
-      logDebug $ "quotes are :-" <> show quoteList
-      bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
-      let quotes = case searchRequest.riderPreferredOption of
+  let quoteList = case searchRequest.toLocation of
+        Just _ -> sortByNearestDriverDistance quoteList0
+        Nothing -> sortByEstimatedFare quoteList0
+  logDebug $ "quotes are :-" <> show quoteList
+  (bppDetailList, isValueAddNPList) <- unzip <$> forM quoteList (\q -> lookupProvider providerLookup q.providerId)
+  quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
+  let quotes = case searchRequest.toLocation of
+        Just _ ->
+          case searchRequest.riderPreferredOption of
             DRPO.Rental -> OnRentalCab <$> quoteEntities
             _ -> OnDemandCab <$> quoteEntities
-      return . sortBy (compare `on` creationTime) $ quotes
-    Nothing -> do
-      quoteList <- sortByEstimatedFare <$> runInReplica (QQuote.findAllBySRId searchRequest.id)
-      logDebug $ "quotes are :-" <> show quoteList
-      bppDetailList <- forM ((.providerId) <$> quoteList) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
-      isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      quoteEntities <- mkQuoteAPIEntitiesWithOffers searchRequest enableRideHailingOffers quoteList bppDetailList isValueAddNPList
-      let quotes = case searchRequest.isMeterRideSearch of
+        Nothing ->
+          case searchRequest.isMeterRideSearch of
             Just True -> OnMeterRide <$> quoteEntities
             _ -> OnRentalCab <$> quoteEntities
-      return . sortBy (compare `on` creationTime) $ quotes
+  return . sortBy (compare `on` offerCreationTime) $ quotes
+
+mkQuoteAPIEntitiesWithOffers ::
+  SSR.SearchRequest ->
+  Bool ->
+  [SQuote.Quote] ->
+  [BppDetails] ->
+  [Bool] ->
+  Flow [QuoteAPIEntity]
+mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
+  let quoteEntitiesWithCtx =
+        zip
+          (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
+          ( quoteList <&> \q ->
+              let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
+                  offerBaseAmount = case mbBreakup of
+                    Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
+                    Nothing -> q.estimatedFare.amount
+                  offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
+               in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
+          )
+      products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
+  productOffers <-
+    if enableRideHailingOffers
+      then
+        withTryCatch
+          "getOffers:offerListWithBasket"
+          (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchReq))
+          >>= \case
+            Left _ -> pure []
+            Right r -> pure r
+      else pure []
+  let offerMap = Map.fromList productOffers
+  forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
+    mbOffer <- case Map.lookup productId offerMap of
+      Nothing -> pure Nothing
+      Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
+    pure quoteEntity {customerOffers = mbOffer}
+
+quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
+quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
+
+sortByNearestDriverDistance :: [SQuote.Quote] -> [SQuote.Quote]
+sortByNearestDriverDistance = sortBy (compare `on` getMbDistanceToNearestDriver)
   where
-    mkQuoteAPIEntitiesWithOffers ::
-      SSR.SearchRequest ->
-      Bool ->
-      [SQuote.Quote] ->
-      [BppDetails] ->
-      [Bool] ->
-      Flow [QuoteAPIEntity]
-    mkQuoteAPIEntitiesWithOffers searchReq enableRideHailingOffers quoteList bppDetailList isValueAddNPList = do
-      let quoteEntitiesWithCtx =
-            zip
-              (mkQAPIEntityList quoteList bppDetailList isValueAddNPList)
-              ( quoteList <&> \q ->
-                  let mbBreakup = RD.parseProjectFareParamsBreakup $ quoteBreakupToFareTuple <$> q.quoteBreakupList
-                      offerBaseAmount = case mbBreakup of
-                        Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
-                        Nothing -> q.estimatedFare.amount
-                      offerBasePrice = mkPrice (Just q.estimatedFare.currency) offerBaseAmount
-                   in (show q.vehicleServiceTierType, mbBreakup, offerBasePrice)
-              )
-          products = map (\(_, (productId, _, price)) -> (productId, price)) quoteEntitiesWithCtx
-      productOffers <-
-        if enableRideHailingOffers
-          then
-            withTryCatch
-              "getOffers:offerListWithBasket"
-              (SOffer.offerListWithBasket searchReq.merchantId searchReq.riderId searchReq.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchReq))
-              >>= \case
-                Left _ -> pure []
-                Right r -> pure r
-          else pure []
-      let offerMap = Map.fromList productOffers
-      forM quoteEntitiesWithCtx $ \(quoteEntity, (productId, mbBreakup, _)) -> do
-        mbOffer <- case Map.lookup productId offerMap of
-          Nothing -> pure Nothing
-          Just resp -> SOffer.mkCumulativeOfferResp searchReq.merchantOperatingCityId resp [] mbBreakup
-        pure quoteEntity {customerOffers = mbOffer}
-
-    quoteBreakupToFareTuple :: DQB.QuoteBreakup -> (Text, HighPrecMoney)
-    quoteBreakupToFareTuple qb = (qb.title, qb.price.amount)
-
-    sortByNearestDriverDistance quoteList = do
-      let sortFunc = compare `on` getMbDistanceToNearestDriver
-      sortBy sortFunc quoteList
     getMbDistanceToNearestDriver quote =
       case quote.quoteDetails of
         SQuote.MeterRideDetails _ -> Nothing
@@ -335,20 +378,17 @@ getOffers searchRequest = do
         SQuote.DriverOfferDetails details -> details.distanceToPickup
         SQuote.OneWaySpecialZoneDetails _ -> Just $ Distance 0 Meter
         SQuote.InterCityDetails _ -> Just $ Distance 0 Meter
-    creationTime :: OfferRes -> UTCTime
-    creationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
-    creationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
-    creationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
-    creationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
-    creationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 
-getEstimates :: Id DM.Merchant -> Id Person.Person -> Id DMOC.MerchantOperatingCity -> Id SSR.SearchRequest -> Bool -> Flow [UEstimate.EstimateAPIEntity]
-getEstimates merchantId personId mocId searchRequestId isReferredRide = do
-  mbSearchReq <- runInReplica $ QSR.findById searchRequestId
-  estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
+offerCreationTime :: OfferRes -> UTCTime
+offerCreationTime (OnDemandCab QuoteAPIEntity {createdAt}) = createdAt
+offerCreationTime (Metro Metro.MetroOffer {createdAt}) = createdAt
+offerCreationTime (OnRentalCab QuoteAPIEntity {createdAt}) = createdAt
+offerCreationTime (PublicTransport PublicTransportQuote {createdAt}) = createdAt
+offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
+
+getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Flow [UEstimate.EstimateAPIEntity]
+getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList = do
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})
-  let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map
           ( \e ->
@@ -366,7 +406,7 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
       then
         withTryCatch
           "getEstimates:offerListWithBasket"
-          (SOffer.offerListWithBasket merchantId personId mocId DOrder.RideHailing products Nothing Nothing mbSearchReq)
+          (SOffer.offerListWithBasket searchRequest.merchantId searchRequest.riderId searchRequest.merchantOperatingCityId DOrder.RideHailing products Nothing Nothing (Just searchRequest))
           >>= \case
             Left _ -> pure []
             Right r -> pure r
@@ -378,8 +418,9 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
       Nothing -> pure Nothing
       -- Pass the parsed breakup so the offer-response post-offer amount
       -- reflects VAT redistribution via applyRideDiscount.
-      Just resp -> SOffer.mkCumulativeOfferResp mocId resp [] mbBreakup
-    UEstimate.mkEstimateAPIEntity isReferredRide mbOffer estimate
+      Just resp -> SOffer.mkCumulativeOfferResp searchRequest.merchantOperatingCityId resp [] mbBreakup
+    (bppDetails, valueAddNP) <- lookupProvider providerLookup estimate.providerId
+    UEstimate.mkEstimateAPIEntity isReferredRide mbOffer bppDetails valueAddNP estimate
   return . sortBy (compare `on` (.createdAt)) $ estimates
 
 sortByEstimatedFare :: (HasField "estimatedFare" r Price) => [r] -> [r]

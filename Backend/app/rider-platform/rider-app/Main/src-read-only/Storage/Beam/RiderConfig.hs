@@ -45,8 +45,6 @@ data RiderConfigT f = RiderConfigT
     cancellationRateThresholdMonthly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateThresholdWeekly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
     dailyConditionCooldownTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

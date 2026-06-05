@@ -16,12 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.QuoteBreakup as Beam
 
-create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.QuoteBreakup.QuoteBreakup -> m ())
-create = createWithKV
-
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.QuoteBreakup.QuoteBreakup] -> m ())
-createMany = traverse_ create
-
 findAllByQuoteIdT :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.QuoteBreakup.QuoteBreakup])
 findAllByQuoteIdT quoteId = do findAllWithKVAndConditionalDB [Se.Is Beam.quoteId $ Se.Eq quoteId] Nothing
 

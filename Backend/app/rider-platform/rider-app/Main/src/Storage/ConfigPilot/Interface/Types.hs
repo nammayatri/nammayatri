@@ -94,6 +94,8 @@ data SConfigType (cfg :: ConfigType) where
   SBecknConfig :: SConfigType 'BecknConfig
   SMerchantServiceConfig :: SConfigType 'MerchantServiceConfig
   SExophone :: SConfigType 'Exophone
+  SInsuranceConfig :: SConfigType 'InsuranceConfig
+  SVehicleConfig :: SConfigType 'VehicleConfig
 
 deriving instance Show (SConfigType cfg)
 

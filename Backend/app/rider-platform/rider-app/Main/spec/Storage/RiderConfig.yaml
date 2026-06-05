@@ -116,9 +116,7 @@ RiderConfig:
     seatBookingTtl: Maybe Int
     busTripTtl: Maybe Int
     seatBookingCleanupTtl: Maybe Int
-    collectAutoCompleteData: Maybe Bool
     distanceWeightage: Int
-    collectMMIRouteData: Maybe Bool
     isAvoidToll: Bool
     autoUnblockSafetyCenterAfterDays: Int
     placeNameCacheExpiryDays: Maybe Int

@@ -491,7 +491,6 @@ in  { esqDBCfg
     , cacTenants
     , tsServiceConfig
     , superPositionConfig
-    , collectRouteData = True
     , kafkaClickhouseCfg
     , riderClickhouseCfg
     , dashboardClickhouseCfg

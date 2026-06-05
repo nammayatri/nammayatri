@@ -114,7 +114,6 @@ type SearchRequestFlow m r c =
     HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],

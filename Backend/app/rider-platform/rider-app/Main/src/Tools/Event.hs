@@ -164,34 +164,6 @@ data ExophoneEventData = ExophoneEventData
     exophoneNumber :: Maybe Text
   }
 
-data AutoCompleteEventData = AutoCompleteEventData
-  { autocompleteInputs :: Text,
-    customerId :: Id Person,
-    id :: Text,
-    isLocationSelectedOnMap :: Maybe Bool,
-    searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
-    searchType :: Text,
-    sessionToken :: Text,
-    merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity,
-    originLat :: Text,
-    originLon :: Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Show, Eq, Generic, FromJSON, ToJSON)
-
-data RouteDataEvent = RouteDataEvent
-  { mapsProvider :: Maybe Text,
-    routes :: [Text],
-    searchRequestId :: Maybe (Id DSearchRequest.SearchRequest),
-    merchantId :: Id Merchant,
-    merchantOperatingCityId :: Id MerchantOperatingCity,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime
-  }
-  deriving (Show, Eq, Generic, FromJSON)
-
 data MarketingParamsEventPreLoginData = MarketingParamsEventPreLoginData
   { gclId :: Maybe Text,
     utmCampaign :: Maybe Text,
@@ -341,26 +313,6 @@ triggerExophoneEvent ExophoneEventData {..} = do
   let exophonePayload = Exophone {..}
   exoevent <- createEvent (getId <$> personId) (maybe "" getId merchantId) ExophoneData RIDER_APP triggeredBy (Just exophonePayload) Nothing Nothing
   triggerEvent exoevent
-
-triggerAutoCompleteEvent ::
-  ( EventStreamFlow m r
-  ) =>
-  AutoCompleteEventData ->
-  m ()
-triggerAutoCompleteEvent AutoCompleteEventData {..} = do
-  let autoCompletePayload = AutoComplete {..}
-  event <- createEvent (Just $ getId autoCompletePayload.customerId) (getId autoCompletePayload.merchantId) AutoCompleteData RIDER_APP System (Just autoCompletePayload) Nothing Nothing
-  triggerEvent event
-
-triggerRouteDataEvent ::
-  ( EventStreamFlow m r
-  ) =>
-  RouteDataEvent ->
-  m ()
-triggerRouteDataEvent RouteDataEvent {..} = do
-  let routePayload = RouteCollectionData {..}
-  event <- createEvent Nothing (getId routePayload.merchantId) RouteCollection RIDER_APP System (Just routePayload) Nothing Nothing
-  triggerEvent event
 
 triggerMarketingParamEvent ::
   ( EventStreamFlow m r

@@ -16,7 +16,6 @@ import qualified Domain.Types.RentalDetails
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.SpecialZoneQuote
-import qualified Domain.Types.TripTerms
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -59,7 +58,6 @@ data Quote = Quote
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Quote.TollChargesInfo,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
-    tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleIconUrl :: Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl,
@@ -67,7 +65,7 @@ data Quote = Quote
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data MeterRideQuoteAPIDetails = MeterRideQuoteAPIDetails {quoteId :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -108,4 +106,4 @@ data QuoteDetails
   | MeterRideDetails Domain.Types.Quote.MeterRideQuoteDetails
   deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)

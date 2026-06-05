@@ -14,7 +14,6 @@ imports:
   DriverOfferAPIEntity: Domain.Action.UI.DriverOffer
   SpecialZoneQuoteAPIEntity: Domain.Action.UI.SpecialZoneQuote
   parseBaseUrl: Kernel.Prelude
-  TripTerms: Domain.Types.TripTerms
   SearchRequest: Domain.Types.SearchRequest
   QuoteBreakup: Domain.Types.QuoteBreakup
   FareProductType: Domain.Types.FarePolicy.FareProductType
@@ -27,6 +26,7 @@ imports:
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
   BillingCategory: SharedLogic.Type
+  Value: Data.Aeson
 
 Quote:
   dataName: quote
@@ -79,7 +79,6 @@ Quote:
     providerId : Text
     providerUrl : BaseUrl
     itemId : Text
-    tripTerms : Maybe TripTerms
     tripCategory: Maybe TripCategory
     quoteDetails : QuoteDetails
     merchantId : Id Merchant
@@ -114,8 +113,6 @@ Quote:
 
   beamFields:
       quoteDetails: {}
-      tripTerms:
-        tripTermsId: Maybe Text
       discount:
         discount: Maybe HighPrecMoney
         currency: Maybe Currency
@@ -139,7 +136,8 @@ Quote:
       tollChargesInfo:
         tollCharges : Maybe HighPrecMoney
         tollNames : Maybe [Text]
-      quoteBreakupList: {}
+      quoteBreakupList:
+        quoteBreakupListJson: Maybe Value
 
   beamType:
     estimatedFare : HighPrecMoney
@@ -161,9 +159,8 @@ Quote:
 
   fromTType:
     providerUrl: parseBaseUrl|MI
-    tripTerms: getTripTerms|M
     tollChargesInfo: mkTollChargesInfo tollCharges tollNames currency|E
-    quoteBreakupList: Storage.Queries.QuoteBreakup.findAllByQuoteIdT id|EM
+    quoteBreakupList: Storage.Queries.Transformers.Quote.loadQuoteBreakupList quoteBreakupListJson id|EM
     quoteDetails: (Storage.Queries.Transformers.Quote.toQuoteDetails fareProductType tripCategory distanceToNearestDriver rentalDetailsId meterRideBppQuoteId staticBppQuoteId driverOfferId specialZoneQuoteId distanceUnit distanceToNearestDriverValue)|EM
     discount: (Kernel.Types.Common.mkPrice currency <$> discount)|E
     merchantOperatingCityId: (backfillMOCId merchantOperatingCityId merchantId)|EM
@@ -189,7 +186,6 @@ Quote:
     estimatedTotalFare: ((.amount) estimatedTotalFare)|E
     tollCharges: (tollChargesInfo <&> ((.amount) . (.tollCharges)))|E
     tollNames: (tollChargesInfo <&> (.tollNames))|E
-    tripTermsId: (Kernel.Types.Id.getId <$> (tripTerms <&> (.id)))|E
     merchantOperatingCityId: (Just $ Kernel.Types.Id.getId merchantOperatingCityId)|E
     distanceToNearestDriver: (Kernel.Types.Common.distanceToHighPrecMeters <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails)))|E
     distanceToNearestDriverValue: (Kernel.Types.Common.distanceToHighPrecDistance distanceUnit) <$> (Storage.Queries.Transformers.Quote.getDistanceToNearestDriver (Storage.Queries.Transformers.Quote.fromQuoteDetails quoteDetails))|E
@@ -212,6 +208,7 @@ Quote:
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
     isSafetyPlus: Kernel.Prelude.Just|I
     billingCategory: Kernel.Prelude.Just|I
+    quoteBreakupListJson: Storage.Queries.Transformers.Quote.encodeQuoteBreakupList quoteBreakupList|E
 
   sqlType:
     requestId: character varying(255)
@@ -224,7 +221,6 @@ Quote:
     vehicle_variant: character varying(60)
     distanceToNearestDriver: double precision
     providerUrl: character varying(255)
-    tripTermsId: character(36)
     fareProductType: character varying(255)
     driverOfferId: character(36)
     meterRideBppQuoteId: character(36)
@@ -232,6 +228,7 @@ Quote:
     specialZoneQuoteId: character(36)
     currency: character varying(255)
     distanceUnit: character varying(255)
+    quoteBreakupListJson: "json"
 
   default:
     fareProductType: "'ONE_WAY'"

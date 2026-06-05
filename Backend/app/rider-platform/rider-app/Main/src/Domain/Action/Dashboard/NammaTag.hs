@@ -101,7 +101,6 @@ import qualified Lib.Yudhishthira.Types as LYTU
 import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.Types.NammaTagV2
 import qualified Lib.Yudhishthira.TypesTH as YTH
-import SharedLogic.EstimateTags
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
 import SharedLogic.Offer
@@ -165,7 +164,6 @@ $(genToSchema ''DTE.Exophone)
 $(genToSchema ''PickupETA.PickupETAInput)
 $(genToSchema ''MerchantServiceConfigDimensions)
 $(genToSchema ''ExophoneDimensions)
-$(genToSchema ''EstimateTagsData)
 $(genToSchema ''FRT.InvoiceContext)
 
 instance Default FRT.InvoiceContext where
@@ -320,9 +318,6 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTR.RiderConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTR.RiderConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.ESTIMATE_TAGS -> do
-      logicData :: EstimateTagsData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
-      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy EstimateTagsResult) _riderConfig.dynamicLogicUpdatePassword req logicData
     LYTU.CUMULATIVE_OFFER_POLICY -> do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))
       logicData :: CumulativeOfferReq <- YudhishthiraFlow.createLogicData defaultVal (Prelude.listToMaybe req.inputData)
@@ -495,12 +490,6 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTR.RiderConfig))
-          }
-    LYTU.ESTIMATE_TAGS ->
-      return $
-        LYTU.DomainSchemaResp
-          { LYTU.defaultValue = A.toJSON (def :: EstimateTagsData),
-            LYTU.schema = toInlinedSchemaValue (Proxy @EstimateTagsData)
           }
     LYTU.CUMULATIVE_OFFER_POLICY -> do
       defaultVal <- fromMaybeM (InvalidRequest "CumulativeOfferReq not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @CumulativeOfferReq))

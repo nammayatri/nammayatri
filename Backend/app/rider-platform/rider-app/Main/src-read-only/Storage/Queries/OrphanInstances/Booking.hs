@@ -21,7 +21,6 @@ import qualified Storage.Beam.Booking as Beam
 import qualified Storage.Queries.LocationMapping
 import Storage.Queries.Transformers.Booking
 import qualified Storage.Queries.Transformers.Booking
-import qualified Storage.Queries.TripTerms
 
 instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
@@ -34,7 +33,6 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
     initialPickupLocation' <- Storage.Queries.Transformers.Booking.getInitialPickupLocation mappings (fst toBookingDetailsAndFromLocation')
     merchantOperatingCityId' <- Storage.Queries.Transformers.Booking.backfillMOCId merchantOperatingCityId merchantId
     providerUrl' <- parseBaseUrl providerUrl
-    tripTerms' <- if isJust tripTermsId then Storage.Queries.TripTerms.findById'' (Kernel.Types.Id.Id (fromJust tripTermsId)) else pure Nothing
     vehicleIconUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) vehicleIconUrl
     pure $
       Just
@@ -117,7 +115,6 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             supplierTaxNo = supplierTaxNo,
             transactionId = riderTransactionId,
             tripCategory = tripCategory,
-            tripTerms = tripTerms',
             updatedAt = updatedAt,
             vehicleCategory = vehicleCategory,
             vehicleIconUrl = vehicleIconUrl',
@@ -220,7 +217,6 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.supplierTaxNo = supplierTaxNo,
         Beam.riderTransactionId = transactionId,
         Beam.tripCategory = tripCategory,
-        Beam.tripTermsId = Kernel.Types.Id.getId <$> (tripTerms <&> (.id)),
         Beam.updatedAt = updatedAt,
         Beam.vehicleCategory = vehicleCategory,
         Beam.vehicleIconUrl = Kernel.Prelude.fmap showBaseUrl vehicleIconUrl,

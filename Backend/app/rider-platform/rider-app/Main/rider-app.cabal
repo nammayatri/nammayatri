@@ -479,7 +479,6 @@ library
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.DisplayBookingId
-      SharedLogic.EstimateTags
       SharedLogic.External.BbpsService.Flow
       SharedLogic.External.LocationTrackingService.API.NearbyDrivers
       SharedLogic.External.LocationTrackingService.API.Sos
@@ -625,13 +624,13 @@ library
       Storage.CachedQueries.Translations
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
-      Storage.CachedQueries.VehicleConfig
       Storage.CachedQueries.VehicleSeatLayoutMappingExtra
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.AlertIncident
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BookingCancellationReason
       Storage.Clickhouse.ConductorStats
+      Storage.Clickhouse.Estimate
       Storage.Clickhouse.EstimateBreakup
       Storage.Clickhouse.FareBreakup
       Storage.Clickhouse.FRFSLiveAlerts
@@ -640,6 +639,7 @@ library
       Storage.Clickhouse.Location
       Storage.Clickhouse.Person
       Storage.Clickhouse.PurchasedPassPayment
+      Storage.Clickhouse.Quote
       Storage.Clickhouse.QuoteBreakup
       Storage.Clickhouse.Ride
       Storage.Clickhouse.Sos
@@ -647,6 +647,7 @@ library
       Storage.ConfigPilot.Config.CommonConfig
       Storage.ConfigPilot.Config.Exophone
       Storage.ConfigPilot.Config.FRFSConfig
+      Storage.ConfigPilot.Config.InsuranceConfig
       Storage.ConfigPilot.Config.MerchantConfig
       Storage.ConfigPilot.Config.MerchantPushNotification
       Storage.ConfigPilot.Config.MerchantServiceConfig
@@ -654,6 +655,7 @@ library
       Storage.ConfigPilot.Config.PayoutConfig
       Storage.ConfigPilot.Config.RiderConfig
       Storage.ConfigPilot.Config.RideRelatedNotificationConfig
+      Storage.ConfigPilot.Config.VehicleConfig
       Storage.ConfigPilot.Interface.Getter
       Storage.ConfigPilot.Interface.Setter
       Storage.ConfigPilot.Interface.Types
@@ -754,7 +756,6 @@ library
       Storage.Queries.Transformers.ServicePeopleCategory
       Storage.Queries.Transformers.SpecialZoneQuote
       Storage.Queries.Transformers.TicketMerchantDetails
-      Storage.Queries.Transformers.TripTerms
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.TranslationsExtra
       Storage.Queries.UiRiderConfigExtra
@@ -1149,7 +1150,6 @@ library
       Domain.Types.TicketService
       Domain.Types.TicketSubPlace
       Domain.Types.Translations
-      Domain.Types.TripTerms
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
       Domain.Types.VehicleConfig
@@ -1313,7 +1313,6 @@ library
       Storage.Beam.TicketService
       Storage.Beam.TicketSubPlace
       Storage.Beam.Translations
-      Storage.Beam.TripTerms
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.VehicleConfig
@@ -1552,7 +1551,6 @@ library
       Storage.Queries.TicketService
       Storage.Queries.TicketSubPlace
       Storage.Queries.Translations
-      Storage.Queries.TripTerms
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.VehicleConfig

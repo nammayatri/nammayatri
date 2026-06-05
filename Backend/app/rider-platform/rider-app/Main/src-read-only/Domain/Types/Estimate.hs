@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.ServiceTierType
-import qualified Domain.Types.TripTerms
 import qualified Kernel.External.Maps
 import Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -37,7 +36,6 @@ data Estimate = Estimate
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driversLocation :: [Kernel.External.Maps.LatLong],
     estimateBreakupList :: [Domain.Types.Estimate.EstimateBreakup],
-    estimateTags :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.Price,
@@ -75,7 +73,6 @@ data Estimate = Estimate
     tollChargesInfo :: Kernel.Prelude.Maybe Domain.Types.Estimate.TollChargesInfo,
     totalFareRange :: Domain.Types.Estimate.FareRange,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
-    tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory,
@@ -89,7 +86,7 @@ data Estimate = Estimate
 
 data BPPEstimate = BPPEstimate {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusinessDiscountInfo = BusinessDiscountInfo {businessDiscount :: Kernel.Types.Common.Price, businessDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, (Show))
+data BusinessDiscountInfo = BusinessDiscountInfo {businessDiscount :: Kernel.Types.Common.Price, businessDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
 
 data EstimateBreakup = EstimateBreakup
   { estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate,
@@ -97,11 +94,11 @@ data EstimateBreakup = EstimateBreakup
     price :: Domain.Types.Estimate.EstimateBreakupPrice,
     title :: Kernel.Prelude.Text
   }
-  deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
+  deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
 
-newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
+newtype EstimateBreakupPrice = EstimateBreakupPrice {value :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
 
-data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, (Show), (Kernel.Utils.GenericPretty.PrettyShow))
+data FareRange = FareRange {maxFare :: Kernel.Types.Common.Price, minFare :: Kernel.Types.Common.Price} deriving (Generic, Show, Kernel.Utils.GenericPretty.PrettyShow)
 
 data NightShiftInfo = NightShiftInfo
   { nightShiftCharge :: Kernel.Types.Common.Price,
@@ -109,10 +106,10 @@ data NightShiftInfo = NightShiftInfo
     nightShiftStart :: Kernel.Prelude.TimeOfDay,
     oldNightShiftCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
-data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, (Show))
+data PersonalDiscountInfo = PersonalDiscountInfo {personalDiscount :: Kernel.Types.Common.Price, personalDiscountPercentage :: Kernel.Prelude.Double} deriving (Generic, Show)
 
-data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, (Show))
+data TollChargesInfo = TollChargesInfo {tollCharges :: Kernel.Types.Common.Price, tollNames :: [Kernel.Prelude.Text]} deriving (Generic, Show)
 
-data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, (Show))
+data WaitingCharges = WaitingCharges {waitingChargePerMin :: Kernel.Prelude.Maybe Kernel.Types.Common.Price} deriving (Generic, Show)

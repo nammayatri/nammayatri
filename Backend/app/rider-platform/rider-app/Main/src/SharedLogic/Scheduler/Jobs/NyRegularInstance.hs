@@ -41,7 +41,6 @@ runNyRegularInstanceJob ::
     HasFlowEnv m r '["nyGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["ondcGatewayUrl" ::: BaseUrl],
     HasFlowEnv m r '["searchRequestExpiry" ::: Maybe Seconds],
-    HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],

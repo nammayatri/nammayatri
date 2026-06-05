@@ -177,7 +177,6 @@ buildSelectedQuote ::
   m DQuote.Quote
 buildSelectedQuote estimate providerInfo now req@DSearchRequest.SearchRequest {..} QuoteInfo {quoteBreakupList = quoteBreakupInfos, ..} = do
   uid <- generateGUID
-  let tripTerms = Nothing
   quoteDetails_ <- buildDriverQuoteDetails tripCategory
   quoteBreakups <- DOnSearch.buildQuoteBreakUp quoteBreakupInfos uid req.merchantId req.merchantOperatingCityId
   let quote =

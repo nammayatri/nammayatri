@@ -4,6 +4,7 @@ import Domain.Types.DriverOffer as DDO
 import Domain.Types.Estimate
 import Domain.Types.Quote as DQ
 import Domain.Types.SearchRequest
+import Domain.Utils (mapConcurrently)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -15,10 +16,8 @@ import qualified Storage.Beam.Quote as BeamQ
 import qualified Storage.Queries.DriverOffer as QueryDO
 import Storage.Queries.InterCityDetails as QueryICD
 import Storage.Queries.OrphanInstances.Quote ()
-import qualified Storage.Queries.QuoteBreakup as QQB
 import Storage.Queries.RentalDetails as QueryRD
 import Storage.Queries.SpecialZoneQuote as QuerySZQ
-import qualified Storage.Queries.TripTerms as QTT
 
 -- Extra code goes here --
 createQuote :: (MonadFlow m, EsqDBFlow m r) => Quote -> m ()
@@ -37,13 +36,14 @@ createDetails = \case
 
 createQuote' :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Quote -> m ()
 createQuote' quote = do
-  traverse_ QTT.create (quote.tripTerms)
   _ <- createDetails (quote.quoteDetails)
-  QQB.createMany quote.quoteBreakupList
   createQuote quote
 
-createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Quote] -> m ()
-createMany = traverse_ createQuote'
+-- | Parallel insert. See note on 'Storage.Queries.EstimateExtra.createMany' —
+-- errors from individual concurrent writes are swallowed by the helper, so
+-- this trades strict write fidelity for response-path latency.
+createMany :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Forkable m) => [Quote] -> m ()
+createMany = void . mapConcurrently createQuote'
 
 findByBppIdAndBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do

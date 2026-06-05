@@ -122,7 +122,6 @@ data HandlerEnv = HandlerEnv
     searchRateLimitOptions :: APIRateLimitOptions,
     disableSignatureAuth :: Bool,
     authTokenCacheExpiry :: Seconds,
-    collectRouteData :: Bool,
     ondcTokenHashMap :: HM.HashMap KeyConfig TokenConfig,
     searchRequestExpiry :: Maybe Seconds,
     dashboardClickhouseCfg :: ClickhouseCfg,

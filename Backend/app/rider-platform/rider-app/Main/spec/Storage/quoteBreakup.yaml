@@ -34,6 +34,12 @@ QuoteBreakup:
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
+    # The quote_breakup table is no longer written from the search path; breakups
+    # now ride inline in quote.quote_breakup_list_json. The findAllByQuoteIdT
+    # query below is kept so legacy rows can still be read as a fallback by
+    # Storage.Queries.Transformers.Quote.loadQuoteBreakupList.
+    - create
+    - createMany
 
   constraints:
     id: PrimaryKey

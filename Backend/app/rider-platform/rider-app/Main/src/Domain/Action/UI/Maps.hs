@@ -22,7 +22,6 @@ module Domain.Action.UI.Maps
     autoComplete,
     getPlaceDetails,
     getPlaceName,
-    makeAutoCompleteKey,
     AutoCompleteType (..),
   )
 where
@@ -42,7 +41,6 @@ import qualified Kernel.External.Maps.Interface.Types as MIT
 import Kernel.External.Maps.Types
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
@@ -55,7 +53,6 @@ import qualified Storage.CachedQueries.Person as CQP
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import Tools.Error
-import Tools.Event
 import qualified Tools.Maps as Maps
 
 data AutoCompleteType = PICKUP | DROP deriving (Generic, Show, Read, Eq, Ord, FromJSON, ToJSON, ToSchema)
@@ -74,9 +71,6 @@ data AutoCompleteReq = AutoCompleteReq
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
-makeAutoCompleteKey :: Text -> Text -> Text
-makeAutoCompleteKey token typeOfSearch = "Analytics-RiderApp-AutoComplete-Data" <> token <> "|" <> typeOfSearch
-
 addressDigest :: Text -> Text
 addressDigest = T.pack . show . MD5.md5 . BSL.fromStrict . TE.encodeUtf8 . T.toCaseFold . T.strip
 
@@ -84,30 +78,6 @@ autoComplete :: (ServiceFlow m r, EventStreamFlow m r, HasShortDurationRetryCfg 
 autoComplete (personId, merchantId) entityId AutoCompleteReq {..} = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   merchantOperatingCity <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  fork "Inserting/Updating autocomplete data" $ do
-    riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
-    whenJust riderConfig $ \config -> do
-      let toCollectData = fromMaybe False config.collectAutoCompleteData
-      when toCollectData $ do
-        let autoCompleteDataCollectionCondition = (isJust sessionToken) && (isJust autoCompleteType)
-        when autoCompleteDataCollectionCondition $ do
-          let reqOrigin = fromMaybe (Maps.LatLong 0 0) origin
-          let token = fromMaybe "" sessionToken
-          let typeOfSearch = fromMaybe DROP autoCompleteType
-          let key = makeAutoCompleteKey token (show typeOfSearch)
-          currentRecord :: Maybe AutoCompleteEventData <- Redis.safeGet key
-          now <- getCurrentTime
-          case currentRecord of
-            Just record -> do
-              let currentSting = record.autocompleteInputs
-              let updatedRecord = AutoCompleteEventData (currentSting <> "|" <> input) record.customerId record.id record.isLocationSelectedOnMap record.searchRequestId record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
-              triggerAutoCompleteEvent updatedRecord
-              Redis.setExp key updatedRecord 300
-            Nothing -> do
-              uid <- generateGUID
-              let autoCompleteData = AutoCompleteEventData input personId uid Nothing Nothing (show typeOfSearch) token merchantId merchantOperatingCityId (show reqOrigin.lat) (show reqOrigin.lon) now now
-              triggerAutoCompleteEvent autoCompleteData
-              Redis.setExp key autoCompleteData 300
   res <-
     Maps.autoComplete
       merchantId

@@ -311,7 +311,6 @@ data LogicDomain
   | DYNAMIC_PRICING_UNIFIED
   | PICKUP_ETA_CALCULATION
   | USER_CANCELLATION_DUES
-  | ESTIMATE_TAGS
   | USER_CANCELLATION_DUES_WAIVE_OFF
   | FRFS_TICKET_CATEGORIES
   | GPS_TOLL_BEHAVIOR
@@ -343,7 +342,6 @@ instance Enumerable LogicDomain where
       PICKUP_ETA_CALCULATION,
       USER_CANCELLATION_DUES,
       USER_CANCELLATION_DUES_WAIVE_OFF,
-      ESTIMATE_TAGS,
       FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY,
       CUMULATIVE_OFFER_POLICY,
@@ -381,7 +379,6 @@ generateLogicDomainShowInstances =
     ++ [show PICKUP_ETA_CALCULATION]
     ++ [show USER_CANCELLATION_DUES]
     ++ [show USER_CANCELLATION_DUES_WAIVE_OFF]
-    ++ [show ESTIMATE_TAGS]
     ++ [show FRFS_TICKET_CATEGORIES]
     ++ [show (CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
@@ -427,7 +424,6 @@ instance Show LogicDomain where
   show PICKUP_ETA_CALCULATION = "PICKUP-ETA-CALCULATION"
   show USER_CANCELLATION_DUES = "USER-CANCELLATION-DUES"
   show USER_CANCELLATION_DUES_WAIVE_OFF = "USER-CANCELLATION-DUES-WAIVE-OFF"
-  show ESTIMATE_TAGS = "ESTIMATE-TAGS"
   show FRFS_TICKET_CATEGORIES = "FRFS-TICKET-CATEGORIES"
   show (CONFIG configType) = "CONFIG_" ++ show configType
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
@@ -469,8 +465,6 @@ instance Read LogicDomain where
             [(USER_CANCELLATION_DUES, drop 1 rest)]
           "USER-CANCELLATION-DUES-WAIVE-OFF" ->
             [(USER_CANCELLATION_DUES_WAIVE_OFF, drop 1 rest)]
-          "ESTIMATE-TAGS" ->
-            [(ESTIMATE_TAGS, drop 1 rest)]
           "FRFS-TICKET-CATEGORIES" ->
             [(FRFS_TICKET_CATEGORIES, drop 1 rest)]
           "CANCELLATION-COIN-POLICY" ->

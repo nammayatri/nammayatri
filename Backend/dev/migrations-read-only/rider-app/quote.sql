@@ -114,3 +114,8 @@ ALTER TABLE atlas_app.quote ADD COLUMN selected_offer_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.quote ADD COLUMN special_location_support_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.quote ADD COLUMN quote_breakup_list_json json ;

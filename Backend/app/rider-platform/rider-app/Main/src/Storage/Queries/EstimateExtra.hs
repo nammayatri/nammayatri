@@ -3,6 +3,7 @@ module Storage.Queries.EstimateExtra where
 import Domain.Types.Estimate as DE
 import Domain.Types.EstimateStatus
 import Domain.Types.SearchRequest (SearchRequest)
+import Domain.Utils (mapConcurrently)
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Common
@@ -10,9 +11,7 @@ import Kernel.Types.Id (Id (Id))
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as BeamE
-import qualified Storage.Queries.EstimateBreakup as QEB
 import Storage.Queries.OrphanInstances.Estimate ()
-import qualified Storage.Queries.TripTerms as QTT
 
 -- Extra code goes here --
 
@@ -21,13 +20,16 @@ createEstimate estimate = do
   if fromMaybe False estimate.isMultimodalSearch then createWithKVWithOptions (Just 21600) True estimate else createWithKV estimate
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Estimate -> m ()
-create estimate = do
-  _ <- traverse_ QTT.create estimate.tripTerms
-  _ <- createEstimate estimate
-  traverse_ QEB.create estimate.estimateBreakupList
+create = createEstimate
 
-createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Estimate] -> m ()
-createMany = traverse_ create
+-- | Parallel insert. Uses 'Domain.Utils.mapConcurrently' so each Estimate is
+-- written in its own forked flow; the calling thread blocks until all of
+-- them complete. Errors from individual forks are swallowed by the underlying
+-- helper (it returns only @Right@ values), so a write failure surfaces as a
+-- missing row rather than a thrown exception — callers that need strict
+-- write semantics should call 'create' sequentially.
+createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r, Forkable m) => [Estimate] -> m ()
+createMany = void . mapConcurrently create
 
 getStatus :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> m (Maybe EstimateStatus)
 getStatus (Id estimateId) = findOneWithKV [Se.Is BeamE.id $ Se.Eq estimateId] <&> (DE.status <$>)

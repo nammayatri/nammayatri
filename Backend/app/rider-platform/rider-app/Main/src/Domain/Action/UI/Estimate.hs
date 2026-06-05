@@ -25,14 +25,10 @@ import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.External.Maps
 import Kernel.Prelude
-import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Offer as SOffer
-import qualified Storage.CachedQueries.BppDetails as CQBppDetails
-import qualified Storage.CachedQueries.ValueAddNP as QNP
-import Tools.Error
 
 data EstimateAPIEntity = EstimateAPIEntity
   { id :: Id Estimate,
@@ -81,7 +77,6 @@ data EstimateAPIEntity = EstimateAPIEntity
     smartTipReason :: Maybe Text,
     isReferredRide :: Bool,
     isInsured :: Maybe Bool,
-    estimateTags :: Maybe [Text],
     insuredAmount :: Maybe Text,
     offer :: Maybe SOffer.CumulativeOfferResp
   }
@@ -101,10 +96,12 @@ data EstimateBreakupAPIEntity = EstimateBreakupAPIEntity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> Estimate -> m EstimateAPIEntity
-mkEstimateAPIEntity isReferredRide offer (Estimate {..}) = do
-  valueAddNPRes <- QNP.isValueAddNP providerId
-  (bppDetails :: BppDetails) <- CQBppDetails.findBySubscriberIdAndDomain providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BppDetails not found " <> providerId)
+-- | Build the API entity using already-resolved BppDetails + isValueAddNP.
+-- Use this when the caller has a preloaded provider lookup so per-estimate
+-- Redis hits (CQBppDetails.findBySubscriberIdAndDomain + QNP.isValueAddNP)
+-- can be skipped.
+mkEstimateAPIEntity :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Bool -> Maybe SOffer.CumulativeOfferResp -> BppDetails -> Bool -> Estimate -> m EstimateAPIEntity
+mkEstimateAPIEntity isReferredRide offer bppDetails valueAddNPRes (Estimate {..}) = do
   let mbBaseFareEB = find (\x -> x.title == show Enums.BASE_FARE) estimateBreakupList
       mbBaseDistanceFareEB = maybeToList $ addBaseDisatanceFareEB mbBaseFareEB -- TODO::Remove it after UI stops consuming it,
   return
@@ -112,7 +109,7 @@ mkEstimateAPIEntity isReferredRide offer (Estimate {..}) = do
       { agencyName = providerName,
         agencyNumber = providerMobileNumber,
         agencyCompletedRidesCount = providerCompletedRidesCount,
-        tripTerms = fromMaybe [] $ tripTerms <&> (.descriptions),
+        tripTerms = [],
         estimateFareBreakup = filter (not . isProjectedFareParamTag . (.title)) (mkEstimateBreakupAPIEntity <$> (estimateBreakupList <> mbBaseDistanceFareEB)),
         driversLatLong = driversLocation,
         nightShiftRate = mkNightShiftRateAPIEntity <$> nightShiftInfo,
