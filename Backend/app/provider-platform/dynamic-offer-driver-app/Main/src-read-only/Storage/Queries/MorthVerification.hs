@@ -29,12 +29,12 @@ createMany = traverse_ create
 deleteByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 deleteByPersonId driverId = do deleteWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.MorthVerification.MorthVerification])
+findAllByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.MorthVerification.MorthVerification]))
 findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.MorthVerification.MorthVerification])
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m ([Domain.Types.MorthVerification.MorthVerification]))
 findAllByDriverIdAndDocType driverId docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.docType $ Se.Eq docType]]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MorthVerification.MorthVerification -> m (Maybe Domain.Types.MorthVerification.MorthVerification))
@@ -45,7 +45,7 @@ findByRequestId requestId = do findOneWithKV [Se.Is Beam.requestId $ Se.Eq reque
 
 findLatestByDriverIdAndDocTypeAndDocumentNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.External.Encryption.DbHash -> m [Domain.Types.MorthVerification.MorthVerification])
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> Kernel.External.Encryption.DbHash -> m ([Domain.Types.MorthVerification.MorthVerification]))
 findLatestByDriverIdAndDocTypeAndDocumentNumber limit offset driverId docType documentNumberHashBeam = do
   findAllWithOptionsKV
     [ Se.And
@@ -78,8 +78,8 @@ updateByPrimaryKey (Domain.Types.MorthVerification.MorthVerification {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.docType docType,
-      Se.Set Beam.documentNumberEncrypted (documentNumber & unEncrypted . encrypted),
-      Se.Set Beam.documentNumberHash (documentNumber & hash),
+      Se.Set Beam.documentNumberEncrypted (((documentNumber & unEncrypted . encrypted))),
+      Se.Set Beam.documentNumberHash ((documentNumber & hash)),
       Se.Set Beam.driverDateOfBirth driverDateOfBirth,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.issueDateOnDoc issueDateOnDoc,
@@ -122,8 +122,8 @@ instance ToTType' Beam.MorthVerification Domain.Types.MorthVerification.MorthVer
   toTType' (Domain.Types.MorthVerification.MorthVerification {..}) = do
     Beam.MorthVerificationT
       { Beam.docType = docType,
-        Beam.documentNumberEncrypted = documentNumber & unEncrypted . encrypted,
-        Beam.documentNumberHash = documentNumber & hash,
+        Beam.documentNumberEncrypted = ((documentNumber & unEncrypted . encrypted)),
+        Beam.documentNumberHash = (documentNumber & hash),
         Beam.driverDateOfBirth = driverDateOfBirth,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.id = Kernel.Types.Id.getId id,

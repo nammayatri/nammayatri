@@ -64,9 +64,9 @@ data VehicleRegistrationCertificateE e = VehicleRegistrationCertificate
   }
   deriving (Generic)
 
-type VehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsEncrypted
+type VehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsEncrypted)
 
-type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE 'AsUnencrypted
+type DecryptedVehicleRegistrationCertificate = VehicleRegistrationCertificateE ('AsUnencrypted)
 
 instance EncryptedItem VehicleRegistrationCertificate where
   type Unencrypted VehicleRegistrationCertificate = (DecryptedVehicleRegistrationCertificate, HashSalt)
@@ -174,6 +174,6 @@ instance EncryptedItem' VehicleRegistrationCertificate where
 
 data DocsVerificationStatus = ADMIN_PENDING | ADMIN_APPROVED | ADMIN_REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DocsVerificationStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DocsVerificationStatus))
 
-$(Kernel.Utils.TH.mkHttpInstancesForEnum ''DocsVerificationStatus)
+$(Kernel.Utils.TH.mkHttpInstancesForEnum (''DocsVerificationStatus))

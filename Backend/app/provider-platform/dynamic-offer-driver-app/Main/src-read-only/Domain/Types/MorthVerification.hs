@@ -34,9 +34,9 @@ data MorthVerificationE e = MorthVerification
   }
   deriving (Generic)
 
-type MorthVerification = MorthVerificationE 'AsEncrypted
+type MorthVerification = MorthVerificationE ('AsEncrypted)
 
-type DecryptedMorthVerification = MorthVerificationE 'AsUnencrypted
+type DecryptedMorthVerification = MorthVerificationE ('AsUnencrypted)
 
 instance EncryptedItem MorthVerification where
   type Unencrypted MorthVerification = (DecryptedMorthVerification, HashSalt)

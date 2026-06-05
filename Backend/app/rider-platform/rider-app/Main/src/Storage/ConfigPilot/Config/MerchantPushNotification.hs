@@ -1,19 +1,18 @@
+{-# OPTIONS_GHC -Wno-deprecations #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.ConfigPilot.Config.MerchantPushNotification
-  ( MerchantPushNotificationDimensions (..),
-  )
-where
+module Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..)) where
 
-import qualified Domain.Types.MerchantPushNotification as DMPN
+import qualified Domain.Types.MerchantPushNotification as DT
 import Kernel.Prelude
 import Kernel.Types.Id
-import qualified Lib.ConfigPilot.Interface.Getter as CR
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
 import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Queries.MerchantPushNotification as SQMPN
+import qualified Storage.Queries.MerchantPushNotification as SQ
 
 data MerchantPushNotificationDimensions = MerchantPushNotificationDimensions
   { merchantOperatingCityId :: Text
@@ -27,13 +26,13 @@ instance ConfigTypeInfo 'MerchantPushNotification where
 
 instance ConfigDimensions MerchantPushNotificationDimensions where
   type ConfigTypeOf MerchantPushNotificationDimensions = 'MerchantPushNotification
-  type ConfigValueTypeOf MerchantPushNotificationDimensions = [DMPN.MerchantPushNotification]
+  type ConfigValueTypeOf MerchantPushNotificationDimensions = [DT.MerchantPushNotification]
   getConfigType _ = MerchantPushNotification
   getConfigList a =
-    CR.resolveConfigList
+    LCP.resolveConfigList
       a
       (LYT.RIDER_CONFIG MerchantPushNotification)
       (Id a.merchantOperatingCityId)
-      (SQMPN.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
-      []
+      (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
+      ([] :: [LCP.DimMatcher MerchantPushNotificationDimensions DT.MerchantPushNotification])
       Nothing

@@ -31,7 +31,7 @@ import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified SharedLogic.JobScheduler as RJS
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBExtra
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.PersonExtra as QPExtra
@@ -60,7 +60,7 @@ mkRideCancelledKey customerId = "customer-offer:CR:cancelled-cId:" <> customerId
 
 getWindowSize :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Integer
 getWindowSize mocId = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
   pure $ toInteger $ fromMaybe 30 riderConfig.cancellationRateWindow
 
 incrementCancelledCount ::
@@ -109,7 +109,7 @@ getCancellationRateData ::
   Id DP.Person ->
   m (Maybe CustomerCancellationRateData)
 getCancellationRateData mocId customerId = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
   let minimumRides = findMinimumRides riderConfig
   let windowSize = findWindowSize riderConfig
   assignedCount <- getAssignedCount windowSize customerId

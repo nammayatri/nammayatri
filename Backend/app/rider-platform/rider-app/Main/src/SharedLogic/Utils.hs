@@ -25,7 +25,7 @@ import Kernel.Storage.Esqueleto.Config
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
 -- | Pure version of static customer ID generation.
 -- Generates the ID deterministically from phone and merchantId without any config lookups.
@@ -36,7 +36,7 @@ getPureStaticCustomerId person phone =
 
 getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let mbThreshold = mbRiderConfig >>= (.staticCustomerIdThresholdDay)
   case mbThreshold of
     Just threshold ->

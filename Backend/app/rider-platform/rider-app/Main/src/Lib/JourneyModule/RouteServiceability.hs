@@ -26,7 +26,7 @@ import qualified SharedLogic.Scheduler.Jobs.FRFSSeatHoldReaper as SeatHold
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.VehicleSeatLayoutMappingExtra as CQVehicleSeatLayoutMapping
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 
 -- | Shared function to build RouteWithLiveVehicle for a single route.
 --   Used by both FRFSTicketService and MultimodalConfirm.
@@ -54,7 +54,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
 
   when shouldRunSeatHoldReaper $ do
-    mRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
+    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
     let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
     shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
     when shouldRun $

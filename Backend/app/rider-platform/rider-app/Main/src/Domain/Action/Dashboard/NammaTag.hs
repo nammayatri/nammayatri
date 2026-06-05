@@ -131,9 +131,9 @@ import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantPushNotification (MerchantPushNotificationDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
-import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
+import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
@@ -306,7 +306,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -745,7 +745,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       dims = parseDims req.dimensions
   case req.configType of
     LYTU.RiderConfig -> do
-      cfg <- getConfig (RiderDimensions {merchantOperatingCityId = mocId})
+      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId})
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceUsageConfig -> do
       cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId})
@@ -784,9 +784,9 @@ getNammaTagConfigPilotGetDimensionSchema :: Kernel.Types.Id.ShortId Domain.Types
 getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = do
   case configType of
     LYTU.RiderConfig ->
-      pure $ mkDimSchema (Proxy @RiderDimensions)
+      pure $ mkDimSchema (Proxy @RiderConfigDimensions)
     LYTU.PayoutConfig ->
-      pure $ mkDimSchema (Proxy @PayoutDimensions)
+      pure $ mkDimSchema (Proxy @PayoutConfigDimensions)
     LYTU.MerchantPushNotification ->
       pure $ mkDimSchema (Proxy @MerchantPushNotificationDimensions)
     LYTU.BecknConfig ->

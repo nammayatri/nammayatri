@@ -66,8 +66,8 @@ instance ToTType' Beam.VehicleRegistrationCertificate Domain.Types.VehicleRegist
     Beam.VehicleRegistrationCertificateT
       { Beam.airConditioned = airConditioned,
         Beam.approved = approved,
-        Beam.certificateNumberEncrypted = certificateNumber & unEncrypted . encrypted,
-        Beam.certificateNumberHash = certificateNumber & hash,
+        Beam.certificateNumberEncrypted = ((certificateNumber & unEncrypted . encrypted)),
+        Beam.certificateNumberHash = (certificateNumber & hash),
         Beam.dateOfRegistration = dateOfRegistration,
         Beam.docsVerificationStatus = docsVerificationStatus,
         Beam.documentImageId = Kernel.Types.Id.getId documentImageId,

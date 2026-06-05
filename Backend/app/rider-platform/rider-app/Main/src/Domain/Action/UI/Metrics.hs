@@ -12,7 +12,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common (fork, logError)
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Text.Regex.Posix ((=~))
 import Tools.Metrics
@@ -29,7 +29,7 @@ processMetrics mbPersonId metricName message = do
       mbPerson <- runInReplica $ QPerson.findById personId
       case mbPerson of
         Just person -> do
-          mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
           pure $ case mbRiderConfig of
             Just riderConfig -> fromMaybe [] riderConfig.metricsBlacklistPatterns
             Nothing -> []
