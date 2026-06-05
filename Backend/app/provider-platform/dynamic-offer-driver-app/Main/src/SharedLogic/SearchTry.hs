@@ -257,7 +257,7 @@ buildSearchTry merchantId searchReq estimateOrQuoteIds estOrQuoteId baseFare sea
   transporterConfig <- CTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if tripCategory == DTC.OneWay DTC.OneWayOnDemandDynamicOffer && transporterConfig.isDynamicPricingQARCalEnabled == Just True
     then fork "updateDynamicPricingDemandCounters" $
-      geoAddDynamicPricingCounter mkDemandVehicleCategoryWithDistanceBin mkDemandVehicleCategory mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon searchReq.id.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
+      geoAddDynamicPricingCounter mkDemandVehicleCategoryWithDistanceBin mkDemandVehicleCategory mkDemandVehicleCategoryCity now vehicleServiceTierItem.vehicleCategory searchReq.fromLocation.lat searchReq.fromLocation.lon id_.getId ((.getMeters) <$> searchReq.estimatedDistance) searchReq.merchantOperatingCityId.getId
     else pure ()
   pure $
     DST.SearchTry
