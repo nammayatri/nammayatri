@@ -45,3 +45,8 @@ findAllByLayoutId layoutId = do
 
 makeLayoutIdKey :: Id DomainLayout.SeatLayout -> Text
 makeLayoutIdKey layoutId = "CachedQueries:Seat:LayoutId-" <> getId layoutId
+
+invalidateCacheByLayoutId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DomainLayout.SeatLayout -> m ()
+invalidateCacheByLayoutId layoutId = do
+  let cacheKey = makeLayoutIdKey layoutId
+  void $ Hedis.del cacheKey

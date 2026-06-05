@@ -1311,3 +1311,49 @@ instance IsHTTPError AddBaggageError where
     AddBaggageNegativeCount -> E400
 
 instance IsAPIError AddBaggageError
+
+data SeatLayoutError
+  = SeatLayoutNotFound
+  | SeatLayoutAlreadyExists
+  | SeatLayoutInUseCannotModify
+  | InvalidSeatPosition
+  | DuplicateSeatPosition
+  | DuplicateSeatLabel
+  | InvalidSeatLayoutDimensions
+  | InvalidSleeperSeatPosition
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SeatLayoutError
+
+instance IsBaseError SeatLayoutError where
+  toMessage = \case
+    SeatLayoutNotFound -> Just "Seat layout not found."
+    SeatLayoutAlreadyExists -> Just "A seat layout with the given ID already exists."
+    SeatLayoutInUseCannotModify -> Just "Seat layout is currently assigned to vehicles and cannot be modified or deleted."
+    InvalidSeatPosition -> Just "Seat position is outside the layout grid bounds."
+    DuplicateSeatPosition -> Just "Duplicate seat position found in the layout."
+    DuplicateSeatLabel -> Just "Duplicate seat label found in the layout."
+    InvalidSeatLayoutDimensions -> Just "Seat layout dimensions must be at least 1x1."
+    InvalidSleeperSeatPosition -> Just "Sleeper seat position overlaps with another seat at the next row."
+
+instance IsHTTPError SeatLayoutError where
+  toErrorCode = \case
+    SeatLayoutNotFound -> "SEAT_LAYOUT_NOT_FOUND"
+    SeatLayoutAlreadyExists -> "SEAT_LAYOUT_ALREADY_EXISTS"
+    SeatLayoutInUseCannotModify -> "SEAT_LAYOUT_IN_USE_CANNOT_MODIFY"
+    InvalidSeatPosition -> "INVALID_SEAT_POSITION"
+    DuplicateSeatPosition -> "DUPLICATE_SEAT_POSITION"
+    DuplicateSeatLabel -> "DUPLICATE_SEAT_LABEL"
+    InvalidSeatLayoutDimensions -> "INVALID_SEAT_LAYOUT_DIMENSIONS"
+    InvalidSleeperSeatPosition -> "INVALID_SLEEPER_SEAT_POSITION"
+  toHttpCode = \case
+    SeatLayoutNotFound -> E400
+    SeatLayoutAlreadyExists -> E409
+    SeatLayoutInUseCannotModify -> E409
+    InvalidSeatPosition -> E400
+    DuplicateSeatPosition -> E400
+    DuplicateSeatLabel -> E400
+    InvalidSeatLayoutDimensions -> E400
+    InvalidSleeperSeatPosition -> E400
+
+instance IsAPIError SeatLayoutError
