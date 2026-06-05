@@ -120,6 +120,7 @@ module SharedLogic.Finance.RidePayment
     createRefundRaisedLedger,
     createRefundSucceededLedger,
     refundSucceededAlreadyRecorded,
+    voidRefundRaisedLedger,
     createPendingCancellationFeeLedger,
     markCancellationFeeInvoicePaid,
     voidRideInvoice,
@@ -901,9 +902,9 @@ createTipLedger ctx tipAmount = do
 -- 5. Refund ledger entries
 -- ---------------------------------------------------------------------------
 --
--- SETTLED entries on each status transition: APPROVED = BuyerAsset → OwnerLiability,
--- REFUNDED = OwnerLiability → BuyerAsset. Both share refType "RideRefund" + referenceId =
--- rideId; metadata {refundRequestId, refundRequestStatus} dedups across sibling refunds.
+-- Per refund_request (refType "RideRefund", ref = rideId, {refundRequestId,status} metadata):
+-- APPROVED → pending OwnerAsset→BuyerAsset; REFUNDED → settle it; FAILED → void it.
+-- VOIDED legs are ignored by dedup/guards (so a retry re-raises); "done" = a SETTLED leg.
 
 mkRefundMetadata :: Id DRefundRequest.RefundRequest -> DRefundRequest.RefundRequestStatus -> Aeson.Value
 mkRefundMetadata refundRequestId refundRequestStatus =
@@ -921,16 +922,17 @@ createRefundRaisedLedger ::
   m (Either FinanceError [Id LE.LedgerEntry])
 createRefundRaisedLedger ctx refundRequestId refundAmount = do
   existing <- getEntriesByReference ridePaymentRefRideRefund ctx.referenceId
-  case List.find (entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED) existing of
+  -- Skip VOIDED legs so a retry re-raises a fresh pending leg; a live leg de-dups a re-fire.
+  case List.find (\e -> e.status /= LE.VOIDED && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing of
     Just e -> do
       logInfo $ "Refund APPROVED ledger already written for refundRequest " <> refundRequestId.getId
       pure $ Right [e.id]
     Nothing -> do
       result <-
         runFinance ctx $
-          transferWithMetadata
+          transferPendingWithMetadata
+            OwnerAsset
             BuyerAsset
-            OwnerLiability
             refundAmount
             ridePaymentRefRideRefund
             (Just (mkRefundMetadata refundRequestId DRefundRequest.APPROVED))
@@ -944,32 +946,17 @@ createRefundSucceededLedger ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   FinanceCtx ->
   Id DRefundRequest.RefundRequest ->
-  HighPrecMoney ->
   m (Either FinanceError [Id LE.LedgerEntry])
-createRefundSucceededLedger ctx refundRequestId refundAmount = do
+createRefundSucceededLedger ctx refundRequestId = do
   existing <- getEntriesByReference ridePaymentRefRideRefund ctx.referenceId
-  case List.find (entryMatchesRefundStatus refundRequestId DRefundRequest.REFUNDED) existing of
-    Just e -> do
-      logInfo $ "Refund REFUNDED ledger already written for refundRequest " <> refundRequestId.getId
-      pure $ Right [e.id]
-    Nothing -> do
-      result <-
-        runFinance ctx $
-          transferWithMetadata
-            OwnerLiability
-            BuyerAsset
-            refundAmount
-            ridePaymentRefRideRefund
-            (Just (mkRefundMetadata refundRequestId DRefundRequest.REFUNDED))
-      case result of
-        Left err -> do
-          logError $ "Failed to create refund REFUNDED ledger: " <> show err
-          pure $ Left err
-        Right (_, entryIds) -> pure $ Right entryIds
+  let approvedEntries = filter (entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED) existing
+      pendingApproved = filter (\e -> e.status == LE.PENDING) approvedEntries
+  -- Settle the pending APPROVED leg in place — no reverse entry. Idempotent (settleEntry no-ops if settled).
+  forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.settleEntry e.id
+  pure $ Right (map (\e -> e.id) approvedEntries)
 
--- | True once this refund's REFUNDED ledger entry exists — the authoritative
---   "already processed" signal. Gates the one-shot REFUNDED side-effects (ledger,
---   cumulative invoice, BPP call) against re-fires of the status-refresh hooks.
+-- | True once this refund's APPROVED leg is SETTLED — the "success already done" signal that
+--   gates the one-shot REFUNDED side-effects (settle, invoice, BPP call) against hook re-fires.
 refundSucceededAlreadyRecorded ::
   (BeamFlow.BeamFlow m r) =>
   Text -> -- rideId
@@ -977,7 +964,20 @@ refundSucceededAlreadyRecorded ::
   m Bool
 refundSucceededAlreadyRecorded rideId refundRequestId = do
   existing <- getEntriesByReference ridePaymentRefRideRefund rideId
-  pure $ any (entryMatchesRefundStatus refundRequestId DRefundRequest.REFUNDED) existing
+  pure $ any (\e -> e.status == LE.SETTLED && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing
+
+-- | On FAILED, void this refund's pending APPROVED leg(s) — the raised obligation never
+--   materialized. Only PENDING legs → idempotent.
+voidRefundRaisedLedger ::
+  (BeamFlow.BeamFlow m r) =>
+  Text -> -- rideId
+  Id DRefundRequest.RefundRequest ->
+  m ()
+voidRefundRaisedLedger rideId refundRequestId = do
+  existing <- getEntriesByReference ridePaymentRefRideRefund rideId
+  let pendingApproved =
+        filter (\e -> e.status == LE.PENDING && entryMatchesRefundStatus refundRequestId DRefundRequest.APPROVED e) existing
+  forM_ pendingApproved $ \e -> Lib.Finance.Ledger.Service.voidEntry e.id "RefundFailed"
 
 -- | Create PENDING Leg-1 ledger entries + RideCancellation invoice for a
 --   cancellation fee. Call 'markCancellationFeeInvoicePaid' on success or
