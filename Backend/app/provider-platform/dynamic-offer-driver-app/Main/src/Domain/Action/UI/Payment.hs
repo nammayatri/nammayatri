@@ -75,6 +75,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance
   ( AccountRole (OwnerLiability, PlatformAsset),
     InvoiceConfig (..),
@@ -110,11 +111,11 @@ import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.Payment as SPayment
 import Storage.Beam.Webhook ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverGstin as QDG
 import qualified Storage.Queries.DriverInformation as QDI
@@ -136,7 +137,6 @@ import Tools.Error
 import Tools.Notifications
 import qualified Tools.Payment as Payment
 import qualified Tools.PaymentNudge as PaymentNudge
-import Utils.Common.Cac.KeyNameConstants
 
 -- create order -----------------------------------------------------
 createOrder :: (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id INV.Invoice -> Flow Payment.CreateOrderResp
@@ -593,7 +593,7 @@ processPayment ::
   [INV.Invoice] ->
   m ()
 processPayment merchantId driver orderId sendNotification (serviceName, subsConfig) invoices = do
-  transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let mbInvoice = listToMaybe invoices
   let driverFeeIds = (.driverFeeId) <$> invoices
@@ -655,7 +655,7 @@ processSubscriptionPurchasePayment merchantId person subscriptionPurchase = do
         now <- getCurrentTime
         currency <- SMerchant.getCurrencyByMerchantOpCity latestPurchase.merchantOperatingCityId
         plan <- QPlan.findByPrimaryKey latestPurchase.planId >>= fromMaybeM (PlanNotFound latestPurchase.planId.getId)
-        transporterConfig <- SCTC.findByMerchantOpCityId latestPurchase.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = latestPurchase.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound latestPurchase.merchantOperatingCityId.getId)
         let (_platformFee, cgst, sgst) = SLDriverFee.calculatePlatformFeeAttr latestPurchase.planFee plan
             creditAmount = latestPurchase.planRideCredit
             paidAmount = latestPurchase.planFee
@@ -796,7 +796,7 @@ updatePrepaidBalanceAndExpiry merchantId person driverFee = do
   let paidAmount = driverFee.platformFee.fee + driverFee.platformFee.cgst + driverFee.platformFee.sgst
   let referenceId = fromMaybe driverFee.id.getId ((.getId) <$> driverFee.planId)
   mbPanCard <- QPanCard.findByDriverId person.id
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOperatingCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist person.merchantOperatingCityId.getId)
   let totalGst = driverFee.platformFee.cgst + driverFee.platformFee.sgst
@@ -1001,7 +1001,7 @@ processNotification merchantOpCityId notification notificationStatus respCode re
   let driverFeeId = driverFee.id
   now <- getCurrentTime
   unless (notification.status == Juspay.SUCCESS) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = driver.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
     case notificationStatus of
       Juspay.NOTIFICATION_FAILURE -> do
         --- here based on notification status failed update driver fee to payment_overdue and reccuring invoice----

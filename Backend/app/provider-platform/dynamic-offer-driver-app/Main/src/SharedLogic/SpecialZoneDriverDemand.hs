@@ -79,6 +79,7 @@ import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.GateInfo.Geometry (CachedGateForProximity (..), isPointInOrNearGate, parseGatePolygons)
 import qualified Lib.Queries.GateInfo as QGI
@@ -92,8 +93,8 @@ import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.FarePolicy as CQFP
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDI
 import qualified Storage.Queries.FareProduct as QFareProduct
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
@@ -255,7 +256,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           representativeDuration = Seconds representativeAirportRideDurationSec
       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
       distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
-      mbTransporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       now <- getCurrentTime
       fareParams <-
         SFC.calculateFareParameters
@@ -1234,7 +1235,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
       stalenessThreshold <-
         case targetGate.merchantOperatingCityId of
           Just mocId ->
-            CTC.findByMerchantOpCityId (cast mocId :: Id DMOC.MerchantOperatingCity) Nothing
+            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId})
               <&> maybe
                 driverLocationStalenessThresholdSecondsDefault
                 (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))

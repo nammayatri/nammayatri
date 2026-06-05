@@ -44,9 +44,10 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
-import qualified Storage.Cac.TransporterConfig as CQTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverLicenseExtra as QDLE
 import qualified Storage.Queries.Person as PersonQuery
@@ -67,7 +68,7 @@ pullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
   person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
   transporterConfig <-
-    CQTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do
@@ -257,11 +258,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   logInfo $ "PullDocument - Using vehicle category from session: " <> show vehicleCategory
 
   documentVerificationConfig <-
-    CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory
-      person.merchantOperatingCityId
-      DVC.DriverLicense
-      vehicleCategory
-      Nothing
+    getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DVC.DriverLicense, vehicleCategory = Just vehicleCategory})
       >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DVC.DriverLicense <> " for category " <> show vehicleCategory))
 
   logInfo $ "PullDocument - Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory

@@ -27,10 +27,11 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMM
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.Ride as QRide
@@ -128,7 +129,7 @@ customerCancellationDuesSync merchantId merchantCity apiKey req = do
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
   merchantOperatingCity <- CQMM.findByMerchantIdAndCity merchantId merchantCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show merchantCity)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOperatingCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCity.id.getId)
   mbRide <- QRide.findById (Id req.bppRideId)
   Kernel.Prelude.whenJust mbRide $ \ride -> do
     mbBooking <- QBooking.findById ride.bookingId

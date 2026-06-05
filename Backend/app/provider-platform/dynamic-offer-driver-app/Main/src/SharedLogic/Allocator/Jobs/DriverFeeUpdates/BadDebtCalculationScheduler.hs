@@ -7,11 +7,12 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.DriverFee as QDF
 
 badDebtCalculation ::
@@ -30,7 +31,7 @@ badDebtCalculation Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   let jobData = jobInfo.jobData
       merchantId = jobData.merchantId
       opCityId = jobData.merchantOperatingCityId
-  transporterConfig <- SCTC.findByMerchantOpCityId opCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantId.getId)
   driverFeesToUpdate <- B.runInReplica $ QDF.findAllDriverFeesRequiredToMovedIntoBadDebt merchantId transporterConfig
   void $ QDF.updateBadDebtDateAllDriverFeeIds merchantId (driverFeesToUpdate <&> (.id)) transporterConfig
   if null driverFeesToUpdate

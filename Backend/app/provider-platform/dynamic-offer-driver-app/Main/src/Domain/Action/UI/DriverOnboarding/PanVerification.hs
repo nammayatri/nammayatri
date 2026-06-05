@@ -61,11 +61,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
-import qualified Storage.Cac.TransporterConfig as SCTC
-import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -75,7 +76,6 @@ import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
-import Utils.Common.Cac.KeyNameConstants
 
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
@@ -115,7 +115,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
-  transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -131,7 +131,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     _ -> pure ()
 
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbPanVerificationService =
         (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
@@ -178,7 +178,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   where
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
-      documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.PanCard CAR Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
+      documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq
@@ -459,9 +459,9 @@ shouldTriggerPanAadhaarLinkage ::
   Maybe DPan.PanType ->
   Text ->
   Flow Bool
-shouldTriggerPanAadhaarLinkage person merchantOpCityId docType panNumber = do
+shouldTriggerPanAadhaarLinkage _ merchantOpCityId docType panNumber = do
   transporterConfig <-
-    SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast person.id)))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
       isBusiness = docType == Just DPan.BUSINESS || DVRC.isBusinessPan (Just panNumber)

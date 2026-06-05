@@ -41,6 +41,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
@@ -52,12 +53,12 @@ import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.Type as SLT
-import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
-import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverQuote as QDQuote
 import qualified Storage.Queries.Location as QLoc
@@ -68,7 +69,6 @@ import qualified Storage.Queries.SearchTry as QST
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
-import Utils.Common.CacUtils
 
 data FulfillmentId = QuoteId (Id DQ.Quote) | DriverQuoteId (Id DDQ.DriverQuote)
 
@@ -194,7 +194,7 @@ handler merchantId req validatedReq = do
     let lat = searchRequest.fromLocation.lat
         lon = searchRequest.fromLocation.lon
         merchantOpCityId = searchRequest.merchantOperatingCityId
-    transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DemandHotspots.updateDemandHotspotsOnBooking searchRequest.id merchantOpCityId transporterConfig (Maps.LatLong lat lon)
   let paymentMethodInfo = req.paymentMethodInfo
       bppSubscriberId = req.bppSubscriberId
@@ -367,8 +367,8 @@ handler merchantId req validatedReq = do
       pure (mbPaymentMethod, Nothing) -- TODO : Remove paymentUrl from here altogether
 
 findRandomExophone :: (CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> DSR.SearchRequest -> DExophone.ExophoneType -> m DExophone.Exophone
-findRandomExophone merchantOpCityId sr exoType = do
-  merchantServiceUsageConfig <- CMSUC.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id sr.transactionId))) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+findRandomExophone merchantOpCityId _ exoType = do
+  merchantServiceUsageConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   exophones <- CQExophone.findByMerchantOpCityIdServiceAndExophoneType merchantOpCityId merchantServiceUsageConfig.getExophone exoType
   nonEmptyExophones <- case exophones of
     [] -> throwError $ ExophoneNotFound merchantOpCityId.getId

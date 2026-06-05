@@ -34,16 +34,17 @@ import qualified Lib.BehaviorEngine.Orchestrator as BEOrch
 import qualified Lib.BehaviorTracker.Recorder as BTRecorder
 import qualified Lib.BehaviorTracker.Snapshot as BTSnap
 import qualified Lib.BehaviorTracker.Types as BTT
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.ConsequenceDispatcher as BehaviorDispatch
 import SharedLogic.BehaviourManagement.IssueBreach (IssueBreachType (..))
 import qualified SharedLogic.BehaviourManagement.IssueBreachMitigation as IBM
 import SharedLogic.DriverOnboarding
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -52,7 +53,6 @@ import qualified Storage.Queries.Ride as QRide
 import Tools.DynamicLogic (getAppDynamicLogic)
 import Tools.Error
 import qualified Tools.Notifications as Notify
-import Utils.Common.Cac.KeyNameConstants
 
 reportIssue :: Id Ride -> ICommon.IssueReportType -> Maybe Text -> Flow APISuccess
 reportIssue rideId issueType apiKey = do
@@ -82,7 +82,7 @@ handleTollRelatedIssue ride = do
   -- Keep DB counter for backward compat
   void $ QDI.updateTollRelatedIssueCount (Just tollRelatedIssueCount) ride.driverId
   -- Framework pipeline
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let counterConfig = BTT.CounterConfig {windowSizeDays = 30, counters = [BTT.ACTION_COUNT], periods = [BTT.mkPeriodConfig "window" 30]}
   -- Increment Redis counter for visibility
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "TOLL_RELATED_ISSUE" BTT.ACTION_COUNT
@@ -102,7 +102,7 @@ handleTollRelatedIssue ride = do
 handleExtraFareMitigation :: Ride -> ServiceTierType -> Flow ()
 handleExtraFareMitigation ride serviceTierType = do
   driverInfo <- QDI.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let ibConfig = IBM.getIssueBreachConfig EXTRA_FARE_MITIGATION transporterConfig
   let allowedSTiers = ibConfig <&> (.ibAllowedServiceTiers)
   let isRideAllowedForCounting = maybe False (\allowedServiceTiers -> null allowedServiceTiers || serviceTierType `elem` allowedServiceTiers) allowedSTiers
@@ -149,7 +149,7 @@ handleDrunkAndDriveViolation ride = do
   -- Keep DB counter for backward compat
   void $ QDI.updateDrunkAndDriveViolationCount (Just drunkAndDriveViolationCount) ride.driverId
   -- Framework pipeline
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
   -- Increment Redis counter for visibility
   BTRecorder.incrementCounterOnly counterConfig BTT.DRIVER ride.driverId.getId "DRUNK_AND_DRIVE" BTT.ACTION_COUNT
@@ -180,7 +180,7 @@ handleDrunkAndDriveViolation ride = do
 
 handleAcRestriction :: Ride -> DI.DriverInformation -> Flow ()
 handleAcRestriction ride driverInfo = do
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId (Just (DriverId (cast ride.driverId))) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   let airConditionScore = fromMaybe 0 driverInfo.airConditionScore
       counterConfig = BTT.CounterConfig {windowSizeDays = 365, counters = [BTT.ACTION_COUNT], periods = []}
   -- Increment Redis counter for visibility

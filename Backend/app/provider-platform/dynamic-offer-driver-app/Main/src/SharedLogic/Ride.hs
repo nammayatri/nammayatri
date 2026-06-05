@@ -48,6 +48,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import qualified Lib.Payment.Domain.Types.PayoutRequest as DPR
@@ -61,11 +62,11 @@ import qualified SharedLogic.FareCalculator as FC
 import qualified SharedLogic.FarePolicy as SFP
 import SharedLogic.Finance.Prepaid
 import qualified SharedLogic.ScheduledNotifications as SN
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
-import qualified Storage.CachedQueries.RideRelatedNotificationConfig as SCRRNC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverInformation as QDI
@@ -103,7 +104,7 @@ initializeRide ::
 initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates mbClientId enableOtpLessRide mFleetOwnerId = do
   let merchantId = merchant.id
       isPrepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled
-  transporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
   when isPrepaidSubscriptionAndWalletEnabled $ do
     let (counterpartyType, ownerId) = case mFleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
@@ -220,7 +221,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
           ]
 
     notifyRideRelatedNotificationOnEvent ride now timeDiffEvent = do
-      rideRelatedNotificationConfigList <- SCRRNC.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId timeDiffEvent booking.configInExperimentVersions
+      rideRelatedNotificationConfigList <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, timeDiffEvent = Just timeDiffEvent})
       forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driver.id)
 
 recomputeRideFinancialsForFareUpdate ::
@@ -269,7 +270,7 @@ releaseLien booking ride = do
     let (counterpartyType, ownerId) = case ride.fleetOwnerId of
           Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
           Nothing -> (counterpartyDriver, ride.driverId.getId)
-    mbTransporterConfig <- SCTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing
+    mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
     let vehicleCategoryScopedPrepaidEnabled = fromMaybe False $ mbTransporterConfig >>= (.subscriptionConfig.vehicleCategoryScopedPrepaidEnabled)
         mbVehicleCategory = if vehicleCategoryScopedPrepaidEnabled then Just (castServiceTierToVehicleCategory booking.vehicleServiceTier) else Nothing
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ownerId) 10 10 $ do
@@ -592,7 +593,7 @@ deactivateExistingQuotes merchantOpCityId merchantId quoteDriverId searchTryId e
   QSRD.setInactiveBySTId searchTryId
   transporterConfig <- case mbTransporterConfig of
     Just transporterConfig -> pure transporterConfig
-    Nothing -> SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pullExistingRideRequests merchantOpCityId driverSearchReqs merchantId quoteDriverId estimatedFare transporterConfig
   return driverSearchReqs
 

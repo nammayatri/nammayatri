@@ -30,6 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as LibPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.Common as LibPayment
@@ -37,8 +38,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.Payment
 import Storage.Beam.Payment ()
-import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.StclMembership as QStclMembership
 import Tools.Auth
@@ -235,7 +236,7 @@ postBuyAdditionalShares (mbDriverId, merchantId, merchantOperatingCityId) req = 
 
   -- Per-MOC tunables, with module-level defaults if stclConfig (or any inner field) is unset.
   transporterConfig <-
-    SCT.findByMerchantOpCityId merchantOperatingCityId (Just (CCK.DriverId (cast driverId)))
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
       >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   let stclCfg = transporterConfig.stclConfig
       maxSharesPerDriver = fromMaybe defaultMaxSharesPerDriver (stclCfg >>= (.maxSharesPerDriver))

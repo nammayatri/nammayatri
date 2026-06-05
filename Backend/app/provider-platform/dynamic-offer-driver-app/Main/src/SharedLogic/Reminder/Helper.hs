@@ -51,19 +51,20 @@ import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, generateGUID, getCurrentTime)
 import Kernel.Utils.Logging (logInfo)
+import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as CCT
+import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DocumentReminderHistory as QDRH
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRCAExtra
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RCStatsExtra as QRCStats
 import qualified Storage.Queries.Reminder as QReminder
-import qualified Storage.Queries.ReminderConfig as QReminderConfig
 
 -- ============================================================================
 -- Helper functions for common patterns
@@ -102,10 +103,10 @@ getReminderConfigIfEnabled driverId merchantOpCityId documentType = do
   mbPerson <- QPerson.findById driverId
   case mbPerson of
     Just person | person.role == DP.DRIVER -> do
-      mbTransporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       case mbTransporterConfig >>= (.reminderSystemEnabled) of
         Just True -> do
-          mbReminderConfig <- QReminderConfig.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType
+          mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType})
           case mbReminderConfig of
             Just config | config.enabled -> pure $ Just config
             _ -> pure Nothing
@@ -497,7 +498,7 @@ checkAndCreateRemindersForRidesThreshold ::
   m ()
 checkAndCreateRemindersForRidesThreshold driverId driverRideCount mbRCAssoc mbRCRideCount merchantOperatingCityId providerId = do
   -- Get all reminder configs that have ridesThreshold configured
-  allReminderConfigs <- QReminderConfig.findAllByMerchantOpCityId merchantOperatingCityId
+  allReminderConfigs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing})
   let ridesThresholdDocumentTypes =
         List.map (.documentType) $
           filter

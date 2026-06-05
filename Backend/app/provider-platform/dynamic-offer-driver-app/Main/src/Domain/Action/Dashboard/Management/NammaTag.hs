@@ -76,6 +76,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.BehaviorEngine.Types as BET
 import qualified Lib.BehaviorTracker.Types as BTT
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
@@ -100,9 +101,9 @@ import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
 import SharedLogic.UserCancellationDues
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.UiDriverConfig as QUiConfig
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.UiDriverConfig as SQU
 import qualified Tools.ConfigPilot as TC
 import qualified Tools.DynamicLogic as TDL
@@ -286,7 +287,7 @@ postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merch
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let mbMerchantId = Just $ cast merchant.id
   case req.domain of
     LYT.POOLING -> do

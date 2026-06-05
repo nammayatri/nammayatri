@@ -52,11 +52,12 @@ import qualified Kernel.Types.Id
 import Kernel.Types.Predicate (MaxLength (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Storage.Beam.IssueManagement ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Communication as QComm
 import qualified Storage.Queries.CommunicationDelivery as QDelivery
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
@@ -431,7 +432,7 @@ personMatchesSearch p s =
 
 validateChannelLimits :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DMOC.MerchantOperatingCity -> [DComm.ChannelType] -> Text -> Text -> m ()
 validateChannelLimits merchantOpCityId channels title body = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   whenJust transporterConfig.communicationChannelCharLimits $ \limits ->
     runRequestValidation (buildChecks limits) (title, body)
   where

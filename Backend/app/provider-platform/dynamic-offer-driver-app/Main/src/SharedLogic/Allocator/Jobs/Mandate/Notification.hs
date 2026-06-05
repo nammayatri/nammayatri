@@ -25,16 +25,17 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id, cast)
 import Kernel.Utils.Common
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as APayments
 import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.DriverFee (changeAutoPayFeesAndInvoicesForDriverFeesToManual, jobDuplicationPreventionKey, roundToHalf, setIsNotificationSchedulerRunningKey)
 import Storage.Beam.SchedulerJob ()
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QINV
@@ -72,7 +73,7 @@ sendPDNNotificationToDriver Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
     setIsNotificationSchedulerRunningKey startTime endTime merchantOpCityId serviceName True
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     subscriptionConfig <-
       CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
         >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)

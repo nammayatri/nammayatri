@@ -31,8 +31,9 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
+import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 
 generateAadhaarOtp ::
@@ -60,7 +61,7 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func _merchantId merchantOpCityId req = do
   merchantServiceUsageConfig <-
-    CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   merchantServiceConfig <-
     CQMSC.findByServiceAndCity (DMSC.AadhaarVerificationService merchantServiceUsageConfig.aadhaarVerificationService) merchantOpCityId
