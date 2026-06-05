@@ -14,11 +14,11 @@
 
 module SharedLogic.Pricing where
 
-import Control.Applicative ((<|>))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map.Strict as Map
-import Data.Text as T hiding (elem, find, length, null, zip)
+import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time hiding (getCurrentTime)
+import qualified Database.Redis as Redis
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -135,11 +135,23 @@ geoAddDynamicPricingCounter mkDistBinKey mkVehCatKey mkCityKey time vehicleCateg
       void $ Hedis.geoAdd key [(ln, lt, mem)]
       void $ Hedis.expire key 3600
 
--- Batched geoSearch via bulkShardedRedisBatch: groups keys by cluster slot
--- (the '{vehicleCategory}' hash tag ensures all keys for the same category
--- land on one slot) and returns the count of members within the radius for
--- each key. This avoids parsing individual member names — only 'length' is
--- used on the raw ByteString list returned by geoSearch.
+-- Counts in-radius members for many keys in a SINGLE pipelined round-trip.
+--
+-- GEOSEARCH is a single-key command, so there is no multi-key form to batch
+-- (unlike MGET) — but all keys for one call share the '{vehicleCategory}' hash
+-- tag, hence one cluster slot. We therefore issue every GEOSEARCH inside ONE
+-- 'runHedisEither' block: hedis auto-pipelines commands within a single Redis
+-- monad action, so the whole batch costs one TCP round-trip to the owning node
+-- instead of N sequential ones (the previous 'bulkShardedRedisBatch' wrapped
+-- each geoSearch in its own 'withCrossAppRedis', so it neither pipelined nor —
+-- with all keys on one slot — gained any parallelism, and it scrambled order).
+--
+-- Returns the in-radius count for each key, positionally aligned with the input
+-- list (result[i] is the count for keys[i]) — callers index by position, so the
+-- keys themselves aren't echoed back. Member names are not parsed — only 'length'
+-- of the raw reply is used. On any reply/connection error the whole batch degrades
+-- to zero counts (mirrors 'Hedis.geoSearch').
+-- PRECONDITION: all keys must hash to the same cluster slot.
 batchGeoSearchCounts ::
   (MonadFlow m, CacheFlow m r) =>
   [Text] ->
@@ -220,18 +232,6 @@ getActualQAR now vehicleCategory location radius distance cityId = do
 
     bothJust (mbCur, mbPast) = isJust mbCur && isJust mbPast
 
-    -- Logs each demand/acceptance Redis key alongside the count fetched for it,
-    -- so a QAR value can be traced back to the exact buckets it was computed from.
-    logQARCounts keys cs =
-      logDebug $
-        "QAR_COUNTS: vehicleCategory=" <> show vehicleCategory
-          <> " cityId="
-          <> cityId
-          <> " radius="
-          <> show radius
-          <> " keyCounts="
-          <> show (zip keys cs)
-
     -- Fetch only the signal(s) still missing at this level and fill them in; a value
     -- already found at a finer level is preserved untouched. 'demAt'/'accAt' build a
     -- level's demand/acceptance key for a time bucket; 'fetch' returns counts aligned
@@ -240,19 +240,13 @@ getActualQAR now vehicleCategory location radius distance cityId = do
       case (isNothing mbCur, isNothing mbPast) of
         (False, False) -> pure (mbCur, mbPast)
         (True, False) -> do
-          let keys = [demAt timeN, demAt timeN_1, accAt timeN, accAt timeN_1]
-          cs <- fetch keys
-          logQARCounts keys cs
+          cs <- fetch [demAt timeN, demAt timeN_1, accAt timeN, accAt timeN_1]
           pure (currentOf cs, mbPast)
         (False, True) -> do
-          let keys = [demAt timeN_1, demAt timeN_2, accAt timeN_1, accAt timeN_2]
-          cs <- fetch keys
-          logQARCounts keys cs
+          cs <- fetch [demAt timeN_1, demAt timeN_2, accAt timeN_1, accAt timeN_2]
           pure (mbCur, pastOf cs)
         (True, True) -> do
-          let keys = [demAt timeN, demAt timeN_1, demAt timeN_2, accAt timeN, accAt timeN_1, accAt timeN_2]
-          cs <- fetch keys
-          logQARCounts keys cs
+          cs <- fetch [demAt timeN, demAt timeN_1, demAt timeN_2, accAt timeN, accAt timeN_1, accAt timeN_2]
           pure (toQAR cs)
       where
         currentOf cs = case cs of
@@ -272,18 +266,3 @@ getActualQAR now vehicleCategory location radius distance cityId = do
     computeQAR demandCount acceptanceCount
       | demandCount > 4 = Just (fromIntegral acceptanceCount / fromIntegral demandCount)
       | otherwise = Nothing
-
-    getCityLevelQAR timeN timeN_1 timeN_2 vc cid = do
-      let demCityN = mkDemandVehicleCategoryCity timeN vc cid
-          demCityN_1 = mkDemandVehicleCategoryCity timeN_1 vc cid
-          demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vc cid
-          accCityN = mkAcceptanceVehicleCategoryCity timeN vc cid
-          accCityN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vc cid
-          accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vc cid
-          cityKeys = [demCityN, demCityN_1, demCityN_2, accCityN, accCityN_1, accCityN_2]
-      results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int cityKeys
-      let resultsMap = Map.fromList results
-          c k = fromMaybe 0 (Map.lookup k resultsMap)
-          cityCurrent = computeQAR (c demCityN + c demCityN_1) (c accCityN + c accCityN_1)
-          cityPast = computeQAR (c demCityN_1 + c demCityN_2) (c accCityN_1 + c accCityN_2)
-      return (cityCurrent, cityPast)
