@@ -1819,7 +1819,7 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
           createJobIn @_ @'DailyPassStatusUpdate (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Just Common.PassExpiryReminderMasterTrigger -> do
-          let jobData = PassExpiryReminderMasterJobData {cursor = Nothing}
+          let jobData = PassExpiryReminderMasterJobData {cursor = Just 0}
           createJobIn @_ @'PassExpiryReminderMaster (Just merchant.id) (Just merchantOpCity.id) diffTimeS jobData
           pure Success
         Nothing -> throwError $ InternalError "invalid job name"
