@@ -210,7 +210,8 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
         now <- getCurrentTime
         let geohash = fromMaybe (fromMaybe "" $ T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (fromlocaton.lat, fromlocaton.lon)) mbFromLocGeohash
             vehicleCategories = map (\(_, mbItem) -> maybe Nothing (.vehicleCategory) mbItem) resolvedFareProducts
-        buildDynamicPricingInputs now geohash mbToLocGeohash distance.getMeters merchantOpCityId.getId vehicleCategories
+            qarRadius = fromMaybe 5.0 transporterConfig.qarCalRadiusInKm
+        buildDynamicPricingInputs now fromlocaton qarRadius geohash mbToLocGeohash distance.getMeters merchantOpCityId.getId vehicleCategories
       _ -> pure []
   farePolicies <- catMaybes <$> mapConcurrently (\(fareProduct, mbVehicleServiceTierItem) -> getFullFarePolicy (Just fromlocaton) mbToLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDuration txnId Nothing baseVariantFareAmountCar mbAppDynamicLogicVersion allFareProducts.specialLocationName ((.getId) <$> mbFromSpecialLocationId) fareProduct configsInExperimentVersions dpInputsList (Just transporterConfig) (Just mbVehicleServiceTierItem)) resolvedFareProducts
   return $
@@ -975,67 +976,6 @@ getCongestionMultiplier geohash distanceBin cityId = do
       ]
   return (congestionMultiplier, congestionMultiplierPast)
 
--- | Quote-Acceptance-Ratio (acceptance / demand) over a sliding pair of 15-min
--- time buckets, computed from atomic INCR counters. All geohash-level keys
--- share a '{geohash}' cluster hash tag, so the four key families (demand /
--- acceptance, distance-binned / not) across the three buckets are fetched in a
--- single 'mGetCluster'. The hierarchy geohash+distanceBin -> geohash -> city is
--- applied in memory; the city level (a separate slot) is only fetched when both
--- the current and past QAR are still missing. current = buckets N + N-1,
--- past = buckets N-1 + N-2; a level contributes only when its demand count > 4.
-getActualQAR ::
-  (MonadFlow m, CacheFlow m r) =>
-  UTCTime ->
-  Maybe DVC.VehicleCategory ->
-  Text ->
-  Int ->
-  Text ->
-  m (Maybe Double, Maybe Double)
-getActualQAR now vehicleCategory geohash distance cityId = do
-  let timeN = now
-      timeN_1 = addUTCTime (-900) now
-      timeN_2 = addUTCTime (-1800) now
-      mbDistance = Just distance
-      demDistN = mkDemandGeohashCounter timeN vehicleCategory geohash mbDistance
-      demDistN_1 = mkDemandGeohashCounter timeN_1 vehicleCategory geohash mbDistance
-      demDistN_2 = mkDemandGeohashCounter timeN_2 vehicleCategory geohash mbDistance
-      accDistN = mkAcceptanceGeohashCounter timeN vehicleCategory geohash mbDistance
-      accDistN_1 = mkAcceptanceGeohashCounter timeN_1 vehicleCategory geohash mbDistance
-      accDistN_2 = mkAcceptanceGeohashCounter timeN_2 vehicleCategory geohash mbDistance
-      demGhN = mkDemandGeohashCounter timeN vehicleCategory geohash Nothing
-      demGhN_1 = mkDemandGeohashCounter timeN_1 vehicleCategory geohash Nothing
-      demGhN_2 = mkDemandGeohashCounter timeN_2 vehicleCategory geohash Nothing
-      accGhN = mkAcceptanceGeohashCounter timeN vehicleCategory geohash Nothing
-      accGhN_1 = mkAcceptanceGeohashCounter timeN_1 vehicleCategory geohash Nothing
-      accGhN_2 = mkAcceptanceGeohashCounter timeN_2 vehicleCategory geohash Nothing
-      geohashKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demGhN, demGhN_1, demGhN_2, accGhN, accGhN_1, accGhN_2]
-  geohashCounts <- HM.fromList <$> Hedis.withCrossAppRedis (Hedis.mGetClusterWithKeys @Int geohashKeys)
-  let cnt counts key = HM.lookupDefault 0 key counts
-      qar counts demKeys accKeys =
-        let demandCount = sum (map (cnt counts) demKeys)
-            acceptanceCount = sum (map (cnt counts) accKeys)
-         in if demandCount > 4 then Just (fromIntegral acceptanceCount / fromIntegral demandCount) else Nothing
-      distCurrent = qar geohashCounts [demDistN, demDistN_1] [accDistN, accDistN_1]
-      ghCurrent = qar geohashCounts [demGhN, demGhN_1] [accGhN, accGhN_1]
-      distPast = qar geohashCounts [demDistN_1, demDistN_2] [accDistN_1, accDistN_2]
-      ghPast = qar geohashCounts [demGhN_1, demGhN_2] [accGhN_1, accGhN_2]
-      currentQAR = distCurrent <|> ghCurrent
-      pastQAR = distPast <|> ghPast
-  if isJust currentQAR && isJust pastQAR
-    then return (currentQAR, pastQAR)
-    else do
-      let demCityN = mkDemandVehicleCategoryCity timeN vehicleCategory cityId
-          demCityN_1 = mkDemandVehicleCategoryCity timeN_1 vehicleCategory cityId
-          demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vehicleCategory cityId
-          accCityN = mkAcceptanceVehicleCategoryCity timeN vehicleCategory cityId
-          accCityN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vehicleCategory cityId
-          accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vehicleCategory cityId
-          cityKeys = [demCityN, demCityN_1, demCityN_2, accCityN, accCityN_1, accCityN_2]
-      cityCounts <- HM.fromList <$> Hedis.withCrossAppRedis (Hedis.mGetClusterWithKeys @Int cityKeys)
-      let cityCurrent = qar cityCounts [demCityN, demCityN_1] [accCityN, accCityN_1]
-          cityPast = qar cityCounts [demCityN_1, demCityN_2] [accCityN_1, accCityN_2]
-      return (currentQAR <|> cityCurrent, pastQAR <|> cityPast)
-
 -- | All Redis-derived inputs (plus the random toss) that the dynamic-pricing
 -- logic consumes. congestion / rain / toss are independent of vehicleCategory;
 -- QAR and supply-demand are keyed by it. Splitting the fetch this way lets the
@@ -1070,14 +1010,16 @@ fetchSharedDynamicPricingInputs geohash distanceBin cityId = do
 fetchCategoryDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
+  LatLong ->
+  Double ->
   Text ->
   Maybe Text ->
   Int ->
   Text ->
   Maybe DVC.VehicleCategory ->
   m (Maybe Double, Maybe Double, Maybe Double, Maybe Double)
-fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory = do
-  (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory geohash distance cityId
+fetchCategoryDynamicPricingInputs now location radius geohash mbToLocGeohash distance cityId vehicleCategory = do
+  (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory location radius distance cityId
   mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash geohash vehicleCategory
   mbSupplyDemandRatioToLoc <- join <$> traverse (\g -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash g vehicleCategory) mbToLocGeohash
   pure (actualQAR, actualQARPast, mbSupplyDemandRatioFromLoc, mbSupplyDemandRatioToLoc)
@@ -1094,15 +1036,17 @@ mkDynamicPricingInputs (congestionMultiplier, congestionMultiplierPast, mbRainSt
 resolveDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
+  LatLong ->
+  Double ->
   Text ->
   Maybe Text ->
   Int ->
   Text ->
   Maybe DVC.VehicleCategory ->
   m DynamicPricingInputs
-resolveDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory = do
+resolveDynamicPricingInputs now location radius geohash mbToLocGeohash distance cityId vehicleCategory = do
   shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
-  categoryInputs <- fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory
+  categoryInputs <- fetchCategoryDynamicPricingInputs now location radius geohash mbToLocGeohash distance cityId vehicleCategory
   pure $ mkDynamicPricingInputs shared categoryInputs
 
 -- Deduped resolution for a whole search: the shared part is fetched once and
@@ -1111,16 +1055,18 @@ resolveDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCa
 buildDynamicPricingInputs ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
+  LatLong ->
+  Double ->
   Text ->
   Maybe Text ->
   Int ->
   Text ->
   [Maybe DVC.VehicleCategory] ->
   m [(Maybe DVC.VehicleCategory, DynamicPricingInputs)]
-buildDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategories = do
+buildDynamicPricingInputs now location radius geohash mbToLocGeohash distance cityId vehicleCategories = do
   shared <- fetchSharedDynamicPricingInputs geohash (getDistanceBin distance) cityId
   forM (List.nub vehicleCategories) $ \vehicleCategory -> do
-    categoryInputs <- fetchCategoryDynamicPricingInputs now geohash mbToLocGeohash distance cityId vehicleCategory
+    categoryInputs <- fetchCategoryDynamicPricingInputs now location radius geohash mbToLocGeohash distance cityId vehicleCategory
     pure (vehicleCategory, mkDynamicPricingInputs shared categoryInputs)
 
 getCongestionChargeMultiplierFromModel' ::
@@ -1159,7 +1105,7 @@ getCongestionChargeMultiplierFromModel' mbDpInputs timeDiffFromUtc (Just _fromLo
   -- random toss. On the search path these are precomputed once per
   -- vehicleCategory in 'getAllFarePoliciesProduct' and passed in via 'mbDpInputs';
   -- on the single-tier paths we resolve them here for this vehicleCategory.
-  DynamicPricingInputs {..} <- maybe (resolveDynamicPricingInputs now fromLocGeohash toLocGeohash distance merchantOperatingCityId.getId vehicleCategory) pure mbDpInputs
+  DynamicPricingInputs {..} <- maybe (resolveDynamicPricingInputs now _fromLocation (fromMaybe 5.0 _radius') fromLocGeohash toLocGeohash distance merchantOperatingCityId.getId vehicleCategory) pure mbDpInputs
 
   -- 'getActualQAR'/'getCongestionMultiplier' already resolve the
   -- geohash+distanceBin -> geohash -> city hierarchy internally and return the
