@@ -88,6 +88,7 @@ SearchRequest:
     parcelType: Maybe ParcelType
     parcelQuantity: Maybe Int
     preferSafetyPlus: Bool
+    isPetRide: Bool
     isReserveRide: Maybe Bool
     numberOfLuggages: Maybe Int
     paymentMode: Maybe PaymentMode
@@ -111,6 +112,7 @@ SearchRequest:
     customerNammaTags: "Maybe [Text]"
     searchTags: "Maybe [Text]"
     preferSafetyPlus: Maybe Bool
+    isPetRide: Maybe Bool
     userBundleVersion: Maybe Text
     userSdkVersion: Maybe Text
     riderPreferredOption: Maybe RiderPreferredOption
@@ -147,6 +149,7 @@ SearchRequest:
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType
     preferSafetyPlus: Kernel.Prelude.Just|I
+    isPetRide: Kernel.Prelude.Just|I
     userOsType: userClientDevice <&> (.deviceType)|E
     userOsVersion: userClientDevice <&> (.deviceVersion)|E
     userModelName: userClientDevice <&> (.deviceModel)|E
@@ -180,6 +183,7 @@ SearchRequest:
     customerNammaTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     searchTags: Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType
     preferSafetyPlus: fromMaybe False preferSafetyPlus|E
+    isPetRide: fromMaybe False isPetRide|E
     userClientDevice: Kernel.Utils.Version.mkClientDevice userOsType userOsVersion userModelName userManufacturer|E
     userBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userBundleVersion)|EM
     userSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> userSdkVersion)|EM
