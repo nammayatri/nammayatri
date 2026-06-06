@@ -37,7 +37,6 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Servant.Client (withShortRetry)
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Servant hiding (throwError)
