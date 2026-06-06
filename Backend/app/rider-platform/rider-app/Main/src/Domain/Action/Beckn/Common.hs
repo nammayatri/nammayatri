@@ -190,7 +190,8 @@ data RideAssignedReq = RideAssignedReq
     favCount :: Maybe Int,
     fareBreakups :: Maybe [DFareBreakup],
     driverTrackingUrl :: Maybe BaseUrl,
-    isSafetyPlus :: Bool
+    isSafetyPlus :: Bool,
+    bppInvoiceProviderFields :: QRBE.BPPInvoiceProviderFields
   }
 
 data OnlinePaymentParameters = OnlinePaymentParameters
@@ -1556,7 +1557,6 @@ validateRideAssignedReq RideAssignedReq {..} = do
         email <- mapM decrypt person.email
         return $ Just OnlinePaymentParameters {driverAccountId = driverAccountId_, ..}
       else return Nothing
-  let bppInvoiceProviderFields = QRBE.BPPInvoiceProviderFields Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
   return $ ValidatedRideAssignedReq {..}
   where
     isAssignable booking = booking.status `elem` (if booking.isScheduled then [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW, DRB.TRIP_ASSIGNED] else [DRB.CONFIRMED, DRB.AWAITING_REASSIGNMENT, DRB.NEW])

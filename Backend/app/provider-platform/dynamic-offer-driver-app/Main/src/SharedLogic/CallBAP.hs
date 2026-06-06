@@ -118,6 +118,7 @@ import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
 import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
+import qualified SharedLogic.Beckn.Common as SBCommon
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
@@ -125,6 +126,7 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -385,6 +387,14 @@ rideAssignedCommon booking ride driver veh = do
             Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
+  bppInvoiceInfo <-
+    if isValueAddNP
+      then do
+        mbMerchantOpCity <- CQMOC.findById booking.merchantOperatingCityId
+        case mbMerchantOpCity of
+          Just merchantOpCity -> SBCommon.resolveBPPInvoiceInfoForRide merchant merchantOpCity ride.driverId
+          Nothing -> pure SBCommon.emptyBPPInvoiceInfo
+      else pure SBCommon.emptyBPPInvoiceInfo
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text

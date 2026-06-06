@@ -37,6 +37,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Servant.Client.Core as SCC
 import SharedLogic.Search as SLS
+import qualified Storage.Queries.BookingExtra as QRBE
 import Tools.Error
 
 validatePrices :: (MonadThrow m, Log m, Num a, Ord a) => a -> a -> m ()
@@ -162,6 +163,7 @@ parseRideAssignedEvent :: (MonadFlow m, CacheFlow m r) => Spec.Order -> Text -> 
 parseRideAssignedEvent order msgId txnId bppUri = do
   let tagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personTags)
   let tagGroupsFullfillment = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
+  let orderTagGroups = order.orderTags
   let isDriverBirthDay = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_DRIVER_BIRTHDAY tagGroups
       isFreeRide = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_FREE_RIDE tagGroups
       vehicleAge :: Maybe Months = readMaybe . T.unpack =<< getTagV2' Tag.VEHICLE_AGE_INFO Tag.VEHICLE_AGE tagGroupsFullfillment
@@ -172,6 +174,17 @@ parseRideAssignedEvent order msgId txnId bppUri = do
       isAlreadyFav = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_ALREADY_FAVOURITE tagGroups
       isSafetyPlus = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_SAFETY_PLUS tagGroups
       favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
+      bppInvoiceProviderFields =
+        QRBE.BPPInvoiceProviderFields
+          { issuedById = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ID orderTagGroups,
+            issuedByName = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_NAME orderTagGroups,
+            issuedByAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.ISSUED_BY_ADDRESS orderTagGroups,
+            supplierName = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_NAME orderTagGroups,
+            supplierAddress = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ADDRESS orderTagGroups,
+            supplierGSTIN = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_GSTIN orderTagGroups,
+            supplierTaxNo = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_TAX_NO orderTagGroups,
+            supplierId = getTagV2' Tag.BPP_INVOICE_INFO Tag.SUPPLIER_ID orderTagGroups
+          }
   let mbFareBreakupsQuotationBreakup = order.orderQuote >>= (.quotationBreakup)
   let fareBreakups = mbFareBreakupsQuotationBreakup <&> (mapMaybe mkDFareBreakup)
   bookingDetails <- parseBookingDetails order msgId

@@ -1048,12 +1048,16 @@ isRidePaymentSettled rideId = do
 --   includes all original line items plus a Tip line item.
 --   Called after chargePaymentIntent succeeds when tip was folded into the
 --   existing PI (paymentStatus was not Completed when tip was added).
+--   mbIssuedToName / mbIssuedToAddress are fallbacks used when the prior
+--   invoice was created before the customer fields were available.
 regenerateRideTipInvoice ::
   (BeamFlow.BeamFlow m r, MonadFlow m) =>
   Text -> -- rideId
   HighPrecMoney -> -- tipAmount
+  Maybe Text -> -- mbIssuedToName  (fallback)
+  Maybe Text -> -- mbIssuedToAddress (fallback)
   m ()
-regenerateRideTipInvoice rideId tipAmount = do
+regenerateRideTipInvoice rideId tipAmount mbIssuedToName mbIssuedToAddress = do
   rideEntries <- findRidePaymentEntries rideId
   let rideFareEntries = List.filter (\e -> e.referenceType == ridePaymentRefRideFare) rideEntries
   -- Find the RideFare entry linked to an active (Paid/Issued/Draft) invoice.
@@ -1104,8 +1108,8 @@ regenerateRideTipInvoice rideId tipAmount = do
                   paymentOrderId = priorInv.paymentOrderId,
                   issuedToType = priorInv.issuedToType,
                   issuedToId = priorInv.issuedToId,
-                  issuedToName = priorInv.issuedToName,
-                  issuedToAddress = priorInv.issuedToAddress,
+                  issuedToName = priorInv.issuedToName <|> mbIssuedToName,
+                  issuedToAddress = priorInv.issuedToAddress <|> mbIssuedToAddress,
                   issuedByType = priorInv.issuedByType,
                   issuedById = priorInv.issuedById,
                   issuedByName = priorInv.issuedByName,

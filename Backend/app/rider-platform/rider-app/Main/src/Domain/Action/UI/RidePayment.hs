@@ -293,7 +293,9 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
               QRide.updateTipByRideId (Just tipAmount) rideId
               let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
               void $ RidePaymentFinance.createTipLedger tipCtx tipRequest.amount.amount
-              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipRequest.amount.amount
+              let riderName = Text.intercalate " " $ catMaybes [person.firstName, person.middleName, person.lastName]
+                  fromAddr = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
+              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipRequest.amount.amount (if Text.null riderName then Nothing else Just riderName) fromAddr
             else logError $ "Failed to capture tip payment intent: " <> tipPaymentIntentResp.paymentIntentId
       else do
         -- Tip added before payment is captured (NotInitiated or Initiated)
@@ -375,7 +377,9 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                     Just b -> b.discountApplicableRideFareTaxExclusive + b.discountApplicableRideFareTax
                     Nothing -> fareWithTip.amount
               SPayment.zeroEffectivePaymentDueToOffer booking.merchantId booking.merchantOperatingCityId rideId person booking.selectedOfferId fareWithTip.currency discountApplicableFareAmountTaxIncl rideDiscountAmount ledgerInfo booking
-              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+              let riderName = Text.intercalate " " $ catMaybes [person.firstName, person.middleName, person.lastName]
+                  fromAddr = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
+              RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount (if Text.null riderName then Nothing else Just riderName) fromAddr
           Just paymentIntentResp -> do
             -- Create separate PENDING tip ledger entry via dedicated function
             let tipCtx = RidePaymentFinance.buildRiderFinanceCtx booking.merchantId.getId booking.merchantOperatingCityId.getId tipAmount.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
@@ -387,7 +391,9 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
               if paymentCaptured
                 then do
                   QRide.markPaymentStatus Domain.Types.Ride.Completed rideId
-                  RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount
+                  let riderName = Text.intercalate " " $ catMaybes [person.firstName, person.middleName, person.lastName]
+                      fromAddr = listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city]
+                  RidePaymentFinance.regenerateRideTipInvoice rideId.getId tipAmount.amount (if Text.null riderName then Nothing else Just riderName) fromAddr
                 else do
                   QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
                   logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId

@@ -260,11 +260,13 @@ tfAssignedReqToOrder Common.DRideAssignedReq {..} mbFarePolicy becknConfig fulfi
       payment = UtilsOU.mkPaymentParams paymentMethodInfo paymentUrl merchant bppConfig booking
   logDebug $ "currentRideDropLocation: " <> show currentRideDropLocation
   let orderSettlementTags = mkOrderSettlementTags bppConfig merchant
+      invoiceInfoTags = Common.mkBPPInvoiceInfoTagGroup bppInvoiceInfo
+      allOrderTags = Just orderSettlementTags <> invoiceInfoTags
   fulfillment <- Utils.mkFulfillmentV2 (Just driver) (Just driverStats) ride booking (Just vehicle) image tagGroups Nothing isDriverBirthDay isFreeRide driverAccountId (Just $ show fulfillmentState) isValueAddNP riderPhone isAlreadyFav favCount
   pure
     Spec.Order
       { orderId = Just $ booking.id.getId,
-        orderTags = Just orderSettlementTags,
+        orderTags = allOrderTags,
         orderStatus = Just $ show EventEnum.ACTIVE,
         orderFulfillments = Just [fulfillment],
         orderBilling = Nothing,
