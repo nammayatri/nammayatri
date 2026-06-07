@@ -60,6 +60,7 @@ import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Route as QR
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
@@ -69,7 +70,6 @@ import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RideExtra as QRideExtra
-import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV

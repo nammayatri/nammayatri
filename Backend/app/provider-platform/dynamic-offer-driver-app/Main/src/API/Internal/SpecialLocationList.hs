@@ -27,6 +27,7 @@ import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Types.SpecialLocation as SL
 import Servant
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error

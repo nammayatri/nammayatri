@@ -35,6 +35,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.SpecialZoneDriverDemand (mkGateSearchDemandKey, mkQueueSkipCountKey, mkSpecialZoneQueueRequestLockKey)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
 

@@ -96,6 +96,7 @@ import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import qualified SharedLogic.Type as SLT
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.Toll ()
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP

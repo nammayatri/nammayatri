@@ -23,6 +23,7 @@ import qualified Lib.Queries.SpecialLocation
 import qualified Lib.Queries.SpecialLocation as SpecialLocation
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Person as QPerson

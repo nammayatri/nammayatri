@@ -12,13 +12,23 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Lib.Types.GateInfo where
+-- | Hand-written companion to the generated 'Lib.Types.GateInfo'. Holds the API
+--   projection 'GateInfoFull' and the per-variant threshold lookup helpers, which
+--   reference the generated @GateInfo@ record (and therefore cannot live in the
+--   generator's EXTRA_DOMAIN_TYPE_FILE without an import cycle). Re-exports the
+--   generated module so existing call sites can switch a single import.
+module Lib.Types.GateInfoExtra
+  ( module Lib.Types.GateInfoExtra,
+    module Lib.Types.GateInfo,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.Map.Strict as Map
 import Kernel.External.Maps (LatLong)
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.Types.GateInfo
 import Lib.Types.SpecialLocation
 
 data GateInfoFull = GateInfoFull
@@ -34,43 +44,6 @@ data GateInfoFull = GateInfoFull
     gateTags :: Maybe [Text],
     walkDescription :: Maybe Text,
     entryFeeAmount :: Maybe Double,
-    minDriverThresholds :: Maybe (Map.Map Text Int),
-    maxDriverThresholds :: Maybe (Map.Map Text Int),
-    demandThresholds :: Maybe (Map.Map Text Int),
-    defaultMinDriverThreshold :: Maybe Int,
-    defaultMaxDriverThreshold :: Maybe Int,
-    defaultDemandThreshold :: Maybe Int,
-    notificationCooldownInSec :: Maybe Int,
-    maxRideSkipsBeforeQueueRemoval :: Maybe Int,
-    pickupZoneArrivalTimeoutInSec :: Maybe Int,
-    pickupRequestResponseTimeoutInSec :: Maybe Int,
-    notificationActiveTillInSec :: Maybe Int
-  }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
-
-data GateType = Pickup | Drop | Parking
-  deriving (Read, Show, Generic, Eq, FromJSON, ToJSON, ToSchema)
-
-data GateInfo = GateInfo
-  { id :: Id GateInfo,
-    point :: LatLong,
-    specialLocationId :: Id SpecialLocation,
-    defaultDriverExtra :: Maybe Int,
-    name :: Text,
-    address :: Maybe Text,
-    geom :: Maybe Text,
-    createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    canQueueUpOnGate :: Bool,
-    gateType :: GateType,
-    merchantId :: Maybe (Id Merchant),
-    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
-    gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text,
-    entryFeeAmount :: Maybe Double,
-    -- Per vehicle variant thresholds (stored as JSON in DB).
-    -- Key: vehicle service tier text (e.g. "AUTO_RICKSHAW", "SEDAN").
-    -- Value lookup falls back to defaultXxx field below when key is missing.
     minDriverThresholds :: Maybe (Map.Map Text Int),
     maxDriverThresholds :: Maybe (Map.Map Text Int),
     demandThresholds :: Maybe (Map.Map Text Int),

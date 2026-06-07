@@ -562,6 +562,7 @@ library
       Storage.Beam.Payment
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
+      Storage.Beam.SpecialZone
       Storage.Beam.SystemConfigs
       Storage.Beam.Toll
       Storage.Beam.Yudhishthira

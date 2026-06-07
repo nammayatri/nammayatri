@@ -14,6 +14,7 @@ import Domain.Types.Merchant (Merchant)
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -35,41 +36,54 @@ getMerchantOpCityId mbMerchantOpCityId merchant mbCity =
     Just moCityId -> pure moCityId
     Nothing -> (.id) <$> getMerchantOpCity merchant mbCity
 
+-- | In-memory (L1) cache TTL for merchant-operating-city lookups. MOC rows are
+--   config-like and rarely change; an in-process cache avoids the Redis round-trip
+--   on the hot path. NOTE: cache invalidation only clears Redis, so an updated MOC
+--   may be served stale from a pod's in-mem cache for up to this many seconds.
+inMemCacheTtl :: Seconds
+inMemCacheTtl = 3600
+
 findById :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m (Maybe MerchantOperatingCity)
 findById merchantOpCityId =
-  Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
-    Just moCity -> pure moCity
-    Nothing -> flip whenJust cacheMerchantOpCityById /=<< Queries.findById merchantOpCityId
+  IM.withInMemCache [makeMerchantOpCityIdKey merchantOpCityId] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantOpCityIdKey merchantOpCityId) >>= \case
+      Just moCity -> pure moCity
+      Nothing -> flip whenJust cacheMerchantOpCityById /=<< Queries.findById merchantOpCityId
 
 findByCity :: (CacheFlow m r, EsqDBFlow m r) => Context.City -> m (Maybe MerchantOperatingCity)
 findByCity city =
-  Hedis.safeGet (makeMerchantOperatingCityCityKey city) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cachedMerchantOperatingCityCity /=<< Queries.findByCity city
+  IM.withInMemCache [makeMerchantOperatingCityCityKey city] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantOperatingCityCityKey city) >>= \case
+      Just a -> return a
+      Nothing -> flip whenJust cachedMerchantOperatingCityCity /=<< Queries.findByCity city
 
 findAllByMerchantId :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> m [MerchantOperatingCity]
 findAllByMerchantId merchantId =
-  Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
-    Just a -> return a
-    Nothing -> cacheMerchantId merchantId /=<< Queries.findAllByMerchantId merchantId
+  IM.withInMemCache [makeMerchantIdKey merchantId] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantIdKey merchantId) >>= \case
+      Just a -> return a
+      Nothing -> cacheMerchantId merchantId /=<< Queries.findAllByMerchantId merchantId
 
 findAllByMerchantIdAndState :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.IndianState -> m [MerchantOperatingCity]
 findAllByMerchantIdAndState merchantId state =
-  Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
-    Just a -> return a
-    Nothing -> cacheMerchantIdAndState merchantId state /=<< Queries.findAllByMerchantIdAndState merchantId state
+  IM.withInMemCache [makeMerchantIdAndStateKey merchantId state] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantIdAndStateKey merchantId state) >>= \case
+      Just a -> return a
+      Nothing -> cacheMerchantIdAndState merchantId state /=<< Queries.findAllByMerchantIdAndState merchantId state
 
 findByMerchantIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity merchantId city =
-  Hedis.safeGet (makeMerchantIdAndCityKey merchantId city) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cachedMerchantIdAndCity /=<< Queries.findByMerchantIdAndCity merchantId city
+  IM.withInMemCache [makeMerchantIdAndCityKey merchantId city] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantIdAndCityKey merchantId city) >>= \case
+      Just a -> return a
+      Nothing -> flip whenJust cachedMerchantIdAndCity /=<< Queries.findByMerchantIdAndCity merchantId city
 
 findByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantShortIdAndCity merchantShortId city =
-  Hedis.safeGet (makeMerchantShortIdAndCityKey merchantShortId city) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cachedMerchantShortIdAndCity /=<< Queries.findByMerchantShortIdAndCity merchantShortId city
+  IM.withInMemCache [makeMerchantShortIdAndCityKey merchantShortId city] inMemCacheTtl $
+    Hedis.safeGet (makeMerchantShortIdAndCityKey merchantShortId city) >>= \case
+      Just a -> return a
+      Nothing -> flip whenJust cachedMerchantShortIdAndCity /=<< Queries.findByMerchantShortIdAndCity merchantShortId city
 
 cacheMerchantOpCityById :: CacheFlow m r => MerchantOperatingCity -> m ()
 cacheMerchantOpCityById merchantOpCity = do

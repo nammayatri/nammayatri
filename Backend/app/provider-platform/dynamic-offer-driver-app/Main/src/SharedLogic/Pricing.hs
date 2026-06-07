@@ -14,7 +14,10 @@
 
 module SharedLogic.Pricing where
 
-import Data.Text as T hiding (elem, find, length, null)
+import Control.Applicative ((<|>))
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.Map.Strict as Map
+import Data.Text as T hiding (elem, find, length, null, zip)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
@@ -86,86 +89,69 @@ mkCongestionVehicleCategoryWithDistanceBin :: UTCTime -> Maybe DVC.VehicleCatego
 mkCongestionVehicleCategoryWithDistanceBin time vehicleCategory (Just distance) = "congestion_VC_" <> show vehicleCategory <> "_dB_" <> (getDistanceBin distance) <> "_time_" <> (buildTimeBucket time)
 mkCongestionVehicleCategoryWithDistanceBin time vehicleCategory Nothing = mkCongestionVehicleCategory time vehicleCategory
 
-getQARWithDistance ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
+getActualQAR ::
+  (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
   Maybe DVC.VehicleCategory ->
   Int ->
-  Double ->
-  LatLong ->
-  m (Maybe Double)
-getQARWithDistance time vehicleCategory distance radius location = do
-  let demandKey = mkDemandVehicleCategoryWithDistanceBin time vehicleCategory (Just distance)
-      timeN_1 = addUTCTime (-900) time --------Previous time bucket
-      demandKeyN_1 = mkDemandVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
-  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-  let demandData = demandDataN ++ demandDataN_1
-  if length demandData > 4
-    then do
-      let acceptanceKey = mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory (Just distance)
-          acceptanceKeyN_1 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
-      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-      let acceptanceData = acceptanceDataN ++ acceptanceDataN_1
-      return $ Just $ fromIntegral (length acceptanceData) / fromIntegral (length demandData)
-    else return Nothing
-
-getQARVehicleCategory ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
-  UTCTime ->
-  Maybe DVC.VehicleCategory ->
-  Double ->
-  LatLong ->
-  m (Maybe Double)
-getQARVehicleCategory time vehicleCategory radius location = do
-  let demandKey = mkDemandVehicleCategory time vehicleCategory
-      timeN_1 = addUTCTime (-900) time --------Previous time bucket
-      demandKeyN_1 = mkDemandVehicleCategory timeN_1 vehicleCategory
-  demandDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-  demandDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch demandKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-  let demandData = demandDataN ++ demandDataN_1
-  if length demandData > 4
-    then do
-      let acceptanceKey = mkAcceptanceVehicleCategory time vehicleCategory
-          acceptanceKeyN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
-      acceptanceDataN <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKey (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-      acceptanceDataN_1 <- Hedis.withCrossAppRedis $ Hedis.geoSearch acceptanceKeyN_1 (Hedis.FromLonLat location.lon location.lat) (Hedis.ByRadius radius "km")
-      let acceptanceData = acceptanceDataN ++ acceptanceDataN_1
-      return $ Just $ fromIntegral (length acceptanceData) / fromIntegral (length demandData)
-    else return Nothing
-
-getQARVehicleCategoryCity ::
-  ( MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r
-  ) =>
-  UTCTime ->
-  Maybe DVC.VehicleCategory ->
   Text ->
-  m (Maybe Double)
-getQARVehicleCategoryCity time vehicleCategory cityId = do
-  let demandKey = mkDemandVehicleCategoryCity time vehicleCategory cityId
-      timeN_1 = addUTCTime (-900) time
-      demandKeyN_1 = mkDemandVehicleCategoryCity timeN_1 vehicleCategory cityId
-  demandDataN :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get demandKey
-  demandDataN_1 :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get demandKeyN_1
-  let demandData = fromMaybe 0 demandDataN + fromMaybe 0 demandDataN_1
-  if demandData > 4
-    then do
-      let acceptanceKey = mkAcceptanceVehicleCategoryCity time vehicleCategory cityId
-          acceptanceKeyN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vehicleCategory cityId
-      acceptanceDataN :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get acceptanceKey
-      acceptanceDataN_1 :: Maybe Int <- Hedis.withCrossAppRedis $ Hedis.get acceptanceKeyN_1
-      let acceptanceData = fromMaybe 0 acceptanceDataN + fromMaybe 0 acceptanceDataN_1
-      return $ Just $ fromIntegral acceptanceData / fromIntegral demandData
-    else return Nothing
+  m (Maybe Double, Maybe Double)
+getActualQAR now vehicleCategory location radius distance cityId = do
+  let timeN = now
+      timeN_1 = addUTCTime (-900) now
+      timeN_2 = addUTCTime (-1800) now
+      demDistN = mkDemandVehicleCategoryWithDistanceBin timeN vehicleCategory (Just distance)
+      demDistN_1 = mkDemandVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
+      demDistN_2 = mkDemandVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
+      accDistN = mkAcceptanceVehicleCategoryWithDistanceBin timeN vehicleCategory (Just distance)
+      accDistN_1 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
+      accDistN_2 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
+      demVcN = mkDemandVehicleCategory timeN vehicleCategory
+      demVcN_1 = mkDemandVehicleCategory timeN_1 vehicleCategory
+      demVcN_2 = mkDemandVehicleCategory timeN_2 vehicleCategory
+      accVcN = mkAcceptanceVehicleCategory timeN vehicleCategory
+      accVcN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
+      accVcN_2 = mkAcceptanceVehicleCategory timeN_2 vehicleCategory
+      radiusKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demVcN, demVcN_1, demVcN_2, accVcN, accVcN_1, accVcN_2]
+  radiusCounts <- batchGeoSearchCounts radiusKeys location radius
+  let countsMap = Map.fromList (zip radiusKeys radiusCounts)
+      cnt k = Map.findWithDefault 0 k countsMap
+      distCurrent = computeQAR (cnt demDistN + cnt demDistN_1) (cnt accDistN + cnt accDistN_1)
+      distPast = computeQAR (cnt demDistN_1 + cnt demDistN_2) (cnt accDistN_1 + cnt accDistN_2)
+      vcCurrent = computeQAR (cnt demVcN + cnt demVcN_1) (cnt accVcN + cnt accVcN_1)
+      vcPast = computeQAR (cnt demVcN_1 + cnt demVcN_2) (cnt accVcN_1 + cnt accVcN_2)
+  vc2xCurrent <-
+    if isJust (distCurrent <|> vcCurrent)
+      then pure Nothing
+      else do
+        twoXCounts <- batchGeoSearchCounts [demVcN, demVcN_1, accVcN, accVcN_1] location (2 * radius)
+        let (d, d1, a, a1) = case twoXCounts of
+              [w, x, y, z] -> (w, x, y, z)
+              _ -> (0, 0, 0, 0)
+        pure $ computeQAR (d + d1) (a + a1)
+  (cityCurrent, cityPast) <-
+    if isNothing (distCurrent <|> vcCurrent <|> vc2xCurrent) || isNothing (distPast <|> vcPast)
+      then getCityLevelQAR timeN timeN_1 timeN_2 vehicleCategory cityId
+      else pure (Nothing, Nothing)
+  let currentQAR = distCurrent <|> vcCurrent <|> vc2xCurrent <|> cityCurrent
+      pastQAR = distPast <|> vcPast <|> cityPast
+  return (currentQAR, pastQAR)
+  where
+    computeQAR demandCount acceptanceCount
+      | demandCount > 4 = Just (fromIntegral acceptanceCount / fromIntegral demandCount)
+      | otherwise = Nothing
+
+    getCityLevelQAR timeN timeN_1 timeN_2 vc cid = do
+      let demCityN = mkDemandVehicleCategoryCity timeN vc cid
+          demCityN_1 = mkDemandVehicleCategoryCity timeN_1 vc cid
+          demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vc cid
+          accCityN = mkAcceptanceVehicleCategoryCity timeN vc cid
+          accCityN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vc cid
+          accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vc cid
+          cityKeys = [demCityN, demCityN_1, demCityN_2, accCityN, accCityN_1, accCityN_2]
+      results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int cityKeys
+      let resultsMap = Map.fromList results
+          c k = fromMaybe 0 (Map.lookup k resultsMap)
+          cityCurrent = computeQAR (c demCityN + c demCityN_1) (c accCityN + c accCityN_1)
+          cityPast = computeQAR (c demCityN_1 + c demCityN_2) (c accCityN_1 + c accCityN_2)
+      return (cityCurrent, cityPast)

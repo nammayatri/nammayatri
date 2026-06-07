@@ -52,6 +52,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import SharedLogic.FareCalculator (fareSum)
 import SharedLogic.Type (BillingCategory)
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM

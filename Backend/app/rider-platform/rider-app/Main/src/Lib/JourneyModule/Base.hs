@@ -78,10 +78,11 @@ import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import Lib.Queries.SpecialLocation as QSpecialLocation
-import qualified Lib.Types.GateInfo as GD
+import qualified Lib.Types.GateInfoExtra as GD
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Offer as SOffer
 import SharedLogic.Search
+import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as QMerchOpCity
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))

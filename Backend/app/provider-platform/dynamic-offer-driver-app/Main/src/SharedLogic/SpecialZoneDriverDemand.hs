@@ -48,8 +48,6 @@ import Data.List (partition, sortOn)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
-import qualified Data.Vector as V
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
@@ -66,18 +64,19 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
+import Lib.GateInfo.Geometry (CachedGateForProximity (..), isPointInOrNearGate, parseGatePolygons)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
-import qualified Lib.Types.GateInfo as DGI
+import qualified Lib.Types.GateInfoExtra as DGI
 import qualified Lib.Types.SpecialLocation as SL
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import qualified SharedLogic.FareCalculator as SFC
 import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.FarePolicy as CQFP
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
@@ -870,19 +869,6 @@ filterEligibleDrivers gateId driverIds = do
       )
       driverIds
 
--- | Cached snapshot of a queueable gate used for the proximity check. Carries the
---   parsed pickup-zone polygon(s) so the in-memory filter can do point-in-polygon
---   and edge-distance checks without hitting Postgres on the hot path.
---   `polygons` is empty when the gate has no/invalid geom — in that case the
---   filter falls back to a haversine check around `centerPoint`.
-data CachedGateForProximity = CachedGateForProximity
-  { gateId :: Text,
-    canQueueUpOnGate :: Bool,
-    centerPoint :: LatLong,
-    polygons :: [[[LatLong]]] -- list of polygons; each polygon is rings (outer first, then holes); each ring is closed.
-  }
-  deriving (Show, Generic, FromJSON, ToJSON, Typeable)
-
 -- | Fetch all gates of a special location with their parsed pickup-zone polygons.
 --   1-hour in-memory cache keyed by specialLocationId; gate polygons are admin-edited
 --   and rarely change, so a stale read is acceptable.
@@ -909,91 +895,6 @@ getCachedGatesForProximity slId =
               }
         )
         rows
-
--- | Parse PostGIS ST_AsGeoJSON output (Polygon or MultiPolygon) into a list of
---   polygons. Each polygon is a list of closed rings (outer + holes); each ring
---   is a list of LatLong (note GeoJSON stores [lon, lat]).
-parseGatePolygons :: Text -> Maybe [[[LatLong]]]
-parseGatePolygons txt = do
-  v <- either (const Nothing) Just (A.eitherDecodeStrict (TE.encodeUtf8 txt))
-  AT.parseMaybe parseShape v
-  where
-    parseShape :: A.Value -> AT.Parser [[[LatLong]]]
-    parseShape = A.withObject "Geometry" $ \o -> do
-      typ :: Text <- o A..: "type"
-      coords <- o A..: "coordinates"
-      case typ of
-        "Polygon" -> do
-          poly <- parsePolygon coords
-          pure [poly]
-        "MultiPolygon" -> A.withArray "MultiPolygonCoords" (mapM parsePolygon . V.toList) coords
-        _ -> fail $ "Unsupported geometry type: " <> show typ
-
-    parsePolygon = A.withArray "PolygonCoords" $ \rings -> mapM parseRing (V.toList rings)
-    parseRing = A.withArray "Ring" $ \pts -> mapM parsePoint (V.toList pts)
-    parsePoint = A.withArray "Coord" $ \pair -> do
-      coords :: [Double] <- mapM AT.parseJSON (V.toList pair)
-      case coords of
-        (lon : lat : _) -> pure $ LatLong lat lon
-        _ -> fail "Expected [lon, lat] coordinate"
-
--- | Ray-casting point-in-ring test. Assumes a closed ring (last == first).
-pointInRing :: LatLong -> [LatLong] -> Bool
-pointInRing _ ring | length ring < 4 = False
-pointInRing (LatLong y x) ring =
-  foldl' step False (zip ring (drop 1 ring))
-  where
-    step inside (LatLong y1 x1, LatLong y2 x2)
-      | y1 == y2 = inside -- horizontal edge: ignore (avoids div-by-zero)
-      | ((y1 > y) /= (y2 > y))
-          && (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1) =
-        not inside
-      | otherwise = inside
-
--- | Inside the polygon (outer ring AND not in any hole).
-pointInPolygon :: LatLong -> [[LatLong]] -> Bool
-pointInPolygon _ [] = False
-pointInPolygon p (outer : holes) = pointInRing p outer && not (any (pointInRing p) holes)
-
--- | Approximate point-to-segment distance in meters using equirectangular projection.
---   Fine for radii <<< Earth radius (we use ~150m here).
-pointToSegmentMeters :: LatLong -> LatLong -> LatLong -> Double
-pointToSegmentMeters p a b =
-  let latRad = (a.lat + b.lat) / 2 * pi / 180
-      mPerDegLat = 111320.0 :: Double
-      mPerDegLon = 111320.0 * cos latRad
-      ax = a.lon * mPerDegLon
-      ay = a.lat * mPerDegLat
-      bx = b.lon * mPerDegLon
-      by = b.lat * mPerDegLat
-      px = p.lon * mPerDegLon
-      py = p.lat * mPerDegLat
-      dx = bx - ax
-      dy = by - ay
-      lenSq = dx * dx + dy * dy
-      t = if lenSq <= 0 then 0 else max 0 (min 1 (((px - ax) * dx + (py - ay) * dy) / lenSq))
-      cx = ax + t * dx
-      cy = ay + t * dy
-   in sqrt ((px - cx) * (px - cx) + (py - cy) * (py - cy))
-
--- | Min distance from point to any edge of any ring of the polygon (meters).
-minDistanceToPolygonEdges :: LatLong -> [[LatLong]] -> Double
-minDistanceToPolygonEdges _ [] = 1 / 0
-minDistanceToPolygonEdges p rings =
-  minimum $
-    map
-      (\ring -> if length ring < 2 then 1 / 0 else minimum (zipWith (pointToSegmentMeters p) ring (drop 1 ring)))
-      rings
-
--- | True iff the driver is inside any of the gate's polygons OR within `radius`
---   meters of any polygon's edge. Falls back to haversine-from-centerPoint when
---   the gate has no parsed polygons.
-isPointInOrNearGate :: LatLong -> Double -> CachedGateForProximity -> Bool
-isPointInOrNearGate p radius gate
-  | null gate.polygons =
-    realToFrac (distanceBetweenInMeters p gate.centerPoint) < radius
-  | otherwise =
-    any (\poly -> pointInPolygon p poly || minDistanceToPolygonEdges p poly < radius) gate.polygons
 
 -- | Exclude drivers physically committed to a *different* queueable gate at the
 --   same special location: their location is inside that gate's pickup polygon
