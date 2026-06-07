@@ -80,13 +80,13 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       return $ Right ()
     _ -> do
       let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
       let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 
       result <- withTryCatch "callExternalBPP:confirmFlow" $ do
         frfsConfig <-
-          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
         processOnConfirm onConfirmReq

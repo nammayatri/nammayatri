@@ -43,10 +43,10 @@ runWithServiceConfig ::
   m resp
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   merchantConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantInsuranceServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.InsuranceService merchantConfig.insuranceService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.InsuranceService merchantConfig.insuranceService)}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
   case merchantInsuranceServiceConfig.serviceConfig of
     DMSC.InsuranceServiceConfig msc -> func msc req

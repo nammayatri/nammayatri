@@ -57,7 +57,7 @@ getOfferDiscount _token bppBookingId req = do
     (Just offerId, Just offerBase) -> do
       let productId = show booking.vehicleServiceTierType
           price = mkPrice (Just booking.estimatedTotalFare.currency) offerBase
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       unless enableRideHailingOffers $ throwError $ InternalError "RideHailing offers disabled"
       mbRide <- B.runInReplica $ QRide.findByRBId booking.id

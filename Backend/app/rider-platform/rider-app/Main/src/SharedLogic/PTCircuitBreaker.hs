@@ -297,7 +297,7 @@ updateFareCachingFlag ::
   Bool ->
   m ()
 updateFareCachingFlag mode mocId enabled = do
-  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do
@@ -315,7 +315,7 @@ updateBookingFlag ::
   Bool ->
   m ()
 updateBookingFlag mode mocId enabled = do
-  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
   case mRiderConfig of
     Nothing -> logError $ "RiderConfig not found for mocId: " <> mocId.getId
     Just riderConfig -> do

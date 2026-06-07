@@ -33,7 +33,7 @@ trackEvent ::
   TrackingEvent ->
   m ()
 trackEvent merchantId merchantOperatingCityId event = do
-  mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  mbMerchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   case mbMerchantConfig of
     Nothing -> logDebug "EventTracking: MerchantServiceUsageConfig not found, skipping event"
     Just merchantConfig -> do
@@ -68,6 +68,7 @@ sendToProvider merchantId merchantOperatingCityId provider actionName req = do
             serviceName = Just (DMSC.EventTrackingService provider)
           }
       )
+      Nothing
   case mbConfig of
     Nothing ->
       logDebug $ "EventTracking: provider " <> show provider <> " listed in usage config but no service config row found, skipping"

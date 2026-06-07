@@ -80,7 +80,7 @@ postNearbyDrivers (Just personId, merchantId) req = withLogTag $ do
   mbMoc <- CQMOC.findByMerchantIdAndCity merchantId reqCity
   -- Returning empty response for cases where merchant operating city is not found like in case of AnyCity
   flip (maybe makeEmptyNearbyResp) mbMoc $ \moc -> do
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
     case req.travelMode of
       Just DTrip.Bus -> do
         vehicleDataBuckets <- getNearbyBusesAsBuckets moc.id riderConfig req.location

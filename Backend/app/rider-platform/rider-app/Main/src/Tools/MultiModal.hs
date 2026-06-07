@@ -31,10 +31,10 @@ import Tools.Error
 getMultiModalConfig :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m MultiModal.MultiModalServiceConfig
 getMultiModalConfig merchantId merchantOperatingCityId = do
   merchantServiceUsageConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalService merchantServiceUsageConfig.getMultiModalService)}) Nothing
       >>= fromMaybeM (InternalError $ "No MultiModal service provider configured for the merchant, merchantId:" <> merchantId.getId)
 
   case merchantServiceConfig.serviceConfig of
@@ -48,7 +48,7 @@ getOTPRestServiceReq :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DM.Mer
 getOTPRestServiceReq merchantId merchantOperatingCityId = do
   transitServiceReq <-
     measureLatency
-      (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
+      (getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.MultiModalStaticDataService MultiModal.OTPTransit)}) Nothing >>= fromMaybeM (InternalError "No OTP Transit Service Config Found"))
       ("getOTPRestServiceReq: getOneConfig merchantId=" <> merchantId.getId <> " merchantOperatingCityId=" <> merchantOperatingCityId.getId)
   transitServiceReq' <- case transitServiceReq.serviceConfig of
     DMSC.MultiModalStaticDataServiceConfig multiModalServiceConfig -> return multiModalServiceConfig

@@ -804,7 +804,7 @@ triggerPendingCashRideCashbackPayoutJob person = do
     Right _ -> pure ()
   where
     schedulePayoutJob = do
-      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing})
+      mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just DV.CAR, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
       case mbPayoutConfig of
         Nothing ->
           logError $ "No payout config found for cashback payout trigger; person=" <> person.id.getId

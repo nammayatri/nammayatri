@@ -78,7 +78,7 @@ resolveAndCallTicketService ::
   m resp
 resolveAndCallTicketService selectService func merchantId merchantOperatingCityId req = do
   merchantConfig <-
-    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let service = selectService merchantConfig
   logDebug $ "resolveAndCallTicketService: service=" <> show service <> " mocId=" <> merchantOperatingCityId.getId

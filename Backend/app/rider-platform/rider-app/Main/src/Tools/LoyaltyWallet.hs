@@ -34,7 +34,7 @@ loyaltyInfo ::
 loyaltyInfo customerId merchantId merchantOperatingCityId = do
   let serviceName = DMSC.MultiModalPaymentService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "MultiModalPayment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.MultiModalPaymentServiceConfig paymentCfg ->
@@ -99,7 +99,7 @@ runWithMultiModalConfig ::
 runWithMultiModalConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.MultiModalPaymentService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "MultiModalPayment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.MultiModalPaymentServiceConfig paymentCfg -> func paymentCfg req

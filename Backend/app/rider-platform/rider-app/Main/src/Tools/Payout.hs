@@ -75,12 +75,12 @@ runWithServiceConfigAndName ::
   serviceReq ->
   m resp
 runWithServiceConfigAndName func getCfg mkReq clientSdkVersion merchantId merchantOperatingCityId mRoutingId serviceReq = do
-  orgPaymentsConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  orgPaymentsConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   let payoutServiceNameRaw = DMSC.PayoutService (getCfg orgPaymentsConfig)
       paymentMode = Nothing -- Stripe payouts are not supported
   payoutServiceName <- modifyServiceName payoutServiceNameRaw (fromMaybe DMPM.LIVE paymentMode) clientSdkVersion
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just payoutServiceName})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just payoutServiceName}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show Payout.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig vsc -> case vsc of

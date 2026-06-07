@@ -61,7 +61,7 @@ getPickupRoutes ::
   m Maps.GetRoutesResp
 getPickupRoutes (personId, merchantId) entityId GetPickupRoutesReq {..} = do
   mocId <- Maps.getMerchantOperatingCityId personId Nothing
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   mbRide <- mapM (\rid -> QRide.findById rid >>= fromMaybeM (RideNotFound rid.getId)) rideId
   service <- getService merchantConfig mbRide
   let req = Maps.GetRoutesReq {..}

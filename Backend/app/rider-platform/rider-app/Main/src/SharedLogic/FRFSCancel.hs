@@ -97,7 +97,7 @@ handleCancelledStatus _merchant booking refundAmount cancellationCharges message
   void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (fareParameters.totalQuantity))
   void $ CQP.clearPSCache booking.riderId
   bapConfig <-
-    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)})
+    getOneConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) Nothing
       >>= fromMaybeM (InternalError "Beckn Config not found")
   updateTotalOrderValueAndSettlementAmount booking quoteCategories bapConfig
   return (mRiderNumber, person.mobileCountryCode, fareParameters)

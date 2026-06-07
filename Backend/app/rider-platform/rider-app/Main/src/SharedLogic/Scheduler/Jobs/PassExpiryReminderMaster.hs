@@ -55,7 +55,7 @@ scheduleTomorrow ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 scheduleTomorrow merchantId' merchantOpCityId = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) (mbRiderConfig :: Maybe DRC.RiderConfig)
       tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes

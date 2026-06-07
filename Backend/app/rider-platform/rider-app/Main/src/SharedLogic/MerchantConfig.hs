@@ -130,7 +130,7 @@ anyFraudDetected riderId merchantOperatingCityId mSearchReq = checkFraudDetected
 
 checkFraudDetected :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ClickhouseFlow m r) => Id Person.Person -> Id DMOC.MerchantOperatingCity -> [Factors] -> [DMC.MerchantConfig] -> Maybe DSR.SearchRequest -> m (Maybe DMC.MerchantConfig)
 checkFraudDetected riderId merchantOperatingCityId factors merchantConfigs mSearchReq = Redis.withNonCriticalCrossAppRedis $ do
-  useFraudDetection <- maybe False (.useFraudDetection) <$> getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  useFraudDetection <- maybe False (.useFraudDetection) <$> getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   if useFraudDetection
     then findM (\mc -> and <$> mapM (getFactorResult mc) factors) merchantConfigs
     else pure Nothing

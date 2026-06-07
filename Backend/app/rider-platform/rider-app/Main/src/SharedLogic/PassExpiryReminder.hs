@@ -39,7 +39,7 @@ sendPassExpiryReminderBatch ::
   m (Maybe Int)
 sendPassExpiryReminderBatch merchantId merchantOperatingCityId mbCursor = do
   riderConfig <-
-    getConfig (SCRC.RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+    getConfig (SCRC.RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   let daysToExpire = fromMaybe defaultDaysToExpire riderConfig.passExpiryReminderDays
       remindDaily = fromMaybe False riderConfig.remindEverydayUntilPassExpiry
