@@ -47,6 +47,7 @@ mkPersist
       enforceTollRoute Bool Maybe
       render Domain.RenderType Maybe
       supportNumber Text Maybe
+      geomGeoJson Text Maybe
       createdAt UTCTime
       updatedAt UTCTime
       Primary id

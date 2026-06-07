@@ -52,6 +52,9 @@ data SpecialLocation = SpecialLocation
     merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
     gates :: [GatesInfo], --TODO: deprecate this later
     geom :: Maybe Text,
+    -- | Pickup/zone polygon as GeoJSON text (the @geom_geo_json@ column), used for
+    --   in-Haskell point-in-polygon checks so the read path needs no PostGIS.
+    geomGeoJson :: Maybe Text,
     linkedLocationsIds :: [Id SpecialLocation],
     locationType :: SpecialLocationType,
     enabled :: Bool,

@@ -23,4 +23,4 @@ data MerchantClientConfig = MerchantClientConfig
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, ToJSON, FromJSON)

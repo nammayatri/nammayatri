@@ -43,7 +43,7 @@ import Tools.Error
 -- | Required airport entry fee for this booking. Uses booking.pickupGateId (gate where customer is).
 --   Returns 0 if no gateId or no fee configured.
 requiredEntryFeeForBooking ::
-  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m) =>
+  (Esq.EsqDBFlow m r, Esq.EsqDBReplicaFlow m r, MonadFlow m, CacheFlow m r) =>
   SRB.Booking ->
   m HighPrecMoney
 requiredEntryFeeForBooking booking =

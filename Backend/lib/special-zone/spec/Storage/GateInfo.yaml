@@ -1,0 +1,100 @@
+imports:
+  LatLong: Kernel.External.Maps
+  SpecialLocation: Lib.Types.SpecialLocation
+  Merchant: Lib.Types.SpecialLocation
+  MerchantOperatingCity: Lib.Types.SpecialLocation
+  Map: Data.Map.Strict
+
+GateInfo:
+  tableName: gate_info
+  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
+
+  types:
+    GateType:
+      enum: "Pickup,Drop,Parking"
+
+  fields:
+    id: Id GateInfo
+    point: LatLong
+    specialLocationId: Id SpecialLocation
+    defaultDriverExtra: Maybe Int
+    name: Text
+    address: Maybe Text
+    geomGeoJson: Maybe Text
+    canQueueUpOnGate: Bool
+    gateType: GateType
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    gateTags: Maybe [Text]
+    walkDescription: Maybe Text
+    entryFeeAmount: Maybe Double
+    minDriverThresholds: Maybe (Map Text Int)
+    maxDriverThresholds: Maybe (Map Text Int)
+    demandThresholds: Maybe (Map Text Int)
+    defaultMinDriverThreshold: Maybe Int
+    defaultMaxDriverThreshold: Maybe Int
+    defaultDemandThreshold: Maybe Int
+    notificationCooldownInSec: Maybe Int
+    maxRideSkipsBeforeQueueRemoval: Maybe Int
+    pickupZoneArrivalTimeoutInSec: Maybe Int
+    pickupRequestResponseTimeoutInSec: Maybe Int
+    notificationActiveTillInSec: Maybe Int
+    enableQueueFilter: Maybe (Map Text Bool)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamFields:
+    minDriverThresholds:
+      minDriverThresholdsJson: Maybe Text
+    maxDriverThresholds:
+      maxDriverThresholdsJson: Maybe Text
+    demandThresholds:
+      demandThresholdsJson: Maybe Text
+
+  beamType:
+    point: Text
+    enableQueueFilter: Maybe Text
+
+  sqlType:
+    id: character varying(36)
+    point: text
+    specialLocationId: character varying(36)
+    merchantId: text
+    merchantOperatingCityId: text
+    geomGeoJson: text
+    minDriverThresholdsJson: text
+    maxDriverThresholdsJson: text
+    demandThresholdsJson: text
+    enableQueueFilter: text
+
+  fromTType:
+    point: Lib.Queries.Transformers.GateInfo.mkLatLongFromText point|E
+    enableQueueFilter: Lib.Queries.Transformers.GateInfo.decodeBoolMap enableQueueFilter|E
+    minDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap minDriverThresholdsJson|E
+    maxDriverThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap maxDriverThresholdsJson|E
+    demandThresholds: Lib.Queries.Transformers.GateInfo.decodeThresholdMap demandThresholdsJson|E
+
+  toTType:
+    point: Lib.Queries.Transformers.GateInfo.latLongToText point|E
+    enableQueueFilter: Lib.Queries.Transformers.GateInfo.encodeBoolMap enableQueueFilter|E
+    minDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
+    maxDriverThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
+    demandThresholdsJson: Lib.Queries.Transformers.GateInfo.encodeThresholdMap|I
+
+  constraints:
+    id: PrimaryKey
+    specialLocationId: "!SecondaryKey"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllBySpecialLocationId:
+      kvFunction: findAllWithKV
+      where: specialLocationId
+
+  defaultQueryTypeConstraint: "(Lib.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

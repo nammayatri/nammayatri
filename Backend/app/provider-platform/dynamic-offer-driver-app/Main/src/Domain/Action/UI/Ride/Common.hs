@@ -72,6 +72,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (fareSum)
 import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc

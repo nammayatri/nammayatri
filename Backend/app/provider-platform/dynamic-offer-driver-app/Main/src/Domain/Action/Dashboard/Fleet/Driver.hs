@@ -206,6 +206,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Route as CQRoute
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.DriverInformation as CHDriverInfo
@@ -1065,7 +1066,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
       vehicleNumberHash <- getDbHash vehicleRegistrationCertNumber
       routes <-
         case mbRouteCodes of
-          Just routeCodes -> mapM (\routeCode -> QRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
+          Just routeCodes -> mapM (\routeCode -> CQRoute.findByRouteCode routeCode >>= fromMaybeM (RouteNotFound routeCode)) routeCodes
           Nothing -> pure []
       pure
         ( Common.RegisterRCReq
@@ -3062,7 +3063,7 @@ getDriverFleetPossibleRoutes merchantShortId opCity fleetOwnerId startStopCode =
   listItem <-
     mapM
       ( \rtsmData -> do
-          route <- QRoute.findByRouteCode rtsmData.routeCode >>= fromMaybeM (RouteNotFound rtsmData.routeCode)
+          route <- CQRoute.findByRouteCode rtsmData.routeCode >>= fromMaybeM (RouteNotFound rtsmData.routeCode)
           pure $ createRouteRespItem route Nothing
       )
       possibleRoutes
@@ -3160,7 +3161,7 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
               pdestination <- maybe (throwError (InternalError "Pilot destination not found")) pure tripTransaction.pilotDestination
               WMB.postAssignTripTransaction tripTransaction Nothing True psource psource pdestination True
             _ -> do
-              route <- QRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
+              route <- CQRoute.findByRouteCode tripTransaction.routeCode >>= fromMaybeM (RouteNotFound tripTransaction.routeCode)
               (routeSourceStopInfo, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
               WMB.postAssignTripTransaction tripTransaction (Just route) True routeSourceStopInfo.point routeSourceStopInfo.point routeDestinationStopInfo.point True
   where
@@ -3172,13 +3173,13 @@ createTripTransactions merchantId merchantOpCityId fleetOwnerId driverId vehicle
       let tripType' = fromMaybe Common.WIMB trip.tripType
       case tripType' of
         Common.WIMB -> do
-          route <- QRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
+          route <- CQRoute.findByRouteCode trip.routeCode >>= fromMaybeM (RouteNotFound trip.routeCode)
           (_, routeDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo route route.code
           case (trip.roundTrip, route.roundRouteCode) of
             (Just _, Nothing) -> throwError (RoundTripNotAllowedForRoute route.code)
             (Just roundTrip, Just roundRouteCode) -> do
               when (roundTrip.frequency == 0) $ throwError RoundTripFrequencyShouldBeGreaterThanZero
-              roundRoute <- QRoute.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound trip.routeCode)
+              roundRoute <- CQRoute.findByRouteCode roundRouteCode >>= fromMaybeM (RouteNotFound trip.routeCode)
               (_, roundRouteDestinationStopInfo) <- WMB.getSourceAndDestinationStopInfo roundRoute roundRouteCode
               foldM
                 ( \accTransactions freqIdx -> do

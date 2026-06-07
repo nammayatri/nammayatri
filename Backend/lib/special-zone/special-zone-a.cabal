@@ -26,23 +26,29 @@ flag Local
 
 library
   exposed-modules:
-      Lib.Queries.GateInfo
-      Lib.Queries.GateInfoGeom
+      Lib.GateInfo.Geometry
+      Lib.Queries.GateInfoExtra
       Lib.Queries.SpecialLocation
       Lib.Queries.SpecialLocationGeom
       Lib.Queries.SpecialLocationPriority
-      Lib.Tabular.GateInfo
-      Lib.Tabular.GateInfoGeom
+      Lib.Queries.Transformers.GateInfo
+      Lib.Storage.Beam.BeamFlow
       Lib.Tabular.SpecialLocation
       Lib.Tabular.SpecialLocationGeom
       Lib.Tabular.SpecialLocationPriority
-      Lib.Types.GateInfo
+      Lib.Types.GateInfoExtra
       Lib.Types.SpecialLocation
       Lib.Types.SpecialLocationPriority
+      Tools.Beam.UtilsTH
+      Lib.Queries.GateInfo
+      Lib.Queries.OrphanInstances.GateInfo
+      Lib.Storage.Beam.GateInfo
+      Lib.Types.GateInfo
   other-modules:
       Paths_special_zone_a
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -84,18 +90,25 @@ library
       aeson
     , base >=4.7 && <5
     , base16-bytestring
+    , beam-core
+    , beam-postgres
     , bytestring
     , containers
     , cryptohash
+    , directory
     , euler-hs
     , exceptions
+    , filepath
     , http-client
     , http-types
     , lens
     , mobility-core
     , openapi3
+    , postgresql-simple
+    , process
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , servant
     , servant-client
     , servant-openapi3
@@ -103,6 +116,7 @@ library
     , text
     , time
     , uri-encode
+    , vector
   default-language: Haskell2010
   if flag(Local)
     ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
