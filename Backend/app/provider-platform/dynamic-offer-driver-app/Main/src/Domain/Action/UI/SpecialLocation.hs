@@ -8,6 +8,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Lib.Queries.SpecialLocation
+import Storage.Beam.SpecialZone ()
 
 getSpecialLocationList ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

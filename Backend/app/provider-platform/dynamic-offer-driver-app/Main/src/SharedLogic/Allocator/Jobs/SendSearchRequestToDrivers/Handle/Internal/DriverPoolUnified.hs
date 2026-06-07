@@ -38,6 +38,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Beckn.Common as DTS
 import SharedLogic.DriverPool
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import Storage.Beam.SpecialZone ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR

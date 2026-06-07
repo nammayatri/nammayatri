@@ -32,6 +32,7 @@ updateSpecialLocation D.SpecialLocation {..} = Esq.update $ \tbl -> do
     [ SpecialLocationGeomLocationName =. val locationName,
       SpecialLocationGeomCategory =. val category,
       SpecialLocationGeomGeom =. val geom,
+      SpecialLocationGeomGeomGeoJson =. val geomGeoJson,
       SpecialLocationGeomMerchantOperatingCityId =. val merchantOperatingCityId',
       SpecialLocationGeomMerchantId =. val merchantId',
       SpecialLocationGeomUpdatedAt =. val updatedAt,

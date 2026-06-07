@@ -7,6 +7,7 @@ import Domain.Types.MerchantClientConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Error
 import Kernel.Types.Version
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -17,4 +18,5 @@ import Storage.Queries.OrphanInstances.MerchantClientConfig
 -- Extra code goes here --
 findByPackageOSAndService :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => ClientService -> Maybe DeviceType -> Text -> m (Maybe MerchantClientConfig)
 findByPackageOSAndService service clientOS packageId =
-  findOneWithKV [Se.And [Se.Is BeamMCC.serviceName $ Se.Eq service, Se.Is BeamMCC.packageId $ Se.Eq packageId, Se.Is BeamMCC.clientOS $ Se.Eq clientOS]]
+  IM.withInMemCache ["MerchantClientConfig", show service, maybe "" show clientOS, packageId] 3600 $
+    findOneWithKV [Se.And [Se.Is BeamMCC.serviceName $ Se.Eq service, Se.Is BeamMCC.packageId $ Se.Eq packageId, Se.Is BeamMCC.clientOS $ Se.Eq clientOS]]
