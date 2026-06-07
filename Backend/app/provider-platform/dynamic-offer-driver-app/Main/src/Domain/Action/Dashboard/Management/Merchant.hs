@@ -150,7 +150,6 @@ import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
 import qualified Lib.Queries.GateInfo as QGI
-import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -170,6 +169,7 @@ import qualified SharedLogic.SpecialLocationUpsert as SLU
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import qualified SharedLogic.VehicleServiceTierAreaRestriction as VSTAR
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CDIPC
 import qualified Storage.Cac.DriverIntelligentPoolConfig as CQDIPC
 import qualified Storage.Cac.DriverPoolConfig as CQDPC
@@ -3125,11 +3125,13 @@ postMerchantSpecialLocationUpsert merchantShortId _city mbSpecialLocationId requ
   void $
     runTransaction $
       if isJust mbExistingSL then QSLG.updateSpecialLocation updatedSL else QSLG.create updatedSL
+  QSL.clearSpecialZoneInMemCache
   return Success
   where
     mkSpecialLocation :: Maybe SL.SpecialLocation -> Maybe Text -> Flow SL.SpecialLocation
     mkSpecialLocation mbExistingSpLoc mbGeometry = do
       let geom = request.geom <|> mbGeometry
+          geomGeoJson = geom
       id <- maybe generateGUID (return . (.id)) mbExistingSpLoc
       now <- getCurrentTime
       (merchantOperatingCityId, merchantId) <- case request.city of
@@ -3176,7 +3178,8 @@ deleteMerchantSpecialLocationDelete :: ShortId DM.Merchant -> Context.City -> Id
 deleteMerchantSpecialLocationDelete _merchantShortid _city specialLocationId = do
   void $ QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Special Location with given id not found")
   void $ runTransaction $ QSL.deleteById specialLocationId
-  void $ runTransaction $ QGI.deleteAll specialLocationId
+  QGI.deleteAll specialLocationId
+  QSL.clearSpecialZoneInMemCache
   pure Success
 
 postMerchantSpecialLocationGatesUpsert :: ShortId DM.Merchant -> Context.City -> Id SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Flow APISuccess
@@ -3184,6 +3187,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
   specialLocation <- QSL.findById specialLocationId >>= fromMaybeM (InvalidRequest "Cound not find a special location with the provided id")
   existingGates <- QGI.findAllGatesBySpecialLocationId specialLocationId
   createOrUpdateGate specialLocation existingGates request
+  QSL.clearSpecialZoneInMemCache
   return Success
   where
     createOrUpdateGate :: SL.SpecialLocation -> [(D.GateInfo, Maybe Text)] -> Common.UpsertSpecialLocationGateReqT -> Flow ()
@@ -3192,9 +3196,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
           existingGate = fst <$> existingGateWithGeom
           mbGeom = snd =<< existingGateWithGeom
       updatedGate <- mkGate specialLocation req existingGate mbGeom
-      void $
-        runTransaction $
-          if isNothing existingGate then QGIG.create updatedGate else QGIG.updateGate updatedGate
+      if isNothing existingGate then QGI.create updatedGate else QGI.updateGate updatedGate
 
     mkGate :: SL.SpecialLocation -> Common.UpsertSpecialLocationGateReqT -> Maybe D.GateInfo -> Maybe Text -> Flow D.GateInfo
     mkGate specialLocation reqT mbGate mbGeom = do
@@ -3205,7 +3207,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
       address <- fromMaybeM (InvalidRequest "Address cannot be empty for a new gate") $ reqT.address <|> (mbGate >>= (.address))
       let canQueueUpOnGate = fromMaybe False $ reqT.canQueueUpOnGate <|> (mbGate <&> (.canQueueUpOnGate))
           defaultDriverExtra = reqT.defaultDriverExtra <|> (mbGate >>= (.defaultDriverExtra))
-          geom = reqT.geom <|> mbGeom
+          geomGeoJson = reqT.geom <|> mbGeom
           gateTags = reqT.gateTags <|> (mbGate >>= (.gateTags))
           walkDescription = reqT.walkDescription <|> (mbGate >>= (.walkDescription))
       return $
@@ -3241,7 +3243,8 @@ deleteMerchantSpecialLocationGatesDelete _merchantShortId _city specialLocationI
   let existingGate = fst <$> find (\(gate, _mbGeom) -> normalizeName gate.name == normalizeName gateName) existingGates
   case existingGate of
     Nothing -> throwError $ InvalidRequest "Could not find any gates with the specified name for the given specialLocationId"
-    Just gate -> runTransaction $ QGI.deleteById gate.id
+    Just gate -> QGI.deleteById gate.id
+  QSL.clearSpecialZoneInMemCache
   return Success
 
 normalizeName :: Text -> Text

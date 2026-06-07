@@ -41,6 +41,7 @@ mkPersist
       linkedLocationsIds (PostgresList Text),
       locationType Domain.SpecialLocationType
       geom Text Maybe
+      geomGeoJson Text Maybe
       render Domain.RenderType Maybe
       priority Int
       enabled Bool

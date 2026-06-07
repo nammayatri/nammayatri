@@ -80,6 +80,14 @@ dependencies:
   - servant-openapi3
   - openapi3
   - lens
+  - beam-core
+  - beam-postgres
+  - sequelize
+  - postgresql-simple
+  - process
+  - directory
+  - filepath
+  - vector
 
 ghc-options:
   - -fwrite-ide-info
@@ -94,6 +102,7 @@ ghc-options:
 library:
   source-dirs:
     - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat

@@ -17,14 +17,15 @@ module Lib.Queries.SpecialLocation where
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude hiding (isNothing)
 import Kernel.Storage.Esqueleto as Esq
-import qualified Kernel.Storage.Esqueleto.Functions as F
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.GateInfo.Geometry (minDistanceToPolygonEdges, parseGatePolygons, pointInPolygon)
 import qualified Lib.Queries.GateInfo as QGI
+import Lib.Storage.Beam.BeamFlow (BeamFlow)
 import Lib.Tabular.SpecialLocation
-import qualified Lib.Types.GateInfo as GD
+import qualified Lib.Types.GateInfoExtra as GD
 import qualified Lib.Types.SpecialLocation as D
 
 data SpecialLocationFull = SpecialLocationFull
@@ -83,13 +84,15 @@ findByLocationName locationName =
 
 findByIdWithGeom :: (Transactionable m, EsqDBReplicaFlow m r) => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
 findByIdWithGeom specialLocationId =
-  Esq.runInReplica $
-    Esq.findOne $ do
-      specialLocation <- from $ table @SpecialLocationT
-      where_ $
-        specialLocation ^. SpecialLocationEnabled ==. val True
-          &&. specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
-      return (specialLocation, F.mbGetGeomGeoJSON)
+  fmap (\sl -> (sl, sl.geomGeoJson))
+    <$> ( Esq.runInReplica $
+            Esq.findOne $ do
+              specialLocation <- from $ table @SpecialLocationT
+              where_ $
+                specialLocation ^. SpecialLocationEnabled ==. val True
+                  &&. specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
+              return specialLocation
+        )
 
 filterGates :: Maybe SpecialLocationFull -> Bool -> Maybe SpecialLocationFull
 filterGates (Just specialLocBody) isOrigin =
@@ -102,12 +105,12 @@ filterGates (Just specialLocBody) isOrigin =
         else Just specialLocBody {gatesInfo = filteredGates}
 filterGates Nothing _ = Nothing
 
-makeFullSpecialLocation :: (Transactionable m, EsqDBReplicaFlow m r) => (D.SpecialLocation, Text) -> m SpecialLocationFull
-makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
+makeFullSpecialLocation :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => D.SpecialLocation -> m SpecialLocationFull
+makeFullSpecialLocation D.SpecialLocation {..} = do
   gatesWithShape <- QGI.findAllGatesBySpecialLocationId id
   let gatesInfoFull =
         map
-          ( \(GD.GateInfo {point = gatePoint, id = gateId, gateType = gt, createdAt = _gateCreatedAt, geom = _gateGeom, updatedAt = _gateUpdatedAt, merchantId = _merchantId, merchantOperatingCityId = _merchantOperatingCityId, ..}, gateShape) ->
+          ( \(GD.GateInfo {point = gatePoint, id = gateId, gateType = gt, createdAt = _gateCreatedAt, geomGeoJson = _gateGeom, updatedAt = _gateUpdatedAt, merchantId = _merchantId, merchantOperatingCityId = _merchantOperatingCityId, ..}, gateShape) ->
               GD.GateInfoFull
                 { GD.id = gateId,
                   GD.point = gatePoint,
@@ -120,15 +123,25 @@ makeFullSpecialLocation (D.SpecialLocation {..}, specialShape) = do
   pure $
     SpecialLocationFull
       { gatesInfo = gatesInfoFull,
-        geoJson = Just specialShape,
+        geoJson = geomGeoJson,
         merchantOperatingCityId = getId <$> merchantOperatingCityId,
         ..
       }
 
-buildSpecialLocationWithGates :: (Transactionable m, EsqDBReplicaFlow m r) => D.SpecialLocation -> m D.SpecialLocation
+buildSpecialLocationWithGates :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => D.SpecialLocation -> m D.SpecialLocation
 buildSpecialLocationWithGates specialLocation = do
   gates <- QGI.findAllGatesBySpecialLocationIdWithoutGeoJson specialLocation.id
   pure specialLocation {D.gates = map (\(GD.GateInfo {..}) -> D.GatesInfo {..}) gates}
+
+-- | Drop every special-zone L1 in-mem cache entry — full special locations, the
+--   all-enabled-with-geom set used for lat/long lookups, warrior lists, and the gate
+--   caches — and propagate the cleanup to other pods via the InMem sidecar. Call this
+--   after any special-location or gate mutation so reads aren't served stale until TTL.
+clearSpecialZoneInMemCache :: (MonadFlow m, CacheFlow m r) => m ()
+clearSpecialZoneInMemCache = do
+  IM.refreshInMem "SpecialLocation:"
+  IM.refreshInMem "GateInfo:"
+  IM.refreshInMem "GateProximityPolygons"
 
 fullSpecialLocationRedisKey :: Text -> Text
 fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
@@ -136,7 +149,7 @@ fullSpecialLocationRedisKey city = "SpecialLocation:Full:" <> city
 specialLocationWarriorRedisKey :: Text -> Text -> Text
 specialLocationWarriorRedisKey category mocId = "SpecialLocation:Warrior:" <> category <> ":" <> mocId
 
-findFullSpecialLocationsByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r, MonadFlow m) => Text -> m [SpecialLocationFull]
+findFullSpecialLocationsByMerchantOperatingCityId :: (BeamFlow m r, Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r, MonadFlow m) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId mocId = do
   let cacheKey = fullSpecialLocationRedisKey mocId
   IM.withInMemCache [cacheKey] 3600 $
@@ -147,7 +160,7 @@ findFullSpecialLocationsByMerchantOperatingCityId mocId = do
         Hedis.set cacheKey specialLocations
         pure specialLocations
 
-findFullSpecialLocationsByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> m [SpecialLocationFull]
+findFullSpecialLocationsByMerchantOperatingCityId' :: (BeamFlow m r, Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> m [SpecialLocationFull]
 findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
   mbRes <-
     Esq.runInReplica $
@@ -158,11 +171,11 @@ findFullSpecialLocationsByMerchantOperatingCityId' mocId = do
             &&. ( specialLocation ^. SpecialLocationMerchantOperatingCityId ==. just (val mocId)
                     ||. isNothing (specialLocation ^. SpecialLocationMerchantOperatingCityId)
                 )
-        return (specialLocation, F.getGeomGeoJSON)
+        return specialLocation
   mapM makeFullSpecialLocation mbRes
 
 findAllSpecialLocationsWithGeoJSON ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) =>
   Text ->
   Maybe Int ->
   Maybe Int ->
@@ -185,11 +198,11 @@ findAllSpecialLocationsWithGeoJSON mocId mbLimit mbOffset mbLocationTypes = do
         forM_ mbLimit (limit . fromIntegral)
         forM_ mbOffset (offset . fromIntegral)
 
-        return (specialLocation, F.getGeomGeoJSON)
+        return specialLocation
   mapM makeFullSpecialLocation mbRes
 
 findAllSpecialLocationsWithGeoJSONAllCities ::
-  (Transactionable m, EsqDBReplicaFlow m r) =>
+  (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) =>
   Maybe Int ->
   Maybe Int ->
   Maybe [D.SpecialLocationType] ->
@@ -208,10 +221,10 @@ findAllSpecialLocationsWithGeoJSONAllCities mbLimit mbOffset mbLocationTypes = d
         forM_ mbLimit (limit . fromIntegral)
         forM_ mbOffset (offset . fromIntegral)
 
-        return (specialLocation, F.getGeomGeoJSON)
+        return specialLocation
   mapM makeFullSpecialLocation mbRes
 
-findSpecialLocationsWarriorByMerchantOperatingCityId :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId :: (BeamFlow m r, Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
   Hedis.safeGet (specialLocationWarriorRedisKey category mocId) >>= \case
     Just a -> pure a
@@ -220,7 +233,7 @@ findSpecialLocationsWarriorByMerchantOperatingCityId mocId category = do
       Hedis.set (specialLocationWarriorRedisKey category mocId) specialLocations
       pure specialLocations
 
-findSpecialLocationsWarriorByMerchantOperatingCityId' :: (Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
+findSpecialLocationsWarriorByMerchantOperatingCityId' :: (BeamFlow m r, Transactionable m, CacheFlow m r, EsqDBReplicaFlow m r) => Text -> Text -> m [D.SpecialLocation]
 findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
   specialLocationWithoutGates <-
     Esq.runInReplica $
@@ -235,56 +248,54 @@ findSpecialLocationsWarriorByMerchantOperatingCityId' mocId category = do
         return specialLocation
   mapM buildSpecialLocationWithGates specialLocationWithoutGates
 
-findSpecialLocationByLatLongFull :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe SpecialLocationFull)
+-- | All enabled special locations with their zone polygon(s) parsed from the
+--   @geom_geo_json@ column, held in an in-memory cache (1h TTL) and ordered by
+--   priority. Replaces the per-call PostGIS @ST_Contains@/@ST_DWithin@ scans with an
+--   in-Haskell point-in-polygon over this cached set, so the read path needs no
+--   PostGIS. NOTE: a stale read is possible for up to the TTL after an admin edit.
+getAllEnabledSpecialLocationsWithGeom :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => m [(D.SpecialLocation, [[[LatLong]]])]
+getAllEnabledSpecialLocationsWithGeom =
+  IM.withInMemCache ["SpecialLocation:AllEnabledWithGeom"] 3600 $ do
+    sls <-
+      Esq.runInReplica $
+        Esq.findAll $ do
+          specialLocation <- from $ table @SpecialLocationT
+          where_ $ specialLocation ^. SpecialLocationEnabled ==. val True
+          orderBy [asc (specialLocation ^. SpecialLocationPriority)]
+          return specialLocation
+    pure $ map (\sl -> (sl, fromMaybe [] (sl.geomGeoJson >>= parseGatePolygons))) sls
+
+findSpecialLocationByLatLongFull :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe SpecialLocationFull)
 findSpecialLocationByLatLongFull point = do
-  mbRes <-
-    Esq.runInReplica $
-      Esq.findAll $ do
-        specialLocation <- from $ table @SpecialLocationT
-        where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
-        orderBy [asc (specialLocation ^. SpecialLocationPriority)]
-        return (specialLocation, F.getGeomGeoJSON)
-  mapM makeFullSpecialLocation (listToMaybe mbRes)
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  case listToMaybe [sl | (sl, polys) <- cached, any (pointInPolygon point) polys] of
+    Just sl -> Just <$> makeFullSpecialLocation sl
+    Nothing -> pure Nothing
 
-findSpecialLocationByLatLongNearby :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
+findSpecialLocationByLatLongNearby :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> Int -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLongNearby point radius = do
-  specialLocations <-
-    Esq.runInReplica $
-      Esq.findAll $ do
-        specialLocation <- from $ table @SpecialLocationT
-        where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. pointCloseByOrWithin (point.lon, point.lat) (val radius)
-        orderBy [asc (specialLocation ^. SpecialLocationPriority)]
-        return (specialLocation, F.getGeomGeoJSON)
-  return $ listToMaybe specialLocations
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  let isNear polys =
+        any (pointInPolygon point) polys
+          || any (\poly -> minDistanceToPolygonEdges point poly < fromIntegral radius) polys
+  pure $ listToMaybe [(sl, fromMaybe "" sl.geomGeoJson) | (sl, polys) <- cached, isNear polys]
 
-findPickupSpecialLocationByLatLong :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
+findPickupSpecialLocationByLatLong :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
 findPickupSpecialLocationByLatLong point = do
   mbSpecialLocation <- findSpecialLocationByLatLong' point
   case mbSpecialLocation of
     Just specialLocation -> pure $ Just specialLocation
     Nothing -> maybe (pure Nothing) (Lib.Queries.SpecialLocation.findById . (.specialLocationId)) =<< QGI.findGateInfoByLatLongWithoutGeoJson point
 
-findSpecialLocationByLatLong' :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
+findSpecialLocationByLatLong' :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe D.SpecialLocation)
 findSpecialLocationByLatLong' point = do
-  specialLocations <-
-    Esq.runInReplica $
-      Esq.findAll $ do
-        specialLocation <- from $ table @SpecialLocationT
-        where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
-        orderBy [asc (specialLocation ^. SpecialLocationPriority)]
-        return specialLocation
-  return $ listToMaybe specialLocations
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure $ listToMaybe [sl | (sl, polys) <- cached, any (pointInPolygon point) polys]
 
-findSpecialLocationByLatLong :: (Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe (D.SpecialLocation, Text))
+findSpecialLocationByLatLong :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => LatLong -> m (Maybe (D.SpecialLocation, Text))
 findSpecialLocationByLatLong point = do
-  specialLocations <-
-    Esq.runInReplica $
-      Esq.findAll $ do
-        specialLocation <- from $ table @SpecialLocationT
-        where_ $ specialLocation ^. SpecialLocationEnabled ==. val True &&. containsPoint (point.lon, point.lat)
-        orderBy [asc (specialLocation ^. SpecialLocationPriority)]
-        return (specialLocation, F.getGeomGeoJSON)
-  return $ listToMaybe specialLocations
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure $ listToMaybe [(sl, fromMaybe "" sl.geomGeoJson) | (sl, polys) <- cached, any (pointInPolygon point) polys]
 
 deleteById :: Id D.SpecialLocation -> SqlDB ()
 deleteById = Esq.deleteByKey @SpecialLocationT

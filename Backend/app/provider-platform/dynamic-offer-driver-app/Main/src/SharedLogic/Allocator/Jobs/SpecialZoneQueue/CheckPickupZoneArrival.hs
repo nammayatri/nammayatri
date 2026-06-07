@@ -22,6 +22,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
 import SharedLogic.SpecialZoneDriverDemand (mkSpecialZoneQueueRequestLockKey)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import qualified Tools.Notifications as Notify
 

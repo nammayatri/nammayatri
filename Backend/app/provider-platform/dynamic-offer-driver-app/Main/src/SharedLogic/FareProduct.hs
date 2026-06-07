@@ -25,6 +25,7 @@ import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import qualified Lib.Queries.SpecialLocationPriority as QSpecialLocationPriority
 import qualified Lib.Types.SpecialLocation as DSpecialLocation
 import qualified Lib.Types.SpecialLocation as SL
+import Storage.Beam.SpecialZone ()
 import qualified Storage.CachedQueries.FareProduct as QFareProduct
 
 data FareProducts = FareProducts
