@@ -122,7 +122,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) Nothing) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -158,7 +158,7 @@ callOnStatus currBooking = do
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
   case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
     (Just timeDiffThreshold, Just estimatedEndDuration) -> do
       now <- getCurrentTime

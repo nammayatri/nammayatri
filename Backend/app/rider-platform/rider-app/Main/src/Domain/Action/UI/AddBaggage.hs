@@ -47,7 +47,7 @@ postAddBaggageConfirm (_personId, merchantId) bookingId req = do
     throwError AddBaggageNegativeCount
 
   riderCfg <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (RiderConfigNotFound booking.merchantOperatingCityId.getId)
   whenJust riderCfg.maxNumberOfLuggages $ \maxN ->
     when (req.numberOfLuggages > maxN) $ throwError (AddBaggageExceedsMax maxN)

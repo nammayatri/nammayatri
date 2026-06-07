@@ -116,7 +116,7 @@ processBusLegState
   integratedBppConfig
   mbBookedVehicleNumber = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
     let includeNullUpcomingStops = fromMaybe False riderConfig.includeVehiclesWithNoEta
     if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do

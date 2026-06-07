@@ -134,7 +134,7 @@ onInit req = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = decRider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails
@@ -220,7 +220,7 @@ buildOnInitResFromBooking bookingId = do
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions decRider.merchantOperatingCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions decRider.merchantOperatingCityId.getId) Nothing >>= fromMaybeM (RiderConfigDoesNotExist decRider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   let fromLocation = booking.fromLocation
       mbToLocation = getToLocationFromBookingDetails booking.bookingDetails

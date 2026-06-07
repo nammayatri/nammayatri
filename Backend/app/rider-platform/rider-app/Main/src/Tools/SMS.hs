@@ -40,14 +40,14 @@ sendSMS merchantId merchantOperatingCityId = Sms.sendSMS handler
     handler = Sms.SmsHandler {..}
 
     getProvidersPriorityList = do
-      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
       when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOperatingCityId:" <> merchantOperatingCityId.getId)
       pure smsServiceProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SmsService provider)})
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SmsService provider)}) Nothing
           >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantId.getId)
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc

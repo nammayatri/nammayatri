@@ -70,7 +70,7 @@ updateCustomerStats event _ = do
                       case payload.rs of
                         DDR.COMPLETED -> do
                           let createdAt = payload.cAt
-                          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+                          riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
                           let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
                           -- Esq.runNoTransaction $ do
                           let ifIsWeekend = SP.isWeekend createdAt minuteDiffFromUTC

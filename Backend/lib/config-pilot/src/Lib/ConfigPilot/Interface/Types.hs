@@ -42,9 +42,11 @@ where
 import qualified Data.Text as T
 import GHC.Generics (C, D, Generic (from), K1 (..), M1 (..), Rep, S, (:*:) (..))
 import Kernel.Prelude
+import Kernel.Tools.Metrics.CoreMetrics (incrementConfigPilotFailureCounter, incrementConfigPilotSuccessCounter)
 import Kernel.Types.Error
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, throwError)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, logDebug, logError, throwError, withLogTag)
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
+import System.Environment (lookupEnv)
 import Prelude (id)
 
 -- -----------------------------------------------------------------------------
@@ -131,9 +133,38 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
   filterByDimensions :: a -> ConfigValueTypeOf a -> ConfigValueTypeOf a
   filterByDimensions _ = id
 
-  -- | Fetch filtered configs. Default chains getConfigList + filterByDimensions.
-  getConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
-  getConfig dims = filterByDimensions dims <$> getConfigList dims
+  -- | Fetch filtered configs with an optional fallback action triggered on any exception.
+  -- Wraps 'getConfigList' in a try block with structured logging under
+  -- @CONFIG_PILOT:<POD_NAME>@ tag. Entry and exit are logged at debug level.
+  -- On success the @config_pilot_success_metric@ counter is incremented; on failure
+  -- the @config_pilot_failure_metric@ counter is incremented (both labelled by table name).
+  -- When a fallback is provided ('Just'), failures log an error and invoke it;
+  -- with 'Nothing' the original exception is re-thrown after the failure metric is recorded.
+  getConfig ::
+    (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+    a ->
+    Maybe (m (ConfigValueTypeOf a)) ->
+    m (ConfigValueTypeOf a)
+  getConfig dims mbFallback = do
+    let tableName = show (getConfigType dims)
+    killSwitch <- liftIO $ maybe False read <$> lookupEnv "ENABLE_CONFIG_PILOT_FOR_ALL"
+    withLogTag "CONFIG_PILOT:" $
+      if killSwitch
+        then do
+          logDebug $ "getConfig:entry table=" <> tableName <> " dims=" <> show dims
+          let onSuccess cfg = do
+                incrementConfigPilotSuccessCounter tableName
+                pure cfg
+              onFailure (e :: SomeException) = do
+                logError $ "Fetch failed from config pilot, triggering fallback. error=" <> show e
+                incrementConfigPilotFailureCounter tableName
+                fromMaybe (throwM e) mbFallback
+          result <-
+            handle onFailure $
+              (filterByDimensions dims <$> getConfigList dims) >>= onSuccess
+          logDebug $ "getConfig:exit table=" <> tableName <> " dims=" <> show dims
+          pure result
+        else fromMaybe (throwM $ InternalError $ "No Fallback configured for table: " <> tableName) mbFallback
 
   setConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   setConfig _ = throwError $ InvalidRequest "setConfig not implemented for this dimension"
@@ -159,8 +190,9 @@ instance ToMaybeOne [a] where
 getOneConfig ::
   (ConfigDimensions a, ToMaybeOne (ConfigValueTypeOf a), Show a, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
   a ->
+  Maybe (m (ConfigValueTypeOf a)) ->
   m (Maybe (ElemOf (ConfigValueTypeOf a)))
-getOneConfig dims = getConfig dims >>= toMaybeOne (show dims)
+getOneConfig dims mbFallback = getConfig dims mbFallback >>= toMaybeOne (show dims)
 
 -- -----------------------------------------------------------------------------
 -- Generic machinery: extract non-Maybe field values as cache key parts

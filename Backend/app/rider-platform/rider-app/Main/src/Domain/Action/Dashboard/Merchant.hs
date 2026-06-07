@@ -298,7 +298,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
     when (Common.mapsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.MapsService service)}
       void $
-        listToMaybe <$> getConfig mscDims
+        listToMaybe <$> getConfig mscDims Nothing
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -331,7 +331,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
     when (Common.smsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SmsService service)}
       void $
-        listToMaybe <$> getConfig mscDims
+        listToMaybe <$> getConfig mscDims Nothing
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -563,9 +563,9 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- rider_config
   mbRiderConfig <- do
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) >>= \case
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = newMerchantOperatingCityId.getId}) Nothing >>= \case
       Nothing -> do
-        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) >>= fromMaybeM (InvalidRequest "Rider Config not found")
+        riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = baseOperatingCityId.getId}) Nothing >>= fromMaybeM (InvalidRequest "Rider Config not found")
         let newRiderConfig = buildRiderConfig newMerchantId newMerchantOperatingCityId now riderConfig
         return $ Just newRiderConfig
       _ -> return Nothing
@@ -1917,7 +1917,7 @@ getMerchantRiderConfigEstimatesOrder merchantShortId city = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   pure $
@@ -1938,7 +1938,7 @@ postMerchantRiderConfigEstimatesOrderUpdate merchantShortId city req = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show city)
 
   riderConfig <-
-    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       >>= fromMaybeM (InvalidRequest "RiderConfig not found for this merchant operating city")
 
   let updatedConfig =

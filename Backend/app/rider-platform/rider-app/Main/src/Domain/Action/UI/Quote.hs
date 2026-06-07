@@ -199,7 +199,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
     estimates' <- getEstimates searchRequest.merchantId person.id searchRequest.merchantOperatingCityId searchRequestId (isJust searchRequest.driverIdentifier)
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
 
     let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
         defaultServiceTierOrderConfig = maybe [] (.defaultServiceTierOrderConfig) riderConfig
@@ -258,7 +258,7 @@ isHighPriorityBooking bookingDetails = case bookingDetails of
 getOffers :: SSR.SearchRequest -> Flow [OfferRes]
 getOffers searchRequest = do
   logDebug $ "search Request is : " <> show searchRequest
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
   case searchRequest.toLocation of
     Just _ -> do
@@ -347,7 +347,7 @@ getEstimates merchantId personId mocId searchRequestId isReferredRide = do
   mbSearchReq <- runInReplica $ QSR.findById searchRequestId
   estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map

@@ -163,9 +163,9 @@ runWithServiceConfig ::
   liveActivityReq ->
   m resp
 runWithServiceConfig func getCfg merchantId merchantOperatingCityId personId req liveActivityReq = do
-  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+  merchantConfig <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
   merchantNotificationServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService $ getCfg merchantConfig)})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.NotificationService $ getCfg merchantConfig)}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "notification" (show $ getCfg merchantConfig))
   case merchantNotificationServiceConfig.serviceConfig of
     DMSC.NotificationServiceConfig msc -> func msc req liveActivityReq (clearDeviceToken personId)
@@ -313,7 +313,7 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
 
   -- Check if vehicle number matches any special vehicle notification config
   let matchedSpecialVehicleConfig = case riderConfig.specialVehicleNotificationConfigs of
@@ -577,7 +577,7 @@ notifyOnRideCompleted booking ride otherParties = do
 
   fork "Create Post ride safety job" $ do
     safetySettings <- Lib.findSafetySettingsWithFallback (cast person.id) (Lib.getDefaultSafetySettings (cast person.id) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
-    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+    riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
     now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
     let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> RideShareOptions
         convertToPersonRideShareOptions = \case
@@ -1335,7 +1335,7 @@ notifyRideStartToEmergencyContacts ::
   m ()
 notifyRideStartToEmergencyContacts booking ride = do
   rider <- runInReplica $ Person.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = rider.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = rider.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist rider.merchantOperatingCityId.getId)
   now <- getLocalCurrentTime riderConfig.timeDiffFromUtc
   personENList <- DPDEN.findpersonENListWithFallBack booking.riderId (Just rider)
   let followingContacts = filter (\contact -> checkSafetySettingConstraint (DPDEN.fromSafetyRideShare <$> contact.shareTripWithEmergencyContactOption) riderConfig now) personENList

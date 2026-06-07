@@ -116,7 +116,7 @@ postCustomerUnblock merchantShortId opCity customerId = do
   -- merchant access checking
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
-  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = customer.merchantOperatingCityId.getId})
+  merchantConfigs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = customer.merchantOperatingCityId.getId}) Nothing
   mapM_
     ( \mc -> withCrossAppRedis $ do
         SWC.deleteCurrentWindowValues (SMC.mkCancellationKey mc.id.getId personId.getId) mc.fraudBookingCancellationCountWindow

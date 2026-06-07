@@ -182,7 +182,7 @@ computeValidTill ::
   Id.Id DMOC.MerchantOperatingCity ->
   Environment.Flow Data.Time.UTCTime
 computeValidTill now moid = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
   let durationDays = maybe 365 (.validityDurationDays) riderConfig.studentPassVerifyConfig
   pure $ Data.Time.addUTCTime (fromIntegral durationDays * Data.Time.nominalDay) now
 
@@ -228,7 +228,7 @@ processRouteDetails moid routeDetails = do
   case Kernel.Prelude.listToMaybe integratedBPPConfigs of
     Nothing -> pure (Nothing, [], Nothing)
     Just integratedBPPConfig -> do
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moid.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist moid.getId)
       (allRouteIds, allRoutePairs, totalStages) <- foldM (processOneRouteDetail riderConfig integratedBPPConfig) ([], [], 0) dedupedRouteDetails
       pure (Just (L.nub allRouteIds), allRoutePairs, Just totalStages)
 

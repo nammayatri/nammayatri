@@ -60,7 +60,7 @@ mkRideCancelledKey customerId = "customer-offer:CR:cancelled-cId:" <> customerId
 
 getWindowSize :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> m Integer
 getWindowSize mocId = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
   pure $ toInteger $ fromMaybe 30 riderConfig.cancellationRateWindow
 
 incrementCancelledCount ::
@@ -109,7 +109,7 @@ getCancellationRateData ::
   Id DP.Person ->
   m (Maybe CustomerCancellationRateData)
 getCancellationRateData mocId customerId = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
   let minimumRides = findMinimumRides riderConfig
   let windowSize = findWindowSize riderConfig
   assignedCount <- getAssignedCount windowSize customerId

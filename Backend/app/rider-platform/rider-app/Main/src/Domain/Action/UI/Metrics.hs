@@ -29,7 +29,7 @@ processMetrics mbPersonId metricName message = do
       mbPerson <- runInReplica $ QPerson.findById personId
       case mbPerson of
         Just person -> do
-          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
           pure $ case mbRiderConfig of
             Just riderConfig -> fromMaybe [] riderConfig.metricsBlacklistPatterns
             Nothing -> []

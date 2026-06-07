@@ -61,7 +61,7 @@ instance ConfigDimensions MerchantServiceConfigDimensions where
         CR.DimMatcher (.serviceName) (\c -> Just $ fst (TRMSC.getServiceNameConfigJson c.serviceConfig)) (==)
       ]
       Nothing
-  getConfig dims = do
+  getConfig dims _mbFallback = do
     foundCfg <- measureLatency (getConfigList dims) ("MerchantServiceConfig.getConfigList merchantId=" <> dims.merchantId <> " mocId=" <> dims.merchantOperatingCityId)
     if null foundCfg
       then do

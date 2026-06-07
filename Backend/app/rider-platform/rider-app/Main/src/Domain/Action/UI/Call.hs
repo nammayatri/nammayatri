@@ -447,7 +447,7 @@ getCallTwillioAccessToken rideId entity deviceType = do
       twillioCallConfig :: TwillioCallCfg <- getCfg cityId merId
       createJWT id twillioCallConfig deviceType
     getCfg cityId mercId = do
-      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
+      merchantServConfig <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = cityId.getId, merchantId = mercId.getId, serviceName = Just (DMSC.CallService Call.TwillioCall)}) Nothing >>= fromMaybeM (MerchantServiceConfigNotFound cityId.getId "Call" "TwillioCall")
       case merchantServConfig.serviceConfig of
         DMSC.CallServiceConfig config ->
           case config of

@@ -78,7 +78,7 @@ validateRequest DOnSearch {..} = do
   let merchantId = search.merchantId
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity search
-  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId}) >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
+  frfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = search.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show search.merchantOperatingCityId)
   if frfsConfig.isEventOngoing == Just True && search.riderId /= SFU.partnerOrgRiderId
     then do
       stats <- QPStats.findByPersonId search.riderId >>= fromMaybeM (InternalError "Person stats not found")
@@ -308,7 +308,7 @@ filterQuotes integratedBPPConfig quotesWithCategories (Just journeyLeg) = do
     _ -> do
       case journeyLeg.mode of
         DTripTypes.Bus -> do
-          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId})
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = journeyLeg.merchantOperatingCityId.getId}) Nothing
           let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
           let cfgMap' = SFU.adjustCfgMapForPreferredTier journeyLeg.userPreferredServiceTier cfgMap
           let serviceTierTypeFromQuote quote quoteCategories = JourneyUtils.getServiceTierFromQuote quoteCategories quote <&> (.serviceTierType)

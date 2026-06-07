@@ -68,7 +68,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
   let validCancellationReasonCodesForImmediateCharge = fromMaybe ["CUSTOMER_NO_SHOW"] riderConfig.validCancellationReasonCodesForImmediateCharge
   let immediateCharge = isJust cancellationFee && maybe False (`elem` validCancellationReasonCodesForImmediateCharge) cancellationReasonCode
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee cancellationFeeTax immediateCharge

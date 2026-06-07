@@ -34,7 +34,7 @@ dailyPassStatusUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
       merchantOpCityId = jobData.merchantOperatingCityId
       autoSchedule = jobData.autoSchedule
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       batchSize = max 1 $ fromMaybe 1000 (mbRiderConfig >>= (.passStatusUpdateBatchSize))
 

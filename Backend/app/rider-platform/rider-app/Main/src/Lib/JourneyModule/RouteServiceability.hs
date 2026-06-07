@@ -54,7 +54,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
       shouldRunSeatHoldReaper = any ((== Just DVSLM.AUTO_ASSIGNED) . (>>= (.seatSelectionType))) seatLayoutMappings
 
   when shouldRunSeatHoldReaper $ do
-    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
+    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId}) Nothing
     let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
     shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
     when shouldRun $

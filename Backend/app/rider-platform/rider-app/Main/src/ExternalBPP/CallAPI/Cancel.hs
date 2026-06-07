@@ -57,7 +57,7 @@ cancel ::
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   frfsConfig <-
-    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId})
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
   unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
   let mbServiceTierType = FRFSUtils.getServiceTierTypeFromRouteStationsJson booking.routeStationsJson

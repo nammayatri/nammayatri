@@ -70,7 +70,7 @@ getSosDetails merchantShortId opCity sosId = do
   mbMerchantOpCity <- case sos.merchantOperatingCityId of
     Just cityId -> CQMOC.findById (Kernel.Types.Id.cast cityId)
     Nothing -> CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
-  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId})) mbMerchantOpCity
+  mbRideConfig <- maybe (pure Nothing) (\moc -> getConfig (RiderConfigDimensions {merchantOperatingCityId = moc.id.getId}) Nothing) mbMerchantOpCity
   let externalSOSConfig = mbRideConfig >>= \rc -> rc.externalSOSConfig
   let triggerSource = convertTriggerSource <$> (externalSOSConfig <&> (.triggerSource))
   person <- B.runInReplica $ QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonNotFound sos.personId.getId)
@@ -169,7 +169,7 @@ callExternalSOS sosId mbComments = do
   merchantOpCityId <- Kernel.Types.Id.cast @SafetyDCommon.MerchantOperatingCity @DMOC.MerchantOperatingCity <$> sos.merchantOperatingCityId & fromMaybeM (InvalidRequest "SOS record missing merchantOperatingCityId")
   merchantId <- Kernel.Types.Id.cast @SafetyDCommon.Merchant @Domain.Types.Merchant.Merchant <$> sos.merchantId & fromMaybeM (InvalidRequest "SOS record missing merchantId")
   person <- QP.findById (Kernel.Types.Id.cast @SafetyDCommon.Person @DPerson.Person sos.personId) >>= fromMaybeM (PersonDoesNotExist sos.personId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions merchantOpCityId.getId) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions merchantOpCityId.getId) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case riderConfig.externalSOSConfig of
     Nothing -> throwError $ InvalidRequest "External SOS config not configured for this city"
     Just sosConfig -> do
@@ -177,7 +177,7 @@ callExternalSOS sosId mbComments = do
         throwError $ InvalidRequest "External SOS trigger source is not DASHBOARD for this city"
       let sosServiceType = flowToSOSService sosConfig.flow
       merchantSvcCfg <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)})
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.SOSService sosServiceType)}) Nothing
           >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "SOS" (show sosServiceType))
       case merchantSvcCfg.serviceConfig of
         DMSC.SOSServiceConfig specificConfig -> do

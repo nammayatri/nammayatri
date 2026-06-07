@@ -76,7 +76,7 @@ createSafetyTicket ::
   m ()
 createSafetyTicket person ride = do
   logDebug $ "Creating Safety Ticket for ride : " <> show ride.id
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   merchantConfig <- CQM.findById (person.merchantId) >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
   let rideMocId = fromMaybe person.merchantOperatingCityId ride.merchantOperatingCityId
   rideMoc <- CQMOC.findById rideMocId >>= fromMaybeM (MerchantOperatingCityNotFound rideMocId.getId)
