@@ -1932,7 +1932,7 @@ MerchantServiceConfig:
     - EXTRA_QUERY_FILE
 
 MerchantClientConfig:
-  derives: Generic,Show
+  derives: Generic,Show,ToJSON,FromJSON
   fields:
     packageId: Text
     clientOS: Maybe Kernel.Types.Version.DeviceType

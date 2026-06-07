@@ -14,9 +14,10 @@
 
 module SharedLogic.Pricing where
 
+import Control.Applicative ((<|>))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map.Strict as Map
-import Data.Text as T hiding (elem, find, length, null)
+import Data.Text as T hiding (elem, find, length, null, zip)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
@@ -143,12 +144,6 @@ mkCongestionVehicleCategoryWithDistanceBin :: UTCTime -> Maybe DVC.VehicleCatego
 mkCongestionVehicleCategoryWithDistanceBin time vehicleCategory (Just distance) = "congestion_VC_" <> show vehicleCategory <> "_dB_" <> (getDistanceBin distance) <> "_time_" <> (buildTimeBucket time)
 mkCongestionVehicleCategoryWithDistanceBin time vehicleCategory Nothing = mkCongestionVehicleCategory time vehicleCategory
 
--- | Stepwise QAR (Quote-Acceptance-Ratio) using geoSearch.
--- Hierarchy: distanceBin → vehicleCategory → city.
--- At each geo level, fetches N and N-1 first; if current window has enough
--- demand (>4), fetches N-2 to compute the past window (reusing N-1).
--- All geoSearch calls within a level are batched via 'bulkShardedRedisBatch'
--- so keys sharing the '{vehicleCategory}' hash tag pipeline to one slot.
 getActualQAR ::
   (MonadFlow m, CacheFlow m r) =>
   UTCTime ->
@@ -162,52 +157,42 @@ getActualQAR now vehicleCategory location radius distance cityId = do
   let timeN = now
       timeN_1 = addUTCTime (-900) now
       timeN_2 = addUTCTime (-1800) now
-  -- Step 1: DistanceBin level (N, N-1)
-  let demDistN = mkDemandVehicleCategoryWithDistanceBin timeN vehicleCategory (Just distance)
+      demDistN = mkDemandVehicleCategoryWithDistanceBin timeN vehicleCategory (Just distance)
       demDistN_1 = mkDemandVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
+      demDistN_2 = mkDemandVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
       accDistN = mkAcceptanceVehicleCategoryWithDistanceBin timeN vehicleCategory (Just distance)
       accDistN_1 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_1 vehicleCategory (Just distance)
-  distCounts <- batchGeoSearchCounts [demDistN, demDistN_1, accDistN, accDistN_1] location radius
-  let (cDemDistN, cDemDistN_1, cAccDistN, cAccDistN_1) = case distCounts of
-        [a, b, c, d] -> (a, b, c, d)
-        _ -> (0, 0, 0, 0)
-      distCurrent = computeQAR (cDemDistN + cDemDistN_1) (cAccDistN + cAccDistN_1)
-  case distCurrent of
-    Just _ -> do
-      -- Fetch N-2 for past (N-1 already known)
-      let demDistN_2 = mkDemandVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
-          accDistN_2 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
-      pastCounts <- batchGeoSearchCounts [demDistN_2, accDistN_2] location radius
-      let (cDemDistN_2, cAccDistN_2) = case pastCounts of
-            [a, b] -> (a, b)
-            _ -> (0, 0)
-          distPast = computeQAR (cDemDistN_1 + cDemDistN_2) (cAccDistN_1 + cAccDistN_2)
-      return (distCurrent, distPast)
-    Nothing -> do
-      -- Step 2: VehicleCategory level (N, N-1)
-      let demVcN = mkDemandVehicleCategory timeN vehicleCategory
-          demVcN_1 = mkDemandVehicleCategory timeN_1 vehicleCategory
-          accVcN = mkAcceptanceVehicleCategory timeN vehicleCategory
-          accVcN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
-      vcCounts <- batchGeoSearchCounts [demVcN, demVcN_1, accVcN, accVcN_1] location radius
-      let (cDemVcN, cDemVcN_1, cAccVcN, cAccVcN_1) = case vcCounts of
-            [a, b, c, d] -> (a, b, c, d)
-            _ -> (0, 0, 0, 0)
-          vcCurrent = computeQAR (cDemVcN + cDemVcN_1) (cAccVcN + cAccVcN_1)
-      case vcCurrent of
-        Just _ -> do
-          -- Fetch N-2 for past
-          let demVcN_2 = mkDemandVehicleCategory timeN_2 vehicleCategory
-              accVcN_2 = mkAcceptanceVehicleCategory timeN_2 vehicleCategory
-          vcPastCounts <- batchGeoSearchCounts [demVcN_2, accVcN_2] location radius
-          let (cDemVcN_2, cAccVcN_2) = case vcPastCounts of
-                [a, b] -> (a, b)
-                _ -> (0, 0)
-              vcPast = computeQAR (cDemVcN_1 + cDemVcN_2) (cAccVcN_1 + cAccVcN_2)
-          return (vcCurrent, vcPast)
-        Nothing -> do
-          -- Step 3: City level (incr counters, no geo-spatial locality)
-          getCityLevelQAR timeN timeN_1 timeN_2 vehicleCategory cityId
+      accDistN_2 = mkAcceptanceVehicleCategoryWithDistanceBin timeN_2 vehicleCategory (Just distance)
+      demVcN = mkDemandVehicleCategory timeN vehicleCategory
+      demVcN_1 = mkDemandVehicleCategory timeN_1 vehicleCategory
+      demVcN_2 = mkDemandVehicleCategory timeN_2 vehicleCategory
+      accVcN = mkAcceptanceVehicleCategory timeN vehicleCategory
+      accVcN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
+      accVcN_2 = mkAcceptanceVehicleCategory timeN_2 vehicleCategory
+      radiusKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demVcN, demVcN_1, demVcN_2, accVcN, accVcN_1, accVcN_2]
+  radiusCounts <- batchGeoSearchCounts radiusKeys location radius
+  let countsMap = Map.fromList (zip radiusKeys radiusCounts)
+      cnt k = Map.findWithDefault 0 k countsMap
+      distCurrent = computeQAR (cnt demDistN + cnt demDistN_1) (cnt accDistN + cnt accDistN_1)
+      distPast = computeQAR (cnt demDistN_1 + cnt demDistN_2) (cnt accDistN_1 + cnt accDistN_2)
+      vcCurrent = computeQAR (cnt demVcN + cnt demVcN_1) (cnt accVcN + cnt accVcN_1)
+      vcPast = computeQAR (cnt demVcN_1 + cnt demVcN_2) (cnt accVcN_1 + cnt accVcN_2)
+  vc2xCurrent <-
+    if isJust (distCurrent <|> vcCurrent)
+      then pure Nothing
+      else do
+        twoXCounts <- batchGeoSearchCounts [demVcN, demVcN_1, accVcN, accVcN_1] location (2 * radius)
+        let (d, d1, a, a1) = case twoXCounts of
+              [w, x, y, z] -> (w, x, y, z)
+              _ -> (0, 0, 0, 0)
+        pure $ computeQAR (d + d1) (a + a1)
+  (cityCurrent, cityPast) <-
+    if isNothing (distCurrent <|> vcCurrent <|> vc2xCurrent) || isNothing (distPast <|> vcPast)
+      then getCityLevelQAR timeN timeN_1 timeN_2 vehicleCategory cityId
+      else pure (Nothing, Nothing)
+  let currentQAR = distCurrent <|> vcCurrent <|> vc2xCurrent <|> cityCurrent
+      pastQAR = distPast <|> vcPast <|> cityPast
+  return (currentQAR, pastQAR)
   where
     computeQAR demandCount acceptanceCount
       | demandCount > 4 = Just (fromIntegral acceptanceCount / fromIntegral demandCount)
@@ -216,23 +201,14 @@ getActualQAR now vehicleCategory location radius distance cityId = do
     getCityLevelQAR timeN timeN_1 timeN_2 vc cid = do
       let demCityN = mkDemandVehicleCategoryCity timeN vc cid
           demCityN_1 = mkDemandVehicleCategoryCity timeN_1 vc cid
+          demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vc cid
           accCityN = mkAcceptanceVehicleCategoryCity timeN vc cid
           accCityN_1 = mkAcceptanceVehicleCategoryCity timeN_1 vc cid
-      results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int [demCityN, demCityN_1, accCityN, accCityN_1]
+          accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vc cid
+          cityKeys = [demCityN, demCityN_1, demCityN_2, accCityN, accCityN_1, accCityN_2]
+      results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int cityKeys
       let resultsMap = Map.fromList results
-          demN = Map.lookup demCityN resultsMap
-          demN_1 = Map.lookup demCityN_1 resultsMap
-          accN = Map.lookup accCityN resultsMap
-          accN_1 = Map.lookup accCityN_1 resultsMap
-      let cityCurrent = computeQAR (fromMaybe 0 demN + fromMaybe 0 demN_1) (fromMaybe 0 accN + fromMaybe 0 accN_1)
-      case cityCurrent of
-        Just _ -> do
-          let demCityN_2 = mkDemandVehicleCategoryCity timeN_2 vc cid
-              accCityN_2 = mkAcceptanceVehicleCategoryCity timeN_2 vc cid
-          results2 <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int [demCityN_2, accCityN_2]
-          let resultsMap2 = Map.fromList results2
-              demN_2 = Map.lookup demCityN_2 resultsMap2
-              accN_2 = Map.lookup accCityN_2 resultsMap2
-          let cityPast = computeQAR (fromMaybe 0 demN_1 + fromMaybe 0 demN_2) (fromMaybe 0 accN_1 + fromMaybe 0 accN_2)
-          return (cityCurrent, cityPast)
-        Nothing -> return (Nothing, Nothing)
+          c k = fromMaybe 0 (Map.lookup k resultsMap)
+          cityCurrent = computeQAR (c demCityN + c demCityN_1) (c accCityN + c accCityN_1)
+          cityPast = computeQAR (c demCityN_1 + c demCityN_2) (c accCityN_1 + c accCityN_2)
+      return (cityCurrent, cityPast)

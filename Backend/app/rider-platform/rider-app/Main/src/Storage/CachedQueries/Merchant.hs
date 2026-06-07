@@ -34,6 +34,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (Subscriber)
@@ -45,39 +46,55 @@ import Tools.Error
 loadAllBaps :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => m [Merchant]
 loadAllBaps = Queries.findAll
 
+-- | In-memory (L1) cache TTL for merchant lookups. Merchant rows are config-like
+--   and rarely change; a short-lived in-process cache avoids the Redis round-trip
+--   on the hot path. NOTE: 'clearCache' only clears Redis, so an updated merchant
+--   may be served stale from a pod's in-mem cache for up to this many seconds.
+inMemCacheTtl :: Seconds
+inMemCacheTtl = 3600
+
 findById :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id Merchant -> m (Maybe Merchant)
 findById id =
-  Hedis.safeGet (makeIdKey id) >>= \case
-    Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-    Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
+  IM.withInMemCache [makeIdKey id] inMemCacheTtl $
+    Hedis.safeGet (makeIdKey id) >>= \case
+      Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
+      Nothing -> flip whenJust cacheMerchant /=<< Queries.findById id
 
-findByShortId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> m (Maybe Merchant)
+findByShortId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ShortId Merchant -> m (Maybe Merchant)
 findByShortId shortId_ =
-  Hedis.safeGet (makeShortIdKey shortId_) >>= \case
-    Nothing -> findAndCache
-    Just id ->
-      Hedis.safeGet (makeIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-        Nothing -> findAndCache
+  IM.withInMemCache [makeShortIdKey shortId_] inMemCacheTtl $
+    Hedis.safeGet (makeShortIdKey shortId_) >>= \case
+      Nothing -> findAndCache
+      Just id ->
+        Hedis.safeGet (makeIdKey id) >>= \case
+          Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
+          Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findByShortId shortId_
 
-findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r) => ShortId Subscriber -> m (Maybe Merchant)
+findBySubscriberId :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => ShortId Subscriber -> m (Maybe Merchant)
 findBySubscriberId subscriberId =
-  Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
-    Nothing -> findAndCache
-    Just id ->
-      Hedis.safeGet (makeIdKey id) >>= \case
-        Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
-        Nothing -> findAndCache
+  IM.withInMemCache [makeSubscriberIdKey subscriberId] inMemCacheTtl $
+    Hedis.safeGet (makeSubscriberIdKey subscriberId) >>= \case
+      Nothing -> findAndCache
+      Just id ->
+        Hedis.safeGet (makeIdKey id) >>= \case
+          Just a -> return . Just $ coerce @(MerchantD 'Unsafe) @Merchant a
+          Nothing -> findAndCache
   where
     findAndCache = flip whenJust cacheMerchant /=<< Queries.findBySubscriberId subscriberId
 
 -- Call it after any update
-clearCache :: Hedis.HedisFlow m r => Merchant -> m ()
-clearCache merchant = Hedis.runInMultiCloudRedisWrite $ do
-  Hedis.del (makeIdKey merchant.id)
-  Hedis.del (makeShortIdKey merchant.shortId)
+clearCache :: (CacheFlow m r, MonadFlow m) => Merchant -> m ()
+clearCache merchant = do
+  Hedis.runInMultiCloudRedisWrite $ do
+    Hedis.del (makeIdKey merchant.id)
+    Hedis.del (makeShortIdKey merchant.shortId)
+  -- Also drop the L1 in-mem entries (and propagate the cleanup to other pods via
+  -- the InMem sidecar) so an update isn't masked by a stale in-process cache.
+  IM.refreshInMem (makeIdKey merchant.id)
+  IM.refreshInMem (makeShortIdKey merchant.shortId)
+  IM.refreshInMem (makeSubscriberIdKey merchant.subscriberId)
 
 cacheMerchant :: (CacheFlow m r) => Merchant -> m ()
 cacheMerchant merchant = do

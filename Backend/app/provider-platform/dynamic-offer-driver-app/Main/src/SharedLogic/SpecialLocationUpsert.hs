@@ -43,8 +43,8 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
-import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
 import qualified Lib.Queries.SpecialLocationPriority as QSLP
@@ -52,6 +52,7 @@ import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Types.SpecialLocationPriority as SLP
+import Storage.Beam.SpecialZone ()
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -244,6 +245,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
   locationFileName :: Text <- cleanCSVField idx row.locationFileName "Location File Name"
   (_, locationGeomFile) <- find (\(geomFileName, _) -> locationFileName == geomFileName) locationGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for location: " <> locationName)
   locationGeom <- getGeomFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for location: " <> locationName)
+  locationGeomGeoJson <- GGeom.getGeoJsonFromKML locationGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to GeoJSON for location: " <> locationName)
   category :: Text <- cleanCSVField idx row.category "Category"
   let locationType :: Maybe SL.SpecialLocationType = readMaybeCSVField idx row.locationType "Location Type"
       mbSpecialLocationId :: Maybe Text = cleanField row.specialLocationId
@@ -272,7 +274,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
       then do
         gateInfoFileName :: Text <- cleanCSVField idx row.gateInfoFileName "Gate Info (file_name)"
         (_, gateInfoGeomFile) <- find (\(gateFileName, _) -> gateInfoFileName == gateFileName) gateGeomFiles & fromMaybeM (InvalidRequest $ "KML file missing for gateInfo: " <> gateInfoName)
-        gateGeom <- getGeomFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to PostGis geom for gateInfo: " <> gateInfoName)
+        gateGeom <- GGeom.getGeoJsonFromKML gateInfoGeomFile >>= fromMaybeM (InvalidRequest $ "Not able to convert the given KML to GeoJSON for gateInfo: " <> gateInfoName)
         return $ Just gateGeom
       else return Nothing
   let specialLocation =
@@ -289,6 +291,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             priority = fromMaybe 0 priority,
             locationType = fromMaybe SL.Open locationType,
             geom = Just $ T.pack locationGeom,
+            geomGeoJson = Just locationGeomGeoJson,
             createdAt = now,
             updatedAt = now,
             isQueueEnabled = mbIsQueueEnabled,
@@ -304,7 +307,7 @@ makeSpecialLocation locationGeomFiles gateGeomFiles merchantOpCity idx row = do
             defaultDriverExtra = gateInfoDefaultDriverExtra,
             name = gateInfoName,
             address = gateInfoAddress,
-            geom = T.pack <$> gateInfoGeom,
+            geomGeoJson = gateInfoGeom,
             canQueueUpOnGate = gateInfoCanQueueUpOnGate,
             gateType = gateInfoType,
             merchantId = Just (cast merchantOpCity.merchantId),
@@ -401,11 +404,9 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
       forM specialLocationAndGates $ \(_, _, (_, gi), _, _, _) -> do
         mbGate <- QGI.findById gi.id
         pure $ (gi.id,) <$> mbGate
-  whenJust mbExisting $ \spl ->
-    void $
-      runTransaction $ do
-        QSL.deleteById spl.id
-        QGI.deleteAll spl.id
+  whenJust mbExisting $ \spl -> do
+    void $ runTransaction $ QSL.deleteById spl.id
+    QGI.deleteAll spl.id
   specialLocationId <-
     case mbSpecialLocationIdFromCsv of
       Just splId -> return $ Id splId
@@ -418,9 +419,10 @@ processSpecialLocationAndGatesGroup opCity merchantOpCity specialLocationAndGate
               Map.lookup gateInfo.id existingGatesById
                 <|> Map.lookup gateInfo.name existingGatesByName
             merged = mergeGateInfoWithExisting gateInfo mbExistingGate
-        runTransaction $ QGIG.create $ merged {DGI.specialLocationId = specialLocationId}
+        QGI.create $ merged {DGI.specialLocationId = specialLocationId}
     )
     specialLocationAndGates
+  QSL.clearSpecialZoneInMemCache
 
 ---------------------------------------------------------------------
 -- Merge helpers — preserve existing DB values when CSV value is Nothing

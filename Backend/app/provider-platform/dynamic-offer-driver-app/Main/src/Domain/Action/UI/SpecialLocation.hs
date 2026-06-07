@@ -10,6 +10,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (throwError)
 import Lib.Queries.SpecialLocation
 import Servant (Header, Headers, addHeader)
+import Storage.Beam.SpecialZone ()
 import Tools.Error (SpecialZoneErrors (SpecialLocationNotModified))
 
 getSpecialLocationList ::

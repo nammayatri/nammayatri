@@ -603,6 +603,7 @@ library
       Storage.Beam.Quote
       Storage.Beam.SchedulerJob
       Storage.Beam.Sos
+      Storage.Beam.SpecialZone
       Storage.Beam.SystemConfigs
       Storage.Beam.Toll
       Storage.Beam.Webhook
@@ -670,6 +671,7 @@ library
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
       Storage.CachedQueries.RideRelatedNotificationConfig
+      Storage.CachedQueries.Route
       Storage.CachedQueries.SubscriptionConfig
       Storage.CachedQueries.UiDriverConfig
       Storage.CachedQueries.ValueAddNP

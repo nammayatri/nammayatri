@@ -12,7 +12,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.WMB as WMB
-import qualified Storage.Queries.Route as QR
+import qualified Storage.CachedQueries.Route as QR
 import qualified Storage.Queries.TripTransaction as QTT
 import Tools.Error
 
