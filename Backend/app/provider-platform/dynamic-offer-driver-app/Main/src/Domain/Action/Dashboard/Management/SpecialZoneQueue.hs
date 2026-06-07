@@ -7,11 +7,12 @@ module Domain.Action.Dashboard.Management.SpecialZoneQueue
     postSpecialZoneQueueManualQueueRemove,
     getSpecialZoneQueueDriverQueuePosition,
     getSpecialZoneQueueDriverQueueHistory,
+    getSpecialZoneQueueTriggerNotifyStatus,
   )
 where
 
 import qualified API.Types.ProviderPlatform.Management.SpecialZoneQueue as SZQT
-import Data.List (nub)
+import Data.List (nub, partition)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
@@ -32,10 +33,13 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as DGI
+import SharedLogic.Allocator (AllocatorJobType (..), RetryTriggerNotifyJobData (..))
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTSFlow
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.SpecialZoneQueueRequestExtra as QSZQR
@@ -46,9 +50,38 @@ postSpecialZoneQueueTriggerNotify merchantShortId opCity req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   gate <- QGI.findById (Kernel.Types.Id.Id req.gateId) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> req.gateId)
-  let mbPriorityIds = fmap (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
-  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify mbPriorityIds req.isDemandHigh
-  logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId
+  let priorityIds = maybe [] (map Kernel.Types.Id.Id) req.forceNotifyDriverIds
+      retryIntervalSec = fromMaybe SpecialZoneDriverDemand.defaultTriggerNotifyRetryIntervalSec gate.triggerNotifyRetryIntervalSec
+      maxRetryDurationSec = fromMaybe SpecialZoneDriverDemand.defaultTriggerNotifyMaxRetryDurationSec gate.triggerNotifyMaxRetryDurationSec
+  requestId <- generateGUID
+  totalNotified <- SpecialZoneDriverDemand.forceNotifyDriverDemand merchantOpCity.id merchant.id gate req.vehicleType req.driversToNotify (Just priorityIds) req.isDemandHigh (Just requestId)
+  SpecialZoneDriverDemand.recordTriggerNotifyEvent
+    req.gateId
+    req.vehicleType
+    requestId
+    DSZQR.Dashboard
+    totalNotified
+    (Just req.driversToNotify)
+    req.isDemandHigh
+    priorityIds
+    maxRetryDurationSec
+    SpecialZoneDriverDemand.CreateIfMissing
+  when (totalNotified < req.driversToNotify) $ do
+    claimed <- SpecialZoneDriverDemand.tryClaimRetryJob req.gateId req.vehicleType maxRetryDurationSec
+    when claimed $
+      createJobIn @_ @'RetryTriggerNotify
+        (Just merchant.id)
+        (Just merchantOpCity.id)
+        (secondsToNominalDiffTime $ Seconds retryIntervalSec)
+        RetryTriggerNotifyJobData
+          { gateId = req.gateId,
+            vehicleType = req.vehicleType,
+            retryIntervalSec = retryIntervalSec,
+            maxRetryDurationSec = maxRetryDurationSec,
+            merchantId = merchant.id,
+            merchantOperatingCityId = merchantOpCity.id
+          }
+  logInfo $ "Dashboard trigger: notified " <> show totalNotified <> " drivers for gate " <> req.gateId <> " requestId=" <> requestId
   pure Kernel.Types.APISuccess.Success
 
 postSpecialZoneQueueManualQueueAdd :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> SZQT.ManualQueueAddReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
@@ -246,3 +279,30 @@ getSpecialZoneQueueDriverQueueHistory merchantShortId opCity driverIdText = do
         { timestamp = ev.timestamp,
           value = ev.value
         }
+
+getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Text -> Text -> Environment.Flow SZQT.TriggerNotifyStatusRes)
+getSpecialZoneQueueTriggerNotifyStatus merchantShortId opCity gateId vehicleType = do
+  merchant <- findMerchantByShortId merchantShortId
+  _merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  gate <- QGI.findById (Kernel.Types.Id.Id gateId) >>= fromMaybeM (InvalidRequest $ "Gate not found: " <> gateId)
+  let maxRetryDurationSec = fromMaybe SpecialZoneDriverDemand.defaultTriggerNotifyMaxRetryDurationSec gate.triggerNotifyMaxRetryDurationSec
+  sessions <- SpecialZoneDriverDemand.getActiveTriggerSessions gateId vehicleType maxRetryDurationSec
+  let activeRequestIds = map (.requestId) sessions
+  rows <- QSZQR.findAllByRequestIds activeRequestIds
+  let (dashSessions, appSessions) = partition (\s -> s.source == DSZQR.Dashboard) sessions
+      dashRequestIds = map (.requestId) dashSessions
+      appRequestIds = map (.requestId) appSessions
+      dashboardNotified = sum $ map (.totalTriggered) dashSessions
+      appNotified = sum $ map (.totalTriggered) appSessions
+      dashboardAccepted = length $ filter (\r -> r.status == DSZQR.Accepted && maybe False (`elem` dashRequestIds) r.requestId) rows
+      appAccepted = length $ filter (\r -> r.status == DSZQR.Accepted && maybe False (`elem` appRequestIds) r.requestId) rows
+  pure
+    SZQT.TriggerNotifyStatusRes
+      { totalNotified = dashboardNotified + appNotified,
+        totalAccepted = dashboardAccepted + appAccepted,
+        dashboardNotified = dashboardNotified,
+        dashboardAccepted = dashboardAccepted,
+        appNotified = appNotified,
+        appAccepted = appAccepted,
+        activeRequestCount = length sessions
+      }

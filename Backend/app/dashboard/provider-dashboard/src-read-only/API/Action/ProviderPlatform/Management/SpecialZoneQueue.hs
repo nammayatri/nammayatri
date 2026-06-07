@@ -22,10 +22,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition :<|> GetSpecialZoneQueueDriverQueueHistory))
+type API = ("specialZoneQueue" :> (PostSpecialZoneQueueTriggerNotify :<|> GetSpecialZoneQueueQueueStats :<|> PostSpecialZoneQueueManualQueueAdd :<|> PostSpecialZoneQueueManualQueueRemove :<|> GetSpecialZoneQueueDriverQueuePosition :<|> GetSpecialZoneQueueDriverQueueHistory :<|> GetSpecialZoneQueueTriggerNotifyStatus))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city :<|> getSpecialZoneQueueDriverQueueHistory merchantId city
+handler merchantId city = postSpecialZoneQueueTriggerNotify merchantId city :<|> getSpecialZoneQueueQueueStats merchantId city :<|> postSpecialZoneQueueManualQueueAdd merchantId city :<|> postSpecialZoneQueueManualQueueRemove merchantId city :<|> getSpecialZoneQueueDriverQueuePosition merchantId city :<|> getSpecialZoneQueueDriverQueueHistory merchantId city :<|> getSpecialZoneQueueTriggerNotifyStatus merchantId city
 
 type PostSpecialZoneQueueTriggerNotify =
   ( ApiAuth
@@ -75,6 +75,14 @@ type GetSpecialZoneQueueDriverQueueHistory =
       :> API.Types.ProviderPlatform.Management.SpecialZoneQueue.GetSpecialZoneQueueDriverQueueHistory
   )
 
+type GetSpecialZoneQueueTriggerNotifyStatus =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.SPECIAL_ZONE_QUEUE / 'API.Types.ProviderPlatform.Management.SpecialZoneQueue.GET_SPECIAL_ZONE_QUEUE_TRIGGER_NOTIFY_STATUS)
+      :> API.Types.ProviderPlatform.Management.SpecialZoneQueue.GetSpecialZoneQueueTriggerNotifyStatus
+  )
+
 postSpecialZoneQueueTriggerNotify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerSpecialZoneQueueNotifyReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postSpecialZoneQueueTriggerNotify merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.postSpecialZoneQueueTriggerNotify merchantShortId opCity apiTokenInfo req
 
@@ -92,3 +100,6 @@ getSpecialZoneQueueDriverQueuePosition merchantShortId opCity apiTokenInfo drive
 
 getSpecialZoneQueueDriverQueueHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.DriverQueueHistoryRes)
 getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driverId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.getSpecialZoneQueueDriverQueueHistory merchantShortId opCity apiTokenInfo driverId
+
+getSpecialZoneQueueTriggerNotifyStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.SpecialZoneQueue.TriggerNotifyStatusRes)
+getSpecialZoneQueueTriggerNotifyStatus merchantShortId opCity apiTokenInfo gateId vehicleType = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.SpecialZoneQueue.getSpecialZoneQueueTriggerNotifyStatus merchantShortId opCity apiTokenInfo gateId vehicleType

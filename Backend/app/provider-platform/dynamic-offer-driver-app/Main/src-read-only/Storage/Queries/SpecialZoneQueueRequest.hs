@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.SpecialZoneQueueRequest.SpecialZoneQueueRequest
       Se.Set Beam.gateName gateName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.requestId requestId,
       Se.Set Beam.response response,
       Se.Set Beam.specialLocationId specialLocationId,
       Se.Set Beam.specialLocationName specialLocationName,

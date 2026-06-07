@@ -3244,6 +3244,11 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
             enableQueueFilter = mbGate >>= (.enableQueueFilter),
+            enableQuoteSupplyFilter = mbGate >>= (.enableQuoteSupplyFilter),
+            quoteSupplyFilterVariants = mbGate >>= (.quoteSupplyFilterVariants),
+            triggerNotifyRetryIntervalSec = mbGate >>= (.triggerNotifyRetryIntervalSec),
+            triggerNotifyMaxRetryDurationSec = mbGate >>= (.triggerNotifyMaxRetryDurationSec),
+            isAutoNotifyEnabled = reqT.isAutoNotifyEnabled <|> (mbGate >>= (.isAutoNotifyEnabled)),
             ..
           }
 

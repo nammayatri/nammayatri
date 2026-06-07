@@ -767,7 +767,8 @@ data UpsertSpecialLocationGateReq = UpsertSpecialLocationGateReq
     address :: Maybe Text,
     canQueueUpOnGate :: Maybe Bool,
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    isAutoNotifyEnabled :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -786,6 +787,7 @@ instance FromMultipart Tmp UpsertSpecialLocationGateReq where
       <*> parseMaybeInput "canQueueUpOnGate" form
       <*> parseMaybeInput "gateTags" form
       <*> parseMaybeInput "walkDescription" form
+      <*> parseMaybeInput "isAutoNotifyEnabled" form
 
 instance HideSecrets UpsertSpecialLocationGateReq where
   hideSecrets = identity
@@ -799,7 +801,8 @@ data UpsertSpecialLocationGateReqT = UpsertSpecialLocationGateReqT
     address :: Maybe Text,
     canQueueUpOnGate :: Maybe Bool,
     gateTags :: Maybe [Text],
-    walkDescription :: Maybe Text
+    walkDescription :: Maybe Text,
+    isAutoNotifyEnabled :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

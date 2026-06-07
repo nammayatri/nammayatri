@@ -41,9 +41,11 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.Scheduler.Environment (JobCreator)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival as ArrivalCheck
 import SharedLogic.Booking
 import SharedLogic.Cancel
 import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
@@ -132,7 +134,9 @@ handler ::
     HasRequestId r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Redis.HedisLTSFlowEnv r,
-    HasField "gateNotifiedKeyShards" r Int
+    HasField "ltsHedisEnv" r Redis.HedisEnv,
+    HasField "gateNotifiedKeyShards" r Int,
+    JobCreator r m
   ) =>
   Id DM.Merchant ->
   InitReq ->
@@ -183,7 +187,8 @@ handler merchantId req validatedReq = do
         <> show serviceTier
         <> " searchRequestId="
         <> searchRequest.id.getId
-    fork "specialZoneDriverDemandPipeline" $
+    fork "specialZoneDriverDemandPipeline" $ do
+      ArrivalCheck.sweepStaleAcceptedRequestsForGate pickupZoneGateId [show vehicleVariant]
       SpecialZoneDriverDemand.runDemandCheckForVariants
         searchRequest.merchantOperatingCityId
         merchantId

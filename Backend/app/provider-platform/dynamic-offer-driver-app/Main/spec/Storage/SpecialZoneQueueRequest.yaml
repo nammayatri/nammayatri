@@ -29,6 +29,7 @@ SpecialZoneQueueRequest:
     specialLocationName: Text
     vehicleType: Text
     triggerSource: "Maybe TriggerSource"
+    requestId: "Maybe Text"
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -49,5 +50,9 @@ SpecialZoneQueueRequest:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    - columns: [requestId]
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]
