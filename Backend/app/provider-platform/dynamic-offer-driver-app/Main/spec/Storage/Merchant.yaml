@@ -594,6 +594,7 @@ MerchantServiceUsageConfig:
     driverBackgroundVerificationService: DriverBackgroundVerificationService
     aadhaarVerificationService: AadhaarVerificationService
     faceVerificationService: VerificationService
+    faceComparisonConfig: Maybe VerificationService
     panVerificationService: Maybe VerificationService
     gstVerificationService: Maybe VerificationService
     dashboardPanVerificationService: Maybe VerificationService
@@ -664,6 +665,7 @@ MerchantServiceUsageConfig:
     getDistancesForScheduledRides: text
     aadhaarVerificationService: character varying(30)
     faceVerificationService: character varying(30)
+    faceComparisonConfig: character varying(30)
     panVerificationService: character varying(30)
     gstVerificationService: character varying(30)
     dashboardPanVerificationService: character varying(30)
@@ -702,6 +704,7 @@ MerchantServiceUsageConfig:
     payoutOrderStatus: "'Juspay'"
     backgroundVerification: "'Checkr'"
     sdkVerificationService: "'HyperVerge'"
+    faceComparisonConfig: "'Idfy'"
     getDistancesForScheduledRides: "'OSRM'"
     llmChatCompletion: "'AzureOpenAI'"
     panVerificationService: "'HyperVerge'"
@@ -1088,6 +1091,8 @@ TransporterConfig:
     isAvoidToll: Bool
     aadhaarImageResizeConfig: Maybe AadhaarImageResizeConfig
     enableFaceVerification: Bool
+    enableFaceMatch: Maybe Bool
+    faceMatchScoreThreshold: Maybe Double
     enableTollCrossedNotifications: Bool
     specialZoneBookingOtpExpiry: Int
     isPlanMandatory: Bool
@@ -1708,6 +1713,7 @@ TransporterConfig:
     orderAndNotificationStatusCheckTimeLimit: "345600"
     canSuvDowngradeToTaxi: "false"
     enableFaceVerification: "false"
+    enableFaceMatch: "false"
     enableTollCrossedNotifications: "false"
     ratingAsDecimal: "false"
     refillVehicleModel: "false"

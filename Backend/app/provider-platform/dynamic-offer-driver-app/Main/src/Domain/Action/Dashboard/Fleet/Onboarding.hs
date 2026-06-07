@@ -34,6 +34,7 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.FaceMatch as FaceMatch
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Cac.TransporterConfig
@@ -168,6 +169,15 @@ postOnboardingVerify ::
 postOnboardingVerify merchantShortId opCity reqType mbAccessType adminApprovalRequired req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  when (fromMaybe False transporterConfig.enableFaceMatch && reqType `elem` [CommonOnboarding.VERIFY_PAN, CommonOnboarding.VERIFY_AADHAAR]) $ do
+    let imgId = Id req.imageId
+    docImage <- IQuery.findById imgId >>= fromMaybeM (InvalidRequest "Document image not found")
+    when (docImage.personId /= Id req.driverId) $
+      throwError $ InvalidRequest "Document image does not belong to the driver"
+    matchResult <- FaceMatch.compareDocAgainstProfilePhoto merchant.id merchantOpCity.id (Id req.driverId) transporterConfig.faceMatchScoreThreshold imgId
+    unless matchResult $
+      throwError $ InvalidRequest "Face on document does not match profile photo"
   let verifyBy = case mbAccessType of
         Just accessTypeValue -> case accessTypeValue of
           Common.DASHBOARD_ADMIN -> DPan.DASHBOARD_ADMIN

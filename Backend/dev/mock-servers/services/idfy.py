@@ -190,6 +190,16 @@ def _name_compare():
     return {"match_output": {"name_match": 100}}
 
 
+def _face_compare():
+    return {
+        "image_1": {"face_detected": True, "face_quality": "good"},
+        "image_2": {"face_detected": True, "face_quality": "good"},
+        "is_a_match": True,
+        "match_score": 95.0,
+        "review_recommended": False,
+    }
+
+
 def handle(handler, path, body):
     text = body.decode("utf-8") if isinstance(body, bytes) and body else (body or "")
     try:
@@ -198,8 +208,11 @@ def handle(handler, path, body):
         body_json = {}
 
     # Allow /mock/override rules to short-circuit with a fully synthetic response.
+    # _get_override pops "status" from the dict; restore it so the IdfyResponse
+    # envelope stays intact for the Haskell client's FromJSON parser.
     override_status, override_data = handler._get_override("idfy")
     if override_status and isinstance(override_data, dict):
+        override_data["status"] = override_status
         return handler._json(override_data)
 
     if path.endswith("/configure"):
@@ -234,19 +247,21 @@ def handle(handler, path, body):
         _fire_webhook("GstVerificationResult", body_json)
         return handler._json(resp)
 
-    # Extract (synchronous)
-    if "/validate_image" in path:
+    # Synchronous endpoints — match both old mock paths and actual Idfy client paths
+    if "/validate_image" in path or "/validate/document" in path:
         return handler._json(_idfy_envelope(_validate_image(body_json)))
-    if "/extract_image/ind_dl" in path:
+    if "/extract_image/ind_dl" in path or "/extract/ind_driving_license" in path:
         return handler._json(_idfy_envelope(_dl_extract()))
-    if "/extract_image/ind_rc" in path:
+    if "/extract_image/ind_rc" in path or "/extract/ind_rc" in path:
         return handler._json(_idfy_envelope(_rc_extract()))
-    if "/extract_image/ind_pan" in path:
+    if "/extract_image/ind_pan" in path or "/extract/ind_pan" in path:
         return handler._json(_idfy_envelope(_pan_extract()))
-    if "/extract_image/ind_gst" in path:
+    if "/extract_image/ind_gst" in path or "/extract/ind_gst" in path:
         return handler._json(_idfy_envelope(_gst_extract()))
-    if "/extract_image/ind_aadhaar" in path:
+    if "/extract_image/ind_aadhaar" in path or "/extract/ind_aadhaar" in path:
         return handler._json(_idfy_envelope(_aadhaar_extract()))
+    if "/compare/face" in path:
+        return handler._json(_idfy_envelope(_face_compare()))
     if "/compare" in path:
         return handler._json(_idfy_envelope(_name_compare()))
 

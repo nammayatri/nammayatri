@@ -70,6 +70,12 @@ def handle(handler, path, body):
     path_ids = extract_path_ids(path)
     override_status, extra = handler._get_override("gridline", *path_ids)
 
+    # Synchronous Idfy endpoints (validate, extract, compare) — delegate to idfy mock
+    if any(seg in path for seg in ("/validate/", "/validate_image", "/extract/", "/extract_image/", "/compare")):
+        from services import idfy
+        handler._apply_overrides("idfy", path, urlparse(handler.path).query, body)
+        return idfy.handle(handler, path, body)
+
     # Idfy async verify endpoints (POST .../tasks/async/...) return IdfySuccess
     if "tasks/async" in path:
         request_id = str(uuid.uuid4())

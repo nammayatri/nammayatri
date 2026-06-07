@@ -115,9 +115,11 @@ def check_overrides(service, path, query_string, headers, body_parsed, body_raw=
             if o.get("match") and o["match"] not in path:
                 continue
             extracted = _extract_value(o["extract"], path, query_string, headers, decoded_body)
-            if extracted is not None and str(extracted) == o["value"]:
-                merged = deep_merge(merged, o["response"])
-                log.info(f"Override matched: {service} {o['extract']}={o['value']}")
+            if extracted is not None:
+                matches = o["value"] in str(extracted) if o["extract"] == "path" else str(extracted) == o["value"]
+                if matches:
+                    merged = deep_merge(merged, o["response"])
+                    log.info(f"Override matched: {service} {o['extract']}={o['value']}")
     return merged
 
 
@@ -136,6 +138,8 @@ def _extract_value(extract_path, url_path, query_string, headers, body_parsed):
             return segments[idx] if idx < len(segments) else None
         except (ValueError, IndexError):
             return None
+    elif source == "path" and not field:
+        return url_path
     elif source == "query" and field and query_string:
         from urllib.parse import parse_qs
         params = parse_qs(query_string)

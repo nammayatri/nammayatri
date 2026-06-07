@@ -500,6 +500,7 @@ library
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Digilocker
+      SharedLogic.DriverOnboarding.FaceMatch
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool

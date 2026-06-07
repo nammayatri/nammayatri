@@ -104,10 +104,7 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN crea
 
 
 
-------- SQL updates -------
-
-
-
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN face_comparison_config character varying(30)  default 'Idfy';
