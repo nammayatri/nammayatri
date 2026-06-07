@@ -31,6 +31,7 @@ module Tools.Verification
     verifySdkResp,
     getTask,
     nameCompare,
+    faceCompare,
     getDigiLockerFile,
     pullDigiLockerDrivingLicense,
     fetchAndExtractVerifiedDL,
@@ -58,6 +59,7 @@ import Kernel.External.Verification as Reexport hiding
     extractGSTImage,
     extractPanImage,
     extractRCImage,
+    faceCompare,
     fetchAndExtractVerifiedAadhaar,
     fetchAndExtractVerifiedDL,
     fetchAndExtractVerifiedPan,
@@ -312,6 +314,14 @@ nameCompare ::
   NameCompareReq ->
   m NameCompareResp
 nameCompare = runWithServiceConfig Verification.nameCompare (.verificationService)
+
+faceCompare ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  FaceCompareReq ->
+  m FaceCompareResp
+faceCompare = runWithServiceConfig Verification.faceCompare (fromMaybe VT.Idfy . (.faceComparisonConfig))
 
 extractDLImage ::
   ServiceFlow m r =>

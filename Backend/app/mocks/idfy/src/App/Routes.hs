@@ -56,6 +56,7 @@ type MockIdfyAPI =
     :<|> ExtractGSTImage
     :<|> ExtractAadhaarImage
     :<|> NameCompareAPI
+    :<|> FaceCompareAPI
     :<|> ConfigureMockAPI
 
 mockIdfyAPI :: Proxy MockIdfyAPI
@@ -76,4 +77,5 @@ mockIdfyServer =
     :<|> P.extractGSTImage
     :<|> P.extractAadhaarImage
     :<|> P.nameCompare
+    :<|> P.faceCompare
     :<|> P.configureMock

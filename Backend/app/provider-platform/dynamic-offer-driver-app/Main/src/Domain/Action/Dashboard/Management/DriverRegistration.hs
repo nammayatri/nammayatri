@@ -119,6 +119,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.FaceMatch as FaceMatch
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Reminder.Helper (createReminder)
@@ -728,6 +729,14 @@ postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Co
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (fromMaybe False transporterConfig.enableFaceMatch) $ do
+    docImage <- QImage.findById (cast imageId1) >>= fromMaybeM (InvalidRequest "Document image not found")
+    when (docImage.personId /= cast driverId_) $
+      throwError $ InvalidRequest "Document image does not belong to the driver"
+    matchResult <- FaceMatch.compareDocAgainstProfilePhoto (cast merchant.id) merchantOpCityId (cast driverId_) transporterConfig.faceMatchScoreThreshold (cast imageId1)
+    unless matchResult $
+      throwError $ InvalidRequest "Face on document does not match profile photo"
   let verifyBy = case accessType of
         Just accessTypeValue -> case accessTypeValue of
           Common.DASHBOARD_ADMIN -> DPan.DASHBOARD_ADMIN
@@ -795,6 +804,15 @@ postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> 
 postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (fromMaybe False transporterConfig.enableFaceMatch) $ do
+    whenJust req.aadhaarFrontImageId $ \frontImgId -> do
+      docImage <- QImage.findById (cast frontImgId) >>= fromMaybeM (InvalidRequest "Document image not found")
+      when (docImage.personId /= cast driverId) $
+        throwError $ InvalidRequest "Document image does not belong to the driver"
+      matchResult <- FaceMatch.compareDocAgainstProfilePhoto (cast merchant.id) merchantOpCityId (cast driverId) transporterConfig.faceMatchScoreThreshold (cast frontImgId)
+      unless matchResult $
+        throwError $ InvalidRequest "Face on document does not match profile photo"
   DOV.postDriverRegisterAadhaarCard (Just (cast driverId), merchant.id, merchantOpCityId) (castAadharReq req)
   where
     castAadharReq Common.AadhaarCardReq {..} = API.Types.UI.DriverOnboardingV2.AadhaarCardReq {aadhaarBackImageId = cast <$> aadhaarBackImageId, aadhaarFrontImageId = cast <$> aadhaarFrontImageId, validationStatus = convertValidationStatus validationStatus, ..}
@@ -1545,6 +1563,10 @@ approveAndUpdatePan req mId mOpCityId = do
     when (existingPan.verificationStatus == VALID) $
       throwError $ DocumentAlreadyValidated "PanCard"
   transporterConfig <- CCT.findByMerchantOpCityId mOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound mOpCityId.getId)
+  when (fromMaybe False transporterConfig.enableFaceMatch) $ do
+    matchResult <- FaceMatch.compareDocAgainstProfilePhoto mId mOpCityId driverId transporterConfig.faceMatchScoreThreshold imageId
+    unless matchResult $
+      throwError $ InvalidRequest "Face on document does not match profile photo"
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber

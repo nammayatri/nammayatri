@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Product.Idfy (verifyDL, verifyRC, verifyPan, verifyGst, verifyPanAadhaarLink, validateImage, extractDLImage, extractRCImage, extractPanImage, extractGSTImage, extractAadhaarImage, nameCompare, configureMock) where
+module Product.Idfy (verifyDL, verifyRC, verifyPan, verifyGst, verifyPanAadhaarLink, validateImage, extractDLImage, extractRCImage, extractPanImage, extractGSTImage, extractAadhaarImage, nameCompare, faceCompare, configureMock) where
 
 import App.Types
 import Common
@@ -238,6 +238,19 @@ nameCompare apiKey accountId _req = withFlowHandlerAPI $ do
     Just $
       Idfy.NameCompareResponseData
         { match_output = Idfy.NameMatchOutput {name_match = 100}
+        }
+
+faceCompare :: Maybe ApiKey -> Maybe AccountId -> Idfy.FaceCompareRequest -> FlowHandler Idfy.FaceCompareResponse
+faceCompare apiKey accountId _req = withFlowHandlerAPI $ do
+  verifyAuth apiKey accountId
+  buildMeaninglessIdfyResponse $
+    Just $
+      Idfy.FaceCompareResponseData
+        { image_1 = Just Idfy.FaceImageResult {face_detected = Just True, face_quality = Just "good"},
+          image_2 = Just Idfy.FaceImageResult {face_detected = Just True, face_quality = Just "good"},
+          is_a_match = Just True,
+          match_score = Just 95.0,
+          review_recommended = Just False
         }
 
 configureMock :: MockDocConfig -> FlowHandler MockDocConfig

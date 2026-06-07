@@ -36,6 +36,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     dashboardPanVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     dashboardUdyamVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     driverBackgroundVerificationService :: B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService,
+    faceComparisonConfig :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     faceVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     getDistances :: B.C f Kernel.External.Maps.Types.MapsService,
