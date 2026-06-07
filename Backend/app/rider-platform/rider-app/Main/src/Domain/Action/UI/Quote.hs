@@ -389,7 +389,7 @@ offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Flow [UEstimate.EstimateAPIEntity]
 getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList = do
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map

@@ -449,7 +449,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime currentTimeIST integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   -- fetch rider config
-  mbRiderConfig <- measureLatency (getConfig (RiderConfigDimensions {merchantOperatingCityId = mocid.getId})) "getConfig RiderConfig"
+  mbRiderConfig <- measureLatency (getConfig (RiderConfigDimensions {merchantOperatingCityId = mocid.getId}) Nothing) "getConfig RiderConfig"
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
 
@@ -1401,7 +1401,7 @@ createRecentLocationForMultimodal journey = do
 postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> Bool -> m (Maybe DOrder.PaymentOrder)
 postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer isMockPayment = do
   frfsConfig <-
-    getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+    getConfig (FRFSConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
   frfsBookingsPayments <- mapMaybeM QFRFSTicketBookingPayment.findTicketBookingPayment bookings
   (vendorSplitDetails, amountUpdated) <- createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
@@ -1615,7 +1615,7 @@ getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber mbPassVerifyReq
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> Maybe Spec.ServiceTierType -> [FRFSFare] -> m (Maybe FRFSFare)
 sortAndGetBusFares _ _ [] = return Nothing
 sortAndGetBusFares merchantOpCityId mbPreferredTier finalFares = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   let cfgMap' = FRFSUtils.adjustCfgMapForPreferredTier mbPreferredTier cfgMap
   let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType

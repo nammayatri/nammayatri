@@ -251,7 +251,7 @@ buildBookingOtpSmsForCategory merchantOperatingCityId booking otp = do
           }
   where
     getAppUrl mocId = do
-      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
+      riderCfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocId.getId)
       pure riderCfg.appUrl
     -- "Area, City" or whichever of the two is present. Empty if neither is set.
     shortDestination addr =

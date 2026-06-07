@@ -63,7 +63,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   let merchantId = merchant.id
       serviceName' = DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'})
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'}) Nothing
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'
@@ -77,7 +77,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       let personId = Id payoutOrder.customerId
-      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
+      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
       unless (isPayoutStatusSuccess payoutOrder.status) do
         personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
         person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

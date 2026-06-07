@@ -1180,7 +1180,7 @@ computeIsCancellable ::
   DIBC.IntegratedBPPConfig ->
   m (Maybe Bool)
 computeIsCancellable booking integratedBPPConfig = do
-  mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+  mbFrfsConfig <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId}) Nothing
   let configCancellable = maybe True (.isCancellationAllowed) mbFrfsConfig
   let mbServiceTierType = getServiceTierTypeFromRouteStationsJson booking.routeStationsJson
   case mbServiceTierType of
@@ -1331,7 +1331,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg jour
   let startTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
-  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+  mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isPTBookingNotAllowedForUser = ("PTBookingAllowed#No" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))

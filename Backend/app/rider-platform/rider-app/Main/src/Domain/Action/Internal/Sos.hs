@@ -38,7 +38,7 @@ postSosErssReauth req = do
   let mocId = Id req.merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
   merchantOperatingCity <- CQMOC.findById mocId >>= fromMaybeM (MerchantOperatingCityNotFound req.merchantOperatingCityId)
   let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = mocId.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SOSService SOS.ERSS)}
-  mbMerchantSvcCfg <- listToMaybe <$> getConfig mscDims
+  mbMerchantSvcCfg <- listToMaybe <$> getConfig mscDims Nothing
   case mbMerchantSvcCfg of
     Nothing ->
       throwError $ InvalidRequest "ERSS service config not found for merchantOperatingCityId"

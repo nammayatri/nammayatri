@@ -33,7 +33,7 @@ runNyRegularMasterJob ::
 runNyRegularMasterJob Job {merchantOperatingCityId} = do
   cityId <- merchantOperatingCityId & fromMaybeM (Tools.InternalError "Job is missing merchantOperatingCityId")
   merchantCity <- QCMOC.findById cityId >>= fromMaybeM (Tools.MerchantOperatingCityNotFound $ "merchantOpCityid: " <> cityId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = cityId.getId}) Nothing >>= fromMaybeM (Tools.RiderConfigNotFound $ "merchantOpCityid: " <> cityId.getId)
   let batchSize = fromMaybe 10 (riderConfig.nyRegularSubscriptionBatchSize)
       executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
 

@@ -66,8 +66,8 @@ sendCustomerRefund Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       merchantId = jobData.merchantId
       statusForRetry = jobData.statusForRetry
       toScheduleNextPayout = jobData.toScheduleNextPayout
-  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True, payoutEntity = Just METRO_TICKET_CASHBACK})
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, vehicleCategory = Nothing, isPayoutEnabled = Just True, payoutEntity = Just METRO_TICKET_CASHBACK}) Nothing
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (InternalError $ "RiderConfig not found for mocId: " <> show merchantOpCityId.getId)
   let rescheduleTimeDiff = payoutConfig <&> (.timeDiff)
   eligibleBookingsList <- QFTB.findAllByCashbackStatus riderConfig.payoutBatchSize (Just 0) (Just statusForRetry)
   logDebug $ "Bookings eligible for cashback: " <> show eligibleBookingsList

@@ -305,7 +305,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -735,31 +735,31 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       dims = parseDims req.dimensions
   case req.configType of
     LYTU.RiderConfig -> do
-      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId})
+      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceUsageConfig -> do
-      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId})
+      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
-      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims})
+      cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
-      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims})
+      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPushNotification -> do
-      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId})
+      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.Exophone -> do
-      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims})
+      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.FRFSConfig -> do
-      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId})
+      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantConfig -> do
-      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId})
+      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.RideRelatedNotificationConfig -> do
-      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing})
+      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
   where

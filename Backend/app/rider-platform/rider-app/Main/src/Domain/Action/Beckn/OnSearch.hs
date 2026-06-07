@@ -306,11 +306,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId}) Nothing
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
-  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing})) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
+  becknConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = searchRequest.merchantOperatingCityId.getId, merchantId = searchRequest.merchantId.getId, domain = Just (show Domain.MOBILITY), vehicleCategory = Nothing}) Nothing) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId)
   blackListedVehicles <- Utils.getBlackListedVehicles searchRequest.merchantOperatingCityId becknConfig.id providerInfo.providerId
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do

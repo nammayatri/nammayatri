@@ -37,7 +37,7 @@ sendEmailOTP apiKey merchantShortIdText city req = do
   smsCfg <- asks (.smsCfg)
   let useFakeOtpM = show <$> useFakeSms smsCfg
   otp <- maybe generateOTPCode pure useFakeOtpM
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
   emailOTPConfig <- riderConfig.emailOtpConfig & fromMaybeM (RiderConfigNotFound $ "Email OTP config not found for merchantOperatingCityId:- " <> merchantOpCityId.getId)
   emailServiceConfig <- asks (.emailServiceConfig)
   whenNothing_ useFakeOtpM $ do

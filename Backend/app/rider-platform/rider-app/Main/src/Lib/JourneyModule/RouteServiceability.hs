@@ -69,7 +69,7 @@ buildRouteWithLiveVehicle routeInfo busScheduleDetails integratedBPPConfig fromS
               busScheduleDetails
 
   when shouldRunSeatHoldReaper $ do
-    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId})
+    mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId.getId}) Nothing
     let seatBookingCleanupTtl' = mRiderConfig >>= (.seatBookingCleanupTtl)
     shouldRun <- Hedis.setNxExpire "frfs:seat_hold_reaper_lock" (fromMaybe 120 seatBookingCleanupTtl') ("1" :: Text)
     when shouldRun $

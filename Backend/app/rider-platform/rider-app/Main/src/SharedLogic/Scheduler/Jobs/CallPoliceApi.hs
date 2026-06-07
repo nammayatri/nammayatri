@@ -56,7 +56,7 @@ sendCallPoliceApi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   booking <- B.runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantId = booking.merchantId
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   rideCallPoliceAPIKeyExists <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
   case rideCallPoliceAPIKeyExists of
     Nothing -> do
@@ -94,7 +94,7 @@ getTokenofJMService merchantId merchantOpCityId = do
     fetchAndStoreToken = do
       logDebug "Journey Monitoring Token does not exist in Redis, fetching from Tokenize Service"
       sc <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.TokenizationService Tokenize.JourneyMonitoring)})
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.TokenizationService Tokenize.JourneyMonitoring)}) Nothing
           >>= maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
           >>= validateTokenizationServiceConfig
       res <- Tokenize.tokenize sc Tokenize.TokenizationReq {expiry = Nothing, code = Nothing, codeVerifier = Nothing}
@@ -123,7 +123,7 @@ diffUTCTimeInSeconds _ Nothing = 3600 -- default to (1 hour)
 
 getServiceConfig :: CallApiFlow m r => Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m IncidentReportServiceConfig
 getServiceConfig merchantId merchantOpCityId service = do
-  mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just service})
+  mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just service}) Nothing
   case mbCfg of
     Just cfg -> case cfg.serviceConfig of
       DMSC.IncidentReportServiceConfig sc -> return sc

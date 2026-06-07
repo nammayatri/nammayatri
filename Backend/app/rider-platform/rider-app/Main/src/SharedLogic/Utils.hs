@@ -36,7 +36,7 @@ getPureStaticCustomerId person phone =
 
 getStaticCustomerId :: (MonadFlow m, EsqDBReplicaFlow m r, EsqDBFlow m r, CacheFlow m r) => DP.Person -> Text -> m Text
 getStaticCustomerId person phone = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
   let mbThreshold = mbRiderConfig >>= (.staticCustomerIdThresholdDay)
   case mbThreshold of
     Just threshold ->
