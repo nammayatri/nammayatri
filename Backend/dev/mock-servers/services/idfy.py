@@ -35,6 +35,7 @@ import uuid
 from datetime import datetime, timezone
 
 import status_store
+from ._env import DRIVER_APP_PORT
 
 _LOCK = threading.Lock()
 _CONFIG = {
@@ -42,7 +43,14 @@ _CONFIG = {
     "gstNumber": "29ABCDE1234F1Z5",
     "aadhaarNumber": "123456789012",
 }
-_WEBHOOK_URL = os.environ.get("IDFY_WEBHOOK_URL", "")
+# Default fires to the driver-app idfy webhook endpoint (same URL the old Haskell mock used).
+# Override with IDFY_WEBHOOK_URL to point elsewhere, or set to "" to disable.
+_WEBHOOK_URL = os.environ.get(
+    "IDFY_WEBHOOK_URL",
+    f"http://localhost:{DRIVER_APP_PORT}/service/idfy/verification",
+)
+# Secret must match IdfyCfg.secret in merchant_service_config (local plaintext value).
+_WEBHOOK_SECRET = os.environ.get("IDFY_WEBHOOK_SECRET", "xxxxxxx")
 _WEBHOOK_DELAY_MS = int(os.environ.get("IDFY_WEBHOOK_DELAY_MS", "500"))
 
 
@@ -72,18 +80,78 @@ def _idfy_envelope(result):
     }
 
 
-def _fire_webhook(tag, payload):
-    """Optional: POST the verification result to a configured webhook URL."""
+def _fire_webhook(tag, payload, request_id=None):
+    """POST a properly-formatted IdfyResponse to the driver-app webhook endpoint.
+
+    For RC verification the driver-app expects a full IdfyResponse envelope
+    (type="ind_rc", extraction_output with registration_number) so that
+    onVerifyRCHandler can read the fleet_owner_id from Redis and persist the RC.
+    """
     if not _WEBHOOK_URL:
         return
 
     def _do_send():
         import urllib.request
+        now = _now_iso()
+        rid = request_id or str(uuid.uuid4())
+
+        if tag == "RCVerificationResult":
+            # Build a proper IdfyResponse with type="ind_rc" so the Haskell
+            # webhook handler can parse it as VerificationResponse.
+            rc_number = None
+            if isinstance(payload, dict):
+                data = payload.get("_data") or payload.get("data") or {}
+                if isinstance(data, dict):
+                    rc_number = data.get("rc_number") or data.get("rcNumber")
+            body = {
+                "type": "ind_rc",
+                "request_id": rid,
+                "status": "completed",
+                "action": "action",
+                "group_id": "gid",
+                "task_id": rid,
+                "created_at": now,
+                "completed_at": now,
+                "result": {
+                    "extraction_output": {
+                        "registration_number": rc_number,
+                        "status": "VALID",
+                        "vehicle_class": None,
+                        "manufacturer": None,
+                        "model": None,
+                        "colour": None,
+                        "chassis_number": None,
+                        "engine_number": None,
+                        "owner_name": None,
+                        "registration_date": None,
+                        "fitness_upto": None,
+                        "insurance_validity": None,
+                        "permit_validity_from": None,
+                        "permit_validity_upto": None,
+                        "puc_valid_upto": None,
+                        "puc_validity_upto": None,
+                        "seating_capacity": None,
+                        "m_y_manufacturing": None,
+                        "fuel_type": None,
+                        "body_type": None,
+                        "gross_vehicle_weight": None,
+                        "unladden_weight": None,
+                    }
+                },
+            }
+        else:
+            # For DL / PAN / GST keep the existing envelope shape (those tests
+            # already work via the async callback or check_extraction=false).
+            body = {"tag": tag, "data": payload}
+
         try:
             req = urllib.request.Request(
                 _WEBHOOK_URL,
-                data=json.dumps({"tag": tag, "data": payload}).encode("utf-8"),
-                headers={"Content-Type": "application/json"},
+                data=json.dumps(body).encode("utf-8"),
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": _WEBHOOK_SECRET,
+                },
             )
             urllib.request.urlopen(req, timeout=5).read()
         except Exception:
@@ -219,7 +287,7 @@ def handle(handler, path, body):
         return handler._json(resp)
     if "/verify_with_source/ind_rc" in path:
         resp = _ack(body_json)
-        _fire_webhook("RCVerificationResult", body_json)
+        _fire_webhook("RCVerificationResult", body_json, request_id=resp["request_id"])
         return handler._json(resp)
     if "/verify_with_source/ind_pan_aadhaar_link" in path:
         resp = _ack(body_json)
