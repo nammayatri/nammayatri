@@ -11,6 +11,7 @@ import qualified Domain.Types.VendorSplitDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -36,6 +37,17 @@ findAllByAreasCityAndVariant area merchantOperatingCityId vehicleVariant = do
         ]
     ]
 
+findAllByCityAndPlan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Maybe Data.Text.Text -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
+findAllByCityAndPlan merchantOperatingCityId dailyPlanId = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.dailyPlanId $ Se.Eq dailyPlanId
+        ]
+    ]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Lib.Types.SpecialLocation.Area -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.VehicleVariant.VehicleVariant -> Data.Text.Text -> m (Maybe Domain.Types.VendorSplitDetails.VendorSplitDetails))
@@ -53,7 +65,12 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.maxVendorFeeAmount maxVendorFeeAmount, Se.Set Beam.splitType splitType, Se.Set Beam.splitValue splitValue, Se.Set Beam.updatedAt _now]
+    [ Se.Set Beam.dailyPlanId dailyPlanId,
+      Se.Set Beam.maxVendorFeeAmount maxVendorFeeAmount,
+      Se.Set Beam.splitType splitType,
+      Se.Set Beam.splitValue splitValue,
+      Se.Set Beam.updatedAt _now
+    ]
     [ Se.And
         [ Se.Is Beam.area $ Se.Eq area,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -68,6 +85,7 @@ instance FromTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vend
       Just
         Domain.Types.VendorSplitDetails.VendorSplitDetails
           { area = area,
+            dailyPlanId = dailyPlanId,
             maxVendorFeeAmount = maxVendorFeeAmount,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             splitType = splitType,
@@ -82,6 +100,7 @@ instance ToTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vendor
   toTType' (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = do
     Beam.VendorSplitDetailsT
       { Beam.area = area,
+        Beam.dailyPlanId = dailyPlanId,
         Beam.maxVendorFeeAmount = maxVendorFeeAmount,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.splitType = splitType,
