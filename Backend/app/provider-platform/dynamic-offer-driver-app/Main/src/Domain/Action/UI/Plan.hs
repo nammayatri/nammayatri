@@ -58,7 +58,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as SOrder
 import SharedLogic.DriverFee (calcNumRides, calculatePlatformFeeAttr, getPaymentModeAndVehicleCategoryKey, getStartTimeAndEndTimeRange, mkCachedKeyTotalRidesByDriverId, roundToHalf)
-import SharedLogic.Finance.Prepaid (handleSubscriptionExpiry)
+import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner, getPrepaidBalanceByOwner, handleSubscriptionExpiry)
 import qualified SharedLogic.Merchant as SMerchant
 import SharedLogic.Payment
 import qualified SharedLogic.Payment as SPayment
@@ -117,7 +117,8 @@ data PlanEntity = PlanEntity
     coinEntity :: Maybe CoinEntity,
     bankErrors :: [ErrorEntity],
     cancellationPenalties :: [CancellationPenaltyInformation],
-    airportRideSubscription :: Maybe HighPrecMoney
+    airportRideSubscription :: Maybe HighPrecMoney,
+    remainingPlanCreditLimit :: Maybe HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -284,15 +285,29 @@ subscriptionPurchaseList (driverId, _merchantId, merchantOperatingCityId) mbLimi
   purchases <-
     B.runInReplica $
       QSPE.findAllByOwnerAndServiceNameWithPagination ownerId ownerType PREPAID_SUBSCRIPTION mbStatus mbVehicleCategory limit offset
-  currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId) purchases
+  let counterparty = case ownerType of
+        DSP.DRIVER -> counterpartyDriver
+        DSP.FLEET_OWNER -> counterpartyFleetOwner
+  allActivePlans <- QSPE.findAllActiveByOwnerAndServiceName ownerId ownerType PREPAID_SUBSCRIPTION mbVehicleCategory
+  mbBalance <- getPrepaidBalanceByOwner counterparty ownerId mbVehicleCategory
+  let queuedCredits = sum . map (.planRideCredit) $ filter (\p -> isNothing p.expiryDate) allActivePlans
+  logInfo $
+    "subscriptionPurchaseList ownerId=" <> ownerId
+      <> " totalBalance="
+      <> show mbBalance
+      <> " queuedCredits="
+      <> show queuedCredits
+  currentPlanResList <- mapM (buildCurrentPlanResFromPurchase driverId merchantOperatingCityId mbBalance queuedCredits) purchases
   return $ SubscriptionPurchaseListRes {list = currentPlanResList}
 
 buildCurrentPlanResFromPurchase ::
   Id SP.Person ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe HighPrecMoney ->
+  HighPrecMoney ->
   DSP.SubscriptionPurchase ->
   Flow CurrentPlanRes
-buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
+buildCurrentPlanResFromPurchase driverId merchantOperatingCityId mbBalance queuedCredits purchase = do
   let syntheticDriverPlan = mkSyntheticDriverPlanFromPurchase purchase
   mPlan <- QPD.findByIdAndPaymentModeWithServiceName purchase.planId MANUAL PREPAID_SUBSCRIPTION
   subscriptionConfig <-
@@ -313,9 +328,13 @@ buildCurrentPlanResFromPurchase driverId merchantOperatingCityId purchase = do
         mbOrder <- SOrder.findById (cast purchase.paymentOrderId)
         maybe (pure (Nothing, Nothing)) orderBasedCheck mbOrder
       else return (Nothing, Nothing)
+  let remainingPlanCreditLimit =
+        if isJust purchase.expiryDate
+          then Just $ max 0 (fromMaybe 0 mbBalance - queuedCredits)
+          else Just purchase.planRideCredit
   return $
     CurrentPlanRes
-      { currentPlanDetails = currentPlanEntity,
+      { currentPlanDetails = currentPlanEntity <&> \e -> e {remainingPlanCreditLimit},
         mandateDetails = Nothing,
         autoPayStatus = Nothing,
         subscribed = True,
@@ -1329,6 +1348,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         autopayDuesWithCurrency = PriceAPIEntity autopayDues currency,
         dueBoothChargesWithCurrency = PriceAPIEntity dueBoothCharges currency,
         coinEntity = CoinEntity <$> coinDiscountUpto <*> (PriceAPIEntity <$> coinDiscountUpto <*> pure currency),
+        remainingPlanCreditLimit = Nothing,
         ..
       }
   where
