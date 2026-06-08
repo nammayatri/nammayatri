@@ -925,3 +925,18 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_ba
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_face_match boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN face_match_score_threshold double precision ;
+
+
+------- SQL updates -------
+

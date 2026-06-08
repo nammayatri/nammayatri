@@ -49,6 +49,7 @@ STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
 INTERCITY_DIR="$SCRIPT_DIR/collections/IntercityRideFlow"
 RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
+FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
@@ -452,6 +453,7 @@ run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
 run_intercity() { run_frfs "$INTERCITY_DIR" "INTERCITY" "${1:-}" "${2:-}"; }
 run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
+run_facematch() { run_frfs "$FACEMATCH_DIR" "FACE MATCH" "${1:-}" "${2:-}"; }
 run_sms() {
     echo ""
     echo "  NOTE: The first OTP test runs with useFakeSms (no real SMS sent)."
@@ -486,6 +488,7 @@ show_help() {
     echo "  intercity           Run intercity ride suites (Bangalore -> Mysore, normal + airport OTP)"
     echo "  rental              Run rental ride suites (Bangalore 4hr/40km, normal + airport OTP)"
     echo "  fleet               Run fleet management suites (driver name, association)"
+    echo "  facematch           Run face match integration tests (mock endpoint, score logic)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
     echo "  ophub               Run operation hub suites (hub requests, driver mobile search)"
     echo "  --list              List all available suites and cities"
@@ -582,6 +585,9 @@ case "${1:-}" in
         ;;
     fleet)
         run_fleet "${2:-}" "${3:-}"
+        ;;
+    facematch)
+        run_facematch "${2:-}" "${3:-}"
         ;;
     sms|kaleyra)
         run_sms "${2:-}" "${3:-}"

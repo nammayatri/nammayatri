@@ -54,6 +54,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.FaceMatch as FaceMatch
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as CFQDVC
@@ -235,15 +236,23 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
           fleetDocConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
           return $ maybe True (.isImageValidationRequired) fleetDocConfigs
         _ -> return $ maybe True (.isImageValidationRequired) $ find (\c -> c.vehicleCategory == fromMaybe CAR vehicleCategory) docConfigs
-      if isImageValidationRequired && isNothing validationStatus
-        then do
-          validationOutput <-
-            Verification.validateImage merchantId merchantOpCityId $
-              Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-          when validationOutput.validationAvailable $ do
-            checkErrors imageEntity.id imageType validationOutput.detectedImage
-          Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-        else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+      imageIsValid <-
+        if isImageValidationRequired && isNothing validationStatus
+          then do
+            validationOutput <-
+              Verification.validateImage merchantId merchantOpCityId $
+                Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+            when validationOutput.validationAvailable $ do
+              checkErrors imageEntity.id imageType validationOutput.detectedImage
+            Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+            pure True
+          else do
+            when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+            pure (isJust validationStatus)
+      when (imageIsValid && imageType == DVC.ProfilePhoto && fromMaybe False transporterConfig.enableFaceMatch) $
+        void $
+          withTryCatch "faceMatch:compareProfilePhotoAgainstDocs" $
+            FaceMatch.compareProfilePhotoAgainstDocs merchantId merchantOpCityId personId transporterConfig.faceMatchScoreThreshold image
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
