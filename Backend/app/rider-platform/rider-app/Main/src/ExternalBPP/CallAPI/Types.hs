@@ -3,6 +3,7 @@ module ExternalBPP.CallAPI.Types where
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
 import Kernel.Utils.Common
@@ -17,7 +18,8 @@ type FRFSSearchFlow m r =
     EsqDBReplicaFlow m r,
     Metrics.HasBAPMetrics m r,
     CallFRFSBPP.BecknAPICallFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    ClickhouseFlow m r
   )
 
 type FRFSConfirmFlow m r c =

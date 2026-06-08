@@ -37,6 +37,7 @@ imports:
   SeatType: Domain.Types.Seat
   Person: Domain.Types.Person
   FleetOperatorTripAction: Domain.Types.FleetOperatorTripAction
+  CumulativeOfferResp: SharedLogic.OfferTypes
 
 module: FRFSTicketService
 types:
@@ -79,6 +80,7 @@ types:
     serviceTierType: Maybe ServiceTierType
     routeCode: Maybe Text
     serviceTierName: Maybe Text
+    offer: Maybe CumulativeOfferResp
 
     derive: "Show"
 
