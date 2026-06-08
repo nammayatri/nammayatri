@@ -2853,10 +2853,11 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationNumber >>= fromMaybeM (RCNotFound req.vehicleRegistrationNumber)
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
   unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  SStatus.validateMandatoryVehicleDocsForRC transporterConfig rc
   validateFleetDriverAssociation fleetOwnerId driver.id
   isValidAssociation <- checkRCAssociationForDriver driver.id (Just rc) False
   when (not isValidAssociation) $ do
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     allLinkedRCs <- DAQuery.findAllLinkedByDriverId driver.id
     rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
     let validLinkedRCs = filter (\rc' -> rc'.verificationStatus /= Documents.INVALID) rcs
