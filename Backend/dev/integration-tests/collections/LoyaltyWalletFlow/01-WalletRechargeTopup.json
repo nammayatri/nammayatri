@@ -130,9 +130,9 @@
               "console.log('Recharge order:', JSON.stringify(d));",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
               "pm.test('Order id present', function () {",
-              "    pm.expect(d.id || d.orderId || d.order_id).to.not.be.undefined;",
+              "    pm.expect(d.order_id || d.orderId || d.id).to.not.be.undefined;",
               "});",
-              "var orderId = d.id || d.orderId || d.order_id;",
+              "var orderId = d.order_id || d.orderId || d.id;",
               "var orderShortId = d.order_id || d.orderShortId || orderId;",
               "pm.environment.set('wallet_order_id', orderId);",
               "pm.environment.set('wallet_order_short_id', orderShortId);"

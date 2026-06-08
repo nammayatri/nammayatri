@@ -51,6 +51,7 @@ RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
+AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -463,6 +464,7 @@ run_sms() {
     run_frfs "$SMS_DIR" "KALEYRA SMS" "${1:-}" "${2:-}"
 }
 run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
+run_airport() { run_frfs "$AIRPORT_DIR" "AIRPORT TAXI" "${1:-}" "${2:-}"; }
 
 # ── Help ──
 
@@ -488,6 +490,7 @@ show_help() {
     echo "  fleet               Run fleet management suites (driver name, association)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
     echo "  ophub               Run operation hub suites (hub requests, driver mobile search)"
+    echo "  airport             Run airport taxi booth flow suites (Delhi BHARAT_TAXI)"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -523,6 +526,8 @@ show_help() {
     echo "  ./run-tests.sh fleet NY_Bangalore                 # Fleet suites for Bangalore"
     echo "  ./run-tests.sh sms                                          # Kaleyra SMS (OTP only by default)"
     echo "  ./run-tests.sh sms NY_Bangalore                             # Kaleyra SMS for Bangalore"
+    echo "  ./run-tests.sh airport                            # All airport taxi suites"
+    echo "  ./run-tests.sh airport BT_Delhi                   # Airport taxi suites for Delhi"
     echo "  ./run-tests.sh rides NY_Bangalore -v              # Verbose — show request/response"
     echo "  ./run-tests.sh online BF_Helsinki -vp             # Pretty-print full JSON request/response"
     echo "  ./run-tests.sh online BF_Helsinki -d              # Debug: per-API service logs for all APIs"
@@ -588,6 +593,9 @@ case "${1:-}" in
         ;;
     ophub)
         run_ophub "${2:-}" "${3:-}"
+        ;;
+    airport|airport-taxi)
+        run_airport "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
