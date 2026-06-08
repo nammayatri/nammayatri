@@ -31,7 +31,9 @@
           "    console.log('Test driver number:', dNum);",
           "}",
           "if (!pm.collectionVariables.get('_test_vehicle_reg')) {",
-          "    var vReg = 'KA01T' + Math.floor(1000 + Math.random() * 8999);",
+          "    var city = pm.environment.get('dashboard_city') || 'Bangalore';",
+          "    var rcPrefix = {'Bangalore': 'KA', 'Chennai': 'TN', 'Kolkata': 'WB', 'Delhi': 'DL', 'Hyderabad': 'TS', 'Mumbai': 'MH', 'Mysore': 'KA'}[city] || 'KA';",
+          "    var vReg = rcPrefix + '01T' + Math.floor(1000 + Math.random() * 8999);",
           "    pm.collectionVariables.set('_test_vehicle_reg', vReg);",
           "    console.log('Test vehicle reg:', vReg);",
           "}"

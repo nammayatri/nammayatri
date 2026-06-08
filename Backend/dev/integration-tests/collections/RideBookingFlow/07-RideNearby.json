@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "07-RideNearby",
-    "description": "Integration test for GET /{driverId}/nearby.\nSetup: registers 5 drivers at origin_lat/lon + 5 riders who each do a search from the same origin.\nAsserts: nearbyDriverCount >= 4 (other 4 drivers visible to driver1), nearbyCustomerCount >= 5.",
+    "description": "Integration test for GET /{driverId}/nearby.\nSetup: registers 5 drivers at origin_lat/lon + 5 riders who each do a search from the same origin.\nAsserts: nearbyDriverCount >= 4 (other 4 drivers visible to driver1), nearbyCustomerCount >= 5. | Fix: Rider Auth now uses {{bap_short_id}} instead of hardcoded 'NAMMA_YATRI', so Delhi (BHARAT_TAXI) and Kolkata (JATRI_SAATHI) riders authenticate against the correct BAP merchant and the serviceability geofence check uses the right region list.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -1774,7 +1774,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider1_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+          "raw": "{\"mobileNumber\": \"{{_test_rider1_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -1850,7 +1850,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider2_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+          "raw": "{\"mobileNumber\": \"{{_test_rider2_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -1926,7 +1926,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider3_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+          "raw": "{\"mobileNumber\": \"{{_test_rider3_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -2002,7 +2002,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider4_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+          "raw": "{\"mobileNumber\": \"{{_test_rider4_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
@@ -2078,7 +2078,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_rider5_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+          "raw": "{\"mobileNumber\": \"{{_test_rider5_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",

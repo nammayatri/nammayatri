@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "NY Taxi User Cancellation",
-    "description": "Taxi ride with rider cancellation",
+    "description": "Taxi ride with rider cancellation | Fix: Rider Auth now uses {{bap_short_id}} instead of hardcoded 'NAMMA_YATRI', so Delhi (BHARAT_TAXI) and Kolkata (JATRI_SAATHI) riders authenticate against the correct BAP merchant and the serviceability geofence check uses the right region list.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -440,7 +440,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{bap_short_id}}\"\n}"
         },
         "url": {
           "raw": "{{baseUrl_app}}/auth",
