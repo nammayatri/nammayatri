@@ -14,6 +14,7 @@
 
 module Tools.Ticket
   ( createTicket,
+    updateSosTicket,
     createSosTicket,
     updateTicket,
     addAndUpdateKaptureCustomer,
@@ -48,6 +49,9 @@ createSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicket
 
 updateTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
 updateTicket = resolveAndCallTicketService (.issueTicketService) TI.updateTicket
+
+updateSosTicket :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.UpdateTicketReq -> m Ticket.UpdateTicketResp
+updateSosTicket = resolveAndCallTicketService (\cfg -> fromMaybe cfg.issueTicketService cfg.sosTicketService) TI.updateTicket
 
 addAndUpdateKaptureCustomer :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Ticket.KaptureCustomerReq -> m Ticket.KaptureCustomerResp
 addAndUpdateKaptureCustomer = resolveAndCallTicketService (.issueTicketService) TI.addAndUpdateKaptureCustomer

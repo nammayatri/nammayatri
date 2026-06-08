@@ -29,6 +29,6 @@ instance B.Table FeedbackT where
 
 type Feedback = FeedbackT Identity
 
-$(enableKVPG ''FeedbackT ['id] [])
+$(enableKVPG ''FeedbackT ['id] [['driverId], ['rideId]])
 
 $(mkTableInstances ''FeedbackT "feedback")

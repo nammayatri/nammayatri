@@ -61,6 +61,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Version as Version
 import qualified Lib.DriverCoins.Coins as DC
@@ -139,6 +140,7 @@ cancelRideImpl ::
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -214,7 +216,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
 
             fork "DriverRideCancelledCoin Event : " $ do
               mbLocation <- do
-                driverLocations <- LF.driversLocation [ride.driverId]
+                driverLocations <- LF.driversLocationByCloudType [ride.driverId] driver.cloudType
                 return $ listToMaybe driverLocations
               disToPickup <- forM mbLocation $ \location -> do
                 driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
@@ -391,6 +393,7 @@ getDistanceToPickup ::
     EncFlow m r,
     HasKafkaProducer r,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     Esq.EsqDBReplicaFlow m r
   ) =>
   SRB.Booking ->
@@ -399,8 +402,9 @@ getDistanceToPickup ::
 getDistanceToPickup booking mbRide = do
   case mbRide of
     Just ride -> do
+      mbDriver <- QPerson.findById ride.driverId
       mbLocation <- do
-        driverLocations <- withTryCatch "driversLocation:getDistanceToPickup" $ LF.driversLocation [ride.driverId]
+        driverLocations <- withTryCatch "driversLocation:getDistanceToPickup" $ LF.driversLocationByCloudType [ride.driverId] (mbDriver >>= (.cloudType))
         case driverLocations of
           Left err -> do
             logError ("Failed to fetch Driver Location with error : " <> show err)
@@ -420,6 +424,7 @@ customerCancellationChargesCalculation ::
     HasKafkaProducer r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     Esq.EsqDBReplicaFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
@@ -524,6 +529,7 @@ getCancellationCharges ::
     Esq.EsqDBReplicaFlow m r,
     HasField "shortDurationRetryCfg" r RetryCfg,
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,

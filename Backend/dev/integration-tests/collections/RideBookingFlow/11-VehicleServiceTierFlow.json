@@ -46,7 +46,8 @@
   ],
   "item": [
     {
-      "name": "Auth (Driver A)",
+      "name": "Auth (Driver)",
+      "_group": "Setup Driver A",
       "event": [
         {
           "listen": "test",
@@ -76,7 +77,8 @@
       }
     },
     {
-      "name": "OTP (Driver A)",
+      "name": "OTP (Driver)",
+      "_group": "Setup Driver A",
       "event": [
         {
           "listen": "test",
@@ -106,7 +108,8 @@
       }
     },
     {
-      "name": "Add Vehicle (Driver A)",
+      "name": "Add Vehicle — SEDAN (Dashboard)",
+      "_group": "Setup Driver A",
       "event": [
         {
           "listen": "test",
@@ -140,7 +143,8 @@
       }
     },
     {
-      "name": "Enable Driver (Driver A)",
+      "name": "Enable (Dashboard)",
+      "_group": "Setup Driver A",
       "event": [
         {
           "listen": "test",
@@ -174,7 +178,8 @@
       }
     },
     {
-      "name": "Subscribe Plan (Driver A)",
+      "name": "Subscribe Plan (Driver)",
+      "_group": "Setup Driver A",
       "event": [
         {
           "listen": "test",
@@ -208,7 +213,8 @@
       }
     },
     {
-      "name": "Auth (Driver B (old vehicle))",
+      "name": "Auth (Driver)",
+      "_group": "Setup Driver B",
       "event": [
         {
           "listen": "test",
@@ -238,7 +244,8 @@
       }
     },
     {
-      "name": "OTP (Driver B (old vehicle))",
+      "name": "OTP (Driver)",
+      "_group": "Setup Driver B",
       "event": [
         {
           "listen": "test",
@@ -268,7 +275,8 @@
       }
     },
     {
-      "name": "Add Vehicle (Driver B (old vehicle))",
+      "name": "Add Vehicle — SEDAN, mfg 2005, old (Dashboard)",
+      "_group": "Setup Driver B",
       "event": [
         {
           "listen": "test",
@@ -302,7 +310,8 @@
       }
     },
     {
-      "name": "Enable Driver (Driver B (old vehicle))",
+      "name": "Enable (Dashboard)",
+      "_group": "Setup Driver B",
       "event": [
         {
           "listen": "test",
@@ -336,7 +345,8 @@
       }
     },
     {
-      "name": "Subscribe Plan (Driver B (old vehicle))",
+      "name": "Subscribe Plan (Driver)",
+      "_group": "Setup Driver B",
       "event": [
         {
           "listen": "test",
@@ -370,7 +380,8 @@
       }
     },
     {
-      "name": "Auth (Driver C (AC off))",
+      "name": "Auth (Driver)",
+      "_group": "Setup Driver C",
       "event": [
         {
           "listen": "test",
@@ -400,7 +411,8 @@
       }
     },
     {
-      "name": "OTP (Driver C (AC off))",
+      "name": "OTP (Driver)",
+      "_group": "Setup Driver C",
       "event": [
         {
           "listen": "test",
@@ -430,7 +442,8 @@
       }
     },
     {
-      "name": "Add Vehicle (Driver C (AC off))",
+      "name": "Add Vehicle — SEDAN, AC off (Dashboard)",
+      "_group": "Setup Driver C",
       "event": [
         {
           "listen": "test",
@@ -464,7 +477,8 @@
       }
     },
     {
-      "name": "Enable Driver (Driver C (AC off))",
+      "name": "Enable (Dashboard)",
+      "_group": "Setup Driver C",
       "event": [
         {
           "listen": "test",
@@ -498,7 +512,8 @@
       }
     },
     {
-      "name": "Subscribe Plan (Driver C (AC off))",
+      "name": "Subscribe Plan (Driver)",
+      "_group": "Setup Driver C",
       "event": [
         {
           "listen": "test",
@@ -532,7 +547,8 @@
       }
     },
     {
-      "name": "Auth (Driver AUTO)",
+      "name": "Auth (Driver)",
+      "_group": "Setup Driver AUTO",
       "event": [
         {
           "listen": "test",
@@ -562,7 +578,8 @@
       }
     },
     {
-      "name": "OTP (Driver AUTO)",
+      "name": "OTP (Driver)",
+      "_group": "Setup Driver AUTO",
       "event": [
         {
           "listen": "test",
@@ -592,7 +609,8 @@
       }
     },
     {
-      "name": "Add Vehicle (Driver AUTO)",
+      "name": "Add Vehicle — AUTO_RICKSHAW (Dashboard)",
+      "_group": "Setup Driver AUTO",
       "event": [
         {
           "listen": "test",
@@ -626,7 +644,8 @@
       }
     },
     {
-      "name": "Enable Driver (Driver AUTO)",
+      "name": "Enable (Dashboard)",
+      "_group": "Setup Driver AUTO",
       "event": [
         {
           "listen": "test",
@@ -660,7 +679,8 @@
       }
     },
     {
-      "name": "Subscribe Plan (Driver AUTO)",
+      "name": "Subscribe Plan (Driver)",
+      "_group": "Setup Driver AUTO",
       "event": [
         {
           "listen": "test",
@@ -694,7 +714,8 @@
       }
     },
     {
-      "name": "GET Tiers (A) — Structure, canSwitchToAirport, Save Baseline",
+      "name": "Structure & canSwitchToAirport field (Driver)",
+      "_group": "P2",
       "event": [
         {
           "listen": "test",
@@ -705,7 +726,8 @@
               "",
               "// Driver A was onboarded with a SEDAN — must have at least one eligible tier",
               "pm.test('tiers array is non-empty', function () {",
-              "    pm.expect(d.tiers).to.be.an('array').with.length.above(0);",
+              "    pm.expect(d.tiers).to.be.an('array');",
+              "    pm.expect(d.tiers.length).to.be.above(0);",
               "});",
               "",
               "// canSwitchToAirport is null when no tier has isAirportRideEnabled=true,",
@@ -720,7 +742,9 @@
               "// isDefault         — true if vehicle.variant is in tier.defaultForVehicleVariant.",
               "pm.test('each tier has isUsageRestricted / isSelected / isDefault', function () {",
               "    d.tiers.forEach(function (t) {",
-              "        pm.expect(t, t.serviceTierType).to.include.all.keys('isUsageRestricted','isSelected','isDefault','serviceTierType');",
+              "        ['isUsageRestricted','isSelected','isDefault','serviceTierType'].forEach(function (k) {",
+              "            pm.expect(t, t.serviceTierType + ' missing ' + k).to.have.property(k);",
+              "        });",
               "    });",
               "});",
               "",
@@ -753,7 +777,8 @@
       "description": "GET /driver/vehicleServiceTiers — response shape validation.\n\nChecks:\n  • tiers[] non-empty (driver has at least one eligible tier)\n  • canSwitchToAirport field present — new field from service_tier commit;\n    computed as: if any non-restricted tier has isAirportRideEnabled\n    then Just driverInfo.canSwitchToAirport else Nothing\n  • Every tier has isUsageRestricted / isSelected / isDefault\n\nSaves full response as _vst_baseline for diff-based assertions in later steps."
     },
     {
-      "name": "GET Tiers (AUTO) — Ineligible CAB Tiers Absent (Variant Filtering)",
+      "name": "Variant filter — AUTO has no CAB tiers (Driver)",
+      "_group": "P3",
       "event": [
         {
           "listen": "test",
@@ -793,7 +818,8 @@
       "description": "GET /driver/vehicleServiceTiers for Driver AUTO (AUTO_RICKSHAW).\n\nTests filterVehicleTier in selectVehicleTierForDriverWithUsageRestriction:\n  filterVehicleTier tier = vehicle.variant `elem` tier.allowedVehicleVariant\n\nAUTO_RICKSHAW is not in allowedVehicleVariant of any CAB tier, so\nSEDAN / SUV / HATCHBACK / TAXI must be completely absent — not just restricted.\nThis is ineligibility: the tier is filtered out, not marked with isUsageRestricted."
     },
     {
-      "name": "GET Tiers (B) — mfcCheck: Old Vehicle (2005) Restricts vehicleAgeThreshold-Gated Tiers",
+      "name": "mfcCheck — old vehicle (2005) restricts age-gated tiers (Driver)",
+      "_group": "P4a",
       "event": [
         {
           "listen": "test",
@@ -842,7 +868,8 @@
       "description": "GET /driver/vehicleServiceTiers for Driver B (mYManufacturing=2005-01-01).\n\nTests mfcCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleAgeInMonths = getVehicleAge vehicle.mYManufacturing now\n  mfcCheck = case (vehicleAgeInMonths, tier.vehicleAgeThreshold) of\n    (Just (Months age), Just (Months threshold)) -> age < threshold\n    _ -> True\n\n2005-01-01 → age ≈ 240 months. Any tier with vehicleAgeThreshold < 240\nhas mfcCheck=False → isUsageRestricted=True.\n\nCompares against Driver A baseline (no mYManufacturing → age=Nothing → mfcCheck=True always).\nConditional: passes gracefully if no tier has vehicleAgeThreshold configured."
     },
     {
-      "name": "GET Tiers (C) — airConditionedCheck: AC=false at Onboarding Restricts AC-Gated Tiers",
+      "name": "airConditionedCheck — AC off restricts AC tiers (Driver)",
+      "_group": "P4b",
       "event": [
         {
           "listen": "test",
@@ -898,7 +925,8 @@
       "description": "GET /driver/vehicleServiceTiers for Driver C (addVehicle with airConditioned=false).\n\nTests airConditionedCheck in selectVehicleTierForDriverWithUsageRestriction:\n  airConditionedCheck =\n    (tier.vehicleCategory == Just AMBULANCE)\n    || (compareNumber tier.airConditionedThreshold driverInfo.airConditionScore\n        && (isNothing tier.airConditionedThreshold || vehicle.airConditioned /= Just False))\n\nvehicle.airConditioned = Just False → the second condition fails for any tier\nwith an airConditionedThreshold → isUsageRestricted=True.\n\nAlso cross-checks: same tiers are unrestricted for Driver A (airConditioned=Nothing\n→ isNothing Nothing = True → check short-circuits to True → not restricted)."
     },
     {
-      "name": "POST Update Service Tiers (A) — Select One Non-Restricted Tier",
+      "name": "Select one non-restricted tier (Driver)",
+      "_group": "P5",
       "event": [
         {
           "listen": "prerequest",
@@ -952,7 +980,8 @@
       "description": "POST /driver/updateServiceTiers — driver explicitly selects a tier.\n\nPrerequest builds the body from _vst_baseline, setting isSelected=true\nfor one non-restricted tier.\n\nBackend in postDriverUpdateServiceTiers reads:\n  let isSelected = maybe isAlreadySelected (.isSelected) mbServiceTierDriverRequest\n  if isSelected || (isDefault && vehicle.category /= AMBULANCE)\n    then return (Just tier)"
     },
     {
-      "name": "GET Tiers (A) — Verify Selected Tier isSelected=true",
+      "name": "Verify selection persisted (Driver)",
+      "_group": "P5",
       "event": [
         {
           "listen": "test",
@@ -993,7 +1022,8 @@
       "description": "Verifies the tier selection from the previous POST persisted.\n\nQVehicle.updateSelectedServiceTiers is called at the end of postDriverUpdateServiceTiers,\nso the next GET must reflect isSelected=true for the tier we sent."
     },
     {
-      "name": "POST Update Service Tiers (A) — Deselect All (Default Tier Protected)",
+      "name": "Deselect all — default tier protected (Driver)",
+      "_group": "P5",
       "event": [
         {
           "listen": "prerequest",
@@ -1048,7 +1078,8 @@
       "description": "POST /driver/updateServiceTiers with all tiers as isSelected=false.\n\nTests default-tier protection in postDriverUpdateServiceTiers:\n  if isSelected || (isDefault && vehicle.category /= AMBULANCE)\n    then return (Just tier)   -- kept\n\nWhere isDefault = vehicle.variant `elem` tier.defaultForVehicleVariant.\nBackend ignores isSelected=false for default tiers — they stay selected."
     },
     {
-      "name": "GET Tiers (A) — Default Tier Cannot Be Deselected",
+      "name": "Verify default tier stays selected (Driver)",
+      "_group": "P5",
       "event": [
         {
           "listen": "test",
@@ -1090,7 +1121,8 @@
       "description": "Verifies the default-tier protection from the previous step.\n\nThe tier where vehicle.variant ∈ tier.defaultForVehicleVariant must still\nhave isSelected=true, because the backend's isDefault check overrides isSelected=false."
     },
     {
-      "name": "POST Vehicle Rating (Dashboard, A) — Set Low Rating 1.0",
+      "name": "Set vehicle rating 1.0 (Dashboard)",
+      "_group": "P6",
       "event": [
         {
           "listen": "test",
@@ -1125,7 +1157,8 @@
       "description": "Dashboard POST /driverVehicleQuality/updateVehicleRating.\n\nSets vehicle.vehicleRating=1.0 via updateVehicleRatingAndRemark,\nwriting to both the vehicle table and the RC.\nUsed to trigger vehicleRatingCheck restriction in the next GET."
     },
     {
-      "name": "GET Tiers (A) — vehicleRatingCheck: Low Rating Restricts Threshold-Gated Tiers",
+      "name": "vehicleRatingCheck — low rating restricts tiers (Driver)",
+      "_group": "P6",
       "event": [
         {
           "listen": "test",
@@ -1175,7 +1208,8 @@
       "description": "Tests vehicleRatingCheck in selectVehicleTierForDriverWithUsageRestriction:\n  vehicleRatingCheck = compareNumber vehicle.vehicleRating tier.vehicleRating\n  compareNumber (Just 1.0) (Just threshold) = 1.0 >= threshold\n\nAny tier with vehicleRating threshold > 1.0 → vehicleRatingCheck=False → restricted.\nDetected by diffing against _vst_baseline_tiers.\nConditional: passes gracefully if no tier has a vehicleRating threshold."
     },
     {
-      "name": "POST Vehicle Rating (Dashboard, A) — Restore High Rating 5.0",
+      "name": "Restore vehicle rating 5.0 (Dashboard)",
+      "_group": "P6",
       "event": [
         {
           "listen": "test",
@@ -1210,7 +1244,8 @@
       "description": "Restores vehicle.vehicleRating=5.0. compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold passes for all realistic thresholds."
     },
     {
-      "name": "GET Tiers (A) — vehicleRatingCheck: High Rating Restores Tiers to Unrestricted",
+      "name": "vehicleRatingCheck — high rating restores tiers (Driver)",
+      "_group": "P6",
       "event": [
         {
           "listen": "test",
@@ -1253,7 +1288,8 @@
       "description": "Verifies vehicleRatingCheck recovery:\n  compareNumber (Just 5.0) (Just threshold) = 5.0 >= threshold → True\n→ vehicleRatingCheck=True → tiers that were restricted with 1.0 are now unrestricted."
     },
     {
-      "name": "POST AC Restriction (Dashboard, A) — isWorking=false",
+      "name": "AC restriction OFF (Dashboard)",
+      "_group": "P7",
       "event": [
         {
           "listen": "test",
@@ -1288,7 +1324,8 @@
       "description": "Dashboard POST /driver/{id}/acRestriction/update {isWorking:false}.\n\nCalls checkAndUpdateAirConditioned(isDashboard=True, isAirConditioned=False,\n  shouldUpdateServiceTiers=True).\n\nTwo effects:\n  1. vehicle.airConditioned = Just False\n  2. incrementDriverAcUsageRestrictionCount → increases driverInfo.airConditionScore\n\nBoth contribute to airConditionedCheck failing for AC-gated tiers."
     },
     {
-      "name": "GET Tiers (A) — Dashboard AC Restricted: AC-Gated Tiers Restricted & Auto-Deselected",
+      "name": "AC tiers restricted & auto-deselected (Driver)",
+      "_group": "P7",
       "event": [
         {
           "listen": "test",
@@ -1340,7 +1377,8 @@
       "description": "Verifies both effects of dashboard acRestriction/update(isWorking=false):\n\n1. airConditionedCheck fails → isUsageRestricted=true:\n     vehicle.airConditioned=Just False → (vehicle.airConditioned /= Just False) = False\n\n2. shouldUpdateServiceTiers=True → auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     uses autoSelectedVehicleVariant (not allowedVehicleVariant)\n     restricted tiers excluded → QVehicle.updateSelectedServiceTiers called\n     → AC-restricted tiers must not be isSelected=true"
     },
     {
-      "name": "POST AC Restriction (Dashboard, A) — isWorking=true (Restore)",
+      "name": "AC restriction ON — restore (Dashboard)",
+      "_group": "P7",
       "event": [
         {
           "listen": "test",
@@ -1375,7 +1413,8 @@
       "description": "Dashboard POST /driver/{id}/acRestriction/update {isWorking:true}.\n\nSets vehicle.airConditioned=Just True. airConditionScore is NOT reset — only\nincremented by isWorking=false. For a fresh driver, one increment is still below\nthreshold so the score-based part of airConditionedCheck still passes."
     },
     {
-      "name": "GET Tiers (A) — Dashboard AC Restored: AC-Gated Tiers Unrestricted",
+      "name": "AC tiers unrestricted after restore (Driver)",
+      "_group": "P7",
       "event": [
         {
           "listen": "test",
@@ -1417,7 +1456,8 @@
       "description": "Verifies recovery after dashboard acRestriction/update(isWorking=true).\n\nvehicle.airConditioned=Just True → (isNothing threshold || Just True /= Just False) = True\n→ airConditionedCheck passes → isUsageRestricted=False."
     },
     {
-      "name": "POST Update Air Condition (Driver A) — isAirConditioned=false",
+      "name": "updateAirCondition OFF (Driver)",
+      "_group": "P8",
       "event": [
         {
           "listen": "test",
@@ -1452,7 +1492,8 @@
       "description": "Driver-facing POST /driver/updateAirCondition {isAirConditioned:false}.\n\nCalls checkAndUpdateAirConditioned(isDashboard=False, isAirConditioned=False,\n  shouldUpdateServiceTiers=True).\n\nDifference from dashboard path:\n  • Sets vehicle.airConditioned=Just False (same)\n  • Does NOT call incrementDriverAcUsageRestrictionCount (airConditionScore unchanged)\n  • shouldUpdateServiceTiers=True still fires the auto-deselect"
     },
     {
-      "name": "GET Tiers (A) — Driver AC Off: AC-Gated Tiers Restricted & selectedServiceTiers Auto-Updated",
+      "name": "AC tiers restricted & auto-deselected (Driver)",
+      "_group": "P8",
       "event": [
         {
           "listen": "test",
@@ -1502,7 +1543,8 @@
       "description": "Verifies driver-side updateAirCondition(false) path:\n\n1. Same airConditionedCheck failure: vehicle.airConditioned=Just False → restricted.\n\n2. shouldUpdateServiceTiers=True auto-deselect:\n     fetchVehicleTierForDriverWithUsageRestriction(onlyAutoSelected=True)\n     → uses autoSelectedVehicleVariant\n     → restricted tiers excluded from new selectedServiceTiers"
     },
     {
-      "name": "POST Update Air Condition (Driver A) — isAirConditioned=true (Restore)",
+      "name": "updateAirCondition ON — restore (Driver)",
+      "_group": "P8",
       "event": [
         {
           "listen": "test",
@@ -1537,7 +1579,8 @@
       "description": "Restores via driver-side updateAirCondition(true). Sets vehicle.airConditioned=Just True without touching airConditionScore."
     },
     {
-      "name": "GET Tiers (A) — Driver AC Restored: AC-Gated Tiers Unrestricted",
+      "name": "AC tiers unrestricted after restore (Driver)",
+      "_group": "P8",
       "event": [
         {
           "listen": "test",
@@ -1577,7 +1620,8 @@
       "description": "Same recovery as dashboard path: vehicle.airConditioned=Just True → airConditionedCheck passes → tiers unrestricted."
     },
     {
-      "name": "POST Update Service Tiers (A) — Toggle canSwitchToAirport",
+      "name": "Toggle canSwitchToAirport (Driver)",
+      "_group": "P9",
       "event": [
         {
           "listen": "prerequest",
@@ -1634,7 +1678,8 @@
       "description": "POST /driver/updateServiceTiers with canSwitchToAirport flipped.\n\nBackend in postDriverUpdateServiceTiers:\n  canSwitchToAirport' = foldl (\\acc (tier, isRestricted) ->\n    if isRestricted then acc\n    else acc || (fromMaybe driverInfo.canSwitchToAirport req.canSwitchToAirport\n                 && fromMaybe True tier.isAirportRideEnabled)) False tiers\n  QDI.updateAirportSwitch canSwitchToAirport' personId\n\nSkips gracefully if canSwitchToAirport is null (no isAirportRideEnabled tier in config)."
     },
     {
-      "name": "GET Tiers (A) — canSwitchToAirport Reflects Toggle",
+      "name": "canSwitchToAirport reflects toggle (Driver)",
+      "_group": "P9",
       "event": [
         {
           "listen": "test",

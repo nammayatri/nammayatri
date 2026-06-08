@@ -181,6 +181,7 @@ library
       Domain.Action.Beckn.OnUpdate
       Domain.Action.Dashboard.AlertIncident
       Domain.Action.Dashboard.AppManagement.Customer
+      Domain.Action.Dashboard.AppManagement.EDCMachine
       Domain.Action.Dashboard.AppManagement.EventManagement
       Domain.Action.Dashboard.AppManagement.EventManagement.Utils
       Domain.Action.Dashboard.AppManagement.FRFSTicketService
@@ -792,6 +793,7 @@ library
       Tools.Whatsapp
       API.Action.Dashboard.AppManagement
       API.Action.Dashboard.AppManagement.Customer
+      API.Action.Dashboard.AppManagement.EDCMachine
       API.Action.Dashboard.AppManagement.EventManagement
       API.Action.Dashboard.AppManagement.FRFSTicketService
       API.Action.Dashboard.AppManagement.MerchantOnboarding
@@ -889,7 +891,9 @@ library
       API.Action.UnifiedDashboard.RideBooking.HealthCheck
       API.Types.Dashboard.AppManagement
       API.Types.Dashboard.AppManagement.Customer
+      API.Types.Dashboard.AppManagement.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.Customer
+      API.Types.Dashboard.AppManagement.Endpoints.EDCMachine
       API.Types.Dashboard.AppManagement.Endpoints.EventManagement
       API.Types.Dashboard.AppManagement.Endpoints.FRFSTicketService
       API.Types.Dashboard.AppManagement.Endpoints.MerchantOnboarding
@@ -1698,7 +1702,7 @@ library
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
 
@@ -1836,7 +1840,7 @@ executable rider-app-exe
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
-    ghc-options: -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
+    ghc-options: -Wno-ambiguous-fields -Wno-incomplete-uni-patterns -Wno-incomplete-record-updates -O0 -funfolding-use-threshold20 -fno-cse -fmax-simplifier-iterations1 -fno-specialise-aggressively -j4
   else
     ghc-options: -O2 -j4
 

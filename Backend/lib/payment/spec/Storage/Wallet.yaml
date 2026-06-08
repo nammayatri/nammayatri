@@ -19,10 +19,16 @@ PersonWallet:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  constraints:
+    personId: SecondaryKey
+
   queries:
     findByPersonId:
       kvFunction: findOneWithKV
       where: personId
+
+  constraints:
+    personId: SecondaryKey
 
   defaultQueryTypeConstraint: "(Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r)"
   beamInstance: MakeTableInstancesGenericSchema
@@ -47,6 +53,9 @@ WalletRewardPosting:
     merchantOperatingCityId : Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
+
+  constraints:
+    walletId: SecondaryKey
 
   queries:
     findByWalletIdAndStatus:

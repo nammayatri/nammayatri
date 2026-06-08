@@ -188,3 +188,7 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN cloud_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN seat_selection_type text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN driver_name text ;
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN driver_mobile_number text ;
+
+
+------- SQL updates -------
+

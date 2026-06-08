@@ -31,6 +31,7 @@ import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import Lib.SessionizerMetrics.Types.Event
@@ -61,6 +62,7 @@ sendScheduledRideAssignedOnUpdate ::
     CacheFlow m r,
     HasField "modelNamesHashMap" r (HMS.HashMap Text Text),
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
@@ -125,7 +127,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
                   merchantId = booking.providerId
                   merchantOperatingCityId = booking.merchantOperatingCityId
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:callPayout" $ LTF.driversLocationByCloudType [driverId] driver.cloudType
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -195,7 +197,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
               return $ Terminate "Job is Terminated and Ride is Reallocated because any one of the above values are Nothing"
             Just (dropLoc, merchantId, scheduledPickup, transporterConfig, _vehicle, scheduledPickupTime) -> do
               mbCurrentDriverLocation <- do
-                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocation [driverId]
+                driverLocations <- withTryCatch "driversLocation:sendScheduledRideAssignedOnUpdate" $ LTF.driversLocationByCloudType [driverId] (mbActiveRide >>= (.cloudType))
                 case driverLocations of
                   Left _err -> do
                     return Nothing
@@ -271,6 +273,7 @@ cancelOrReallocate ::
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
     HasField "s3Env" r (S3.S3Env m),
     LT.HasLocationService m r,
+    HasFlowEnv m r '["cloudType" ::: Maybe CloudType],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],

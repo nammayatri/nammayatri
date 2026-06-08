@@ -320,6 +320,8 @@ VehicleRegistrationCertificate:
   constraints:
     id: PrimaryKey
     certificateNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId: SecondaryKey
+    fleetOwnerId: SecondaryKey # high fan-out (fleet -> many RCs), monitor SET size
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -450,6 +452,7 @@ Image:
     id: PrimaryKey
     personId: SecondaryKey
     rcId: SecondaryKey
+    workflowTransactionId: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -687,6 +690,7 @@ VehiclePermit:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+    documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -841,6 +845,7 @@ BusinessLicense:
   constraints:
     id: PrimaryKey
     documentImageId: SecondaryKey
+    driverId: SecondaryKey
   queries:
     findByPersonId:
       kvFunction: findAllWithKV
@@ -867,6 +872,7 @@ VehiclePUC:
   constraints:
     id: PrimaryKey
     rcId: SecondaryKey
+    documentImageId: SecondaryKey
   queries:
     findByRcIdAndDriverId:
       kvFunction: findAllWithKV
@@ -913,6 +919,7 @@ FleetRCAssociation:
   constraints:
     id: PrimaryKey
     rcId: "!SecondaryKey" # forcing to be a secondary key
+    fleetOwnerId: "!SecondaryKey" # forcing; high fan-out (fleet -> many RCs), monitor SET size
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -971,6 +978,7 @@ DriverPanCard:
     id: PrimaryKey
     driverId: SecondaryKey
     panCardNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    documentImageId1: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -1111,7 +1119,8 @@ DriverUdyam :
   constraints:
     id: PrimaryKey
     driverId: SecondaryKey
-    # udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+    udyamNumberHash: "!SecondaryKey" # forcing to be a secondary key
+
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -1245,6 +1254,9 @@ AadhaarCard:
   derives: "Generic"
   constraints:
     driverId: PrimaryKey
+    aadhaarFrontImageId: SecondaryKey
+    aadhaarBackImageId: SecondaryKey
+    aadhaarNumberHash: "!SecondaryKey" # forcing; queried in AadhaarCardExtra.findByAadhaarNumberHash
 
   beamFields:
     aadhaarNumber:
@@ -1498,10 +1510,10 @@ MorthVerification:
       documentNumberEncrypted: Text
       documentNumberHash: DbHash
   fromTType:
-    documentNumber: EncryptedHashed <$> (Encrypted <$> documentNumberEncrypted) <*> documentNumberHash|E
+    documentNumber: EncryptedHashed (Encrypted documentNumberEncrypted) documentNumberHash|E
   toTType:
-    documentNumberEncrypted: (documentNumber <&> unEncrypted . (.encrypted))|E
-    documentNumberHash: (documentNumber <&> (.hash))|E
+    documentNumberEncrypted: (unEncrypted . (.encrypted) $ documentNumber)|E
+    documentNumberHash: ((.hash) documentNumber)|E
   queries:
     findById:
       kvFunction: findOneWithKV

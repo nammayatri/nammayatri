@@ -290,3 +290,10 @@ ALTER TABLE atlas_app.person ADD COLUMN client_id text ;
 
 ------- SQL updates -------
 
+CREATE INDEX CONCURRENTLY person_idx_device_id ON atlas_app.person USING btree (device_id);
+
+
+
+
+------- SQL updates -------
+

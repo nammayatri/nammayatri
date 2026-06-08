@@ -36,6 +36,6 @@ instance B.Table RefundsT where
 
 type Refunds = RefundsT Identity
 
-$(enableKVPG ''RefundsT ['id] [['orderId]])
+$(enableKVPG ''RefundsT ['id] [['orderId], ['shortId]])
 
 $(mkTableInstancesGenericSchema ''RefundsT "refunds")
