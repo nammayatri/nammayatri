@@ -22,17 +22,22 @@ data VehicleSeatLayoutMappingItem = VehicleSeatLayoutMappingItem
   { gtfsId :: Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping,
     seatLayoutId :: Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout,
+    seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     vehicleNo :: Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data VehicleSeatLayoutMappingUpsertReq = VehicleSeatLayoutMappingUpsertReq
+data VehicleSeatLayoutMappingUpsertEntry = VehicleSeatLayoutMappingUpsertEntry
   { gtfsId :: Data.Text.Text,
     seatLayoutId :: Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout,
     seatSelectionType :: Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType,
     vehicleNo :: Data.Text.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleSeatLayoutMappingUpsertReq = VehicleSeatLayoutMappingUpsertReq {entries :: [VehicleSeatLayoutMappingUpsertEntry]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

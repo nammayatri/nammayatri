@@ -14,17 +14,21 @@ apiPrefix: vehicleSeatLayoutMapping
 
 types:
   VehicleSeatLayoutMappingUpsertReq:
+    entries: "[VehicleSeatLayoutMappingUpsertEntry]"
+    derive: "'HideSecrets"
+
+  VehicleSeatLayoutMappingUpsertEntry:
     vehicleNo: Text
     gtfsId: Text
     seatLayoutId: Id SeatLayout
     seatSelectionType: Maybe SeatSelectionType
-    derive: "'HideSecrets"
 
   VehicleSeatLayoutMappingItem:
     id: Id VehicleSeatLayoutMapping
     vehicleNo: Text
     gtfsId: Text
     seatLayoutId: Id SeatLayout
+    seatSelectionType: Maybe SeatSelectionType
 
 apis:
   - GET:
