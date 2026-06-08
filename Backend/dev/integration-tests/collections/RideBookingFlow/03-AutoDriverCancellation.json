@@ -55,6 +55,31 @@
             ],
             "type": "text/javascript"
           }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Reset all test-run variables so this run gets fresh drivers/riders.",
+              "// Without this, collection variables persist and D1/D2 reuse the same",
+              "// phone numbers across runs, causing stale ride/booking state conflicts.",
+              "var city = pm.environment.get('dashboard_city') || 'Bangalore';",
+              "var rcPrefixMap = {Bangalore:'KA',Chennai:'TN',Kolkata:'WB',Delhi:'DL',Hyderabad:'TS',Mumbai:'MH',Mysore:'KA'};",
+              "var rcPrefix = rcPrefixMap[city] || 'KA';",
+              "var d1 = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+              "var d2 = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+              "var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+              "var reg1 = rcPrefix + String(Math.floor(10+Math.random()*89)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(1000+Math.random()*8999));",
+              "var reg2 = rcPrefix + String(Math.floor(10+Math.random()*89)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String.fromCharCode(65+Math.floor(Math.random()*26)) + String(Math.floor(1000+Math.random()*8999));",
+              "pm.collectionVariables.set('_test_driver_number', d1);",
+              "pm.collectionVariables.set('_test_driver2_number', d2);",
+              "pm.collectionVariables.set('_test_rider_number', rNum);",
+              "pm.collectionVariables.set('_test_reg_no', reg1);",
+              "pm.collectionVariables.set('_test_reg_no2', reg2);",
+              "console.log('Fresh run: D1=' + d1 + ' D2=' + d2 + ' Rider=' + rNum + ' Reg1=' + reg1 + ' (' + city + ')');"
+            ]
+          }
         }
       ],
       "request": {
@@ -1326,6 +1351,63 @@
           ]
         }
       }
+    },
+    {
+      "name": "D1 Set Offline",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{driver_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": ""
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=false&mode=%22OFFLINE%22",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "setActivity"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "false"
+            },
+            {
+              "key": "mode",
+              "value": "%22OFFLINE%22"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Set D1 offline immediately after cancellation so D1 cannot",
+              "// accept the reallocated ride before D2. Without this, both",
+              "// D1 and D2 receive the reallocation request and D1 often wins,",
+              "// causing D2 to get RIDE_REQUEST_ALREADY_ACCEPTED.",
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "D2 Get Nearby Ride Requests",
