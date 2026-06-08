@@ -517,6 +517,7 @@ library
       SharedLogic.Payment
       SharedLogic.PaymentVendorSplits
       SharedLogic.Person
+      SharedLogic.PersonBlock
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PickupETA
       SharedLogic.PTCircuitBreaker

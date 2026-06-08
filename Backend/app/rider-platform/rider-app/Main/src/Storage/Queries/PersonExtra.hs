@@ -18,6 +18,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Sequelize as Se
+import qualified SharedLogic.PersonBlock
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.Person ()
 
@@ -245,7 +246,7 @@ updatingEnabledAndBlockedState (Id personId) blockedByRule isBlocked = do
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
-    Just driverP -> do
+    Just driverP -> unless (isBlocked && SharedLogic.PersonBlock.isNoBlockUser driverP) $ do
       now <- getCurrentTime
       updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),
@@ -266,7 +267,7 @@ updatingAuthEnabledAndBlockedState (Id personId) blockedByRule isAuthBlocked blo
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
-    Just driverP -> do
+    Just driverP -> unless (isAuthBlocked == Just True && SharedLogic.PersonBlock.isNoBlockUser driverP) $ do
       now <- getCurrentTime
       let authBlocked = fromMaybe False isAuthBlocked
       updateOneWithKV
@@ -289,7 +290,7 @@ updatingBlockedStateWithUntil (Id personId) blockedByRule isBlocked blockedUntil
   person <- findByPId (Id personId)
   case person of
     Nothing -> pure ()
-    Just driverP -> do
+    Just driverP -> unless (isBlocked && SharedLogic.PersonBlock.isNoBlockUser driverP) $ do
       now <- getCurrentTime
       updateOneWithKV
         ( [ Se.Set BeamP.enabled (not isBlocked),

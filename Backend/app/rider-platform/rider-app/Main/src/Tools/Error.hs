@@ -21,7 +21,9 @@ import Kernel.Types.Error.BaseError.HTTPError.FromResponse
 import Network.HTTP.Types (Status (statusCode))
 import Servant.Client (ResponseF (responseStatusCode))
 
-data CustomerError = PersonMobileAlreadyExists Text | DeviceTokenNotFound
+data CustomerError
+  = PersonMobileAlreadyExists Text
+  | DeviceTokenNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''CustomerError

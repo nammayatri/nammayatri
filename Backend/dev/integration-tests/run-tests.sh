@@ -51,6 +51,7 @@ RENTAL_DIR="$SCRIPT_DIR/collections/RentalRideFlow"
 FLEET_DIR="$SCRIPT_DIR/collections/FleetManagementFlow"
 SMS_DIR="$SCRIPT_DIR/collections/KaleyraSmsFlow"
 OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
+CUSTOMER_BLOCK_DIR="$SCRIPT_DIR/collections/CustomerBlockingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -114,11 +115,11 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR" "Fleet Management:$FLEET_DIR"; do
+    for label_dir in "Online Ride Booking Flow:$ONLINE_DIR" "Bus Ticket Booking Flow:$BUS_DIR" "Metro Ticket Booking Flow:$METRO_DIR" "Subway Ticket Booking Flow:$SUBWAY_DIR" "Scheduler Flow:$SCHEDULER_DIR" "Fleet Management Flow:$FLEET_DIR" "Customer Blocking Flow:$CUSTOMER_BLOCK_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
-        echo "=== $label Ticket Booking Flow ==="
+        echo "=== $label ==="
         [ -d "$dir" ] || continue
         for env_file in "$dir"/Local/Local_*.postman_environment.json; do
             [ -f "$env_file" ] || continue
@@ -464,6 +465,58 @@ run_sms() {
 }
 run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
 
+run_customer_blocking() {
+    local filter_env="${1:-}"
+    local filter_suite="${2:-}"
+    local passed=0 failed=0 failed_suites=""
+
+    if [ ! -d "$CUSTOMER_BLOCK_DIR" ]; then
+        echo "No customer-blocking collections found at $CUSTOMER_BLOCK_DIR"
+        return 0
+    fi
+
+    for env_file in "$CUSTOMER_BLOCK_DIR"/Local/Local_*.postman_environment.json; do
+        [ -f "$env_file" ] || continue
+        local env_name
+        env_name=$(basename "$env_file" .postman_environment.json | sed 's/^Local_//')
+        [ -n "$filter_env" ] && [ "$filter_env" != "$env_name" ] && continue
+
+        echo ""
+        echo "════════════════════════════════════════════════════════════"
+        echo "  CUSTOMER BLOCKING / $env_name"
+        echo "════════════════════════════════════════════════════════════"
+
+        for f in "$CUSTOMER_BLOCK_DIR"/*.json; do
+            [[ "$f" == *"postman_environment"* ]] && continue
+            local suite_name
+            suite_name=$(basename "$f" .json)
+            [ -n "$filter_suite" ] && [ "$filter_suite" != "$suite_name" ] && continue
+
+            echo ""
+            echo "------------------------------------------------------------"
+            echo "  $env_name / $suite_name"
+            echo "------------------------------------------------------------"
+            echo "Running: $suite_name ($env_name)"
+
+            if newman run "$f" -e "$env_file" --bail --timeout-request 60000 --reporters cli; then
+                echo "PASSED: $suite_name ($env_name)"
+                passed=$((passed + 1))
+            else
+                echo "FAILED: $suite_name ($env_name)"
+                failed=$((failed + 1))
+                failed_suites="$failed_suites $env_name/$suite_name"
+            fi
+        done
+    done
+
+    echo ""
+    echo "════════════════════════════════════════════════════════════"
+    echo "  CUSTOMER BLOCKING RESULTS: $passed passed, $failed failed"
+    if [ -n "$failed_suites" ]; then echo "  Failed:$failed_suites"; fi
+    echo "════════════════════════════════════════════════════════════"
+    [ "$failed" -eq 0 ]
+}
+
 # ── Help ──
 
 show_help() {
@@ -488,6 +541,7 @@ show_help() {
     echo "  fleet               Run fleet management suites (driver name, association)"
     echo "  sms|kaleyra         Run Kaleyra SMS integration tests (non-OTP needs test_phone_number in env)"
     echo "  ophub               Run operation hub suites (hub requests, driver mobile search)"
+    echo "  customer-blocking   Run NO_BLOCK_USER tag whitelist suites"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -588,6 +642,9 @@ case "${1:-}" in
         ;;
     ophub)
         run_ophub "${2:-}" "${3:-}"
+        ;;
+    customer-blocking)
+        run_customer_blocking "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
