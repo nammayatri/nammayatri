@@ -38,7 +38,7 @@ type API =
              :> ReqBody '[JSON] DRoles.AssignAccessLevelReq
              :> Post '[JSON] APISuccess
            :<|> "list"
-             :> DashboardAuth 'DASHBOARD_ADMIN
+             :> DashboardAuth 'DASHBOARD_USER
              :> QueryParam "searchString" Text
              :> QueryParam "limit" Integer
              :> QueryParam "offset" Integer
