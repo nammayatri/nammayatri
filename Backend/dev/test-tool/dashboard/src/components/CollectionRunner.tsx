@@ -1101,7 +1101,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         {visibleNodes.map(node => (
           <div key={node.id} className="cr-node">
             <div className="cr-node-header">
-              <span className={`cr-tag cr-tag-${node.tag}`}>{node.tag}</span>
+              {!node.prefixGroup && <span className={`cr-tag cr-tag-${node.tag}`}>{node.tag}</span>}
               <span className="cr-node-title">{node.title}</span>
             </div>
             {node.stepIds.map(stepId => {
@@ -1124,6 +1124,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
                 <div key={stepId} className={`cr-step cr-step-${state?.status || 'pending'}`}>
                   <div className="cr-step-header" onClick={() => state && toggleStep(stepId)}>
                     <span className={`cr-dot cr-dot-${state?.status || 'pending'}`} />
+                    {node.prefixGroup && <span className={`cr-tag cr-tag-${step.tag}`}>{step.tag}</span>}
                     <span className="cr-step-method">{step.method}</span>
                     <span className="cr-step-name">{step.name}</span>
                     {runningStepId === stepId && <span className="cr-spinner" />}
