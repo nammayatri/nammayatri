@@ -4,10 +4,12 @@
 -- person-resolution + token-issuance path) under the NAMMA_YATRI merchant.
 -- Invalid token, unknown provider, or ANY error/exception -> 200 {isValid:false}
 -- (logged); never a 500 to the PWA.
-module Domain.Action.UI.PartnerAuth (postPartnerSession) where
+module Domain.Action.UI.PartnerAuth (postPartnerSession, normalizeIndianMobile) where
 
 import qualified API.Types.UI.PartnerAuth as APT
 import API.Types.UI.PartnerAuthExtra ()
+import Data.Char (isDigit)
+import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DRegistration
 import qualified Environment
 import Kernel.Prelude
@@ -50,23 +52,38 @@ postPartnerSession providerTxt req = do
         then pure invalidRes
         else do
           userDetails <- PartnerAuth.getUserDetails cfg req.token
+          -- BHIM is an India-only (UPI) app; normalise the number to ("+91", <local>)
+          -- so we match an existing Person instead of forking a duplicate account when
+          -- BHIM sends it with a 91 / +91 / 0091 prefix.
+          let (countryCode, localMobile) = normalizeIndianMobile userDetails.mobileNumber
           authRes <-
-            -- BHIM is an India-only (UPI) app, so the country code is fixed to "+91".
-            -- Derive/configure this when a non-India provider is onboarded.
             DRegistration.resolveAndIssueDirectSession
               merchant
-              "+91"
-              userDetails.mobileNumber
+              countryCode
+              localMobile
               (Just userDetails.name)
               Nothing
               Nothing
               Nothing
               Nothing
               Nothing
-          pure
-            APT.PartnerSessionRes
-              { isValid = True,
-                sessionToken = authRes.token,
-                mobileNumber = Just userDetails.mobileNumber,
-                name = Just userDetails.name
-              }
+          -- A verified BHIM token can still map to a blocked NY user, for whom no
+          -- session token is issued. Never return isValid:true with a null token.
+          case authRes.token of
+            Just tok ->
+              pure
+                APT.PartnerSessionRes
+                  { isValid = True,
+                    sessionToken = Just tok,
+                    mobileNumber = Just userDetails.mobileNumber,
+                    name = Just userDetails.name
+                  }
+            Nothing -> do
+              logError $ "PartnerAuth: no session issued (blocked user?) for provider " <> providerTxt
+              pure invalidRes
+
+-- | Normalise an Indian mobile number from BHIM to ("+91", <local 10-digit>),
+-- tolerating bare, "91…", "+91…", "0091…" and spaced formats. Kept separate so
+-- the country-code/format assumption lives in one unit-tested place.
+normalizeIndianMobile :: Text -> (Text, Text)
+normalizeIndianMobile raw = ("+91", T.takeEnd 10 (T.filter isDigit raw))
