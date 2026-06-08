@@ -34,294 +34,1033 @@
 	"item": [
 		{
 			"name": "Driver Auth",
-			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Always generate fresh numbers so each run uses a new driver/rider.",
+							"// Without this the collection-level guard reuses the same driver,",
+							"// leaving stale Redis state that causes empty searchRequestsForDriver.",
+							"var city = pm.environment.get('dashboard_city') || 'Bangalore';",
+							"var rcMap = {Bangalore:'KA',Chennai:'TN',Kolkata:'WB',Delhi:'DL',Hyderabad:'TS',Mumbai:'MH',Mysore:'KA'};",
+							"var prefix = rcMap[city] || 'KA';",
+							"var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+							"var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+							"var regNo = prefix + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+							"pm.collectionVariables.set('_test_driver_number', dNum);",
+							"pm.collectionVariables.set('_test_rider_number', rNum);",
+							"pm.collectionVariables.set('_test_reg_no', regNo);",
+							"pm.collectionVariables.set('_nearby_retries', 0);",
+							"console.log('Fresh run: driver=' + dNum + ' rider=' + rNum + ' reg=' + regNo + ' (' + city + ')');"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('driver_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}],
-				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"},
-				"url": {"raw": "{{baseURL_namma_P}}/auth", "host": ["{{baseURL_namma_P}}"], "path": ["auth"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{driver_merchant_id}}\", \"merchantOperatingCity\": \"{{city}}\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
 			}
 		},
 		{
 			"name": "Driver OTP",
-			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('driver_token', d.token); pm.environment.set('driver_id', d.person.id); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}],
-				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"},
-				"url": {"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify", "host": ["{{baseURL_namma_P}}"], "path": ["auth", "{{driver_authId}}", "verify"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"auth",
+						"{{driver_authId}}",
+						"verify"
+					]
+				}
 			}
 		},
 		{
 			"name": "Add Vehicle (Dashboard)",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Intercity Driver\", \"colour\": \"White\"}"},
-				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"variant\": \"{{vehicle_variant}}\", \"registrationNo\": \"{{_test_reg_no}}\", \"vehicleClass\": \"{{vehicle_class}}\", \"vehicleCategory\": \"{{vehicle_category}}\", \"make\": \"{{vehicle_make}}\", \"model\": \"{{vehicle_model}}\", \"driverName\": \"Test Intercity Driver\", \"colour\": \"White\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{driver_id}}",
+						"addVehicle"
+					]
+				}
 			}
 		},
 		{
 			"name": "Enable Driver (Dashboard)",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{dashboard_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"},
-				"url": {"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable", "host": ["{{baseURL_BPP_Dashboard_Internal}}"], "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{dashboard_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"canDowngradeToSedan\": false, \"canDowngradeToHatchback\": false, \"canDowngradeToTaxi\": false}"
+				},
+				"url": {
+					"raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+					"host": [
+						"{{baseURL_BPP_Dashboard_Internal}}"
+					],
+					"path": [
+						"{{dashboard_merchant_id}}",
+						"{{dashboard_city}}",
+						"driver",
+						"{{driver_id}}",
+						"enable"
+					]
+				}
 			}
 		},
 		{
 			"name": "Subscribe Plan (Driver)",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{}"},
-				"url": {"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe", "host": ["{{baseURL_namma_P}}"], "path": ["plan", "{{plan_id}}", "subscribe"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/plan/{{plan_id}}/subscribe",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"plan",
+						"{{plan_id}}",
+						"subscribe"
+					]
+				}
 			}
 		},
 		{
 			"name": "Enable Intercity Switch (Driver Profile)",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('canSwitchToInterCity set to true');"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('canSwitchToInterCity set to true');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"canSwitchToInterCity\": true}"},
-				"url": {"raw": "{{baseURL_namma_P}}/driver/profile", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "profile"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"canSwitchToInterCity\": true}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/profile",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"profile"
+					]
+				}
 			}
 		},
 		{
 			"name": "Set Driver Online",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<2000){}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{}"},
-				"url": {"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "setActivity"], "query": [{"key": "active", "value": "true"}, {"key": "mode", "value": "%22ONLINE%22"}]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"setActivity"
+					],
+					"query": [
+						{
+							"key": "active",
+							"value": "true"
+						},
+						{
+							"key": "mode",
+							"value": "%22ONLINE%22"
+						}
+					]
+				}
 			}
 		},
 		{
 			"name": "Driver Set Location",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "POST",
 				"header": [
-					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{driver_id}}"},
-					{"key": "vt", "value": "{{vehicle_variant}}"},
-					{"key": "dm", "value": "ONLINE"},
-					{"key": "mId", "value": "{{driver_merchant_id}}"}
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					},
+					{
+						"key": "vt",
+						"value": "{{vehicle_variant}}"
+					},
+					{
+						"key": "dm",
+						"value": "ONLINE"
+					},
+					{
+						"key": "mId",
+						"value": "{{driver_merchant_id}}"
+					}
 				],
-				"body": {"mode": "raw", "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"},
-				"url": {"raw": "{{baseUrl_lts}}/driver/location", "host": ["{{baseUrl_lts}}"], "path": ["driver", "location"]}
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+				},
+				"url": {
+					"raw": "{{baseUrl_lts}}/driver/location",
+					"host": [
+						"{{baseUrl_lts}}"
+					],
+					"path": [
+						"driver",
+						"location"
+					]
+				}
 			}
 		},
 		{
 			"name": "Rider Auth",
-			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('rider_authId', d.authId); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}],
-				"body": {"mode": "raw", "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"},
-				"url": {"raw": "{{baseUrl_app}}/auth", "host": ["{{baseUrl_app}}"], "path": ["auth"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{bap_short_id}}\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth"
+					]
+				}
 			}
 		},
 		{
 			"name": "Rider OTP",
-			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('rider_token', d.token); pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}],
-				"body": {"mode": "raw", "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"},
-				"url": {"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify", "host": ["{{baseUrl_app}}"], "path": ["auth", "{{rider_authId}}", "verify"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider-device\"}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"auth",
+						"{{rider_authId}}",
+						"verify"
+					]
+				}
 			}
 		},
 		{
 			"name": "Driver Location Update",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); });"], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "POST",
 				"header": [
-					{"key": "Content-Type", "value": "application/json"},
-					{"key": "token", "value": "{{driver_id}}"},
-					{"key": "vt", "value": "{{vehicle_variant}}"},
-					{"key": "dm", "value": "ONLINE"},
-					{"key": "mId", "value": "{{driver_merchant_id}}"}
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					},
+					{
+						"key": "vt",
+						"value": "{{vehicle_variant}}"
+					},
+					{
+						"key": "dm",
+						"value": "ONLINE"
+					},
+					{
+						"key": "mId",
+						"value": "{{driver_merchant_id}}"
+					}
 				],
-				"body": {"mode": "raw", "raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"},
-				"url": {"raw": "{{baseUrl_lts}}/driver/location", "host": ["{{baseUrl_lts}}"], "path": ["driver", "location"]}
+				"body": {
+					"mode": "raw",
+					"raw": "[{\"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"ts\": \"{{current_time}}\"}]"
+				},
+				"url": {
+					"raw": "{{baseUrl_lts}}/driver/location",
+					"host": [
+						"{{baseUrl_lts}}"
+					],
+					"path": [
+						"driver",
+						"location"
+					]
+				}
 			}
 		},
 		{
 			"name": "Ride Search (Intercity Bangalore -> Mysore)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["// Schedule the trip 30 minutes in the future, no return time (one-way)", "var startTs = new Date(Date.now() + 30 * 60 * 1000).toISOString();", "pm.environment.set('_intercity_start_time', startTs);"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('searchId', d.searchId); console.log('Intercity Search ID:', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); const w=parseInt(pm.environment.get('search_wait_ms')||'8000',10); while(Date.now()-s<w){}"], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"// Schedule the trip 30 minutes in the future, no return time (one-way)",
+							"var startTs = new Date(Date.now() + 30 * 60 * 1000).toISOString();",
+							"pm.environment.set('_intercity_start_time', startTs);"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('searchId', d.searchId); console.log('Intercity Search ID:', d.searchId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); const w=parseInt(pm.environment.get('search_wait_ms')||'8000',10); while(Date.now()-s<w){}"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"fareProductType\": \"INTER_CITY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Bangalore Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"stops\": [{\"address\": {\"area\": \"{{intercity_dest_city}}\", \"areaCode\": \"570001\", \"city\": \"{{intercity_dest_city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}], \"roundTrip\": false, \"isSourceManuallyMoved\": false, \"isDestinationManuallyMoved\": false, \"startTime\": \"{{_intercity_start_time}}\"}}"},
-				"url": {"raw": "{{baseUrl_app}}/rideSearch", "host": ["{{baseUrl_app}}"], "path": ["rideSearch"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"fareProductType\": \"INTER_CITY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Bangalore Origin\", \"areaCode\": \"560001\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"stops\": [{\"address\": {\"area\": \"{{intercity_dest_city}}\", \"areaCode\": \"570001\", \"city\": \"{{intercity_dest_city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}}], \"roundTrip\": false, \"isSourceManuallyMoved\": false, \"isDestinationManuallyMoved\": false, \"startTime\": \"{{_intercity_start_time}}\"}}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/rideSearch",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideSearch"
+					]
+				}
 			}
 		},
 		{
 			"name": "Get Intercity Quotes",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": [
-					"var d = pm.response.json();",
-					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-					"var quotes = d.quotes || [];",
-					"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
-					"var pick = null;",
-					"for (var i=0; i<quotes.length; i++) {",
-					"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
-					"  if (!inner) continue;",
-					"  if (inner.vehicleVariant === want) { pick = inner; break; }",
-					"}",
-					"if (!pick && quotes.length > 0) pick = quotes[0].onIntercityCab || quotes[0].onDemandCab;",
-					"if (pick) {",
-					"  pm.environment.set('quoteId', pick.id);",
-					"  console.log('Intercity Quote:', pick.id, 'variant:', pick.vehicleVariant, 'fare:', pick.estimatedTotalFare);",
-					"  console.log('All quotes:', quotes.map(function(q){var i=q.onIntercityCab||q.onDemandCab; return i?i.vehicleVariant+'='+i.estimatedTotalFare:'?';}).join(', '));",
-					"}",
-					"pm.test('Has intercity quotes', function () { pm.expect(pm.environment.get('quoteId')).to.be.a('string').that.is.not.empty; });"
-				], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<3000){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"var quotes = d.quotes || [];",
+							"var want = pm.environment.get('vehicle_variant') || 'SEDAN';",
+							"var pick = null;",
+							"for (var i=0; i<quotes.length; i++) {",
+							"  var inner = quotes[i].onIntercityCab || quotes[i].onDemandCab;",
+							"  if (!inner) continue;",
+							"  if (inner.vehicleVariant === want) { pick = inner; break; }",
+							"}",
+							"if (!pick && quotes.length > 0) pick = quotes[0].onIntercityCab || quotes[0].onDemandCab;",
+							"if (pick) {",
+							"  pm.environment.set('quoteId', pick.id);",
+							"  console.log('Intercity Quote:', pick.id, 'variant:', pick.vehicleVariant, 'fare:', pick.estimatedTotalFare);",
+							"  console.log('All quotes:', quotes.map(function(q){var i=q.onIntercityCab||q.onDemandCab; return i?i.vehicleVariant+'='+i.estimatedTotalFare:'?';}).join(', '));",
+							"}",
+							"pm.test('Has intercity quotes', function () { pm.expect(pm.environment.get('quoteId')).to.be.a('string').that.is.not.empty; });"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "GET",
-				"header": [{"key": "token", "value": "{{rider_token}}"}],
-				"url": {"raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "{{searchId}}", "results"]}
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideSearch",
+						"{{searchId}}",
+						"results"
+					]
+				}
 			}
 		},
 		{
 			"name": "Confirm Intercity Quote",
-			"event": [{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<5000){}"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.environment.set('customer_bookingId', d.bookingId); console.log('Booking:', d.bookingId); pm.test('Status 200', function () { pm.response.to.have.status(200); }); const s=Date.now(); while(Date.now()-s<10000){}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{rider_token}}"}],
-				"body": {"mode": "raw", "raw": "{}"},
-				"url": {"raw": "{{baseUrl_app}}/rideSearch/quotes/{{quoteId}}/confirm", "host": ["{{baseUrl_app}}"], "path": ["rideSearch", "quotes", "{{quoteId}}", "confirm"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}"
+				},
+				"url": {
+					"raw": "{{baseUrl_app}}/rideSearch/quotes/{{quoteId}}/confirm",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideSearch",
+						"quotes",
+						"{{quoteId}}",
+						"confirm"
+					]
+				}
 			}
 		},
 		{
 			"name": "Get Nearby Ride Requests (Driver)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<2000){}"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": [
-					"var d = pm.response.json();",
-					"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
-					"    var req = d.searchRequestsForDriver[0];",
-					"    pm.environment.set('searchTryId', req.searchTryId);",
-					"    console.log('Got intercity search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
-					"} else {",
-					"    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
-					"}",
-					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-					"pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });"
-				], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Wait 8s for the BPP to dispatch the intercity SearchTry to the driver.",
+							"// The dispatch after Confirm Intercity Quote is async; a single shot",
+							"// without any wait returns empty. The test script retries up to 3 times.",
+							"const s = Date.now(); while (Date.now() - s < 8000) {}"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+							"    var req = d.searchRequestsForDriver[0];",
+							"    pm.environment.set('searchTryId', req.searchTryId);",
+							"    pm.collectionVariables.set('_nearby_retries', 0);",
+							"    console.log('Got intercity search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare);",
+							"    pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });",
+							"} else {",
+							"    var retries = parseInt(pm.collectionVariables.get('_nearby_retries') || '0');",
+							"    console.log('WARNING: No nearby ride requests (attempt ' + (retries + 1) + '/3)');",
+							"    if (retries < 2) {",
+							"        pm.collectionVariables.set('_nearby_retries', retries + 1);",
+							"        pm.execution.setNextRequest('Get Nearby Ride Requests (Driver)');",
+							"    } else {",
+							"        pm.collectionVariables.set('_nearby_retries', 0);",
+							"        pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });",
+							"    }",
+							"}"
+						]
+					}
+				}
 			],
 			"request": {
 				"method": "GET",
-				"header": [{"key": "token", "value": "{{driver_token}}"}],
-				"url": {"raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "nearbyRideRequest"]}
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"nearbyRideRequest"
+					]
+				}
 			}
 		},
 		{
 			"name": "Driver Accept Intercity Ride",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver accepted intercity ride!');"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Driver accepted intercity ride!');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"},
-				"url": {"raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "searchRequest", "quote", "respond"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"searchRequest",
+						"quote",
+						"respond"
+					]
+				}
 			}
 		},
 		{
 			"name": "Get Booking (Verify Intercity, Extract OTP)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<5000){}"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": [
-					"var d = pm.response.json();",
-					"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-					"if (d.list && d.list.length > 0) {",
-					"  var booking = d.list[0];",
-					"  pm.environment.set('customer_bookingId', booking.id);",
-					"  var otp = booking.rideOtp;",
-					"  if (!otp && booking.rideList && booking.rideList.length > 0) {",
-					"    otp = booking.rideList[0].rideOtp;",
-					"  }",
-					"  pm.environment.set('ride_otp', otp || '');",
-					"  console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', otp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
-					"  pm.test('Booking is intercity', function () { pm.expect(JSON.stringify(booking.tripCategory)).to.include('InterCity'); });",
-					"  pm.test('Has rideOtp', function () { pm.expect(pm.environment.get('ride_otp')).to.be.a('string').that.is.not.empty; });",
-					"}"
-				], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<5000){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+							"if (d.list && d.list.length > 0) {",
+							"  var booking = d.list[0];",
+							"  pm.environment.set('customer_bookingId', booking.id);",
+							"  var otp = booking.rideOtp;",
+							"  if (!otp && booking.rideList && booking.rideList.length > 0) {",
+							"    otp = booking.rideList[0].rideOtp;",
+							"  }",
+							"  pm.environment.set('ride_otp', otp || '');",
+							"  console.log('Booking:', booking.id, 'Status:', booking.status, 'OTP:', otp, 'tripCategory:', JSON.stringify(booking.tripCategory));",
+							"  pm.test('Booking is intercity', function () { pm.expect(JSON.stringify(booking.tripCategory)).to.include('InterCity'); });",
+							"  pm.test('Has rideOtp', function () { pm.expect(pm.environment.get('ride_otp')).to.be.a('string').that.is.not.empty; });",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "GET",
-				"header": [{"key": "token", "value": "{{rider_token}}"}],
-				"url": {"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "onlyActive", "value": "true"}, {"key": "offset", "value": "0"}]}
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideBooking",
+						"list"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "1"
+						},
+						{
+							"key": "onlyActive",
+							"value": "true"
+						},
+						{
+							"key": "offset",
+							"value": "0"
+						}
+					]
+				}
 			}
 		},
 		{
 			"name": "Get Ride (Driver)",
-			"event": [{"listen": "test", "script": {"exec": [
-				"var d = pm.response.json();",
-				"if (d.list && d.list.length > 0) {",
-				"    pm.environment.set('driver_ride_id', d.list[0].id);",
-				"    console.log('Intercity Ride:', d.list[0].id, 'Status:', d.list[0].status);",
-				"}",
-				"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
-			], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json();",
+							"if (d.list && d.list.length > 0) {",
+							"    pm.environment.set('driver_ride_id', d.list[0].id);",
+							"    console.log('Intercity Ride:', d.list[0].id, 'Status:', d.list[0].status);",
+							"}",
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "GET",
-				"header": [{"key": "token", "value": "{{driver_token}}"}],
-				"url": {"raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "list"], "query": [{"key": "limit", "value": "1"}, {"key": "isActive", "value": "true"}]}
+				"header": [
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"ride",
+						"list"
+					],
+					"query": [
+						{
+							"key": "limit",
+							"value": "1"
+						},
+						{
+							"key": "isActive",
+							"value": "true"
+						}
+					]
+				}
 			}
 		},
 		{
 			"name": "Driver Start Intercity Ride",
-			"event": [{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Intercity ride started!');"], "type": "text/javascript"}}],
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Intercity ride started!');"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"odometer\": {\"value\": 0, \"fileId\": \"test-odometer-start\"}}"},
-				"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "start"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}, \"odometer\": {\"value\": 0, \"fileId\": \"test-odometer-start\"}}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"ride",
+						"{{driver_ride_id}}",
+						"start"
+					]
+				}
 			}
 		},
 		{
 			"name": "End Ride (At Mysore)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<1500){}"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": ["pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Intercity ride ended at Mysore');"], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<1500){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test('Status 200', function () { pm.response.to.have.status(200); }); console.log('Intercity ride ended at Mysore');"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "POST",
-				"header": [{"key": "Content-Type", "value": "application/json"}, {"key": "token", "value": "{{driver_token}}"}],
-				"body": {"mode": "raw", "raw": "{\"point\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}, \"odometer\": {\"value\": 150, \"fileId\": \"test-odometer-end\"}}"},
-				"url": {"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end", "host": ["{{baseURL_namma_P}}"], "path": ["driver", "ride", "{{driver_ride_id}}", "end"]}
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "token",
+						"value": "{{driver_token}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"point\": {\"lat\": {{intercity_dest_lat}}, \"lon\": {{intercity_dest_lon}}}, \"odometer\": {\"value\": 150, \"fileId\": \"test-odometer-end\"}}"
+				},
+				"url": {
+					"raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+					"host": [
+						"{{baseURL_namma_P}}"
+					],
+					"path": [
+						"driver",
+						"ride",
+						"{{driver_ride_id}}",
+						"end"
+					]
+				}
 			}
 		},
 		{
 			"name": "Verify Booking Completed (Rider)",
 			"event": [
-				{"listen": "prerequest", "script": {"exec": ["const s=Date.now(); while(Date.now()-s<3000){}"], "type": "text/javascript"}},
-				{"listen": "test", "script": {"exec": ["var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); }); pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); }); console.log('Intercity flow done! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"], "type": "text/javascript"}}
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const s=Date.now(); while(Date.now()-s<3000){}"
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var d = pm.response.json(); pm.test('Status 200', function () { pm.response.to.have.status(200); }); pm.test('Booking COMPLETED', function () { pm.expect(d.bookingStatus).to.equal('COMPLETED'); }); pm.test('Ride COMPLETED', function () { pm.expect(d.rideStatus).to.equal('COMPLETED'); }); console.log('Intercity flow done! Booking:', d.bookingStatus, 'Ride:', d.rideStatus);"
+						],
+						"type": "text/javascript"
+					}
+				}
 			],
 			"request": {
 				"method": "GET",
-				"header": [{"key": "token", "value": "{{rider_token}}"}],
-				"url": {"raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}", "host": ["{{baseUrl_app}}"], "path": ["rideBooking", "v2", "{{customer_bookingId}}"]}
+				"header": [
+					{
+						"key": "token",
+						"value": "{{rider_token}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl_app}}/rideBooking/v2/{{customer_bookingId}}",
+					"host": [
+						"{{baseUrl_app}}"
+					],
+					"path": [
+						"rideBooking",
+						"v2",
+						"{{customer_bookingId}}"
+					]
+				}
 			}
 		}
 	]
