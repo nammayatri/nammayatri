@@ -6,6 +6,7 @@ on:
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
+      - "prodHotPush-International"
   workflow_dispatch:
 
 # Cancel in-progress Pull Request workflows if a new workflow is triggered, or a new commit is pushed to the branch.
@@ -52,6 +53,7 @@ jobs:
                 "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-International" ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
@@ -70,7 +72,7 @@ jobs:
             name: Nix Optimized Prod Release Build
             continue-on-error: false
       fail-fast: false
-    runs-on: x86_64_${{ github.ref_name }}_push
+    runs-on: x86_64_prodHotPush-Common_push
     outputs:
       docker-image-name: ${{ steps.docker.outputs.base_image }}
     steps:
