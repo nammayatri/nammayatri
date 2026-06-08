@@ -17,8 +17,8 @@ handler mbToken =
     :<|> refreshHandler mbToken
     :<|> serverInfoHandler mbToken
 
-keysHandler :: Maybe Text -> FlowHandler InMemKeysResponse
-keysHandler = withFlowHandlerAPI . Handler.getKeys
+keysHandler :: Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> FlowHandler InMemKeysResponse
+keysHandler mbToken mbPattern mbLimit mbOffset = withFlowHandlerAPI $ Handler.getKeys mbToken mbPattern mbLimit mbOffset
 
 getHandler :: Maybe Text -> InMemGetRequest -> FlowHandler InMemGetResponse
 getHandler mbToken req = withFlowHandlerAPI $ Handler.getValue mbToken req

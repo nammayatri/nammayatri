@@ -227,8 +227,6 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._mock_sql_update(body)
         if path == "/mock/sql/insert" and self.command == "POST":
             return self._mock_sql_insert(body)
-        if path == "/mock/sql/exec" and self.command == "POST":
-            return self._mock_sql_exec(body)
 
         # ── Generic Redis SET / DEL (for tests that need to seed or invalidate Redis cache state) ──
         if path == "/mock/redis/set" and self.command == "POST":
@@ -614,46 +612,6 @@ class MockHandler(BaseHTTPRequestHandler):
             return self._json({"ok": True, "rowcount": rowcount})
         except Exception:
             log.exception("sql-insert error")
-            return self._json({"error": "internal server error"}, status=500)
-
-    def _mock_sql_exec(self, body):
-        """POST /mock/sql/exec — run an arbitrary SQL statement against a dev DB.
-        Body: {
-          "db_name": "atlas_dev",
-          "sql": "SELECT ... / INSERT ... / UPDATE ..."
-        }
-        For SELECT statements returns: {"ok": true, "rows": [...], "count": N}
-        For non-SELECT statements returns: {"ok": true, "rowcount": N}
-        Use sparingly — prefer /mock/sql/select|update|insert for structured ops."""
-        try:
-            data = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            return self._json({"error": "invalid JSON"}, status=400)
-
-        db_name = data.get("db_name", "atlas_dev")
-        sql = data.get("sql", "").strip()
-        if not sql:
-            return self._json({"error": "sql is required"}, status=400)
-
-        is_select = sql.upper().lstrip().startswith("SELECT")
-        try:
-            conn = self._pg_connect(db_name)
-            try:
-                conn.autocommit = True
-                cur = conn.cursor()
-                cur.execute(sql)
-                if is_select:
-                    col_names = [d[0] for d in cur.description] if cur.description else []
-                    rows = [dict(zip(col_names, r)) for r in cur.fetchall()]
-                    cur.close()
-                    return self._json({"ok": True, "rows": rows, "count": len(rows)}, default=str)
-                rowcount = cur.rowcount
-                cur.close()
-            finally:
-                conn.close()
-            return self._json({"ok": True, "rowcount": rowcount})
-        except Exception:
-            log.exception("sql-exec error")
             return self._json({"error": "internal server error"}, status=500)
 
     # ── Generic scheduler job trigger (for scheduler tests) ──
@@ -1164,7 +1122,7 @@ def main():
 
     server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/sql/exec, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()
