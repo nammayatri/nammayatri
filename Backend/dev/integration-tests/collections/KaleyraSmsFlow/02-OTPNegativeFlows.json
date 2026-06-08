@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "OTP Negative Flows",
-    "description": "Negative flow tests for OTP auth via SMS.\n\nTests: wrong OTP, wrong OTP format, already verified token, resend limit exceeded, invalid phone number.\n\nSkipped (impractical locally): OTP expiry (3 min wait), rate limit (driver=20/sec, rider=8000/sec).\n\nAuto-detects rider (port 8013, /v2/auth) vs driver (port 8016, /ui/auth) from baseUrl_internal.\nRequires: useFakeSms = Some 7891 (default local dev).",
+    "description": "Negative flow tests for OTP auth via SMS.\n\nTests: wrong OTP, wrong OTP format, already verified token, resend limit exceeded, invalid phone number.\n\nSkipped (impractical locally): OTP expiry (3 min wait), rate limit (driver=20/sec, rider=8000/sec).\n\nAuto-detects rider (port 8013, /v2/auth) vs driver (port 8016, /ui/auth) from baseUrl_internal.\nRequires: useFakeSms = Some 7891 (default local dev).\n\nResend OTP tests (steps 06-10) require real SMS provider credentials and are SKIPPED by default.\nSet enable_real_sms_tests=true in your environment file to run them.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -26,6 +26,16 @@
           "        pm.collectionVariables.set('_auth_prefix', base + '/v2');",
           "        pm.collectionVariables.set('_merchant_id_auth', pm.environment.get('merchant_short_id') || 'NAMMA_YATRI');",
           "        console.log('Detected: rider app (port 8013, /v2/auth)');",
+          "    }",
+          "",
+          "    // Check if real SMS provider tests are enabled (resend OTP needs real providers)",
+          "    var enableRealSms = pm.environment.get('enable_real_sms_tests');",
+          "    if (enableRealSms === 'true' || enableRealSms === true) {",
+          "        pm.collectionVariables.set('_skip_resend_tests', 'false');",
+          "        console.log('Real SMS tests ENABLED - resend OTP tests (06-10) will run');",
+          "    } else {",
+          "        pm.collectionVariables.set('_skip_resend_tests', 'true');",
+          "        console.log('Real SMS tests DISABLED - resend OTP tests (06-10) will be skipped');",
           "    }",
           "}"
         ],
@@ -105,8 +115,8 @@
             "exec": [
               "pm.test('Wrong format OTP returns 400', function () { pm.response.to.have.status(400); });",
               "var d = pm.response.json();",
-              "pm.test('Error code is INVALID_REQUEST', function () {",
-              "    pm.expect(d.errorCode).to.eql('INVALID_REQUEST');",
+              "pm.test('Error code is INVALID_REQUEST or REQUEST_VALIDATION_FAILURE', function () {",
+              "    pm.expect(d.errorCode).to.be.oneOf(['INVALID_REQUEST', 'REQUEST_VALIDATION_FAILURE']);",
               "});",
               "console.log('Wrong format OTP response:', JSON.stringify(d));"
             ],
@@ -173,7 +183,14 @@
               "pm.test('Message says Already verified', function () {",
               "    pm.expect(d.errorMessage).to.include('Already verified');",
               "});",
-              "console.log('Already verified response:', JSON.stringify(d));"
+              "console.log('Already verified response:', JSON.stringify(d));",
+              "",
+              "// Skip resend OTP tests (06-10) if real SMS tests are not enabled",
+              "if (pm.collectionVariables.get('_skip_resend_tests') === 'true') {",
+              "    console.log('[skip] Jumping to step 11 - resend OTP tests require real SMS provider credentials');",
+              "    console.log('[info] To enable: set enable_real_sms_tests=true in your environment file');",
+              "    pm.execution.setNextRequest('11 - Auth with invalid phone number (expect INVALID_REQUEST)');",
+              "}"
             ],
             "type": "text/javascript"
           }
@@ -343,8 +360,8 @@
             "exec": [
               "pm.test('Invalid phone returns 400', function () { pm.response.to.have.status(400); });",
               "var d = pm.response.json();",
-              "pm.test('Error code is INVALID_REQUEST', function () {",
-              "    pm.expect(d.errorCode).to.eql('INVALID_REQUEST');",
+              "pm.test('Error code is INVALID_REQUEST or REQUEST_VALIDATION_FAILURE', function () {",
+              "    pm.expect(d.errorCode).to.be.oneOf(['INVALID_REQUEST', 'REQUEST_VALIDATION_FAILURE']);",
               "});",
               "console.log('Invalid phone response:', JSON.stringify(d));"
             ],

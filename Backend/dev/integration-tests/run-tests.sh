@@ -455,13 +455,22 @@ run_rental() { run_frfs "$RENTAL_DIR" "RENTAL" "${1:-}" "${2:-}"; }
 run_fleet() { run_frfs "$FLEET_DIR" "FLEET MANAGEMENT" "${1:-}" "${2:-}"; }
 run_sms() {
     echo ""
-    echo "  NOTE: The first OTP test runs with useFakeSms (no real SMS sent)."
-    echo "  The second test sends a REAL OTP via Kaleyra (backend generates OTP,"
-    echo "  Kaleyra delivers it to your phone). Requires real credentials,"
-    echo "  useFakeSms=None, and will be SKIPPED unless you set test_phone_number"
-    echo "  in your env file (e.g. Local_NY_Bangalore.postman_environment.json)."
+    echo "  NOTE: OTP tests run with useFakeSms (no real SMS sent)."
+    echo "  Resend OTP tests (steps 06-10) are SKIPPED by default as they"
+    echo "  require real SMS provider credentials."
     echo ""
-    run_frfs "$SMS_DIR" "KALEYRA SMS" "${1:-}" "${2:-}"
+    local sms_exit=0
+    run_frfs "$SMS_DIR" "KALEYRA SMS" "${1:-}" "${2:-}" || sms_exit=$?
+    echo ""
+    echo "  ┌──────────────────────────────────────────────────────────────────┐"
+    echo "  │  To run resend OTP tests with real SMS provider credentials:    │"
+    echo "  │    1. Add real Kaleyra/GupShup credentials to your config       │"
+    echo "  │    2. Set enable_real_sms_tests=true in your environment file   │"
+    echo "  │       (e.g. Local_NY_Bangalore.postman_environment.json)        │"
+    echo "  │    3. Re-run: ./run-tests.sh sms                               │"
+    echo "  └──────────────────────────────────────────────────────────────────┘"
+    echo ""
+    return $sms_exit
 }
 run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
 run_airport() { run_frfs "$AIRPORT_DIR" "AIRPORT TAXI" "${1:-}" "${2:-}"; }
