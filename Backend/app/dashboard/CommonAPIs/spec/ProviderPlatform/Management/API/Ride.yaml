@@ -52,6 +52,7 @@ apis:
         fleetOwnerId: Text
         customerCountryCode: Text
         driverCountryCode: Text
+        tripCategory: TripCategory
       auth: ApiAuthV2
       response:
         type: RideListRes
@@ -78,6 +79,7 @@ apis:
               fleetOwnerId: Text
               customerCountryCode: Text
               driverCountryCode: Text
+              tripCategory: TripCategory
             auth: ApiAuthV2
             response:
               type: RideListRes

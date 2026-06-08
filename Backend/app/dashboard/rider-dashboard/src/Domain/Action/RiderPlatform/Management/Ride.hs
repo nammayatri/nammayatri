@@ -21,6 +21,7 @@ import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
 import qualified Domain.Action.Dashboard.Ride
+import qualified Domain.Types
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
@@ -49,10 +50,11 @@ getRideList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+  Kernel.Prelude.Maybe Domain.Types.TripCategory ->
   Environment.Flow API.Types.RiderPlatform.Management.Ride.RideListRes
-getRideList merchantShortId opCity _apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to = do
+getRideList merchantShortId opCity _apiTokenInfo limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to tripCategory = do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
-  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to
+  API.Client.RiderPlatform.Management.callManagementAPI checkedMerchantId opCity (.rideDSL.getRideList) limit offset bookingStatus rideShortId customerPhoneNo driverPhoneNo from to tripCategory
 
 getRideInfo :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Ride -> Environment.Flow API.Types.RiderPlatform.Management.Ride.RideInfoRes
 getRideInfo merchantShortId opCity apiTokenInfo rideId = do

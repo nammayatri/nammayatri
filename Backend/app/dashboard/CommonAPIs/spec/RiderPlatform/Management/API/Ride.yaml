@@ -39,6 +39,7 @@ apis:
         - driverPhoneNo: Text
         - from: UTCTime
         - to: UTCTime
+        - tripCategory: TripCategory
       response:
         type: RideListRes
       migrate:

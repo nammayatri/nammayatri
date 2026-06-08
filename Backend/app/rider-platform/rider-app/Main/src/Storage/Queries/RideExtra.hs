@@ -247,8 +247,9 @@ findAllRideItems ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   UTCTime ->
+  Maybe TripCategory ->
   m [RideItem]
-findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now =
+findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now mbTripCategory =
   case mbRideShortId of
     Just rideShortId -> do
       ride' <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -299,10 +300,7 @@ findAllRideItems merchantID limitVal offsetVal mbBookingStatus mbRideShortId mbC
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> mkBookingStatusVal ride B.==?. B.val_ bookingStatus) mbBookingStatus
-                        -- B.&&?. ( if null currentRides
-                        --            then B.sqlBool_ $ B.val_ True
-                        --            else B.sqlNot_ (B.sqlBool_ (B.in_ ride.id $ B.val_ <$> (getId . (.id) <$> currentRides)))
-                        --        )
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\tc -> booking.tripCategory B.==?. B.val_ (Just tc)) mbTripCategory
                   )
                   do
                     booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)

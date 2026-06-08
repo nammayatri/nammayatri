@@ -227,8 +227,9 @@ getRideList ::
   Maybe Text ->
   Maybe UTCTime ->
   Maybe UTCTime ->
+  Maybe TripCategory ->
   Flow Common.RideListRes
-getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = withDynamicLogLevel "ride-list" $ do
+getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo mbTripCategory = withDynamicLogLevel "ride-list" $ do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
@@ -239,7 +240,7 @@ getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId 
   case (mbFrom, mbTo) of
     (Just from', Just to') -> when (from' > to') $ throwError $ InvalidRequest "from date should be less than to date"
     _ -> pure ()
-  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now
+  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id limit_ offset_ mbBookingStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhone mbFrom mbTo now mbTripCategory
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItem rideItems
   let count = length rideListItems
@@ -296,7 +297,7 @@ getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ =
     (Nothing, Nothing) -> throwError $ InvalidRequest "Ride Short Id or Phone Number Not Received"
   mbNumberHash <- getDbHash `traverse` mbPhoneNumber
   now <- getCurrentTime
-  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id totalRides 0 Nothing mbShortId mbNumberHash Nothing Nothing Nothing now
+  rideItems <- B.runInReplica $ QRide.findAllRideItems merchant.id totalRides 0 Nothing mbShortId mbNumberHash Nothing Nothing Nothing now Nothing
   let rideItem = DL.sortBy (\a b -> compare b.ride.createdAt a.ride.createdAt) rideItems
   let lastNRides = map (.ride) rideItem
       lastNBookingStatus = map (.bookingStatus) rideItem
