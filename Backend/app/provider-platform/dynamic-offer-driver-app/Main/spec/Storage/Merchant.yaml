@@ -956,6 +956,9 @@ TransporterConfig:
       sgstPercentage: Maybe HighPrecMoney
       igstPercentage: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    ThresholdConfig:
+      amount: HighPrecMoney
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     TaxConfig:
       rideGst: GstBreakup
       subscriptionGst: GstBreakup
@@ -964,6 +967,8 @@ TransporterConfig:
       defaultTdsRate: Maybe Double
       subscriptionTdsRate: Maybe Double
       invalidPanTdsRate: Double
+      panNotLinkedTdsRate: Maybe Double
+      section194OThreshold: Maybe ThresholdConfig
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:

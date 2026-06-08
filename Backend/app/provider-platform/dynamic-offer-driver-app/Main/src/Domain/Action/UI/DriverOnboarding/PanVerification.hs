@@ -63,6 +63,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -500,6 +501,26 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
             IVQuery.create ivEntity
           _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
+-- | Materialize the effective TDS rate onto the entity's tds_rate column.
+-- Called from the PAN-verification and PAN-Aadhaar-linkage webhook handlers
+-- after they've updated driver_pan_card. Only writes when the merchant is in
+-- spec mode (panNotLinkedTdsRate set on tax_config); otherwise no-ops so
+-- other merchants' rate-resolution flows remain unchanged.
+materializeTdsRateFor :: Person.Person -> Flow ()
+materializeTdsRateFor person = do
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))
+      >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  case transporterConfig.taxConfig.panNotLinkedTdsRate of
+    Nothing -> pure () -- merchant didn't opt in to spec mode; leave tds_rate alone
+    Just _ -> do
+      mbPanCard <- DPQuery.findByDriverId person.id
+      let mbRate = Wallet.computeEffectiveTdsRate mbPanCard Nothing person.role transporterConfig.taxConfig
+      whenJust mbRate $ \rate ->
+        if DCommon.checkFleetOwnerRole person.role
+          then QFOI.updateTdsRate (Just rate) (cast person.id)
+          else DIQuery.updateTdsRate (Just rate) (cast person.id)
+
 onVerifyPanAadhaarLink :: VerificationReqRecord -> VT.PanAadhaarLinkResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPanAadhaarLink verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
@@ -507,10 +528,19 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
     VT.Idfy -> do
       logInfo ("onVerifyPanAadhaarLink: " <> show output)
       IVQuery.updateExtractValidationStatus Domain.Success verificationReq.requestId
-      case output.message of
-        Just "PAN & Aadhaar are linked" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
-        Just "Aadhaar linked to some other PAN" -> DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
-        Just "This PAN number does not exist" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
-        other -> throwError $ InternalError ("Unknown message in onVerifyPanAadhaarLink. Message : " <> show other)
+      case (output.isLinked, output.message) of
+        (Just True, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
+        (Just False, Just "Aadhaar linked to some other PAN") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
+        (Just False, Just "This PAN number does not exist") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
+        (Just False, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_NOT_LINKED) person.id
+        (Nothing, _) ->
+          logWarning $ "onVerifyPanAadhaarLink: Idfy response had no isLinked field, leaving column NULL. Payload: " <> show output
     _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyPanAadhaarLink. Name of provider : " <> show serviceName)
+  -- Recompute and materialize the effective TDS rate now that linkage status
+  -- has been updated. No-op for merchants not in spec mode.
+  materializeTdsRateFor person
   pure Ack
