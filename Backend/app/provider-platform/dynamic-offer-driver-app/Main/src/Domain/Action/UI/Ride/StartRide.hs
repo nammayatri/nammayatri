@@ -154,7 +154,27 @@ startRide ::
   Id DRide.Ride ->
   StartRideReq ->
   m APISuccess.APISuccess
-startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
+startRide handle rideId req = withLogTag ("rideId-" <> rideId.getId) $ do
+  isLocked <- Redis.tryLockRedis mkLockKey 60
+  if isLocked
+    then
+      finally
+        (startRideHandler handle rideId req)
+        ( do
+            Redis.unlockRedis mkLockKey
+            logDebug $ "Start ride for RideId: " <> rideId.getId <> " Unlocked"
+        )
+    else throwError (InternalError "Start ride inprogress")
+  where
+    mkLockKey = "StartTransaction:RID:-" <> rideId.getId
+
+startRideHandler ::
+  (StartRideFlow m r, SchedulerFlow r, HasShortDurationRetryCfg r c, Redis.HedisLTSFlowEnv r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv, HasField "blackListedJobs" r [Text]) =>
+  ServiceHandle m ->
+  Id DRide.Ride ->
+  StartRideReq ->
+  m APISuccess.APISuccess
+startRideHandler ServiceHandle {..} rideId req = do
   ride <- findRideById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   let driverId = ride.driverId
   driverInfo <- QDI.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
