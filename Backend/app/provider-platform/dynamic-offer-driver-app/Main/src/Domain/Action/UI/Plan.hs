@@ -1096,6 +1096,51 @@ validateInActiveMandateExists driverId driverPlan = do
       unless (mandate.status == DM.INACTIVE) $ throwError (InActiveMandateDoNotExist driverId.getId)
       return mandate
 
+-- | Resolve the effective plan fee for a prepaid subscription purchase.
+resolvePrepaidPlanFee ::
+  Id SP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Plan ->
+  SubscriptionConfig ->
+  SP.Person ->
+  Flow HighPrecMoney
+resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConfig driver = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  now <- getCurrentTime
+  isMember <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName (Just subscriptionConfig)
+  let baseAmount = plan.registrationAmount
+      offerListReq =
+        Payment.OfferListReq
+          { order = Payment.OfferOrder {orderId = Nothing, amount = baseAmount, currency = currency, basket = Nothing},
+            customer = Just Payment.OfferCustomer {customerId = driverId.getId, email = driver.email, mobile = Nothing},
+            planId = plan.id.getId,
+            registrationDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
+            dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
+            paymentMode = getPaymentModeAndVehicleCategoryKey plan,
+            numOfRides = -1,
+            offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payment.IS_VISIBLE else Nothing,
+            staticCustomerId = Nothing,
+            deviceImei = Nothing,
+            membershipStatus = Just (Payment.MembershipStatus (fromMaybe False isMember))
+          }
+  offerListResp <- SPayment.offerListCache merchantId driverId merchantOpCityId plan.serviceName offerListReq
+  let effectiveFee = case offerListResp.offerResp of
+        [] -> plan.registrationAmount
+        offers -> (.finalOrderAmount) $ DL.minimumBy (comparing (.finalOrderAmount)) offers
+  logInfo $
+    "resolvePrepaidPlanFee driverId=" <> driverId.getId
+      <> " planId="
+      <> plan.id.getId
+      <> " vehicleCategory="
+      <> show plan.vehicleCategory
+      <> " isMember="
+      <> show isMember
+      <> " effectiveFee="
+      <> show effectiveFee
+  pure effectiveFee
+
 createPrepaidSubscriptionOrder ::
   ServiceNames ->
   Id SP.Person ->
@@ -1110,11 +1155,12 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  effectivePlanFee <- resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConfig driver
   orderId <- generateGUIDText
   orderShortId <- generateShortId
   nwAddress <- asks (.nwAddress)
   let driverEmail = fromMaybe "test@juspay.in" driver.email
-      amount = plan.registrationAmount
+      amount = effectivePlanFee
       createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId,
@@ -1174,7 +1220,7 @@ createPrepaidSubscriptionOrder serviceName driverId merchantId merchantOpCityId 
             planId = plan.id,
             planFrequency = plan.frequency,
             planRideCredit = planRideCredit,
-            planFee = plan.registrationAmount,
+            planFee = effectivePlanFee,
             purchaseTimestamp = now,
             paymentOrderId = paymentOrderId,
             financeInvoiceId = Nothing,
@@ -1332,6 +1378,10 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
         ..
       }
   where
+    -- For prepaid the amount charged (and discounted) is registrationAmount; planBaseAmount is the ride credit and must not be used as the offer base. Postpaid still uses planBaseAmoun
+    offerBaseAmount = case serviceNameParam of
+      PREPAID_SUBSCRIPTION -> plan.registrationAmount
+      _ -> getPlanAmount plan.planBaseAmount
     makeOfferEntity offer =
       OfferEntity
         { title = offer.offerDescription.title,
@@ -1340,7 +1390,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
           offerId = offer.offerId
         }
     makeOfferReq paymentCurrency date paymentMode_ transporterConfig = do
-      let baseAmount = getPlanAmount plan.planBaseAmount
+      let baseAmount = offerBaseAmount
       driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
       now <- getCurrentTime
       isMemberEligibleForOffers <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName subscriptionConfig
@@ -1361,7 +1411,7 @@ convertPlanToPlanEntity driverId applicationDate isCurrentPlanEntity driverPlan 
             membershipStatus = Payment.MembershipStatus <$> isMemberEligibleForOffers
           }
     mkPlanFareBreakup currency offers now = do
-      let baseAmount = getPlanAmount plan.planBaseAmount
+      let baseAmount = offerBaseAmount
           (discountAmountOffers, finalOrderAmountOffers) =
             if null offers
               then (0.0, baseAmount)
