@@ -333,7 +333,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_id}}"
+						"value": "{{driver_token}}"
 					},
 					{
 						"key": "vt",
@@ -524,7 +524,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_id}}"
+						"value": "{{driver_token}}"
 					},
 					{
 						"key": "vt",
@@ -726,9 +726,12 @@
 					"listen": "prerequest",
 					"script": {
 						"exec": [
-							"// Wait briefly before checking nearby requests",
-							"const start = Date.now();",
-							"while (Date.now() - start < 1000) { /* busy wait */ }"
+							"// Wait 25s on first attempt \u2014 Kafka batch allocator cycles every ~22s.",
+							"// Retries skip this wait (they already waited in the test script).",
+							"var _retries = parseInt(pm.collectionVariables.get('_d1_nearby_retries') || '0');",
+							"if (_retries === 0) {",
+							"    var _ws = Date.now(); while (Date.now() - _ws < 25000) {}",
+							"}"
 						],
 						"type": "text/javascript"
 					}
@@ -737,8 +740,6 @@
 					"listen": "test",
 					"script": {
 						"exec": [
-							"// Retry up to 3x with 5s wait \u2014 same pattern as D2 reallocation step",
-							"const _nrs = Date.now(); while (Date.now() - _nrs < 5000) {}",
 							"var d = pm.response.json();",
 							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
 							"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
@@ -751,9 +752,10 @@
 							"    });",
 							"} else {",
 							"    var retries = parseInt(pm.collectionVariables.get('_d1_nearby_retries') || '0');",
-							"    console.log('WARNING: No nearby ride requests (attempt ' + (retries+1) + '/3). Driver may not be visible yet.');",
+							"    console.log('WARNING: No nearby ride requests (attempt ' + (retries+1) + '/3). Allocator may still be processing.');",
 							"    if (retries < 2) {",
 							"        pm.collectionVariables.set('_d1_nearby_retries', retries + 1);",
+							"        var _rs = Date.now(); while (Date.now() - _rs < 5000) {}",
 							"        pm.execution.setNextRequest('Get Nearby Ride Requests (Driver)');",
 							"    } else {",
 							"        pm.collectionVariables.set('_d1_nearby_retries', 0);",
