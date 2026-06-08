@@ -18,7 +18,7 @@ findLatestByDriverId ::
   Id Domain.Types.Person.Person ->
   m (Maybe Domain.Types.IffcoTokioInsurance.IffcoTokioInsurance)
 findLatestByDriverId (Id driverId) = do
-  results <- findAllWithOptionsKV [Se.Is Beam.driverId $ Se.Eq driverId] (Se.Desc Beam.createdAt) (Just 1) Nothing
+  results <- findAllWithKVAndConditionalDB [Se.Is Beam.driverId $ Se.Eq driverId] (Just (Se.Desc Beam.createdAt))
   pure $ listToMaybe results
 
 -- | Update an entry by invoiceRequestNumber with async response values
