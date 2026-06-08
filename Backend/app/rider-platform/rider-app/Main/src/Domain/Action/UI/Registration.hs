@@ -30,6 +30,7 @@ module Domain.Action.UI.Registration
     VerifyBusinessEmailRes (..),
     auth,
     signatureAuth,
+    resolveAndIssueDirectSession,
     createPerson,
     verify,
     resend,
@@ -568,6 +569,85 @@ mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mb
   mobileNumberDecrypted <- decryptAES128 merchant.cipherText mobileNumber
   let reqWithMobileNumebr = req {mobileNumber = Just mobileNumberDecrypted}
   notificationToken <- mapM (decryptAES128 merchant.cipherText) req.notificationToken
+  mobileNumberHash <- getDbHash mobileNumberDecrypted
+  person <-
+    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
+      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing Nothing) return
+  let entityId = getId $ person.id
+      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+      scfg = sessionConfig smsCfg
+  let mkId = getId $ merchant.id
+  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM False
+  if not person.blocked
+    then do
+      deploymentVersion <- asks (.version)
+      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion mbCloudType
+      _ <- RegistrationToken.create regToken
+      mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
+      mbEncBusinessEmail <- encrypt `mapM` reqWithMobileNumebr.businessEmail
+      _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
+      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing Nothing mbCloudType
+      personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
+      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
+    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+
+-- | Resolve-or-create a Person by (plaintext) mobile number under the given
+-- merchant and issue a verified DIRECT session — the exact path
+-- 'mobileSignatureAuth' uses after it decrypts the mobile number. Exposed as a
+-- standalone entry point for partner auth facades (e.g. embedded-PWA partners)
+-- that already hold a plaintext mobile number and have verified the user out of
+-- band. The existing signature-auth flow is intentionally left untouched.
+resolveAndIssueDirectSession ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    CacheFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasKafkaProducer r,
+    ClickhouseFlow m r
+  ) =>
+  Merchant ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  m AuthRes
+resolveAndIssueDirectSession merchant countryCode mobileNumberDecrypted mbName mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
+  smsCfg <- asks (.smsCfg)
+  mbCloudType <- asks (.cloudType)
+  let reqWithMobileNumebr =
+        AuthReq
+          { mobileNumber = Just mobileNumberDecrypted,
+            mobileCountryCode = Just countryCode,
+            identifierType = Just SP.MOBILENUMBER,
+            merchantId = merchant.shortId,
+            deviceToken = Nothing,
+            notificationToken = Nothing,
+            whatsappNotificationEnroll = Nothing,
+            firstName = mbName,
+            middleName = Nothing,
+            lastName = Nothing,
+            email = Nothing,
+            businessEmail = Nothing,
+            language = Nothing,
+            gender = Nothing,
+            otpChannel = Nothing,
+            registrationLat = Nothing,
+            registrationLon = Nothing,
+            enableOtpLessRide = Nothing,
+            allowBlockedUserLogin = Nothing,
+            isOperatorReq = Nothing,
+            reuseToken = Nothing,
+            operatorBadgeToken = Nothing,
+            deviceSerialNumber = Nothing,
+            vehicleType = Nothing
+          }
+      deviceToken = reqWithMobileNumebr.deviceToken
+      notificationToken = reqWithMobileNumebr.notificationToken
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id

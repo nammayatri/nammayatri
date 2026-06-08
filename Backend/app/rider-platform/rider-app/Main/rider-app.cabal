@@ -75,6 +75,7 @@ library
       API.Types.Dashboard.AppManagement.OrphanInstances.MerchantOnboarding
       API.Types.Dashboard.AppManagement.OrphanInstances.TicketDashboard
       API.Types.Dashboard.AppManagement.OrphanInstances.TransitOperator
+      API.Types.UI.PartnerAuthExtra
       API.Types.UI.PartnerBookingStatementExtra
       API.Types.UI.Payment
       API.UI
@@ -306,6 +307,7 @@ library
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.Offers
       Domain.Action.UI.ParkingBooking
+      Domain.Action.UI.PartnerAuth
       Domain.Action.UI.PartnerBookingStatement
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Pass
@@ -782,6 +784,7 @@ library
       Tools.Metrics.BAPMetrics.Types
       Tools.MultiModal
       Tools.Notifications
+      Tools.PartnerAuth
       Tools.Payment
       Tools.Payout
       Tools.Schema
@@ -870,6 +873,7 @@ library
       API.Action.UI.NyRegularSubscription
       API.Action.UI.Offers
       API.Action.UI.ParkingBooking
+      API.Action.UI.PartnerAuth
       API.Action.UI.PartnerBookingStatement
       API.Action.UI.Pass
       API.Action.UI.PassDetails
@@ -972,6 +976,7 @@ library
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
       API.Types.UI.ParkingBooking
+      API.Types.UI.PartnerAuth
       API.Types.UI.PartnerBookingStatement
       API.Types.UI.Pass
       API.Types.UI.PassDetails
@@ -1847,6 +1852,7 @@ test-suite rider-app-test
   main-is: Main.hs
   other-modules:
       FRFS.DirectQR
+      PartnerAuth.BhimAES
       Paths_rider_app
   hs-source-dirs:
       test
@@ -1908,6 +1914,7 @@ test-suite rider-app-test
     , data-default-class
     , directory
     , euler-hs
+    , external
     , extra
     , filepath
     , geohash ==1.0.1

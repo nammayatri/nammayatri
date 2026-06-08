@@ -36,6 +36,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified PartnerAuth.Interface.Types as PartnerAuth
+import qualified PartnerAuth.Types as PartnerAuth
 import qualified Storage.Queries.PlaceBasedServiceConfig as Queries
 import Utils.Common.JWT.Config as GW
 
@@ -159,3 +161,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+  PartnerAuthServiceConfig partnerAuthCfg -> case partnerAuthCfg of
+    PartnerAuth.BHIMConfig _ -> PartnerAuthService PartnerAuth.BHIM
