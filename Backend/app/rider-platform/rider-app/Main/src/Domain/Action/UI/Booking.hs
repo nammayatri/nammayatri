@@ -400,10 +400,11 @@ data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedP
 
 buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int, Int)
 buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset = do
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
-  let today = DT.utctDay istTime
-
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
+  let today = DT.utctDay istTime
 
   let (mergedList, bookingOffset, journeyOffset, passOffset) = mergeWithCounts bookings journeys passes finalLimit 0 0 0 []
       finalBookingOffset = bookingOffset + maybe 0 fromIntegral initialBookingOffset

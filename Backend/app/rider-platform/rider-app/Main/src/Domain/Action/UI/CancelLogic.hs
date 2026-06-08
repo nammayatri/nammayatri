@@ -29,6 +29,8 @@ import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.Yudhishthira ()
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Tools.DynamicLogic as DynamicLogic
 
 data CancellationReasonConfig = CancellationReasonConfig
@@ -54,7 +56,9 @@ computeCancellationReasons ::
   Bool ->
   m [CancellationReasonConfig]
 computeCancellationReasons merchantOpCityId hasRideAssigned isAC = do
-  localTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  localTime <- getLocalCurrentTime timeDiffFromUtc
   let inputData =
         CancellationReasonInput
           { hasRideAssigned = hasRideAssigned,

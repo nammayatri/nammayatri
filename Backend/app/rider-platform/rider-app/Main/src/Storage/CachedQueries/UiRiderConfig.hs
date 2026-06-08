@@ -28,12 +28,15 @@ import Kernel.Utils.Time
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as YType
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.UiRiderConfig as Queries
 import qualified Tools.DynamicLogic as TDL
 
 findUiConfig :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => YType.UiConfigRequest -> Id MerchantOperatingCity -> Bool -> m (Maybe (UiRiderConfig, Int))
 findUiConfig YType.UiConfigRequest {..} merchantOperatingCityId isBaseLogic = do
-  localTime <- getLocalCurrentTime 19800 -- Fix Me
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  localTime <- getLocalCurrentTime timeDiffFromUtc
   let config = LYT.UI_RIDER os platform
       getConfig = Queries.getUiConfig YType.UiConfigRequest {..} merchantOperatingCityId
   version <- TDL.selectAppDynamicLogicVersion (cast merchantOperatingCityId) config localTime toss

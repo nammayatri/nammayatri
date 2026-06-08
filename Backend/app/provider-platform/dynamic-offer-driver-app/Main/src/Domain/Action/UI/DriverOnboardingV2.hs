@@ -3,6 +3,7 @@ module Domain.Action.UI.DriverOnboardingV2 where
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
+import qualified Control.Monad.Catch as C
 import qualified Control.Monad.Extra as CME
 import Crypto.Random (getRandomBytes)
 import qualified Data.Aeson as A
@@ -72,6 +73,7 @@ import SharedLogic.DriverOnboarding.Digilocker
     verifyDigiLockerEnabled,
   )
 import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
+import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -1290,10 +1292,12 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             updatedAt = now
           }
 
-getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Flow APITypes.FleetRCListRes
-getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
+getDriverFleetRcs :: (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Maybe Int -> Maybe Int -> Maybe Text -> Flow APITypes.FleetRCListRes
+getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset mbSearchString = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   transporterConfig <- CQTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
+  mbSearchStringHash <- mapM getDbHash mbSearchString
   driverLinkedRcs <- DAQuery.findAllLinkedByDriverId driverId
   fleetRcs <-
     if transporterConfig.allowDriverToUseFleetRcs == Just True
@@ -1303,20 +1307,24 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset = do
           Nothing -> pure []
           Just fleetDriverAssociation -> do
             let fleetOwnerId = fleetDriverAssociation.fleetOwnerId
-            RCQuery.findAllByFleetOwnerId effectiveLimit offset (Just fleetOwnerId)
+            RCQuery.findAllByFleetOwnerIdAndSearchString effectiveLimit offset (Just fleetOwnerId) mbSearchString mbSearchStringHash
       else pure []
   let activeRcId = fmap (.rcId) . DL.find (.isRcActive) $ driverLinkedRcs
-  rcs <- mapM (getCombinedRcData activeRcId) fleetRcs
+  rcs <- mapM (getCombinedRcData merchantOperatingCity transporterConfig activeRcId) fleetRcs
   return $ APITypes.FleetRCListRes rcs
   where
-    getCombinedRcData activeRcId rc = do
+    getCombinedRcData merchantOperatingCity transporterConfig activeRcId rc = do
       rcNo <- decrypt rc.certificateNumber
       let isActive = Just rc.id == activeRcId
+      isValid <-
+        SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig ENGLISH rcNo
+          `C.catchAll` \_ -> pure False
       return $
         VRC.LinkedRC
           { rcActive = isActive,
             rcDetails = SDO.makeRCAPIEntity rc rcNo,
-            isFleetRC = isJust rc.fleetOwnerId
+            isFleetRC = isJust rc.fleetOwnerId,
+            isValid = Just isValid
           }
     effectiveLimit = Just $ min 10 (fromMaybe 10 limit)
 

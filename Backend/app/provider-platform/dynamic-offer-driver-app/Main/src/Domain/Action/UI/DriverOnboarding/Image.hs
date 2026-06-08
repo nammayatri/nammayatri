@@ -174,7 +174,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         Just rcNo -> do
           rc <- QRC.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
           case person.role of
-            Person.FLEET_OWNER -> do
+            role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
               fleetAssoc <- FRCA.findLatestByRCIdAndFleetOwnerId rc.id personId
               when (isNothing fleetAssoc) $ throwError RCNotLinkedWithFleet
               return $ Just rc.id

@@ -388,6 +388,7 @@ apis:
       query:
         limit: Int
         offset: Int
+        searchString: Text
       response:
         type: FleetRCListRes
   - POST:
