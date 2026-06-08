@@ -6,6 +6,8 @@ module Domain.Action.Dashboard.AppManagement.VehicleSeatLayoutMapping
 where
 
 import qualified API.Types.Dashboard.AppManagement.VehicleSeatLayoutMapping as API
+import Data.List (nub)
+import qualified Data.Map.Strict as Map
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleSeatLayoutMapping
 import qualified Environment
@@ -36,7 +38,8 @@ listVehicleSeatLayoutMapping _merchantShortId _opCity limit offset gtfsId = do
         { id = m.id,
           vehicleNo = m.vehicleNo,
           gtfsId = m.gtfsId,
-          seatLayoutId = m.seatLayoutId
+          seatLayoutId = m.seatLayoutId,
+          seatSelectionType = m.seatSelectionType
         }
 
 upsertVehicleSeatLayoutMapping ::
@@ -49,27 +52,42 @@ upsertVehicleSeatLayoutMapping merchantShortId opCity req = do
   merchantOperatingCity <-
     CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  mbExisting <- Queries.findByVehicleNoAndGtfsId req.vehicleNo req.gtfsId
-  case mbExisting of
-    Just _ -> do
-      Queries.updateSeatLayoutIdByVehicleNoAndGtfsId req.seatLayoutId req.vehicleNo req.gtfsId
-      CQVehicleSeatLayoutMapping.invalidateCache req.vehicleNo req.gtfsId
-    Nothing -> do
-      now <- getCurrentTime
-      newId <- generateGUID
-      let mapping =
-            Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping
-              { id = newId,
-                vehicleNo = req.vehicleNo,
-                gtfsId = req.gtfsId,
-                seatLayoutId = req.seatLayoutId,
-                seatSelectionType = req.seatSelectionType,
-                merchantId = merchant.id,
-                merchantOperatingCityId = merchantOperatingCity.id,
-                createdAt = now,
-                updatedAt = now
-              }
-      Queries.create mapping
+
+  let uniqueGtfsIds = nub $ map (.gtfsId) req.entries
+  existingMappings <- Queries.findAllByGtfsIds uniqueGtfsIds
+
+  let initialMap = Map.fromList [((m.gtfsId, m.vehicleNo), m) | m <- existingMappings]
+
+  void $
+    foldM
+      ( \mappingMap entry -> do
+          now <- getCurrentTime
+          let key = (entry.gtfsId, entry.vehicleNo)
+          case Map.lookup key mappingMap of
+            Just existingMapping -> do
+              let effectiveSeatSelectionType = entry.seatSelectionType <|> existingMapping.seatSelectionType
+              Queries.updateSeatLayoutIdByVehicleNoAndGtfsId entry.seatLayoutId effectiveSeatSelectionType entry.vehicleNo entry.gtfsId
+              CQVehicleSeatLayoutMapping.invalidateCache entry.vehicleNo entry.gtfsId
+              pure mappingMap
+            Nothing -> do
+              newId <- generateGUID
+              let mapping =
+                    Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping
+                      { id = newId,
+                        vehicleNo = entry.vehicleNo,
+                        gtfsId = entry.gtfsId,
+                        seatLayoutId = entry.seatLayoutId,
+                        seatSelectionType = entry.seatSelectionType,
+                        merchantId = merchant.id,
+                        merchantOperatingCityId = merchantOperatingCity.id,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+              Queries.create mapping
+              pure $ Map.insert key mapping mappingMap
+      )
+      initialMap
+      req.entries
   return Kernel.Types.APISuccess.Success
 
 deleteVehicleSeatLayoutMapping ::
