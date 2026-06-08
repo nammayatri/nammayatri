@@ -11,13 +11,16 @@ import Kernel.Utils.Common
 import Sequelize as Se
 import qualified Storage.Beam.ServicePeopleCategory as BeamR
 import Storage.Queries.OrphanInstances.ServicePeopleCategory ()
+import qualified Storage.Queries.RiderConfig as QRiderConfig
 
 -- Extra code goes here --
 findServicePeopleCategoryById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id ServicePeopleCategory -> Day -> m (Maybe ServicePeopleCategory)
 findServicePeopleCategoryById id day = do
   servicePeopleCategories :: [ServicePeopleCategory] <- findAllWithKV [Se.Is BeamR.id $ Se.Eq $ getId id]
-  let currentLocalTime = UTCTime day $ secondsToDiffTime 19800
-  now <- getLocalCurrentTime 19800
+  mbRiderConfig <- maybe (pure Nothing) QRiderConfig.findByMerchantOperatingCityId ((.merchantOperatingCityId) =<< listToMaybe servicePeopleCategories)
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  let currentLocalTime = UTCTime day $ secondsToDiffTime (fromIntegral timeDiffFromUtc.getSeconds)
+  now <- getLocalCurrentTime timeDiffFromUtc
   if utctDay currentLocalTime == utctDay now
     then
       getServicePeopleCategory servicePeopleCategories currentLocalTime SameDay

@@ -193,7 +193,9 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
   paymentOrderShortId <- generateShortId
   let deviceId = fromMaybe defaultDashboardDeviceId mbDeviceId
 
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   passNumber <- getNextPassNumber
   let startDate = fromMaybe (DT.utctDay istTime) mbStartDay
       endDate = calculatePassEndDate startDate pass.maxValidDays
@@ -711,7 +713,9 @@ passOrderStatusHandler paymentOrderId _merchantId status = do
   logInfo $ "Pass payment webhook handler called for paymentOrderId: " <> paymentOrderId.getId
   mbPurchasedPassPayment <- QPurchasedPassPayment.findOneByPaymentOrderId paymentOrderId
   mbPurchasedPass <- maybe (pure Nothing) (QPurchasedPass.findById . (.purchasedPassId)) mbPurchasedPassPayment
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- maybe (pure Nothing) (\purchasedPass -> getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})) mbPurchasedPass
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   case (mbPurchasedPassPayment, mbPurchasedPass) of
     (Just purchasedPassPayment, Just purchasedPass) -> do
@@ -904,7 +908,9 @@ getMultimodalPassListUtil isDashboard (mbCallerPersonId, merchantId) mbDeviceIdP
         Just s -> Just [s]
         Nothing -> Nothing
 
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   now <- getCurrentTime
 
@@ -965,7 +971,9 @@ postMultimodalPassVerify (mbCallerPersonId, merchantId) purchasedPassId passVeri
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   purchasedPass <- QPurchasedPass.findById purchasedPassId >>= fromMaybeM (PurchasedPassNotFound purchasedPassId.getId)
   unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   unless (purchasedPass.startDate <= DT.utctDay istTime) $ throwError (PassActivationNotReady purchasedPassId.getId $ "Pass will be active from " <> show purchasedPass.startDate)
 
   mbPassType <- CQPassType.findById purchasedPass.passTypeId
@@ -1180,7 +1188,9 @@ postMultimodalPassSwitchDeviceId (mbCallerPersonId, merchantId) req = do
   deviceId <- getDeviceId person req.deviceId req.imeiNumber
   allActivePurchasedPasses <- QPurchasedPass.findAllByPersonIdWithFilters personId merchantId (Just [DPurchasedPass.Active, DPurchasedPass.PreBooked]) Nothing Nothing
 
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
 
   forM_ allActivePurchasedPasses $ \purchasedPass -> do
@@ -1321,7 +1331,9 @@ postMultimodalPassActivateTodayUtil isDashboard (mbCallerPersonId, _merchantId) 
   unless isDashboard $ do
     personId <- mbCallerPersonId & fromMaybeM (PersonNotFound "personId")
     unless (purchasedPass.personId == personId) $ throwError AccessDenied
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   normalizedMbStartDate <- case mbStartDate of
     Just d | d == today -> return Nothing
@@ -1393,7 +1405,9 @@ postMultimodalPassUploadProfilePicture (mbCallerPersonId, _merchantId) req = do
   unless (purchasedPass.status == DPurchasedPass.PhotoPending) $
     throwError (InvalidRequest "Pass is not in PhotoPending status")
 
-  istTime <- getLocalCurrentTime (19800 :: Seconds)
+  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = purchasedPass.merchantOperatingCityId.getId})
+  let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
+  istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime
   let newStatus = if purchasedPass.startDate <= today then DPurchasedPass.Active else DPurchasedPass.PreBooked
   QPurchasedPass.updateStatusById newStatus purchasedPass.id

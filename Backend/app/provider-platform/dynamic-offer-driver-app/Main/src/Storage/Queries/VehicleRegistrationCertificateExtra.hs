@@ -799,3 +799,33 @@ updateDocImageAndStatusById (Id rcId) (Id newImageId) status rejectReason = do
       Se.Set BeamVRC.updatedAt _now
     ]
     [Se.Is BeamVRC.id $ Se.Eq rcId]
+
+findAllByFleetOwnerIdAndSearchString :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
+findAllByFleetOwnerIdAndSearchString mbLimit mbOffset fleetOwnerId mbSearchString mbSearchStringHash = do
+  dbConf <- getReplicaBeamConfig
+  let limitVal = fromIntegral $ fromMaybe 10 mbLimit
+      offsetVal = fromIntegral $ fromMaybe 0 mbOffset
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limitVal $
+            B.offset_ offsetVal $
+              B.orderBy_ (\rc' -> B.desc_ rc'.updatedAt) $
+                B.filter_'
+                  ( \rc ->
+                      rc.fleetOwnerId B.==?. B.val_ fleetOwnerId
+                        B.&&?. ( maybe
+                                   (B.sqlBool_ $ B.val_ True)
+                                   (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                                   mbSearchString
+                                   B.||?. maybe
+                                     (B.sqlBool_ $ B.val_ False)
+                                     (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                                     mbSearchStringHash
+                               )
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right res' -> catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []
