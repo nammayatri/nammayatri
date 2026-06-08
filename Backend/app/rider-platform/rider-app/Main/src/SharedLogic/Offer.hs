@@ -1,6 +1,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module SharedLogic.Offer where
+module SharedLogic.Offer
+  ( module SharedLogic.Offer,
+    module Reexport,
+  )
+where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
@@ -37,6 +41,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Tools.Utils as LYTUtils
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.TypesTH as YTH
+import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Translations as CQTranslations
@@ -57,16 +62,6 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerSponsoredBy :: [Text],
     offerIds :: [Text],
     offerListResp :: Payment.OfferListResp
-  }
-  deriving (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data CumulativeOfferResp = CumulativeOfferResp
-  { offerTitle :: Text,
-    offerDescription :: Text,
-    offerSponsoredBy :: [Text],
-    offerIds :: [Text],
-    offerListResp :: [OfferRespAPIEntity]
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -98,23 +93,6 @@ data OffersFraudChecksResp = OffersFraudChecksResp
   }
   deriving (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
-
-data OfferRespAPIEntity = OfferRespAPIEntity
-  { offerId :: Text,
-    offerTitle :: Maybe Text,
-    offerDescription :: Maybe Text,
-    offerTnc :: Maybe Text,
-    offerSponsoredBy :: Maybe Text,
-    offerCode :: Text,
-    autoApply :: Bool,
-    isHidden :: Bool,
-    amountSaved :: HighPrecMoney,
-    postOfferAmount :: HighPrecMoney,
-    estimatedAmountSaved :: HighPrecMoney,
-    estimatedPostOfferAmount :: HighPrecMoney
-  }
-  deriving (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data OffersRespAPIEntity = OffersRespAPIEntity
   { offers :: [OfferRespAPIEntity],
