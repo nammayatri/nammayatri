@@ -1,0 +1,53 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+
+RewardOffer:
+  tableName: reward_offer
+
+  derives: "Generic,Show,FromJSON,ToJSON"
+
+  fields:
+    id: Id RewardOffer
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    entityType: RewardEntityType
+    triggerEvent: RewardTriggerEvent
+    requiredTags: "[Text]"
+    title: Text
+    description: Maybe Text
+    imageUrl: Maybe Text
+    displayOrder: Int
+    milestoneTarget: Maybe Int
+    logicDomain: Text
+    active: Bool
+    validFrom: Maybe UTCTime
+    validTill: Maybe UTCTime
+
+  types:
+    RewardEntityType:
+      enum: "DRIVER,RIDER"
+    RewardTriggerEvent:
+      enum: "EndRide,Rating,Cancellation,DriverToCustomerReferral,CustomerToDriverReferral,LeaderBoard,Training,BulkUploadEvent,LMS,LMSBonus,BookingComplete"
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findAllActiveByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - merchantOperatingCityId
+          - active: "True|CIM"
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  sqlType:
+    requiredTags: text[]

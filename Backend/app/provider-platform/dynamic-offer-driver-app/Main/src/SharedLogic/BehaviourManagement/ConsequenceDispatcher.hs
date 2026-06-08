@@ -19,7 +19,10 @@ module SharedLogic.BehaviourManagement.ConsequenceDispatcher
   )
 where
 
+import Control.Applicative ((<|>))
+import qualified "dashboard-helper-api" Dashboard.Common.DriverCoins as DCoins
 import qualified Data.Aeson as A
+import qualified Data.Text as T
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import qualified Domain.Types.DriverInformation as DI
@@ -28,6 +31,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
+import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -38,11 +42,13 @@ import qualified Lib.CommunicationEngine.Parser as CMParser
 import qualified Lib.CommunicationEngine.Types as CMT
 import qualified Lib.ConsequenceEngine.Parser as CEParser
 import qualified Lib.ConsequenceEngine.Types as CET
+import qualified Lib.DriverCoins.CoinLedger as CoinLedger
 import Lib.Scheduler.Environment
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.Allocator
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTS
 import SharedLogic.External.LocationTrackingService.Types
+import qualified SharedLogic.Rewards.Types as RewardTypes
 import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -58,7 +64,8 @@ data DispatchContext = DispatchContext
   { merchantId :: Id DM.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     counterConfig :: Maybe BTT.CounterConfig,
-    actionEvent :: Maybe BTT.ActionEvent
+    actionEvent :: Maybe BTT.ActionEvent,
+    rewardContext :: Maybe RewardTypes.RewardDispatchContext
   }
 
 -- | Dispatch all consequence directives for a driver.
@@ -66,6 +73,9 @@ handleConsequences ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
+    MonadReader r m,
+    ClickhouseFlow m r,
+    Redis.HedisFlow m r,
     Redis.HedisLTSFlowEnv r,
     CoreMetrics m,
     HasLocationService m r,
@@ -91,11 +101,14 @@ dispatchConsequence ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
+    MonadReader r m,
+    ClickhouseFlow m r,
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
     CoreMetrics m,
     HasLocationService m r,
     JobCreator r m,
-    HasShortDurationRetryCfg r c,
-    Redis.HedisLTSFlowEnv r
+    HasShortDurationRetryCfg r c
   ) =>
   DispatchContext ->
   Id DP.Person ->
@@ -187,6 +200,16 @@ dispatchConsequence ctx driverId = \case
             BTRecorder.incrementCounterOnly config event.entityType event.entityId event.actionType counterType
           Nothing -> logWarning $ "Unknown counterType '" <> params.counterType <> "' for driver " <> driverId.getId
       _ -> logWarning $ "INCREMENT_COUNTER consequence for driver " <> driverId.getId <> " but no counterConfig/actionEvent in DispatchContext"
+  CET.AwardCoins params ->
+    case ctx.rewardContext of
+      Just rewardCtx -> handleAwardCoins ctx driverId rewardCtx params
+      Nothing -> logWarning $ "AWARD_COINS for driver " <> driverId.getId <> " without rewardContext"
+  CET.AwardCash params ->
+    case ctx.rewardContext of
+      Just rewardCtx -> handleAwardCash ctx driverId rewardCtx params
+      Nothing -> logWarning $ "AWARD_CASH for driver " <> driverId.getId <> " without rewardContext"
+  CET.GrantCoupon params ->
+    logInfo $ "GRANT_COUPON not supported on driver-app for driver " <> driverId.getId <> ": " <> show params
 
 -- | Map blockReasonTag text to BlockReasonFlag enum
 parseBlockReasonFlag :: Maybe Text -> BlockReasonFlag
@@ -202,7 +225,35 @@ parseBlockReasonFlag = \case
   Just other -> fromMaybe ByDashboard (readMaybe $ toString other)
   Nothing -> ByDashboard
 
--- | Send an overlay notification to a driver using a PNKey
+parseRewardEventFunction :: Text -> DCoins.DriverCoinsFunctionType
+parseRewardEventFunction eventFunctionText =
+  fromMaybe DCoins.BulkUploadFunction (readMaybe $ T.unpack eventFunctionText)
+
+handleAwardCoins ::
+  CoinLedger.EventFlow m r =>
+  DispatchContext ->
+  Id DP.Person ->
+  RewardTypes.RewardDispatchContext ->
+  CET.AwardCoinsParams ->
+  m ()
+handleAwardCoins ctx driverId rewardCtx params = do
+  let eventFunction = parseRewardEventFunction params.eventFunction
+      ledgerEntityId = params.rewardOfferId <|> rewardCtx.entityId
+  CoinLedger.awardCoinsFromJsonLogic driverId ctx.merchantId ctx.merchantOperatingCityId rewardCtx.vehCategory rewardCtx.mbServiceTierType eventFunction params.coins params.expirationHours ledgerEntityId
+
+handleAwardCash ::
+  CoinLedger.EventFlow m r =>
+  DispatchContext ->
+  Id DP.Person ->
+  RewardTypes.RewardDispatchContext ->
+  CET.AwardCashParams ->
+  m ()
+handleAwardCash ctx driverId rewardCtx params = do
+  let eventFunction = parseRewardEventFunction params.eventFunction
+      amount = realToFrac params.amount :: HighPrecMoney
+      referenceId = fromMaybe "json_logic_reward" (params.rewardOfferId <|> rewardCtx.entityId)
+  CoinLedger.awardCashFromJsonLogic driverId ctx.merchantId ctx.merchantOperatingCityId rewardCtx eventFunction amount referenceId rewardCtx.mbFleetOwnerId
+
 sendOverlayByKey ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -211,7 +262,7 @@ sendOverlayByKey ::
   ) =>
   DispatchContext ->
   Id DP.Person ->
-  Text -> -- overlayPNKey
+  Text ->
   m ()
 sendOverlayByKey ctx driverId overlayKey = do
   logInfo $ "Sending overlay for driver " <> driverId.getId <> ": " <> overlayKey

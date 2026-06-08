@@ -106,6 +106,7 @@ library
       API.UI.Rating
       API.UI.Registration
       API.UI.RentalsIntercityCache
+      API.UI.Rewards
       API.UI.Ride
       API.UI.Route
       API.UI.SavedReqLocation
@@ -322,6 +323,7 @@ library
       Domain.Action.UI.Registration
       Domain.Action.UI.RentalDetails
       Domain.Action.UI.RentalsIntercityCache
+      Domain.Action.UI.Rewards
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
       Domain.Action.UI.RiderLocation
@@ -468,6 +470,7 @@ library
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
       SharedLogic.BehaviourManagement.CustomerCancellationRate
+      SharedLogic.BehaviourManagement.RiderConsequenceDispatcher
       SharedLogic.Booking
       SharedLogic.Cac
       SharedLogic.CallBPP
@@ -524,6 +527,7 @@ library
       SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.RenderInvoiceFromTemplate
+      SharedLogic.Rewards.RiderRewardPipeline
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
@@ -615,6 +619,7 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PickupRoute
       Storage.CachedQueries.PlaceBasedServiceConfig
+      Storage.CachedQueries.RewardOffer
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.RoutePolylines
       Storage.CachedQueries.RouteStopTimeTable
@@ -718,6 +723,7 @@ library
       Storage.Queries.RecentLocationExtra
       Storage.Queries.RefundRequestExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RewardOfferExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderPreferencesExtra
       Storage.Queries.RouteDetailsExtra
@@ -1119,6 +1125,7 @@ library
       Domain.Types.RefundRequest
       Domain.Types.RegistrationToken
       Domain.Types.RentalDetails
+      Domain.Types.RewardOffer
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
@@ -1282,6 +1289,7 @@ library
       Storage.Beam.RefundRequest
       Storage.Beam.RegistrationToken
       Storage.Beam.RentalDetails
+      Storage.Beam.RewardOffer
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
@@ -1469,6 +1477,7 @@ library
       Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RefundRequest
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.RewardOffer
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RiderPreferences
       Storage.Queries.OrphanInstances.RouteDetails
@@ -1520,6 +1529,7 @@ library
       Storage.Queries.RefundRequest
       Storage.Queries.RegistrationToken
       Storage.Queries.RentalDetails
+      Storage.Queries.RewardOffer
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
@@ -1613,10 +1623,14 @@ library
     , beam-postgres
     , beckn-services
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , casing
     , cassava
     , cereal
+    , communication-engine
+    , consequence-engine
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1759,10 +1773,14 @@ executable rider-app-exe
     , beam-mysql
     , beam-postgres
     , beckn-spec
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , casing
     , cassava
     , cereal
+    , communication-engine
+    , consequence-engine
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0
@@ -1898,10 +1916,14 @@ test-suite rider-app-test
     , beam-core
     , beam-mysql
     , beam-postgres
+    , behavior-engine
+    , behavior-tracker
     , bytestring
     , casing
     , cassava
     , cereal
+    , communication-engine
+    , consequence-engine
     , containers
     , cryptonite
     , cryptostore >=0.2.3.0

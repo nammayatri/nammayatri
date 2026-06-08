@@ -73,6 +73,7 @@ import qualified API.UI.Quote as Quote
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
 import qualified API.UI.RentalsIntercityCache as RentalsIntercityCache
+import qualified API.UI.Rewards as Rewards
 import qualified API.UI.Ride as Ride
 import qualified API.UI.Route as Route
 import qualified API.UI.SavedReqLocation as SavedReqLocation
@@ -96,6 +97,7 @@ type API =
            :<|> Payment.API
            :<|> Payment.S2SAPI
            :<|> Loyalty.API
+           :<|> Rewards.API
            :<|> Search.API
            :<|> Select.API
            :<|> Quote.API
@@ -180,6 +182,7 @@ handler =
     :<|> Payment.handler
     :<|> Payment.handlerS2S
     :<|> Loyalty.handler
+    :<|> Rewards.handler
     :<|> Search.handler
     :<|> Select.handler
     :<|> Quote.handler

@@ -63,6 +63,8 @@ dependencies:
   - amazonka-ses
   - base >= 4.7 && < 5
   - base64-bytestring
+  - behavior-engine
+  - behavior-tracker
   - bytestring
   - cryptonite
   - cryptostore >= 0.2.3.0
@@ -106,6 +108,8 @@ dependencies:
   - passetto-lib
   - vector
   - cereal
+  - communication-engine
+  - consequence-engine
   - beam-core
   - beam-mysql
   - beam-postgres

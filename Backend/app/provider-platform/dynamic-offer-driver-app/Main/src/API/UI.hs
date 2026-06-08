@@ -82,6 +82,7 @@ import qualified API.UI.Plan as Plan
 import qualified API.UI.QueueRank as QueueRank
 import qualified API.UI.Rating as Rating
 import qualified API.UI.Registration as Registration
+import qualified API.UI.Rewards as Rewards
 import qualified API.UI.Ride as Ride
 import qualified API.UI.RideRoute as RideRoute
 import qualified API.UI.RideSummary as RideSummary
@@ -133,6 +134,7 @@ type API =
            :<|> Plan.API
            :<|> KioskLocation.API
            :<|> DriverCoins.API
+           :<|> Rewards.API
            :<|> RideSummary.API
            :<|> City.API
            :<|> LmsModule.API
@@ -209,6 +211,7 @@ handler =
     :<|> Plan.handler
     :<|> KioskLocation.handler
     :<|> DriverCoins.handler
+    :<|> Rewards.handler
     :<|> RideSummary.handler
     :<|> City.handler
     :<|> LmsModule.handler
