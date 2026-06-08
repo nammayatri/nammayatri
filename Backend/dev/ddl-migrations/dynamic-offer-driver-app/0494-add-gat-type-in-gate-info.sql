@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN gate_type varchar(36) DEFAULT 'Pickup';

@@ -451,6 +451,8 @@ let emailServiceConfig =
       , isForcedAWS = True
       }
 
+let rideEventsPublisherCfg = Some { streamPrefix = "", shardCount = +10 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -570,4 +572,5 @@ in  { esqDBCfg
     , masterCloudProxyConfig =
       { masterUrl = None Text, masterSecret = Some "123" }
     , enableLtsPoolDataForPooling = True
+    , rideEventsPublisherCfg
     }

@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.gate_info ADD COLUMN pickup_request_response_timeout_in_sec integer;

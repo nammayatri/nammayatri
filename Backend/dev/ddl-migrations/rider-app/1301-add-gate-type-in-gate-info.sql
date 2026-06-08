@@ -1,1 +1,0 @@
-ALTER TABLE atlas_app.gate_info ADD COLUMN gate_type varchar(36) DEFAULT 'Pickup';
