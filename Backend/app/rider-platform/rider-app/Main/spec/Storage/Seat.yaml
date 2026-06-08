@@ -101,7 +101,7 @@ VehicleSeatLayoutMapping:
 
     updateSeatLayoutIdByVehicleNoAndGtfsId:
       kvFunction: updateOneWithKV
-      params: [seatLayoutId]
+      params: [seatLayoutId, seatSelectionType]
       where:
         and: [vehicleNo, gtfsId]
 
@@ -121,6 +121,11 @@ VehicleSeatLayoutMapping:
       where: seatLayoutId
       limit: limit
       offset: offset
+
+    findAllByGtfsIds:
+      kvFunction: findAllWithKV
+      where:
+        in: [gtfsId]
 
   extraOperations:
     - GENERATE_INDEXES
