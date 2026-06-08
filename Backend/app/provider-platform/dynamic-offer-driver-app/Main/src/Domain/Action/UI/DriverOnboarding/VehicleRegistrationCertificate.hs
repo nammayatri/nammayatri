@@ -107,6 +107,7 @@ import Kernel.Utils.Validation
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
 import SharedLogic.Reminder.Helper (createReminder)
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as SCO
@@ -878,6 +879,7 @@ linkRCStatus (driverId, merchantId, merchantOpCityId) isTaxiBoothRequest req@RCS
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   if req.isActivate
     then do
+      SStatus.validateMandatoryVehicleDocsForRC transporterConfig rc
       validated <- validateRCActivation isTaxiBoothRequest driverId transporterConfig rc
       when validated $ activateRC driverInfo merchantId merchantOpCityId transporterConfig now rc
     else do

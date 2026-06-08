@@ -497,6 +497,7 @@ library
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.Status
+      SharedLogic.DriverOnboarding.VehicleDocs
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.DriverPoolData
