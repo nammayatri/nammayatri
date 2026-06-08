@@ -19,7 +19,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
+import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -89,7 +89,8 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     airConditioned :: SetField (Maybe Bool),
     luggageCapacity :: SetField (Maybe Int),
     vehicleRating :: SetField (Maybe Double),
-    registrationNo :: SetField Text
+    registrationNo :: SetField Text,
+    cloudType :: SetField (Maybe CloudType)
   }
 
 emptyUpdate :: DriverPoolDataUpdate
@@ -142,7 +143,8 @@ emptyUpdate =
       airConditioned = Unchanged,
       luggageCapacity = Unchanged,
       vehicleRating = Unchanged,
-      registrationNo = Unchanged
+      registrationNo = Unchanged,
+      cloudType = Unchanged
     }
 
 -- | Synchronously update driver pool data in Redis/LTS.
@@ -234,7 +236,8 @@ applyUpdate u d =
       DPD.airConditioned = applyField u.airConditioned d.airConditioned,
       DPD.luggageCapacity = applyField u.luggageCapacity d.luggageCapacity,
       DPD.vehicleRating = applyField u.vehicleRating d.vehicleRating,
-      DPD.registrationNo = applyField u.registrationNo d.registrationNo
+      DPD.registrationNo = applyField u.registrationNo d.registrationNo,
+      DPD.cloudType = applyField u.cloudType d.cloudType
     }
 
 -- | Apply a single field update: Set overwrites, Unchanged keeps current.

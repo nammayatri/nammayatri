@@ -159,5 +159,6 @@ buildDriverPoolDataFromDB driverIds = do
             luggageCapacity = v.luggageCapacity,
             vehicleRating = v.vehicleRating,
             registrationNo = v.registrationNo,
+            cloudType = p.cloudType,
             schemaVersion = Just Migrations.currentSchemaVersion
           }

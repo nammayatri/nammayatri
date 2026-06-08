@@ -460,7 +460,8 @@ updatePersonRec (Id personId) person = do
         LTSSync.clientSdkVersion = LTSSync.Set person.clientSdkVersion,
         LTSSync.clientBundleVersion = LTSSync.Set person.clientBundleVersion,
         LTSSync.clientConfigVersion = LTSSync.Set person.clientConfigVersion,
-        LTSSync.clientDevice = LTSSync.Set person.clientDevice
+        LTSSync.clientDevice = LTSSync.Set person.clientDevice,
+        LTSSync.cloudType = LTSSync.Set person.cloudType
       }
 
 updateLanguage :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> KET.Language -> m ()
@@ -521,10 +522,11 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
         { LTSSync.clientSdkVersion = LTSSync.Set (mbClientVersion <|> person.clientSdkVersion),
           LTSSync.clientBundleVersion = LTSSync.Set (mbBundleVersion <|> person.clientBundleVersion),
           LTSSync.clientConfigVersion = LTSSync.Set (mbConfigVersion <|> person.clientConfigVersion),
-          LTSSync.clientDevice = LTSSync.Set (mbDevice <|> person.clientDevice)
+          LTSSync.clientDevice = LTSSync.Set (mbDevice <|> person.clientDevice),
+          LTSSync.cloudType = LTSSync.Set cloudType
         }
 
-updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe CloudType -> Id Person -> m ()
+updateCloudType :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Maybe CloudType -> Id Person -> m ()
 updateCloudType cloudType (Id personId) = do
   now <- getCurrentTime
   updateOneWithKV
@@ -532,6 +534,8 @@ updateCloudType cloudType (Id personId) = do
       Se.Set BeamP.updatedAt now
     ]
     [Se.Is BeamP.id (Se.Eq personId)]
+  LTSSync.syncDriverPoolDataToLTS (Id personId) $
+    LTSSync.emptyUpdate {LTSSync.cloudType = LTSSync.Set cloudType}
 
 updateAlternateMobileNumberAndCode :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Person -> m ()
 updateAlternateMobileNumberAndCode person = do

@@ -20,7 +20,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
+import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 
@@ -81,6 +81,7 @@ data DriverPoolData = DriverPoolData
     luggageCapacity :: Maybe Int,
     vehicleRating :: Maybe Double,
     registrationNo :: Text,
+    cloudType :: Maybe CloudType,
     -- | Monotonic schema version stamped by the cold-start builder and by
     -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
     -- means the entry was written before this field existed (treated as 0,
@@ -161,6 +162,7 @@ defaultDriverPoolData dId =
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       registrationNo = "",
+      cloudType = Nothing,
       schemaVersion = Nothing
     }
 
