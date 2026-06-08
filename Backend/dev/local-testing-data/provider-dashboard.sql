@@ -3,6 +3,9 @@ INSERT INTO atlas_bpp_dashboard.person (id, first_name, last_name, role_id, emai
 	('3680f4b5-dce4-4d03-aa8c-5405690e87bd', 'juspay_admin', 'juspay_admin', '37947162-3b5d-4ed6-bcac-08841be1534d', '0.1.0|0|LhbMPLXsyXE0tjkVpk2AsylStET+zn3gLufYYvF+mWEGaXojqY71IUsw/gJWIIWzbQTGsY31FlnT3BL8o360B2kngyHgMg9A3Jnj0I4=', '\xef2654345b65cbe5230f3cc47ff26ff73cfd7023e10ac258b4b88bab8221a181', '0.1.0|0|oJOzop+9gdchzwbhz/EyxkSZ7s4z/irFEpsQrsNmSXbKnfe96m+P9xkFqy8/BFU1sGUhgszM1JKsuJNXBQ==', '\x26d21f3ddcce96b1fab220d6aea0b5341d4653e812d4e18d542577acbdeef640', '+91',	'\x8c03a02fbcb46d7f7624063574892f64f19b9871138edfcfeb4f0361362e567f', '2022-09-06 11:25:42.609155+00', '2022-09-06 11:25:42.609155+00')
 ON CONFLICT DO NOTHING;
 
+-- Admin tokens: one per city+merchant because merchantCityAccessCheck requires
+-- the token's operating_city to match the URL city exactly. A single Bangalore
+-- token cannot be used for Chennai/Delhi/Kolkata dashboard API calls.
 INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
 SELECT
     'local-admin-token-blr-id-00000000000',
@@ -14,6 +17,45 @@ SELECT
     now()
 FROM atlas_bpp_dashboard.merchant m
 WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
+SELECT
+    'local-admin-token-chn-id-00000000000',
+    'local-admin-token-chennai-namma-yatri',
+    '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+    m.id,
+    'Chennai',
+    true,
+    now()
+FROM atlas_bpp_dashboard.merchant m
+WHERE m.short_id = 'NAMMA_YATRI_PARTNER'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
+SELECT
+    'local-admin-token-del-id-00000000000',
+    'local-admin-token-delhi-bharat-taxi',
+    '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+    m.id,
+    'Delhi',
+    true,
+    now()
+FROM atlas_bpp_dashboard.merchant m
+WHERE m.short_id = 'BHARAT_TAXI_PARTNER'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO atlas_bpp_dashboard.registration_token (id, token, person_id, merchant_id, operating_city, enabled, created_at)
+SELECT
+    'local-admin-token-kol-id-00000000000',
+    'local-admin-token-kolkata-jatri-saathi',
+    '3680f4b5-dce4-4d03-aa8c-5405690e87bd',
+    m.id,
+    'Kolkata',
+    true,
+    now()
+FROM atlas_bpp_dashboard.merchant m
+WHERE m.short_id = 'JATRI_SAATHI_PARTNER'
 ON CONFLICT DO NOTHING;
 
 -- unencrypted: email: fleet@dashboard.com, password: fleet
