@@ -1650,13 +1650,13 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         let (fleetOwnerName, fleetName) = fromMaybe ("", Nothing) (Map.lookup fleetOwnerId fleetOwnerNameMap)
         driverRCAssociation <- QRCAssociation.findAllActiveAndInactiveAssociationsByDriverId driver.id
         let rcAssociatedWithFleet = filter (\(_, rc) -> rc.fleetOwnerId == Just fleetOwnerId) driverRCAssociation
-        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, vehicleDocsVerificationStatus, failedRules) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
-          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+        (vehicleNo, vehicleType, rcId, vehicleColor, vehicleMake, vehicleModel, vehicleYear, vehicleDocsVerificationStatus, failedRules, isRcActive) <- case rcAssociatedWithFleet of ---- so the logic is if it have active association with the fleet vehicle return that otherwise return the latest one
+          [] -> pure (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, False)
           associations -> do
             let activeAssociation = find (\(assoc, _) -> assoc.isRcActive) associations
             case activeAssociation of
-              Just (_, rc) -> getVehicleDetails rc ------- if driver is using fleet vehicle
-              Nothing -> getVehicleDetails $ snd $ head associations -------- otherwise give the latest active association
+              Just (_, rc) -> getVehicleDetails True rc ------- if driver is using fleet vehicle
+              Nothing -> getVehicleDetails False $ snd $ head associations -------- otherwise give the latest active association
         let driverName = Just driver.firstName
             firstName = Just driver.firstName
             middleName = driver.middleName
@@ -1711,7 +1711,7 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
                 Just tripTransation -> return (tripTransation.status == TRIP_ASSIGNED, tripTransation.status == IN_PROGRESS, Just tripTransation.routeCode)
                 Nothing -> return (False, True, Nothing)
             else return (False, False, Nothing)
-        let isRcAssociated = isJust vehicleNo
+        let isRcAssociated = isRcActive
             isDriverActive = fda.isActive
             driverId = Just $ driver.id.getId
             driverDocsVerificationStatus = castDocsVerificationStatus <$> driverInfo'.docsVerificationStatus
@@ -1801,13 +1801,14 @@ getDriverFleetDriverAssociation merchantShortId opCity mbIsActive mbLimit mbOffs
         pure ls
     getVehicleDetails ::
       (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+      Bool ->
       DVRC.VehicleRegistrationCertificate ->
-      m (Maybe Text, Maybe Common.VehicleVariant, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Int, Maybe Common.DocsVerificationStatus, Maybe [Text])
-    getVehicleDetails vrc = do
+      m (Maybe Text, Maybe Common.VehicleVariant, Maybe Text, Maybe Text, Maybe Text, Maybe Text, Maybe Int, Maybe Common.DocsVerificationStatus, Maybe [Text], Bool)
+    getVehicleDetails isRcActive vrc = do
       decryptedVehicleRC <- decrypt vrc.certificateNumber
       let vehicleType = DCommon.castVehicleVariantDashboard vrc.vehicleVariant
           vehicleYear = vrc.vehicleModelYear <|> ((\(y, _, _) -> fromInteger y) <$> (toGregorian <$> vrc.mYManufacturing))
-      pure (Just decryptedVehicleRC, vehicleType, Just vrc.id.getId, vrc.vehicleColor, vrc.vehicleManufacturer, vrc.vehicleModel, vehicleYear, castDocsVerificationStatus <$> vrc.docsVerificationStatus, Just vrc.failedRules)
+      pure (Just decryptedVehicleRC, vehicleType, Just vrc.id.getId, vrc.vehicleColor, vrc.vehicleManufacturer, vrc.vehicleModel, vehicleYear, castDocsVerificationStatus <$> vrc.docsVerificationStatus, Just vrc.failedRules, isRcActive)
 
 ---------------------------------------------------------------------
 getDriverFleetVehicleAssociation :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Bool -> Maybe UTCTime -> Maybe UTCTime -> Maybe Common.FleetVehicleStatus -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe Common.DocsVerificationStatus -> Flow Common.DrivertoVehicleAssociationResT

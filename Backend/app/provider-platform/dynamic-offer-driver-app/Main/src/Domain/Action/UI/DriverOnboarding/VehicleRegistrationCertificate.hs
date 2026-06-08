@@ -173,7 +173,8 @@ type DriverRCRes = APISuccess
 data LinkedRC = LinkedRC
   { rcDetails :: VehicleRegistrationCertificateAPIEntity,
     rcActive :: Bool,
-    isFleetRC :: Bool
+    isFleetRC :: Bool,
+    isValid :: Maybe Bool
   }
   deriving (Generic, ToSchema, ToJSON, FromJSON)
 
@@ -1057,7 +1058,8 @@ getAllLinkedRCs (driverId, _, _) = do
         LinkedRC
           { rcActive = fromMaybe False $ HM.lookup rc.id.getId activeRcs <&> (.isRcActive),
             rcDetails = makeRCAPIEntity rc rcNo,
-            isFleetRC = isJust rc.fleetOwnerId
+            isFleetRC = isJust rc.fleetOwnerId,
+            isValid = Nothing
           }
 
 rcVerificationLockKey :: Text -> Text
