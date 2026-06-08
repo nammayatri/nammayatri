@@ -1,1 +1,0 @@
-ALTER TABLE atlas_driver_offer_bpp.gate_info ADD COLUMN notification_active_till_in_sec integer;
