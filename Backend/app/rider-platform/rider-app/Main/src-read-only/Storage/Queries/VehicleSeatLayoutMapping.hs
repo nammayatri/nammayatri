@@ -28,6 +28,9 @@ deleteByVehicleNoAndGtfsId vehicleNo gtfsId = do deleteWithKV [Se.And [Se.Is Bea
 findAllByGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Maybe Int -> Maybe Int -> Kernel.Prelude.Text -> m [Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping])
 findAllByGtfsId limit offset gtfsId = do findAllWithOptionsKV [Se.Is Beam.gtfsId $ Se.Eq gtfsId] (Se.Desc Beam.createdAt) limit offset
 
+findAllByGtfsIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> m [Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping])
+findAllByGtfsIds gtfsId = do findAllWithKV [Se.Is Beam.gtfsId $ Se.In gtfsId]
+
 findAllBySeatLayoutId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> m [Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping])
@@ -36,10 +39,17 @@ findAllBySeatLayoutId limit offset seatLayoutId = do findAllWithOptionsKV [Se.Is
 findByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleSeatLayoutMapping.VehicleSeatLayoutMapping))
 findByVehicleNoAndGtfsId vehicleNo gtfsId = do findOneWithKV [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]
 
-updateSeatLayoutIdByVehicleNoAndGtfsId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
-updateSeatLayoutIdByVehicleNoAndGtfsId seatLayoutId vehicleNo gtfsId = do
+updateSeatLayoutIdByVehicleNoAndGtfsId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.SeatLayout.SeatLayout -> Kernel.Prelude.Maybe Domain.Types.VehicleSeatLayoutMapping.SeatSelectionType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateSeatLayoutIdByVehicleNoAndGtfsId seatLayoutId seatSelectionType vehicleNo gtfsId = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.seatLayoutId (Kernel.Types.Id.getId seatLayoutId), Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]
+  updateOneWithKV
+    [ Se.Set Beam.seatLayoutId (Kernel.Types.Id.getId seatLayoutId),
+      Se.Set Beam.seatSelectionType seatSelectionType,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.And [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo, Se.Is Beam.gtfsId $ Se.Eq gtfsId]]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
