@@ -1667,6 +1667,7 @@ library
     , regex-compat
     , regex-posix
     , resource-pool
+    , safe-exceptions
     , scheduler
     , scientific
     , sequelize

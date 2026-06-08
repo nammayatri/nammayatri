@@ -8,6 +8,7 @@ module Domain.Action.UI.PartnerAuth (postPartnerSession, normalizeIndianMobile) 
 
 import qualified API.Types.UI.PartnerAuth as APT
 import API.Types.UI.PartnerAuthExtra ()
+import qualified Control.Exception.Safe as CES
 import Data.Char (isDigit)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Registration as DRegistration
@@ -19,14 +20,16 @@ import qualified PartnerAuth.Interface as PartnerAuth
 import qualified PartnerAuth.Types as PartnerAuth
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Tools.PartnerAuth as TPartnerAuth
 import Tools.Error
+import qualified Tools.PartnerAuth as TPartnerAuth
 
 postPartnerSession :: Text -> APT.PartnerSessionReq -> Environment.Flow APT.PartnerSessionRes
 postPartnerSession providerTxt req = do
   -- Wrap the entire partner interaction: invalid token, unknown/unconfigured
-  -- provider, or any thrown error all map to 200 {isValid:false} + a log line.
-  result <- try @_ @SomeException issueSession
+  -- provider, or any thrown (synchronous) error all map to 200 {isValid:false} +
+  -- a log line. Control.Exception.Safe.try lets async exceptions (shutdown,
+  -- timeouts) propagate instead of being swallowed.
+  result <- CES.try @_ @SomeException issueSession
   case result of
     Right res -> pure res
     Left err -> do

@@ -191,6 +191,7 @@ library:
     - finance-kernel
     - utils
     - external
+    - safe-exceptions
 
 executables:
   rider-app-exe:
