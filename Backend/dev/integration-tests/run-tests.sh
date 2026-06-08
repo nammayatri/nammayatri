@@ -67,6 +67,10 @@ RIDE_ENVS=("NY_Bangalore" "YS_Kolkata" "NY_Chennai" "BT_Delhi")
 # Bangalore only has Auto, no cab dynamic-offer fare policies
 CAB_CITIES=("YS_Kolkata" "NY_Chennai" "BT_Delhi")
 
+# Cities that support Auto (AUTO_RICKSHAW) fare products
+# Kolkata (Jatri Saathi) has no AUTO_RICKSHAW fare products in config-sync
+AUTO_CITIES=("NY_Bangalore" "NY_Chennai" "BT_Delhi")
+
 # ── Utilities ──
 
 flush_redis() {
@@ -298,6 +302,18 @@ run_rides() {
                 done
                 if [ "$is_cab_city" = false ]; then
                     echo "  SKIP: $suite_name (no cab fare policies for $env_name)"
+                    continue
+                fi
+            fi
+
+            # Skip Auto collections for cities without AUTO_RICKSHAW fare products
+            if [[ "$suite_name" == *"Auto"* ]]; then
+                local is_auto_city=false
+                for ac in "${AUTO_CITIES[@]}"; do
+                    [ "$ac" == "$env_name" ] && is_auto_city=true
+                done
+                if [ "$is_auto_city" = false ]; then
+                    echo "  SKIP: $suite_name (no auto fare products for $env_name)"
                     continue
                 fi
             fi

@@ -316,7 +316,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{driver_id}}"
 					},
 					{
 						"key": "vt",
@@ -725,7 +725,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{driver_id}}"
 					},
 					{
 						"key": "vt",
@@ -825,6 +825,9 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"// Busy-wait replaces setTimeout (which is a no-op in Newman/test-runner)",
+							"const _sw = parseInt(pm.environment.get('search_wait_ms') || '5000');",
+							"const _ss = Date.now(); while (Date.now() - _ss < _sw) {}",
 							"var d = pm.response.json();",
 							"if (d.estimates && d.estimates.length > 0) {",
 							"    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
@@ -832,10 +835,22 @@
 							"           || d.estimates.find(e => e.vehicleServiceTierType === want)",
 							"           || d.estimates[0];",
 							"    pm.environment.set('estimateId', est.id);",
+							"    pm.collectionVariables.set('_search_retries', 0);",
 							"    console.log('Estimate:', est.id, est.vehicleVariant, est.estimatedFare, '(wanted', want + ')');",
-							"}",
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });"
+							"    pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"    pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });",
+							"} else {",
+							"    var retries = parseInt(pm.collectionVariables.get('_search_retries') || '0');",
+							"    console.log('WARNING: No estimates yet (attempt ' + (retries+1) + '/3). Retrying...');",
+							"    if (retries < 2) {",
+							"        pm.collectionVariables.set('_search_retries', retries + 1);",
+							"        pm.execution.setNextRequest('Get Search Results');",
+							"    } else {",
+							"        pm.collectionVariables.set('_search_retries', 0);",
+							"        pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+							"        pm.test('Has estimates', function () { pm.expect(d, 'response body').to.be.an('object'); pm.expect(d.estimates, 'estimates field').to.be.an('array'); pm.expect(d.estimates.length, 'estimate count').to.be.above(0); });",
+							"    }",
+							"}"
 						],
 						"type": "text/javascript"
 					}
@@ -923,18 +938,31 @@
 					"listen": "test",
 					"script": {
 						"exec": [
+							"// Retry up to 3x with 5s wait \u2014 same pattern as D2 reallocation step",
+							"const _nrs = Date.now(); while (Date.now() - _nrs < 5000) {}",
 							"var d = pm.response.json();",
+							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
 							"if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
 							"    var req = d.searchRequestsForDriver[0];",
 							"    pm.environment.set('searchTryId', req.searchTryId);",
+							"    pm.collectionVariables.set('_d1_nearby_retries', 0);",
 							"    console.log('Got search request, searchTryId:', req.searchTryId, 'baseFare:', req.baseFare, 'variant:', req.requestedVehicleVariant);",
+							"    pm.test('Has search requests', function () {",
+							"        pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+							"    });",
 							"} else {",
-							"    console.log('WARNING: No nearby ride requests found for driver. Response:', JSON.stringify(d));",
-							"}",
-							"pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-							"pm.test('Has search requests', function () {",
-							"    pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
-							"});"
+							"    var retries = parseInt(pm.collectionVariables.get('_d1_nearby_retries') || '0');",
+							"    console.log('WARNING: No nearby ride requests (attempt ' + (retries+1) + '/3). Driver may not be visible yet.');",
+							"    if (retries < 2) {",
+							"        pm.collectionVariables.set('_d1_nearby_retries', retries + 1);",
+							"        pm.execution.setNextRequest('Get Nearby Ride Requests (Driver)');",
+							"    } else {",
+							"        pm.collectionVariables.set('_d1_nearby_retries', 0);",
+							"        pm.test('Has search requests', function () {",
+							"            pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty;",
+							"        });",
+							"    }",
+							"}"
 						],
 						"type": "text/javascript"
 					}
@@ -1154,7 +1182,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver2_token}}"
+						"value": "{{driver2_id}}"
 					},
 					{
 						"key": "vt",
@@ -1267,7 +1295,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver2_token}}"
+						"value": "{{driver2_id}}"
 					},
 					{
 						"key": "vt",

@@ -327,7 +327,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{driver_id}}"
 					},
 					{
 						"key": "vt",
@@ -775,7 +775,7 @@
 					},
 					{
 						"key": "token",
-						"value": "{{driver_token}}"
+						"value": "{{driver_id}}"
 					},
 					{
 						"key": "vt",
@@ -987,7 +987,10 @@
 						"confirm"
 					],
 					"query": [
-						{ "key": "paymentInstrument", "value": "Cash" }
+						{
+							"key": "paymentInstrument",
+							"value": "Cash"
+						}
 					]
 				}
 			}
