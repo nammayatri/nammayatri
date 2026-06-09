@@ -158,6 +158,7 @@ import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimit)
 import Kernel.Utils.Validation
@@ -4441,7 +4442,8 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
   let cityParam = merchantOpCity.city
       stateParam = merchantOpCity.state
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
-  QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
+  newGeomGeoJson <- GGeom.getGeoJsonFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to GeoJSON")
+  QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom) (Just newGeomGeoJson)
   return Success
 
 postMerchantConfigVehicleServiceTierCreate ::

@@ -21,7 +21,6 @@ import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
 import Kernel.Storage.InMem as IM
-import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Lib.GateInfo.Geometry (parseGatePolygons, pointInPolygon)
@@ -35,74 +34,59 @@ import qualified Sequelize as Se
 
 -- Extra code goes here --
 
--- | All gates of a special location, paired with their raw GeoJSON polygon text
---   (from the @geom_geojson@ column). Kept tuple-shaped for backward compatibility
---   with callers that used the old PostGIS @ST_AsGeoJSON@ projection.
+-- | Single source of truth for gate reads: every gate paired with its parsed
+--   pickup-zone polygon(s) (empty when the gate has no geom), held in an in-memory
+--   cache (1h TTL). Gate rows are admin-edited and rarely change, and the table is
+--   small, so all gate lookups below are served from this cache — no DB/PostGIS on the
+--   read path. Invalidated on any gate/special-location write via
+--   'Lib.Queries.SpecialLocation.clearSpecialZoneInMemCache' (refreshes the "GateInfo:"
+--   key prefix across pods).
+getAllGatesCached :: (BeamFlow m r) => m [(D.GateInfo, [[[LatLong]]])]
+getAllGatesCached =
+  IM.withInMemCache ["GateInfo:All"] 3600 $ do
+    gates <- findAllWithKV [Se.Is Beam.id $ Se.Not (Se.Eq "")]
+    pure $ map (\g -> (g, maybe [] (fromMaybe [] . parseGatePolygons) g.geomGeoJson)) gates
+
+gatesAtSpecialLocation :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, [[[LatLong]]])]
+gatesAtSpecialLocation slId = filter (\(g, _) -> g.specialLocationId == slId) <$> getAllGatesCached
+
+-- | All gates of a special location, paired with their GeoJSON polygon text. Kept
+--   tuple-shaped for backward compatibility with callers that used the old PostGIS
+--   @ST_AsGeoJSON@ projection. Served from the in-memory cache.
 findAllGatesBySpecialLocationId :: (BeamFlow m r) => Id SL.SpecialLocation -> m [(D.GateInfo, Maybe Text)]
-findAllGatesBySpecialLocationId slId =
-  map (\g -> (g, g.geomGeoJson)) <$> findAllGatesBySpecialLocationIdWithoutGeoJson slId
+findAllGatesBySpecialLocationId slId = map (\(g, _) -> (g, g.geomGeoJson)) <$> gatesAtSpecialLocation slId
 
 findAllGatesBySpecialLocationIdWithoutGeoJson :: (BeamFlow m r) => Id SL.SpecialLocation -> m [D.GateInfo]
-findAllGatesBySpecialLocationIdWithoutGeoJson slId =
-  findAllWithKV [Se.Is Beam.specialLocationId $ Se.Eq (getId slId)]
-
--- | Cache entry for the global "which gate contains this point" lookup. Carries the
---   gate plus its parsed pickup-zone polygons so containment runs purely in Haskell.
-data GateWithPolygons = GateWithPolygons
-  { gate :: D.GateInfo,
-    polygons :: [[[LatLong]]]
-  }
-  deriving (Show, Generic, ToJSON, Typeable)
-
--- | All gates that have a pickup-zone polygon, with polygons parsed once and held
---   in an in-memory cache (1-hour TTL). Gate polygons are admin-edited and rarely
---   change, so a stale read is acceptable; this replaces the per-call PostGIS
---   @ST_Contains@ scan that the old query did on the hot path.
-getAllGatesWithPolygonsCached :: (BeamFlow m r, CoreMetrics m) => m [GateWithPolygons]
-getAllGatesWithPolygonsCached =
-  IM.withInMemCache ["GateInfo:AllWithGeom"] 3600 $ do
-    gates <- findAllWithKV [Se.Is Beam.geomGeoJson $ Se.Not (Se.Eq Nothing)]
-    pure $
-      map
-        (\g -> GateWithPolygons {gate = g, polygons = fromMaybe [] (g.geomGeoJson >>= parseGatePolygons)})
-        gates
+findAllGatesBySpecialLocationIdWithoutGeoJson slId = map fst <$> gatesAtSpecialLocation slId
 
 -- | Find the gate whose pickup-zone polygon contains the given point. Pure Haskell
 --   point-in-polygon over the in-memory cached polygons — no PostGIS.
-findGateInfoIfDriverInsideGatePickupZone :: (BeamFlow m r, CoreMetrics m) => LatLong -> m (Maybe D.GateInfo)
+findGateInfoIfDriverInsideGatePickupZone :: (BeamFlow m r) => LatLong -> m (Maybe D.GateInfo)
 findGateInfoIfDriverInsideGatePickupZone point = do
-  gates <- getAllGatesWithPolygonsCached
-  pure $ (.gate) <$> find (\gp -> any (pointInPolygon point) gp.polygons) gates
+  gates <- getAllGatesCached
+  pure $ fst <$> find (\(_, polys) -> any (pointInPolygon point) polys) gates
 
--- | Exact match on the serialized @point@ column.
+-- | Exact match on the gate's point. Served from the in-memory cache.
 findGateInfoByLatLongWithoutGeoJson :: (BeamFlow m r) => LatLong -> m (Maybe D.GateInfo)
-findGateInfoByLatLongWithoutGeoJson point =
-  findOneWithKV [Se.Is Beam.point $ Se.Eq (TGI.latLongToText point)]
+findGateInfoByLatLongWithoutGeoJson point = do
+  gates <- getAllGatesCached
+  pure $ fst <$> find (\(g, _) -> g.point == point) gates
 
--- | Find the nearest gate within a given radius (meters) of the given point,
---   scoped to a special location. Uses Haversine distance since the @point@ column
---   is a serialized LatLong, not PostGIS geometry. Tie-breaks by gate id so the
---   selection is deterministic.
+-- | Find the nearest gate within a given radius (meters) of the given point, scoped to
+--   a special location. Haversine distance over the in-memory cache; tie-breaks by gate
+--   id for deterministic selection.
 findGateInfoByLatLongWithinRadius :: (BeamFlow m r) => Id SL.SpecialLocation -> LatLong -> Double -> m (Maybe D.GateInfo)
 findGateInfoByLatLongWithinRadius slId point radiusMeters = do
-  gates <- findAllGatesBySpecialLocationIdWithoutGeoJson slId
+  gates <- map fst <$> gatesAtSpecialLocation slId
   let gatesWithDist = map (\g -> (distanceBetweenInMeters point g.point, g)) gates
       gatesInRadius = filter (\(d, _) -> d <= realToFrac radiusMeters) gatesWithDist
       sorted = sortBy (comparing (\(d, g) -> (d, g.id))) gatesInRadius
   pure $ snd <$> listToMaybe sorted
 
 findGatesWithDriverThreshold :: (BeamFlow m r) => Id SL.SpecialLocation -> m [D.GateInfo]
-findGatesWithDriverThreshold slId =
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.specialLocationId $ Se.Eq (getId slId),
-          Se.Is Beam.canQueueUpOnGate $ Se.Eq True,
-          Se.Or
-            [ Se.Is Beam.minDriverThresholdsJson $ Se.Not (Se.Eq Nothing),
-              Se.Is Beam.defaultMinDriverThreshold $ Se.Not (Se.Eq Nothing)
-            ]
-        ]
-    ]
+findGatesWithDriverThreshold slId = do
+  gates <- map fst <$> gatesAtSpecialLocation slId
+  pure $ filter (\g -> g.canQueueUpOnGate && (isJust g.minDriverThresholds || isJust g.defaultMinDriverThreshold)) gates
 
 deleteById :: (BeamFlow m r) => Id D.GateInfo -> m ()
 deleteById gateId = deleteWithKV [Se.Is Beam.id $ Se.Eq (getId gateId)]
