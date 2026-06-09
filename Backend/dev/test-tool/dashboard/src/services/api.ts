@@ -293,6 +293,8 @@ export interface PostmanStepResult extends ApiResult {
   upstreamMs: number;
   /** True if the step's prerequest script invoked pm.execution.skipRequest() */
   skipped?: boolean;
+  /** Step name requested via pm.execution.setNextRequest(), if any */
+  nextRequest?: string;
 }
 
 /**
@@ -383,10 +385,13 @@ export async function callPostmanStep(
   if (step.testScript) {
     // Test script can use pm.sendRequest + real setTimeout from inside (postman-runtime.ts drains all queued
     // async callbacks before resolving), so polling/sleep-then-check patterns just work — no special-casing here.
-    const result = await executeTestScript(step.testScript, data, status, stores);
+    const result = await executeTestScript(step.testScript, data, status, stores, step.name);
     assertions = result.assertions;
     consoleLogs = result.consoleLogs;
     scriptError = result.error;
+    if (result.nextRequest !== undefined) {
+      return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders, nextRequest: result.nextRequest };
+    }
   }
 
   return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };

@@ -12,6 +12,8 @@ export interface PostmanRuntimeResult {
   assertions: Array<{ name: string; passed: boolean; error?: string }>;
   consoleLogs: string[];
   error?: string;
+  /** Step name requested via pm.execution.setNextRequest(), if any */
+  nextRequest?: string;
 }
 
 export interface VariableStores {
@@ -130,7 +132,8 @@ export async function executeTestScript(
   script: string,
   responseData: any,
   responseStatus: number,
-  stores: VariableStores
+  stores: VariableStores,
+  stepName?: string
 ): Promise<PostmanRuntimeResult> {
   const assertions: PostmanRuntimeResult['assertions'] = [];
   const consoleLogs: string[] = [];
@@ -140,6 +143,10 @@ export async function executeTestScript(
   const pm: any = buildPmObject(responseData, responseStatus, stores, assertions);
   pm.sendRequest = sendRequestShim;
 
+  let nextRequest: string | undefined;
+  pm.execution.setNextRequest = (name: string) => { nextRequest = name; };
+  pm.info = { requestName: stepName ?? '' };
+
   const consoleObj = {
     log: (...args: any[]) => consoleLogs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     warn: (...args: any[]) => consoleLogs.push('[WARN] ' + args.join(' ')),
@@ -148,7 +155,7 @@ export async function executeTestScript(
 
   try {
     const postman = {
-      setNextRequest: () => {},
+      setNextRequest: (name: string) => { nextRequest = name; },
       setEnvironmentVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
       getEnvironmentVariable: (key: string) => stores.environment[key] ?? '',
       setGlobalVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
@@ -165,7 +172,7 @@ export async function executeTestScript(
     return { assertions, consoleLogs, error: e.message };
   }
 
-  return { assertions, consoleLogs };
+  return { assertions, consoleLogs, nextRequest };
 }
 
 /**

@@ -571,6 +571,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         break; // bail on first failure
       }
 
+      // Handle pm.execution.setNextRequest() — jump to named step
+      if (result.nextRequest) {
+        const targetIdx = visibleSteps.findIndex(s => s.name === result.nextRequest);
+        if (targetIdx !== -1) {
+          onLog('info', `  [setNextRequest] jumping to "${result.nextRequest}"`);
+          stepIdx = targetIdx - 1; // loop will ++
+          await interStepWait(abortRef);
+          continue;
+        }
+      }
+
       if (stepIdx < visibleSteps.length - 1) {
         await interStepWait(abortRef);
       }
@@ -984,6 +995,17 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         }
         setExpandedSteps(prev => new Set(prev).add(step.id));
         break;
+      }
+
+      // Handle pm.execution.setNextRequest() — jump to named step
+      if (result.nextRequest) {
+        const targetIdx = visibleSteps.findIndex(s => s.name === result.nextRequest);
+        if (targetIdx !== -1) {
+          onLog('info', `  [setNextRequest] jumping to "${result.nextRequest}"`);
+          stepIdx = targetIdx - 1; // loop will ++
+          await interStepWait(abortRef);
+          continue;
+        }
       }
 
       if (stepIdx < visibleSteps.length - 1) {

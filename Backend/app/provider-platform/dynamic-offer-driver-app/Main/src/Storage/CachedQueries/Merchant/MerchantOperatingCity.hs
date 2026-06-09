@@ -62,8 +62,12 @@ findAllByMerchantIdAndState merchantId state =
 findByMerchantIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => Id Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantIdAndCity merchantId city =
   Hedis.safeGet (makeMerchantIdAndCityKey merchantId city) >>= \case
-    Just a -> return a
-    Nothing -> flip whenJust cachedMerchantIdAndCity /=<< Queries.findByMerchantIdAndCity merchantId city
+    -- Also populate the id-keyed cache so that subsequent findById calls (e.g. in
+    -- findFirstIbppConfigByCityAndVehicle) succeed even when the merchant+city cache
+    -- holds a stale MOC id that no longer exists in the primary DB (happens after
+    -- config-sync switches from one MOC id to another without flushing Redis).
+    Just a -> whenJust a cacheMerchantOpCityById >> return a
+    Nothing -> flip whenJust (\moc -> cachedMerchantIdAndCity moc >> cacheMerchantOpCityById moc) /=<< Queries.findByMerchantIdAndCity merchantId city
 
 findByMerchantShortIdAndCity :: (CacheFlow m r, EsqDBFlow m r) => ShortId Merchant -> Context.City -> m (Maybe MerchantOperatingCity)
 findByMerchantShortIdAndCity merchantShortId city =

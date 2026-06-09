@@ -96,20 +96,33 @@ castVehicleVariantDashboard = \case
 runVerifyRCFlow :: Bool -> Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
 runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity req isFleet bulkUpload mbFleetOwnerId = do
   let imageId = maybe "" cast req.imageId
+      vehicleDetails =
+        if not (T.null req.make) && not (T.null req.model)
+          then
+            Just
+              DomainRC.DriverVehicleDetails
+                { vehicleManufacturer = req.make,
+                  vehicleModel = req.model,
+                  vehicleColour = req.colour,
+                  vehicleDoors = Nothing,
+                  vehicleSeatBelts = Nothing,
+                  vehicleModelYear = req.vehicleModelYear
+                }
+          else Nothing
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
             imageId = imageId,
             imageId2 = cast <$> req.imageId2,
             udinNumber = req.udinNumber,
-            operatingCity = show operatingCity, -- Fixed
-            dateOfRegistration = Nothing,
+            operatingCity = show operatingCity,
+            dateOfRegistration = req.dateOfRegistration,
             airConditioned = req.airConditioned,
             oxygen = req.oxygen,
             ventilator = req.ventilator,
-            vehicleDetails = Nothing,
+            vehicleDetails = vehicleDetails,
             vehicleCategory = req.vehicleCategory,
-            vehicleClass = Nothing,
+            vehicleClass = Just req.vehicleClass,
             isRCImageValidated = Nothing,
             engineNumber = Nothing,
             chassisNumber = Nothing
