@@ -55,6 +55,7 @@ startKafkaConsumer = do
   configFile <- KafkaFlow.getConfigNameFromConsumertype consumerType
   appCfg :: AppCfg <- readDhallConfigDefault configFile
   appEnv <- buildAppEnv appCfg consumerType
+  Metrics.serve appCfg.metricsPort
   -- LOCATION_UPDATE is the only consumer that also runs the driver health-check
   -- HTTP server in the same process. Both transport paths get it.
   when (consumerType == LOCATION_UPDATE) (void $ forkIO $ runDriverHealthcheck appCfg appEnv)
@@ -157,7 +158,7 @@ data BroadcastEntry = BroadcastEntry
 
 runDriverHealthcheck :: AppCfg -> AppEnv -> IO ()
 runDriverHealthcheck appCfg appEnv = do
-  Metrics.serve appCfg.metricsPort
+  -- Metrics are now served for all consumer types in 'startKafkaConsumer'.
   let heathCheckConfig = fromJust appCfg.healthCheckAppCfg
   let loggerRt = L.getEulerLoggerRuntime appEnv.hostname heathCheckConfig.loggerConfig
 
