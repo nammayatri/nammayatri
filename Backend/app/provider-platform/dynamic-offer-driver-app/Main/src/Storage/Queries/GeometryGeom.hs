@@ -20,11 +20,9 @@ module Storage.Queries.GeometryGeom
   )
 where
 
-import Data.Either (fromRight)
+import Data.List (sortBy)
+import Data.Ord (Down (..), comparing)
 import qualified Database.Beam as B
-import Database.Beam.Postgres
-import Database.Beam.Postgres.Syntax
-import qualified Database.Beam.Query as BQ
 import Domain.Types.Geometry
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
@@ -34,75 +32,31 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow)
 import qualified Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
+import Storage.Queries.Geometry (clearGeometryInMemCache, getAllGeometriesWithPolygons)
 
--- | Get geometry as GeoJSON text using ST_AsGeoJSON
--- This converts the PostgreSQL geometry type to a Text representation
-getGeomAsGeoJSON :: BQ.QGenExpr context Postgres s (Maybe Text)
-getGeomAsGeoJSON = BQ.QExpr (\_ -> PgExpressionSyntax (emit "ST_AsGeoJSON(geom)"))
-
--- | Find all geometries for a city with the geom column converted to GeoJSON text.
--- Uses a raw Beam query with ST_AsGeoJSON to avoid type mismatch with PostgreSQL geometry type.
+-- | Geometries for a city, served from the in-memory cache (no PostGIS / DB read),
+--   ordered by id descending and paginated.
 findAllGeometries :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Maybe Int -> Maybe Int -> m [Geometry]
 findAllGeometries cityParam mbLimit mbOffset = do
-  let limitVal = fromMaybe 100 mbLimit
-      offsetVal = fromMaybe 0 mbOffset
-  dbConf <- getReplicaBeamConfig
-  result <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ (fromIntegral limitVal) $
-            B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
-                fmap
-                  ( \BeamG.GeometryT {..} ->
-                      (id, city, state, region, getGeomAsGeoJSON)
-                  )
-                  $ B.filter_' (\BeamG.GeometryT {..} -> B.sqlBool_ (city B.==. B.val_ cityParam)) $
-                    B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] result)
+  cached <- getAllGeometriesWithPolygons
+  pure $ paginate mbLimit mbOffset $ map fst $ filter (\(g, _) -> g.city == cityParam) cached
 
--- | FromTType instance for the tuple result from the raw query
-instance FromTType' (Text, Context.City, Context.IndianState, Text, Maybe Text) Geometry where
-  fromTType' (gId, gCity, gState, gRegion, gGeom) = do
-    pure $
-      Just
-        Geometry
-          { id = Id gId,
-            city = gCity,
-            state = gState,
-            region = gRegion,
-            geom = gGeom
-          }
-
--- | Find all geometries across all cities for a merchant (for allCities=true).
--- Queries all geometries without city filter, ordered by id descending.
+-- | All geometries across cities (allCities=true dashboard listing), from the cache.
 findAllGeometriesForMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id merchant -> Maybe Int -> Maybe Int -> m [Geometry]
 findAllGeometriesForMerchant _merchantId mbLimit mbOffset = do
-  let limitVal = fromMaybe 100 mbLimit
-      offsetVal = fromMaybe 0 mbOffset
-  dbConf <- getReplicaBeamConfig
-  result <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ (fromIntegral limitVal) $
-            B.offset_ (fromIntegral offsetVal) $
-              B.orderBy_ (\(gId, _, _, _, _) -> B.desc_ gId) $
-                fmap
-                  ( \BeamG.GeometryT {..} ->
-                      (id, city, state, region, getGeomAsGeoJSON)
-                  )
-                  $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] result)
+  cached <- getAllGeometriesWithPolygons
+  pure $ paginate mbLimit mbOffset $ map fst cached
 
--- | Update geometry using raw Beam update that doesn't return rows.
--- Uses L.updateRows with B.update' to avoid type mismatch error that occurs with updateWithKV
--- which tries to read back the updated rows containing the geometry column.
-updateGeometry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> Text -> Text -> m ()
-updateGeometry cityParam stateParam regionParam newGeom = do
+paginate :: Maybe Int -> Maybe Int -> [Geometry] -> [Geometry]
+paginate mbLimit mbOffset =
+  take (fromMaybe 100 mbLimit) . drop (fromMaybe 0 mbOffset) . sortBy (comparing (Down . (.id)))
+
+-- | Update a geometry row's polygon. Writes the GeoJSON text to geom_geo_json (used by
+--   the in-Haskell read path) and, for rollback safety, keeps writing the legacy PostGIS
+--   geom column. Invalidates the in-mem geometry cache afterwards.
+updateGeometry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> Text -> Text -> Maybe Text -> m ()
+updateGeometry cityParam stateParam regionParam newGeom mbNewGeomGeoJson = do
   dbConf <- getMasterBeamConfig
   void $
     L.runDB dbConf $
@@ -110,25 +64,7 @@ updateGeometry cityParam stateParam regionParam newGeom = do
         B.update'
           (BeamCommon.geometryGeom BeamCommon.atlasDB)
           ( \BeamGeomG.GeometryGeomT {..} ->
-              geom B.<-. B.val_ (Just newGeom)
+              (geom B.<-. B.val_ (Just newGeom)) <> (geomGeoJson B.<-. B.val_ mbNewGeomGeoJson)
           )
           (\BeamGeomG.GeometryGeomT {..} -> B.sqlBool_ $ city B.==. B.val_ cityParam B.&&. state B.==. B.val_ stateParam B.&&. region B.==. B.val_ regionParam)
-
-instance FromTType' BeamGeomG.GeometryGeom Geometry where
-  fromTType' BeamGeomG.GeometryGeomT {..} = do
-    pure $
-      Just
-        Geometry
-          { id = Id id,
-            ..
-          }
-
-instance ToTType' BeamGeomG.GeometryGeom Geometry where
-  toTType' Geometry {..} =
-    BeamGeomG.GeometryGeomT
-      { BeamGeomG.id = getId id,
-        BeamGeomG.region = region,
-        BeamGeomG.state = state,
-        BeamGeomG.city = city,
-        BeamGeomG.geom = geom
-      }
+  clearGeometryInMemCache

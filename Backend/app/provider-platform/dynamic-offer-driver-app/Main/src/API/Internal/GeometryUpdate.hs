@@ -34,7 +34,9 @@ import Tools.Error
 
 data GeometryUpdateReq = GeometryUpdateReq
   { region :: Text,
-    newGeom :: Text
+    newGeom :: Text,
+    -- GeoJSON form of the polygon, used by the in-Haskell (no-PostGIS) read path.
+    newGeomGeoJson :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -58,5 +60,5 @@ updateGeometry merchantId city req = withFlowHandlerAPI $ do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantId: " <> merchantId.getId <> " ,city: " <> show city)
   let cityParam = merchantOpCity.city
       stateParam = merchantOpCity.state
-  QGEO.updateGeometry cityParam stateParam req.region req.newGeom
+  QGEO.updateGeometry cityParam stateParam req.region req.newGeom req.newGeomGeoJson
   return Success
