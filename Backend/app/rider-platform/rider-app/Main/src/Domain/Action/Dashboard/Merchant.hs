@@ -1897,13 +1897,14 @@ putMerchantConfigGeometryUpdate merchantShortId opCity req = do
   let cityParam = merchantOpCity.city
       stateParam = merchantOpCity.state
   newGeom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to PostGis geom")
+  newGeomGeoJson <- GGeom.getGeoJsonFromKML req.file >>= fromMaybeM (InvalidRequest "Not able to convert the given KML to GeoJSON")
 
   -- Update rider geometry
-  QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom)
+  QGEO.updateGeometry cityParam stateParam req.region (T.pack newGeom) (Just newGeomGeoJson)
 
   -- If updateInDriver from multipart form is true, also update driver geometry via internal API
   when (fromMaybe False req.updateInDriver) $ do
-    void $ CallBPPInternal.updateGeometry merchant opCity req.region (T.pack newGeom)
+    void $ CallBPPInternal.updateGeometry merchant opCity req.region (T.pack newGeom) (Just newGeomGeoJson)
 
   return Success
 

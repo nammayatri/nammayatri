@@ -1217,7 +1217,8 @@ getGeometryList merchant city mbLimit mbOffset mbAllCities = do
 
 data GeometryUpdateReq = GeometryUpdateReq
   { region :: Text,
-    newGeom :: Text
+    newGeom :: Text,
+    newGeomGeoJson :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1246,10 +1247,11 @@ updateGeometry ::
   Context.City ->
   Text ->
   Text ->
+  Maybe Text ->
   m ()
-updateGeometry merchant city region newGeom = do
+updateGeometry merchant city region newGeom newGeomGeoJson = do
   let internalUrl = merchant.driverOfferBaseUrl
   let merchantId = merchant.driverOfferMerchantId
-  let req = GeometryUpdateReq region newGeom
+  let req = GeometryUpdateReq region newGeom newGeomGeoJson
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   void $ try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (geometryUpdateClient merchantId city req) "GeometryUpdate" geometryUpdateApi

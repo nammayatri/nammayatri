@@ -82,17 +82,10 @@ findByLocationName locationName =
         specialLocation ^. SpecialLocationLocationName ==. val locationName
       return specialLocation
 
-findByIdWithGeom :: (Transactionable m, EsqDBReplicaFlow m r) => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
-findByIdWithGeom specialLocationId =
-  fmap (\sl -> (sl, sl.geomGeoJson))
-    <$> ( Esq.runInReplica $
-            Esq.findOne $ do
-              specialLocation <- from $ table @SpecialLocationT
-              where_ $
-                specialLocation ^. SpecialLocationEnabled ==. val True
-                  &&. specialLocation ^. SpecialLocationId ==. val specialLocationId.getId
-              return specialLocation
-        )
+findByIdWithGeom :: (BeamFlow m r, Transactionable m, EsqDBReplicaFlow m r) => Id D.SpecialLocation -> m (Maybe (D.SpecialLocation, Maybe Text))
+findByIdWithGeom specialLocationId = do
+  cached <- getAllEnabledSpecialLocationsWithGeom
+  pure $ (\(sl, _) -> (sl, sl.geomGeoJson)) <$> find (\(sl, _) -> sl.id == specialLocationId) cached
 
 filterGates :: Maybe SpecialLocationFull -> Bool -> Maybe SpecialLocationFull
 filterGates (Just specialLocBody) isOrigin =
