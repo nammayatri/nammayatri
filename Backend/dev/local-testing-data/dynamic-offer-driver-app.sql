@@ -343,13 +343,13 @@ WHERE m.short_id IN ('BRIDGE_FINLAND_PARTNER', 'BRIDGE_CABS_PARTNER')
   );
 
 -- ────────────────────────────────────────────────────────────────────────
--- FRFS Fleet Operator — IntegratedBPPConfig seed (Kolkata, BUS, DIRECT/GIMS)
+-- FRFS Fleet Operator — IntegratedBPPConfig seed (Chennai, BUS, DIRECT/GIMS)
 --
 -- Required by FRFSFleetOperatorFlow/01-ConductorFlow.json.
--- findFirstIbppConfigByCityAndVehicle("Kolkata", "BUS") queries this table.
+-- findFirstIbppConfigByCityAndVehicle("Chennai", "BUS") queries this table.
 -- providerConfig = DIRECT with baseUrl pointing to the local mock server
 -- (port 8080) which handles /internal/fleet-operator/... GIMS endpoints.
--- feedKey = 'kolkata_bus' is used as the gtfsId path param in GIMS calls.
+-- feedKey = 'chennai_bus' is used as the gtfsId path param in GIMS calls.
 -- ────────────────────────────────────────────────────────────────────────
 INSERT INTO atlas_driver_offer_bpp.integrated_bpp_config
   ( id
@@ -366,12 +366,12 @@ INSERT INTO atlas_driver_offer_bpp.integrated_bpp_config
   , updated_at
   )
 VALUES
-  ( md5('frfs-kolkata-bus-ibpp-config')::uuid::text
-  , 'kolkata_bus'
-  , 'kolkata_bus'
+  ( md5('frfs-chennai-bus-ibpp-config')::uuid::text
+  , 'chennai_bus'
+  , 'chennai_bus'
   , 'FRFS'
-  , '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'
-  , '7a0a3891-5945-4f86-a2f2-90c89c197c56'
+  , '7f7896dd-787e-4a0b-8675-e9e6fe93bb8f'
+  , 'f8e9db0a-96c8-49e4-942a-3e3f7265d2da'
   , 'APPLICATION'
   -- DIRECT provider config: baseUrl = mock server, cipherKey = dummy (not used in GIMS flow)
   , '{"tag":"DIRECT","contents":{"baseUrl":"http://localhost:8080","cipherKey":"DUMMYCIPHERKEY"}}'::json
