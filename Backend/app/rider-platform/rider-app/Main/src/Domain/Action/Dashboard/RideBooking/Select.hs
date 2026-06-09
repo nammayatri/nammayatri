@@ -13,6 +13,7 @@ import qualified "this" Domain.Types.Estimate
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import SharedLogic.Cancel
@@ -27,7 +28,7 @@ postSelectEstimate ::
   Environment.Flow Domain.Action.UI.Select.MultimodalSelectRes
 postSelectEstimate merchantShortId _opCity personId estimateId req = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Select.select2' (personId, m.id) estimateId req
+  API.UI.Select.select2' (personId, m.id) estimateId req Kernel.Prelude.Nothing
 
 getSelectQuotes ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

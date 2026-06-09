@@ -31,6 +31,8 @@ import qualified Beckn.ACL.Select as ACL
 import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Journey as DJourney
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
@@ -106,14 +108,14 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId person
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.MultimodalSelectRes
-select2 (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId $ select2' (personId, merchantId) estimateId req
+select2 (personId, merchantId) estimateId req = withFlowHandlerAPIPersonId personId $ select2' (personId, merchantId) estimateId req Nothing
 
-select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
-select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
+select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> Maybe (DJourney.Journey, DJourneyLeg.JourneyLeg) -> m DSelect.MultimodalSelectRes
+select2' (personId, merchantId) estimateId req mbJourneyLegData = withPersonIdLogTag personId $ do
   -- Note: This `cancelSearch` only handles cancelling the currently selected estimate's previous searches. If any another estimate was selected previously that UI has to ensure to call cancelSearch for that and then call select upon it's success.
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
     void $ cancelSearchUtil (personId, merchantId) estimateId
-    dSelectReq <- DSelect.select2 personId estimateId req
+    dSelectReq <- DSelect.select2 personId estimateId req mbJourneyLegData
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
     let journeyId = dSelectReq.mbJourneyId
