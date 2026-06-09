@@ -74,6 +74,7 @@ import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified Lib.JourneyModule.RouteServiceability as JMRouteServiceability
+import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -678,22 +679,17 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
           )
           routeFilteredQuotesWithCategories
   let mbReprAdultPrice = listToMaybe sortedQuotesWithCategories >>= \(_, qcs) -> find (\c -> c.category == ADULT) qcs <&> (.price)
-  -- Cumulative offer is surfaced on standalone FRFS quotes only. When this search is
-  -- a leg of a multimodal journey, the offer is computed once at the journey level
-  -- (generateJourneyInfoResponse), so skip it here to avoid a redundant fetch.
-  -- This is keyed off the journey leg, NOT the config's platform type: a standalone
-  -- purchase can resolve a MULTIMODAL-platform config (e.g. Chennai bus has no
-  -- APPLICATION config), and the offer must still surface there.
   mbOffer <-
     if isJust mbJourneyLeg
       then pure Nothing
       else case mbReprAdultPrice of
         Nothing -> pure Nothing
-        Just reprPrice ->
+        Just reprPrice -> do
+          standaloneLeg <- JMTypes.mkStandaloneFrfsMinimalLegInfo search
           withTryCatch
             "getFrfsSearchQuote:cumulativeOffer"
             ( SOffer.offerListCache merchantId_ personId search.merchantOperatingCityId (FRFSUtils.getPaymentType False search.vehicleType) reprPrice Nothing
-                >>= \offersResp -> SOffer.mkCumulativeOfferResp search.merchantOperatingCityId offersResp [] Nothing
+                >>= \offersResp -> SOffer.mkCumulativeOfferResp search.merchantOperatingCityId offersResp [standaloneLeg] Nothing
             )
             >>= \case
               Left _ -> pure Nothing
