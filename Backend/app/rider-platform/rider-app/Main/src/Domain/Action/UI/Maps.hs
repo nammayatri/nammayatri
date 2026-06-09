@@ -147,6 +147,7 @@ getPlaceName (personId, merchantId) entityId req = do
             else pure $ map (convertToGetPlaceNameResp source) placeNameCache
         Nothing -> callMapsApi merchantId merchantOperatingCityId entityId req merchant.geoHashPrecisionValue
     MIT.ByPlaceId placeId -> do
+      when (T.null placeId) $ throwError $ InvalidRequest "placeId cannot be empty"
       placeNameCache' <- CM.findPlaceByPlaceId placeId
       let placeNameCache = fst placeNameCache'
           source = snd placeNameCache'

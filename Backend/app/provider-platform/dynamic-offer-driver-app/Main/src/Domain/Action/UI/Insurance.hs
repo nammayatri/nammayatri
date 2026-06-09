@@ -5,6 +5,7 @@ import qualified Domain.Types.Extra.MerchantServiceConfig as ExtraMSC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions (runInReplica)
@@ -31,6 +32,7 @@ getInsurance ::
   )
 getInsurance (_mbPersonId, _merchantId, _merchantOpCityId) referenceId = do
   ride <- runInReplica $ QRide.findById (Kernel.Types.Id.Id referenceId) >>= fromMaybeM (RideDoesNotExist referenceId)
+  unless (ride.status `elem` [DRide.INPROGRESS, DRide.COMPLETED]) $ throwError $ InvalidRequest "Insurance is only available for rides that are in progress or completed"
   unless (ride.isInsured) $ throwError $ InvalidRequest "This ride is not insured!"
   appBackendBapInternal <- asks (.appBackendBapInternal)
   SharedLogic.CallBAPInternal.getInsuranceInfo appBackendBapInternal.apiKey appBackendBapInternal.url referenceId
