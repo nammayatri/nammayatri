@@ -1,0 +1,2925 @@
+{
+  "info": {
+    "name": "NY Edit Flow (Add/edit/remove Stops + Destination)",
+    "description": "End-to-end mid-ride edit flow: fresh driver + rider -> onboard -> search (no stops) -> auto-assign -> start ride -> editStops adds 2 stops -> editDestination changes drop -> editStops removes tail stop (preservedPrefixStops=1, stops=[]) -> end ride. Three sequential edits on the same booking; all must succeed because the Rider:Edit:BId-<id> lock releases between handlers and expirePendingSoftBURs only sweeps SOFT BURs (not DRIVER_ACCEPTED ones).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get(\"_test_driver_number\")) {",
+          "    var dNum = \"9\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var rNum = \"8\" + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var regNo = \"KA\" + String(Math.floor(10 + Math.random() * 89)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String.fromCharCode(65 + Math.floor(Math.random() * 26)) + String(Math.floor(1000 + Math.random() * 8999));",
+          "    pm.collectionVariables.set(\"_test_driver_number\", dNum);",
+          "    pm.collectionVariables.set(\"_test_rider_number\", rNum);",
+          "    pm.collectionVariables.set(\"_test_reg_no\", regNo);",
+          "    console.log(\"Test driver:\", dNum, \"rider:\", rNum, \"reg:\", regNo);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "Driver OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        }
+      }
+    },
+    {
+      "name": "Add Vehicle (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Vehicle added', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"registrationNo\": \"{{_test_reg_no}}\",\n  \"vehicleClass\": \"3w\",\n  \"colour\": \"Green\",\n  \"model\": \"AUTO RICKSHAW\",\n  \"make\": \"Bajaj\",\n  \"vehicleCategory\": \"AUTO_CATEGORY\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/addVehicle",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "addVehicle"]
+        }
+      }
+    },
+    {
+      "name": "Enable Driver (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Driver enabled', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/enable",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "enable"]
+        }
+      }
+    },
+    {
+      "name": "Subscribe Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Plan subscribed', function () { pm.expect(pm.response.code).to.be.oneOf([200, 500]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/plan/18911beb-28ba-456d-8cca-4d019461d2b0/subscribe?serviceName=%22YATRI_SUBSCRIPTION%22",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["plan", "18911beb-28ba-456d-8cca-4d019461d2b0", "subscribe"],
+          "query": [{ "key": "serviceName", "value": "%22YATRI_SUBSCRIPTION%22" }]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Location",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" },
+          { "key": "vt", "value": "AUTO_RICKSHAW" },
+          { "key": "dm", "value": "ONLINE" },
+          { "key": "mId", "value": "{{driver_merchant_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": ["{{baseUrl_lts}}"],
+          "path": ["driver", "location"]
+        }
+      }
+    },
+    {
+      "name": "Driver Set Online",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/setActivity?active=true&mode=%22ONLINE%22",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "setActivity"],
+          "query": [
+            { "key": "active", "value": "true" },
+            { "key": "mode", "value": "%22ONLINE%22" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_rider_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"NAMMA_YATRI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-rider\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth", "{{rider_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Driver Location Update",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" },
+          { "key": "vt", "value": "AUTO_RICKSHAW" },
+          { "key": "dm", "value": "ONLINE" },
+          { "key": "mId", "value": "{{driver_merchant_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": ["{{baseUrl_lts}}"],
+          "path": ["driver", "location"]
+        }
+      }
+    },
+    {
+      "name": "Ride Search (no stops)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 2000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('searchId', d.searchId);",
+              "console.log('Search ID:', d.searchId);",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "const _delay = 5000; const _start = Date.now(); while (Date.now() - _start < _delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"fareProductType\": \"ONE_WAY\", \"contents\": {\"origin\": {\"address\": {\"area\": \"Test Origin\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}, \"destination\": {\"address\": {\"area\": \"Test Destination\", \"areaCode\": \"000000\", \"city\": \"{{city}}\", \"country\": \"India\", \"state\": \"{{state}}\"}, \"gps\": {\"lat\": {{dest_lat}}, \"lon\": {{dest_lon}}}}, \"stops\": []}}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideSearch"]
+        }
+      }
+    },
+    {
+      "name": "Get Search Results",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "setTimeout(function(){}, 5000);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.estimates && d.estimates.length > 0) {",
+              "    var want = pm.environment.get('auto_vehicle_variant') || 'AUTO_RICKSHAW';",
+              "    var est = d.estimates.find(e => e.vehicleVariant === want)",
+              "           || d.estimates.find(e => e.vehicleServiceTierType === want)",
+              "           || d.estimates[0];",
+              "    pm.environment.set('estimateId', est.id);",
+              "    pm.environment.set('originalSearchFare', est.estimatedFare);",
+              "    console.log('Estimate:', est.id, est.vehicleVariant, 'originalSearchFare:', est.estimatedFare);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has estimates', function () { pm.expect(d.estimates).to.be.an('array').that.is.not.empty; });",
+              "pm.test('Captured originalSearchFare', function () { pm.expect(Number(pm.environment.get('originalSearchFare'))).to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideSearch/{{searchId}}/results",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideSearch", "{{searchId}}", "results"]
+        }
+      }
+    },
+    {
+      "name": "Select Estimate (Auto Assign)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "const _sel_delay = 8000; const _sel_start = Date.now(); while (Date.now() - _sel_start < _sel_delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"autoAssignEnabled\": true, \"autoAssignEnabledV2\": true}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/estimate/{{estimateId}}/select2",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["estimate", "{{estimateId}}", "select2"]
+        }
+      }
+    },
+    {
+      "name": "Get Nearby Ride Requests (Driver)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.searchRequestsForDriver && d.searchRequestsForDriver.length > 0) {",
+              "    var req = d.searchRequestsForDriver[0];",
+              "    pm.environment.set('searchTryId', req.searchTryId);",
+              "    console.log('Got searchTryId:', req.searchTryId);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Has search requests', function () { pm.expect(d.searchRequestsForDriver).to.be.an('array').that.is.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/nearbyRideRequest",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "nearbyRideRequest"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"searchTryId\": \"{{searchTryId}}\", \"offeredFare\": null, \"response\": \"Accept\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/searchRequest/quote/respond",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "searchRequest", "quote", "respond"]
+        }
+      }
+    },
+    {
+      "name": "Get Booking (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const delay = pm.environment.get('booking_wait_ms') || 5000;",
+              "const start = Date.now(); while (Date.now() - start < delay) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    var booking = d.list[0];",
+              "    pm.environment.set('customer_bookingId', booking.id);",
+              "    var otp = booking.rideOtp;",
+              "    if (!otp && booking.rideList && booking.rideList.length > 0) {",
+              "        otp = booking.rideList[0].rideOtp;",
+              "        pm.environment.set('customer_rideId', booking.rideList[0].id);",
+              "        console.log('BAP rideId:', booking.rideList[0].id);",
+              "    }",
+              "    pm.environment.set('ride_otp', otp);",
+              "    console.log('Booking:', booking.id, 'OTP:', otp);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured customer_rideId', function () { pm.expect(pm.environment.get('customer_rideId')).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Ride (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.list && d.list.length > 0) {",
+              "    pm.environment.set('driver_ride_id', d.list[0].id);",
+              "    console.log('Driver rideId:', d.list[0].id);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "isActive", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Start Ride",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride started');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "{{driver_ride_id}}", "start"]
+        }
+      }
+    },
+    {
+      "name": "Rider Add Stops (SOFT)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 0) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.bookingUpdateRequestId) {",
+              "    pm.environment.set('stopsAddBurId', d.bookingUpdateRequestId);",
+              "    pm.environment.set('bookingUpdateRequestId', d.bookingUpdateRequestId);",
+              "    console.log('stopsAddBurId:', d.bookingUpdateRequestId);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured stopsAddBurId', function () { pm.expect(pm.environment.get('stopsAddBurId')).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": [\n    {\"gps\": {\"lat\": 12.9500, \"lon\": 77.6300}, \"address\": {\"street\": \"stop 1\"}},\n    {\"gps\": {\"lat\": 12.9600, \"lon\": 77.6350}, \"address\": {\"street\": \"stop 2\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Poll Add Stops Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait at least 3s: lets the rider-side cooldown expire AND gives BPP time to compute fare and dispatch on_update.",
+              "const start = Date.now(); while (Date.now() - start < 3500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated', function () { pm.expect(details).to.be.an('object'); pm.expect(details.estimatedFare).to.not.be.null; });",
+              "if (details && details.estimatedFare != null) {",
+              "    pm.environment.set('fareWithStops', details.estimatedFare);",
+              "    console.log('fareWithStops:', details.estimatedFare, 'originalSearchFare:', pm.environment.get('originalSearchFare'));",
+              "}",
+              "pm.test('fareWithStops > originalSearchFare (adding stops should increase fare)', function () {",
+              "    pm.expect(Number(details.estimatedFare)).to.be.above(Number(pm.environment.get('originalSearchFare')));",
+              "});",
+              "pm.test('BUR status is SOFT before confirm', function () { pm.expect(details.status).to.equal('SOFT'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{stopsAddBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{stopsAddBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Add Stops",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM store so this confirm's overlay is the only DRIVER_NOTIFY_LOCATION_UPDATE we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Capture BPP BUR id from the manual-mode CONFIRM_UPDATE overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('stopsAddBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('stopsAddBppBurId:', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{stopsAddBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{stopsAddBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Add Stops",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// BPP BUR id (stopsAddBppBurId) was captured in 'Rider Confirm Add Stops' (post-confirm).",
+              "// Small settle wait before the driver-accept.",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Captured BPP BUR id from FCM overlay', function () { pm.expect(pm.environment.get('stopsAddBppBurId'), 'no DRIVER_NOTIFY_LOCATION_UPDATE overlay in mock-server — was CONFIRM_UPDATE fired / is fcm_url pointed at 8080/fcm?').to.be.a('string').and.not.empty; });",
+              "pm.test('Status 200 (driver accepted add-stops edit)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{stopsAddBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{stopsAddBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Re-poll Add Stops BUR (verify CONFIRM)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for BPP postEditResult ACCEPT -> on_update CONFIRM_UPDATE back to BAP -> BAP BUR status flips SOFT to CONFIRM.",
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('BAP BUR transitioned SOFT -> CONFIRM after driver accept', function () { pm.expect(details.status).to.equal('CONFIRM'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{stopsAddBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{stopsAddBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Verify Booking Has 2 Stops (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var booking = pm.response.json().list[0];",
+              "var contents = booking && booking.bookingDetails && booking.bookingDetails.contents;",
+              "var stops = (contents && contents.stops) || [];",
+              "console.log('Rider stops count:', stops.length, 'hasStops not separately exposed but stops list non-empty implies booking.hasStops=true');",
+              "pm.test('Rider sees 2 stops', function () { pm.expect(stops.length).to.equal(2); });",
+              "pm.test('Stops list non-empty implies booking.hasStops flag was set to true (transformer gates stops list by hasStops==true)', function () { pm.expect(stops.length).to.be.above(0); });",
+              "pm.test('Stop 1 coords match', function () {",
+              "    pm.expect(Math.abs(stops[0].lat - 12.95) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[0].lon - 77.63) < 0.0001).to.be.true;",
+              "});",
+              "pm.test('Stop 2 coords match', function () {",
+              "    pm.expect(Math.abs(stops[1].lat - 12.96) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[1].lon - 77.635) < 0.0001).to.be.true;",
+              "});",
+              "// Capture stop ids for later phases (Phase F stop-visited)",
+              "if (stops.length >= 1 && stops[0].id) { pm.environment.set('stop1Id', stops[0].id); console.log('stop1Id:', stops[0].id); }",
+              "if (stops.length >= 2 && stops[1].id) { pm.environment.set('stop2Id', stops[1].id); console.log('stop2Id:', stops[1].id); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Ride Has 2 Stops (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var ride = pm.response.json().list[0];",
+              "var stops = (ride && ride.stops) || [];",
+              "console.log('Driver stops count:', stops.length);",
+              "console.log('Driver ride keys:', ride ? Object.keys(ride).join(',') : '<none>');",
+              "if (stops.length === 0) { console.log('Driver ride dump:', JSON.stringify(ride).slice(0, 1200)); }",
+              "pm.test('Driver sees 2 stops', function () { pm.expect(Array.isArray(stops)).to.be.true; pm.expect(stops.length).to.equal(2); });",
+              "pm.test('Stop 1 coords match', function () {",
+              "    pm.expect(Math.abs(stops[0].location.lat - 12.95) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[0].location.lon - 77.63) < 0.0001).to.be.true;",
+              "});",
+              "pm.test('Stop 2 coords match', function () {",
+              "    pm.expect(Math.abs(stops[1].location.lat - 12.96) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[1].location.lon - 77.635) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "isActive", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops SOFT_X (will be superseded)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase C: regression guard for sweep + confirm-by-burId. SOFT_X is created first, then SOFT_Y supersedes it via the createdAt-based sweep.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('SOFT_X captured', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('supersededBurId', d.bookingUpdateRequestId);",
+              "console.log('supersededBurId (SOFT_X):', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": [\n    {\"gps\": {\"lat\": 12.9520, \"lon\": 77.6310}, \"address\": {\"street\": \"x stop 1\"}},\n    {\"gps\": {\"lat\": 12.9620, \"lon\": 77.6360}, \"address\": {\"street\": \"x stop 2\"}},\n    {\"gps\": {\"lat\": 12.9720, \"lon\": 77.6410}, \"address\": {\"street\": \"x stop 3\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Poll SOFT_X Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('SOFT_X fare populated (BPP processed it)', function () { pm.expect(details.estimatedFare).to.not.be.null; });",
+              "pm.test('SOFT_X status still SOFT (not yet confirmed/swept)', function () { pm.expect(details.status).to.equal('SOFT'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{supersededBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{supersededBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm SOFT_X (→ USER_CONFIRMED, capture BPP id from overlay)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear the FCM store so X's CONFIRM_UPDATE overlay is the only one present when we read.",
+              "// (Python mock-server FCM accumulates and never drains; clearing makes the capture deterministic.)",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "var s = Date.now(); while (Date.now() - s < 300) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 (SOFT_X confirmed → USER_CONFIRMED)', function () { pm.response.to.have.status(200); });",
+              "// Manual mode: CONFIRM_UPDATE (Update.hs:415/545) fired sendUpdateLocOverlay for X carrying",
+              "// X's BPP BUR id. Capture it NOW — before SOFT_Y is confirmed (Y's overlay would then be newest).",
+              "function grabX(attempt) {",
+              "  pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "    var msgs = [];",
+              "    if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "    var overlays = msgs.filter(function (m) {",
+              "      return m && m.message && m.message.android && m.message.android.data",
+              "          && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "    });",
+              "    var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "    if (overlay) {",
+              "      var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "      pm.environment.set('supersededBppBurId', entity.bookingUpdateRequestId);",
+              "      console.log('supersededBppBurId (SOFT_X overlay):', entity.bookingUpdateRequestId);",
+              "    } else if (attempt < 8) {",
+              "      var t0 = Date.now(); while (Date.now() - t0 < 250) {}",
+              "      grabX(attempt + 1);",
+              "    }",
+              "  });",
+              "}",
+              "if (pm.response.code === 200) { var s = Date.now(); while (Date.now() - s < 1200) {} grabX(1); }"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{supersededBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{supersededBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops SOFT_Y (active, supersedes X on confirm)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Cooldown from SOFT_X has been released by /on_update SOFT (race-guard semantics).",
+              "// Two SOFTs can coexist as BUR rows; supersede happens at CONFIRM time, not on SOFT creation."
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200 (SOFT_Y accepted after on_update released cooldown)', function () { pm.response.to.have.status(200); });",
+              "pm.test('SOFT_Y captured for later confirm/supersede assertion', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('activeBurId', d.bookingUpdateRequestId);",
+              "console.log('activeBurId (SOFT_Y):', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": [\n    {\"gps\": {\"lat\": 12.9500, \"lon\": 77.6300}, \"address\": {\"street\": \"stop 1\"}},\n    {\"gps\": {\"lat\": 12.9600, \"lon\": 77.6350}, \"address\": {\"street\": \"stop 2\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm SOFT_Y (supersedes SOFT_X)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM so SOFT_Y's CONFIRM_UPDATE overlay is the only one we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "// Wait for SOFT_Y BPP processing + /on_update SOFT to release cooldown.",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 (SOFT_Y confirmed)', function () { pm.response.to.have.status(200); });",
+              "// Capture BUR_Y's BPP id from its CONFIRM_UPDATE overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('activeBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('activeBppBurId (BUR_Y overlay):', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{activeBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{activeBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Re-poll SOFT_X (expect EXPIRED after supersede)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for supersede DB write + BAP on_update EDIT_SUPERSEDED to land.",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Note: BAP does not transition BUR status on supersede — only sets errorObj.",
+              "// BPP-side BUR is EXPIRED; BAP-side BUR stays SOFT but carries the EDIT_SUPERSEDED errorObj.",
+              "pm.test('SOFT_X errorObj.errorCode = EDIT_SUPERSEDED (supersede signal from BPP)', function () {",
+              "    pm.expect(details.errorObj).to.be.an('object').and.not.null;",
+              "    pm.expect(details.errorObj.errorCode).to.equal('EDIT_SUPERSEDED');",
+              "});",
+              "pm.test('SOFT_X errorObj.errorMessage mentions supersede', function () {",
+              "    pm.expect(details.errorObj.errorMessage).to.include('Superseded');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{supersededBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{supersededBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept SOFT_X (Scenario A: expect 400 superseded)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Captured SOFT_X BPP id from overlay', function () { pm.expect(pm.environment.get('supersededBppBurId'), 'no overlay captured for SOFT_X — was it confirmed / fcm_url at 8080/fcm?').to.be.a('string').and.not.empty; });",
+              "pm.test('Status 400 (driver-accept of EXPIRED BUR rejected)', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message indicates supersede', function () {",
+              "    pm.expect(pm.response.text()).to.include('superseded by a newer edit');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{supersededBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{supersededBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops BUR_Z (after BUR_Y confirm, before BUR_Y accept)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Manual mode (editLocDriverPermissionNeeded=true): BUR_Y is USER_CONFIRMED awaiting driver-accept.",
+              "// In that window the rider can still create another SOFT (BUR_Z). When driver-accepts BUR_Y next,",
+              "// supersede will mark BUR_Z as EXPIRED (= expired by d2).",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200 (BUR_Z created as SOFT)', function () { pm.response.to.have.status(200); });",
+              "pm.test('BUR_Z captured', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('postConfirmBurId', d.bookingUpdateRequestId);",
+              "console.log('postConfirmBurId (BUR_Z):', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": [\n    {\"gps\": {\"lat\": 12.9550, \"lon\": 77.6320}, \"address\": {\"street\": \"z stop 1\"}},\n    {\"gps\": {\"lat\": 12.9650, \"lon\": 77.6370}, \"address\": {\"street\": \"z stop 2\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept BUR_Y (commits BUR_Y, expires BUR_Z by d2)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for BPP to finish processing BUR_Z's SOFT so it's visible to the supersede scan.",
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Captured BUR_Y BPP id from overlay', function () { pm.expect(pm.environment.get('activeBppBurId'), 'no overlay captured for BUR_Y').to.be.a('string').and.not.empty; });",
+              "pm.test('Status 200 (driver-accept of BUR_Y committed)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{activeBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{activeBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm BUR_Z (Scenario B: expect 400 superseded by d2)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait for supersede chain from BUR_Y's driver-accept to settle on BUR_Z.",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 (confirm of EXPIRED BUR rejected by CONFIRM_UPDATE arm)', function () { pm.response.to.have.status(400); });",
+              "pm.test('Error message indicates supersede', function () {",
+              "    pm.expect(pm.response.text()).to.include('superseded by a newer edit');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{postConfirmBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{postConfirmBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Rider Edit Destination (SOFT)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Wait out the 3s cooldown from Phase C's last editStops before kicking edit-dest.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.bookingUpdateRequestId) {",
+              "    pm.environment.set('destBurId', d.bookingUpdateRequestId);",
+              "    pm.environment.set('bookingUpdateRequestId', d.bookingUpdateRequestId);",
+              "    console.log('destBurId:', d.bookingUpdateRequestId);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured destBurId', function () { pm.expect(pm.environment.get('destBurId')).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination\": {\n    \"gps\": {\"lat\": 12.9816, \"lon\": 77.6512},\n    \"address\": {\"street\": \"new destination\"}\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/edit/location",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "edit", "location"]
+        }
+      }
+    },
+    {
+      "name": "Poll Edit Dest Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated', function () { pm.expect(details).to.be.an('object'); pm.expect(details.estimatedFare).to.not.be.null; });",
+              "pm.test('BUR status is SOFT before confirm', function () { pm.expect(details.status).to.equal('SOFT'); });",
+              "if (details && details.estimatedFare != null) {",
+              "    pm.environment.set('editDestFare', details.estimatedFare);",
+              "    console.log('editDestFare:', details.estimatedFare, 'fareWithStops:', pm.environment.get('fareWithStops'));",
+              "}",
+              "pm.test('editDestFare differs from fareWithStops (destination change recomputed)', function () {",
+              "    pm.expect(Number(details.estimatedFare)).to.not.equal(Number(pm.environment.get('fareWithStops')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{destBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{destBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Edit Dest",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM so this confirm's CONFIRM_UPDATE overlay is the only one we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Capture edit-destination BUR's BPP id from its overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('destBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('destBppBurId:', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{destBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{destBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Edit Dest",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{destBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{destBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Re-poll Edit Dest BUR (verify CONFIRM)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('BAP BUR transitioned SOFT -> CONFIRM after driver accept', function () { pm.expect(details.status).to.equal('CONFIRM'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{destBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{destBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Verify toLocation Updated (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var contents = pm.response.json().list[0].bookingDetails.contents;",
+              "var to = contents && contents.toLocation;",
+              "console.log('Rider toLocation:', JSON.stringify(to));",
+              "pm.test('Rider toLocation present', function () { pm.expect(to).to.be.an('object'); pm.expect(to).to.not.be.null; });",
+              "pm.test('Rider toLocation moved to new dest', function () {",
+              "    pm.expect(Math.abs(to.lat - 12.9816) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(to.lon - 77.6512) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify toLocation Updated (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var to = pm.response.json().list[0].toLocation;",
+              "console.log('Driver toLocation:', JSON.stringify(to));",
+              "pm.test('Driver toLocation present', function () { pm.expect(to).to.not.be.null; pm.expect(to).to.be.an('object'); });",
+              "pm.test('Driver toLocation moved to new dest', function () {",
+              "    pm.expect(Math.abs(to.lat - 12.9816) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(to.lon - 77.6512) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "isActive", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider Edit Destination SOFT (will be rejected)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase E: regression guard for mapping-write-at-DRIVER_ACCEPTED. Driver REJECT must leave booking + ride unchanged.",
+              "// Wait out 3s cooldown.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured rejectBurId', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('rejectBurId', d.bookingUpdateRequestId);",
+              "console.log('rejectBurId:', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"destination\": {\n    \"gps\": {\"lat\": 12.9700, \"lon\": 77.6500},\n    \"address\": {\"street\": \"reject probe\"}\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/edit/location",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "edit", "location"]
+        }
+      }
+    },
+    {
+      "name": "Poll Reject BUR Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated', function () { pm.expect(details.estimatedFare).to.not.be.null; });",
+              "pm.test('BUR status is SOFT', function () { pm.expect(details.status).to.equal('SOFT'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{rejectBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{rejectBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Reject BUR",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM so this confirm's CONFIRM_UPDATE overlay is the only one we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "const start = Date.now(); while (Date.now() - start < 300) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Capture the reject BUR's BPP id from its overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('rejectBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('rejectBppBurId:', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{rejectBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{rejectBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver REJECT Edit Dest",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 (REJECT processed)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"REJECT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{rejectBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{rejectBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Verify Booking toLocation UNCHANGED After Reject",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var booking = pm.response.json().list[0];",
+              "var contents = booking && booking.bookingDetails && booking.bookingDetails.contents;",
+              "var toLoc = contents && contents.toLocation;",
+              "pm.test('toLocation still equals Phase D dest (driver-reject did NOT half-apply)', function () {",
+              "    pm.expect(Math.abs(toLoc.lat - 12.9816) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(toLoc.lon - 77.6512) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Ride toLocation UNCHANGED After Reject (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var ride = pm.response.json().list[0];",
+              "var toLoc = ride && ride.toLocation;",
+              "// Capture BPP-side stop ids from driver ride data. The arrived/{stopId}/stop endpoint expects BPP location id, not BAP's.",
+              "var driverStops = (ride && ride.stops) || [];",
+              "console.log('Driver stops dump:', JSON.stringify(driverStops).slice(0, 800));",
+              "if (driverStops.length >= 1) {",
+              "    var s1 = driverStops[0];",
+              "    var s1LocId = (s1.location && s1.location.id) || s1.locationId || s1.id;",
+              "    if (s1LocId) { pm.environment.set('stop1Id', s1LocId); console.log('BPP stop1Id:', s1LocId); }",
+              "}",
+              "if (driverStops.length >= 2) {",
+              "    var s2 = driverStops[1];",
+              "    var s2LocId = (s2.location && s2.location.id) || s2.locationId || s2.id;",
+              "    if (s2LocId) { pm.environment.set('stop2Id', s2LocId); console.log('BPP stop2Id:', s2LocId); }",
+              "}",
+              "pm.test('Driver-side toLocation still equals Phase D dest', function () {",
+              "    pm.expect(Math.abs(toLoc.lat - 12.9816) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(toLoc.lon - 77.6512) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "isActive", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops SOFT (race-with-arrival)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase J: race between driver-arrives-at-stop and rider-edits-stops.",
+              "// At this point no stop has been visited, so the BPP SOFT-entry guard (reachedStopIndices > n) passes.",
+              "// We will then trigger 'Driver Arrived at Stop 1' BEFORE confirming this BUR, opening the race window.",
+              "// On confirm we expect BPP handleStopsModification CONFIRM_UPDATE branch to re-check reachedStopIndices and return 400.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200 (SOFT entered before any stop visited)', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured raceBurId', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('raceBurId', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": [\n    {\"gps\": {\"lat\": 13.0100, \"lon\": 77.7100}, \"address\": {\"street\": \"race replacement stop\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Poll Race SOFT Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated (SOFT processed by BPP)', function () { pm.expect(details.estimatedFare).to.not.be.null; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{raceBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{raceBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Driver Arrived at Stop 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase F: realistic mid-ride. Driver actually visits stop 1; later we edit stops with preservedPrefixStops>=1 (preserving the visited stop).",
+              "// stop1Id was captured during Phase C 'Verify Booking Reflects SOFT_Y Stops'.",
+              "// This call ALSO opens the race window for Phase J: raceBurId is SOFT, and reachedStopIndices is about to become [1].",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lat\": 12.9500,\n  \"lon\": 77.6300\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/arrived/{{stop1Id}}/stop",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "{{driver_ride_id}}", "arrived", "{{stop1Id}}", "stop"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Race BUR (expect 400 stale-state)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase J assertion. The raceBurId SOFT was created BEFORE the driver arrived at stop 1.",
+              "// Now reachedStopIndices=[1] but the SOFT's preservedPrefixStops=0. The BPP CONFIRM_UPDATE",
+              "// re-check 'when (any (> n) reachedStopIndices)' must fire and return a 400 (or upstream 500 wrapping the error).",
+              "// If this step returns 200 it means the guard is only at SOFT-entry, not at confirm time — a real race-window bug.",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "console.log('Race confirm status:', pm.response.code);",
+              "console.log('Race confirm body:', pm.response.text().slice(0, 600));",
+              "pm.test('Race confirm rejected (non-200) -> race window is closed', function () {",
+              "    pm.expect(pm.response.code).to.not.equal(200);",
+              "});",
+              "pm.test('Response body is an error payload (BPP rejection bubbled up)', function () {",
+              "    var body = pm.response.text().toLowerCase();",
+              "    var stale = body.indexOf('stale') >= 0 || body.indexOf('already reached') >= 0 || body.indexOf('has been reached') >= 0 || body.indexOf('cannot modify') >= 0 || body.indexOf('in flight') >= 0;",
+              "    // Accept BECKN_API_CALL_ERROR too in case the safeCatch in postEditResultConfirm isn't deployed yet.",
+              "    var generic = body.indexOf('beckn_api_call_error') >= 0;",
+              "    pm.expect(stale || generic, 'expected stale/race-detected error, got: ' + pm.response.text().slice(0, 300)).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{raceBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{raceBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver Departed from Stop 1",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 400) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"lat\": 12.9500,\n  \"lon\": 77.6300\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/departed/{{stop1Id}}/stop",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "{{driver_ride_id}}", "departed", "{{stop1Id}}", "stop"]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops preserve stop 1 + add new stop X",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// preservedPrefixStops=1 keeps the visited stop (stop1) and adds a new stop after it. Must NOT trigger the stale-state guard.",
+              "const start = Date.now(); while (Date.now() - start < 400) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('Status 200 (preserved-visited-stop edit allowed)', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured postVisitBurId', function () { pm.expect(d.bookingUpdateRequestId).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('postVisitBurId', d.bookingUpdateRequestId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 1,\n  \"stops\": [\n    {\"gps\": {\"lat\": 13.0000, \"lon\": 77.7000}, \"address\": {\"street\": \"new stop x\"}}\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Poll Post-Visit Edit Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// BPP fork (route compute + sendUpdateEditDest) can take a while on a loaded local env. Wait long enough for on_update to land.",
+              "const start = Date.now(); while (Date.now() - start < 2000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated', function () { pm.expect(details.estimatedFare).to.not.be.null; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{postVisitBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{postVisitBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Post-Visit Edit",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM so this confirm's CONFIRM_UPDATE overlay is the only one we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "const start = Date.now(); while (Date.now() - start < 300) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "// Capture post-visit edit BUR's BPP id from its overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('postVisitBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('postVisitBppBurId:', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{postVisitBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{postVisitBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Post-Visit Edit",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Manual mode: booking.stops only mutates after driver-accept (postEditResultInner ACCEPT branch).",
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 (driver accepted post-visit edit)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{postVisitBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{postVisitBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Verify Booking Has Stop 1 + Stop X",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var booking = pm.response.json().list[0];",
+              "var stops = (booking && booking.bookingDetails && booking.bookingDetails.contents && booking.bookingDetails.contents.stops) || [];",
+              "pm.test('Booking has 2 stops after preserve-and-add edit', function () { pm.expect(stops.length).to.equal(2); });",
+              "pm.test('First stop is the preserved visited stop 1', function () {",
+              "    pm.expect(Math.abs(stops[0].lat - 12.95) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[0].lon - 77.63) < 0.0001).to.be.true;",
+              "});",
+              "pm.test('Second stop is the new stop X', function () {",
+              "    pm.expect(Math.abs(stops[1].lat - 13.0) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[1].lon - 77.7) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rider editStops drop visited stop (Stale-state Negative)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase G: try to drop the already-visited stop. BPP's reachedStopIndices>n guard should reject with 400.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Stale-state edit returns 400', function () { pm.expect(pm.response.code).to.equal(400); });",
+              "pm.test('Error mentions already reached stops', function () {",
+              "    var text = pm.response.text();",
+              "    pm.expect(text).to.include('Cannot modify');",
+              "    pm.expect(text).to.include('already reached');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 0,\n  \"stops\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Rider Remove tail Stops (SOFT)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Phase H: remove tail stop, preserving the visited stop 1. After Phase G's 400 there's no cooldown to wait for (rejected request doesn't engage the lock), but be safe with 3s anyway.",
+              "const start = Date.now(); while (Date.now() - start < 100) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.bookingUpdateRequestId) {",
+              "    pm.environment.set('stopsRemoveBurId', d.bookingUpdateRequestId);",
+              "    pm.environment.set('bookingUpdateRequestId', d.bookingUpdateRequestId);",
+              "    console.log('stopsRemoveBurId:', d.bookingUpdateRequestId);",
+              "}",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Captured stopsRemoveBurId', function () { pm.expect(pm.environment.get('stopsRemoveBurId')).to.be.a('string').and.not.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"preservedPrefixStops\": 1,\n  \"stops\": []\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/editStops",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["ride", "{{customer_rideId}}", "editStops"]
+        }
+      }
+    },
+    {
+      "name": "Poll Remove Stops Result",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var details = d.bookingUpdateRequestDetails;",
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('estimatedFare populated', function () { pm.expect(details).to.be.an('object'); pm.expect(details.estimatedFare).to.not.be.null; });",
+              "pm.test('BUR status is SOFT before confirm', function () { pm.expect(details.status).to.equal('SOFT'); });",
+              "if (details && details.estimatedFare != null) {",
+              "    pm.environment.set('removeStopsFare', details.estimatedFare);",
+              "    console.log('removeStopsFare:', details.estimatedFare, 'fareWithStops:', pm.environment.get('fareWithStops'));",
+              "}",
+              "// Removing a stop should reduce or at least change the fare (cannot be strictly lesser if dest is far away, but should differ).",
+              "pm.test('removeStopsFare differs from fareWithStops (recomputed after remove)', function () {",
+              "    pm.expect(Number(details.estimatedFare)).to.not.equal(Number(pm.environment.get('fareWithStops')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/{{stopsRemoveBurId}}/result",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "{{stopsRemoveBurId}}", "result"]
+        }
+      }
+    },
+    {
+      "name": "Rider Confirm Remove Stops ",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Clear FCM so this confirm's CONFIRM_UPDATE overlay is the only one we read.",
+              "pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/clear', method: 'POST' }, function () {});",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
+              "// Capture remove-stops BUR's BPP id from its overlay — only if confirm succeeded.",
+              "if (pm.response.code === 200) {",
+              "  function grabBpp(attempt) {",
+              "    pm.sendRequest({ url: pm.environment.get('mock_fcm_base') + '/read/test-device', method: 'GET' }, function (err, res) {",
+              "      var msgs = [];",
+              "      if (!err && res) { try { var p = res.json(); if (Array.isArray(p)) msgs = p; } catch (e) {} }",
+              "      var overlays = msgs.filter(function (m) {",
+              "        return m && m.message && m.message.android && m.message.android.data",
+              "            && m.message.android.data.notification_type === 'DRIVER_NOTIFY_LOCATION_UPDATE';",
+              "      });",
+              "      var overlay = overlays.length ? overlays[overlays.length - 1] : null;",
+              "      if (overlay) {",
+              "        var entity = JSON.parse(overlay.message.android.data.entity_data);",
+              "        pm.environment.set('stopsRemoveBppBurId', entity.bookingUpdateRequestId);",
+              "        console.log('stopsRemoveBppBurId:', entity.bookingUpdateRequestId);",
+              "      } else if (attempt < 8) { var t0 = Date.now(); while (Date.now() - t0 < 250) {} grabBpp(attempt + 1); }",
+              "    });",
+              "  }",
+              "  var s = Date.now(); while (Date.now() - s < 1200) {} grabBpp(1);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": { "mode": "raw", "raw": "" },
+        "url": {
+          "raw": "{{baseUrl_app}}/edit/result/{{stopsRemoveBurId}}/confirm",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["edit", "result", "{{stopsRemoveBurId}}", "confirm"]
+        }
+      }
+    },
+    {
+      "name": "Driver Accept Remove Stops",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "// Manual mode: tail-stop removal only commits to booking.stops after driver-accept.",
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 (driver accepted remove-stops edit)', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"ACCEPT\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/edit/result/{{stopsRemoveBppBurId}}",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["edit", "result", "{{stopsRemoveBppBurId}}"]
+        }
+      }
+    },
+    {
+      "name": "Verify Tail Stop Removed (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var booking = pm.response.json().list[0];",
+              "var contents = booking.bookingDetails.contents;",
+              "var stops = (contents && contents.stops) || [];",
+              "console.log('Rider stops after remove:', stops.length);",
+              "pm.test('Rider now sees 1 stop', function () { pm.expect(stops.length).to.equal(1); });",
+              "pm.test('Stops list non-empty implies booking.hasStops still true (1 stop remains)', function () { pm.expect(stops.length).to.be.above(0); });",
+              "pm.test('Surviving stop is the visited stop 1', function () {",
+              "    pm.expect(Math.abs(stops[0].lat - 12.95) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[0].lon - 77.63) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verify Tail Stop Removed (Driver)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var ride = pm.response.json().list[0];",
+              "var stops = (ride && ride.stops) || [];",
+              "console.log('Driver stops after remove:', stops.length);",
+              "if (stops.length !== 1) { console.log('Driver ride dump:', JSON.stringify(ride).slice(0, 1200)); }",
+              "pm.test('Driver now sees 1 stop', function () { pm.expect(stops.length).to.equal(1); });",
+              "pm.test('Surviving stop is stop 1', function () {",
+              "    pm.expect(Math.abs(stops[0].location.lat - 12.95) < 0.0001).to.be.true;",
+              "    pm.expect(Math.abs(stops[0].location.lon - 77.63) < 0.0001).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=1&isActive=true",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "isActive", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "End Ride",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); }); console.log('Ride ended');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"point\": {\"lat\": 12.9816, \"lon\": 77.6512}}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/end",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "{{driver_ride_id}}", "end"]
+        }
+      }
+    },
+    {
+      "name": "Verify Ride Reached Terminal State (COMPLETED)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var list = pm.response.json().list || [];",
+              "// We requested isActive=false, so the freshly-completed ride should appear here.",
+              "var ride = list.find(r => r.id === pm.environment.get('driver_ride_id'));",
+              "if (!ride) { console.log('driver_ride_id not found in inactive list; first id:', list[0] && list[0].id); }",
+              "pm.test('Driver ride status COMPLETED', function () { pm.expect(ride).to.exist; pm.expect(ride.status).to.equal('COMPLETED'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{driver_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/ride/list?limit=5&isActive=false",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "ride", "list"],
+          "query": [
+            { "key": "limit", "value": "5" },
+            { "key": "isActive", "value": "false" }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "_test_driver_number", "value": "" },
+    { "key": "_test_rider_number", "value": "" },
+    { "key": "_test_reg_no", "value": "" }
+  ]
+}

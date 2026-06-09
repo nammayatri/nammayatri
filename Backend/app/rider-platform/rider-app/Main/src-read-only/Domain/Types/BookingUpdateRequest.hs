@@ -27,17 +27,25 @@ data BookingUpdateRequest = BookingUpdateRequest
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     oldEstimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     oldEstimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    preservedPrefixStops :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     status :: Domain.Types.BookingUpdateRequest.BookingUpdateRequestStatus,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
     travelledDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters,
+    updateType :: Kernel.Prelude.Maybe Domain.Types.BookingUpdateRequest.BookingUpdateType,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BookingUpdateRequestStatus = SOFT | CONFIRM deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BookingUpdateRequestStatus = SOFT | CONFIRM | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data BookingUpdateType = DESTINATION | STOPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ErrorObj = ErrorObj {errorCode :: Kernel.Prelude.Text, errorMessage :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateRequestStatus)
 
 $(mkHttpInstancesForEnum ''BookingUpdateRequestStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingUpdateType)
+
+$(mkHttpInstancesForEnum ''BookingUpdateType)

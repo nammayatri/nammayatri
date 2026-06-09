@@ -49,6 +49,7 @@ import Data.List (nub)
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.Action.UI.Ride as URide
 import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -74,6 +75,7 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -565,11 +567,24 @@ onUpdate = \case
     breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakup.BOOKING_UPDATE_REQUEST) fareBreakups
     QFareBreakup.createMany breakups
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
+    Redis.unlockRedis (URide.processingSoftKey booking.id)
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
-    dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
-    prevOrder <- QLM.maxOrderByEntity booking.id.getId
-    dropLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId) prevOrder
-    QLM.create dropLocMap
+    case bookingUpdateRequest.updateType of
+      Just DBUR.STOPS -> do
+        let n = fromMaybe 0 bookingUpdateRequest.preservedPrefixStops
+            mbMerchantId = Just bookingUpdateRequest.merchantId
+            mbMerchantOpCityId = Just bookingUpdateRequest.merchantOperatingCityId
+        stopMappings <- QLM.getLatestStopsByEntityId' bookingUpdateRequest.id.getId
+        SLM.rewriteLatestStopMappingsFromOrder booking.id.getId DLM.BOOKING mbMerchantId mbMerchantOpCityId n stopMappings
+        SLM.rewriteLatestStopMappingsFromOrder ride.id.getId DLM.RIDE mbMerchantId mbMerchantOpCityId n stopMappings
+        let booking_has_stops = n + length stopMappings > 0
+        QRB.updateHasStops booking.id booking_has_stops
+        QRide.updateHasStops ride.id booking_has_stops
+      _ -> do
+        dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
+        prevOrder <- QLM.maxOrderByEntity booking.id.getId
+        dropLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId) prevOrder
+        QLM.create dropLocMap
     fareBreakupsBUR <- QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST
     fareBreakups <-
       mapM
@@ -582,6 +597,7 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
+    QBUR.updateStatusById DBUR.CONFIRM bookingUpdateRequest.id
     mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
     whenJust mbJourneyLeg $ \journeyLeg -> do
       let journeyId = journeyLeg.journeyId
@@ -608,6 +624,7 @@ onUpdate = \case
     if bookingUpdateReqDetails.status == DBUR.SOFT
       then QBUR.updateErrorObjById (Just DBUR.ErrorObj {..}) bookingUpdateReqId
       else Notify.notifyOnTripUpdate booking ride (Just (errorCode, errorMessage))
+    Redis.unlockRedis (URide.processingSoftKey booking.id)
   OUValidatedDestinationReachedReq ValidatedDestinationReachedReq {..} -> do
     QRide.updateDestinationReachedAt (Just destinationReachedTime) ride.id
     allBookingParty <- QBPL.findAllActiveByBookingId booking.id

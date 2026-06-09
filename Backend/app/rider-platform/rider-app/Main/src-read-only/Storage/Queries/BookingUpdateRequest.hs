@@ -85,9 +85,11 @@ updateByPrimaryKey (Domain.Types.BookingUpdateRequest.BookingUpdateRequest {..})
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.oldEstimatedDistance oldEstimatedDistance,
       Se.Set Beam.oldEstimatedFare oldEstimatedFare,
+      Se.Set Beam.preservedPrefixStops preservedPrefixStops,
       Se.Set Beam.status status,
       Se.Set Beam.totalDistance totalDistance,
       Se.Set Beam.travelledDistance travelledDistance,
+      Se.Set Beam.updateType updateType,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -110,9 +112,11 @@ instance FromTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             oldEstimatedDistance = oldEstimatedDistance,
             oldEstimatedFare = oldEstimatedFare,
+            preservedPrefixStops = preservedPrefixStops,
             status = status,
             totalDistance = totalDistance,
             travelledDistance = travelledDistance,
+            updateType = updateType,
             updatedAt = updatedAt
           }
 
@@ -133,8 +137,10 @@ instance ToTType' Beam.BookingUpdateRequest Domain.Types.BookingUpdateRequest.Bo
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.oldEstimatedDistance = oldEstimatedDistance,
         Beam.oldEstimatedFare = oldEstimatedFare,
+        Beam.preservedPrefixStops = preservedPrefixStops,
         Beam.status = status,
         Beam.totalDistance = totalDistance,
         Beam.travelledDistance = travelledDistance,
+        Beam.updateType = updateType,
         Beam.updatedAt = updatedAt
       }

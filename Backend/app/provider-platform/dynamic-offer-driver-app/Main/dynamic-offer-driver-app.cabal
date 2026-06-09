@@ -714,6 +714,7 @@ library
       Storage.Queries.Booking.Internal
       Storage.Queries.BookingCancellationReasonExtra
       Storage.Queries.BookingExtra
+      Storage.Queries.BookingUpdateRequestExtra
       Storage.Queries.BusinessEventExtra
       Storage.Queries.CallStatusExtra
       Storage.Queries.CancellationDuesDetailsExtra

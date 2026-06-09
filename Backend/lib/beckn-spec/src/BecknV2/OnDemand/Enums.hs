@@ -85,6 +85,7 @@ data FulfillmentState
   | EDIT_LOCATION -- Custom type only used for on-us transaction
   | ADD_STOP -- Custom type only used for on-us transaction
   | EDIT_STOP -- Custom type only used for on-us transaction
+  | EDIT_STOPS -- Custom type for dedicated edit-stops flow with preservedPrefixStops
   | CHANGE_SERVICE_TIER -- Custom type only used for on-us transaction
   | ADD_BAGGAGE -- Custom type only used for on-us transaction
   | DRIVER_REACHED_DESTINATION
