@@ -34,6 +34,8 @@ import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.JobScheduler
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QB
@@ -56,7 +58,7 @@ sendCallPoliceApi Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
   booking <- B.runInReplica $ QB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
   let merchantOperatingCityId = booking.merchantOperatingCityId
       merchantId = booking.merchantId
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   rideCallPoliceAPIKeyExists <- Hedis.withCrossAppRedis $ Hedis.get (mkRideCallPoliceAPIKey rideId)
   case rideCallPoliceAPIKeyExists of
     Nothing -> do
@@ -94,7 +96,7 @@ getTokenofJMService merchantId merchantOpCityId = do
     fetchAndStoreToken = do
       logDebug "Journey Monitoring Token does not exist in Redis, fetching from Tokenize Service"
       sc <-
-        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.TokenizationService Tokenize.JourneyMonitoring)}) Nothing
+        getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just (DMSC.TokenizationService Tokenize.JourneyMonitoring)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (DMSC.TokenizationService Tokenize.JourneyMonitoring)))
           >>= maybe (throwError $ MerchantServiceUsageConfigNotFound merchantId.getId) pure
           >>= validateTokenizationServiceConfig
       res <- Tokenize.tokenize sc Tokenize.TokenizationReq {expiry = Nothing, code = Nothing, codeVerifier = Nothing}
@@ -123,7 +125,7 @@ diffUTCTimeInSeconds _ Nothing = 3600 -- default to (1 hour)
 
 getServiceConfig :: CallApiFlow m r => Id Merchant.Merchant -> Id DMOC.MerchantOperatingCity -> DMSC.ServiceName -> m IncidentReportServiceConfig
 getServiceConfig merchantId merchantOpCityId service = do
-  mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just service}) Nothing
+  mbCfg <- getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, merchantId = merchantId.getId, serviceName = Just service}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOpCityId (service)))
   case mbCfg of
     Just cfg -> case cfg.serviceConfig of
       DMSC.IncidentReportServiceConfig sc -> return sc

@@ -25,19 +25,19 @@ data PayoutConfigDimensions = PayoutConfigDimensions
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'PayoutConfig where
-  type DimensionsFor 'PayoutConfig = PayoutConfigDimensions
-  configTypeValue = PayoutConfig
-  sConfigType = SPayoutConfig
+instance ConfigTypeInfo 'PayoutConfigRider where
+  type DimensionsFor 'PayoutConfigRider = PayoutConfigDimensions
+  configTypeValue = PayoutConfigRider
+  sConfigType = SPayoutConfigRider
 
 instance ConfigDimensions PayoutConfigDimensions where
-  type ConfigTypeOf PayoutConfigDimensions = 'PayoutConfig
+  type ConfigTypeOf PayoutConfigDimensions = 'PayoutConfigRider
   type ConfigValueTypeOf PayoutConfigDimensions = [DT.PayoutConfig]
-  getConfigType _ = PayoutConfig
+  getConfigType _ = PayoutConfigRider
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG PayoutConfig)
+      (LYT.RIDER_CONFIG PayoutConfigRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId) (Just []))
       [ LCP.DimMatcher (.vehicleCategory) (.vehicleCategory) (==),

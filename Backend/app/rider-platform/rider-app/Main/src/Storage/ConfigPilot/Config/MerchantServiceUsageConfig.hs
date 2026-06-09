@@ -19,20 +19,20 @@ data MerchantServiceUsageConfigDimensions = MerchantServiceUsageConfigDimensions
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'MerchantServiceUsageConfig where
-  type DimensionsFor 'MerchantServiceUsageConfig = MerchantServiceUsageConfigDimensions
-  configTypeValue = MerchantServiceUsageConfig
-  sConfigType = SMerchantServiceUsageConfig
+instance ConfigTypeInfo 'MerchantServiceUsageConfigRider where
+  type DimensionsFor 'MerchantServiceUsageConfigRider = MerchantServiceUsageConfigDimensions
+  configTypeValue = MerchantServiceUsageConfigRider
+  sConfigType = SMerchantServiceUsageConfigRider
 
 instance ConfigDimensions MerchantServiceUsageConfigDimensions where
-  type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfig
+  type ConfigTypeOf MerchantServiceUsageConfigDimensions = 'MerchantServiceUsageConfigRider
   type ConfigValueTypeOf MerchantServiceUsageConfigDimensions = Maybe DT.MerchantServiceUsageConfig
-  getConfigType _ = MerchantServiceUsageConfig
+  getConfigType _ = MerchantServiceUsageConfigRider
   getConfigList a =
     listToMaybe
       <$> LCP.resolveConfigList
         a
-        (LYT.RIDER_CONFIG MerchantServiceUsageConfig)
+        (LYT.RIDER_CONFIG MerchantServiceUsageConfigRider)
         (Id a.merchantOperatingCityId)
         (maybeToList <$> SQ.findByMerchantOperatingCityId (Id a.merchantOperatingCityId))
         (([] :: [LCP.DimMatcher MerchantServiceUsageConfigDimensions DT.MerchantServiceUsageConfig]))

@@ -29,6 +29,8 @@ import Kernel.Utils.Common hiding (Error)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -64,9 +66,9 @@ safetyWebhookHandler ::
 safetyWebhookHandler merchantShortId mbOpCity secret val = do
   merchant <- findMerchantByShortId merchantShortId
   merchanOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just mbOpCity)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchanOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchanOperatingCityId.getId)
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId})
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchanOperatingCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchanOperatingCityId.getId)
   logDebug $ "runWithServiceConfig: merchantServiceUsageConfig: " <> show merchantServiceUsageConfig
   merchantServiceConfig <-

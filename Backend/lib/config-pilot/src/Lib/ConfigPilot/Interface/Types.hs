@@ -72,7 +72,8 @@ data SConfigType (cfg :: ConfigType) where
   SRiderConfig :: SConfigType 'RiderConfig
   SFRFSConfig :: SConfigType 'FRFSConfig
   SPayoutConfig :: SConfigType 'PayoutConfig
-  SMerchantServiceUsageConfig :: SConfigType 'MerchantServiceUsageConfig
+  SMerchantServiceUsageConfigDriver :: SConfigType 'MerchantServiceUsageConfigDriver
+  SMerchantServiceUsageConfigRider :: SConfigType 'MerchantServiceUsageConfigRider
   SHotSpotConfig :: SConfigType 'HotSpotConfig
   SMerchantConfig :: SConfigType 'MerchantConfig
   SRideRelatedNotificationConfig :: SConfigType 'RideRelatedNotificationConfig
@@ -99,6 +100,10 @@ data SConfigType (cfg :: ConfigType) where
   SExophone :: SConfigType 'Exophone
   SInsuranceConfig :: SConfigType 'InsuranceConfig
   SVehicleConfig :: SConfigType 'VehicleConfig
+  SExophoneRider :: SConfigType 'ExophoneRider
+  SPayoutConfigRider :: SConfigType 'PayoutConfigRider
+  SMerchantPushNotificationRider :: SConfigType 'MerchantPushNotificationRider
+  SRideRelatedNotificationConfigRider :: SConfigType 'RideRelatedNotificationConfigRider
   SScheduledPayoutConfig :: SConfigType 'ScheduledPayoutConfig
   SReminderConfig :: SConfigType 'ReminderConfig
   STagActionNotificationConfig :: SConfigType 'TagActionNotificationConfig
@@ -149,10 +154,11 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
     m (ConfigValueTypeOf a)
   getConfig dims mbFallback = do
     let tableName = show (getConfigType dims)
-    killSwitch <- liftIO $ maybe False read <$> lookupEnv "ENABLE_CONFIG_PILOT_FOR_ALL"
+    disableConfigPilot <- liftIO $ maybe False read <$> lookupEnv "DISABLE_CONFIG_PILOT"
     withLogTag "CONFIG_PILOT:" $
-      if killSwitch
-        then do
+      if disableConfigPilot
+        then fromMaybe (throwM $ InternalError $ "No Fallback configured for table: " <> tableName) mbFallback
+        else do
           logDebug $ "getConfig:entry table=" <> tableName <> " dims=" <> show dims
           let onSuccess cfg = do
                 incrementConfigPilotSuccessCounter tableName
@@ -166,7 +172,6 @@ class (Show a, ConfigTypeInfo (ConfigTypeOf a)) => ConfigDimensions a where
               (filterByDimensions dims <$> getConfigList dims) >>= onSuccess
           logDebug $ "getConfig:exit table=" <> tableName <> " dims=" <> show dims
           pure result
-        else fromMaybe (throwM $ InternalError $ "No Fallback configured for table: " <> tableName) mbFallback
 
   setConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => a -> m (ConfigValueTypeOf a)
   setConfig _ = throwError $ InvalidRequest "setConfig not implemented for this dimension"

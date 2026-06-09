@@ -147,7 +147,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         coinConfigs <- forM serviceTiers $ \stt -> do
           let vehicleCategory = BecknUtils.castVehicleCategoryToDomain $ BecknUtils.mapServiceTierToCategory stt
           maybeCoinsConfig <-
-            getOneConfig (CoinsConfigDimensions {merchantOptCityId = searchReq.merchantOperatingCityId.getId, eventFunction = Just DCT.GoldTierRideCompleted, merchantId = Just searchReq.providerId.getId, active = Just True, vehicleCategory = Just vehicleCategory, serviceTierType = Just stt, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing})
+            getOneConfig (CoinsConfigDimensions {merchantOptCityId = searchReq.merchantOperatingCityId.getId, eventFunction = Just DCT.GoldTierRideCompleted, merchantId = Just searchReq.providerId.getId, active = Just True, vehicleCategory = Just vehicleCategory, serviceTierType = Just stt, eventName = Nothing, tripCategoryType = Nothing, configId = Nothing}) Nothing
           return (stt, maybeCoinsConfig >>= (\config -> Just config.coins))
         return $ M.fromList coinConfigs
       else return M.empty
@@ -450,7 +450,7 @@ addLanguageToDictionary ::
   m LanguageDictionary
 addLanguageToDictionary searchReq dict dPoolRes = do
   let language = fromMaybe Maps.ENGLISH dPoolRes.driverPoolResult.language
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = searchReq.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
   if language `elem` transporterConfig.languagesToBeTranslated
     then
       if isJust $ M.lookup language dict

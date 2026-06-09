@@ -12,6 +12,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common (fork, logError)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Text.Regex.Posix ((=~))
@@ -29,7 +30,7 @@ processMetrics mbPersonId metricName message = do
       mbPerson <- runInReplica $ QPerson.findById personId
       case mbPerson of
         Just person -> do
-          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing
+          mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
           pure $ case mbRiderConfig of
             Just riderConfig -> fromMaybe [] riderConfig.metricsBlacklistPatterns
             Nothing -> []

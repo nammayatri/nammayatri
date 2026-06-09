@@ -13,6 +13,7 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Types.Id (Id, getId)
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.ConfigPilot.Config.RiderConfig as SCRC
 import qualified Storage.Queries.PersonExtra as QPerson
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
@@ -39,7 +40,7 @@ sendPassExpiryReminderBatch ::
   m (Maybe Int)
 sendPassExpiryReminderBatch merchantId merchantOperatingCityId mbCursor = do
   riderConfig <-
-    getConfig (SCRC.RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) Nothing
+    getConfig (SCRC.RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCityId))
       >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   let daysToExpire = fromMaybe defaultDaysToExpire riderConfig.passExpiryReminderDays
       remindDaily = fromMaybe False riderConfig.remindEverydayUntilPassExpiry

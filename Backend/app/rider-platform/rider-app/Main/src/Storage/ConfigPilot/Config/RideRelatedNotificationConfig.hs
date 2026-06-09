@@ -21,19 +21,19 @@ data RideRelatedNotificationConfigDimensions = RideRelatedNotificationConfigDime
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'RideRelatedNotificationConfig where
-  type DimensionsFor 'RideRelatedNotificationConfig = RideRelatedNotificationConfigDimensions
-  configTypeValue = RideRelatedNotificationConfig
-  sConfigType = SRideRelatedNotificationConfig
+instance ConfigTypeInfo 'RideRelatedNotificationConfigRider where
+  type DimensionsFor 'RideRelatedNotificationConfigRider = RideRelatedNotificationConfigDimensions
+  configTypeValue = RideRelatedNotificationConfigRider
+  sConfigType = SRideRelatedNotificationConfigRider
 
 instance ConfigDimensions RideRelatedNotificationConfigDimensions where
-  type ConfigTypeOf RideRelatedNotificationConfigDimensions = 'RideRelatedNotificationConfig
+  type ConfigTypeOf RideRelatedNotificationConfigDimensions = 'RideRelatedNotificationConfigRider
   type ConfigValueTypeOf RideRelatedNotificationConfigDimensions = [DT.RideRelatedNotificationConfig]
-  getConfigType _ = RideRelatedNotificationConfig
+  getConfigType _ = RideRelatedNotificationConfigRider
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG RideRelatedNotificationConfig)
+      (LYT.RIDER_CONFIG RideRelatedNotificationConfigRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId) (Just []))
       [ LCP.DimMatcher (.timeDiffEvent) (Just . (.timeDiffEvent)) (==)

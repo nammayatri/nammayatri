@@ -65,6 +65,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Reminder.Helper as ReminderHelper
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CMM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
@@ -79,6 +80,7 @@ import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Reminder as QReminder
+import qualified Storage.Queries.ReminderConfig as QRC
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
 import qualified Storage.Queries.VehicleInsurance as QVI
 import qualified Storage.Queries.VehiclePUC as QVPUC
@@ -205,7 +207,7 @@ processReminder Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
 
       logInfo $ "Processing reminder " <> reminderId.getId <> " of type " <> show reminder.documentType <> " for driver " <> reminder.driverId.getId
 
-      mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just reminder.documentType})
+      mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just reminder.documentType}) (Just (maybeToList <$> QRC.findByMerchantOpCityIdAndDocumentType merchantOpCityId reminder.documentType))
 
       -- Process based on document type
       case mbReminderConfig of
@@ -348,7 +350,7 @@ processInspectionReminder ::
   m ()
 processInspectionReminder reminder driver config merchantId merchantOpCityId displayName notificationType messageKey setApprovedAction = do
   now <- getCurrentTime
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let isOverdue = reminder.dueDate <= now
       isMandatory = config.isMandatory
       isVehicleRelated = reminder.documentType == DVC.InspectionHub
@@ -420,7 +422,7 @@ processDocumentExpiryReminder reminder driver reminderConfig merchantId merchant
           let isMandatory = reminderConfig.isMandatory
           if isMandatory
             then do
-              transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+              transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
               -- Disable driver when: not vehicle-related, OR vehicle-related but separateDriverVehicleEnablement is not true
               let isVehicleRelated = reminder.documentType `elem` vehicleRelatedDocumentTypes
                   shouldDisableDriver = not isVehicleRelated || transporterConfig.separateDriverVehicleEnablement /= Just True
@@ -530,7 +532,7 @@ refreshPersonDocsStatusForReminder ::
 refreshPersonDocsStatusForReminder personId logContext =
   do
     person <- BF.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
     if transporterConfig.enableManualDocumentStatusCheck == Just True
       then
         void $
@@ -558,7 +560,7 @@ refreshVehicleDocsStatusForReminder rcId logContext =
   do
     rc <- BF.runInReplica $ QVRC.findById rcId >>= fromMaybeM (InternalError $ "RC not found by id " <> rcId.getId)
     merchantOpCityId <- rc.merchantOperatingCityId & fromMaybeM (InternalError $ "merchantOperatingCityId missing for RC " <> rc.id.getId)
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     if transporterConfig.enableManualDocumentStatusCheck == Just True
       then
         void $

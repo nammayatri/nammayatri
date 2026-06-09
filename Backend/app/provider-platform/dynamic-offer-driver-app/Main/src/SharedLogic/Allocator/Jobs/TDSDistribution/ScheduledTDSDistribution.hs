@@ -32,6 +32,7 @@ import qualified Network.HTTP.Client as HTTP
 import qualified Network.HTTP.Client.TLS as TLS
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.TDSDistributionPdfFile as QPdfFile
@@ -77,7 +78,7 @@ scheduledTDSDistribution Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) d
   logInfo $ "Starting TDS Distribution job for merchant: " <> merchantId.getId
 
   -- Fetch tdsFromEmail from TransporterConfig
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = opCityId.getId}) (Just (SCTC.findByMerchantOpCityId opCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound opCityId.getId)
   fromEmail <- case transporterConfig.tdsFromEmail of
     Just e -> pure e
     Nothing -> do

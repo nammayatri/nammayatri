@@ -21,19 +21,19 @@ data ExophoneDimensions = ExophoneDimensions
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'Exophone where
-  type DimensionsFor 'Exophone = ExophoneDimensions
-  configTypeValue = Exophone
-  sConfigType = SExophone
+instance ConfigTypeInfo 'ExophoneRider where
+  type DimensionsFor 'ExophoneRider = ExophoneDimensions
+  configTypeValue = ExophoneRider
+  sConfigType = SExophoneRider
 
 instance ConfigDimensions ExophoneDimensions where
-  type ConfigTypeOf ExophoneDimensions = 'Exophone
+  type ConfigTypeOf ExophoneDimensions = 'ExophoneRider
   type ConfigValueTypeOf ExophoneDimensions = [DT.Exophone]
-  getConfigType _ = Exophone
+  getConfigType _ = ExophoneRider
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG Exophone)
+      (LYT.RIDER_CONFIG ExophoneRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOperatingCityId (Id a.merchantOperatingCityId))
       [ LCP.DimMatcher (.callService) (Just . (.callService)) (==)

@@ -43,9 +43,11 @@ import qualified Kernel.Utils.Text as TU
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.Merchant as SMerchant
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -93,7 +95,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
     throwError $ InvalidRequest "Referral Code must have 6 digits"
   let merchOpCityId = Id merchantOperatingCityId
       isMultipleDeviceIdExist_ = fromMaybe False isMultipleDeviceIdExist
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchOpCityId.getId)
   (driverReferralLinkage, checkLastActiveRideValidity) <-
     case (length referralCode.getId, refereeLocation) of
       (4, Just refereeLocation') -> do
@@ -273,7 +275,7 @@ updatePayoutRelatedFieldsIfRideValie transporterConfig merchOpCityId driverId ri
     then do
       let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) ride.updatedAt
       vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> driverId.getId)
-      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchOpCityId.getId, vehicleCategory = Just (fromMaybe VC.AUTO_CATEGORY vehicle.category), isPayoutEnabled = Nothing}) >>= fromMaybeM (PayoutConfigNotFound (show vehicle.category) merchOpCityId.getId)
+      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchOpCityId.getId, vehicleCategory = Just (fromMaybe VC.AUTO_CATEGORY vehicle.category), isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchOpCityId (fromMaybe VC.AUTO_CATEGORY vehicle.category) Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicle.category) merchOpCityId.getId)
       QDriverStats.updateTotalValidRidesAndPayoutEarnings (driverStats.totalValidActivatedRides + 1) (driverStats.totalPayoutEarnings + payoutConfig.referralRewardAmountPerRide) (cast driverId)
       QDailyStats.updateReferralStatsByDriverId (dailyStats.activatedValidRides + 1) (dailyStats.referralEarnings + payoutConfig.referralRewardAmountPerRide) DDS.Initialized driverId (utctDay localTimeOfThatDay)
     else do

@@ -48,6 +48,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Finance.EInvoice
 import SharedLogic.Finance.Wallet (computeTdsRateReason)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.SubscriptionPurchase as QSP
@@ -858,7 +859,7 @@ handleSubscriptionExpiry purchase = do
     when (purchase.ownerType == DSP.DRIVER) $
       void $
         withTryCatch "decrementOperatorTotalActiveDriversOnSubscriptionExpiry" $ do
-          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId})
+          mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = purchase.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId purchase.merchantOperatingCityId Nothing))
           whenJust mbTransporterConfig $ \tc ->
             AnalyticsExtra.decrementOperatorTotalActiveDriversIfDriverHasNoActiveSubscription tc purchase.ownerId
 

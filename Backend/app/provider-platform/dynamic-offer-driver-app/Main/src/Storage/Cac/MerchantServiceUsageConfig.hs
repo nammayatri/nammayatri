@@ -47,7 +47,7 @@ findByMerchantOpCityId id mbstickId = do
   inMemConfig <- getConfigFromMemory id
   let context = [(CCU.MerchantOperatingCityId, toJSON id.getId)]
   config <-
-    CCU.getConfigFromCacOrDB inMemConfig context mbstickId (KBF.fromCacType @SBMSUC.MerchantServiceUsageConfig) CCU.MerchantServiceUsageConfig
+    CCU.getConfigFromCacOrDB inMemConfig context mbstickId (KBF.fromCacType @SBMSUC.MerchantServiceUsageConfig) CCU.MerchantServiceUsageConfigDriver
       |<|>| ( do
                 logDebug $ "MerchantServiceUsageConfig not found in memory, fetching from DB for context: " <> show context
                 CMMSUC.findByMerchantOpCityId id

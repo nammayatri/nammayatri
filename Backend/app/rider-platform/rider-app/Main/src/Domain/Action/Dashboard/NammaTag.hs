@@ -305,7 +305,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
   let mbMerchantid = Just $ cast merchant.id
   merchantOperatingCity <- CQMOC.findByMerchantShortIdAndCity merchantShortId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   let merchantOpCityId = merchantOperatingCity.id
-  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+  _riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SQRiderConfig.findByMerchantOperatingCityId merchantOpCityId)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
   case req.domain of
     LYTU.UI_RIDER dt pt -> do
       let uiConfigReq = LYTU.UiConfigRequest {os = dt, platform = pt, merchantId = getId merchant.id, city = opCity, language = Nothing, bundle = Nothing, toss = Nothing}
@@ -330,12 +330,12 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYTU.PICKUP_ETA_CALCULATION -> do
       logicData :: PickupETA.PickupETAInput <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy PickupETA.PickupETAResult) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
+    LYTU.RIDER_CONFIG LYTU.PayoutConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTP.PayoutConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTP.PayoutConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
+    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTRN.RideRelatedNotificationConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
@@ -345,7 +345,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTM.MerchantConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTM.MerchantConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
+    LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTPN.MerchantPushNotification) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
@@ -360,7 +360,7 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTBC.BecknConfig) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy (LYTU.Config DTBC.BecknConfig)) _riderConfig.dynamicLogicUpdatePassword req logicData
-    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+    LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
       def' <- fromMaybeM (InvalidRequest "Exophone not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTE.Exophone))
       let configWrap = LYTU.Config def' Nothing 1
       logicData :: (LYTU.Config DTE.Exophone) <- YudhishthiraFlow.createLogicData configWrap (Prelude.listToMaybe req.inputData)
@@ -512,14 +512,14 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (def :: PickupETA.PickupETAInput),
             LYTU.schema = toInlinedSchemaValue (Proxy @PickupETA.PickupETAInput)
           }
-    LYTU.RIDER_CONFIG LYTU.PayoutConfig -> do
+    LYTU.RIDER_CONFIG LYTU.PayoutConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "PayoutConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTP.PayoutConfig))
       return $
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTP.PayoutConfig))
           }
-    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfig -> do
+    LYTU.RIDER_CONFIG LYTU.RideRelatedNotificationConfigRider -> do
       def' <- fromMaybeM (InvalidRequest "RideRelatedNotificationConfig not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTRN.RideRelatedNotificationConfig))
       return $
         LYTU.DomainSchemaResp
@@ -533,7 +533,7 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTM.MerchantConfig))
           }
-    LYTU.RIDER_CONFIG LYTU.MerchantPushNotification -> do
+    LYTU.RIDER_CONFIG LYTU.MerchantPushNotificationRider -> do
       def' <- fromMaybeM (InvalidRequest "MerchantPushNotification not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTPN.MerchantPushNotification))
       return $
         LYTU.DomainSchemaResp
@@ -554,7 +554,7 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
           { LYTU.defaultValue = A.toJSON (LYTU.Config def' Nothing 1),
             LYTU.schema = toInlinedSchemaValue (Proxy @(LYTU.Config DTBC.BecknConfig))
           }
-    LYTU.RIDER_CONFIG LYTU.Exophone -> do
+    LYTU.RIDER_CONFIG LYTU.ExophoneRider -> do
       def' <- fromMaybeM (InvalidRequest "Exophone not found") (Prelude.listToMaybe $ YTH.genDef (Proxy @DTE.Exophone))
       return $
         LYTU.DomainSchemaResp
@@ -735,10 +735,10 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       dims = parseDims req.dimensions
   case req.configType of
     LYTU.RiderConfig -> do
-      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId}) Nothing
+      cfg <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQRiderConfig.findByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
-    LYTU.MerchantServiceUsageConfig -> do
-      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) Nothing
+    LYTU.MerchantServiceUsageConfigRider -> do
+      cfg <- getConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantSUC.findByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantServiceConfig -> do
       cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) Nothing
@@ -746,20 +746,20 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
     LYTU.BecknConfig -> do
       cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
-    LYTU.MerchantPushNotification -> do
-      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) Nothing
+    LYTU.MerchantPushNotificationRider -> do
+      cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
-    LYTU.Exophone -> do
-      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims}) Nothing
+    LYTU.ExophoneRider -> do
+      cfgs <- getConfig (ExophoneDimensions {merchantOperatingCityId = mocId, callService = dimLookup "callService" dims}) (Just (SQExophone.findAllByMerchantOperatingCityId (Id mocId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.FRFSConfig -> do
-      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) Nothing
+      cfg <- getConfig (FRFSConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQFRFSConfig.findByMerchantOperatingCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON (maybeToList cfg)}
     LYTU.MerchantConfig -> do
-      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId}) Nothing
+      cfgs <- getConfig (MerchantConfigDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantConfig.findAllByMerchantOperatingCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
-    LYTU.RideRelatedNotificationConfig -> do
-      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing}) Nothing
+    LYTU.RideRelatedNotificationConfigRider -> do
+      cfgs <- getConfig (RideRelatedNotificationConfigDimensions {merchantOperatingCityId = mocId, timeDiffEvent = Nothing}) (Just (SQRRNC.findAllByMerchantOperatingCityId (Id mocId) (Just [])))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     _ -> throwError $ InvalidRequest $ "Config type " <> show req.configType <> " is not supported for getConfigWithDimensions"
   where
@@ -775,23 +775,23 @@ getNammaTagConfigPilotGetDimensionSchema _merchantShortId _opCity configType = d
   case configType of
     LYTU.RiderConfig ->
       pure $ mkDimSchema (Proxy @RiderConfigDimensions)
-    LYTU.PayoutConfig ->
+    LYTU.PayoutConfigRider ->
       pure $ mkDimSchema (Proxy @PayoutConfigDimensions)
-    LYTU.MerchantPushNotification ->
+    LYTU.MerchantPushNotificationRider ->
       pure $ mkDimSchema (Proxy @MerchantPushNotificationDimensions)
     LYTU.BecknConfig ->
       pure $ mkDimSchema (Proxy @BecknConfigDimensions)
-    LYTU.Exophone ->
+    LYTU.ExophoneRider ->
       pure $ mkDimSchema (Proxy @ExophoneDimensions)
     LYTU.MerchantServiceConfig ->
       pure $ mkDimSchema (Proxy @MerchantServiceConfigDimensions)
-    LYTU.MerchantServiceUsageConfig ->
+    LYTU.MerchantServiceUsageConfigRider ->
       pure $ mkDimSchema (Proxy @MerchantServiceUsageConfigDimensions)
     LYTU.FRFSConfig ->
       pure $ mkDimSchema (Proxy @FRFSConfigDimensions)
     LYTU.MerchantConfig ->
       pure $ mkDimSchema (Proxy @MerchantConfigDimensions)
-    LYTU.RideRelatedNotificationConfig ->
+    LYTU.RideRelatedNotificationConfigRider ->
       pure $ mkDimSchema (Proxy @RideRelatedNotificationConfigDimensions)
     _ -> throwError $ InvalidRequest $ "Dimension schema not available for " <> show configType
   where
@@ -819,36 +819,36 @@ postNammaTagConfigPilotCreateRow merchantShortId opCity req = do
       when (isJust existing) $ throwError $ InvalidRequest "FRFSConfig already exists for this merchantOperatingCityId"
       SQFRFSConfig.create cfg
       invalidateConfigInMem LYTU.FRFSConfig
-    LYTU.MerchantServiceUsageConfig -> do
+    LYTU.MerchantServiceUsageConfigRider -> do
       cfg :: DTMSUC.MerchantServiceUsageConfig <- parseConfigData req.configData
       existing <- SQMerchantSUC.findByMerchantOperatingCityId mocId
       when (isJust existing) $ throwError $ InvalidRequest "MerchantServiceUsageConfig already exists for this merchantOperatingCityId"
       SQMerchantSUC.create cfg
-      invalidateConfigInMem LYTU.MerchantServiceUsageConfig
-    LYTU.PayoutConfig -> do
+      invalidateConfigInMem LYTU.MerchantServiceUsageConfigRider
+    LYTU.PayoutConfigRider -> do
       cfg :: DTP.PayoutConfig <- parseConfigData req.configData
       SQPayoutConfig.create cfg
-      invalidateConfigInMem LYTU.PayoutConfig
+      invalidateConfigInMem LYTU.PayoutConfigRider
     LYTU.MerchantConfig -> do
       cfg :: DTM.MerchantConfig <- parseConfigData req.configData
       SQMerchantConfig.create cfg
       invalidateConfigInMem LYTU.MerchantConfig
-    LYTU.RideRelatedNotificationConfig -> do
+    LYTU.RideRelatedNotificationConfigRider -> do
       cfg :: DTRN.RideRelatedNotificationConfig <- parseConfigData req.configData
       SQRRNC.create cfg
-      invalidateConfigInMem LYTU.RideRelatedNotificationConfig
-    LYTU.MerchantPushNotification -> do
+      invalidateConfigInMem LYTU.RideRelatedNotificationConfigRider
+    LYTU.MerchantPushNotificationRider -> do
       cfg :: DTPN.MerchantPushNotification <- parseConfigData req.configData
       SQMerchantPN.create cfg
-      invalidateConfigInMem LYTU.MerchantPushNotification
+      invalidateConfigInMem LYTU.MerchantPushNotificationRider
     LYTU.BecknConfig -> do
       cfg :: DTBC.BecknConfig <- parseConfigData req.configData
       SQBecknConfig.create cfg
       invalidateConfigInMem LYTU.BecknConfig
-    LYTU.Exophone -> do
+    LYTU.ExophoneRider -> do
       cfg :: DTE.Exophone <- parseConfigData req.configData
       SQExophone.create cfg
-      invalidateConfigInMem LYTU.Exophone
+      invalidateConfigInMem LYTU.ExophoneRider
     LYTU.MerchantServiceConfig -> do
       cfg :: DTMSC.MerchantServiceConfig <- parseConfigData req.configData
       SQMerchantSC.create cfg

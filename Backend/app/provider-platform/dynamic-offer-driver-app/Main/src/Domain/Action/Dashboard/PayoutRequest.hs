@@ -37,6 +37,7 @@ import qualified Lib.Payment.Payout.Registration as Registration
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPC
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.ScheduledPayoutConfig (ScheduledPayoutConfigDimensions (..))
 import qualified Storage.Queries.DriverInformation as QDI
@@ -113,7 +114,7 @@ refundRegistrationAmount merchantShortId opCity req = do
 
   -- Get payout call
   let vehicleCategory = DV.AUTO_CATEGORY
-  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
+  payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, vehicleCategory = Just vehicleCategory, isPayoutEnabled = Nothing}) (Just (maybeToList <$> CQPC.findByPrimaryKey merchantOpCity.id vehicleCategory Nothing)) >>= fromMaybeM (PayoutConfigNotFound (show vehicleCategory) merchantOpCity.id.getId)
   let createPayoutOrderCall = TP.createPayoutOrder payoutServiceName merchantOpCity.id driverId mbPersonBankAccount
 
   -- Delegate to lib — it looks up PaymentOrder for amount + VPA, checks idempotency
@@ -159,7 +160,7 @@ upsertScheduledPayoutConfig merchantShortId opCity req = do
   merchant <- QM.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
 
-  mbExisting <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, isEnabled = Nothing, payoutCategory = Just req.payoutCategory})
+  mbExisting <- getOneConfig (ScheduledPayoutConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId, isEnabled = Nothing, payoutCategory = Just req.payoutCategory}) (Just (maybeToList <$> QSPC.findByMerchantOpCityIdAndCategory merchantOpCity.id req.payoutCategory))
   case mbExisting of
     Just existing -> do
       now <- getCurrentTime

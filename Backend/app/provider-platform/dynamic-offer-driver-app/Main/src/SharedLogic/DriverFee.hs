@@ -34,6 +34,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common hiding (UTCTime)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.Invoice as QINV
@@ -244,7 +245,7 @@ getStartTimeAndEndTimeRange merchantOpCityId _driverId transporterConfig = do
   now <- getCurrentTime
   transporterConfig' <- case transporterConfig of
     Just tc -> pure tc
-    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let potentialStart = addUTCTime transporterConfig'.driverPaymentCycleStartTime (UTCTime (utctDay now) (secondsToDiffTime 0))
       startTime = if now >= potentialStart then potentialStart else addUTCTime (-1 * transporterConfig'.driverPaymentCycleDuration) potentialStart
       endTime = addUTCTime transporterConfig'.driverPaymentCycleDuration startTime

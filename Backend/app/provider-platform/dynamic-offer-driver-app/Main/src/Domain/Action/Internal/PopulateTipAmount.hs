@@ -34,6 +34,7 @@ import qualified Lib.Finance.Invoice.Service as InvoiceSvc
 import qualified Lib.Finance.Ledger.Service as LedgerSvc
 import qualified SharedLogic.Finance.InvoiceRegeneration as InvoiceRegen
 import qualified SharedLogic.Finance.Wallet as Wallet
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as QM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -53,7 +54,7 @@ populateTipAmount rideId tipAmount apiKey = do
     throwError $ AuthBlocked "Invalid BPP internal api key"
 
   QRide.updateTipAmountField (Just tipAmount) ride.id
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   mbDailyStats <- QDailyStats.findByDriverIdAndDate ride.driverId (utctDay localTime)
   case mbDailyStats of

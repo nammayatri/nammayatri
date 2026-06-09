@@ -78,6 +78,7 @@ import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Types.GateInfo as DGI
 import Storage.Beam.SpecialZone ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- | Full quotation.breakup for a 'FareParameters': display tags followed by
@@ -1075,7 +1076,7 @@ calculateFareParameters params = do
   -- Check if V2 features are enabled via TransporterConfig
   isV2Enabled <- case params.merchantOperatingCityId of
     Just merchantOpCityId -> do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       let v2Enabled = maybe False (fromMaybe False . (.enableFareCalculatorV2)) transporterConfig
       logDebug $ "FareCalculator: TransporterConfig for merchantOpCityId " <> merchantOpCityId.getId <> " - enableFareCalculatorV2: " <> show (transporterConfig >>= (.enableFareCalculatorV2)) <> ", V2 enabled: " <> show v2Enabled
       pure v2Enabled
@@ -1214,7 +1215,7 @@ applyAirportEntryFee ::
 applyAirportEntryFee params fareParams = case (params.merchantOperatingCityId, params.pickupGateId) of
   (Just merchantOperatingCityId, Just gateIdText) -> do
     transporterConfig <-
-      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId})
+      getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing))
         >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
     if not (fromMaybe False transporterConfig.airportEntryFeeEnabled)
       then pure fareParams

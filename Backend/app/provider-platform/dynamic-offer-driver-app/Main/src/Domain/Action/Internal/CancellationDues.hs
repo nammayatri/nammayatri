@@ -14,6 +14,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
@@ -49,7 +50,7 @@ customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCa
       when (duesDetails.paymentStatus /= DCDD.PENDING) $
         throwError $ InvalidRequest $ "Cancellation dues for rideId " <> req.rideId <> " are already " <> show duesDetails.paymentStatus <> ". Cannot waive off."
     Nothing -> logWarning $ "No CancellationDuesDetails entry found for rideId: " <> req.rideId <> ". Proceeding with legacy flow."
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   logInfo $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel
   unless (ride.cancellationChargesOnCancel == Just req.waiveOffAmount) $ do
     logWarning $ "Cancellation Due Amount is not equal to the waived off amount for riderId " <> riderDetails.id.getId <> " rideId " <> req.rideId <> " bookingId " <> req.bookingId <> " waiveOffAmount " <> show req.waiveOffAmount <> " cancellationDues " <> show ride.cancellationChargesOnCancel

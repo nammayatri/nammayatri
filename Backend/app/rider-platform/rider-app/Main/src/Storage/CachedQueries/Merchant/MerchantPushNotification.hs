@@ -14,10 +14,6 @@
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Storage.CachedQueries.Merchant.MerchantPushNotification
-  {-# WARNING
-    "This module contains direct calls to the table and redis. \
-  \ Use Storage.ConfigPilot.Config.MerchantPushNotification (getConfig) instead for reads."
-    #-}
   ( create,
     findAllByMerchantOpCityId,
     findMatchingMerchantPN,
