@@ -4,13 +4,11 @@ Unified mock server for NammaYatri merchant service providers.
 
 Each service handler lives in services/<name>.py with a handle(handler, path, body) function.
 
-Two override mechanisms for test automation:
+Override mechanism for test automation:
 
-1. POST /mock/status  — keyed by explicit ID (e.g., payment order ID)
-   {"service": "juspay", "id": ["order-123"], "status": "CHARGED", "data": {"amount": 150}}
-
-2. POST /mock/override — keyed by request field extraction (middleware)
+  POST /mock/override — keyed by request field extraction (middleware)
    {"service": "cmrl", "extract": "body.mob", "value": "9876543210",
+    "match": "/orders",   // optional: only fire when path contains this
     "response": {"returnCode": "500", "returnMessage": "Technical Failure"}}
 
    Extract syntax:
@@ -23,16 +21,74 @@ Two override mechanisms for test automation:
 """
 
 import argparse
+import collections
+import itertools
 import json
 import logging
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import os
+import queue
+import threading
+import time
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, sandbox_proxy, gims
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
+
+# ── Hit recording for the test-dashboard "Mock calls" panel ──
+#
+# Every routed outbound-service call captures a snapshot of (req, resp, duration).
+# Capped ring buffer so a long-running mock-server doesn't grow unbounded.
+# Admin endpoints (/mock/...) are NOT recorded — they're noise, not outbound calls.
+_HITS_MAX = 4000
+_HIT_BODY_MAX = 64 * 1024  # bytes, per direction
+_HITS = collections.deque(maxlen=_HITS_MAX)
+_HITS_LOCK = threading.Lock()
+_HIT_SEQ = itertools.count(1)
+
+
+def _truncate_for_hit(body):
+    """Return body as a JSON-serializable value, truncating oversize payloads."""
+    if body is None:
+        return None
+    if isinstance(body, bytes):
+        if len(body) > _HIT_BODY_MAX:
+            body = body[:_HIT_BODY_MAX]
+        try:
+            text = body.decode("utf-8")
+        except UnicodeDecodeError:
+            return {"_truncated": True, "_binary": True, "_bytes": len(body)}
+    else:
+        text = body if isinstance(body, str) else json.dumps(body, default=str)
+        if len(text) > _HIT_BODY_MAX:
+            text = text[:_HIT_BODY_MAX]
+    try:
+        return json.loads(text)
+    except (json.JSONDecodeError, ValueError):
+        return text
+
+
+# SSE subscriber queues — each /mock/hits/stream client gets one, populated by
+# record_hit. Bounded to avoid pinning memory if a slow client falls behind.
+_STREAM_SUBSCRIBERS: list[queue.Queue] = []
+_STREAM_LOCK = threading.Lock()
+
+
+def record_hit(hit):
+    with _HITS_LOCK:
+        hit["id"] = next(_HIT_SEQ)
+        _HITS.append(hit)
+        published = dict(hit)
+    with _STREAM_LOCK:
+        for q in _STREAM_SUBSCRIBERS:
+            try:
+                q.put_nowait(published)
+            except queue.Full:
+                pass
+
 
 # Route table: (path substring, module, service name for overrides)
 ROUTES = [
@@ -49,8 +105,13 @@ ROUTES = [
     ("/mmi",         mmi,         "mmi"),
     ("/nextbillion", nextbillion, "nextbillion"),
     ("/gridline",    gridline,    "gridline"),
-    ("/nandi",       transit,     "transit"),
-    ("/gtfs",        transit,     "transit"),
+    ("/route-stop-mapping", gims,      "gims"),
+    ("/example-trip",      gims,      "gims"),
+    ("/route/",            gims,      "gims"),
+    ("/fleet-operator",    gims,      "gims"),
+    ("/nandi",         sandbox_proxy, "nandi"),
+    ("/gtfs-inmemory", sandbox_proxy, "gtfs_inmemory"),
+    ("/gtfs",          transit,       "transit"),
     ("/hyperverge",  hyperverge,  "hyperverge"),
     ("/gullak",      gullak,      "gullak"),
     ("/openai",      openai,      "openai"),
@@ -60,6 +121,10 @@ ROUTES = [
     ("/mlpricing",   mlpricing,   "mlpricing"),
     ("/ondc",        ondc,        "ondc"),
     ("/cac",         cac,         "cac"),
+    ("/fcm",         fcm,         "fcm"),
+    ("/sms",         sms,         "sms"),
+    ("/idfy",        idfy,        "idfy"),
+    ("/maps",        google,      "google"),
 ]
 
 
@@ -80,31 +145,18 @@ class MockHandler(BaseHTTPRequestHandler):
     # ── Override access for handlers ──
 
     def _get_override(self, service, *candidate_ids):
-        """Check status store for an override matching any candidate ID.
-        Also checks extract-based rules and merges request-level overrides."""
-        status_val = None
-        data = {}
-        # Check explicit ID-based status store
-        for cid in candidate_ids:
-            if cid:
-                entry = status_store.get_status(service, cid)
-                if entry:
-                    status_val = entry["status"]
-                    data = entry.get("data", {})
-                    break
-        # If no explicit match, try extract-based rules
-        if status_val is None:
-            parsed = urlparse(self.path)
-            extract_status, extract_data = status_store.get_extract_status(
-                service, parsed.path, None, None, None)
-            if extract_status:
-                status_val = extract_status
-                data = extract_data
-        # Merge request-level overrides from middleware (set by _apply_overrides)
-        req_override = getattr(self, "_request_override", {})
-        if req_override:
-            data = status_store.deep_merge(data, req_override)
-        return status_val, data
+        """Return (status, extra_data) from the middleware-matched override.
+
+        `candidate_ids` is accepted for signature compatibility with existing
+        handlers but unused — matching is driven entirely by /mock/override
+        rules (extract + value), evaluated in _apply_overrides.
+        """
+        del candidate_ids  # unused
+        req_override = dict(getattr(self, "_request_override", {}) or {})
+        if not req_override:
+            return None, {}
+        status_val = req_override.pop("status", None)
+        return status_val, req_override
 
     # ── Main handler ──
 
@@ -116,9 +168,48 @@ class MockHandler(BaseHTTPRequestHandler):
 
         log.info(f"{self.command} {self.path}")
 
+        # Set up hit recording for this request. `_captured_*` are filled by
+        # `_json()` on the way out; non-admin paths get a record appended in
+        # the finally below. Admin paths (/mock/..., /health, /) are tagged
+        # so the SSE stream can filter them out by default.
+        is_admin = path.startswith("/mock/") or path in ("/", "/health", "/flush-redis")
+        self._hit_start = time.time()
+        self._hit_request_headers = {k: v for k, v in self.headers.items()}
+        self._hit_request_body = body
+        self._hit_run_id = self.headers.get("X-Test-Run-Id") or None
+        self._captured_status = None
+        self._captured_response_body = None
+        self._captured_response_headers = None
+        self._hit_admin = is_admin
+        try:
+            return self._dispatch(parsed, path, query, body)
+        finally:
+            try:
+                record_hit({
+                    "timestamp": self._hit_start,
+                    "duration_ms": int((time.time() - self._hit_start) * 1000),
+                    "service": getattr(self, "_hit_service", None),
+                    "method": self.command,
+                    "path": path,
+                    "query": query,
+                    "url": self.path,
+                    "request_headers": dict(self._hit_request_headers),
+                    "request_body": _truncate_for_hit(self._hit_request_body),
+                    "status": self._captured_status if self._captured_status is not None else 200,
+                    "response_headers": self._captured_response_headers or {},
+                    "response_body": self._captured_response_body,
+                    "run_id": self._hit_run_id,
+                    "admin": is_admin,
+                })
+            except Exception:
+                log.exception("failed to record mock hit")
+
+    def _dispatch(self, parsed, path, query, body):
+        # ── Hit-buffer admin endpoints (must come before the /mock prefix dispatch) ──
+        if path == "/mock/hits/stream":
+            return self._mock_hits_stream(parsed)
+
         # ── Mock APIs ──
-        if path == "/mock/status":
-            return self._mock_status(body)
         if path == "/mock/override":
             return self._mock_override(body)
 
@@ -159,6 +250,7 @@ class MockHandler(BaseHTTPRequestHandler):
         for prefix, module, svc_name in ROUTES:
             if prefix in path:
                 # Middleware: check override rules and attach to handler
+                self._hit_service = svc_name
                 self._apply_overrides(svc_name, path, query, body)
                 module.handle(self, path, body)
                 return
@@ -182,52 +274,70 @@ class MockHandler(BaseHTTPRequestHandler):
         override = status_store.check_overrides(service, path, query, headers, body_parsed, body_raw=body)
         self._request_override = override
 
-    # ── Mock status API (existing) ──
+    # ── Mock hits API (test-dashboard "Mock calls" panel) ──
 
-    def _mock_status(self, body):
-        if self.command == "GET":
-            result = {"statuses": status_store.list_statuses(), "overrides": status_store.list_overrides()}
-            return self._json(result)
+    def _mock_hits_stream(self, parsed):
+        """GET /mock/hits/stream?include_admin=1
 
-        if self.command == "DELETE":
-            status_store.clear_statuses()
-            status_store.clear_overrides()
-            return self._json({"cleared": True})
+        Server-Sent Events: pushes a `data: {hit-json}\\n\\n` frame for every
+        hit recorded while this connection is open. No backlog replay — the
+        caller opens the stream before the API call (mirroring the log-tail
+        pattern) and closes it once it's done + a small grace window for
+        async fan-out. Heartbeats let the server detect a closed client.
+        """
+        if self.command != "GET":
+            return self._json({"error": "method not allowed"}, status=405)
+        from urllib.parse import parse_qs
+        params = parse_qs(parsed.query or "")
+        include_admin = params.get("include_admin", ["0"])[0] in ("1", "true", "yes")
 
-        if self.command == "POST":
-            try:
-                data = json.loads(body) if body else {}
-            except json.JSONDecodeError:
-                return self._json({"error": "invalid JSON"}, status=400)
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
 
-            service = data.get("service")
-            identifiers = data.get("id")
-            status = data.get("status")
-            extract = data.get("extract")  # e.g. "path.2" to extract ID from URL path index 2
+        # Subscribe BEFORE returning headers so any hit recorded between now
+        # and the client's first read is queued (not dropped).
+        q: queue.Queue = queue.Queue(maxsize=1024)
+        with _STREAM_LOCK:
+            _STREAM_SUBSCRIBERS.append(q)
+        try:
+            while True:
+                try:
+                    hit = q.get(timeout=10)
+                except queue.Empty:
+                    try:
+                        self.wfile.write(b": keepalive\n\n")
+                        self.wfile.flush()
+                        continue
+                    except (BrokenPipeError, ConnectionResetError):
+                        return
+                if not include_admin and hit.get("admin"):
+                    continue
+                try:
+                    self.wfile.write(b"data: ")
+                    self.wfile.write(json.dumps(hit, default=str).encode("utf-8"))
+                    self.wfile.write(b"\n\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    return
+        finally:
+            with _STREAM_LOCK:
+                try:
+                    _STREAM_SUBSCRIBERS.remove(q)
+                except ValueError:
+                    pass
 
-            if not service or not status:
-                return self._json({"error": "service and status are required"}, status=400)
-            if not identifiers and not extract:
-                return self._json({"error": "either id (string or array) or extract (e.g. 'path.2') is required"}, status=400)
-
-            if identifiers:
-                count = status_store.set_status(service, identifiers, status, data.get("data"))
-                return self._json({"ok": True, "service": service, "id": identifiers, "status": status, "ttl": status_store.STATUS_TTL, "updated": count})
-            else:
-                # Store as an extract-based rule: when a request to this service
-                # has a matching path/body/query value, return this status
-                match = data.get("match")  # e.g. "/orders" — only trigger on paths containing this
-                status_store.set_extract_status(service, extract, status, match=match, data=data.get("data"))
-                return self._json({"ok": True, "service": service, "extract": extract, "match": match, "status": status, "ttl": status_store.STATUS_TTL})
-
-        return self._json({"error": "method not allowed"}, status=405)
-
-    # ── Mock override API (new) ──
+    # ── Mock override API ──
 
     def _mock_override(self, body):
         """
         POST /mock/override — add a request-matching override rule
           {"service": "cmrl", "extract": "body.mob", "value": "9876543210",
+           "match": "/orders",      // optional: only fire when path contains this
            "response": {"returnCode": "500", "returnMessage": "Technical Failure"}}
 
         GET /mock/override — list all active overrides
@@ -263,12 +373,13 @@ class MockHandler(BaseHTTPRequestHandler):
             extract = data.get("extract")
             value = data.get("value")
             response = data.get("response")
+            match = data.get("match")
 
             if not service or not extract or value is None or not response:
                 return self._json({"error": "service, extract, value, and response are required"}, status=400)
 
-            status_store.add_override(service, extract, value, response)
-            return self._json({"ok": True, "service": service, "extract": extract, "value": str(value), "ttl": status_store.STATUS_TTL})
+            status_store.add_override(service, extract, value, response, match=match)
+            return self._json({"ok": True, "service": service, "extract": extract, "value": str(value), "match": match, "ttl": status_store.STATUS_TTL})
 
         return self._json({"error": "method not allowed"}, status=405)
 
@@ -281,7 +392,16 @@ class MockHandler(BaseHTTPRequestHandler):
     # outside the dev stack.
 
     _SQL_WHERE_OPS = {"=", "!=", "<", "<=", ">", ">=", "LIKE", "IN", "IS NULL", "IS NOT NULL"}
-    _SQL_DB_DEFAULT = {"host": "localhost", "port": 5434, "user": "atlas_app_user"}
+    # `atlas_superuser` has SELECT across all schemas (atlas_app + atlas_driver_offer_bpp + …).
+    # `atlas_app_user` is scoped to atlas_app only and 500s on cross-schema queries.
+    # Local dev Postgres uses trust auth so password is ignored — kept optional for
+    # environments that switch to md5/scram. Override any of these via env vars.
+    _SQL_DB_DEFAULT = {
+        "host": os.environ.get("MOCK_SQL_HOST", "localhost"),
+        "port": int(os.environ.get("MOCK_SQL_PORT", "5434")),
+        "user": os.environ.get("MOCK_SQL_USER", "atlas_superuser"),
+        **({"password": os.environ["MOCK_SQL_PASSWORD"]} if os.environ.get("MOCK_SQL_PASSWORD") else {}),
+    }
 
     def _build_where(self, clauses):
         """Build a (SQL, params) pair from a where_clause list.
@@ -940,9 +1060,34 @@ class MockHandler(BaseHTTPRequestHandler):
 
     def _json(self, data, status=200, default=None):
         body = json.dumps(data, default=default).encode()
+        # Capture for the hit recorder before sending.
+        try:
+            self._captured_status = status
+            self._captured_response_body = _truncate_for_hit(body)
+            self._captured_response_headers = {"Content-Type": "application/json", "Content-Length": str(len(body))}
+        except Exception:
+            pass
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _raw(self, status, content_type, body, extra_headers=None):
+        if isinstance(body, str):
+            body = body.encode()
+        try:
+            self._captured_status = status
+            self._captured_response_body = _truncate_for_hit(body)
+            self._captured_response_headers = {"Content-Type": content_type, "Content-Length": str(len(body))}
+        except Exception:
+            pass
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        if extra_headers:
+            for k, v in extra_headers.items():
+                self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
@@ -950,14 +1095,33 @@ class MockHandler(BaseHTTPRequestHandler):
         pass
 
 
+class _QuietThreadingHTTPServer(ThreadingHTTPServer):
+    """ThreadingHTTPServer that silently drops client-disconnect exceptions.
+
+    `socketserver.BaseServer.handle_error` prints a traceback for every
+    exception raised out of the request handler. The dashboard's SSE stream
+    (/mock/hits/stream) and Postman/test-runner clients routinely close
+    connections mid-request, producing a flood of ConnectionResetError /
+    BrokenPipeError tracebacks that are pure noise — the handler itself
+    already catches these where they matter.
+    """
+
+    def handle_error(self, request, client_address):
+        import sys as _sys
+        exc = _sys.exc_info()[1]
+        if isinstance(exc, (ConnectionResetError, BrokenPipeError, ConnectionAbortedError)):
+            return
+        super().handle_error(request, client_address)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Unified mock server for NammaYatri")
     parser.add_argument("--port", type=int, default=8080, help="Port (default: 8080)")
     args = parser.parse_args()
 
-    server = HTTPServer(("0.0.0.0", args.port), MockHandler)
+    server = _QuietThreadingHTTPServer(("0.0.0.0", args.port), MockHandler)
     log.info(f"Mock server running on :{args.port}")
-    log.info("APIs: POST/GET/DELETE /mock/status, POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
+    log.info("APIs: POST/GET/DELETE /mock/override, POST /mock/sql/select, POST /mock/sql/update, POST /mock/sql/insert, POST /mock/scheduler/trigger, POST /mock/scheduler/peek, POST /mock/scheduler/clear")
     log.info(f"Services: {', '.join(r[0].strip('/') for r in ROUTES)}")
     try:
         server.serve_forever()

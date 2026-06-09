@@ -12,6 +12,8 @@ export interface PostmanRuntimeResult {
   assertions: Array<{ name: string; passed: boolean; error?: string }>;
   consoleLogs: string[];
   error?: string;
+  /** Step name requested via pm.execution.setNextRequest(), if any */
+  nextRequest?: string;
 }
 
 export interface VariableStores {
@@ -130,7 +132,8 @@ export async function executeTestScript(
   script: string,
   responseData: any,
   responseStatus: number,
-  stores: VariableStores
+  stores: VariableStores,
+  stepName?: string
 ): Promise<PostmanRuntimeResult> {
   const assertions: PostmanRuntimeResult['assertions'] = [];
   const consoleLogs: string[] = [];
@@ -140,6 +143,10 @@ export async function executeTestScript(
   const pm: any = buildPmObject(responseData, responseStatus, stores, assertions);
   pm.sendRequest = sendRequestShim;
 
+  let nextRequest: string | undefined;
+  pm.execution.setNextRequest = (name: string) => { nextRequest = name; };
+  pm.info = { requestName: stepName ?? '' };
+
   const consoleObj = {
     log: (...args: any[]) => consoleLogs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')),
     warn: (...args: any[]) => consoleLogs.push('[WARN] ' + args.join(' ')),
@@ -148,7 +155,7 @@ export async function executeTestScript(
 
   try {
     const postman = {
-      setNextRequest: () => {},
+      setNextRequest: (name: string) => { nextRequest = name; },
       setEnvironmentVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
       getEnvironmentVariable: (key: string) => stores.environment[key] ?? '',
       setGlobalVariable: (key: string, val: any) => { stores.environment[key] = String(val ?? ''); },
@@ -165,7 +172,7 @@ export async function executeTestScript(
     return { assertions, consoleLogs, error: e.message };
   }
 
-  return { assertions, consoleLogs };
+  return { assertions, consoleLogs, nextRequest };
 }
 
 /**
@@ -176,13 +183,15 @@ export async function executeTestScript(
 export async function executePrereqScript(
   script: string,
   stores: VariableStores
-): Promise<{ consoleLogs: string[]; error?: string }> {
+): Promise<{ consoleLogs: string[]; error?: string; skipped?: boolean }> {
   const consoleLogs: string[] = [];
   const assertions: PostmanRuntimeResult['assertions'] = [];
 
   const { setTimeoutShim, sendRequestShim, drain } = makeAsyncHelpers(consoleLogs);
 
   const pm: any = buildPmObject(null, 0, stores, assertions);
+  let skipped = false;
+  pm.execution = { skipRequest: () => { skipped = true; } };
   pm.sendRequest = sendRequestShim;
 
   const consoleObj = {
@@ -205,10 +214,10 @@ export async function executePrereqScript(
     fn(pm, consoleObj, setTimeoutShim, Math, String, Date, JSON, postman);
     await drain();
   } catch (e: any) {
-    return { consoleLogs, error: e.message };
+    return { consoleLogs, error: e.message, skipped };
   }
 
-  return { consoleLogs };
+  return { consoleLogs, skipped };
 }
 
 // ── pm object builder ──
@@ -284,7 +293,7 @@ function createExpectChain(val: any): any {
   const c: any = {};
 
   // Passthrough chainable words — return same object, no recursion
-  for (const word of ['to', 'be', 'have', 'that', 'is', 'and']) {
+  for (const word of ['to', 'be', 'have', 'that', 'is', 'and', 'at']) {
     Object.defineProperty(c, word, { get: () => c, configurable: true });
   }
   Object.defineProperty(c, 'not', {
@@ -371,9 +380,39 @@ function createExpectChain(val: any): any {
     return c;
   };
 
-  c.below = (n: number) => {
+  c.below = c.lessThan = (n: number) => {
     if (neg ? currentVal < n : currentVal >= n) {
       throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be below ${n}`);
+    }
+    return c;
+  };
+
+  c.most = (n: number) => {
+    if (neg ? currentVal <= n : currentVal > n) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be at most ${n}`);
+    }
+    return c;
+  };
+
+  c.least = (n: number) => {
+    if (neg ? currentVal >= n : currentVal < n) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be at least ${n}`);
+    }
+    return c;
+  };
+
+  c.closeTo = c.approximately = (expected: number, delta: number) => {
+    const pass = typeof currentVal === 'number' && Math.abs(currentVal - expected) <= delta;
+    if (neg ? pass : !pass) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be close to ${expected} ± ${delta}`);
+    }
+    return c;
+  };
+
+  c.within = (start: number, finish: number) => {
+    const pass = currentVal >= start && currentVal <= finish;
+    if (neg ? pass : !pass) {
+      throw new Error(`expected ${currentVal} ${neg ? 'not ' : ''}to be within ${start}..${finish}`);
     }
     return c;
   };

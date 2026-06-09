@@ -53,6 +53,7 @@ data PersonE e = Person
     mobileNumber :: Kernel.Prelude.Maybe (Kernel.External.Encryption.EncryptedHashedField e Kernel.Prelude.Text),
     nyClubConsent :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     onboardedFromDashboard :: Kernel.Prelude.Bool,
+    operatorBadgeToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     passwordHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
     qrImageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -111,6 +112,7 @@ instance EncryptedItem Person where
           mobileNumber = mobileNumber_,
           nyClubConsent = nyClubConsent entity,
           onboardedFromDashboard = onboardedFromDashboard entity,
+          operatorBadgeToken = operatorBadgeToken entity,
           passwordHash = passwordHash entity,
           qrImageId = qrImageId entity,
           reactBundleVersion = reactBundleVersion entity,
@@ -161,6 +163,7 @@ instance EncryptedItem Person where
             mobileNumber = mobileNumber_,
             nyClubConsent = nyClubConsent entity,
             onboardedFromDashboard = onboardedFromDashboard entity,
+            operatorBadgeToken = operatorBadgeToken entity,
             passwordHash = passwordHash entity,
             qrImageId = qrImageId entity,
             reactBundleVersion = reactBundleVersion entity,
@@ -185,9 +188,17 @@ type Driver = Person
 
 data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY | NON_BINARY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL | GIMS_EMAIL_PASSWORD | CONDUCTORTOKEN deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
-data Role = DRIVER | ADMIN | FLEET_OWNER | FLEET_BUSINESS | OPERATOR deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Role
+  = DRIVER
+  | ADMIN
+  | FLEET_OWNER
+  | FLEET_BUSINESS
+  | OPERATOR
+  | BUS_CONDUCTOR
+  | BUS_DRIVER
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
 
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
 

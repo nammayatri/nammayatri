@@ -3,7 +3,6 @@ import { Config, Step } from '../types';
 import { ApiDef } from '../api-catalog/types';
 import { ParsedStep } from './postman-parser';
 import { resolveVariables, executeTestScript, executePrereqScript, VariableStores, PostmanRuntimeResult } from './postman-runtime';
-import { startLogCapture, stopLogCapture } from './context';
 import { PROXY_BASE } from '../config';
 
 export interface ApiResult {
@@ -274,6 +273,7 @@ const SERVICE_PROXY_MAP: Record<string, string> = {
   'rider-dashboard': '/proxy/rider-dashboard',
   'mock-idfy': '/proxy/mock-idfy',
   'mock-server': '/proxy/mock-server',
+  'juspay-payment': '/proxy/juspay-payment',
 };
 
 export interface PostmanStepResult extends ApiResult {
@@ -289,6 +289,12 @@ export interface PostmanStepResult extends ApiResult {
   resolvedHeaders?: Record<string, string>;
   /** Response headers (lower-cased keys, as returned by axios) */
   responseHeaders?: Record<string, string>;
+  /** Upstream latency in ms — measured on context-api side (excludes browser/nginx/proxy overhead) */
+  upstreamMs: number;
+  /** True if the step's prerequest script invoked pm.execution.skipRequest() */
+  skipped?: boolean;
+  /** Step name requested via pm.execution.setNextRequest(), if any */
+  nextRequest?: string;
 }
 
 /**
@@ -300,11 +306,21 @@ export async function callPostmanStep(
 ): Promise<PostmanStepResult> {
   // 1. Execute prerequest script (variable init only, delays handled by test script)
   if (step.prereqScript) {
-    await executePrereqScript(step.prereqScript, stores);
+    const prereq = await executePrereqScript(step.prereqScript, stores);
+    if (prereq.skipped) {
+      return {
+        ok: true, status: 0, data: null, elapsed: 0, upstreamMs: 0,
+        assertions: [], consoleLogs: prereq.consoleLogs, serviceLogs: {},
+        resolvedUrl: step.pathTemplate, resolvedBody: undefined, resolvedHeaders: {}, responseHeaders: {},
+        skipped: true,
+      };
+    }
   }
 
-  // 2. Start tail -f on all service logs
-  const logToken = await startLogCapture();
+  // Log + mock-hits capture is the *caller's* responsibility now — see
+  // startStepCapture() in CollectionRunner. It opens both streams before this
+  // call, signals done() after, and stitches serviceLogs/mockHits onto the
+  // step state.
 
   // 4. Resolve URL
   const resolvedPath = resolveVariables(step.pathTemplate, stores);
@@ -354,6 +370,9 @@ export async function callPostmanStep(
   }
 
   const elapsed = Math.round(performance.now() - start);
+  // X-Upstream-Latency-Ms = time measured on context-api side for the upstream
+  // HTTP call only (excludes browser, nginx, proxy overhead)
+  const upstreamMs = parseInt(responseHeaders['x-upstream-latency-ms'] || '0', 10) || elapsed;
 
   // Auto-record coverage for Postman steps
   _recordCoverageHit(step.service, step.method, resolvedPath, body);
@@ -366,18 +385,16 @@ export async function callPostmanStep(
   if (step.testScript) {
     // Test script can use pm.sendRequest + real setTimeout from inside (postman-runtime.ts drains all queued
     // async callbacks before resolving), so polling/sleep-then-check patterns just work — no special-casing here.
-    const result = await executeTestScript(step.testScript, data, status, stores);
+    const result = await executeTestScript(step.testScript, data, status, stores, step.name);
     assertions = result.assertions;
     consoleLogs = result.consoleLogs;
     scriptError = result.error;
+    if (result.nextRequest !== undefined) {
+      return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders, nextRequest: result.nextRequest };
+    }
   }
 
-  // 9. Stop capture. The backend's stop_log_tails does adaptive settle waiting
-  //    (no new lines for `settle_ms`, capped at `max_wait_ms`) — that's where
-  //    the wait for async service activity (beckn callbacks, allocator) lives.
-  const serviceLogs = logToken ? await stopLogCapture(logToken) : {};
-
-  return { ok, status, data, elapsed, assertions, consoleLogs, scriptError, serviceLogs, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
 function normalizeHeaders(h: any): Record<string, string> {
