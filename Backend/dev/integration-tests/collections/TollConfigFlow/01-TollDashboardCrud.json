@@ -1,0 +1,457 @@
+{
+  "info": {
+    "name": "Toll Dashboard CRUD",
+    "description": "Provider dashboard toll APIs: GeoJSON LineString + Polygon gates (upsert only). Legacy LineSegment create is rejected; legacy rows may still exist in DB.\n\nEnvironments: Local_NY_Bangalore (NAMMA_YATRI_PARTNER), Local_BT_Delhi (BHARAT_TAXI_PARTNER). Gate coords come from env (toll_* vars).\n\nPrerequisites: see TollConfigFlow/Rules.md. ./run-tests.sh toll-config auto-seeds access_matrix + provider-dashboard.sql.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "  }",
+          "})();",
+          "if (!pm.collectionVariables.get('_test_toll_suffix')) {",
+          "  var suffix = String(Math.floor(100000 + Math.random() * 899999));",
+          "  pm.collectionVariables.set('_test_toll_suffix', suffix);",
+          "  pm.environment.set('test_toll_linestring_name', 'INT_TEST_TOLL_LINESTRING_' + suffix);",
+          "  pm.environment.set('test_toll_polygon_name', 'INT_TEST_TOLL_POLYGON_' + suffix);",
+          "  console.log('Toll test suffix:', suffix);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Switch City (Dashboard)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reject legacy LineSegment gate on create",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"INT_TEST_TOLL_LEGACY_REJECT_{{_test_toll_suffix}}\",\n  \"price\": {{toll_test_price}},\n  \"currency\": \"INR\",\n  \"isAutoRickshawAllowed\": true,\n  \"isTwoWheelerAllowed\": false,\n  \"tollStartGates\": [\n    {\n      \"start\": { \"lat\": {{toll_start_lat1}}, \"lon\": {{toll_start_lon1}} },\n      \"end\": { \"lat\": {{toll_start_lat2}}, \"lon\": {{toll_start_lon2}} }\n    }\n  ],\n  \"tollEndGates\": [\n    {\n      \"start\": { \"lat\": {{toll_end_lat1}}, \"lon\": {{toll_end_lon1}} },\n      \"end\": { \"lat\": {{toll_end_lat2}}, \"lon\": {{toll_end_lon2}} }\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/upsert",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "upsert"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Legacy LineSegment upsert rejected', function () {",
+              "  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create toll (GeoJSON LineString gates)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{test_toll_linestring_name}}\",\n  \"price\": 55,\n  \"currency\": \"INR\",\n  \"isAutoRickshawAllowed\": true,\n  \"isTwoWheelerAllowed\": false,\n  \"tollStartGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_start_lon1}}, {{toll_start_lat1}}], [{{toll_start_lon2}}, {{toll_start_lat2}}]]\n    }\n  ],\n  \"tollEndGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_end_lon1}}, {{toll_end_lat1}}], [{{toll_end_lon2}}, {{toll_end_lat2}}]]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/upsert",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "upsert"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Create LineString toll status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List tolls (verify GeoJSON LineString gates)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/toll/list?limit=200&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "config", "toll", "list"],
+          "query": [
+            { "key": "limit", "value": "200" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function classifyGate(g) {",
+              "  if (!g || typeof g !== 'object') return 'unknown';",
+              "  if (g.type === 'Polygon' && g.coordinates) return 'polygon';",
+              "  if (g.type === 'LineString' && g.coordinates) return 'linestring';",
+              "  if (g.start && g.end && g.start.lat !== undefined) return 'legacy_linesegment';",
+              "  return 'unknown';",
+              "}",
+              "var tolls = pm.response.json();",
+              "var name = pm.environment.get('test_toll_linestring_name');",
+              "var found = tolls.find(function (t) { return t.name === name; });",
+              "pm.test('LineString toll present', function () { pm.expect(found).to.not.be.undefined; });",
+              "if (found) {",
+              "  pm.environment.set('test_toll_linestring_id', found.id);",
+              "  pm.test('LineString gates returned as GeoJSON LineString', function () {",
+              "    pm.expect(classifyGate(found.tollStartGates[0])).to.eql('linestring');",
+              "    pm.expect(classifyGate(found.tollEndGates[0])).to.eql('linestring');",
+              "    pm.expect(found.tollStartGates[0].coordinates[0][1]).to.eql(parseFloat(pm.environment.get('toll_start_lat1')));",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update toll (GeoJSON LineString gates)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{test_toll_linestring_name}}_UPDATED\",\n  \"price\": 55,\n  \"currency\": \"INR\",\n  \"isAutoRickshawAllowed\": true,\n  \"isTwoWheelerAllowed\": false,\n  \"tollStartGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_start_lon1}}, {{toll_start_lat1}}], [{{toll_start_lon2}}, {{toll_start_lat2}}]]\n    }\n  ],\n  \"tollEndGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_end_lon1}}, {{toll_end_lat1}}], [{{toll_end_lon2}}, {{toll_end_lat2}}]]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/upsert?tollId={{test_toll_linestring_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "upsert"],
+          "query": [{ "key": "tollId", "value": "{{test_toll_linestring_id}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Update LineString toll status 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('test_toll_linestring_name', pm.environment.get('test_toll_linestring_name') + '_UPDATED');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create toll (GeoJSON Polygon start, LineString end)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{test_toll_polygon_name}}\",\n  \"price\": 60,\n  \"currency\": \"INR\",\n  \"isAutoRickshawAllowed\": true,\n  \"isTwoWheelerAllowed\": false,\n  \"tollStartGates\": [\n    {\n      \"type\": \"Polygon\",\n      \"coordinates\": {{toll_polygon_coordinates}}\n    }\n  ],\n  \"tollEndGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_end_lon1}}, {{toll_end_lat1}}], [{{toll_end_lon2}}, {{toll_end_lat2}}]]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/upsert",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "upsert"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Create polygon toll status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "List tolls (verify GeoJSON Polygon gates)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/toll/list?limit=200&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "config", "toll", "list"],
+          "query": [
+            { "key": "limit", "value": "200" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function classifyGate(g) {",
+              "  if (!g || typeof g !== 'object') return 'unknown';",
+              "  if (g.type === 'Polygon' && g.coordinates) return 'polygon';",
+              "  if (g.type === 'LineString' && g.coordinates) return 'linestring';",
+              "  if (g.start && g.end && g.start.lat !== undefined) return 'legacy_linesegment';",
+              "  return 'unknown';",
+              "}",
+              "var tolls = pm.response.json();",
+              "var name = pm.environment.get('test_toll_polygon_name');",
+              "var found = tolls.find(function (t) { return t.name === name; });",
+              "pm.test('Polygon toll present', function () { pm.expect(found).to.not.be.undefined; });",
+              "if (found) {",
+              "  pm.environment.set('test_toll_polygon_id', found.id);",
+              "  pm.test('Start gate is GeoJSON Polygon', function () {",
+              "    pm.expect(classifyGate(found.tollStartGates[0])).to.eql('polygon');",
+              "    pm.expect(found.tollStartGates[0].coordinates).to.be.an('array');",
+              "  });",
+              "  pm.test('End gate is GeoJSON LineString', function () {",
+              "    pm.expect(classifyGate(found.tollEndGates[0])).to.eql('linestring');",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update toll (GeoJSON Polygon gates)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{test_toll_polygon_name}}_UPDATED\",\n  \"price\": 65,\n  \"currency\": \"INR\",\n  \"isAutoRickshawAllowed\": true,\n  \"isTwoWheelerAllowed\": false,\n  \"tollStartGates\": [\n    {\n      \"type\": \"Polygon\",\n      \"coordinates\": {{toll_polygon_coordinates}}\n    }\n  ],\n  \"tollEndGates\": [\n    {\n      \"type\": \"LineString\",\n      \"coordinates\": [[{{toll_end_lon1}}, {{toll_end_lat1}}], [{{toll_end_lon2}}, {{toll_end_lat2}}]]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/upsert?tollId={{test_toll_polygon_id}}",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "upsert"],
+          "query": [{ "key": "tollId", "value": "{{test_toll_polygon_id}}" }]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Update Polygon toll status 200', function () { pm.response.to.have.status(200); });",
+              "pm.environment.set('test_toll_polygon_name', pm.environment.get('test_toll_polygon_name') + '_UPDATED');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "CSV upsert toll",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "text",
+              "value": "city,toll_id,name,price,currency,is_auto_rickshaw_allowed,is_two_wheeler_allowed,toll_start_gates,toll_end_gates\n{{city}},,INT_TEST_TOLL_CSV_{{_test_toll_suffix}},75,INR,true,false,\"{{toll_csv_start_gates}}\",\"{{toll_csv_end_gates}}\"]\n"
+            },
+            { "key": "upsertInDriverApp", "type": "text", "value": "false" }
+          ]
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/toll/upsert/",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "config", "toll", "upsert", ""]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.test('CSV upsert status 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('No unprocessed entities', function () {",
+              "  pm.expect(d.unprocessedEntities || []).to.be.an('array').that.is.empty;",
+              "});",
+              "pm.environment.set('test_toll_csv_name', 'INT_TEST_TOLL_CSV_' + pm.collectionVariables.get('_test_toll_suffix'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete GeoJSON LineString toll",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/{{test_toll_linestring_id}}/delete",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "{{test_toll_linestring_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delete LineString toll status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete polygon toll",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/{{test_toll_polygon_id}}/delete",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "{{test_toll_polygon_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delete polygon toll status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete CSV toll",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/config/toll/list?limit=200&offset=0",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "config", "toll", "list"],
+          "query": [
+            { "key": "limit", "value": "200" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var tolls = pm.response.json();",
+              "var name = pm.environment.get('test_toll_csv_name');",
+              "var found = tolls.find(function (t) { return t.name === name; });",
+              "pm.test('CSV toll created', function () { pm.expect(found).to.not.be.undefined; });",
+              "if (found) pm.environment.set('test_toll_csv_id', found.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete CSV toll (execute)",
+      "request": {
+        "method": "DELETE",
+        "header": [{ "key": "token", "value": "{{dashboard_token}}" }],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/merchant/toll/{{test_toll_csv_id}}/delete",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "merchant", "toll", "{{test_toll_csv_id}}", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Delete CSV toll status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    { "key": "_test_toll_suffix", "value": "" }
+  ]
+}

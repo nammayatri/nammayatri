@@ -159,3 +159,4 @@ library:
     - location-updates
     - special-zone
     - mock-registry
+    - geojson

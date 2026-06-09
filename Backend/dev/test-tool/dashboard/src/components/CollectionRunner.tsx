@@ -11,6 +11,7 @@ import {
   CollectionGroup, CollectionEnvironment, CollectionSuite,
   fetchCollections, fetchCollection,
   fetchConfigSyncStatus, triggerConfigSync,
+  isTollCollectionDir, seedTollDashboardAccess,
   mockServerBase, MockHit,
   startLogCapture, stopLogCapture
 } from '../services/context';
@@ -446,12 +447,15 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
   // Ensure local DB config is synced from the chosen upstream environment.
   // Returns true to proceed, false if the user should abort.
-  const ensureSyncedFrom = useCallback(async (targetEnv: string, envType: string = selectedEnvType): Promise<boolean> => {
-    if (envType !== 'Local') return true;
+  const ensureSyncedFrom = useCallback(async (
+    targetEnv: string,
+    envType: string = selectedEnvType,
+  ): Promise<{ ok: boolean; configSyncApplied: boolean }> => {
+    if (envType !== 'Local') return { ok: true, configSyncApplied: false };
     const status = await fetchConfigSyncStatus();
     if (status?.last_synced?.from === targetEnv && !status?.running) {
       onLog('info', `[config-sync] local already synced from '${targetEnv}' — skipping sync`);
-      return true;
+      return { ok: true, configSyncApplied: false };
     }
     if (status?.running) {
       onLog('info', `[config-sync] sync already running (from '${status.from}') — waiting for it to finish`);
@@ -460,10 +464,9 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       const trig = await triggerConfigSync(targetEnv, false);
       if (!trig.started) {
         onLog('error', `[config-sync] failed to start: ${trig.error ?? 'unknown error'}`);
-        return false;
+        return { ok: false, configSyncApplied: false };
       }
     }
-    // Poll until done
     for (;;) {
       await new Promise(r => setTimeout(r, 2000));
       const st = await fetchConfigSyncStatus();
@@ -472,19 +475,37 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
         if (st.exit_code === 0 && !st.error) {
           onLog('success', `[config-sync] done — synced from '${targetEnv}'`);
           const healthy = await waitForServicesReady(onLog);
-          return healthy;
+          return { ok: healthy, configSyncApplied: true };
         }
         onLog('error', `[config-sync] failed (exit=${st.exit_code}, error=${st.error ?? 'n/a'})`);
-        return false;
+        return { ok: false, configSyncApplied: false };
       }
     }
   }, [selectedEnvType, onLog]);
 
+  const ensureTollDashboardSeed = useCallback(async (configSyncApplied: boolean): Promise<boolean> => {
+    if (!isTollCollectionDir(selectedDir)) return true;
+    onLog('info', '[toll-setup] seeding dashboard access_matrix + provider-dashboard token');
+    const seed = await seedTollDashboardAccess(selectedSyncEnv, { skipConfigSync: configSyncApplied });
+    if (seed.ok) {
+      onLog('success', '[toll-setup] done');
+      return true;
+    }
+    if (configSyncApplied) {
+      onLog('info', `[toll-setup] seed API unavailable (${seed.error ?? 'unknown'}) — continuing (config-sync applied local-testing-data)`);
+      return true;
+    }
+    onLog('error', `[toll-setup] failed: ${seed.error ?? 'unknown'} — run: cd Backend/dev/integration-tests && ./run-tests.sh --setup`);
+    return false;
+  }, [selectedDir, selectedSyncEnv, onLog]);
+
   // Run all steps sequentially
   const runAll = useCallback(async () => {
     if (isRunning || visibleSteps.length === 0) return;
-    const synced = await ensureSyncedFrom(selectedSyncEnv);
-    if (!synced) return;
+    const sync = await ensureSyncedFrom(selectedSyncEnv);
+    if (!sync.ok) return;
+    const tollReady = await ensureTollDashboardSeed(sync.configSyncApplied);
+    if (!tollReady) return;
     abortRef.current = false;
     setIsRunning(true);
     setStepStates({});
@@ -579,7 +600,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     setIsRunning(false);
     setRunningStepId(null);
     onLog('info', '-- Collection run complete --');
-  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, onLog]);
+  }, [isRunning, visibleSteps, currentEnv, currentSuite, selectedDir, selectedSuite, selectedEnv, selectedEnvType, selectedSyncEnv, ensureSyncedFrom, ensureTollDashboardSeed, onLog]);
 
   const stop = useCallback(() => { abortRef.current = true; }, []);
 
@@ -612,8 +633,8 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
     const hasLocal = jobs.some(j => j.env.envType === 'Local');
     if (hasLocal) {
       onLog('info', `[config-sync] Run All has Local-stack jobs — syncing from '${selectedSyncEnv}'`);
-      const synced = await ensureSyncedFrom(selectedSyncEnv, 'Local');
-      if (!synced) {
+      const sync = await ensureSyncedFrom(selectedSyncEnv, 'Local');
+      if (!sync.ok) {
         onLog('error', '[config-sync] aborting Run All — config sync failed');
         setIsRunning(false);
         setRunAllProgress(null);
@@ -621,6 +642,24 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
       }
     } else {
       onLog('info', '[config-sync] no Local-stack jobs — skipping sync');
+    }
+
+    const hasToll = jobs.some(j => isTollCollectionDir(j.group.directory));
+    if (hasToll) {
+      onLog('info', '[toll-setup] seeding dashboard access for toll collections');
+      const configSyncApplied = hasLocal;
+      const seed = await seedTollDashboardAccess(selectedSyncEnv, { skipConfigSync: configSyncApplied });
+      if (!seed.ok && !configSyncApplied) {
+        onLog('error', `[toll-setup] failed: ${seed.error ?? 'unknown'} — aborting Run All`);
+        setIsRunning(false);
+        setRunAllProgress(null);
+        return;
+      }
+      if (!seed.ok) {
+        onLog('info', `[toll-setup] seed API unavailable (${seed.error ?? 'unknown'}) — continuing`);
+      } else {
+        onLog('success', '[toll-setup] done');
+      }
     }
 
     let completed = 0;

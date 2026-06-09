@@ -71,7 +71,8 @@ because rider-app may poll status using either form.
 2. Set city-specific values (merchant IDs, coordinates, merchant short IDs)
 3. Set the `envType` variable: `"Local"` in `Local/*.postman_environment.json`, `"Master"` in `Master/*.postman_environment.json` — this drives the mock-server auto-skip behavior described below.
 4. Collections are shared across cities — no city-specific logic in collections
-5. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/feature-migrations/0001-dashboard-access-setup.sql`)
+5. If the city needs a dashboard token, ensure `merchant_access` exists (via `dev/local-testing-data/provider-dashboard.sql` or `rider-dashboard.sql`)
+6. **Toll dashboard suites** (`toll-config`, `toll-ride`): `./run-tests.sh` auto-seeds `local-testing-data/toll-dashboard-access.sql` — see `collections/TollConfigFlow/Rules.md`
 
 ## Upstream Config Environment (Sync From)
 
