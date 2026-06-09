@@ -112,6 +112,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH
+import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
@@ -1945,7 +1946,32 @@ postMultimodalRouteServiceability (mbPersonId, _merchantId) req =
       let allSchedules = map buildScheduleInfo busScheduleDetails
       -- Build live vehicle info if live data exists
       mbLiveVehicle <- case maybeBus of
-        Nothing -> return Nothing
+        Nothing -> do
+          -- No live data on the route hash; fall back to last-known location from the bus_metadata_v2 hash
+          mbBusLiveInfo <- JLCF.getBusLiveInfo vno ctx.integratedBPPConfig
+          case (mbBusLiveInfo, mbServiceTier) of
+            (Just busLiveInfo, Just serviceTier) -> do
+              mbServiceTypeResp <- OTPRest.getVehicleServiceType ctx.integratedBPPConfig vno Nothing
+              let fallbackTripId = do
+                    serviceTypeResp <- mbServiceTypeResp
+                    waybill <- serviceTypeResp.waybill_id
+                    tNum <- serviceTypeResp.trip_number
+                    return $ JMU.makeTripIdFromWaybillNoAndTripNo waybill tNum
+              return $
+                Just $
+                  API.Types.UI.MultimodalConfirm.LiveVehicleInfo
+                    { eta = Just [],
+                      number = vno,
+                      position = LatLong busLiveInfo.latitude busLiveInfo.longitude,
+                      locationUTCTimestamp = posixSecondsToUTCTime $ fromIntegral busLiveInfo.timestamp,
+                      serviceTierType = serviceTier,
+                      serviceTierName = frfsServiceTierName,
+                      currentTripId = fallbackTripId,
+                      serviceSubTypes = mbServiceSubTypes,
+                      vehicleTagNumber = mbVehicleTagNumber,
+                      seatSelectionType = seatSelType
+                    }
+            _ -> return Nothing
         Just singleBus -> do
           case mbServiceTier of
             Nothing -> do
