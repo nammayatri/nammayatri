@@ -93,10 +93,18 @@ triggerDummyRideRequest ::
   m Common.DummyRideRequestRes
 triggerDummyRideRequest driver merchantOperatingCityId isDashboardTrigger = do
   driverInfo <- B.runInReplica $ QDI.findById driver.id >>= fromMaybeM DriverInfoNotFound
-  let mbStaticSkipReason
+  -- Mirror the real ride-request eligibility (isDriverModeEligible in
+  -- Storage.Queries.Person.GetNearestDrivers): a driver in ONLINE/SILENT mode is
+  -- eligible regardless of `active`; `active` only matters when no mode is set.
+  let isDriverOnline = case driverInfo.mode of
+        Just DCommon.ONLINE -> True
+        Just DCommon.SILENT -> True
+        Nothing -> driverInfo.active
+        _ -> False
+      mbStaticSkipReason
         | driverInfo.blocked = Just "Driver blocked"
         | not driverInfo.subscribed = Just "Driver not subscribed"
-        | not (driverInfo.active && driverInfo.mode == Just DCommon.ONLINE) = Just "Driver offline"
+        | not isDriverOnline = Just "Driver offline"
         | driverInfo.onRide = Just "Driver on ride"
         | otherwise = Nothing
   case mbStaticSkipReason of
