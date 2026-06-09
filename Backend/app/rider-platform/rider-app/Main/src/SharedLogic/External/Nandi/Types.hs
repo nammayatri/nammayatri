@@ -713,7 +713,8 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     hindiName :: Maybe Text,
     regionalName :: Maybe Text,
     parentStopCode :: Maybe Text,
-    gates :: Maybe [Gate]
+    gates :: Maybe [Gate],
+    clusterId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -730,7 +731,8 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
     gates :: Maybe [Gate],
     hindiName :: Maybe Text,
     regionalName :: Maybe Text,
-    parentStopCode :: Maybe Text
+    parentStopCode :: Maybe Text,
+    clusterId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

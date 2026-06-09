@@ -196,11 +196,12 @@ fromMaybe' a = maybe (integerFromInt a) integerFromInt
 
 getStationsByGtfsId ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe Bool ->
   IntegratedBPPConfig ->
   m [Station.Station]
-getStationsByGtfsId integratedBPPConfig = do
+getStationsByGtfsId mbIncludeClusterId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
+  stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey mbIncludeClusterId
   parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig True
 
 getStationByGtfsIdAndStopCode ::
@@ -208,14 +209,22 @@ getStationByGtfsIdAndStopCode ::
   Text ->
   IntegratedBPPConfig ->
   m (Maybe Station.Station)
-getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] 3600 $ do
+getStationByGtfsIdAndStopCode = getStationByGtfsIdAndStopCodeWithClusterId Nothing
+
+getStationByGtfsIdAndStopCodeWithClusterId ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Maybe Bool ->
+  Text ->
+  IntegratedBPPConfig ->
+  m (Maybe Station.Station)
+getStationByGtfsIdAndStopCodeWithClusterId mbIncludeClusterId stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId, show mbIncludeClusterId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
+  stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode mbIncludeClusterId
   listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig False
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do
-  stations <- getStationsByGtfsId integratedBPPConfig
+  stations <- getStationsByGtfsId Nothing integratedBPPConfig
   pure $ take (fromMaybe (length stations) limit) $ drop (fromMaybe 0 offset) $ filter (\station -> station.vehicleType == vehicleType) stations
 
 findAllMatchingStations :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
@@ -230,7 +239,7 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset vehicle integratedBPPConfig
 
 getStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 getStationsByVehicleType vehicleType integratedBPPConfig = do
-  stations <- getStationsByGtfsId integratedBPPConfig
+  stations <- getStationsByGtfsId Nothing integratedBPPConfig
   return $ filter (\station -> station.vehicleType == vehicleType) stations
 
 -- Parse Queries
@@ -241,7 +250,7 @@ parseStationsFromInMemoryServer ::
   Bool ->
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig needExtraInformation = do
-  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode) stations
+  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode clusterId) stations
   parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig needExtraInformation
 
 parseStationsFromInMemoryServerWithPublicData ::
@@ -277,6 +286,7 @@ parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig needE
               timeBounds = Unbounded,
               vehicleType = BecknFRFSUtils.becknVehicleCategoryToFrfsVehicleCategory integratedBPPConfig.vehicleCategory,
               parentStopCode = station.parentStopCode,
+              clusterId = station.clusterId,
               createdAt = now,
               updatedAt = now
             }

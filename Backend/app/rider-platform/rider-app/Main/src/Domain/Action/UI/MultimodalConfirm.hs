@@ -1083,7 +1083,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
                 Left err -> throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
                 Right response -> return response
           Nothing -> do
-            stations <- OTPRest.getStationsByGtfsId bppConfig
+            stations <- OTPRest.getStationsByGtfsId Nothing bppConfig
             routes <- OTPRest.getRoutesByGtfsId bppConfig
             let (finalStations, finalRoutes) =
                   -- hack to solve the dummy trips and stations, route added for spot booking in GTFS to not appear in single mode search.
