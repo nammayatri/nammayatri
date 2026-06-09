@@ -41,7 +41,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n    \"merchantId\": \"{{bpp_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\",\n    \"identifierType\": \"CONDUCTORTOKEN\",\n    \"email\": \"{{conductor_email}}\",\n    \"password\": \"{{conductor_password}}\"\n}",
+          "raw": "{\n    \"merchantId\": \"{{bpp_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\",\n    \"identifierType\": \"GIMS_EMAIL_PASSWORD\",\n    \"email\": \"{{conductor_email}}\",\n    \"password\": \"{{conductor_password}}\"\n}",
           "options": {
             "raw": {
               "language": "json"
