@@ -558,8 +558,6 @@ mobileSignatureAuth ::
   m AuthRes
 mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
   runRequestValidation validateSignatureAuthReq req
-  smsCfg <- asks (.smsCfg)
-  mbCloudType <- asks (.cloudType)
   countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
   mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileCountryCode is required for signature auth")
   let deviceToken = req.deviceToken
@@ -569,27 +567,9 @@ mobileSignatureAuth req mbBundleVersion mbClientVersion mbClientConfigVersion mb
   mobileNumberDecrypted <- decryptAES128 merchant.cipherText mobileNumber
   let reqWithMobileNumebr = req {mobileNumber = Just mobileNumberDecrypted}
   notificationToken <- mapM (decryptAES128 merchant.cipherText) req.notificationToken
-  mobileNumberHash <- getDbHash mobileNumberDecrypted
-  person <-
-    Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
-      >>= maybe (createPerson reqWithMobileNumebr SP.MOBILENUMBER notificationToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion (getDeviceFromText mbDevice) mbCloudType merchant Nothing Nothing) return
-  let entityId = getId $ person.id
-      useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-      scfg = sessionConfig smsCfg
-  let mkId = getId $ merchant.id
-  regToken <- makeSession SR.SIGNATURE scfg entityId mkId useFakeOtpM False
-  if not person.blocked
-    then do
-      deploymentVersion <- asks (.version)
-      void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion mbCloudType
-      _ <- RegistrationToken.create regToken
-      mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
-      mbEncBusinessEmail <- encrypt `mapM` reqWithMobileNumebr.businessEmail
-      _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing Nothing mbCloudType
-      personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
-      return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
-    else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
+  -- preserveExistingName=False keeps the historic signature-auth behaviour: the
+  -- request's firstName takes precedence over the stored one.
+  issueDirectSessionForReq False merchant countryCode mobileNumberDecrypted reqWithMobileNumebr notificationToken deviceToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
 
 -- | Resolve-or-create a Person by (plaintext) mobile number under the given
 -- merchant and issue a verified DIRECT session — the exact path
@@ -617,8 +597,6 @@ resolveAndIssueDirectSession ::
   Maybe Text ->
   m AuthRes
 resolveAndIssueDirectSession merchant countryCode mobileNumberDecrypted mbName mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
-  smsCfg <- asks (.smsCfg)
-  mbCloudType <- asks (.cloudType)
   let reqWithMobileNumebr =
         AuthReq
           { mobileNumber = Just mobileNumberDecrypted,
@@ -646,8 +624,45 @@ resolveAndIssueDirectSession merchant countryCode mobileNumberDecrypted mbName m
             deviceSerialNumber = Nothing,
             vehicleType = Nothing
           }
-      deviceToken = reqWithMobileNumebr.deviceToken
-      notificationToken = reqWithMobileNumebr.notificationToken
+  -- preserveExistingName=True: a partner login must not clobber an existing NY
+  -- user's chosen display name. The partner-supplied name is used only when a
+  -- new Person is created (via createPerson) or when no stored name exists.
+  issueDirectSessionForReq True merchant countryCode mobileNumberDecrypted reqWithMobileNumebr Nothing Nothing mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+
+-- | Shared tail of the DIRECT (verified, OTP-less) session flow: resolve-or-create
+-- the Person by (plaintext) mobile number, mint a verified SIGNATURE session, and
+-- run the post-login bookkeeping (versions, personal info, verifyFlow). Used by
+-- both 'mobileSignatureAuth' and 'resolveAndIssueDirectSession' so the
+-- security-sensitive issuance logic lives in exactly one place.
+--
+-- preserveExistingName: when True, an existing Person's stored firstName wins over
+-- the request's (partner facades must not overwrite a user's chosen name); when
+-- False, the request's firstName wins (historic signature-auth behaviour).
+issueDirectSessionForReq ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "version" ::: DeploymentVersion, "cloudType" ::: Maybe CloudType],
+    CacheFlow m r,
+    DB.EsqDBReplicaFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    HasKafkaProducer r,
+    ClickhouseFlow m r
+  ) =>
+  Bool ->
+  Merchant ->
+  Text ->
+  Text ->
+  AuthReq ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe Text ->
+  m AuthRes
+issueDirectSessionForReq preserveExistingName merchant countryCode mobileNumberDecrypted reqWithMobileNumebr notificationToken deviceToken mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice = do
+  smsCfg <- asks (.smsCfg)
+  mbCloudType <- asks (.cloudType)
   mobileNumberHash <- getDbHash mobileNumberDecrypted
   person <-
     Person.findByRoleAndMobileNumberAndMerchantId SP.USER countryCode mobileNumberHash merchant.id
@@ -665,7 +680,11 @@ resolveAndIssueDirectSession merchant countryCode mobileNumberDecrypted mbName m
       mbEncEmail <- encrypt `mapM` reqWithMobileNumebr.email
       mbEncBusinessEmail <- encrypt `mapM` reqWithMobileNumebr.businessEmail
       _ <- RegistrationToken.setDirectAuth regToken.id SR.SIGNATURE
-      _ <- Person.updatePersonalInfo person.id (reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User") reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing Nothing mbCloudType
+      let resolvedFirstName =
+            if preserveExistingName
+              then person.firstName <|> reqWithMobileNumebr.firstName <|> Just "User"
+              else reqWithMobileNumebr.firstName <|> person.firstName <|> Just "User"
+      _ <- Person.updatePersonalInfo person.id resolvedFirstName reqWithMobileNumebr.middleName reqWithMobileNumebr.lastName mbEncEmail mbEncBusinessEmail deviceToken notificationToken (reqWithMobileNumebr.language <|> person.language <|> Just Language.ENGLISH) (reqWithMobileNumebr.gender <|> Just person.gender) mbRnVersion (mbClientVersion <|> Nothing) (mbBundleVersion <|> Nothing) mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion person.enableOtpLessRide Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing person Nothing Nothing Nothing Nothing mbCloudType
       personAPIEntity <- verifyFlow person regToken reqWithMobileNumebr.whatsappNotificationEnroll deviceToken
       return $ AuthRes regToken.id regToken.attempts SR.DIRECT (Just regToken.token) (Just personAPIEntity) person.blocked Nothing Nothing
     else return $ AuthRes regToken.id regToken.attempts regToken.authType Nothing Nothing person.blocked Nothing Nothing
