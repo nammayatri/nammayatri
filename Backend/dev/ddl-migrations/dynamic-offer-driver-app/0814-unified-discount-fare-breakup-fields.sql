@@ -1,11 +1,11 @@
 -- Unified Discount & VAT refactor: canonical ten-slot ProjectFareParamsBreakup on FareParameters.
 --
 -- Adds nine slot columns that partition the ride fare into:
---   - discount-applicable ride × {taxExcl, tax}
---   - non-discount-applicable ride × {taxExcl, tax}
---   - toll × {taxExcl, tax}
---   - cancellation × {taxExcl, tax}
---   - parking × {taxExcl, tax}
+--   - discount-applicable ride x {taxExcl, tax}
+--   - non-discount-applicable ride x {taxExcl, tax}
+--   - toll x {taxExcl, tax}
+--   - cancellation x {taxExcl, tax}
+--   - parking x {taxExcl, tax}
 --
 -- `toll_vat` already exists (from migration 0400) and is reused as the toll-tax slot;
 -- the domain keeps the old `tollFareTax` name but maps to/from `toll_vat` in Storage.Queries.FareParameters

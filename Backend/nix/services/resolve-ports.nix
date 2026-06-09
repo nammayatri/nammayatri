@@ -32,7 +32,7 @@ pkgs.writeShellApplication {
     is_port_in_use() {
       local port=$1
       if command -v ss &>/dev/null; then
-        ss -tln 2>/dev/null | grep -q ":''${port} " && return 0
+        ss -tln 2>/dev/null | grep -qE ":''${port}(\s|$)" && return 0
       fi
       if command -v lsof &>/dev/null; then
         lsof -iTCP:"''${port}" -sTCP:LISTEN -P -n &>/dev/null && return 0

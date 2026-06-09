@@ -1133,6 +1133,20 @@ def _remote_pipe_reader(session: dict, stream) -> None:
             except _queue.Full:
                 pass
     rc = session["proc"].wait() if session["proc"] else None
+
+    # Run post-rsync git init so Nix sees a git repo (faster store copy)
+    if rc == 0 and session.get("post_ssh_argv"):
+        try:
+            post = subprocess.run(
+                session["post_ssh_argv"], capture_output=True, text=True
+            )
+            msg = f"[deploy] git init: {'ok' if post.returncode == 0 else post.stderr.strip()}"
+            with session["lock"]:
+                session["buf"].append(msg)
+        except Exception as e:
+            with session["lock"]:
+                session["buf"].append(f"[deploy] git init failed: {e}")
+
     with session["lock"]:
         session["running"] = False
         session["exit_code"] = rc
@@ -1152,6 +1166,8 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
     argv += [
         "-o", "StrictHostKeyChecking=accept-new",
         "-o", "ServerAliveInterval=15",
+        "-o", "GSSAPIAuthentication=no",
+        "-o", "ConnectTimeout=10",
         "-p", str(port),
     ]
     if identity:
@@ -1201,16 +1217,17 @@ def remote_deploy(body: dict) -> dict:
         ssh_cmd_parts += ["-i", identity]
     ssh_cmd = " ".join(ssh_cmd_parts)
 
-    # Ensure the remote directory exists (rsync won't create parent dirs).
-    mkdir_argv = _ssh_argv(user, host, port, identity, want_tty=False) + [f"mkdir -p {shlex.quote(remote_dir)}"]
-    subprocess.run(mkdir_argv, capture_output=True, timeout=10)
-
     excludes = []
     for ex in REMOTE_EXCLUDES:
         excludes += ["--exclude", ex]
 
+    # Use --rsync-path to create the destination directory on the remote before
+    # rsync starts — avoids a separate SSH round-trip for mkdir.
+    rsync_path = f"mkdir -p {shlex.quote(remote_dir)} && rsync"
+
     argv = (
-        ["rsync", "-az", "--delete", "--progress", "--stats", "-e", ssh_cmd]
+        ["rsync", "-az", "--delete", "--progress", "--stats",
+         "-e", ssh_cmd, "--rsync-path", rsync_path]
         + excludes
         + [f"{PROJECT_ROOT}/", target]
     )
@@ -1233,6 +1250,20 @@ def remote_deploy(body: dict) -> dict:
         session["proc"] = proc
         session["running"] = True
         session["buf"].append(f"[deploy] {' '.join(argv)}")
+
+    # After rsync, init a minimal git repo on the remote so Nix copies only
+    # tracked files (much faster than copying the entire untracked directory)
+    git_init_cmd = (
+        f"cd {shlex.quote(remote_dir)} && "
+        f"git init -q && git add -A && "
+        f"GIT_AUTHOR_NAME=deploy GIT_AUTHOR_EMAIL=deploy@deploy "
+        f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
+        f"git commit -q -m deploy --allow-empty 2>/dev/null || true"
+    )
+    ssh_base = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
+    if identity:
+        ssh_base += ["-i", identity]
+    session["post_ssh_argv"] = ssh_base + [f"{user}@{host}", git_init_cmd]
 
     threading.Thread(
         target=_remote_pipe_reader, args=(session, proc.stdout), daemon=True
@@ -1272,7 +1303,7 @@ def remote_clear_data(body: dict) -> dict:
         # devName is mandatory — derive remoteDir from the devbox registry.
         entry = _register_dev_user(user, host, port, identity, dev_name)
         remote_dir = entry["dir"]
-        remote_cmd = f"cd {shlex.quote(remote_dir)} && {inner}"
+        remote_cmd = f"export PATH=\"$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH\"; cd {shlex.quote(remote_dir)} && {inner}"
         argv = _ssh_argv(user, host, port, identity, want_tty=False) + [remote_cmd]
 
     try:
@@ -1329,7 +1360,7 @@ def remote_cabal_clean(body: dict) -> dict:
             return {"session": session["id"], "error": "user required"}
         entry = _register_dev_user(user, host, port, identity, dev_name)
         remote_dir = entry["dir"]
-        remote_cmd = f"cd {shlex.quote(remote_dir)} && {inner}"
+        remote_cmd = f"export PATH=\"$HOME/.nix-profile/bin:/nix/var/nix/profiles/default/bin:$PATH\"; cd {shlex.quote(remote_dir)} && {inner}"
         argv = _ssh_argv(user, host, port, identity, want_tty=False) + [remote_cmd]
 
     try:
