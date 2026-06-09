@@ -343,8 +343,13 @@ WHERE m.short_id IN ('BRIDGE_FINLAND_PARTNER', 'BRIDGE_CABS_PARTNER')
   );
 
 -- ────────────────────────────────────────────────────────────────────────
--- 8. Seed fleet owner, fleet-driver association, and test images
---    (for driver-image integration tests)
+-- FRFS Fleet Operator — IntegratedBPPConfig seed (Kolkata, BUS, DIRECT/GIMS)
+--
+-- Required by FRFSFleetOperatorFlow/01-ConductorFlow.json.
+-- findFirstIbppConfigByCityAndVehicle("Kolkata", "BUS") queries this table.
+-- providerConfig = DIRECT with baseUrl pointing to the local mock server
+-- (port 8080) which handles /internal/fleet-operator/... GIMS endpoints.
+-- feedKey = 'kolkata_bus' is used as the gtfsId path param in GIMS calls.
 -- ────────────────────────────────────────────────────────────────────────
 
 -- 8a. Fleet-owner Person (one per merchant)
@@ -398,19 +403,18 @@ INSERT INTO atlas_driver_offer_bpp.registration_token
   , created_at
   , updated_at
   )
-SELECT
-    md5(m.id || ':seed-fleet-owner-token')::uuid::text
-  , 0
-  , 365
-  , 'SMS'
-  , 'OTP'
-  , '7891'
-  , md5(m.id || ':seed-fleet-owner')::uuid::text
-  , 'USER                              '
-  , m.id
-  , 'seed-fleet-owner-token-' || m.short_id
-  , 365
-  , true
+VALUES
+  ( md5('frfs-kolkata-bus-ibpp-config')::uuid::text
+  , 'kolkata_bus'
+  , 'kolkata_bus'
+  , 'FRFS'
+  , '96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'
+  , '7a0a3891-5945-4f86-a2f2-90c89c197c56'
+  , 'APPLICATION'
+  -- DIRECT provider config: baseUrl = mock server, cipherKey = dummy (not used in GIMS flow)
+  , '{"tag":"DIRECT","contents":{"baseUrl":"http://localhost:8080","cipherKey":"DUMMYCIPHERKEY"}}'::json
+  , 'Kolkata'
+  , 'BUS'
   , now()
   , now()
 FROM atlas_driver_offer_bpp.merchant m
