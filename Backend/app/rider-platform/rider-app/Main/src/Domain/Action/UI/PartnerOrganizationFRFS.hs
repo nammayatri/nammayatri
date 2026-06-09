@@ -584,6 +584,7 @@ mkQuoteRes (quote, quoteCategories) = do
         eventDiscountAmount = quote.eventDiscountAmount,
         integratedBppConfigId = quote.integratedBppConfigId,
         observingFailures = Nothing,
+        offer = Nothing,
         ..
       }
 

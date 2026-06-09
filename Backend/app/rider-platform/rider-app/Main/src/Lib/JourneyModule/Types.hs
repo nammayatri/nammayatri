@@ -1195,6 +1195,134 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
+mkStandaloneFrfsMinimalLegInfo :: (MonadFlow m) => FRFSSR.FRFSSearch -> Maybe Price -> m LegInfo
+mkStandaloneFrfsMinimalLegInfo frfsSearch mbFare = do
+  now <- getCurrentTime
+  legId <- generateGUID
+  let mbFareEntity = mkPriceAPIEntity <$> mbFare
+      mkStation stopCode mbName mbPoint mbAddr =
+        FRFSStationAPI
+          { name = fromMaybe "" mbName,
+            code = stopCode,
+            lat = mbPoint <&> (.lat),
+            lon = mbPoint <&> (.lon),
+            address = mbAddr,
+            regionalName = Nothing,
+            hindiName = Nothing,
+            integratedBppConfigId = cast frfsSearch.integratedBppConfigId
+          }
+      originStop = mkStation frfsSearch.fromStationCode frfsSearch.fromStationName frfsSearch.fromStationPoint frfsSearch.fromStationAddress
+      destinationStop = mkStation frfsSearch.toStationCode frfsSearch.toStationName frfsSearch.toStationPoint frfsSearch.toStationAddress
+      legExtraInfo = case frfsSearch.vehicleType of
+        Spec.BUS ->
+          Bus
+            BusLegExtraInfo
+              { originStop = originStop,
+                destinationStop = destinationStop,
+                routeCode = fromMaybe "" frfsSearch.routeCode,
+                bookingId = Nothing,
+                tickets = Nothing,
+                ticketValidity = Nothing,
+                ticketsCreatedAt = Nothing,
+                routeName = Nothing,
+                providerName = Nothing,
+                selectedServiceTier = Nothing,
+                frequency = Nothing,
+                alternateShortNames = [],
+                ticketNo = Nothing,
+                adultTicketQuantity = Just frfsSearch.quantity,
+                childTicketQuantity = Nothing,
+                refund = Nothing,
+                refunds = [],
+                trackingStatus = JMState.InPlan,
+                trackingStatusLastUpdatedAt = now,
+                fleetNo = Nothing,
+                legStartTime = Nothing,
+                legEndTime = Nothing,
+                discounts = Nothing,
+                categories = [],
+                categoryBookingDetails = Nothing,
+                busConductorId = Nothing,
+                busDriverId = Nothing,
+                busTagNumber = Nothing,
+                tripId = Nothing,
+                tripStartTime = Nothing,
+                bookedStopETA = Nothing,
+                driverName = Nothing,
+                driverMobileNumber = Nothing,
+                seatSelectionType = Nothing
+              }
+        Spec.METRO ->
+          Metro
+            MetroLegExtraInfo
+              { routeInfo = [],
+                bookingId = Nothing,
+                tickets = Nothing,
+                ticketValidity = Nothing,
+                ticketsCreatedAt = Nothing,
+                providerName = Nothing,
+                ticketNo = Nothing,
+                adultTicketQuantity = Just frfsSearch.quantity,
+                childTicketQuantity = Nothing,
+                refund = Nothing,
+                refunds = [],
+                categories = [],
+                categoryBookingDetails = Nothing
+              }
+        Spec.SUBWAY ->
+          Subway
+            SubwayLegExtraInfo
+              { routeInfo = [],
+                bookingId = Nothing,
+                tickets = Nothing,
+                ticketValidity = Nothing,
+                ticketsCreatedAt = Nothing,
+                ticketValidityHours = [],
+                providerName = Nothing,
+                providerRouteId = Nothing,
+                deviceId = Nothing,
+                ticketTypeCode = Nothing,
+                selectedServiceTier = Nothing,
+                ticketNo = Nothing,
+                adultTicketQuantity = Just frfsSearch.quantity,
+                childTicketQuantity = Nothing,
+                refund = Nothing,
+                refunds = [],
+                categories = [],
+                categoryBookingDetails = Nothing
+              }
+  pure
+    LegInfo
+      { journeyLegId = legId,
+        skipBooking = False,
+        bookingAllowed = True,
+        pricingId = Nothing,
+        searchId = frfsSearch.id.getId,
+        travelMode = castCategoryToMode frfsSearch.vehicleType,
+        startTime = now,
+        order = 0,
+        status = InPlan,
+        bookingStatus = JMState.Initial JMState.BOOKING_PENDING,
+        estimatedDuration = Nothing,
+        estimatedMinFare = mbFareEntity,
+        estimatedMaxFare = mbFareEntity,
+        estimatedChildFare = Nothing,
+        estimatedTotalFare = Nothing,
+        estimatedDistance = Nothing,
+        legExtraInfo = legExtraInfo,
+        merchantId = frfsSearch.merchantId,
+        merchantOperatingCityId = frfsSearch.merchantOperatingCityId,
+        personId = frfsSearch.riderId,
+        actualDistance = Nothing,
+        totalFare = Nothing,
+        entrance = Nothing,
+        exit = Nothing,
+        validTill = frfsSearch.validTill,
+        hasApplicablePasses = Nothing,
+        observingFailures = Nothing,
+        isCancellable = Nothing
+      }
+
 mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> DJourneyLeg.JourneyLeg -> [DJourneyLeg.JourneyLeg] -> m LegInfo
 mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg journeyLegs = do
   let fallbackFare = journeyLeg.estimatedMinFare

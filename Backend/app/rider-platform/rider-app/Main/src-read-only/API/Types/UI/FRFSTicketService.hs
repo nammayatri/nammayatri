@@ -30,6 +30,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import Servant
+import qualified SharedLogic.OfferTypes
 import Tools.Auth
 
 data ActiveRouteRes = ActiveRouteRes {lastScheduleTime :: Data.Text.Text, routeId :: Data.Text.Text}
@@ -157,6 +158,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     observingFailures :: Data.Maybe.Maybe Kernel.Prelude.Bool,
+    offer :: Data.Maybe.Maybe SharedLogic.OfferTypes.CumulativeOfferResp,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
