@@ -586,6 +586,13 @@ callUpdateTicket :: Person.Person -> SafetyDSos.Sos -> Maybe Text -> Flow APISuc
 callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
+      fork "update ticket request" $ do
+        ticketStatusList <- Ticket.getTicketStatus person.merchantId person.merchantOperatingCityId (Ticket.SearchTicketByIdReq ticketId)
+        let shouldSkip = case ticketStatusList of
+              (resp : _) -> resp.subStatus `Kernel.Prelude.elem` (["CLOSED", "RESOLVED"] :: [Text])
+              [] -> False
+        unless shouldSkip $
+          void $ Ticket.updateTicket person.merchantId person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, subStatus = Ticket.IN, rideDescription = Nothing, issueDetails = Nothing}
       fork "update ticket request" $
         void $ Ticket.updateSosTicket (person.merchantId) person.merchantOperatingCityId Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
       pure APISuccess.Success

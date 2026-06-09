@@ -239,12 +239,17 @@ callUpdateTicket :: Person.Person -> SafetyDSos.Sos -> Maybe Text -> Environment
 callUpdateTicket person sosDetails mbComment = do
   case sosDetails.ticketId of
     Just ticketId -> do
-      fork "update ticket request" $
-        void $
-          TicketTools.updateTicket
-            person.merchantId
-            person.merchantOperatingCityId
-            Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, status = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
+      fork "update ticket request" $ do
+        ticketStatusList <- TicketTools.getTicketStatus person.merchantId person.merchantOperatingCityId (Ticket.SearchTicketByIdReq ticketId)
+        let shouldSkip = case ticketStatusList of
+              (resp : _) -> resp.subStatus `elem` ["CLOSED", "RESOLVED"]
+              [] -> False
+        unless shouldSkip $
+          void $
+            TicketTools.updateTicket
+              person.merchantId
+              person.merchantOperatingCityId
+              Ticket.UpdateTicketReq {comment = fromMaybe "" mbComment, ticketId = ticketId, subStatus = Ticket.Pending, rideDescription = Nothing, issueDetails = Nothing}
       pure Kernel.Types.APISuccess.Success
     Nothing -> pure Kernel.Types.APISuccess.Success
 
