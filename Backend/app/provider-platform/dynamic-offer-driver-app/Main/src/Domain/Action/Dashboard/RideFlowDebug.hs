@@ -20,7 +20,6 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.DriverQuote as DDQ
-import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Quote as DQuote
@@ -31,10 +30,11 @@ import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude ((<|>))
 import Kernel.Prelude
+import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Types.Id
+import qualified Storage.Clickhouse.Estimate as CHEstimate
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverQuote as QDriverQuote
-import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSR
@@ -44,7 +44,7 @@ import qualified Storage.Queries.SearchTry as QST
 data FlowType = DynamicOfferFlow | StaticOfferFlow | RideOtpFlow | UnknownFlow
   deriving (Show)
 
-detectFlowType :: Maybe DBooking.Booking -> [DEst.Estimate] -> [DQuote.Quote] -> FlowType
+detectFlowType :: Maybe DBooking.Booking -> [CHEstimate.Estimate] -> [DQuote.Quote] -> FlowType
 detectFlowType mbBooking estimates quotes =
   case (.tripCategory) <$> mbBooking of
     Just tc
@@ -85,7 +85,7 @@ getRideFlowDebug _merchantShortId _merchantOpCityId mbRideId mbBookingId mbSearc
 
   -- Step 3: Find downstream entities
   searchTries <- maybe (pure []) (QST.findAllByRequestId . (.id)) mbSearchReq'
-  estimates <- maybe (pure []) (QEstimate.findAllByRequestId . (.id)) mbSearchReq'
+  estimates <- maybe (pure []) (\sr -> CHEstimate.findAllByRequestId sr.id sr.createdAt) mbSearchReq'
   driverQuotes <- fmap concat . forM searchTries $ QDriverQuote.findAllBySTIdIgnoringStatus . (.id)
   bppQuotes <- maybe (pure []) (QQuote.findAllBySearchRequestId . (.id)) mbSearchReq'
 
@@ -173,7 +173,7 @@ computeCurrentStage ::
   FlowType ->
   Maybe DSR.SearchRequest ->
   [DST.SearchTry] ->
-  [DEst.Estimate] ->
+  [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
   [DDQ.DriverQuote] ->
   Maybe DBooking.Booking ->
@@ -232,7 +232,7 @@ buildTimeline ::
   FlowType ->
   Maybe DSR.SearchRequest ->
   [DST.SearchTry] ->
-  [DEst.Estimate] ->
+  [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
   [DDQ.DriverQuote] ->
   Maybe DBooking.Booking ->
@@ -256,7 +256,7 @@ buildTimeline flowType mbSR searchTries estimates quotes driverQuotes mbBooking 
 buildDynamicTimeline ::
   Maybe DSR.SearchRequest ->
   [DST.SearchTry] ->
-  [DEst.Estimate] ->
+  [CHEstimate.Estimate] ->
   [DDQ.DriverQuote] ->
   Maybe DBooking.Booking ->
   Maybe DRide.Ride ->
@@ -271,8 +271,8 @@ buildDynamicTimeline mbSR searchTries estimates driverQuotes mbBooking mbRide =
    in catMaybes
         [ -- Phase 1: Search
           Just $ entry Common.BPP_SEARCH_RECEIVED (done hasSR) ((.createdAt) <$> mbSR) (Just "BPP received search, created SearchRequest"),
-          Just $ entry Common.BPP_ESTIMATES_CREATED (done hasEst) ((.createdAt) <$> listToMaybe estimates) (Just $ show (length estimates) <> " estimates (fare ranges)"),
-          Just $ entry Common.BAP_ON_SEARCH_RECEIVED (done hasEst) ((.createdAt) <$> listToMaybe estimates) (Just "BAP received estimates via on_search"),
+          Just $ entry Common.BPP_ESTIMATES_CREATED (done hasEst) (CH.getDateTime . (.createdAt) <$> listToMaybe estimates) (Just $ show (length estimates) <> " estimates (fare ranges)"),
+          Just $ entry Common.BAP_ON_SEARCH_RECEIVED (done hasEst) (CH.getDateTime . (.createdAt) <$> listToMaybe estimates) (Just "BAP received estimates via on_search"),
           -- Phase 2: Select → Driver matching
           Just $ entry Common.BAP_SELECT_SENT (done hasST) ((.createdAt) <$> listToMaybe searchTries) (Just "Rider selected estimate, BAP sent select"),
           Just $
@@ -449,7 +449,7 @@ detectIssues ::
   FlowType ->
   Maybe DSR.SearchRequest ->
   [DST.SearchTry] ->
-  [DEst.Estimate] ->
+  [CHEstimate.Estimate] ->
   [DQuote.Quote] ->
   [DDQ.DriverQuote] ->
   Maybe DBooking.Booking ->
@@ -508,7 +508,7 @@ mkSearchTryDebug st =
       validTill = st.validTill
     }
 
-mkEstimateDebug :: DEst.Estimate -> Common.BPPEstimateDebug
+mkEstimateDebug :: CHEstimate.Estimate -> Common.BPPEstimateDebug
 mkEstimateDebug est =
   Common.BPPEstimateDebug
     { id = est.id.getId,
@@ -516,7 +516,7 @@ mkEstimateDebug est =
       vehicleServiceTier = show est.vehicleServiceTier,
       minFare = est.minFare,
       maxFare = est.maxFare,
-      createdAt = est.createdAt
+      createdAt = CH.getDateTime est.createdAt
     }
 
 mkDriverQuoteDebug :: DDQ.DriverQuote -> Common.BPPDriverQuoteDebug
