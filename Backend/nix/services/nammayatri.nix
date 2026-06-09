@@ -197,6 +197,12 @@ in
           # On non-NixOS Linux (remote devbox), Nix-built binaries need
           # LOCALE_ARCHIVE to find the system locale data.
           LOCALE_ARCHIVE = "/usr/lib/locale/locale-archive";
+          # Force UTF-8 so Haskell's hGetContents can read migration SQL files
+          # that contain non-ASCII characters (e.g. × in comments). Without
+          # this, a devbox with LC_ALL=C (ASCII-only) raises:
+          #   hGetContents: invalid argument (invalid byte sequence)
+          # Redis processes override this back to LC_ALL=C via localeEnv.
+          LC_ALL = "C.UTF-8";
         };
       };
 
@@ -343,8 +349,16 @@ in
           # with "Failed to configure LOCALE" if this is missing. Harmless on macOS
           # (glibc isn't used) and on NixOS (set globally).
           (lib.mkIf (pkgs.stdenv.isLinux && inBackend) (
-            let localeEnv = { environment.LOCALE_ARCHIVE = "/usr/lib/locale/locale-archive"; };
-            in {
+            let
+              localeEnv = {
+                environment.LOCALE_ARCHIVE = "/usr/lib/locale/locale-archive";
+                # Force a known-good locale so Redis doesn't fail with
+                # "Failed to configure LOCALE for invalid locale name"
+                # when the devbox LANG/LC_ALL is set to something not installed.
+                environment.LC_ALL = "C";
+              };
+            in
+            {
               "redis" = localeEnv;
               "cluster1-n1" = localeEnv;
               "cluster1-n2" = localeEnv;
