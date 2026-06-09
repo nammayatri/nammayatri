@@ -16,10 +16,12 @@
 module Storage.Clickhouse.Estimate where
 
 import qualified Data.List.NonEmpty as NE
+import Data.Time (addUTCTime)
 import qualified Domain.Types.Estimate as DE
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.ServiceTierType as DServiceTierType
+import qualified Domain.Types.Trip as DTrip
 import Kernel.Prelude
 import Kernel.Storage.ClickhouseV2 as CH
 import qualified Kernel.Storage.ClickhouseV2.UtilsTH as TH
@@ -34,6 +36,9 @@ data EstimateT f = EstimateT
     merchantOperatingCityId :: C f (Id DMOC.MerchantOperatingCity),
     congestionMultiplier :: C f (Maybe Double),
     vehicleServiceTier :: C f DServiceTierType.ServiceTierType,
+    tripCategory :: C f DTrip.TripCategory,
+    minFare :: C f Common.HighPrecMoney,
+    maxFare :: C f Common.HighPrecMoney,
     requestId :: C f (Id DSR.SearchRequest),
     createdAt :: C f CH.DateTime --,
   }
@@ -42,6 +47,8 @@ data EstimateT f = EstimateT
 deriving instance Show Estimate
 
 instance CH.ClickhouseValue Common.Seconds
+
+instance CH.ClickhouseValue DTrip.TripCategory
 
 estimateTTable :: EstimateT (FieldModification EstimateT)
 estimateTTable =
@@ -53,6 +60,9 @@ estimateTTable =
       estimatedDuration = "estimated_duration",
       congestionMultiplier = "congestion_multiplier",
       vehicleServiceTier = "vehicle_service_tier",
+      tripCategory = "trip_category",
+      minFare = "min_fare",
+      maxFare = "max_fare",
       requestId = "request_id",
       createdAt = "created_at"
     }
@@ -60,6 +70,22 @@ estimateTTable =
 type Estimate = EstimateT Identity
 
 $(TH.mkClickhouseInstances ''EstimateT 'SELECT_FINAL_MODIFIER)
+
+findAllByRequestId ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DSR.SearchRequest ->
+  UTCTime ->
+  m [Estimate]
+findAllByRequestId requestId searchReqCreatedAt =
+  CH.findAll $
+    CH.select $
+      CH.filter_
+        ( \estimate ->
+            estimate.requestId CH.==. requestId
+              CH.&&. estimate.createdAt >=. CH.DateTime searchReqCreatedAt
+              CH.&&. estimate.createdAt <. CH.DateTime (addUTCTime (172800 :: NominalDiffTime) searchReqCreatedAt)
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE estimateTTable)
 
 calulateCongestionByGeohashAndDistanceBin ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
