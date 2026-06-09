@@ -50,7 +50,7 @@ type PoolBatchNum = Int
 
 type PoolRadiusStep = Meters
 
-data PoolCalculationStage = Estimate | DriverSelection
+data PoolCalculationStage = Estimate | DriverSelection deriving (Eq, Show)
 
 data PoolType = NormalPool | GoHomePool | SpecialDriversPool | SpecialZoneQueuePool | SkipPool deriving (Ord, Eq, Show)
 

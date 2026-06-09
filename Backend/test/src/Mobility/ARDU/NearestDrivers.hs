@@ -84,6 +84,10 @@ createNearestDriverReq nearestRadius now =
           },
       minWalletAmountForCashRides = Nothing,
       currentRideTripCategoryValidForForwardBatching = [],
+      excludeDriverIds = [],
+      prevAttemptedDriverIds = [],
+      applyParallelRequestFilter = False,
+      maxParallelSearchRequests = 1,
       ..
     }
 

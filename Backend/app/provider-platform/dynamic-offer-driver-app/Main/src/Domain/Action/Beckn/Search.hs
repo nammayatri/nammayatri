@@ -567,7 +567,6 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             merchantOperatingCityId = merchantOpCityId,
             merchantId = merchant.id,
             onlinePayment = merchant.onlinePayment,
-            mRadiusStep = Nothing,
             isRental = False,
             isInterCity = False,
             rideFare = Nothing,
@@ -575,6 +574,8 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             tollCharges = Nothing,
             parkingCharge = Nothing,
             paymentInstrument = Nothing,
+            excludeDriverIds = [],
+            prevAttemptedDriverIds = [],
             ..
           }
   (offRidePool, onRidePool, _) <- calculateDriverPool calculateDriverPoolReq

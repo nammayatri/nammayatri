@@ -106,7 +106,6 @@ import qualified Tools.DynamicLogic as DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.EventTracking as ET
-import qualified Tools.Metrics as Metrics
 
 data DOnSearchReq = DOnSearchReq
   { requestId :: Id DSearchReq.SearchRequest,
@@ -297,8 +296,7 @@ onSearch ::
   Text ->
   ValidatedOnSearchReq ->
   Flow ()
-onSearch transactionId ValidatedOnSearchReq {..} = do
-  Metrics.finishSearchMetrics merchant.name transactionId
+onSearch _transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent

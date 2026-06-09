@@ -4,6 +4,10 @@ module SharedLogic.DriverPool.DriverPoolData
     setDriverPoolData,
     driverPoolDataKey,
     defaultDriverPoolData,
+    mkParallelSearchRequestKey,
+    driverRequestCountKey,
+    getDriverRequestCountLimit,
+    checkRequestCount,
   )
 where
 
@@ -11,8 +15,11 @@ import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
+import Domain.Types.Merchant (Merchant)
 import Domain.Types.Person (Driver, Gender (..))
+import qualified Domain.Types.SearchTry as DST
 import Domain.Types.ServiceTierType (ServiceTierType)
 import Domain.Types.VehicleVariant (VehicleVariant (..))
 import qualified Kernel.External.Maps as Maps
@@ -91,6 +98,43 @@ data DriverPoolData = DriverPoolData
 
 driverPoolDataKey :: Id Driver -> Text
 driverPoolDataKey driverId = "driver-pool-data:" <> driverId.getId
+
+-- | Redis sorted set tracking a driver's currently-pending parallel search requests.
+-- Entries are added by `isLessThenNParallelRequests` (atomic reservation) and read by
+-- the early parallel-request filter inside `getNearestDrivers`.
+mkParallelSearchRequestKey :: Id Merchant -> Id Driver -> Text
+mkParallelSearchRequestKey mId dId = "driver-offer:DriverPool:Search-Req-Validity-Map-:" <> mId.getId <> dId.getId
+
+-- | Counter key tracking how many times a specific driver has been asked about
+-- a specific search-try at a specific service tier. Incremented by
+-- `incrementDriverRequestCount` after each batch is sent; checked by
+-- `checkRequestCount` to cap re-asks of prev-attempted drivers within one search.
+driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> ServiceTierType -> Text
+driverRequestCountKey searchTryId driverId vehicleServiceTier =
+  "Driver-Request-Count-Key:SearchTryId-" <> searchTryId.getId <> ":DriverId-" <> driverId.getId <> ":ServiceTier-" <> show vehicleServiceTier
+
+-- | Per-search re-ask limit. For BookAny requests with a downgrade (downgradeLevel < 0)
+-- we cap at 1 attempt; otherwise use the configured `driverRequestCountLimit`.
+getDriverRequestCountLimit :: Int -> Bool -> DriverPoolConfig -> Int
+getDriverRequestCountLimit serviceTierDowngradeLevel isBookAnyRequest driverPoolConfig =
+  if serviceTierDowngradeLevel < 0 && isBookAnyRequest
+    then 1
+    else driverPoolConfig.driverRequestCountLimit
+
+-- | True if this (search-try, driver, serviceTier) is still under its re-ask cap.
+-- Used as a per-search rate-limit on previously-attempted drivers.
+checkRequestCount ::
+  Redis.HedisFlow m r =>
+  Id DST.SearchTry ->
+  Bool ->
+  Id Driver ->
+  ServiceTierType ->
+  Int ->
+  DriverPoolConfig ->
+  m Bool
+checkRequestCount searchTryId isBookAnyRequest driverId vehicleServiceTier serviceTierDowngradeLevel driverPoolConfig =
+  maybe True (\count -> (count :: Int) < getDriverRequestCountLimit serviceTierDowngradeLevel isBookAnyRequest driverPoolConfig)
+    <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchTryId driverId vehicleServiceTier))
 
 -- | Batch-fetch pool data for multiple drivers from Redis.
 getDriverPoolDataBatch ::
