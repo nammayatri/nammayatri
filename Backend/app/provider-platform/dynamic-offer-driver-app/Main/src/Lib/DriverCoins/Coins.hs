@@ -32,12 +32,13 @@ module Lib.DriverCoins.Coins
     EventFlow,
     runCancellationLogic,
     updateEventAndGetCoinsvalue,
+    getValidRideCountForReward,
   )
 where
 
 import qualified Data.Aeson as A
 import qualified Data.Text as T
-import Data.Time (UTCTime (UTCTime, utctDay), addDays)
+import Data.Time (utctDay)
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverStats as DDS
@@ -51,8 +52,6 @@ import Domain.Types.TransporterConfig
 import Domain.Types.VehicleCategory as DTV
 import qualified Domain.Types.VehicleVariant as DTVeh
 import qualified Kernel.Beam.Functions as B
-import qualified Kernel.External.Notification.FCM.Types as FCM
-import qualified Kernel.External.Types as L
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config
 import qualified Kernel.Storage.Hedis as Hedis
@@ -60,13 +59,19 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.App (lookupCloudType)
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.CoinBalance as CoinBalance
+import qualified Lib.DriverCoins.CoinLedger as CoinLedger
+import qualified Lib.DriverCoins.CoinNotifications as CoinNotifications
 import Lib.DriverCoins.Types
 import qualified Lib.DriverCoins.Types as DCT
+import Lib.Scheduler.Environment (JobCreator)
+import Lib.Scheduler.JobStorageType.SchedulerType ()
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (HasYudhishthiraTablesSchema)
 import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.CancellationCoins as CancellationCoins
-import SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
-import qualified SharedLogic.Finance.Wallet as SLFW
+import SharedLogic.External.LocationTrackingService.Types (HasLocationService)
+import qualified SharedLogic.Rewards.DriverRewardDispatch as DriverRewardDispatch
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.CoinsConfig as CDCQ
 import qualified Storage.CachedQueries.MonetaryRewardConfig as CWCQ
@@ -79,38 +84,24 @@ import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
-import qualified Storage.Queries.Translations as MTQuery
 import qualified Tools.DynamicLogic as TDL
-import qualified Tools.Notifications as Notify
+import Tools.Metrics (CoreMetrics)
 import Tools.Utils
 import Utils.Common.Cac.KeyNameConstants
 
 type EventFlow m r = (MonadFlow m, EsqDBFlow m r, CacheFlow m r, MonadReader r m, ClickhouseFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r)
 
 getCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Seconds -> m Int
-getCoinsByDriverId driverId timeDiffFromUtc = Hedis.withLockRedisAndReturnValue driverId.getId 60 $ do
-  now <- getCurrentTime
-  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
-  let currentDate = show $ utctDay istTime
-  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
-  coinKeyExists <- getCoinAccumulationByDriverIdKey driverId currentDate
-  case coinKeyExists of
-    Just coinBalance -> pure coinBalance
-    Nothing -> do
-      totalCoins <- CHistory.getTotalCoins driverId (secondsToNominalDiffTime timeDiffFromUtc)
-      let coinBalance = sum $ map (\coinHistory -> coinHistory.coins - coinHistory.coinsUsed) totalCoins
-      Hedis.whenWithLockRedis (mkCoinAccumulationByDriverIdKey driverId currentDate) 60 $ do
-        setCoinAccumulationByDriverIdKey driverId currentDate coinBalance expirationPeriod
-      pure coinBalance
+getCoinsByDriverId = CoinBalance.getCoinsByDriverId
 
 updateCoinsByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Seconds -> m ()
 updateCoinsByDriverId driverId coinUpdateValue timeDiffFromUtc = do
   now <- getCurrentTime
   let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
   let currentDate = show $ utctDay istTime
-  expirationPeriod <- getExpirationSeconds timeDiffFromUtc
-  safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue) driverId timeDiffFromUtc
-  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+  expirationPeriod <- CoinBalance.getExpirationSeconds timeDiffFromUtc
+  safeIncrBy (CoinBalance.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral coinUpdateValue) driverId timeDiffFromUtc
+  Hedis.withCrossAppRedis $ Hedis.expire (CoinBalance.mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 updateDriverCoins :: EventFlow m r => Id DP.Person -> Int -> Seconds -> m ()
 updateDriverCoins driverId finalCoinsValue timeDiffFromUtc = do
@@ -152,11 +143,29 @@ resetTodayCoinsAndAdjustLifetime driverId timeDiffFromUtc = do
           }
     driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     void $ Person.updateTotalEarnedCoins (driver.totalEarnedCoins - todayAddedCoins) driverId
-    expirationPeriod <- getExpirationSeconds timeDiffFromUtc
-    safeIncrBy (mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
-    Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
+    expirationPeriod <- CoinBalance.getExpirationSeconds timeDiffFromUtc
+    safeIncrBy (CoinBalance.mkCoinAccumulationByDriverIdKey driverId currentDate) (negate $ fromIntegral todayAddedCoins) driverId timeDiffFromUtc
+    Hedis.withCrossAppRedis $ Hedis.expire (CoinBalance.mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
-driverCoinsEvent :: EventFlow m r => Id DP.Person -> Maybe DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> Maybe DTVeh.VehicleVariant -> Maybe DTC.ServiceTierType -> Maybe [LYT.ConfigVersionMap] -> m ()
+driverCoinsEvent ::
+  ( EventFlow m r,
+    ClickhouseFlow m r,
+    HasYudhishthiraTablesSchema,
+    CoreMetrics m,
+    HasLocationService m r,
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Id DP.Person ->
+  Maybe DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DCT.DriverCoinsEventType ->
+  Maybe Text ->
+  Maybe DTVeh.VehicleVariant ->
+  Maybe DTC.ServiceTierType ->
+  Maybe [LYT.ConfigVersionMap] ->
+  m ()
 driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap = do
   let vehCategory = maybe (DTVeh.getVehicleCategoryFromVehicleVariantDefault mbVehVarient) DTVeh.castServiceTierToVehicleCategory mbServiceTierType
       tripCatType = case eventType of
@@ -181,30 +190,33 @@ driverCoinsEvent driverId mbDriver merchantId merchantOpCityId eventType entityI
       blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
       combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
   let incentiveCohortFunctions = maybe [] (extractDriverIncentiveCohortFunctions . (.driverTag)) mbDriver
-  if fromMaybe False transporterConfig.enableDirectWalletIncentives
-    then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
-    else do
-      coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbServiceTierType tripCatType mbConfigVersionMap
-      let applicableCoinConfiguration =
-            if null incentiveCohortFunctions
-              then coinConfiguration
-              else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
+  rewardHandled <-
+    DriverRewardDispatch.tryDispatchDriverRewards driverId mbDriver merchantId merchantOpCityId eventType entityId mbVehVarient mbServiceTierType mbConfigVersionMap
+  unless rewardHandled $
+    if fromMaybe False transporterConfig.enableDirectWalletIncentives
+      then driverMonetaryRewardEvent driverId merchantId merchantOpCityId eventType entityId vehCategory mbConfigVersionMap transporterConfig combinedBlacklist mbFleetOwnerId
+      else do
+        coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbServiceTierType tripCatType mbConfigVersionMap
+        let applicableCoinConfiguration =
+              if null incentiveCohortFunctions
+                then coinConfiguration
+                else filter (\cc -> cc.eventFunction `elem` incentiveCohortFunctions) coinConfiguration
 
-      let filteredConfigAll =
-            if null incentiveCohortFunctions
-              then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
-              else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
+        let filteredConfigAll =
+              if null incentiveCohortFunctions
+                then filter (\cc -> cc.eventFunction `notElem` combinedBlacklist && not (isDriverIncentiveCohortFunction cc.eventFunction)) applicableCoinConfiguration
+                else filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) applicableCoinConfiguration
 
-      logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
+        logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", IncentiveFunctions: " <> show incentiveCohortFunctions <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Applicable: " <> show (map (.eventFunction) applicableCoinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
 
-      if null filteredConfigAll
-        then do
-          logInfo "All coin events blacklisted; skipping award"
-          pure ()
-        else do
-          finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory mbServiceTierType)
-          logInfo $ "Awarding coins: " <> show finalCoinsValue
-          updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+        if null filteredConfigAll
+          then do
+            logInfo "All coin events blacklisted; skipping award"
+            pure ()
+          else do
+            finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory mbServiceTierType)
+            logInfo $ "Awarding coins: " <> show finalCoinsValue
+            updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 extractDriverIncentiveCohortFunctions :: Maybe [LYT.TagNameValueExpiry] -> [DCT.DriverCoinsFunctionType]
 extractDriverIncentiveCohortFunctions =
@@ -241,12 +253,12 @@ hLms driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoin
       runActionWhenValidConditions
         [ pure True
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.BonusQuizCoins ->
       runActionWhenValidConditions
         [ pure True
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 hRating :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Int -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
@@ -258,13 +270,13 @@ hRating driverId merchantId merchantOpCityId ratingValue ride eventFunction mbex
         [ pure (ratingValue == 1 || ratingValue == 2),
           pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.FiveStarRating ->
       runActionWhenValidConditions
         [ pure $ ratingValue == 5,
           pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 hEndRide :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Int -> DR.Ride -> MetroRideType -> DCT.TripCategoryType -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
@@ -278,7 +290,7 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.DriverIncentiveCohortRidesCompleted a -> do
       validRideCount <- case tripCategoryType of
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
@@ -286,18 +298,18 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
       runActionWhenValidConditions
         [ pure (validRideCount == a)
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.PurpleRideCompleted ->
       runActionWhenValidConditions
         [ pure isDisabled
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.GoldTierRideCompleted -> do
       let goldTierRide = isJust coinsRewardedOnGoldTierRide
       runActionWhenValidConditions
         [ pure goldTierRide
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     DCT.MetroRideCompleted mRideType maybeCount -> do
       metroRideCount <- fromMaybe 0 <$> getMetroRideCountByDriverIdKey driverId mRideType
       logDebug $ "Metro Ride Type DB - " <> show mRideType <> "and count - " <> show maybeCount <> "Metro Ride Count from Redis - " <> show metroRideCount
@@ -307,13 +319,13 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
         then
           runActionWhenValidConditions
             conditionsForXRide
-            $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+            $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
         else
           if isNothing maybeCount
             then
               runActionWhenValidConditions
                 conditionsForEveryRide
-                $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+                $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
             else pure 0
     _ -> pure 0
 
@@ -325,7 +337,7 @@ hDriverReferral driverId merchantId merchantOpCityId ride eventFunction mbexpira
       runActionWhenValidConditions
         [ pure $ isValidRide ride
         ]
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
+        $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 validateCancellation :: EventFlow m r => Maybe Text -> UTCTime -> Maybe Meters -> Maybe Meters -> TransporterConfig -> DCT.CancellationType -> m Int
@@ -402,13 +414,13 @@ hCancellation driverId merchantId merchantOpCityId rideStartTime intialDisToPick
   logDebug $ "Driver Coins Handle Cancellation Event Triggered - " <> show eventFunction
   case eventFunction of
     DCT.BookingCancellation -> do
-      runActionWhenValidConditions [pure False] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType -- To be deprecated
+      runActionWhenValidConditions [pure False] $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType -- To be deprecated
     DCT.BookingCancellationPenalisaton -> do
       numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy
-      runActionWhenValidConditions [pure (numCoinValue < 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
+      runActionWhenValidConditions [pure (numCoinValue < 0)] $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
     DCT.BookingCancellationCompensation -> do
       numCoinValue <- validateCancellation entityId rideStartTime intialDisToPickup cancellationDisToPickup transporterConfig cancelledBy
-      runActionWhenValidConditions [pure (numCoinValue > 0)] $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
+      runActionWhenValidConditions [pure (numCoinValue > 0)] $ CoinLedger.updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoinValue entityId vehCategory mbServiceTierType
     _ -> pure 0
 
 runActionWhenValidConditions :: EventFlow m r => [m Bool] -> m Int -> m Int
@@ -423,122 +435,12 @@ runActionWhenValidConditions conditions action = do
       isValid <- condition
       if isValid then checkAllConditions xs else pure False
 
-updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
-updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory mbServiceTierType = do
-  now <- getCurrentTime
-  uuid <- generateGUIDText
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  currentBalance <- getCoinsByDriverId driverId transporterConfig.timeDiffFromUtc
-  let expiryTime =
-        if currentBalance < 0
-          then Nothing -- if current balance is negative we dont expire the coins.
-          else fmap (\expirationTime -> UTCTime (utctDay $ addUTCTime (fromIntegral expirationTime) now) 0) mbexpirationTime
-      status_ = if numCoins > 0 then Remaining else Used
-  let driverCoinEvent =
-        DTCC.CoinHistory
-          { id = Id uuid,
-            driverId = driverId.getId,
-            merchantId = merchantId.getId,
-            merchantOptCityId = merchantOpCityId.getId,
-            eventFunction = eventFunction,
-            coins = numCoins,
-            status = status_,
-            createdAt = now,
-            updatedAt = now,
-            expirationAt = expiryTime,
-            coinsUsed = 0,
-            bulkUploadTitle = Nothing,
-            entityId = entityId,
-            vehicleCategory = Just vehCategory,
-            serviceTierType = mbServiceTierType
-          }
-  CHistory.updateCoinEvent driverCoinEvent
-
-  case eventFunction of
-    DCT.BookingCancellationPenalisaton -> do
-      sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
-    _ -> do
-      when (numCoins > 0) $ do
-        case eventFunction of
-          DCT.MetroRideCompleted _ _ -> do
-            -- case match to be removed after next deployment
-            logDebug "metro notification case for coins"
-            sendCoinsNotificationV3 merchantOpCityId driverId numCoins eventFunction
-          _ -> sendCoinsNotification merchantOpCityId driverId numCoins eventFunction
-  pure numCoins
-
--- This function is to be removed after next apk deployment
-sendCoinsNotificationV3 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
-sendCoinsNotificationV3 merchantOpCityId driverId coinsValue (DCT.MetroRideCompleted metroRideType _) =
-  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
-    let language = fromMaybe L.ENGLISH driver.language
-        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = DCT.MetroRideCompleted metroRideType Nothing}
-     in MTQuery.findByErrorAndLanguage (T.pack (show metroRideType)) language >>= processMessage driver entityData
-  where
-    processMessage driver entityData mbCoinsMessage =
-      case mbCoinsMessage of
-        Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
-            [title, description] ->
-              Notify.sendCoinsNotificationV3 merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData metroRideType
-            _ -> logDebug "Invalid message format."
-        Nothing -> logDebug "Could not find Translations."
-    replaceCoinsValue = T.replace "{#pointsValue#}" (T.pack $ show coinsValue)
-sendCoinsNotificationV3 _merchantOpCityId _driverId _coinsValue _eventFunction = pure ()
-
-sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
-sendCoinsNotificationV2 merchantOpCityId driverId amount coinsValue (DCT.BulkUploadFunctionV2 messageKey) = do
-  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
-    let language = fromMaybe L.ENGLISH driver.language
-     in MTQuery.findByErrorAndLanguage (T.pack (show messageKey)) language >>= processMessage driver amount
-  where
-    processMessage driver amount' mbCoinsMessage =
-      case mbCoinsMessage of
-        Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
-            [title, description] -> do
-              let descriptionReplaced = replaceAmountValue amount' $ replaceCoinsValue description
-              Notify.sendNotificationToDriver merchantOpCityId FCM.SHOW Nothing FCM.COINS_SUCCESS title descriptionReplaced driver (driver.deviceToken)
-            _ -> logDebug "Invalid message format."
-        Nothing -> logDebug "Could not find Translations."
-    replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
-    replaceAmountValue amount' = T.replace "{#amountValue#}" (T.pack $ show amount')
-sendCoinsNotificationV2 _merchantOpCityId _driverId _amount _coinsValue _eventFunction = pure ()
-
-sendCoinsNotification :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
-sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction =
-  B.runInReplica (Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)) >>= \driver ->
-    let language = fromMaybe L.ENGLISH driver.language
-        queryType = if coinsValue > 0 then CoinAdded else CoinSubtracted
-        entityData = Notify.CoinsNotificationData {coins = coinsValue, event = eventFunction}
-     in MTQuery.findByErrorAndLanguage (T.pack (show queryType)) language >>= processMessage driver entityData
-  where
-    processMessage driver entityData mbCoinsMessage =
-      case mbCoinsMessage of
-        Just coinsMessage ->
-          case T.splitOn " | " coinsMessage.message of
-            [title, description] ->
-              Notify.sendCoinsNotification merchantOpCityId title (replaceCoinsValue description) driver (driver.deviceToken) entityData
-            _ -> logDebug "Invalid message format."
-        Nothing -> logDebug "Could not find Translations."
-    replaceCoinsValue = T.replace "{#coinsValue#}" (T.pack $ show coinsValue)
-
-getExpirationSeconds :: MonadFlow m => Seconds -> m Int
-getExpirationSeconds timeDiffFromUtc = do
-  now <- getCurrentTime
-  let istTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
-  let expirationSeconds = round $ diffUTCTime (UTCTime (addDays 1 $ utctDay istTime) 0) istTime -- expire at 12:00 AM IST
-  pure expirationSeconds
-
 incrementValidRideCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 incrementValidRideCount driverId expirationPeriod incrementValue = do
   validRideCountKeyExists <- getValidRideCountByDriverIdKey driverId
   case validRideCountKeyExists of
     Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkValidRideCountByDriverIdKey driverId) (fromIntegral incrementValue)
     Nothing -> setValidRideCountByDriverIdKey driverId expirationPeriod incrementValue
-
-mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
-mkCoinAccumulationByDriverIdKey driverId date = "DriverCoinBalance:DriverId:" <> driverId.getId <> ":" <> date
 
 -- | Wallet Incentive Pipeline
 driverMonetaryRewardEvent :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsEventType -> Maybe Text -> DTV.VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> TransporterConfig -> [DCT.DriverCoinsFunctionType] -> Maybe (Id DP.Person) -> m ()
@@ -578,57 +480,23 @@ hMonetaryRewardEndRide driverId merchantId merchantOpCityId tripCategoryType eve
       validRideCount <- case tripCategoryType of
         DCT.OTPRideTrip -> fromMaybe 0 <$> getOTPValidRideCountByDriverIdKey driverId
         DCT.DynamicOfferTrip -> fromMaybe 0 <$> getValidRideCountByDriverIdKey driverId
-      runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId
+      runActionWhenValidMonetaryRewardConditions [pure (validRideCount == a)] $ CoinLedger.updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId
     _ -> pure False
-
-updateEventAndGetMonetaryRewardCredit :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> HighPrecMoney -> TransporterConfig -> Maybe Text -> Maybe (Id DP.Person) -> m Bool
-updateEventAndGetMonetaryRewardCredit driverId merchantId merchantOpCityId eventFunction amount transporterConfig entityId mbFleetOwnerId = do
-  let referenceId = fromMaybe "wallet_incentive" entityId
-  logDebug $
-    "Wallet Incentive: crediting driver wallet"
-      <> " | driverId="
-      <> driverId.getId
-      <> " | eventFunction="
-      <> show eventFunction
-      <> " | amount="
-      <> show amount
-      <> " | currency="
-      <> show transporterConfig.currency
-      <> " | referenceId="
-      <> referenceId
-  let (counterparty, ownerId) = case mbFleetOwnerId of
-        Just fleetOwnerId -> (counterpartyFleetOwner, fleetOwnerId.getId)
-        Nothing -> (counterpartyDriver, driverId.getId)
-  res <-
-    SLFW.createWalletEntryDelta
-      counterparty
-      ownerId
-      amount
-      transporterConfig.currency
-      merchantId.getId
-      merchantOpCityId.getId
-      SLFW.walletReferenceWalletIncentive
-      referenceId
-      Nothing
-  case res of
-    Right _ -> pure True
-    Left err -> do
-      logError $ "Failed to credit driver wallet: " <> show err
-      pure False
-
-getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
-getCoinAccumulationByDriverIdKey driverId currentDate = Hedis.withCrossAppRedis $ Hedis.get (mkCoinAccumulationByDriverIdKey driverId currentDate)
-
-setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> Int -> m ()
-setCoinAccumulationByDriverIdKey driverId currentDate count expirationPeriod = do
-  void $ Hedis.withCrossAppRedis $ Hedis.incrby (mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral count)
-  Hedis.withCrossAppRedis $ Hedis.expire (mkCoinAccumulationByDriverIdKey driverId currentDate) expirationPeriod
 
 mkValidRideCountByDriverIdKey :: Id DP.Person -> Text
 mkValidRideCountByDriverIdKey driverId = "DriverValidRideCount:DriverId:" <> driverId.getId
 
 getValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe Int)
 getValidRideCountByDriverIdKey driverId = Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.get (mkValidRideCountByDriverIdKey driverId)
+
+getValidRideCountForReward :: (MonadFlow m, Hedis.HedisFlow m r) => Id DP.Person -> DCT.DriverCoinsEventType -> m Int
+getValidRideCountForReward driverId eventType = case eventType of
+  DCT.EndRide {tripCategoryType} -> case tripCategoryType of
+    DCT.OTPRideTrip ->
+      fromMaybe 0 <$> Hedis.runInMasterCloudRedisCellWithCrossAppRedis (Hedis.get $ mkOTPValidRideCountByDriverIdKey driverId)
+    DCT.DynamicOfferTrip ->
+      fromMaybe 0 <$> Hedis.runInMasterCloudRedisCellWithCrossAppRedis (Hedis.get $ mkValidRideCountByDriverIdKey driverId)
+  _ -> pure 0
 
 setValidRideCountByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Int -> Int -> m ()
 setValidRideCountByDriverIdKey driverId expirationPeriod count = do
@@ -675,3 +543,24 @@ incrementMetroRideCount driverId metroRideType expirationPeriod incrementValue =
   case metroRideCountKeyExists of
     Just _ -> void $ Hedis.runInMasterCloudRedisCellWithCrossAppRedis $ Hedis.incrby (mkMetroRideCountByDriverIdKey driverId metroRideType) (fromIntegral incrementValue)
     Nothing -> setMetroRideCountByDriverIdKey driverId metroRideType expirationPeriod incrementValue
+
+updateEventAndGetCoinsvalue :: (EventFlow m r, Hedis.HedisLTSFlowEnv r) => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> Maybe Text -> DTV.VehicleCategory -> Maybe DTC.ServiceTierType -> m Int
+updateEventAndGetCoinsvalue = CoinLedger.updateEventAndGetCoinsvalue
+
+mkCoinAccumulationByDriverIdKey :: Id DP.Person -> Text -> Text
+mkCoinAccumulationByDriverIdKey = CoinBalance.mkCoinAccumulationByDriverIdKey
+
+getCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> m (Maybe Int)
+getCoinAccumulationByDriverIdKey = CoinBalance.getCoinAccumulationByDriverIdKey
+
+setCoinAccumulationByDriverIdKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Text -> Int -> Int -> m ()
+setCoinAccumulationByDriverIdKey = CoinBalance.setCoinAccumulationByDriverIdKey
+
+getExpirationSeconds :: MonadFlow m => Seconds -> m Int
+getExpirationSeconds = CoinBalance.getExpirationSeconds
+
+sendCoinsNotification :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotification = CoinNotifications.sendCoinsNotification
+
+sendCoinsNotificationV2 :: (EventFlow m r, Hedis.HedisFlow m r, Hedis.HedisLTSFlowEnv r) => Id DMOC.MerchantOperatingCity -> Id DP.Person -> HighPrecMoney -> Int -> DCT.DriverCoinsFunctionType -> m ()
+sendCoinsNotificationV2 = CoinNotifications.sendCoinsNotificationV2

@@ -52,11 +52,13 @@ import qualified Kernel.Storage.ClickhouseV2 as CHV2
 import qualified Kernel.Storage.Esqueleto.Config as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Common (Currency, HighPrecMoney, Meters (..), MonadFlow, Seconds (..), getMeters)
 import Kernel.Types.Id
 import Kernel.Utils.Common
   ( CacheFlow,
     Forkable (fork),
+    HasShortDurationRetryCfg,
     fromMaybeM,
     generateGUIDText,
     getCurrentTime,
@@ -66,6 +68,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Time (secondsFromTimeOfDay)
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Coins as DC
 import qualified "dynamic-offer-driver-app" Lib.DriverCoins.Types as DCT
+import Lib.Scheduler.Environment (JobCreator)
+import Lib.Yudhishthira.Storage.Beam.BeamFlow (HasYudhishthiraTablesSchema)
+import qualified "dynamic-offer-driver-app" SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.FareCalculator (timeZoneIST)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Prepaid (counterpartyDriver, counterpartyFleetOwner)
 import "dynamic-offer-driver-app" SharedLogic.Finance.Wallet (createWalletEntryDelta, walletReferenceD2DReferral)
@@ -99,9 +104,17 @@ sendReferralFCM ::
     Esq.EsqDBFlow m r,
     EncFlow m r,
     Esq.EsqDBReplicaFlow m r,
+    MonadFlow m,
+    MonadReader r m,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
     CHConfig.ClickhouseFlow m r,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    CoreMetrics.CoreMetrics m,
+    HasYudhishthiraTablesSchema,
+    LT.HasLocationService m r,
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
   ) =>
   Bool ->
   Ride.Ride ->

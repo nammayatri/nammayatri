@@ -39,6 +39,10 @@ parseDirective directive =
     "PERMANENT_BLOCK" -> parseParams directive.params PermanentBlock
     "CHARGE_FEE" -> parseParams directive.params ChargeFee
     "INCREMENT_COUNTER" -> parseParams directive.params IncrementCounter
+    "AWARD_COINS" -> parseParams directive.params AwardCoins
+    "AWARD_CASH" -> parseParams directive.params AwardCash
+    "AWARD_WALLET" -> parseParams directive.params AwardCash
+    "GRANT_COUPON" -> parseParams directive.params GrantCoupon
     unknown -> Left $ "Unknown consequence type: " <> unknown
 
 -- | Parse all directives, collecting successes and errors

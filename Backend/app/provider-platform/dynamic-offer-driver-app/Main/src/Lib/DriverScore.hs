@@ -147,7 +147,8 @@ eventPayloadHandler merchantOpCityId DST.OnDriverCancellation {..} = do
             { merchantId = merchantId,
               merchantOperatingCityId = merchantOpCityId,
               counterConfig = Just counterConfig,
-              actionEvent = Just actionEvent
+              actionEvent = Just actionEvent,
+              rewardContext = Nothing
             }
     BehaviorDispatch.handleConsequences dispatchCtx driverId output.consequences
     BehaviorDispatch.handleCommunications driverId output.communications

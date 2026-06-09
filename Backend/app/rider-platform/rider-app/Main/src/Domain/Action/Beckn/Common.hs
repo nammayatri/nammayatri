@@ -112,6 +112,7 @@ import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Payment as SPayment
+import qualified SharedLogic.Rewards.RiderRewardPipeline
 import qualified SharedLogic.ScheduledNotifications as SN
 import qualified SharedLogic.Scheduler.Jobs.SafetyCSAlert as SIVR
 import Storage.Beam.Yudhishthira ()
@@ -1114,6 +1115,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   when (isJust paymentStatus && booking.paymentStatus /= Just DRB.PAID) $ QRB.updatePaymentStatus booking.id (fromJust paymentStatus)
   whenJust paymentUrl $ QRB.updatePaymentUrl booking.id
   QRide.updateMultiple updRide.id updRide
+  fork "rider rewards json logic" $
+    SharedLogic.Rewards.RiderRewardPipeline.tryRiderRewardLogic person.id booking.merchantId booking.merchantOperatingCityId BT.COMPLETED booking updRide
   offerDiscountBreakup <-
     if rideDiscountAmount > 0
       then do

@@ -77,6 +77,9 @@ executeConsequence entityId action = do
       PermanentBlock params -> handlePermanentBlock entityId params
       ChargeFee params -> handleChargeFee entityId params
       IncrementCounter _ -> logDebug $ "INCREMENT_COUNTER skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
+      AwardCoins _ -> logDebug $ "AWARD_COINS skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
+      AwardCash _ -> logDebug $ "AWARD_CASH skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
+      GrantCoupon _ -> logDebug $ "GRANT_COUPON skipped in generic executor for entity " <> entityId <> " (handled by app dispatcher)"
   case result of
     Right () -> do
       logDebug $ "Successfully executed consequence " <> show action <> " for entity " <> entityId

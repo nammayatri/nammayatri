@@ -85,6 +85,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.BehaviorEngine.Types as BET
+import qualified Lib.BehaviorTracker.Types as BTT
 import qualified Lib.Finance.Invoice.RenderTemplate as FRT
 import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
 import Lib.Scheduler.Types (AnyJob (..))
@@ -371,6 +373,12 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYTU.INVOICE_TEMPLATE _scope -> do
       logicData :: FRT.InvoiceContext <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy A.Value) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.RIDER_REWARDS -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) _riderConfig.dynamicLogicUpdatePassword req logicData
+    LYTU.DRIVER_REWARDS -> do
+      logicData :: BTT.BehaviorSnapshot <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantid (cast merchantOpCityId) (Proxy :: Proxy BET.OrchestratedOutput) _riderConfig.dynamicLogicUpdatePassword req logicData
     _ -> throwError $ InvalidRequest "Logic Domain not supported"
 
 getNammaTagAppDynamicLogic :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Maybe Int -> LYTU.LogicDomain -> Environment.Flow [LYTU.GetLogicsResp]
@@ -572,6 +580,18 @@ getNammaTagAppDynamicLogicGetDomainSchema _mrchntShortId _opCity domain = do
         LYTU.DomainSchemaResp
           { LYTU.defaultValue = A.toJSON (def :: FRT.InvoiceContext),
             LYTU.schema = toInlinedSchemaValue (Proxy @FRT.InvoiceContext)
+          }
+    LYTU.RIDER_REWARDS ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYTU.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
+          }
+    LYTU.DRIVER_REWARDS ->
+      return $
+        LYTU.DomainSchemaResp
+          { LYTU.defaultValue = A.toJSON (def :: BTT.BehaviorSnapshot),
+            LYTU.schema = toInlinedSchemaValue (Proxy @BTT.BehaviorSnapshot)
           }
     _ -> throwError $ InvalidRequest "Domain schema not available"
 

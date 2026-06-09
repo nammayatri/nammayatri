@@ -111,6 +111,7 @@ library
       API.UI.QueueRank
       API.UI.Rating
       API.UI.Registration
+      API.UI.Rewards
       API.UI.Ride
       API.UI.RideRoute
       API.UI.RideSummary
@@ -333,6 +334,7 @@ library
       Domain.Action.UI.Reels
       Domain.Action.UI.ReferralPayout
       Domain.Action.UI.Registration
+      Domain.Action.UI.Rewards
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
       Domain.Action.UI.Ride.CancelRide.Internal
@@ -427,6 +429,9 @@ library
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
+      Lib.DriverCoins.CoinBalance
+      Lib.DriverCoins.CoinLedger
+      Lib.DriverCoins.CoinNotifications
       Lib.DriverCoins.Coins
       Lib.DriverCoins.Types
       Lib.DriverScore
@@ -552,6 +557,9 @@ library
       SharedLogic.Pricing
       SharedLogic.Reminder.Helper
       SharedLogic.RenderInvoiceFromTemplate
+      SharedLogic.Rewards.DriverRewardDispatch
+      SharedLogic.Rewards.RewardPipeline
+      SharedLogic.Rewards.Types
       SharedLogic.Ride
       SharedLogic.RideEvents.Publisher
       SharedLogic.RideFootnotes
@@ -671,6 +679,7 @@ library
       Storage.CachedQueries.PlanTranslation
       Storage.CachedQueries.ReelsData
       Storage.CachedQueries.RegistryMapFallback
+      Storage.CachedQueries.RewardOffer
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.Route
       Storage.CachedQueries.SubscriptionConfig
@@ -813,6 +822,7 @@ library
       Storage.Queries.RatingExtra
       Storage.Queries.RCStatsExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RewardOfferExtra
       Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
@@ -1241,6 +1251,7 @@ library
       Domain.Types.RegistryMapFallback
       Domain.Types.Reminder
       Domain.Types.ReminderConfig
+      Domain.Types.RewardOffer
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -1424,6 +1435,7 @@ library
       Storage.Beam.RegistryMapFallback
       Storage.Beam.Reminder
       Storage.Beam.ReminderConfig
+      Storage.Beam.RewardOffer
       Storage.Beam.Ride
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
@@ -1667,6 +1679,7 @@ library
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.RewardOffer
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RideDetails
       Storage.Queries.OrphanInstances.RiderDetails
@@ -1712,6 +1725,7 @@ library
       Storage.Queries.RegistryMapFallback
       Storage.Queries.Reminder
       Storage.Queries.ReminderConfig
+      Storage.Queries.RewardOffer
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails

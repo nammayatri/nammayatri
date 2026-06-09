@@ -23,6 +23,9 @@ module Lib.ConsequenceEngine.Types
     NudgeParams (..),
     WarnParams (..),
     IncrementCounterParams (..),
+    AwardCoinsParams (..),
+    AwardCashParams (..),
+    GrantCouponParams (..),
     ConsequenceHandler (..),
     ConsequenceResult (..),
   )
@@ -53,6 +56,9 @@ data ConsequenceAction
   | PermanentBlock PermanentBlockParams
   | ChargeFee ChargeFeeParams
   | IncrementCounter IncrementCounterParams
+  | AwardCoins AwardCoinsParams
+  | AwardCash AwardCashParams
+  | GrantCoupon GrantCouponParams
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
 -- | Parameters for a nudge (warning only, no restrictions)
@@ -116,6 +122,32 @@ data ChargeFeeParams = ChargeFeeParams
 -- | Parameters for counter increment (rule decides when to increment)
 data IncrementCounterParams = IncrementCounterParams
   { counterType :: Text -- "ACTION_COUNT", "ELIGIBLE_COUNT"
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Parameters for awarding driver coins from JSON-logic rules
+data AwardCoinsParams = AwardCoinsParams
+  { coins :: Int,
+    rewardOfferId :: Maybe Text,
+    eventFunction :: Text,
+    expirationHours :: Maybe Int
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Parameters for direct wallet / cash incentive from JSON-logic rules
+data AwardCashParams = AwardCashParams
+  { amount :: Double,
+    currency :: Text,
+    rewardOfferId :: Maybe Text,
+    eventFunction :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
+
+-- | Parameters for granting a coupon / offer (primarily rider-side)
+data GrantCouponParams = GrantCouponParams
+  { offerId :: Maybe Text,
+    couponCode :: Maybe Text,
+    rewardOfferId :: Maybe Text
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 

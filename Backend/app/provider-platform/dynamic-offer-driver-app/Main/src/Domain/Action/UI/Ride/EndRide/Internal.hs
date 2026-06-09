@@ -95,7 +95,7 @@ import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Finance (AccountRole (..), InvoiceConfig (..), InvoiceLineItem (..), ItemType (..), LineItemDescription (..), invoice, runFinance, transfer, transferWithoutAttribution, transfer_)
 import Lib.Finance.Storage.Beam.BeamFlow (BeamFlow)
-import Lib.Scheduler.Environment (JobCreatorEnv)
+import Lib.Scheduler.Environment (JobCreator, JobCreatorEnv)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
@@ -155,6 +155,7 @@ endRideTransaction ::
     EsqDBFlow m r,
     EncFlow m r,
     MonadFlow m,
+    MonadReader r m,
     Esq.EsqDBReplicaFlow m r,
     HasField "maxShards" r Int,
     EventStreamFlow m r,
@@ -163,6 +164,7 @@ endRideTransaction ::
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
     LT.HasLocationService m r,
+    JobCreator r m,
     HasShortDurationRetryCfg r c,
     ClickhouseFlow m r,
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,

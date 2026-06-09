@@ -1,0 +1,20 @@
+CREATE TABLE atlas_app.reward_offer ();
+
+ALTER TABLE atlas_app.reward_offer ADD COLUMN active boolean NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN description text ;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN display_order integer NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN entity_type text NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN image_url text ;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN logic_domain text NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN milestone_target integer ;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN required_tags text[] NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN title text NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN trigger_event text NOT NULL;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN valid_from timestamp with time zone ;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN valid_till timestamp with time zone ;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.reward_offer ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.reward_offer ADD PRIMARY KEY ( id);

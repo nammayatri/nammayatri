@@ -318,7 +318,8 @@ handleGpsTollBehavior ev = withRideAndBooking ev $ \ride booking -> do
               { merchantId = booking.providerId,
                 merchantOperatingCityId = booking.merchantOperatingCityId,
                 counterConfig = Just counterConfig,
-                actionEvent = Just actionEvent
+                actionEvent = Just actionEvent,
+                rewardContext = Nothing
               }
       BehaviorDispatch.handleConsequences dispatchCtx (cast ride.driverId) output.consequences
       BehaviorDispatch.handleCommunications (cast ride.driverId) output.communications
@@ -406,10 +407,16 @@ handleReferral ::
     Esq.EsqDBReplicaFlow m r,
     EncFlow.EncFlow m r,
     MonadFlow m,
+    MonadReader r m,
     CoreMetrics.CoreMetrics m,
     CHConfig.ClickhouseFlow m r,
     CHV2.HasClickhouseEnv CHV2.APP_SERVICE_CLICKHOUSE m,
-    Redis.HedisLTSFlowEnv r
+    Redis.HedisFlow m r,
+    Redis.HedisLTSFlowEnv r,
+    HasYudhishthiraTablesSchema,
+    LT.HasLocationService m r,
+    JobCreator r m,
+    HasShortDurationRetryCfg r c
   ) =>
   RideEndedEvent ->
   m ()
