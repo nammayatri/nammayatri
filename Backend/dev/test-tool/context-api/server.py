@@ -454,7 +454,18 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
                 _config_sync_state["error"] = f"feature-migrations exited with {rc}"
             return
 
-        # Step 4: restart so haskell services see the new config.
+        # Step 4a: flush Redis so Haskell services don't serve 24-hour-cached
+        # stale fare-product / config values after DB was just rewritten.
+        # Without this, a search that ran while fare products were disabled
+        # caches [] in Redis (TTL=86400s) and subsequent searches in the same
+        # day still get empty estimates even though the DB now has enabled rows.
+        ok, out = redis_cmd("flushall")
+        if ok:
+            _append_log("Flushed Redis (stale config caches cleared).")
+        else:
+            _append_log(f"WARN: Redis flush failed (continuing): {out.strip()}")
+
+        # Step 4b: restart so haskell services see the new config.
         if restart_services:
             _restart_haskell_services()
             _append_log("Restarted rider/driver/mock-registry to pick up synced config.")
