@@ -64,11 +64,6 @@ cachedPlaceByGeoHash geoHash placeNameCached = do
   let geoHashIdKey = makeGeoHashIdKey geoHash
   Hedis.setExp geoHashIdKey placeNameCached expTime
 
-backfillAddressHashByPlaceId :: (CacheFlow m r, Esq.EsqDBFlow m r) => Text -> Text -> m ()
-backfillAddressHashByPlaceId placeId newHash = do
-  Queries.updateAddressHashByPlaceId (Just newHash) (Just placeId)
-  Hedis.del $ makePlaceIdKey placeId
-
 makePlaceIdKey :: Text -> Text
 makePlaceIdKey placeId = "CachedQueries:Maps:PlaceId-" <> placeId
 
