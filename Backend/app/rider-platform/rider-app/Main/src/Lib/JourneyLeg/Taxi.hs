@@ -40,6 +40,7 @@ import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -138,7 +139,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
                     driverPreference = Nothing,
                     selectedOfferId = Nothing
                   }
-          void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
+          mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just req.searchId)
+          mbJourneyLegData <- case mbJourneyLeg of
+            Just journeyLeg -> do
+              mbJourney <- QJourney.findByPrimaryKey journeyLeg.journeyId
+              pure $ (\journey -> (journey, journeyLeg)) <$> mbJourney
+            Nothing -> pure Nothing
+          void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq mbJourneyLegData
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId
   confirm _ = throwError (InternalError "Not Supported")
 
