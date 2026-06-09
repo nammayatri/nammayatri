@@ -25,6 +25,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 
@@ -68,7 +69,7 @@ runWithServiceConfig ::
   req ->
   m resp
 runWithServiceConfig func _merchantId merchantOpCityId req = do
-  orgBackgroundVerificationsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgBackgroundVerificationsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgBackgroundVerificationServiceConfig <-
     CQMSC.findByServiceAndCity (DMSC.BackgroundVerificationService orgBackgroundVerificationsConfig.backgroundVerification) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "BackgroundVerifications" (show $ orgBackgroundVerificationsConfig.backgroundVerification))

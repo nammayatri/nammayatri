@@ -24,6 +24,8 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.PTCircuitBreaker as CB
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFS
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.FRFSConfig (FRFSConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
@@ -80,13 +82,13 @@ confirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) book
       return $ Right ()
     _ -> do
       let ptMode = CB.vehicleCategoryToPTMode booking.vehicleType
-      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+      mRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id))
       let circuitOpen = CB.isCircuitOpen ptMode CB.BookingAPI mRiderConfig
       let cbConfig = CB.parseCircuitBreakerConfig (mRiderConfig >>= (.ptCircuitBreakerConfig))
 
       result <- withTryCatch "callExternalBPP:confirmFlow" $ do
         frfsConfig <-
-          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing
+          getConfig (FRFSConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQFRFS.findByMerchantOperatingCityId merchantOperatingCity.id (Just [])))
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking quoteCategories mbIsSingleMode
         processOnConfirm onConfirmReq

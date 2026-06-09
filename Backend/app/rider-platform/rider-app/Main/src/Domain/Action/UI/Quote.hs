@@ -86,6 +86,7 @@ import qualified SharedLogic.Offer as SOffer
 import SharedLogic.Quote
 import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
@@ -389,7 +390,7 @@ offerCreationTime (OnMeterRide QuoteAPIEntity {createdAt}) = createdAt
 getEstimates :: SSR.SearchRequest -> Bool -> Bool -> HM.HashMap Text (BppDetails, Bool) -> [DEstimate.Estimate] -> Flow [UEstimate.EstimateAPIEntity]
 getEstimates searchRequest enableRideHailingOffers isReferredRide providerLookup estimateList = do
   let sortedEstimates = sortByEstimatedFare estimateList
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))
   let enableRideHailingOffers = maybe False (.enableRideHailingOffers) riderConfig
       estimatesWithCtx =
         map

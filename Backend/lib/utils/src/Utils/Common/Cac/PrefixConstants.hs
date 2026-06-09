@@ -36,7 +36,8 @@ data CacPrefix
   | FarePolicyRentalDetailsDistanceBuffers
   | FarePolicyRentalDetailsPricingSlabs
   | FarePolicyInterCityDetailsPricingSlabs
-  | MerchantServiceUsageConfig
+  | MerchantServiceUsageConfigDriver
+  | MerchantServiceUsageConfigRider
   | Empty
   deriving (Eq, Bounded)
 
@@ -57,7 +58,8 @@ instance Show CacPrefix where
   show FarePolicyRentalDetailsDistanceBuffers = "farePolicyRentalDetailsDistanceBuffers:"
   show FarePolicyRentalDetailsPricingSlabs = "farePolicyRentalDetailsPricingSlabs:"
   show FarePolicyInterCityDetailsPricingSlabs = "farePolicyInterCityDetailsPricingSlabs:"
-  show MerchantServiceUsageConfig = "merchantServiceUsageConfig:"
+  show MerchantServiceUsageConfigDriver = "merchantServiceUsageConfig:"
+  show MerchantServiceUsageConfigRider = "merchantServiceUsageConfig:"
   show Empty = ""
 
 $(mkCacFunction ''CacPrefix "getCacMetricErrorFromCac" "_from_cac_parse_error")

@@ -93,6 +93,7 @@ import qualified SharedLogic.FareProduct as SharedFareProduct
 import qualified SharedLogic.Merchant as SMerchant
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Cac.FarePolicy as CQFP
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverInformationExtra as QDI
@@ -256,7 +257,7 @@ computeAirportPerKmFare merchantId merchantOpCityId gateLatLong pickupGateId cal
           representativeDuration = Seconds representativeAirportRideDurationSec
       currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
       distanceUnit <- SMerchant.getDistanceUnitByMerchantOpCity merchantOpCityId
-      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       now <- getCurrentTime
       fareParams <-
         SFC.calculateFareParameters
@@ -1235,7 +1236,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
       stalenessThreshold <-
         case targetGate.merchantOperatingCityId of
           Just mocId ->
-            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId})
+            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
               <&> maybe
                 driverLocationStalenessThresholdSecondsDefault
                 (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))

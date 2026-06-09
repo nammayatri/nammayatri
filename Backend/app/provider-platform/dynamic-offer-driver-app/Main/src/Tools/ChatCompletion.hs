@@ -29,7 +29,7 @@ runWithServiceConfig ::
   CIT.GeneralChatCompletionReq ->
   m CIT.GeneralChatCompletionResp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
-  orgLLMChatCompletionConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgLLMChatCompletionConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgLLMChatCompletionServiceConfig <-
     QOMSC.findByServiceAndCity (DOSC.LLMChatCompletionService $ getCfg orgLLMChatCompletionConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "LLMChatCompletion" (show $ getCfg orgLLMChatCompletionConfig))

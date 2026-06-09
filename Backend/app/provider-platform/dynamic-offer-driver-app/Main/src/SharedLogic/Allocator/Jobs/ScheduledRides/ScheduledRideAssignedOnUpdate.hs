@@ -44,6 +44,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Flow as LTF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
@@ -119,7 +120,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           mbDriver <- runInReplica $ QP.findById driverId
           mbBooking <- QBooking.findById bookingId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId})
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing))
           let mbScheduledPickupTime = driverInfo.latestScheduledBooking
           case (mbDriver, mbVehicle, mbBooking, mbtransporterConfig, mbScheduledPickupTime) of
             (Just driver, Just vehicle, Just booking, Just transporterConfig, Just scheduledPickupTime) -> do
@@ -180,7 +181,7 @@ sendScheduledRideAssignedOnUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id
           now <- getCurrentTime
           mbActiveRide <- QRide.getActiveByDriverId driverId
           mbVehicle <- runInReplica $ QVeh.findById driverId
-          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId})
+          mbtransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = ride.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing))
           result <- runMaybeT $ do
             activeRide <- MaybeT $ return mbActiveRide
             scheduledPickup <- MaybeT $ return (driverInfo.latestScheduledPickup)

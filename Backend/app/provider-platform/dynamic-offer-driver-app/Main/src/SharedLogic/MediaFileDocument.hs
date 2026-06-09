@@ -34,6 +34,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.MediaFileDocument as QMFD
@@ -224,7 +225,7 @@ checkVideoFileSize ::
   Id DMFD.MediaFileDocument ->
   m (Either Text ())
 checkVideoFileSize mbMerchantOpCityId fileSizeInBytes mediaFileDocumentId = do
-  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let maxSizeInMB = fromMaybe 500 $ mbTransporterConfig >>= (.maxAllowedVideoDocSizeInMB)
       maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
   if fileSizeInBytes > maxSizeInBytes

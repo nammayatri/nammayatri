@@ -61,6 +61,7 @@ import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.MobileNumberValidation as MobileValidation
 import qualified SharedLogic.PersonBankAccount as SPBA
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -171,7 +172,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
   let updPerson = person{firstName = req.firstName, lastName = Just req.lastName, email = req.email <|> person.email, role = newRole}
   void $ QP.updateByPrimaryKey updPerson
   void $ updateFleetOwnerInfo fleetOwnerInfo req
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   mbReferredOperatorId <- getOperatorIdFromReferralCode req.operatorReferralCode
   whenJust (mbReferredOperatorId <|> mbRequestedOperatorId) $ \referredOperatorId -> do
@@ -200,7 +201,7 @@ fleetOwnerRegister merchantShortId opCity mbRequestorId req = do
 
 sendFleetOnboardingSms :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
 sendFleetOnboardingSms fleetOwnerId merchantOperatingCityId = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   when (transporterConfig.sendSmsOnEnablement == Just True) $ do
     merchantOpCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
     merchant <- QMerchant.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
@@ -220,7 +221,7 @@ enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id
 enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId mbTransporterConfig = do
   transporterConfig <- case mbTransporterConfig of
     Just tc -> pure tc
-    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    Nothing -> getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   registrationPending <-
     if transporterConfig.requireFleetOwnerRegistrationForEnablement == Just True
       then do
@@ -317,7 +318,7 @@ getOperatorIdFromReferralCode (Just refCode) = do
 
 createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Flow DP.Person
 createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cloudType <- asks (.cloudType)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) cloudType merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
@@ -407,7 +408,7 @@ fleetOwnerLogin merchantShortId opCity _mbRequestorId enabled req = do
       countryCode = req.mobileCountryCode
   sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCity.id.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCity.id Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
   MobileValidation.validateMobileNumber transporterConfig mobileNumber countryCode merchantOpCity.country
 
   smsCfg <- asks (.smsCfg)

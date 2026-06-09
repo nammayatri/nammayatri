@@ -11,6 +11,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import qualified Lib.Yudhishthira.Storage.Queries.TagActionNotificationConfig as QTANC
 import qualified Lib.Yudhishthira.Types.TagActionNotificationConfig as DRN
 import SharedLogic.Allocator
 import Storage.Beam.SchedulerJob ()
@@ -36,7 +37,7 @@ kaalChakraAction ::
   m ()
 kaalChakraAction mbMerchantOperatingCityId driverId mbAction notificationKey = do
   whenJust mbMerchantOperatingCityId $ \cityId -> do
-    notificationConfigs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = cityId.getId, notificationKey = Just notificationKey})
+    notificationConfigs <- getConfig (TagActionNotificationConfigDimensions {merchantOperatingCityId = cityId.getId, notificationKey = Just notificationKey}) (Just (QTANC.findAllByMerchantOperatingCityIdAndNotificationKey (cast cityId) notificationKey))
     void $ scheduleTagActionNotificationJob driverId `mapM` notificationConfigs
   whenJust mbAction $ \action -> do
     case action of

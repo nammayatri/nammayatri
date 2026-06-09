@@ -52,6 +52,8 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.DriverFee (roundToHalf)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Payment ()
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -267,7 +269,7 @@ mkInvoiceAgainstDriverFee id shortId now maxMandateAmount paymentMode driverFee 
 
 offerListCache :: (MonadFlow m, ServiceFlow m r) => Id DM.Merchant -> Id DP.Person -> Id DMOC.MerchantOperatingCity -> DPlan.ServiceNames -> Payment.OfferListReq -> m Payment.OfferListResp
 offerListCache merchantId driverId merchantOpCityId serviceName req = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService merchantOpCityId.getId $ show serviceName)
@@ -463,7 +465,7 @@ createWalletTopupOrder (driverId, merchantId, mocId) amount mbExistingOrderId = 
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   driverPhone <- driver.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   merchantServiceUsageConfig <-
-    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId})
+    getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CMSUC.findByMerchantOpCityId mocId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound mocId.getId)
   let paymentServiceName = DMSC.AirportReachargeService merchantServiceUsageConfig.createBankAccount
   (orderId, orderShortId) <- handleExistingOrder mbExistingOrderId

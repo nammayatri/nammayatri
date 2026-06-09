@@ -55,6 +55,7 @@ import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
 import Lib.Yudhishthira.Tools.Utils (convertTags)
 import qualified Lib.Yudhishthira.Types as LYT
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant.DriverPoolConfig as CDP
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.SearchRequest as QSR
@@ -173,7 +174,7 @@ getDriverPoolConfigFromDB ::
   m (Maybe DriverPoolConfig)
 getDriverPoolConfigFromDB merchantOpCityId serviceTier tripCategory area mbDist searchRepeatType searchRepeatCounter stickeyKey sreq = do
   configs <- CDP.findAllByMerchantOpCityIdInRideFlow merchantOpCityId sreq.configInExperimentVersions Nothing --- Rupak: Change this
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc -- bounds, all these params, timeDiffFromUTC
   let boundedConfigs = findBoundedDomain (filter (\cfg -> cfg.timeBounds /= Unbounded) configs) localTime
   let unboundedConfig = filter (\cfg -> cfg.timeBounds == Unbounded) configs

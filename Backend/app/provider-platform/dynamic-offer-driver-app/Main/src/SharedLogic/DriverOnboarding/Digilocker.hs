@@ -28,6 +28,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Network.HTTP.Types.URI as URI
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DigilockerVerification as QDV
@@ -36,7 +37,7 @@ import Tools.Error
 getDigiLockerConfig :: Id DMOC.MerchantOperatingCity -> Flow DigilockerTypes.DigiLockerCfg
 getDigiLockerConfig merchantOpCityId = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $
@@ -55,7 +56,7 @@ getDigiLockerConfig merchantOpCityId = do
 verifyDigiLockerEnabled :: Id DMOC.MerchantOperatingCity -> Flow ()
 verifyDigiLockerEnabled merchantOpCityId = do
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
   unless (fromMaybe False transporterConfig.digilockerEnabled) $

@@ -25,6 +25,7 @@ import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import qualified Storage.Queries.FRFSQuote as QQuote
@@ -64,7 +65,7 @@ onSelect _ reqBS = withFlowHandlerAPI $ do
               Just booking -> do
                 quoteCategories <- QQuoteCategory.findAllByQuoteId quote.id
                 merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (InternalError "MerchantOperatingCity not found")
-                bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) Nothing >>= fromMaybeM (InternalError "Beckn Config not found")
+                bapConfig <- getOneConfig (BecknConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, domain = Just (show Spec.FRFS), vehicleCategory = Just (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType)}) (Just (maybeToList <$> CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType))) >>= fromMaybeM (InternalError "Beckn Config not found")
                 rider <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
                 let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
                 mRiderNumber <- mapM decrypt rider.mobileNumber

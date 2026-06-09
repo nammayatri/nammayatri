@@ -18,6 +18,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 -- | Fetch loyalty/wallet info — same source the consumer app wallet screen uses.
@@ -34,7 +35,7 @@ loyaltyInfo ::
 loyaltyInfo customerId merchantId merchantOperatingCityId = do
   let serviceName = DMSC.MultiModalPaymentService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (serviceName)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "MultiModalPayment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.MultiModalPaymentServiceConfig paymentCfg ->
@@ -99,7 +100,7 @@ runWithMultiModalConfig ::
 runWithMultiModalConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.MultiModalPaymentService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (serviceName)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "MultiModalPayment" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.MultiModalPaymentServiceConfig paymentCfg -> func paymentCfg req

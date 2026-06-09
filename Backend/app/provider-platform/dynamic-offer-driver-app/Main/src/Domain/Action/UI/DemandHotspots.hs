@@ -36,6 +36,7 @@ import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Logging (logDebug)
 import Kernel.Utils.Time (utcToMilliseconds)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 -- What it is:
@@ -77,7 +78,7 @@ getDriverDemandHotspots ::
     Flow GetDemandHotspotsResp
   )
 getDriverDemandHotspots (_, _, merchantOpCityId) = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case transporterConfig.demandHotspotsConfig of
     Just configs -> do
       if configs.enableDemandHotspots

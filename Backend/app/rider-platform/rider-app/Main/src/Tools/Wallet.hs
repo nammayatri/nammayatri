@@ -32,6 +32,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 createWallet ::
@@ -108,7 +109,7 @@ runWithServiceConfig ::
 runWithServiceConfig func merchantId merchantOperatingCityId req = do
   let serviceName = DMSC.JuspayWalletService Payment.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchantOperatingCityId (serviceName)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "JuspayWallet" (show Payment.Juspay))
   case merchantServiceConfig.serviceConfig of
     DMSC.JuspayWalletServiceConfig paymentCfg -> func paymentCfg req

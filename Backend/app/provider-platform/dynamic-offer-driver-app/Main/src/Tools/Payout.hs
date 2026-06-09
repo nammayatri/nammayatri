@@ -42,6 +42,8 @@ import Kernel.Utils.Version
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayoutOrder
+import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
@@ -170,7 +172,7 @@ getPayoutServiceFlow ::
 getPayoutServiceFlow getCfg payoutServiceNameOption serviceType clientSdkVersion merchantOperatingCityId personId = do
   payoutServiceNameRaw <- case payoutServiceNameOption of
     MerchantServiceUsageConfigOption -> do
-      orgPaymentsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
+      orgPaymentsConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOperatingCityId Nothing)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOperatingCityId.getId)
       pure $ serviceType (getCfg orgPaymentsConfig)
     SubscriptionConfigOption serviceName -> do
       subscriptionConfig <- do
@@ -224,7 +226,7 @@ modifyPayoutServiceByMode Payout.AAJuspay _ = Payout.AAJuspay
 -- relevant only for Juspay
 decidePayoutService :: ServiceFlow m r => DMSC.ServiceName -> Maybe Version -> Id DMOC.MerchantOperatingCity -> m DMSC.ServiceName
 decidePayoutService payoutServiceName clientSdkVersion merchantOpCityId = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   return $ case clientSdkVersion of
     Just v
       | v >= textToVersionDefault transporterConfig.aaEnabledClientSdkVersion -> DMSC.PayoutService PT.AAJuspay

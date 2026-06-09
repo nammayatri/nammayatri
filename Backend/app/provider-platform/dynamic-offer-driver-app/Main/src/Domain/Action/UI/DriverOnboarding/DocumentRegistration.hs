@@ -84,7 +84,7 @@ validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDo
       docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
       return $ maybe True (.isImageValidationRequired) docConfigs
     _ -> do
-      docConfigs <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Just (fromMaybe CAR vehicleCategory)})
+      docConfigs <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just imageType, vehicleCategory = Just (fromMaybe CAR vehicleCategory)}) Nothing
       return $ maybe True (.isImageValidationRequired) docConfigs
   logDebug $ "DocumentRegistration.validateDocument: isImageValidationRequired=" <> show isImageValidationRequired
   if not isImageValidationRequired

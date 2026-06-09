@@ -42,6 +42,7 @@ import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -119,7 +120,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
   if isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId
     then return AlreadyReferred
     else do
-      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+      transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
       dr <- validateReferralCodeAndRole transporterConfig personId req.value req.role
       case dr.role of
         Person.DRIVER -> do
@@ -160,7 +161,7 @@ getDriverDetailsByReferralCode ::
   Flow DriverReferralDetailsRes
 getDriverDetailsByReferralCode (personId, _, merchantOpCityId) value mbRole = do
   when (T.length value < 6) $ throwError (InvalidRequest "Referral code should be at least 6 digits long")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (MerchantNotFound merchantOpCityId.getId)
   dr <- validateReferralCodeAndRole transporterConfig personId value mbRole
   person <- B.runInReplica (QPerson.findById dr.driverId) >>= fromMaybeM (PersonNotFound dr.driverId.getId)
   return $
@@ -180,7 +181,7 @@ makeDriverReferredByOperator ::
 makeDriverReferredByOperator merchantOpCityId driverId referredOperatorId = do
   di <- B.runInReplica (DriverInformation.findById driverId) >>= fromMaybeM DriverInfoNotFound
   unless (isJust di.referralCode || isJust di.referredByDriverId || isJust di.referredByOperatorId) $ do
-    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     DriverInformation.updateReferredByOperatorId (Just referredOperatorId.getId) driverId
     incrementOnboardedCount DriverReferral referredOperatorId transporterConfig
 

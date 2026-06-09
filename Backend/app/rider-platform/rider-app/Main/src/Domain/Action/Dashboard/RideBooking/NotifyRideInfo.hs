@@ -14,6 +14,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
@@ -25,7 +26,7 @@ postNotifyRideInfoNotifyRideInfo merchantShortId opCity personId req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   ride <- QRide.findById req.rideId >>= fromMaybeM (RideNotFound req.rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOperatingCity.id)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   when (ride.status == DR.CANCELLED || ride.status == DR.COMPLETED) $ throwError (InternalError $ "Cannot send message for Ride that is " <> show ride.status)
   case req.notificationType of
     NRI.WHATSAPP -> Common.sendRideBookingDetailsViaWhatsapp personId ride booking riderConfig

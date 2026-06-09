@@ -10,6 +10,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 
 makeMerchantAPIEntity :: Merchant -> MerchantAPIEntity
@@ -26,7 +27,7 @@ getCityConfigs ::
   ) ->
   Environment.Flow API.Types.UI.Merchant.CityConfigs
 getCityConfigs (_, _, merchantOpCityId) = do
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   pure $
     API.Types.UI.Merchant.CityConfigs
       { localPoliceNumbers = fromMaybe [] transporterConfig.localPoliceNumbers,

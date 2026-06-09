@@ -87,6 +87,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event
 import Servant (FromHttpApiData (..))
 import qualified SharedLogic.CallBAP as CallBAP
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QMSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -616,7 +617,7 @@ handleCallFeedback callStatus callStatusObj mbRecordingUrl callSid = do
   case (callStatusObj.merchantOperatingCityId, mbRecordingUrl, callStatus) of
     (Just merchantOpCityId, Just recordingUrl, CallTypes.COMPLETED) -> do
       when (callStatusObj.aiCallAnalyzed /= Just True && recordingUrl /= "") $ do
-        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         when (transporterConfig.liveEKD == Just True) $ do
           void $ LiveEKD.liveEKDProdLoop recordingUrl callSid "driver"
           QCallStatus.updateAiCallAnalyzed (Just True) callStatusObj.callId
@@ -687,7 +688,7 @@ addCampaignData ::
 addCampaignData req merchantOpCityId = do
   -- Get Ozonetel config from merchant service config
   merchantServConfig <- QMSC.findByServiceAndCity (DMSC.CallService Call.Ozonetel) merchantOpCityId >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "Call" "Ozonetel")
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   localNow <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   let currentLocalTimeOfDay = timeToTimeOfDay $ utctDayTime localNow
   case merchantServConfig.serviceConfig of

@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Search as SLS
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 
 buildSearchReqV2 ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasFlowEnv m r '["nwAddress" ::: BaseUrl]) =>
@@ -36,7 +37,7 @@ buildSearchReqV2 ::
   m Spec.SearchReq
 buildSearchReqV2 res@SLS.SearchRes {..} = do
   bapUri <- Utils.mkBapUri merchant.id
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = res.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) Nothing) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = res.merchantOperatingCityId.getId, merchantId = merchant.id.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just merchant.id) "MOBILITY" (Just res.merchantOperatingCityId)))) >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show merchant.id.getId <> "merchantOperatingCityId:-" <> show merchantOperatingCityId.getId)
   messageId <- generateGUIDText
   let eBecknSearchReq = Search.buildBecknSearchReqV2 res bapConfig bapUri messageId
   case eBecknSearchReq of

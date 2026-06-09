@@ -15,6 +15,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import qualified SharedLogic.PassExpiryReminder as SPER
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import Tools.Error
 
@@ -55,7 +56,7 @@ scheduleTomorrow ::
   Id DMOC.MerchantOperatingCity ->
   m ()
 scheduleTomorrow merchantId' merchantOpCityId = do
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) (mbRiderConfig :: Maybe DRC.RiderConfig)
       tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes

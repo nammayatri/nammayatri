@@ -58,6 +58,7 @@ import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.DraftTicketChange as QDTC
@@ -92,7 +93,7 @@ postEventManagementTicketdashboardTicketplaceSubmitDraft _merchantShortId _opCit
       draftChange <- QDTC.findById ticketPlaceId >>= fromMaybeM (InvalidRequest "No draft found")
       m <- findMerchantByShortId _merchantShortId
       moCity <- CQMOC.findByMerchantIdAndCity m.id m.defaultCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
-      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moCity.id.getId}) Nothing >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
+      riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = moCity.id.getId}) (Just (CQRC.findByMerchantOperatingCityId moCity.id)) >>= fromMaybeM (RiderConfigNotFound $ "merchantShortId: " <> _merchantShortId.getShortId <> " ,city: " <> show m.defaultCity)
       let approvalRequired = case oldTicketDef of
             Just mo -> Permissions.needsApproval riderConfig.ticketingPermissionConfig mo ticketDef
             Nothing -> True

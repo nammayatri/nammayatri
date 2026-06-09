@@ -70,8 +70,10 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.Type as SLT
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Booking as QRB
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
@@ -122,7 +124,7 @@ bookingStatusPolling bookingId _ = runInMultiCloud $ do
 
 handleConfirmTtlExpiry :: SRB.Booking -> Flow ()
 handleConfirmTtlExpiry booking = do
-  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) Nothing) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
+  bapConfig <- (listToMaybe <$> getConfig (BecknConfigDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId, merchantId = booking.merchantId.getId, domain = Just "MOBILITY", vehicleCategory = Nothing}) (Just (SQBC.findByMerchantIdDomainandMerchantOperatingCityId (Just booking.merchantId) "MOBILITY" (Just booking.merchantOperatingCityId)))) >>= fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show booking.merchantId.getId <> " merchantOperatingCityId " <> show booking.merchantOperatingCityId.getId)
   confirmBufferTtl <- bapConfig.confirmBufferTTLSec & fromMaybeM (InternalError "Invalid ttl")
   now <- getCurrentTime
   confirmTtl <- bapConfig.confirmTTLSec & fromMaybeM (InternalError "Invalid ttl")
@@ -158,7 +160,7 @@ callOnStatus currBooking = do
 
 checkBookingsForStatus :: [SRB.Booking] -> Flow ()
 checkBookingsForStatus (currBooking : bookings) = do
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = currBooking.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId currBooking.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist currBooking.merchantOperatingCityId.getId)
   case (riderConfig.bookingSyncStatusCallSecondsDiffThreshold, currBooking.estimatedDuration) of
     (Just timeDiffThreshold, Just estimatedEndDuration) -> do
       now <- getCurrentTime

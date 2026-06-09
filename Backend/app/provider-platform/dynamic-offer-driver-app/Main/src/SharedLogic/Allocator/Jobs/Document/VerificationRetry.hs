@@ -42,6 +42,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import SharedLogic.GoogleTranslate (TranslateFlow)
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.CachedQueries.Driver.OnBoarding as CQO
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -72,7 +73,7 @@ retryDocumentVerificationJob jobDetails = withLogTag ("JobId-" <> jobDetails.id.
   let jobData = jobDetails.jobInfo.jobData
   verificationReq <- IVQuery.findByRequestId jobData.requestId >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
-  documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just verificationReq.docType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
+  documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just verificationReq.docType, vehicleCategory = Just (fromMaybe DVC.CAR verificationReq.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId verificationReq.docType (fromMaybe DVC.CAR verificationReq.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show verificationReq.docType))
   let maxRetryCount = documentVerificationConfig.maxRetryCount
   if (fromMaybe 0 verificationReq.retryCount) <= maxRetryCount
     then do

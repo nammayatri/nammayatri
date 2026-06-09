@@ -32,6 +32,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Domain.Types.SafetySettings as DSafety
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import Storage.Beam.Sos ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.BookingCancellationReason as CHBCR
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
@@ -76,7 +77,7 @@ getBackfillPersonStatsData personId merchantOpCityid = do
   let maxBookingTimeCompleted = foldl' max person.createdAt completedBookingsCreatedAt
   let maxBookingTime = max maxBookingTimeCancelled maxBookingTimeCompleted
   Hedis.setExp (personRedisKey personId) maxBookingTime 43200
-  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityid.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityid.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityid)) >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityid.getId)
   let minuteDiffFromUTC = (riderConfig.timeDiffFromUtc.getSeconds) `div` 60
   now <- getCurrentTime
   let completedRidesCnt = length completedBookingsCreatedAt
@@ -164,7 +165,7 @@ checkSafetyCenterDisabled person safetySettings = do
         then return True
         else do
           now <- getCurrentTime
-          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+          riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId)) >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
           let unblockAfterDays = (intToNominalDiffTime riderConfig.autoUnblockSafetyCenterAfterDays) * 24 * 60 * 60
           if diffUTCTime now safetyCenterDisabledOnDate > unblockAfterDays
             then do

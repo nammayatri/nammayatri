@@ -37,6 +37,8 @@ import Kernel.Utils.Common hiding (Error)
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Servant hiding (throwError)
 import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
+import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAC
@@ -117,7 +119,7 @@ digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
 
   transporterConfig <-
-    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+    getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
 
   unless (transporterConfig.digilockerEnabled == Just True) $ do
@@ -206,7 +208,7 @@ getRequiredDocuments ::
   VehicleCategory.VehicleCategory ->
   Flow [DVC.DocumentVerificationConfig]
 getRequiredDocuments merchantOpCityId vehicleCategory = do
-  docsForCategory <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just vehicleCategory})
+  docsForCategory <- getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Nothing, vehicleCategory = Just vehicleCategory}) (Just (CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory Nothing))
   let digiLockerSupportedDocs =
         [ DVC.PanCard,
           DVC.AadhaarCard,
@@ -718,7 +720,7 @@ verifyAndStoreDL session person pdfBytes extractedDL = do
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Using vehicle category from session: " <> show vehicleCategory
 
   documentVerificationConfig <-
-    getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DVC.DriverLicense, vehicleCategory = Just vehicleCategory})
+    getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, documentType = Just DVC.DriverLicense, vehicleCategory = Just vehicleCategory}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory person.merchantOperatingCityId DVC.DriverLicense vehicleCategory Nothing))
       >>= fromMaybeM (DocumentVerificationConfigNotFound person.merchantOperatingCityId.getId (show DVC.DriverLicense <> " for category " <> show vehicleCategory))
 
   logInfo $ "DigiLocker - DriverId: " <> person.id.getId <> ", StateId: " <> stateId <> ", Retrieved DocumentVerificationConfig for category: " <> show vehicleCategory

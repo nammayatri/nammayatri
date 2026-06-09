@@ -57,6 +57,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator (AllocatorJobType (..))
 import qualified SharedLogic.Allocator as Allocator
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.ReminderConfig (ReminderConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DocumentReminderHistory as QDRH
@@ -103,10 +104,10 @@ getReminderConfigIfEnabled driverId merchantOpCityId documentType = do
   mbPerson <- QPerson.findById driverId
   case mbPerson of
     Just person | person.role == DP.DRIVER -> do
-      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+      mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       case mbTransporterConfig >>= (.reminderSystemEnabled) of
         Just True -> do
-          mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType})
+          mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType}) Nothing
           case mbReminderConfig of
             Just config | config.enabled -> pure $ Just config
             _ -> pure Nothing
@@ -498,7 +499,7 @@ checkAndCreateRemindersForRidesThreshold ::
   m ()
 checkAndCreateRemindersForRidesThreshold driverId driverRideCount mbRCAssoc mbRCRideCount merchantOperatingCityId providerId = do
   -- Get all reminder configs that have ridesThreshold configured
-  allReminderConfigs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing})
+  allReminderConfigs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing}) Nothing
   let ridesThresholdDocumentTypes =
         List.map (.documentType) $
           filter

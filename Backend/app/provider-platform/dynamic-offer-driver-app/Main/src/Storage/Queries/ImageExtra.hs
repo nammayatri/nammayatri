@@ -46,6 +46,7 @@ import Kernel.Utils.Error.Throwing
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Image as BeamI
+import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import Storage.Queries.OrphanInstances.Image ()
 import qualified Storage.Queries.Person as QP
@@ -117,7 +118,7 @@ findRecentByRcIdAndImageTypes transporterConfig rcId imageTypes = do
 findRecentByPersonIdAndImageType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> DocumentType -> m [DImage.Image]
 findRecentByPersonIdAndImageType personId imgType = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   let onboardingRetryTimeInHours = transporterConfig.onboardingRetryTimeInHours
   now <- getCurrentTime
   findAllWithOptionsKV

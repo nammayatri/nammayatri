@@ -14,6 +14,7 @@ import Lib.Scheduler
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.PurchasedPass as QPurchasedPass
 import qualified Storage.Queries.PurchasedPassPayment as QPurchasedPassPayment
@@ -34,7 +35,7 @@ dailyPassStatusUpdate Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
       merchantOpCityId = jobData.merchantOperatingCityId
       autoSchedule = jobData.autoSchedule
 
-  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId merchantOpCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       batchSize = max 1 $ fromMaybe 1000 (mbRiderConfig >>= (.passStatusUpdateBatchSize))
 

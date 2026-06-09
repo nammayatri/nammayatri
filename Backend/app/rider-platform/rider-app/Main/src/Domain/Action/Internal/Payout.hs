@@ -37,6 +37,8 @@ import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
@@ -63,7 +65,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
   let merchantId = merchant.id
       serviceName' = DEMSC.PayoutService TPayout.Juspay
   merchantServiceConfig <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, merchantId = merchantId.getId, serviceName = Just serviceName'}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantId merchanOperatingCityId (serviceName')))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantId.getId "Payout" (show TPayout.Juspay))
   psc <- case merchantServiceConfig.serviceConfig of
     DMSC.PayoutServiceConfig psc' -> pure psc'
@@ -77,7 +79,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity authData value = do
     IPayout.OrderStatusPayoutResp {..} -> do
       payoutOrder <- QPayoutOrder.findByOrderId payoutOrderId >>= fromMaybeM (PayoutOrderNotFound payoutOrderId)
       let personId = Id payoutOrder.customerId
-      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
+      payoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = merchanOperatingCityId.getId, vehicleCategory = Just DV.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory merchanOperatingCityId DV.AUTO_CATEGORY (Just []))) >>= fromMaybeM (PayoutConfigNotFound "AUTO_CATEGORY" merchanOperatingCityId.getId)
       unless (isPayoutStatusSuccess payoutOrder.status) do
         personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
         person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)

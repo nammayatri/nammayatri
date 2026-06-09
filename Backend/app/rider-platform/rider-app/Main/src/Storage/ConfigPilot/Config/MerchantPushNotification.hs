@@ -19,19 +19,19 @@ data MerchantPushNotificationDimensions = MerchantPushNotificationDimensions
   }
   deriving (Eq, Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance ConfigTypeInfo 'MerchantPushNotification where
-  type DimensionsFor 'MerchantPushNotification = MerchantPushNotificationDimensions
-  configTypeValue = MerchantPushNotification
-  sConfigType = SMerchantPushNotification
+instance ConfigTypeInfo 'MerchantPushNotificationRider where
+  type DimensionsFor 'MerchantPushNotificationRider = MerchantPushNotificationDimensions
+  configTypeValue = MerchantPushNotificationRider
+  sConfigType = SMerchantPushNotificationRider
 
 instance ConfigDimensions MerchantPushNotificationDimensions where
-  type ConfigTypeOf MerchantPushNotificationDimensions = 'MerchantPushNotification
+  type ConfigTypeOf MerchantPushNotificationDimensions = 'MerchantPushNotificationRider
   type ConfigValueTypeOf MerchantPushNotificationDimensions = [DT.MerchantPushNotification]
-  getConfigType _ = MerchantPushNotification
+  getConfigType _ = MerchantPushNotificationRider
   getConfigList a =
     LCP.resolveConfigList
       a
-      (LYT.RIDER_CONFIG MerchantPushNotification)
+      (LYT.RIDER_CONFIG MerchantPushNotificationRider)
       (Id a.merchantOperatingCityId)
       (SQ.findAllByMerchantOpCityId (Id a.merchantOperatingCityId))
       ([] :: [LCP.DimMatcher MerchantPushNotificationDimensions DT.MerchantPushNotification])

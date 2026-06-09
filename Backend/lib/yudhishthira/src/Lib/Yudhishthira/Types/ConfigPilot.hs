@@ -26,7 +26,8 @@ data ConfigType
   | RiderConfig
   | FRFSConfig
   | PayoutConfig
-  | MerchantServiceUsageConfig
+  | MerchantServiceUsageConfigDriver
+  | MerchantServiceUsageConfigRider
   | HotSpotConfig
   | MerchantConfig
   | RideRelatedNotificationConfig
@@ -54,6 +55,10 @@ data ConfigType
   | Exophone
   | InsuranceConfig
   | VehicleConfig
+  | ExophoneRider
+  | PayoutConfigRider
+  | MerchantPushNotificationRider
+  | RideRelatedNotificationConfigRider
   | ScheduledPayoutConfig
   | ReminderConfig
   | TagActionNotificationConfig

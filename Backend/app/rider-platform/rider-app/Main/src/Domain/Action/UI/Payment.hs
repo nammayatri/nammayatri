@@ -100,6 +100,7 @@ import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRideB
@@ -543,7 +544,7 @@ fetchPaymentServiceConfig merchantShortId mbCity mbServiceType mbPlaceId service
     Just id -> CQPBSC.findByPlaceIdAndServiceName (Id id) (DMSC.PaymentService service)
     Nothing -> return Nothing
   merchantServiceConfig' <-
-    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)}) Nothing
+    getOneConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchant.id.getId, serviceName = Just (getPaymentServiceByType mbServiceType)}) (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchant.id merchantOperatingCity.id (getPaymentServiceByType mbServiceType)))
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOperatingCity.id.getId "Payment" (show service))
   (,merchantOperatingCity) <$> case (placeBasedConfig <&> (.serviceConfig)) <|> Just merchantServiceConfig'.serviceConfig of
     Just (DMSC.PaymentServiceConfig vsc) -> pure vsc
