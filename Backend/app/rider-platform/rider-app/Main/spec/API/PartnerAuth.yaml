@@ -22,6 +22,10 @@ apis:
       auth: NoAuth
       params:
         provider: Text
+      headers:
+        # Client IP (set by the gateway) so the handler can enforce the same
+        # SMC.isIPBlocked fraud gate as /auth before resolving/creating a Person.
+        x-forwarded-for: Text
       request:
         type: PartnerSessionReq
       response:

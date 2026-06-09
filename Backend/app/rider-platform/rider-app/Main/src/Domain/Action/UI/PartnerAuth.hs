@@ -22,6 +22,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified PartnerAuth.Interface as PartnerAuth
 import qualified PartnerAuth.Types as PartnerAuth
+import qualified SharedLogic.MerchantConfig as SMC
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -43,13 +44,13 @@ partnerAuthRateLimitOptions = APIRateLimitOptions {limit = 10, limitResetTimeInS
 tokenDigest :: Text -> Text
 tokenDigest = T.pack . show . Hash.hashWith Hash.SHA256 . TE.encodeUtf8
 
-postPartnerSession :: Text -> APT.PartnerSessionReq -> Environment.Flow APT.PartnerSessionRes
-postPartnerSession providerTxt req = do
+postPartnerSession :: Text -> Maybe Text -> APT.PartnerSessionReq -> Environment.Flow APT.PartnerSessionRes
+postPartnerSession providerTxt mbXForwardedFor req = do
   -- Wrap the entire partner interaction: invalid token, unknown/unconfigured
-  -- provider, rate-limit breach, or any thrown (synchronous) error all map to
-  -- 200 {isValid:false} + a log line, preserving the never-500 contract.
-  -- Control.Exception.Safe.try lets async exceptions (shutdown, timeouts)
-  -- propagate instead of being swallowed.
+  -- provider, blocked IP, rate-limit breach, or any thrown (synchronous) error
+  -- all map to 200 {isValid:false} + a log line, preserving the never-500
+  -- contract. Control.Exception.Safe.try lets async exceptions (shutdown,
+  -- timeouts) propagate instead of being swallowed.
   result <- CES.try @_ @SomeException issueSession
   case result of
     Right res -> pure res
@@ -62,8 +63,17 @@ postPartnerSession providerTxt req = do
     -- a Redis key.
     providerKey = T.take 32 (T.toLower providerTxt)
     issueSession = do
-      -- Throttle first, before parsing/lookup/S2S, so even unknown providers and
-      -- repeated tokens are cheap to reject and cannot amplify into BHIM.
+      -- IP fraud gate first — mirror Registration.auth: reject a client IP that
+      -- the merchant has flagged BEFORE any S2S call or Person resolve/create, so
+      -- a blocked IP can neither create an account nor amplify into BHIM. The
+      -- throw is caught by the wrapper above and surfaces as isValid:false (we
+      -- deliberately don't reveal the block to the caller).
+      whenJust (clientIpFromXForwardedFor mbXForwardedFor) $ \clientIP -> do
+        ipBlocked <- SMC.isIPBlocked clientIP
+        when ipBlocked $ throwError IpHitsLimitExceeded
+      -- Then throttle per (provider, token), before parsing/lookup/S2S, so even
+      -- unknown providers and repeated tokens are cheap to reject and cannot
+      -- amplify into BHIM.
       checkSlidingWindowLimitWithOptions
         ("BAP:PartnerAuth:" <> providerKey <> ":token:" <> tokenDigest req.token)
         partnerAuthRateLimitOptions
@@ -119,6 +129,16 @@ postPartnerSession providerTxt req = do
             Nothing -> do
               logError $ "PartnerAuth: no session issued (blocked user?) for provider " <> providerKey
               pure invalidRes
+
+-- | Extract the client IP from an X-Forwarded-For header value: first hop, port
+-- stripped. Mirrors the derivation in 'Domain.Action.UI.Registration.auth' so the
+-- partner facade applies the same fraud gate.
+clientIpFromXForwardedFor :: Maybe Text -> Maybe Text
+clientIpFromXForwardedFor mbXForwardedFor =
+  mbXForwardedFor >>= \headerValue ->
+    listToMaybe (T.splitOn "," headerValue) >>= \firstIP ->
+      let ipWithoutPort = T.takeWhile (/= ':') (T.strip firstIP)
+       in if T.null ipWithoutPort then Nothing else Just ipWithoutPort
 
 -- | Normalise an Indian mobile number from a partner to ("+91", <local 10-digit>),
 -- tolerating bare, "91…", "+91…", "0091…" and spaced formats. Returns Nothing for
