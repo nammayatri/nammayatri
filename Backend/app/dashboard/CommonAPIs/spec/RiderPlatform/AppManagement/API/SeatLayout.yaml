@@ -1,0 +1,96 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  APISuccess: Kernel.Types.APISuccess
+  SeatLayout: Domain.Types.SeatLayout
+  Seat: Domain.Types.Seat
+  SeatType: Domain.Types.Seat
+
+importPackageOverrides:
+  Domain.Types.SeatLayout: "rider-app"
+  Domain.Types.Seat: "rider-app"
+
+module: SeatLayout
+apiPrefix: seatLayout
+
+types:
+  SeatDef:
+    row: Int
+    col: Int
+    label: Text
+    seatType: Maybe SeatType
+    isBookable: Maybe Bool
+    isLadiesOnly: Maybe Bool
+    directionDegrees: Maybe Int
+    minStopsRequired: Maybe Int
+
+  SeatLayoutUpsertReq:
+    seatLayoutId: Id SeatLayout
+    name: Text
+    rows: Int
+    columns: Int
+    seats: "[SeatDef]"
+    derive: "'HideSecrets"
+
+  SeatItem:
+    id: Id Seat
+    row: Int
+    col: Int
+    label: Text
+    seatType: Maybe SeatType
+    isBookable: Bool
+    isLadiesOnly: Maybe Bool
+    directionDegrees: Maybe Int
+    minStopsRequired: Maybe Int
+
+  SeatLayoutDetailResp:
+    id: Id SeatLayout
+    name: Text
+    rows: Int
+    columns: Int
+    seats: "[SeatItem]"
+
+  SeatLayoutListItem:
+    id: Id SeatLayout
+    name: Text
+    rows: Int
+    columns: Int
+    seatCount: Int
+
+apis:
+  - POST:
+      endpoint: /upsert
+      name: UpsertSeatLayout
+      auth: ApiAuthV2
+      request:
+        type: SeatLayoutUpsertReq
+      response:
+        type: APISuccess
+
+  - GET:
+      endpoint: /list
+      name: ListSeatLayout
+      auth: ApiAuthV2
+      query:
+        limit: Int
+        offset: Int
+      response:
+        type: "[SeatLayoutListItem]"
+
+  - GET:
+      endpoint: /{seatLayoutId}
+      name: GetSeatLayout
+      auth: ApiAuthV2
+      params:
+        seatLayoutId: Id SeatLayout
+      response:
+        type: SeatLayoutDetailResp
+
+  - DELETE:
+      endpoint: /{seatLayoutId}/delete
+      name: DeleteSeatLayout
+      auth: ApiAuthV2
+      params:
+        seatLayoutId: Id SeatLayout
+      response:
+        type: APISuccess
