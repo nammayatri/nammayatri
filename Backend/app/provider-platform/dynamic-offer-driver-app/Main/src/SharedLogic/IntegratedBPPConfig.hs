@@ -15,8 +15,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.IntegratedBPPConfig as QIBC
-import qualified Storage.Queries.MerchantOperatingCity as QMOC
 import Tools.Error
 
 findMaybeIntegratedBPPConfig ::
@@ -33,7 +33,7 @@ findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId veh
         QIBC.findById configId
     Nothing ->
       IM.withInMemCache ["IntegratedBPPConfig", getId merchantOperatingCityId, vehicleCategory, show platformType] 3600 $ do
-        moc <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
+        moc <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
         listToMaybe <$> QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) (Just vehicleCategory) platformType
 
 findIntegratedBPPConfig ::
@@ -53,7 +53,7 @@ findFirstIbppConfigByCityAndVehicle ::
   Text ->
   m IntegratedBPPConfig
 findFirstIbppConfigByCityAndVehicle merchantOpCityId vehicleCategory = do
-  moc <- QMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
+  moc <- CQMOC.findById merchantOpCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
   configs <- QIBC.findByDomainAndCityAndVehicleCategoryAnyPlatform (show Spec.FRFS) (Just moc.city) (Just vehicleCategory)
   listToMaybe configs & fromMaybeM IntegratedBPPConfigNotFound
 
@@ -64,7 +64,7 @@ findAllIntegratedBPPConfig ::
   PlatformType ->
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType = do
-  moc <- QMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
+  moc <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Operating City not found")
   QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) (Just moc.city) (Just vehicleCategory) platformType
 
 findAllIntegratedBPPConfigAcrossCities ::

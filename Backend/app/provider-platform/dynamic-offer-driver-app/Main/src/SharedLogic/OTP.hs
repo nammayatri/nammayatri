@@ -120,4 +120,5 @@ sendOTPByIdentifierType identifierType otpCode personId merchantId merchantOpCit
     Person.EMAIL -> pure EMAIL
     Person.AADHAAR -> pure SMS -- Default to SMS, though this will fail anyway
     Person.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "OTP not applicable for GIMS_EMAIL_PASSWORD authentication"
+    Person.CONDUCTORTOKEN -> throwError $ InvalidRequest "OTP not applicable for CONDUCTORTOKEN authentication"
   sendOTP otpChannel otpCode personId merchantId merchantOpCityId mbCountryCode mbMobileNumber mbEmail mbSenderHash

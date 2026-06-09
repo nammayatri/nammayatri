@@ -266,6 +266,37 @@ auth isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRe
       decPerson <- decrypt person
       let personAPIEntity = SP.makePersonAPIEntity decPerson
       return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
+    -- CONDUCTORTOKEN: local email+password auth for bus conductors stored in the BPP DB.
+    -- Unlike GIMS_EMAIL_PASSWORD, there is no external API call — we hash the incoming
+    -- password and compare it directly to the passwordHash stored on the Person record.
+    SP.CONDUCTORTOKEN -> do
+      email <- req'.email & fromMaybeM (InvalidRequest "Email is required for CONDUCTORTOKEN auth")
+      password <- req'.password & fromMaybeM (InvalidRequest "Password is required for CONDUCTORTOKEN auth")
+      smsCfg <- asks (.smsCfg)
+      deploymentVersion <- asks (.version)
+      mbCloudType <- asks (.cloudType)
+      let merchantId = Id req'.merchantId :: Id DO.Merchant
+      merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req'.merchantOperatingCity
+      person <- QP.findByEmailAndMerchantIdAndRole (Just email) merchant.id SP.BUS_CONDUCTOR >>= fromMaybeM (InvalidRequest "Conductor not found for given email")
+      passwordDbHash <- getDbHash password
+      storedHash <- person.passwordHash & fromMaybeM (InvalidRequest "Conductor account has no password configured")
+      unless (storedHash == passwordDbHash) $ throwError $ InvalidRequest "Invalid conductor credentials"
+      checkSlidingWindowLimit (authHitsCountKey person)
+      let entityId = getId person.id
+          useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+          scfg = sessionConfig smsCfg
+          mkId = getId merchant.id
+      token <- makeSession scfg entityId mkId SR.USER useFakeOtpM merchantOpCityId.getId SR.SIGNATURE SR.DIRECT
+      _ <- QR.create token
+      void $ QP.updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice (Just $ deploymentVersion.getDeploymentVersion) merchantOpCityId mbCloudType
+      cleanCachedTokens person.id
+      QR.deleteByPersonIdExceptNew person.id token.id
+      _ <- QR.setVerified True token.id
+      when person.isNew $ QP.setIsNewFalse False person.id
+      decPerson <- decrypt person
+      let personAPIEntity = SP.makePersonAPIEntity decPerson
+      return $ AuthRes token.id token.attempts (Just token.token) (Just personAPIEntity)
     _ -> do
       authRes <- authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbClientId mbDevice mbSenderHash
       return $ AuthRes {attempts = authRes.attempts, authId = authRes.authId, token = Nothing, person = Nothing}
@@ -314,6 +345,7 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         return (person, SOTP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
       SP.GIMS_EMAIL_PASSWORD -> throwError $ InvalidRequest "GIMS_EMAIL_PASSWORD does not use OTP auth"
+      SP.CONDUCTORTOKEN -> throwError $ InvalidRequest "CONDUCTORTOKEN does not use OTP auth"
 
   checkSlidingWindowLimit (authHitsCountKey person)
   void $ cachePersonOTPChannel person.id otpChannel
@@ -506,6 +538,10 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         case req.email of
           Just email -> pure (Just email, Nothing, Nothing)
           Nothing -> throwError $ InvalidRequest "Email is required for GIMS_EMAIL_PASSWORD auth"
+      SP.CONDUCTORTOKEN -> do
+        case req.email of
+          Just email -> pure (Just email, Nothing, Nothing)
+          Nothing -> throwError $ InvalidRequest "Email is required for CONDUCTORTOKEN auth"
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry (cast merchantOperatingCityId) $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
