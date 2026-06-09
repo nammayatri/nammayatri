@@ -34,6 +34,7 @@ import Environment
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Tools.Metrics.CoreMetrics as CoreMetrics
 import Kernel.Types.Common (Seconds (..))
 import Kernel.Types.Flow (runFlowR)
 import Kernel.Utils.Common (logError, logInfo, logWarning, withLogTag, withTryCatch)
@@ -131,7 +132,7 @@ runShard flowRt appEnv cfg instanceName deliver (shardId, streamName) =
       S.delay (fromIntegral (getSeconds cfg.claimIntervalSeconds)) $
         S.repeatM $
           runFlowR flowRt appEnv $
-            withLogTag tag $ claimEligibleEntries cfg instanceName streamName
+            withLogTag tag $ claimEligibleEntries cfg shardId instanceName streamName
 
 -- | Drain one chunk through 'deliver' and XACK whatever it returns.
 deliverAndAck ::
@@ -174,13 +175,18 @@ readNewEntries cfg instanceName streamName = do
 -- | Scan XPENDING for entries idle longer than @claimMinIdleMs@. Split into
 -- "budget exhausted" (XACK and log, no processing) and "still in budget"
 -- (XCLAIM and feed through downstream).
-claimEligibleEntries :: RedisStreamCfg -> Text -> Text -> Flow [Hedis.StreamsRecord]
-claimEligibleEntries cfg instanceName streamName = do
+claimEligibleEntries :: RedisStreamCfg -> Int -> Text -> Text -> Flow [Hedis.StreamsRecord]
+claimEligibleEntries cfg shardId instanceName streamName = do
   paused <- checkPaused cfg
   if paused
     then pure []
     else do
+      -- Sample the stream-depth gauges once per claim tick (reusing the XPENDING
+      -- summary we need anyway, plus a cheap XLEN).
+      streamLen <- Hedis.xLen streamName
       mbSummary <- Hedis.xPendingSummary streamName cfg.consumerGroupName
+      CoreMetrics.setRedisStreamLength shardId streamLen
+      CoreMetrics.setRedisStreamPending shardId (maybe 0 (\Hedis.XPendingSummaryResponse {numPendingMessages} -> numPendingMessages) mbSummary)
       case mbSummary of
         Just (Hedis.XPendingSummaryResponse {numPendingMessages})
           | numPendingMessages > 0 -> do
@@ -249,7 +255,9 @@ perEventDeliver processor records =
         Just event -> do
           result <- withTryCatch ("rs:" <> entryId) (processor event)
           case result of
-            Right () -> pure (Just rec.recordId)
+            Right () -> do
+              CoreMetrics.incrementRedisStreamProcessed
+              pure (Just rec.recordId)
             Left e -> do
               logWarning $ "process failed; entry stays pending; err=" <> show e
               pure Nothing
@@ -272,7 +280,9 @@ perBatchDeliver batchProcessor records = do
     else do
       result <- withTryCatch "rs-batch" (batchProcessor events)
       case result of
-        Right () -> pure (malformedIds <> validIds)
+        Right () -> do
+          replicateM_ (length validIds) CoreMetrics.incrementRedisStreamProcessed
+          pure (malformedIds <> validIds)
         Left e -> do
           logWarning $ "batch process failed; valid entries stay pending; err=" <> show e
           pure malformedIds
