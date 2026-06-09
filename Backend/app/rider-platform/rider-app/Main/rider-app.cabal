@@ -501,6 +501,7 @@ library
       SharedLogic.NyRegularSubscriptionHasher
       SharedLogic.NySubscription
       SharedLogic.Offer
+      SharedLogic.OfferTypes
       SharedLogic.OTP
       SharedLogic.PassExpiryReminder
       SharedLogic.PassRestore
