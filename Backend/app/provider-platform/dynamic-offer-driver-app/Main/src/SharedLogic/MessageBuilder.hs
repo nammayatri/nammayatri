@@ -60,6 +60,7 @@ where
 
 import qualified Data.Map as M
 import qualified Data.Text as T
+import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Message as Message
@@ -390,16 +391,21 @@ buildOperatorJoinAndDownloadAppMessage merchantOperatingCityId req = do
 
   pure (merchantMessage.senderHeader, msg, merchantMessage.templateId, merchantMessage.messageType)
 
-newtype BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
-  { fleetOwnerName :: Text
+data BuildFleetDeepLinkAuthMessage = BuildFleetDeepLinkAuthMessage
+  { fleetOwnerName :: Text,
+    fleetOwnerId :: Text
   }
 
 buildFleetDeepLinkAuthMessage :: (EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> BuildFleetDeepLinkAuthMessage -> m (Maybe Text, Text, Text, Maybe Text)
 buildFleetDeepLinkAuthMessage merchantOperatingCityId req = do
   (senderHeader, staticMsg, templateId, messageType) <- buildGenericMessage merchantOperatingCityId DMM.FLEET_CONSENT_DEEPLINK_MESSAGE Nothing (BuildGenericMessageReq {})
-  let dynamicMsg =
+  now <- getCurrentTime
+  let expiryDate = T.pack $ formatTime defaultTimeLocale "%Y-%m-%d" (addUTCTime (7 * 86400) now) -- consent deep link valid for 7 days
+      dynamicMsg =
         staticMsg
           & T.replace (templateText "fleetOwnerName") req.fleetOwnerName
+          & T.replace (templateText "fleetOwnerId") req.fleetOwnerId
+          & T.replace (templateText "expiryDate") expiryDate
   pure (senderHeader, dynamicMsg, templateId, messageType)
 
 newtype BuildOperatorDeepLinkAuthMessage = BuildOperatorDeepLinkAuthMessage

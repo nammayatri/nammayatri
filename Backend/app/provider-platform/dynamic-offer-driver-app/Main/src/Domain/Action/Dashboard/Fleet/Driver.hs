@@ -3587,7 +3587,8 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
         (mbSender, message, templateId, messageType) <-
           MessageBuilder.buildFleetDeepLinkAuthMessage merchantOpCityId $
             MessageBuilder.BuildFleetDeepLinkAuthMessage
-              { fleetOwnerName = fleetOwner.firstName
+              { fleetOwnerName = fleetOwner.firstName,
+                fleetOwnerId = fleetOwner.id.getId
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId messageType) >>= Sms.checkSmsResult
