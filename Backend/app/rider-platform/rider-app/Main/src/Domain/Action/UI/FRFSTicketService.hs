@@ -685,7 +685,7 @@ getFrfsSearchQuote (mbPersonId, merchantId_) searchId_ = do
       else case mbReprAdultPrice of
         Nothing -> pure Nothing
         Just reprPrice -> do
-          standaloneLeg <- JMTypes.mkStandaloneFrfsMinimalLegInfo search
+          standaloneLeg <- JMTypes.mkStandaloneFrfsMinimalLegInfo search (Just reprPrice)
           withTryCatch
             "getFrfsSearchQuote:cumulativeOffer"
             ( SOffer.offerListCache merchantId_ personId search.merchantOperatingCityId (FRFSUtils.getPaymentType False search.vehicleType) reprPrice Nothing
