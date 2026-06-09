@@ -17,42 +17,53 @@ module Storage.Queries.Geometry
   ( create,
     findGeometryByStateAndCity,
     findGeometriesContaining,
+    getAllGeometriesWithPolygons,
+    clearGeometryInMemCache,
   )
 where
 
-import Data.Either
-import qualified Database.Beam as B
 import Domain.Types.Geometry
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types (LatLong)
 import Kernel.Prelude
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Types.Beckn.Context as Context
-import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id (Id (..))
 import Kernel.Utils.Common
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Sequelize as Se
-import Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Geometry.Geometry as BeamG
 import qualified Storage.Beam.Geometry.GeometryGeom as BeamGeomG
 
-create :: (MonadFlow m, EsqDBFlow m r) => Geometry -> m ()
-create = createWithKV
+create :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Geometry -> m ()
+create g = do
+  createWithKV g
+  clearGeometryInMemCache
+
+-- | Drop the geometry L1 in-mem cache and propagate the cleanup to other pods. Call
+--   after any geometry create/update.
+clearGeometryInMemCache :: (MonadFlow m, CacheFlow m r) => m ()
+clearGeometryInMemCache = IM.refreshInMem "Geometry:"
+
+-- | Single source of truth for geometry reads: every geometry paired with its parsed
+--   polygon(s) (empty when no geom), held in an in-memory cache (1h TTL). The table is
+--   small and static, so all geometry lookups are served from this cache — no DB/PostGIS
+--   on the read path.
+getAllGeometriesWithPolygons :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [(Geometry, [[[LatLong]]])]
+getAllGeometriesWithPolygons =
+  IM.withInMemCache ["Geometry:All"] 3600 $ do
+    geoms <- findAllWithKV [Se.Is BeamG.id $ Se.Not (Se.Eq "")]
+    pure $ map (\g -> (g, maybe [] (fromMaybe [] . GGeom.parseGatePolygons) g.geom)) geoms
 
 findGeometryByStateAndCity :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Context.City -> Context.IndianState -> m (Maybe Geometry)
 findGeometryByStateAndCity cityParam stateParam = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamG.city (Se.Eq cityParam),
-          Se.Is BeamG.state (Se.Eq stateParam)
-        ]
-    ]
+  cached <- getAllGeometriesWithPolygons
+  pure $ fst <$> find (\(g, _) -> g.city == cityParam && g.state == stateParam) cached
 
 findGeometriesContaining :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LatLong -> [Text] -> m [Geometry]
 findGeometriesContaining gps regions = do
-  dbConf <- getReplicaBeamConfig
-  geoms <- L.runDB dbConf $ L.findRows $ B.select $ B.filter_' (\BeamG.GeometryT {..} -> containsPoint' (gps.lon, gps.lat) B.&&?. B.sqlBool_ (region `B.in_` (B.val_ <$> regions))) $ B.all_ (BeamCommon.geometry BeamCommon.atlasDB)
-  catMaybes <$> mapM fromTType' (fromRight [] geoms)
+  cached <- getAllGeometriesWithPolygons
+  pure [g | (g, polys) <- cached, g.region `elem` regions, any (GGeom.pointInPolygon gps) polys]
 
 instance FromTType' BeamG.Geometry Geometry where
   fromTType' BeamG.GeometryT {..} = do
@@ -60,7 +71,7 @@ instance FromTType' BeamG.Geometry Geometry where
       Just
         Geometry
           { id = Id id,
-            geom = Nothing,
+            geom = geomGeoJson,
             ..
           }
 
@@ -71,5 +82,6 @@ instance ToTType' BeamGeomG.GeometryGeom Geometry where
         BeamGeomG.region = region,
         BeamGeomG.state = state,
         BeamGeomG.city = city,
-        BeamGeomG.geom = geom
+        BeamGeomG.geom = Nothing,
+        BeamGeomG.geomGeoJson = geom
       }
