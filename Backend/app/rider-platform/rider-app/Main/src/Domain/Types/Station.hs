@@ -44,6 +44,7 @@ data Station = Station
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     parentStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    clusterId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

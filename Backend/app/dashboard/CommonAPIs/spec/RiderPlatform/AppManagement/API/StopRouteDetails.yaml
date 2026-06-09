@@ -1,0 +1,64 @@
+imports:
+  VehicleCategory: BecknV2.OnDemand.Enums
+  Station: Domain.Types.Station
+  RouteStopMapping: Domain.Types.RouteStopMapping
+
+importPackageOverrides:
+  BecknV2.OnDemand.Enums: "beckn-spec"
+  Domain.Types.Station: "rider-app"
+  Domain.Types.RouteStopMapping: "rider-app"
+
+module: StopRouteDetails
+apiPrefix: stopRouteDetails
+
+types:
+  StationResp:
+    station: Maybe Station
+  RouteStopMappingWithPolyline:
+    routeStopMappings: "[RouteStopMapping]"
+    polyline: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /stops
+      name: StopRouteDetailsGetStops
+      auth: ApiAuthV2
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      query:
+        includeClusterId: Bool
+      response:
+        type: "[Station]"
+
+  - GET:
+      endpoint: /stop/{stopCode}
+      name: StopRouteDetailsGetStop
+      auth: ApiAuthV2
+      params:
+        stopCode: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: StationResp
+
+  - GET:
+      endpoint: /route-stop-mapping/stop/{stopCode}
+      name: StopRouteDetailsGetRouteStopMappingByStop
+      auth: ApiAuthV2
+      params:
+        stopCode: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: "[RouteStopMapping]"
+
+  - GET:
+      endpoint: /route-stop-mapping/route/{routeCode}
+      name: StopRouteDetailsGetRouteStopMappingByRoute
+      auth: ApiAuthV2
+      params:
+        routeCode: Text
+      mandatoryQuery:
+        vehicleCategory: VehicleCategory
+      response:
+        type: RouteStopMappingWithPolyline

@@ -22,9 +22,9 @@ type RouteFuzzySearchAPI = "routes" :> Capture "gtfs_id" Text :> "fuzzy" :> Capt
 
 type RoutesByGtfsIdAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteInfoNandi]
 
-type StopsByGtfsIdAPI = "stops" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteStopMappingInMemoryServerWithPublicData]
+type StopsByGtfsIdAPI = "stops" :> Capture "gtfs_id" Text :> QueryParam "includeClusterId" Bool :> Get '[JSON] [RouteStopMappingInMemoryServerWithPublicData]
 
-type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] RouteStopMappingInMemoryServer
+type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> QueryParam "includeClusterId" Bool :> Get '[JSON] RouteStopMappingInMemoryServer
 
 type StopsByGtfsIdFuzzySearchAPI = "stops" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
 
@@ -180,10 +180,10 @@ getNandiRouteFuzzySearch = ET.client nandiRouteFuzzySearchAPI
 getNandiRoutesByGtfsId :: Text -> ET.EulerClient [RouteInfoNandi]
 getNandiRoutesByGtfsId = ET.client nandiRoutesByGtfsIdAPI
 
-getNandiStopsByGtfsId :: Text -> ET.EulerClient [RouteStopMappingInMemoryServerWithPublicData]
+getNandiStopsByGtfsId :: Text -> Maybe Bool -> ET.EulerClient [RouteStopMappingInMemoryServerWithPublicData]
 getNandiStopsByGtfsId = ET.client nandiStopsByGtfsIdAPI
 
-getNandiStopsByGtfsIdAndStopCode :: Text -> Text -> ET.EulerClient RouteStopMappingInMemoryServer
+getNandiStopsByGtfsIdAndStopCode :: Text -> Text -> Maybe Bool -> ET.EulerClient RouteStopMappingInMemoryServer
 getNandiStopsByGtfsIdAndStopCode = ET.client nandiStopsByGtfsIdAndStopCodeAPI
 
 getNandiStopsByGtfsIdFuzzySearch :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
