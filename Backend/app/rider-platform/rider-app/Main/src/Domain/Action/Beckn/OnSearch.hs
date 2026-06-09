@@ -378,7 +378,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
                 driverPreference = Nothing,
                 selectedOfferId = Nothing
               }
-      void $ DSelect.select2' (personId, merchant.id) estimateId selectReq
+      void $ DSelect.select2' (personId, merchant.id) estimateId selectReq Nothing
     {- Author: Hemant Mangla
       Rider quotes and estimates are filtered based on their preferences.
       Currently, riders preferring rentals receive only rental options.
