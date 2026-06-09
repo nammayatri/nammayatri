@@ -27,6 +27,7 @@ postTriggerFCMMessage ::
   )
 postTriggerFCMMessage (mbPersonId, _) (API.Types.UI.TriggerFCM.TriggerFcmReq {..}) = do
   senderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  when (getId chatPersonId == "") $ throwError $ InvalidRequest "chatPersonId cannot be empty"
   person <- runInReplica $ QPerson.findById chatPersonId >>= fromMaybeM (PersonNotFound (getId chatPersonId))
   case person.deviceToken of
     Nothing -> throwError DeviceTokenNotFound
