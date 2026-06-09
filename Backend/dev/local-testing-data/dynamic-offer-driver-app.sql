@@ -375,7 +375,7 @@ VALUES
   , 'APPLICATION'
   -- DIRECT provider config: baseUrl = mock server, cipherKey = dummy (not used in GIMS flow)
   , '{"tag":"DIRECT","contents":{"baseUrl":"http://localhost:8080","cipherKey":"DUMMYCIPHERKEY"}}'::json
-  , 'Kolkata'
+  , 'Chennai'
   , 'BUS'
   , now()
   , now()
