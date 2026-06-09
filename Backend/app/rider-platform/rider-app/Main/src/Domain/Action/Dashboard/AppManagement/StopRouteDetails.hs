@@ -77,7 +77,7 @@ clearStopRouteDetailsGetStopsCache merchantShortId opCity vehicleCategory gtfsVe
 stopRouteDetailsGetStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Enums.VehicleCategory -> Environment.Flow StopRouteDetailsAPI.StationResp)
 stopRouteDetailsGetStop merchantShortId opCity stopCode vehicleCategory = do
   bppConfig <- resolveBppConfig merchantShortId opCity vehicleCategory
-  mbStation <- OTPRest.getStationByGtfsIdAndStopCodeWithClusterId (Just True) stopCode bppConfig
+  mbStation <- OTPRest.getStationByGtfsIdAndStopCode stopCode bppConfig
   pure $ StopRouteDetailsAPI.StationResp {station = mbStation}
 
 stopRouteDetailsGetRouteStopMappingByStop :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Enums.VehicleCategory -> Environment.Flow [Domain.Types.RouteStopMapping.RouteStopMapping])
