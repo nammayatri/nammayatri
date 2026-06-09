@@ -89,6 +89,7 @@ let defaultTypeImportMapper =
       , { _1 = "Currency", _2 = "Kernel.Types.Common" }
       , { _1 = "Price", _2 = "Kernel.Types.Common" }
       , { _1 = "LineSegment", _2 = "Kernel.Utils.ComputeIntersection" }
+      , { _1 = "TollGate", _2 = "Toll.Domain.Types.TollGate" }
       ]
 
 let extraDefaultFields =

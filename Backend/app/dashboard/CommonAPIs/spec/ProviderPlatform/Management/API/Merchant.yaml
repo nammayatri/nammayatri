@@ -31,6 +31,10 @@ imports:
   UpsertSpecialLocationReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
+  UpsertTollReq: Dashboard.Common.Merchant
+  UpsertTollCsvReq: Dashboard.Common.Merchant
+  TollAPIEntity: Dashboard.Common.Merchant
+  Toll: Toll.Domain.Types.Toll
   ServiceNames: Dashboard.Common.Merchant
   Vector: Data.Vector
   ConfigFailoverReq: Dashboard.Common.Merchant
@@ -509,6 +513,41 @@ apis:
         endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+  - POST: # UpsertTollCsvAPI
+      endpoint: /config/toll/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertTollCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_TOLL_CSV
+  - GET: # GetMerchantConfigTollList
+      endpoint: /config/toll/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: TollListResp
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT GET_TOLL_LIST
+  - POST: # UpsertTollAPI
+      endpoint: /toll/upsert
+      query:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      request:
+        type: UpsertTollReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPSERT_TOLL
+  - DELETE: # DeleteTollAPI
+      endpoint: /toll/{tollId}/delete
+      params:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT DELETE_TOLL
   - POST:
       endpoint: /config/clearCache/subscription
       auth: ApiAuthV2
@@ -1170,6 +1209,9 @@ types:
   VehicleServiceTierListRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]
+  TollListResp:
+    - recordType: Type
+    - type: [TollAPIEntity]
   SpecialLocationResp:
     - recordType: Type
     - type: [SpecialLocationFull]

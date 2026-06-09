@@ -81,6 +81,8 @@ library
       API.Internal.SpecialLocationUpsert
       API.Internal.StopDetection
       API.Internal.SyncSearch
+      API.Internal.TollList
+      API.Internal.TollUpsert
       API.Internal.ViolationDetection
       API.Types.UI.TicketKapture
       API.UI
@@ -252,6 +254,7 @@ library
       Domain.Action.Internal.SendSMS
       Domain.Action.Internal.SpecialLocationUpsert
       Domain.Action.Internal.StopDetection
+      Domain.Action.Internal.TollUpsert
       Domain.Action.Internal.ViolationDetection
       Domain.Action.UI.Aarokya
       Domain.Action.UI.Cac
@@ -555,6 +558,8 @@ library
       SharedLogic.SpecialLocationUpsert
       SharedLogic.SpecialZoneDriverDemand
       SharedLogic.SyncRide
+      SharedLogic.TollDashboard
+      SharedLogic.TollUpsert
       SharedLogic.Type
       SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
