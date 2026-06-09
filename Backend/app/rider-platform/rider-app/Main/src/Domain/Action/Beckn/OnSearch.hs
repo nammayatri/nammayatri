@@ -299,7 +299,6 @@ onSearch ::
   ValidatedOnSearchReq ->
   Flow (Maybe OnSearchResult)
 onSearch transactionId ValidatedOnSearchReq {..} = do
-  Metrics.finishSearchMetrics merchant.name transactionId
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
@@ -312,6 +311,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   if not isValueAddNP && isJust searchRequest.disabilityTag
     then do
       logTagError "onSearch" "disability tag enabled search estimates discarded, not supported for OFF-US transactions"
+      Metrics.finishSearchMetrics merchant.name transactionId
       pure Nothing
     else do
       deploymentVersion <- asks (.version)
@@ -349,6 +349,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
         when shouldAutoSelectFinal $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
 
+      Metrics.finishSearchMetrics merchant.name transactionId
       pure $ Just OnSearchResult {searchRequest, estimates, quotes, riderConfig}
   where
     isReservedRideSearch :: DSearchReq.SearchRequest -> Bool

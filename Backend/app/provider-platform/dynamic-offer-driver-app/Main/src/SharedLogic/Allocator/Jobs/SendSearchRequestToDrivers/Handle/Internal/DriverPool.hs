@@ -18,9 +18,7 @@ module SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.Dri
     getPoolBatchNum,
     module Reexport,
     PrepareDriverPoolBatchEntity (..),
-    incrementPoolRadiusStep,
     incrementDriverRequestCount,
-    getPoolRadiusStep,
     previouslyAttemptedDrivers,
     checkRequestCount,
     isBookAny,
@@ -54,6 +52,8 @@ import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool.Config as Reexport
 import SharedLogic.DriverPool
+import SharedLogic.DriverPool.DriverPoolData (checkRequestCount)
+import qualified SharedLogic.DriverPool.DriverPoolData as DPD
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.SearchRequest as QSR
 import Tools.DynamicLogic
@@ -71,9 +71,11 @@ isBatchNumExceedLimit driverPoolConfig searchTryId = do
 
 previouslyAttemptedDriversKey :: Id DST.SearchTry -> Maybe Bool -> Text
 previouslyAttemptedDriversKey searchTryId consideOnRideDrivers = do
+  -- v2 shape: [(Id Driver, ServiceTierType)] tuples. Old shape was [DriverPoolWithActualDistResult].
+  -- Key bumped so deploys don't read stale-shape entries (which would fail JSON decode).
   case consideOnRideDrivers of
-    Just consideOnRideDrivers' -> "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId <> ":consideOnRideDrivers-" <> show consideOnRideDrivers'
-    Nothing -> "Driver-Offer:PreviouslyAttemptedDrivers:SearchTryId-" <> searchTryId.getId
+    Just consideOnRideDrivers' -> "Driver-Offer:PreviouslyAttemptedDrivers:v2:SearchTryId-" <> searchTryId.getId <> ":consideOnRideDrivers-" <> show consideOnRideDrivers'
+    Nothing -> "Driver-Offer:PreviouslyAttemptedDrivers:v2:SearchTryId-" <> searchTryId.getId
 
 splitSilentDriversAndSortWithDistance :: [DriverPoolWithActualDistResult] -> [DriverPoolWithActualDistResult]
 splitSilentDriversAndSortWithDistance drivers = do
@@ -85,7 +87,7 @@ previouslyAttemptedDrivers ::
   ) =>
   Id DST.SearchTry ->
   Maybe Bool ->
-  m [DriverPoolWithActualDistResult]
+  m [(Id Driver, DVST.ServiceTierType)]
 previouslyAttemptedDrivers searchTryId consideOnRideDrivers = do
   Redis.withCrossAppRedis $
     Redis.safeGet (previouslyAttemptedDriversKey searchTryId consideOnRideDrivers)
@@ -190,9 +192,6 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
 poolBatchNumKey :: Id DST.SearchTry -> Text
 poolBatchNumKey searchTryId = "Driver-Offer:Allocator:PoolBatchNum:SearchTryId-" <> searchTryId.getId
 
-poolRadiusStepKey :: Id DST.SearchTry -> Text
-poolRadiusStepKey searchTryId = "Driver-Offer:Allocator:PoolRadiusStep:SearchTryId-" <> searchTryId.getId
-
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do
   res <- Redis.withCrossAppRedis $ Redis.get (poolBatchNumKey searchTryId)
@@ -213,50 +212,16 @@ incrementBatchNum searchTryId = do
   logInfo $ "Increment batch num to " <> show res <> "."
   return ()
 
-getPoolRadiusStep :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolRadiusStep
-getPoolRadiusStep searchTryId = do
-  res <- Redis.withCrossAppRedis $ Redis.get (poolRadiusStepKey searchTryId)
-  case res of
-    Just i -> return i
-    Nothing -> do
-      let expTime = 600
-      Redis.withCrossAppRedis $ Redis.setExp (poolRadiusStepKey searchTryId) (0 :: Integer) expTime
-      return 0
-
-incrementPoolRadiusStep ::
-  ( Redis.HedisFlow m r
-  ) =>
-  Id DST.SearchTry ->
-  m ()
-incrementPoolRadiusStep searchTryId = do
-  res <- Redis.withCrossAppRedis $ Redis.incr (poolRadiusStepKey searchTryId)
-  logInfo $ "Increment radius step to " <> show res <> "."
-  return ()
-
 isBookAny :: [DVST.ServiceTierType] -> Bool
 isBookAny vehicleServiceTiers = length vehicleServiceTiers > 1
-
-driverRequestCountKey :: Id DST.SearchTry -> Id Driver -> DVST.ServiceTierType -> Text
-driverRequestCountKey searchTryId driverId vehicleServiceTier = "Driver-Request-Count-Key:SearchTryId-" <> searchTryId.getId <> ":DriverId-" <> driverId.getId <> ":ServiceTier-" <> show vehicleServiceTier
-
-checkRequestCount :: Redis.HedisFlow m r => Id DST.SearchTry -> Bool -> Id Driver -> DVST.ServiceTierType -> Int -> DriverPoolConfig -> m Bool
-checkRequestCount searchTryId isBookAnyRequest driverId vehicleServiceTier serviceTierDowngradeLevel driverPoolConfig =
-  maybe True (\count -> (count :: Int) < getDriverRequestCountLimit serviceTierDowngradeLevel isBookAnyRequest driverPoolConfig)
-    <$> Redis.withCrossAppRedis (Redis.get (driverRequestCountKey searchTryId driverId vehicleServiceTier))
-
-getDriverRequestCountLimit :: Int -> Bool -> DriverPoolConfig -> Int
-getDriverRequestCountLimit serviceTierDowngradeLevel isBookAnyRequest driverPoolConfig =
-  if serviceTierDowngradeLevel < 0 && isBookAnyRequest -- if BookAny and serviceTierDowngradeLevel is less than 0, then limit is 1
-    then 1
-    else driverPoolConfig.driverRequestCountLimit
 
 incrementDriverRequestCount :: (Redis.HedisFlow m r) => [DriverPoolWithActualDistResult] -> Id DST.SearchTry -> m ()
 incrementDriverRequestCount finalPoolBatch searchTryId = do
   CM.mapM_
     ( \dpr ->
         Redis.withCrossAppRedis do
-          void $ Redis.incr (driverRequestCountKey searchTryId dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier)
-          Redis.expire (driverRequestCountKey searchTryId dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier) 7200
+          void $ Redis.incr (DPD.driverRequestCountKey searchTryId dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier)
+          Redis.expire (DPD.driverRequestCountKey searchTryId dpr.driverPoolResult.driverId dpr.driverPoolResult.serviceTier) 7200
     )
     finalPoolBatch
 
