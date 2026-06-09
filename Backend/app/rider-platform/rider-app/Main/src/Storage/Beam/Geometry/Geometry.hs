@@ -23,7 +23,8 @@ data GeometryT f = GeometryT
   { id :: B.C f Text,
     region :: B.C f Text,
     state :: B.C f IndianState,
-    city :: B.C f City
+    city :: B.C f City,
+    geomGeoJson :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 
