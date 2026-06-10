@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Operator.Driver
     postDriverOperatorVerifyJoiningOtp,
     getDriverOperatorDashboardAnalyticsAllTime,
     getDriverOperatorDashboardAnalytics,
+    getDriverReviewQueue,
   )
 where
 
@@ -67,6 +68,7 @@ import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
+import qualified Storage.Queries.FleetOwnerInformationExtra as QFOIExtra
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as SQOHR
@@ -650,3 +652,91 @@ getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay t
   res <- Analytics.computePeriodOperatorAnalytics transporterConfig operator.id.getId fromDay toDay
   logTagInfo "PeriodFallbackRes" (show res)
   pure $ buildRes res
+
+---------------------------------------------------------------------
+getDriverReviewQueue ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  API.Types.ProviderPlatform.Operator.Driver.EntityType ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp
+getDriverReviewQueue merchantShortId opCity entityType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRdId mbRcNo = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  mbMobileNumberHash <- mapM getDbHash mbMobileNumber
+  let limit = fromMaybe 10 mbLimit
+      offset = fromMaybe 0 mbOffset
+  reviewQueue <- case entityType of
+    API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
+      driverInfoList <- QDIExtra.findVerifiedAndNotEnabled merchantOpCity.id mbFrom mbTo limit offset mbMobileNumberHash mbPersonId
+      mapM buildDriverReviewItem driverInfoList
+    API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
+      fleetOwnerList <- QFOIExtra.findVerifiedAndNotEnabled merchantOpCity.id mbFrom mbTo limit offset mbMobileNumberHash mbPersonId
+      mapM buildFleetOwnerReviewItem fleetOwnerList
+    API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
+      rcList <- QVRCE.findVerifiedAndNotApproved merchantOpCity.id mbFrom mbTo limit offset mbRcNo mbRdId
+      mapM buildVehicleReviewItem rcList
+  pure API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp {reviewQueue}
+  where
+    buildDriverReviewItem driverInfo = do
+      person <- QPerson.findById driverInfo.driverId >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
+      mobileNumber <- mapM decrypt person.mobileNumber
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.ReviewQueue
+          { entityType = API.Types.ProviderPlatform.Operator.Driver.DRIVER,
+            name = Just person.firstName,
+            mobileNumber,
+            personId = Just driverInfo.driverId.getId,
+            rId = Nothing,
+            rcNo = Nothing,
+            createdAt = driverInfo.updatedAt,
+            updatedAt = driverInfo.updatedAt,
+            verified = Just driverInfo.verified,
+            enabled = Just driverInfo.enabled,
+            approved = driverInfo.approved
+          }
+
+    buildFleetOwnerReviewItem fleetOwnerInfo = do
+      person <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
+      mobileNumber <- mapM decrypt person.mobileNumber
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.ReviewQueue
+          { entityType = API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER,
+            name = Just person.firstName,
+            mobileNumber,
+            personId = Just fleetOwnerInfo.fleetOwnerPersonId.getId,
+            rId = Nothing,
+            rcNo = Nothing,
+            createdAt = fleetOwnerInfo.updatedAt,
+            updatedAt = fleetOwnerInfo.updatedAt,
+            verified = Just fleetOwnerInfo.verified,
+            enabled = Just fleetOwnerInfo.enabled,
+            approved = Nothing
+          }
+
+    buildVehicleReviewItem rc = do
+      now <- getCurrentTime
+      mbAssoc <- SQDRA.findLatestLinkedByRCId rc.id now
+      mbPerson <- maybe (pure Nothing) (QPerson.findById . (.driverId)) mbAssoc
+      mobileNumber <- maybe (pure Nothing) (mapM decrypt . (.mobileNumber)) mbPerson
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.ReviewQueue
+          { entityType = API.Types.ProviderPlatform.Operator.Driver.VEHICLE,
+            name = rc.vehicleModel,
+            mobileNumber,
+            personId = fmap (.driverId.getId) mbAssoc,
+            rId = Just rc.id.getId,
+            rcNo = rc.unencryptedCertificateNumber,
+            createdAt = rc.updatedAt,
+            updatedAt = rc.updatedAt,
+            verified = rc.verified,
+            enabled = Nothing,
+            approved = rc.approved
+          }

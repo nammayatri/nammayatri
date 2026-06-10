@@ -157,6 +157,22 @@ apis:
               - to: Day
             response:
               type: FilteredOperatorAnalyticsRes
+  - GET:
+      endpoint: /review/queue/{entityType}
+      auth: ApiAuthV2
+      params:
+        entityType: EntityType
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbMobileNumber: Text
+        - mbPersonId: Text
+        - mbRdId: Text
+        - mbRcNo: Text
+      response:
+        type: ReviewQueueResp
 
 
 types:
@@ -248,3 +264,20 @@ types:
     - approvedDriverInspection: Int
     - rejectedVehicleInspection: Int
     - rejectedDriverInspection: Int
+  ReviewQueueResp:
+    - reviewQueue : [ReviewQueue]
+  ReviewQueue:
+    - entityType: EntityType
+    - name: Maybe Text
+    - mobileNumber: Maybe Text
+    - personId: Maybe Text
+    - rId: Maybe Text
+    - rcNo: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - verified: Maybe Bool
+    - enabled: Maybe Bool
+    - approved: Maybe Bool
+  EntityType:
+    enum: "DRIVER,VEHICLE,FLEET_OWNER"
+    derive: "HttpInstance"

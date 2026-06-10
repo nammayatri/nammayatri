@@ -315,6 +315,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
     vehicleImageId: Maybe (Id MediaFile)
+    verified: Maybe Bool
   default:
     approved: "false"
   constraints:
