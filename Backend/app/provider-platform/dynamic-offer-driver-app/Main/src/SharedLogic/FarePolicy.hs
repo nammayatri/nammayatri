@@ -927,31 +927,23 @@ getCongestionChargeMultiplierFromModel' ::
   Maybe Seconds ->
   Maybe Seconds ->
   m (Maybe CongestionChargeDetailsModel)
-getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration = do
+getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just _fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) _radius' mbSpecialLocName (Just dynamicPricingLogicVersion) merchantOperatingCityId mbEstimatedDuration mbActualDuration = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
   logInfo $ "Calling DynamicPricing" <> show fromLocGeohash
   now <- getCurrentTime
-  let radius = fromMaybe 3.0 radius'
   let distanceInKm = int2Double distance / 1000.0
   let distanceBin = getDistanceBin distance
   let estimatedDurationInH = int2Double duration / 3600.0
-  let pastTimeInterval = addUTCTime (-900) now
   let speedKmh = if estimatedDurationInH == 0.0 then 0.0 else distanceInKm / estimatedDurationInH
   toss <- getRandomInRange (1, 100 :: Int)
   mbSupplyDemandRatioFromLoc <- Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash fromLocGeohash vehicleCategory
-  -- mbActualQARFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin vehicleCategory
-  mbActualQARFromLocGeohashDistance <- getQARWithDistance now vehicleCategory distance radius fromLocation
-  -- mbActualQARFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohash fromLocGeohash vehicleCategory
-  mbActualQARFromLocGeohash <- getQARVehicleCategory now vehicleCategory radius fromLocation
-  mbActualQARFromLocGeohash2xRadius <- getQARVehicleCategory now vehicleCategory (2 * radius) fromLocation
-  mbActualQARCity <- getQARVehicleCategoryCity now vehicleCategory merchantOperatingCityId.getId
-  -- mbActualQARCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCity merchantOperatingCityId.getId vehicleCategory
-  -- mbActualQARFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin vehicleCategory
-  -- mbActualQARFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithGeohashPast fromLocGeohash vehicleCategory
-  -- mbActualQARCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkActualQARKeyWithCityPast merchantOperatingCityId.getId vehicleCategory
-  mbActualQARFromLocGeohashDistancePast <- getQARWithDistance pastTimeInterval vehicleCategory distance radius fromLocation
-  mbActualQARFromLocGeohashPast <- getQARVehicleCategory pastTimeInterval vehicleCategory radius fromLocation
-  mbActualQARCityPast <- getQARVehicleCategoryCity pastTimeInterval vehicleCategory merchantOperatingCityId.getId
+  (actualQAR, actualQARPast) <- getActualQAR now vehicleCategory distance merchantOperatingCityId.getId
+  let mbActualQARFromLocGeohash = actualQAR
+      mbActualQARFromLocGeohashDistance = actualQAR
+      mbActualQARCity = actualQAR
+      mbActualQARFromLocGeohashPast = actualQARPast
+      mbActualQARFromLocGeohashDistancePast = actualQARPast
+      mbActualQARCityPast = actualQARPast
   mbCongestionFromLocGeohash <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohash fromLocGeohash
   mbCongestionFromLocGeohashDistance <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBin fromLocGeohash distanceBin
   mbCongestionCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity merchantOperatingCityId.getId
@@ -960,8 +952,6 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
   logInfo $ "Calling DynamicPricing" <> show mbRainStatus
   mbCongestionFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin
   mbCongestionCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast merchantOperatingCityId.getId
-  let actualQAR = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARFromLocGeohash2xRadius <|> mbActualQARCity
-  let actualQARPast = mbActualQARFromLocGeohashDistancePast <|> mbActualQARFromLocGeohashPast <|> mbActualQARCityPast
   let congestionMultiplier = mbCongestionFromLocGeohashDistance <|> mbCongestionFromLocGeohash <|> mbCongestionCity
   let congestionMultiplierPast = mbCongestionFromLocGeohashDistancePast <|> mbCongestionFromLocGeohashPast <|> mbCongestionCityPast
   mbSupplyDemandRatioToLoc <- join <$> traverse (\locgeohash -> Hedis.withCrossAppRedis $ Hedis.get $ mkSupplyDemandRatioKeyWithGeohash locgeohash vehicleCategory) toLocGeohash

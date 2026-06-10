@@ -42,8 +42,6 @@ module SharedLogic.SpecialZoneDriverDemand
 where
 
 import Control.Monad.Extra (mapMaybeM)
-import qualified Data.Aeson as A
-import qualified Data.Aeson.Types as AT
 import Data.List (partition, sortOn)
 import qualified Data.Map as Map
 import qualified Data.Set as Set

@@ -463,6 +463,7 @@ postMerchantSpecialLocationGatesUpsert _merchantShortId _city specialLocationId 
             pickupZoneArrivalTimeoutInSec = mbGate >>= (.pickupZoneArrivalTimeoutInSec),
             pickupRequestResponseTimeoutInSec = mbGate >>= (.pickupRequestResponseTimeoutInSec),
             notificationActiveTillInSec = mbGate >>= (.notificationActiveTillInSec),
+            enableQueueFilter = mbGate >>= (.enableQueueFilter),
             ..
           }
 
@@ -1673,7 +1674,8 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
                 maxRideSkipsBeforeQueueRemoval = readMaybeCSVField idx (fromMaybe "" row.gateInfoMaxRideSkipsBeforeQueueRemoval) "Gate Info (max_ride_skips_before_queue_removal)",
                 pickupZoneArrivalTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupZoneArrivalTimeoutInSec) "Gate Info (pickup_zone_arrival_timeout_in_sec)",
                 pickupRequestResponseTimeoutInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoPickupRequestResponseTimeoutInSec) "Gate Info (pickup_request_response_timeout_in_sec)",
-                notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)"
+                notificationActiveTillInSec = readMaybeCSVField idx (fromMaybe "" row.gateInfoNotificationActiveTillInSec) "Gate Info (notification_active_till_in_sec)",
+                enableQueueFilter = Nothing
               }
       return (city, locationName, (specialLocation, gateInfo), mbSpecialLocationId)
 

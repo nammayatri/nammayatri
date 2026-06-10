@@ -15,16 +15,13 @@
 module SharedLogic.Pricing where
 
 import Control.Applicative ((<|>))
-import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Map.Strict as Map
 import Data.Text as T hiding (elem, find, length, null, zip)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
-import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
-import Tools.Maps
 
 getDistanceBin :: Int -> Text
 getDistanceBin distance
@@ -96,7 +93,7 @@ getActualQAR ::
   Int ->
   Text ->
   m (Maybe Double, Maybe Double)
-getActualQAR now vehicleCategory location radius distance cityId = do
+getActualQAR now vehicleCategory distance cityId = do
   let timeN = now
       timeN_1 = addUTCTime (-900) now
       timeN_2 = addUTCTime (-1800) now
@@ -112,28 +109,19 @@ getActualQAR now vehicleCategory location radius distance cityId = do
       accVcN = mkAcceptanceVehicleCategory timeN vehicleCategory
       accVcN_1 = mkAcceptanceVehicleCategory timeN_1 vehicleCategory
       accVcN_2 = mkAcceptanceVehicleCategory timeN_2 vehicleCategory
-      radiusKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demVcN, demVcN_1, demVcN_2, accVcN, accVcN_1, accVcN_2]
-  radiusCounts <- batchGeoSearchCounts radiusKeys location radius
-  let countsMap = Map.fromList (zip radiusKeys radiusCounts)
-      cnt k = Map.findWithDefault 0 k countsMap
+      allKeys = [demDistN, demDistN_1, demDistN_2, accDistN, accDistN_1, accDistN_2, demVcN, demVcN_1, demVcN_2, accVcN, accVcN_1, accVcN_2]
+  results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int allKeys
+  let countsMap = Map.fromList results
+      cnt k = fromMaybe 0 (Map.lookup k countsMap)
       distCurrent = computeQAR (cnt demDistN + cnt demDistN_1) (cnt accDistN + cnt accDistN_1)
       distPast = computeQAR (cnt demDistN_1 + cnt demDistN_2) (cnt accDistN_1 + cnt accDistN_2)
       vcCurrent = computeQAR (cnt demVcN + cnt demVcN_1) (cnt accVcN + cnt accVcN_1)
       vcPast = computeQAR (cnt demVcN_1 + cnt demVcN_2) (cnt accVcN_1 + cnt accVcN_2)
-  vc2xCurrent <-
-    if isJust (distCurrent <|> vcCurrent)
-      then pure Nothing
-      else do
-        twoXCounts <- batchGeoSearchCounts [demVcN, demVcN_1, accVcN, accVcN_1] location (2 * radius)
-        let (d, d1, a, a1) = case twoXCounts of
-              [w, x, y, z] -> (w, x, y, z)
-              _ -> (0, 0, 0, 0)
-        pure $ computeQAR (d + d1) (a + a1)
   (cityCurrent, cityPast) <-
-    if isNothing (distCurrent <|> vcCurrent <|> vc2xCurrent) || isNothing (distPast <|> vcPast)
+    if isNothing (distCurrent <|> vcCurrent) || isNothing (distPast <|> vcPast)
       then getCityLevelQAR timeN timeN_1 timeN_2 vehicleCategory cityId
       else pure (Nothing, Nothing)
-  let currentQAR = distCurrent <|> vcCurrent <|> vc2xCurrent <|> cityCurrent
+  let currentQAR = distCurrent <|> vcCurrent <|> cityCurrent
       pastQAR = distPast <|> vcPast <|> cityPast
   return (currentQAR, pastQAR)
   where
