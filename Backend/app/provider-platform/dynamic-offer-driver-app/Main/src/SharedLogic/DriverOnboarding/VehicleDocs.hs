@@ -709,7 +709,7 @@ checkInspectionHubRequestCreated requestType mbDriverId mbRegistrationNo = do
 mapInspectionHubRequestStatusToResponseStatus :: Maybe DOHR.RequestStatus -> Maybe ResponseStatus
 mapInspectionHubRequestStatusToResponseStatus mbRequestStatus = case mbRequestStatus of
   Just DOHR.APPROVED -> Just VALID
-  Just DOHR.PENDING -> Just VALID
+  Just DOHR.PENDING -> Just PENDING
   Just DOHR.REJECTED -> Just INVALID
   Nothing -> Just NO_DOC_AVAILABLE
 

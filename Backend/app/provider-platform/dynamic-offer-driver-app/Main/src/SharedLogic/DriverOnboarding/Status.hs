@@ -102,7 +102,6 @@ import qualified Tools.Plasma as TPlasma
 import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
 
-
 data PersonStatusContext = PersonStatusContext
   { statusPerson :: DP.Person,
     statusEntityImagesInfo :: IQuery.EntityImagesInfo
@@ -141,8 +140,6 @@ data StatusRes' = StatusRes'
     digilockerResponseCode :: Maybe Text,
     digilockerAuthorizationUrl :: Maybe Text
   }
-
-
 
 data CommonDocumentItem = CommonDocumentItem
   { documentType :: DDVC.DocumentType,
@@ -194,16 +191,21 @@ data RCDetails = RCDetails
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
+-- Drop self-referential docs (e.g. InspectionHub / DriverInspectionHub) so an inspection doc does not gate its own approval
+excludeDocsByType :: [DVC.DocumentType] -> [DocumentStatusItem] -> [DocumentStatusItem]
+excludeDocsByType excludeDocTypes = filter (\doc -> doc.documentType `notElem` excludeDocTypes)
+
 -- Check only vehicle docs for a specific RC (used for vehicle inspection approval)
 -- mbPerson = Nothing for vehicle inspection, without driver linked to vehicle
 checkAllVehicleDocsVerifiedForRC ::
+  [DVC.DocumentType] ->
   RC.VehicleRegistrationCertificate ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Language ->
   Text ->
   Flow Bool
-checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig language reqRegistrationNo = do
+checkAllVehicleDocsVerifiedForRC excludeDocTypes rc merchantOperatingCity transporterConfig language reqRegistrationNo = do
   let onlyMandatoryDocs = Just True
   let entity = IQuery.VehicleRCEntity rc
   entityImages <- IQuery.findAllByEntityId transporterConfig entity
@@ -216,16 +218,18 @@ checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig lang
     find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
       & fromMaybeM (InvalidRequest $ "Vehicle doc not found for vehicle with registartionNo " <> reqRegistrationNo)
   let makeSelfieAadhaarPanMandatory = Nothing
-  pure $ checkAllVehicleDocsVerified allDocumentVerificationConfigs vehicleDoc makeSelfieAadhaarPanMandatory
+      filteredVehicleDoc = vehicleDoc {documents = excludeDocsByType excludeDocTypes vehicleDoc.documents}
+  pure $ checkAllVehicleDocsVerified allDocumentVerificationConfigs filteredVehicleDoc makeSelfieAadhaarPanMandatory
 
 -- Check only driver docs (used for driver inspection approval)
 checkAllDriverDocsVerifiedForDriver ::
+  [DVC.DocumentType] ->
   DP.Person ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Language ->
   Flow Bool
-checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConfig language = do
+checkAllDriverDocsVerifiedForDriver excludeDocTypes person merchantOperatingCity transporterConfig language = do
   let onlyMandatoryDocs = Just True
   let useHVSdkForDL = Just True
   let entity = IQuery.PersonEntity person
@@ -241,10 +245,11 @@ checkAllDriverDocsVerifiedForDriver person merchantOperatingCity transporterConf
       possibleVehicleCategories = if null possibleVehicleCategoriesRaw then [DVC.CAR] else possibleVehicleCategoriesRaw
   driverDocuments <- fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleCategories person language useHVSdkForDL onlyMandatoryDocs skipMessages
   let makeSelfieAadhaarPanMandatory = Nothing
+      filteredDriverDocuments = excludeDocsByType excludeDocTypes driverDocuments
       vehicleCategory = case vehicleDocumentsUnverified of
         (doc : _) -> fromMaybe doc.userSelectedVehicleCategory doc.verifiedVehicleCategory
         [] -> DVC.CAR
-  pure $ checkAllDriverDocsVerified allDocVerificationConfigs person.role driverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
+  pure $ checkAllDriverDocsVerified allDocVerificationConfigs person.role filteredDriverDocuments vehicleCategory makeSelfieAadhaarPanMandatory
 
 refreshVehicleDocsVerificationStatusForRC ::
   Maybe DTC.TransporterConfig ->
@@ -675,8 +680,6 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal}
 
-
-
 getDriverDocTypes ::
   Id DMOC.MerchantOperatingCity ->
   DocVerificationConfigs ->
@@ -736,9 +739,6 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
               <> show driverDocumentTypes
           pure driverDocumentTypes
         else pure SDO.defaultDriverDocumentTypes
-
-
-
 
 checkAllVehicleDocsVerified ::
   [DVC.DocumentVerificationConfig] ->
@@ -818,7 +818,6 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
         MessageBuilder.buildOnboardingMessage merchantOpCityId $
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
-
 
 persistDocsVerificationStatuses ::
   DP.Person ->
@@ -1039,9 +1038,6 @@ callGetDLGetStatus driverId merchantOpCityId = do
           unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
 
-
-
-
 checkImageValidity :: IQuery.EntityImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkImageValidity entityImagesInfo docType = do
   let validImages = IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
@@ -1063,7 +1059,6 @@ checkLMSTrainingStatus ::
 checkLMSTrainingStatus driverId merchantOpCityId = do
   hasCompleted <- TPlasma.allLMSTrainingCompleted merchantOpCityId (driverId.getId)
   return $ hasCompleted >>= (\ok -> if ok then Just VALID else Nothing)
-
 
 checkBackgroundVerificationStatus :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
@@ -1151,10 +1146,6 @@ getInProgressDriverDocuments driverId entityImagesInfo docType possibleVehicleCa
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing)
 
-
-
-
-
 checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
@@ -1181,9 +1172,6 @@ checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDo
           if hasDocumentVerificationConfig
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
-
-
-
 
 getAadhaarStatus :: Id DP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
@@ -1244,7 +1232,6 @@ getRCAndStatus driverId entityImagesInfo language = do
             Nothing -> do
               msg <- toVerificationMessage NoDcoumentFound language
               return (NO_DOC_AVAILABLE, Nothing, msg)
-
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
 verificationStatusCheck status language img mbReasons = do
@@ -1321,9 +1308,6 @@ getMessageFromResponse language response = do
       | otherwise -> toVerificationMessage Other language
     Nothing -> toVerificationMessage Other language
 
-
-
-
 mkCommonDocumentItem :: DCDOD.CommonDriverOnboardingDocuments -> CommonDocumentItem
 mkCommonDocumentItem doc =
   CommonDocumentItem
@@ -1359,6 +1343,3 @@ mapDigilockerToResponseStatus DocStatus.DOC_FAILED = Just FAILED
 mapDigilockerToResponseStatus DocStatus.DOC_CONSENT_DENIED = Just CONSENT_DENIED
 mapDigilockerToResponseStatus DocStatus.DOC_PULL_REQUIRED = Just PULL_REQUIRED
 mapDigilockerToResponseStatus DocStatus.DOC_SUCCESS = Just VALID
-
-
-

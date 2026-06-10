@@ -1317,7 +1317,7 @@ getDriverFleetRcs (mbDriverId, _, merchantOpCityId) limit offset mbSearchString 
       rcNo <- decrypt rc.certificateNumber
       let isActive = Just rc.id == activeRcId
       isValid <-
-        SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOperatingCity transporterConfig ENGLISH rcNo
+        SStatus.checkAllVehicleDocsVerifiedForRC [] rc merchantOperatingCity transporterConfig ENGLISH rcNo
           `C.catchAll` \_ -> pure False
       return $
         VRC.LinkedRC
