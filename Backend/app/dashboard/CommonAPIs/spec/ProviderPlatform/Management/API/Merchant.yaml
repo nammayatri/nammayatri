@@ -1187,6 +1187,7 @@ types:
     - vehicleAgeThreshold: Maybe Months
     - isAirportRideEnabled: Maybe Bool
     - specialZone: Maybe SpecialZone
+    - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierConfigUpdateReq:
     - name: Maybe Text
     - shortDescription: Maybe Text
@@ -1218,6 +1219,7 @@ types:
     - specialZone: Maybe SpecialZone
     - vehicleAgeThreshold: Maybe Months
     - isAirportRideEnabled: Maybe Bool
+    - allowNullVehicleRating: Maybe Bool
     - derive: "'HideSecrets"
   VehicleServiceTierConfigCreateReq:
     - serviceTierType: ServiceTierType
@@ -1252,6 +1254,7 @@ types:
     - vehicleAgeThreshold: Maybe Months
     - isAirportRideEnabled: Maybe Bool
     - specialZone: Maybe SpecialZone
+    - allowNullVehicleRating: Maybe Bool
   VehicleServiceTierListRes:
     - recordType: Type
     - type: [VehicleServiceTierItem]

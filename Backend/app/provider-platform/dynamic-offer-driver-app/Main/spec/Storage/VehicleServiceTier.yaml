@@ -34,6 +34,7 @@ VehicleServiceTier:
     baseVehicleServiceTier : Maybe Bool
     fareAdditionPerKmOverBaseServiceTier : Maybe Int
     vehicleRating: Maybe Double
+    allowNullVehicleRating: Maybe Bool
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
     allowedVehicleVariant: '[VehicleVariant]'
