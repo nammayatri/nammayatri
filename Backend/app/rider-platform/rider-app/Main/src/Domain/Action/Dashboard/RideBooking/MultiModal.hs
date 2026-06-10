@@ -1,7 +1,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalAddComment, getMultiModalGetComments) where
+module Domain.Action.Dashboard.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalSendDirectMessage, postMultiModalAddComment, getMultiModalGetComments) where
 
 import qualified API.Types.Dashboard.RideBooking.MultiModal
 import Data.Aeson
@@ -16,6 +16,7 @@ import qualified Domain.Types.BookingStatus
 import Domain.Types.EmptyDynamicParam
 import qualified "this" Domain.Types.Journey
 import qualified Domain.Types.Merchant
+import qualified Email.Flow as Email
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
@@ -27,11 +28,15 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
-import Servant
+import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.MessageBuilder (buildSendSmsReq)
+import SharedLogic.MessageBuilder (buildMessageWithKey, buildSendSmsReq)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Person as QPerson
+import Tools.Error (RiderError (RiderConfigDoesNotExist))
 import qualified Tools.Notifications as TNotifications
 import Tools.SMS as Sms hiding (Success)
 import qualified Tools.Whatsapp as Whatsapp
@@ -44,6 +49,38 @@ getMultiModalList merchantShortId _opCity limit offset bookingOffset journeyOffs
 postMultiModalSendMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMultiModalSendMessage _merchantShortId _opCity customerId req = do
   notifyCustomerFromDashboard customerId req
+  pure Kernel.Types.APISuccess.Success
+
+postMultiModalSendDirectMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendDirectMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalSendDirectMessage merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId merchant (Just opCity)
+  case req.channel of
+    API.Types.Dashboard.RideBooking.MultiModal.WHATSAPP -> do
+      merchantMessage <-
+        QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId req.messageKey Nothing
+          >>= fromMaybeM (InvalidRequest $ "No WhatsApp template found for messageKey: " <> show req.messageKey)
+      let variables = map (Just . snd) (fromMaybe [] req.variables)
+      void $
+        Whatsapp.whatsAppSendMessageWithTemplateIdAPI merchant.id merchantOpCityId $
+          Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq req.destination merchantMessage.templateId variables Nothing Nothing
+    API.Types.Dashboard.RideBooking.MultiModal.EMAIL -> do
+      riderConfig <-
+        getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+          >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
+      let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig
+      emailServiceConfig <- asks (.emailServiceConfig)
+      let vars = fromMaybe [] req.variables
+      body <-
+        buildMessageWithKey merchantOpCityId req.messageKey vars
+          >>= fromMaybeM (InvalidRequest $ "No email template found for messageKey: " <> show req.messageKey)
+      subject <-
+        maybe
+          (pure "")
+          (\k -> buildMessageWithKey merchantOpCityId k vars >>= fromMaybeM (InvalidRequest $ "No email template found for messageKey: " <> show k))
+          req.titleKey
+      liftIO $ Email.sendPlainEmail emailServiceConfig fromEmail [req.destination] subject body
+    _ -> throwError $ InvalidRequest "Unsupported channel for sendDirectMessage; only WHATSAPP and EMAIL are supported"
   pure Kernel.Types.APISuccess.Success
 
 notifyCustomerFromDashboard ::
@@ -89,6 +126,8 @@ notifyCustomerFromDashboard customerId req = do
                 sound = Nothing
               }
       TNotifications.notifyPerson person.merchantId person.merchantOperatingCityId person.id notificationData Nothing
+    API.Types.Dashboard.RideBooking.MultiModal.EMAIL ->
+      throwError $ InvalidRequest "EMAIL channel is not supported for sendMessage; use sendDirectMessage"
 
 postMultiModalAddComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMultiModalAddComment _merchantShortId _opCity customerId req = do
