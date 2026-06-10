@@ -158,6 +158,57 @@ jobs:
           crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
           crane auth logout ${DOCKER_REGISTRY}
 
+      - name: Push build artifacts to MinIO
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: |
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+          # strip executables (filename == parent dirname) before tarring — ~70% size reduction
+          find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1)' | xargs rm -f
+
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C Backend dist-newstyle/
+          mc cp dist-newstyle.tar.zst "minio/ny-cabal-artifacts/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
+          rm -f dist-newstyle.tar.zst
+
+      - name: Build repl artifacts (dynamic-offer-driver-app)
+        run: |
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            cd Backend
+            cabal repl dynamic-offer-driver-app \
+              --repl-options='-fno-code -fwrite-interface' \
+              --builddir=dist-newrepl-driver <<< ':quit'
+          "
+
+      - name: Build repl artifacts (rider-app)
+        run: |
+          nix develop .#backend --command bash -c "
+            export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
+            cd Backend
+            cabal repl rider-app \
+              --repl-options='-fno-code -fwrite-interface' \
+              --builddir=dist-newrepl-rider <<< ':quit'
+          "
+
+      - name: Push repl artifacts to MinIO
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: |
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+
+          tar -I 'zstd -T0 -3' -cf driver.tar.zst -C Backend dist-newrepl-driver/
+          mc cp driver.tar.zst "minio/ny-cabal-artifacts/cabal-repl/${{ github.sha }}/dynamic-offer-driver-app.tar.zst"
+          rm -f driver.tar.zst
+
+          tar -I 'zstd -T0 -3' -cf rider.tar.zst -C Backend dist-newrepl-rider/
+          mc cp rider.tar.zst "minio/ny-cabal-artifacts/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
+          rm -f rider.tar.zst
+
       - name: Cleanup staging dir
         if: always()
         run: rm -rf $HOME/ny-staging/${{ github.run_id }}
