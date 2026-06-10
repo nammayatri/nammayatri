@@ -732,7 +732,8 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             unencryptedCertificateNumber = input.registrationNumber,
             approved = Just False,
             updatedAt = now,
-            vehicleImageId = Nothing
+            vehicleImageId = Nothing,
+            verified = Just False
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of

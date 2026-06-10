@@ -1234,6 +1234,7 @@ TransporterConfig:
     requiresDriverOnboardingInspection: Maybe Bool
     separateDriverVehicleEnablement: Maybe Bool
     dontAutoEnableDriver: Maybe Bool
+    enableBotFlow: Maybe Bool # Just True ⇒ statusHandler computes verified (isMandatory docs) + enabled (isMandatoryForEnabling docs AND BOT-set approved). NULL ⇒ legacy flow.
     reminderSystemEnabled: Maybe Bool
     allowedReferralEntities: "[Role]"
     enableOverchargingBlocker: Bool

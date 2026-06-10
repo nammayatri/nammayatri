@@ -56,6 +56,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     vehicleVariant :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)),
     ventilator :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     verificationStatus :: (B.C f Kernel.Types.Documents.VerificationStatus),
+    verified :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),

@@ -529,6 +529,9 @@ mapDocumentType Common.TANCertificate = DVC.TANCertificate
 mapDocumentType Common.UDYAMCertificate = DVC.UDYAMCertificate
 mapDocumentType Common.PanAadhaarLink = DVC.PanAadhaarLinkage
 mapDocumentType Common.VoterIdCard = DVC.VoterIdCard
+mapDocumentType Common.OperatorCode = DVC.OperatorCode
+mapDocumentType Common.MedicalCertificate = DVC.MedicalCertificate
+mapDocumentType Common.Rating = DVC.Rating
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
@@ -984,7 +987,6 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                 DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
                 DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
                 DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
-                DRC.approved = Just True,
                 DRC.docsVerificationStatus =
                   if transporterConfig.enableManualDocumentStatusCheck == Just True
                     then Just DDVS.ADMIN_APPROVED
@@ -1050,7 +1052,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.vehicleModelYear = req.vehicleModelYear,
                     DRC.rejectReason = Nothing,
                     DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
-                    DRC.approved = Just True,
+                    DRC.approved = Nothing,
                     DRC.vehicleImageId = Nothing,
                     DRC.enableForAirport = Nothing,
                     DRC.merchantId = Just merchantId,
@@ -1060,7 +1062,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.docsVerificationStatus =
                       if transporterConfig.enableManualDocumentStatusCheck == Just True
                         then Just DDVS.ADMIN_APPROVED
-                        else Nothing
+                        else Nothing,
+                    DRC.verified = Just False
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver
