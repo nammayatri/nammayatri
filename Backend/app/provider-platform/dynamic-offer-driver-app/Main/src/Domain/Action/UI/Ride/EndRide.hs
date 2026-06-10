@@ -91,6 +91,7 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
 import qualified SharedLogic.FarePolicy as FarePolicy
+import qualified SharedLogic.GoogleMobilityBilling as GoogleMobilityBilling
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.Type as SLT
@@ -598,6 +599,9 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
     -- written back to the ride asynchronously by the handler.
     let updRide = updRide'
     QRide.incrementDriverRiderRideCountForDay (cast driverId) booking.riderId
+    when (thresholdConfig.enableMobilityBilling == Just True) $
+      fork "report Google mobility billable event" $
+        GoogleMobilityBilling.reportNavBillableEvent booking updRide
     fork "updating time and latlong in advance ride if any" $ do
       whenJust advanceRide $ \advanceRide' -> do
         QRide.updatePreviousRideTripEndPosAndTime (Just tripEndPoint) (Just now) advanceRide'.id

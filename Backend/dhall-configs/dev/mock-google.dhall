@@ -25,6 +25,7 @@ let doNotUseRealGoogle =
         , googlePlaceNewUrl : Text
         , useNewPlaces : Bool
         , googleAutocompleteParams : Optional (List Text)
+        , mobilityBillingUrl : Optional Text
         }
 
 in  { port = Natural/toInteger (env:SERVICE_PORT ? 8019)
