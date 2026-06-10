@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.RiderPlatform.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalAddComment, getMultiModalGetComments) where
+module Domain.Action.RiderPlatform.RideBooking.MultiModal (getMultiModalList, postMultiModalSendMessage, postMultiModalAddComment, getMultiModalGetComments, postMultiModalSendDirectMessage) where
 
 import qualified API.Client.RiderPlatform.RideBooking
 import qualified API.Types.Dashboard.RideBooking.MultiModal
@@ -42,3 +42,9 @@ getMultiModalGetComments :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merch
 getMultiModalGetComments merchantShortId opCity apiTokenInfo customerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.multiModalDSL.getMultiModalGetComments) customerId
+
+postMultiModalSendDirectMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendDirectMessageReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postMultiModalSendDirectMessage merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.multiModalDSL.postMultiModalSendDirectMessage) req)
