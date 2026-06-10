@@ -812,7 +812,8 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
+    allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -850,7 +851,8 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -888,7 +890,8 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
     isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone
+    specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
+    allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

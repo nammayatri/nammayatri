@@ -19,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VehicleServiceTier = VehicleServiceTier
   { airConditionedThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     allowedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
     autoSelectedVehicleVariant :: [Domain.Types.VehicleVariant.VehicleVariant],
