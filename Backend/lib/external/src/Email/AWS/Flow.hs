@@ -35,6 +35,15 @@ sendEmail config to otpCode = do
       sendReq = newSendEmail from destination message
   void $ AWS.runResourceT $ AWS.send env sendReq
 
+-- | Send a plain subject+body email (no attachment, no template)
+sendPlainEmail :: Text -> [Text] -> Text -> Text -> IO ()
+sendPlainEmail from to subject bodyText = do
+  env <- AWS.newEnv AWS.discover
+  let destination = Destination' Nothing Nothing (Just to)
+      message = newMessage (newContent subject) (Body' Nothing (Just $ newContent bodyText))
+      sendReq = newSendEmail from destination message
+  void $ AWS.runResourceT $ AWS.send env sendReq
+
 sendMagicLinkEmail :: Email.EmailMagicLinkConfig -> [Text] -> Text -> IO ()
 sendMagicLinkEmail config to token = do
   env <- AWS.newEnv AWS.discover
