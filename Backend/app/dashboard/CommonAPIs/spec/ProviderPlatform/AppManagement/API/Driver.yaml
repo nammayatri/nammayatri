@@ -24,6 +24,7 @@ apis:
         - day: Day
         - fleetOwnerId: Text
         - numOfDays: Int
+        - financeData: Bool
       response:
         type: DriverRideListRes
       migrate:

@@ -22,6 +22,7 @@ getDriverFleetListRides ::
   Kernel.Prelude.Maybe Data.Time.Calendar.Day ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow Domain.Action.UI.Ride.DriverRideListRes
-getDriverFleetListRides _merchantShortId _opCity driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays =
-  Domain.Action.UI.Ride.listDriverRides driverId Nothing mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays
+getDriverFleetListRides _merchantShortId _opCity driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays mbFinanceData =
+  Domain.Action.UI.Ride.listDriverRides driverId Nothing mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays mbFinanceData

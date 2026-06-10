@@ -44,6 +44,7 @@ module Lib.Finance.FinanceM
     transfer_,
     transferPending,
     transferAllowZero,
+    transferWithoutAttribution,
     getEntryIds,
     liftFinance,
     liftFinanceM,
@@ -496,6 +497,40 @@ transfer fromRole toRole amount refType = do
               { fromAccountId = fromAcc.id,
                 toAccountId = toAcc.id,
                 concernedIndividualId = ctx.concernedIndividualId,
+                amount = amount,
+                currency = ctx.currency,
+                entryType = LE.Expense,
+                status = LE.SETTLED,
+                referenceType = refType,
+                referenceId = ctx.referenceId,
+                metadata = Nothing,
+                merchantId = ctx.merchantId,
+                merchantOperatingCityId = ctx.merchantOpCityId,
+                settlementStatus = Nothing
+              }
+      result <- liftFinanceM (createEntryWithBalanceUpdate entryInput)
+      collectEntryId result.id
+      pure (Just result.id)
+
+transferWithoutAttribution ::
+  (BeamFlow.BeamFlow m r) =>
+  AccountRole ->
+  AccountRole ->
+  HighPrecMoney ->
+  Text -> -- Reference type
+  FinanceM m (Maybe (Id LE.LedgerEntry))
+transferWithoutAttribution fromRole toRole amount refType = do
+  ctx <- ask
+  if amount <= 0 || not ctx.emitLedgerEntries
+    then pure Nothing
+    else do
+      fromAcc <- account fromRole
+      toAcc <- account toRole
+      let entryInput =
+            LedgerEntryInput
+              { fromAccountId = fromAcc.id,
+                toAccountId = toAcc.id,
+                concernedIndividualId = Nothing,
                 amount = amount,
                 currency = ctx.currency,
                 entryType = LE.Expense,

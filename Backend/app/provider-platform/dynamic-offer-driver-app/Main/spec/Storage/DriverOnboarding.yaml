@@ -449,6 +449,7 @@ Image:
   constraints:
     id: PrimaryKey
     personId: SecondaryKey
+    rcId: SecondaryKey
   queries:
     findById:
       kvFunction: findOneWithKV

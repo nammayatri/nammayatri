@@ -545,6 +545,7 @@ library
       SharedLogic.Pricing
       SharedLogic.Reminder.Helper
       SharedLogic.Ride
+      SharedLogic.RideFootnotes
       SharedLogic.RiderDetails
       SharedLogic.RuleBasedTierUpgrade
       SharedLogic.ScheduledNotifications
