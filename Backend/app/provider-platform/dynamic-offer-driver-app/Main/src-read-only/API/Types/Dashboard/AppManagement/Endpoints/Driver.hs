@@ -38,12 +38,15 @@ type GetDriverFleetListRides =
       :> QueryParam
            "numOfDays"
            Kernel.Prelude.Int
+      :> QueryParam
+           "financeData"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            Domain.Action.UI.Ride.DriverRideListRes
   )
 
-newtype DriverAPIs = DriverAPIs {getDriverFleetListRides :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient Domain.Action.UI.Ride.DriverRideListRes}
+newtype DriverAPIs = DriverAPIs {getDriverFleetListRides :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Ride.RideStatus -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Domain.Action.UI.Ride.DriverRideListRes}
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})

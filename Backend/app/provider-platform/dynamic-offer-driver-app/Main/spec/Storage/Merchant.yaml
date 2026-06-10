@@ -1291,7 +1291,6 @@ TransporterConfig:
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     takeOtpRideAsValidRideForReferral: Bool
-
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit

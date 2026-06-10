@@ -192,12 +192,17 @@ listDriverRides ::
   Maybe Day ->
   Maybe Text ->
   Maybe Int ->
+  Maybe Bool ->
   m DriverRideListRes
-listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
+listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays mbFinanceData = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  driverPerson <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let driverLanguage = fromMaybe L.ENGLISH driverPerson.language
+      rideEarningsEnabled = mbFinanceData == Just True
   transporterConfig <- case mocId of
     Just id -> SCTC.findByMerchantOpCityId id Nothing
     Nothing -> pure Nothing
+  mbEarningsLabels <- if rideEarningsEnabled then Just <$> RideCommon.fetchEarningsLabels driverLanguage else pure Nothing
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
     (False, Just True) -> return []
@@ -215,7 +220,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
     let goHomeReqId = ride.driverGoHomeRequestId
-    RideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
+    RideCommon.mkDriverRideRes driverLanguage mbEarningsLabels rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -285,7 +290,7 @@ otpRideCreate driver otpCode booking clientId = do
     Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
     _ -> pure Nothing
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo riderCallingNumber
+  RideCommon.mkDriverRideRes L.ENGLISH Nothing rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo riderCallingNumber
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc

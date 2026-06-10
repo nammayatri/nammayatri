@@ -82,6 +82,7 @@ type API =
                     :> QueryParam "status" Ride.RideStatus
                     :> QueryParam "day" Day
                     :> QueryParam "numOfDay" Int
+                    :> QueryParam "financeData" Bool
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
@@ -265,8 +266,9 @@ listDriverRides ::
   Maybe Ride.RideStatus ->
   Maybe Day ->
   Maybe Int ->
+  Maybe Bool ->
   FlowHandler DRide.DriverRideListRes
-listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay
+listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay mbFinanceData = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay mbFinanceData
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req

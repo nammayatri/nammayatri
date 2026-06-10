@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -6,6 +7,11 @@
 -- Common types and functions to break import cycles between UI.Ride, UI.Ride.EndRide, and Dashboard.Ride
 module Domain.Action.UI.Ride.Common
   ( DriverRideRes (..),
+    FareUISection (..),
+    FareUIComponent (..),
+    RideEarnings (..),
+    EarningsLabels (..),
+    fetchEarningsLabels,
     mkDriverRideRes,
     Stop (..),
     DeliveryPersonDetailsAPIEntity (..),
@@ -16,11 +22,18 @@ module Domain.Action.UI.Ride.Common
 where
 
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import qualified Data.ByteString.Lazy as LBS
 import Data.Functor ((<&>))
-import Data.List (find)
-import Data.Maybe (fromMaybe, listToMaybe)
+import qualified Data.HashMap.Strict as HM
+import Data.List (find, nub, partition, sort)
+import Data.Maybe (catMaybes, fromMaybe, listToMaybe, mapMaybe)
 import Data.OpenApi (ToSchema)
+import qualified Data.Scientific as Sci
 import Data.Text (Text, pack)
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (UTCTime, diffUTCTime)
 import qualified Domain.Action.UI.Location as DLocUI
 import qualified Domain.Types as DTC
@@ -31,6 +44,7 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.FareParameters as DFareParams
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.ParcelType as DParcel
@@ -41,8 +55,10 @@ import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant as DVeh
 import GHC.Generics (Generic)
 import Kernel.Beam.Functions (runInReplica)
+import qualified Kernel.External.Types as KET
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Common (BaseUrl, Distance, EncFlow, EsqDBFlow, HighPrecMeters, Meters, Months, Seconds, convertHighPrecMetersToDistance, convertMetersToDistance)
 import Kernel.Types.Confidence (Confidence)
@@ -50,12 +66,19 @@ import Kernel.Types.Id
 import Kernel.Types.Price
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
+import qualified Lib.Yudhishthira.Storage.Beam.BeamFlow as LYBF
+import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.FareCalculator (fareSum)
+import qualified SharedLogic.RideFootnotes as RFN
 import SharedLogic.Type (BillingCategory)
 import Storage.Beam.SpecialZone ()
 import qualified Storage.Queries.BookingCancellationReason as QBCR
+import qualified Storage.Queries.FareParameters as SQFP
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Translations as QTranslations
+import Tools.DynamicLogic (getAppDynamicLogic)
 import qualified Tools.Utils as Tools
 import Prelude hiding (id)
 
@@ -99,6 +122,7 @@ data DriverRideRes = DriverRideRes
     estimatedBaseFare :: Money,
     computedFareWithCurrency :: Maybe PriceAPIEntity,
     estimatedBaseFareWithCurrency :: PriceAPIEntity,
+    estimatedBaseFareWithCurrencyV2 :: PriceAPIEntity,
     estimatedDistance :: Maybe Meters,
     estimatedDistanceWithUnit :: Maybe Distance,
     driverSelectedFare :: Money,
@@ -184,16 +208,212 @@ data DriverRideRes = DriverRideRes
     amountToCollectInCash :: Maybe HighPrecMoney,
     amountToBeSettledOnline :: Maybe HighPrecMoney,
     amountToCollectInCashWithCurrency :: Maybe PriceAPIEntity,
-    amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity
+    amountToBeSettledOnlineWithCurrency :: Maybe PriceAPIEntity,
+    rideEarnings :: Maybe RideEarnings
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
+data FareUISection
+  = FareBreakup
+  | Footnote
+  deriving stock (Show, Eq, Ord, Generic, Enum, Bounded)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data FareUIComponent = FareUIComponent
+  { title :: Text,
+    price :: PriceAPIEntity,
+    uiTranslation :: Maybe Text,
+    section :: FareUISection
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data UiTranslationRaw
+  = UiTrPlain Text
+  | UiTrByKey Text (HM.HashMap Text A.Value)
+  deriving stock (Show, Generic)
+
+instance FromJSON UiTranslationRaw where
+  parseJSON v = case v of
+    A.String s -> pure $ UiTrPlain s
+    A.Object _ -> A.withObject "UiTranslationByKey" (\o -> UiTrByKey <$> o A..: "key" <*> o A..:? "vars" A..!= HM.empty) v
+    _ -> fail "uiTranslation must be string or {key, vars}"
+
+data FareUIComponentRaw = FareUIComponentRaw
+  { title :: Text,
+    price :: PriceAPIEntity,
+    uiTranslation :: Maybe UiTranslationRaw,
+    section :: FareUISection
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON)
+
+data RideEarnings = RideEarnings
+  { fareBreakup :: [FareUIComponent],
+    footnotes :: [FareUIComponent]
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+buildRideEarnings ::
+  (LYBF.BeamFlow m r) =>
+  KET.Language ->
+  EarningsLabels ->
+  DRB.Booking ->
+  DRide.Ride ->
+  DFareParams.FareParameters ->
+  m RideEarnings
+buildRideEarnings lang labels booking ride fp = do
+  let fare = fromMaybe booking.estimatedFare ride.fare
+      discount = fromMaybe 0 ride.discountAmount
+      commission = fromMaybe 0 ride.commission
+      tips = fromMaybe 0 ride.tipAmount
+      cur = ride.currency
+      amountPaidByCustomer = fare - discount + tips
+      EarningsLabels {lblAmountPaid, lblDiscount, lblTips, lblCommission, lblFare} = labels
+      cancellationDues = fromMaybe 0 fp.customerCancellationDues -- we will deccide where to fetch this ?
+  let mkComp sec key mbLabel value applicable =
+        if applicable
+          then
+            Just
+              FareUIComponent
+                { title = key,
+                  price = PriceAPIEntity (roundAmountByCurrency' cur value) cur,
+                  uiTranslation = mbLabel,
+                  section = sec
+                }
+          else Nothing
+      fareBreakupItems =
+        catMaybes
+          [ mkComp FareBreakup "AMOUNT_PAID_BY_CUSTOMER" lblAmountPaid amountPaidByCustomer True,
+            mkComp FareBreakup "DISCOUNT" lblDiscount discount (discount > 0),
+            mkComp FareBreakup "TIPS" lblTips tips (tips > 0),
+            mkComp FareBreakup "COMMISSION" lblCommission commission (commission /= 0),
+            mkComp FareBreakup "CUSTOMER_CANCELLATION_CHARGE" lblFare cancellationDues (cancellationDues > 0)
+          ]
+  footnoteItems <- buildFootnotes lang booking ride fp
+
+  pure RideEarnings {fareBreakup = fareBreakupItems, footnotes = footnoteItems}
+
+buildFootnotes ::
+  (LYBF.BeamFlow m r) =>
+  KET.Language ->
+  DRB.Booking ->
+  DRide.Ride ->
+  DFareParams.FareParameters ->
+  m [FareUIComponent]
+buildFootnotes lang booking ride fp = do
+  (logics, _mbVersion) <- getAppDynamicLogic (cast ride.merchantOperatingCityId) LYT.RIDE_FOOTNOTES_DISPLAY ride.createdAt Nothing Nothing
+  if null logics
+    then pure []
+    else do
+      mbRideFareParams <- maybe (pure Nothing) SQFP.findById ride.fareParametersId
+      let waitingTimeSeconds = case (ride.tripStartTime, ride.driverArrivalTime) of
+            (Just startT, Just arrivalT) -> Just (round (diffUTCTime startT arrivalT))
+            _ -> Nothing
+          logicInput =
+            RFN.RideFootnotesLogicInput
+              { ride = ride,
+                booking = booking,
+                rideFareParams = mbRideFareParams,
+                bookingFareParams = fp,
+                waitingTimeSeconds = waitingTimeSeconds,
+                language = pack (show lang)
+              }
+      resp <- LYTU.runLogics logics logicInput
+      let rawValues = case A.fromJSON resp.result :: A.Result [A.Value] of
+            A.Success vs -> vs
+            A.Error _ -> [resp.result]
+          rawItems = mapMaybe (A.parseMaybe A.parseJSON) rawValues
+      if null rawItems
+        then pure []
+        else do
+          let allKeys = nub $
+                flip concatMap rawItems $ \raw -> case raw.uiTranslation of
+                  Just (UiTrByKey k _) -> [k]
+                  Nothing -> [raw.title]
+                  _ -> []
+          rows <-
+            IM.withInMemCache (["FNT", pack (show lang)] <> sort allKeys) 3600 $
+              QTranslations.findAllByMessageKeysAndLanguage allKeys lang
+          let (preferred, fallbacks) = partition (\t -> t.language == lang) rows
+              txMap =
+                HM.union
+                  (HM.fromList [(t.messageKey, t.message) | t <- preferred])
+                  (HM.fromList [(t.messageKey, t.message) | t <- fallbacks])
+          pure $ mapMaybe (resolveRawComponent txMap) rawItems
+
+resolveRawComponent :: HM.HashMap Text Text -> FareUIComponentRaw -> Maybe FareUIComponent
+resolveRawComponent txMap raw =
+  let ui = resolveUiTranslationFromMap txMap raw.title raw.uiTranslation
+   in if maybe False (T.isInfixOf "{{") ui
+        then Nothing
+        else
+          Just
+            FareUIComponent
+              { title = raw.title,
+                price = raw.price,
+                uiTranslation = ui,
+                section = raw.section
+              }
+
+resolveUiTranslationFromMap :: HM.HashMap Text Text -> Text -> Maybe UiTranslationRaw -> Maybe Text
+resolveUiTranslationFromMap txMap titleKey = \case
+  Just (UiTrPlain s) -> Just s
+  Just (UiTrByKey k vs) ->
+    let template = fromMaybe k (HM.lookup k txMap)
+     in Just (substituteVars template vs)
+  Nothing -> HM.lookup titleKey txMap
+
+substituteVars :: Text -> HM.HashMap Text A.Value -> Text
+substituteVars = HM.foldrWithKey (\k v acc -> T.replace ("{{" <> k <> "}}") (valueToText v) acc)
+
+valueToText :: A.Value -> Text
+valueToText = \case
+  A.String s -> s
+  A.Number n -> case Sci.floatingOrInteger n of
+    Right (i :: Integer) -> T.pack (show i)
+    Left (d :: Double) -> T.pack (show d)
+  A.Bool b -> if b then "true" else "false"
+  A.Null -> ""
+  other -> TE.decodeUtf8 . LBS.toStrict $ A.encode other
+
+resolveLabel ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  KET.Language ->
+  Text ->
+  m (Maybe Text)
+resolveLabel lang key = fmap (fmap (.message)) $ QTranslations.findByErrorAndLanguage key lang
+
+data EarningsLabels = EarningsLabels
+  { lblAmountPaid :: Maybe Text,
+    lblDiscount :: Maybe Text,
+    lblTips :: Maybe Text,
+    lblCommission :: Maybe Text,
+    lblNetEarnings :: Maybe Text,
+    lblFare :: Maybe Text
+  }
+
+fetchEarningsLabels ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  KET.Language ->
+  m EarningsLabels
+fetchEarningsLabels lang =
+  EarningsLabels
+    <$> resolveLabel lang "AMOUNT_PAID_BY_CUSTOMER"
+    <*> resolveLabel lang "DISCOUNT"
+    <*> resolveLabel lang "TIPS"
+    <*> resolveLabel lang "COMMISSION"
+    <*> resolveLabel lang "NET_DRIVER_EARNINGS"
+    <*> resolveLabel lang "FARE"
+
 mkDriverRideRes ::
   ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
+    LYBF.BeamFlow m r,
     Esq.EsqDBReplicaFlow m r
   ) =>
+  KET.Language ->
+  Maybe EarningsLabels ->
   RD.RideDetails ->
   Maybe Text ->
   Maybe DRating.Rating ->
@@ -206,13 +426,16 @@ mkDriverRideRes ::
   [DSI.StopInformation] ->
   Maybe Text ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
+mkDriverRideRes language mbEarningsLabels rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
   let fareParams = booking.fareParams
       estimatedBaseFareGross = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
       estimatedCommission = fromMaybe 0 booking.commission
       estimatedBaseFare = max 0 (estimatedBaseFareGross - estimatedCommission)
+      estimatedBaseFareGrossV2 = fareSum fareParams Nothing
+      estimatedBaseFareV2 = max 0 (estimatedBaseFareGrossV2 - estimatedCommission)
       rideCommission = fromMaybe 0 ride.commission
-      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission)) <$> ride.fare
+      rideTipsAmount = fromMaybe 0 ride.tipAmount
+      computedFareNet = (\fareAmt -> max 0 (fareAmt - rideCommission + rideTipsAmount)) <$> ride.fare
   let initial = "" :: Text
   (nextStopLocation, lastStopLocation) <- case booking.tripCategory of
     DTC.Rental _ -> calculateLocations booking.id booking.stopLocationId
@@ -238,14 +461,18 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
       commission = fromMaybe 0 ride.commission
       mbAmountToCollectInCash =
         case (booking.paymentInstrument, ride.fare) of
-          (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer)
+          (Just DMPM.Cash, Just fareAmt) -> Just $ max 0 (fareAmt - offer + rideTipsAmount)
           _ -> Nothing
       mbAmountToBeSettledOnline =
         case booking.paymentInstrument of
           Just DMPM.Cash -> if offer > 0 then Just offer else Nothing
           _ -> case ride.fare of
-            Just fareAmt -> Just $ max 0 (fareAmt - commission)
+            Just fareAmt -> Just $ max 0 (fareAmt - commission + rideTipsAmount)
             Nothing -> Nothing
+
+  mbRideEarningsVal <- case mbEarningsLabels of
+    Just earningsLabels -> Just <$> buildRideEarnings language earningsLabels booking ride fareParams
+    Nothing -> pure Nothing
 
   return $
     DriverRideRes
@@ -267,6 +494,7 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         actualDuration = roundToIntegral <$> (diffUTCTime <$> ride.tripEndTime <*> ride.tripStartTime),
         estimatedBaseFare = roundToIntegral estimatedBaseFare,
         estimatedBaseFareWithCurrency = PriceAPIEntity (roundAmountByCurrency' ride.currency estimatedBaseFare) ride.currency,
+        estimatedBaseFareWithCurrencyV2 = PriceAPIEntity (roundAmountByCurrency' ride.currency estimatedBaseFareV2) ride.currency,
         estimatedDistance = booking.estimatedDistance,
         estimatedDistanceWithUnit = convertMetersToDistance booking.distanceUnit <$> booking.estimatedDistance,
         driverSelectedFare = roundToIntegral $ fromMaybe 0.0 fareParams.driverSelectedFare,
@@ -352,7 +580,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         amountToCollectInCash = mbAmountToCollectInCash,
         amountToBeSettledOnline = mbAmountToBeSettledOnline,
         amountToCollectInCashWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToCollectInCash,
-        amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline
+        amountToBeSettledOnlineWithCurrency = (\amt -> PriceAPIEntity (roundAmountByCurrency' ride.currency amt) ride.currency) <$> mbAmountToBeSettledOnline,
+        rideEarnings = mbRideEarningsVal
       }
 
 -- calculateLocations moved from UI.Ride
