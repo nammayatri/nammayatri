@@ -36,7 +36,7 @@ jobs:
       matrix:
         include:
           - system: x86_64-linux
-            host: x86_64_main_push
+            host: test
             arch: amd64
             name: Cabal Unoptimized Master Release Build
             continue-on-error: false
@@ -170,7 +170,7 @@ jobs:
           find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1)' | xargs rm -f
 
           tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C Backend dist-newstyle/
-          mc cp dist-newstyle.tar.zst "minio/ny-cabal-artifacts/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
+          mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           rm -f dist-newstyle.tar.zst
 
       - name: Build repl artifacts (dynamic-offer-driver-app)
@@ -202,11 +202,11 @@ jobs:
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
           tar -I 'zstd -T0 -3' -cf driver.tar.zst -C Backend dist-newrepl-driver/
-          mc cp driver.tar.zst "minio/ny-cabal-artifacts/cabal-repl/${{ github.sha }}/dynamic-offer-driver-app.tar.zst"
+          mc cp driver.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dynamic-offer-driver-app.tar.zst"
           rm -f driver.tar.zst
 
           tar -I 'zstd -T0 -3' -cf rider.tar.zst -C Backend dist-newrepl-rider/
-          mc cp rider.tar.zst "minio/ny-cabal-artifacts/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
+          mc cp rider.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
           rm -f rider.tar.zst
 
       - name: Cleanup staging dir
