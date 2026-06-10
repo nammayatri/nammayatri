@@ -195,7 +195,7 @@ getAllFarePoliciesProduct merchantId merchantOpCityId isDashboard fromlocaton mb
   (mbBaseVariantCarFareProduct :: Maybe FareProduct.FareProduct) <-
     return . getFareProduct allFareProducts
       =<< CQVST.findBaseServiceTierTypeByCategoryAndCityIdInRideFlow (Just DVC.CAR) merchantOpCityId configsInExperimentVersions ((.getId) <$> mbFromSpecialLocationId)
-  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId txnId >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId txnId)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   -- Resolve each fareProduct's vehicle-service-tier item once and reuse it for
   -- both the per-vehicleCategory dynamic-pricing inputs and inside
   -- 'getFullFarePolicy', so the (cached) lookup isn't repeated per service tier.

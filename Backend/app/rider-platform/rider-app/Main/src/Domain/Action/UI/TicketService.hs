@@ -52,6 +52,7 @@ import Kernel.Types.Time
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..))
@@ -67,8 +68,8 @@ import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BusinessHour as QBH
 import qualified Storage.Queries.MerchantOperatingCity as QMO
 import qualified Storage.Queries.Person as QP
@@ -730,7 +731,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
           }
     mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
     mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
-      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) merchantOperatingCityId
+      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) merchantOperatingCityId
       let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       localTime <- getLocalCurrentTime timeDiffFromUtc
       let visitDate_ = fromMaybe (utctDay localTime) visitDate
@@ -850,7 +851,7 @@ getTicketPlaceBookings (_mbPersonId, _merchantId') placeId mbLimit mbOffset book
 
         mkTicketBookingCategoryDetails :: DTB.TicketBookingServiceCategory -> Environment.Flow API.Types.UI.TicketService.TicketBookingCategoryDetails
         mkTicketBookingCategoryDetails DTB.TicketBookingServiceCategory {..} = do
-          mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) merchantOperatingCityId
+          mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) merchantOperatingCityId
           let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
           localTime <- getLocalCurrentTime timeDiffFromUtc
           let visitDate_ = fromMaybe (utctDay localTime) visitDate
@@ -1894,7 +1895,7 @@ cancelTBSPeopleCategory visitDate startTime PeopleCategoryCancellationInfo {..} 
   where
     calculateCancellationChargesForPeopleCategory :: DTB.TicketBookingPeopleCategory -> Int -> [Domain.Types.ServicePeopleCategory.CancellationCharge] -> Environment.Flow HighPrecMoney
     calculateCancellationChargesForPeopleCategory tBSPeopleCategory noOfTicketToCancel cancellationCharges' = do
-      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderDimensions {merchantOperatingCityId = mocId.getId})) tBSPeopleCategory.merchantOperatingCityId
+      mbRiderConfig <- maybe (pure Nothing) (\mocId -> getConfig (RiderConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (CQRC.findByMerchantOperatingCityId mocId))) tBSPeopleCategory.merchantOperatingCityId
       let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
       istCurrentTime <- getLocalCurrentTime timeDiffFromUtc
       let visitDateTime = UTCTime visitDate (timeOfDayToTime startTime)

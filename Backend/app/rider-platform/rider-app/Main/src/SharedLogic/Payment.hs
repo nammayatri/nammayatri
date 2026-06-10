@@ -64,11 +64,12 @@ import qualified SharedLogic.JobScheduler as JobScheduler
 import SharedLogic.Offer
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.FRFSRecon as QRecon
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -1121,7 +1122,7 @@ getDuesForPerson ::
   Person.Person ->
   m APIRidePayment.GetDueAmountResp
 getDuesForPerson person = do
-  riderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  riderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let excludedPurposes = fromMaybe [] (riderConfig >>= (.duesExcludedPaymentPurposes))
   mbLatestRideBooking <- QRide.findMostRecentRideForRider person.id
   case mbLatestRideBooking of

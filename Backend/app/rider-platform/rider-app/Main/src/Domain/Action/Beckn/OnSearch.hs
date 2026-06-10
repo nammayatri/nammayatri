@@ -81,8 +81,6 @@ import Kernel.Utils.Common
 -- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 
 import Lib.ConfigPilot.Interface.Types (getConfig)
-import qualified Lib.Yudhishthira.Tools.DebugLog as LYDL
-import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.Type as SLT
@@ -94,7 +92,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.BecknConfig (BecknConfigDimensions (..))
 import Storage.ConfigPilot.Config.InsuranceConfig (InsuranceConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
-import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
@@ -495,6 +492,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
           tripCategory = tripCategory,
           vehicleCategory = DV.castVehicleVariantToVehicleCategory vehicleVariant
         }
+      Nothing
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
   pure
     DEstimate.Estimate

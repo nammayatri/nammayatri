@@ -9,12 +9,12 @@ import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.InsuranceConfig as DIC
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
+import qualified Lib.ConfigPilot.Interface.Getter as LCP
+import Lib.ConfigPilot.Interface.Types
 import qualified Lib.Yudhishthira.Types as LYT
 import Lib.Yudhishthira.Types.ConfigPilot (ConfigType (..))
-import Storage.ConfigPilot.Interface.Getter
-import Storage.ConfigPilot.Interface.Types
+import Storage.Beam.Yudhishthira ()
 import qualified Storage.Queries.InsuranceConfig as QIC
 
 data InsuranceConfigDimensions = InsuranceConfigDimensions
@@ -34,11 +34,12 @@ instance ConfigDimensions InsuranceConfigDimensions where
   type ConfigTypeOf InsuranceConfigDimensions = 'InsuranceConfig
   type ConfigValueTypeOf InsuranceConfigDimensions = Maybe DIC.InsuranceConfig
   getConfigType _ = InsuranceConfig
-  getConfigList a = do
-    IM.withInMemCache (configPilotInMemKey a) 3600 $ do
-      cfg <- QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory (Id a.merchantId) (Id a.merchantOperatingCityId) a.tripCategory a.vehicleCategory
-      case cfg of
-        Nothing -> pure Nothing
-        Just c -> do
-          let configWrapper = LYT.Config {config = c, extraDimensions = Nothing, identifier = 0}
-          Just <$> getConfigImpl a configWrapper (LYT.RIDER_CONFIG InsuranceConfig) (Id a.merchantOperatingCityId)
+  getConfigList a =
+    listToMaybe
+      <$> LCP.resolveConfigList
+        a
+        (LYT.RIDER_CONFIG InsuranceConfig)
+        (Id a.merchantOperatingCityId)
+        (maybeToList <$> QIC.findByMerchantIdAndMerchantOperatingCityIdAndTripCategoryAndVehicleCategory (Id a.merchantId) (Id a.merchantOperatingCityId) a.tripCategory a.vehicleCategory)
+        ([] :: [LCP.DimMatcher InsuranceConfigDimensions DIC.InsuranceConfig])
+        Nothing
