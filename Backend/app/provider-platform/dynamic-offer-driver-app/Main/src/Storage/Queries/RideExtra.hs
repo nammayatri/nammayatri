@@ -120,10 +120,10 @@ findAllRidesByDriverId ::
 findAllRidesByDriverId (Id driverId) = findAllWithKV [Se.Is BeamR.driverId $ Se.Eq driverId]
 
 findCompletedRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
-findCompletedRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findCompletedRideByGHRId (Id ghrId) = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.Eq DRide.COMPLETED]] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
 
 findNewOrInProgressRideByGHRId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DDGR.DriverGoHomeRequest -> m (Maybe Ride)
-findNewOrInProgressRideByGHRId (Id ghrId) = findAllWithOptionsKV [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.In [DRide.NEW, DRide.INPROGRESS]]] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findNewOrInProgressRideByGHRId (Id ghrId) = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverGoHomeRequestId $ Se.Eq (Just ghrId), Se.Is BeamR.status $ Se.In [DRide.NEW, DRide.INPROGRESS]]] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
 
 findActiveByRBId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
 findActiveByRBId (Id rbId) = findOneWithKV [Se.And [Se.Is BeamR.bookingId $ Se.Eq rbId, Se.Is BeamR.status $ Se.Not $ Se.Eq Ride.CANCELLED]]
@@ -161,7 +161,7 @@ findAllRidesBookingsByRideId (Id merchantId) rideIds = do
        in acc <> ((ride',) <$> bookings')
 
 findOneByBookingId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Booking -> m (Maybe Ride)
-findOneByBookingId (Id bookingId) = findAllWithOptionsKV [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Se.Desc BeamR.createdAt) (Just 1) Nothing <&> listToMaybe
+findOneByBookingId (Id bookingId) = findAllWithKVAndConditionalDB [Se.Is BeamR.bookingId $ Se.Eq bookingId] (Just (Se.Desc BeamR.createdAt)) <&> listToMaybe
 
 findAllByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe Ride.RideStatus -> Maybe Day -> Maybe Int -> m [(Ride, Booking)]
 findAllByDriverId (Id driverId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDays = do
@@ -232,14 +232,14 @@ getInProgressByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Per
 getInProgressByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
 
 getInProgressByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m [Ride]
-getInProgressByDriverIds driverIds = findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]]
+getInProgressByDriverIds driverIds = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.Eq Ride.INPROGRESS]] Nothing
 
 getActiveAdvancedRideByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m (Maybe Ride)
 getActiveAdvancedRideByDriverId (Id personId) = findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq personId, Se.Is BeamR.status $ Se.In [Ride.NEW], Se.Is BeamR.isAdvanceBooking $ Se.Eq (Just True)]]
 
 getInProgressOrNewRideIdAndStatusByDriverId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m [(Id Ride, RideStatus)]
 getInProgressOrNewRideIdAndStatusByDriverId (Id driverId) = do
-  ride' <- findAllWithKV [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]]
+  ride' <- findAllWithKVAndConditionalDB [Se.And [Se.Is BeamR.driverId $ Se.Eq driverId, Se.Is BeamR.status $ Se.In [Ride.INPROGRESS, Ride.NEW]]] Nothing
   let rideData = map (\ride -> (ride.id, ride.status)) ride'
   pure rideData
 
@@ -395,7 +395,8 @@ updateTollChargesAndNamesAndIds driverId tollCharges tollNames tollIds = do
 updateAll :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> Ride -> m ()
 updateAll rideId ride = do
   now <- getCurrentTime
-  updateWithKV
+  -- single-row update by PK: updateOneWithKV is KV-first (resilient); updateWithKV would need the DB
+  updateOneWithKV
     [ Se.Set BeamR.status ride.status,
       Se.Set BeamR.chargeableDistance ride.chargeableDistance,
       Se.Set BeamR.fare $ roundToIntegral <$> ride.fare,

@@ -48,7 +48,7 @@ createMany = traverse_ createQuote'
 findByBppIdAndBPPQuoteId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> Text -> m (Maybe Quote)
 findByBppIdAndBPPQuoteId bppId bppQuoteId = do
   dOffer <- QueryDO.findByBPPQuoteId bppQuoteId
-  quoteList <- findAllWithKV [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]]
+  quoteList <- findAllWithKVAndConditionalDB [Se.And [Se.Is BeamQ.providerId $ Se.Eq bppId, Se.Is BeamQ.driverOfferId $ Se.In (map (Just . getId . DDO.id) dOffer)]] Nothing
   let quoteWithDoOfferId = foldl' (getQuoteWithDOffer dOffer) [] quoteList
   pure $ listToMaybe quoteWithDoOfferId
   where
@@ -69,10 +69,10 @@ findAllByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimat
 findAllByEstimateId estimateId status = do
   driverOffers <- findDOfferByEstimateId estimateId status
   let offerIds = map (Just . getId . DDO.id) driverOffers
-  findAllWithKV [Se.Is BeamQ.driverOfferId (Se.In offerIds)]
+  findAllWithKVAndConditionalDB [Se.Is BeamQ.driverOfferId (Se.In offerIds)] Nothing
 
 findDOfferByEstimateId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Estimate -> DriverOfferStatus -> m [DriverOffer]
-findDOfferByEstimateId (Id estimateId) status = findAllWithKV [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]]
+findDOfferByEstimateId (Id estimateId) status = findAllWithKVAndConditionalDB [Se.And [Se.Is BeamDO.estimateId $ Se.Eq estimateId, Se.Is BeamDO.status $ Se.Eq status]] Nothing
 
 findAllQuotesBySRId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> DriverOfferStatus -> m [Quote]
 findAllQuotesBySRId (Id srId) status = do

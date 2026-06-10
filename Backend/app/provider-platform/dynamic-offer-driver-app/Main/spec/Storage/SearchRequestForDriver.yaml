@@ -220,12 +220,12 @@ SearchRequestForDriver:
 
   queries:
     findAllActiveBySTId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where:
         and: [ searchTryId, status ]
 
     findAllActiveBySRId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where:
         and: [ requestId, status ]
 
