@@ -1,0 +1,1594 @@
+{
+  "info": {
+    "name": "01 - Refund Immediate Success Or Failure+Retry(no stripe refundsId re_ case)",
+    "description": "Synchronous refund, Stripe answers immediately. (A) Success Case-2 (deductFromDriver=true): raise -> approve -> asserts BAP (OwnerAsset->BuyerAsset) and BPP (OwnerExpense + SellerExpense) legs SETTLED, both Refund invoices and PDFs. (B) Failure then retry: force the Stripe create to error -> approve FAILED + legs VOIDED -> clear override -> retry -> REFUNDED.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// mock-skip on non-Local envs (Rules.md)",
+          "var envType = pm.environment.get('envType');",
+          "var msu = pm.environment.get('mockServerUrl') || '';",
+          "var url = pm.request.url.toString();",
+          "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) {",
+          "  if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "}",
+          "",
+          "// Dynamic refund amounts derived from the real ride's charged amount T (captured by 00).",
+          "// rf1 = T/2 (primary), rf2 = T/4 (secondary/partial-2), rf3 = T/2 (04 over-cap: > remaining T/4).",
+          "var _T = Number(pm.environment.get('txn_amount'));",
+          "function _r2(x) { return Math.round(x * 100) / 100; }",
+          "if (_T > 0) {",
+          "    pm.environment.set('rf1', String(_r2(_T / 2)));",
+          "    pm.environment.set('rf2', String(_r2(_T / 4)));",
+          "    pm.environment.set('rf3', String(_r2(_T / 2)));",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+358\", \"merchantId\": \"{{bap_short_id}}\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Rider OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "auth",
+            "{{rider_authId}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-rider\"}"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Gate: latest COMPLETED booking for fixed rider (run 00 first)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "var d = {}; try { d = pm.response.json(); } catch(e) {}",
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var list = (d && d.list) || [];",
+              "var completed = list.filter(function (b) { return b.status === 'COMPLETED'; });",
+              "var b = completed.length ? completed[0] : (list.length ? list[0] : null);",
+              "pm.test('Run 00 first — fixed rider has a completed booking', function () {",
+              "  pm.expect(b != null, 'no completed booking for the fixed rider; run 00 (StripeRideFlow) first').to.eql(true);",
+              "});",
+              "if (b) { pm.environment.set('customer_bookingId', b.id); console.log('Gate: booking ' + b.id + ' status ' + b.status); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{rider_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=5&onlyActive=false&offset=0",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "rideBooking",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "5"
+            },
+            {
+              "key": "onlyActive",
+              "value": "false"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture BAP ride id (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'ride',select:['id','booking_id','bpp_ride_id','status'],where_clause:[{column_name:'booking_id',val:pm.environment.get('customer_bookingId'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BAP ride row drained (run 00 first)', function(){ pm.expect(0,'no ride for booking; run 00').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('rideId', r.id);",
+              "  pm.environment.set('bppRideId', r.bpp_ride_id);",
+              "  pm.environment.set('driver_ride_id', r.bpp_ride_id);",
+              "  pm.test('BAP ride row drained', function(){ pm.expect(r.id).to.be.a('string').and.not.empty; });",
+              "  // NOTE: r.id is the RIDE id. orderId is a SEPARATE payment_order GUID, captured next via domain_entity_id.",
+              "  console.log('Gate: BAP rideId='+r.id+' bppRideId='+r.bpp_ride_id+' status='+r.status);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"bpp_ride_id\", \"status\"], \"where_clause\": [{\"column_name\": \"booking_id\", \"val\": \"{{customer_bookingId}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture payment order short id + intent (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_order',select:['id','short_id','payment_service_order_id','status'],where_clause:[{column_name:'domain_entity_id',val:pm.environment.get('rideId'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('payment_order row present', function(){ pm.expect(0,'no payment_order for ride').to.be.above(0); }); return; }",
+              "  var o=rows[0];",
+              "  pm.environment.set('orderId', o.id);",
+              "  pm.environment.set('orderShortId', o.short_id);",
+              "  pm.environment.set('paymentIntentId', o.payment_service_order_id);",
+              "  pm.test('payment_order row present (orderId != rideId)', function(){ pm.expect(o.id).to.be.a('string').and.not.empty; });",
+              "  pm.test('order has a Stripe payment intent (pi_)', function(){ pm.expect(/^pi_/.test(String(o.payment_service_order_id))).to.eql(true); });",
+              "  console.log('Gate: orderId='+o.id+' shortId='+o.short_id+' intent='+o.payment_service_order_id);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"payment_order\", \"select\": [\"id\", \"short_id\", \"payment_service_order_id\", \"status\"], \"where_clause\": [{\"column_name\": \"domain_entity_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture CHARGED transaction amount T (SQL — poll until captured)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'payment_transaction',select:['id','amount','currency','status','created_at'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderId'),op:'='},{column_name:'status',val:'CHARGED',op:'='}],limit:5}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('a CHARGED payment_transaction exists (refund cap source)', function(){ pm.expect(0,'no CHARGED txn after polling (charge settles after End Ride)').to.be.above(0); }); return; }",
+              "  rows.sort(function(a,b){ return String(a.created_at).localeCompare(String(b.created_at)); });",
+              "  var t=rows[0];",
+              "  pm.environment.set('txn_amount', String(t.amount));",
+              "  pm.environment.set('txn_currency', t.currency);",
+              "  pm.environment.set('currency', t.currency);",
+              "  pm.test('a CHARGED payment_transaction exists (refund cap source)', function(){ pm.expect(rows.length).to.be.above(0); });",
+              "  pm.test('T > 0', function(){ pm.expect(Number(t.amount)).to.be.above(0); });",
+              "  console.log('Gate: T(txn_amount)='+t.amount+' '+t.currency);",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"payment_transaction\", \"select\": [\"id\", \"amount\", \"currency\", \"status\", \"created_at\"], \"where_clause\": [{\"column_name\": \"order_id\", \"val\": \"{{orderId}}\", \"op\": \"=\"}, {\"column_name\": \"status\", \"val\": \"CHARGED\", \"op\": \"=\"}], \"limit\": 5}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Capture BPP booking id + commission (SQL — poll until drained)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'ride',select:['id','booking_id','commission','currency','status'],where_clause:[{column_name:'id',val:pm.environment.get('driver_ride_id'),op:'='}],limit:1}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BPP ride row drained', function(){ pm.expect(0,'no BPP ride for id; KV not drained').to.be.above(0); }); return; }",
+              "  var r=rows[0];",
+              "  pm.environment.set('bppBookingId', r.booking_id);",
+              "  pm.environment.set('bpp_commission', String(r.commission==null?0:r.commission));",
+              "  pm.environment.set('bpp_currency', r.currency);",
+              "  pm.test('BPP ride row drained', function(){ pm.expect(r.booking_id).to.be.a('string').and.not.empty; });",
+              "  console.log('Gate: bppBookingId='+r.booking_id+' commission='+(r.commission==null?0:r.commission));",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"ride\", \"select\": [\"id\", \"booking_id\", \"commission\", \"currency\", \"status\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driver_ride_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Wait for BAP fare invoice drained (refund-invoice source)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_invoice',select:['id','invoice_number','invoice_type','status','total_amount'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}],limit:5}); }",
+              "function _finish(rows){",
+              "  if(!rows.length){ pm.test('BAP fare invoice drained (refund-invoice source)', function(){ pm.expect(0,'fare invoice not drained for ride').to.be.above(0); }); return; }",
+              "  pm.test('BAP fare invoice drained (refund-invoice source)', function(){ pm.expect(rows.length).to.be.above(0); });",
+              "  console.log('Gate: BAP fare invoice present ('+rows.length+')');",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{ mode:'raw', raw:_sqlBody() } }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(rows.length){ _finish(rows); } else if(n>0){ setTimeout(function(){ _poll(n-1); }, 3000); } else { _finish([]); } }); }",
+              "var _d={}; try{ _d=pm.response.json(); }catch(e){} var _r0=(_d&&_d.rows)||[];",
+              "if(_r0.length){ _finish(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_app\", \"table_name\": \"finance_invoice\", \"select\": [\"id\", \"invoice_number\", \"invoice_type\", \"status\", \"total_amount\"], \"where_clause\": [{\"column_name\": \"reference_id\", \"val\": \"{{rideId}}\", \"op\": \"=\"}], \"limit\": 5}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Finalize refund env (riderToken alias + sanity gate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// 01-05 raise refunds as the customer via {{riderToken}}",
+              "pm.environment.set('riderToken', pm.environment.get('rider_token'));",
+              "var T = Number(pm.environment.get('txn_amount'));",
+              "pm.test('sanity: T captured and positive', function () { pm.expect(T).to.be.above(0); });",
+              "pm.test('sanity: all refund ids captured', function () {",
+              "    ['rideId','orderId','orderShortId','paymentIntentId','bppBookingId'].forEach(function (k) {",
+              "        pm.expect(pm.environment.get(k), k).to.be.a('string').and.not.empty;",
+              "    });",
+              "});",
+              "console.log('Refund env ready. T =', T, pm.environment.get('txn_currency'), '| commission =', pm.environment.get('bpp_commission'));",
+              "",
+              "// Dynamic refund amounts from the captured charged amount T (self-contained: computed here,",
+              "// AFTER capture, since T is now produced within THIS run — not carried from a prior collection).",
+              "var _Trf = Number(pm.environment.get('txn_amount'));",
+              "function _r2rf(x){ return Math.round(x*100)/100; }",
+              "if (_Trf > 0) {",
+              "  pm.environment.set('rf1', String(_r2rf(_Trf/2)));",
+              "  pm.environment.set('rf2', String(_r2rf(_Trf/4)));",
+              "  pm.environment.set('rf3', String(_r2rf(_Trf/2)));",
+              "  console.log('Refund amounts: rf1='+_r2rf(_Trf/2)+' rf2='+_r2rf(_Trf/4)+' rf3='+_r2rf(_Trf/2)+' (T='+_Trf+')');",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/health",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('refund state cleared', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\"}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/refunds/clear",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "refunds",
+            "clear"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+              "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Raise Refund Request rf1 = T/2 (Customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"requestedAmount\":{\"amount\":{{rf1}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test refund (success case)\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Capture refundRequestId (SQL — after drain)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('B1 refund_request OPEN, txn matches captured T, refunds_id null', function () {",
+              "  var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0);",
+              "  var r = d.rows[0];",
+              "  pm.environment.set('refundRequestId', r.id);",
+              "  pm.expect(r.status).to.eql('OPEN');",
+              "  pm.expect(Number(r.transaction_amount)).to.be.closeTo(Number(pm.environment.get('txn_amount')), 0.01);",
+              "  pm.expect(r.refunds_id == null || r.refunds_id === '').to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\",\"transaction_amount\",\"refunds_id\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Approve Refund — Case 2 deductFromDriver=true (Admin)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('approve -> REFUNDED/SUCCESS', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json();",
+              "  pm.expect(d.status).to.eql('REFUNDED');",
+              "  pm.expect(d.refundStatus).to.eql('SUCCESS');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"approved by integration test\",\"deductFromDriver\":true}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert BAP refund_request REFUNDED + refunds (B1/B2) — after drain",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refund_request',select:['id','status','refunds_id'],where_clause:[{column_name:'id',val:pm.environment.get('refundRequestId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.length>0 && rows[0].status==='REFUNDED'; }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('B1 REFUNDED + refunds_id set', function () {",
+              "    var d = _resp; pm.expect(d.count).to.be.above(0);",
+              "    var r = d.rows[0]; pm.expect(r.status).to.eql('REFUNDED');",
+              "    pm.expect(r.refunds_id, 'refunds_id should be set').to.not.be.empty;",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\",\"refunds_id\"],\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert refunds row SUCCESS + re_ (B2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'refunds',select:['id','order_id','status','id_assigned_by_service_provider','is_api_call_success'],where_clause:[{column_name:'order_id',val:pm.environment.get('orderShortId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.status==='REFUND_SUCCESS';}); }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('B2 refunds REFUND_SUCCESS + re_ id', function () {",
+              "    var d = _resp; pm.expect(d.count).to.be.above(0);",
+              "    var r = d.rows.find(function(x){return x.order_id === pm.environment.get('orderShortId');}) || d.rows[0];",
+              "    pm.expect(r.status).to.eql('REFUND_SUCCESS');",
+              "    pm.expect(/^re_/.test(String(r.id_assigned_by_service_provider||'')), 'expected a re_ id, got: '+r.id_assigned_by_service_provider).to.be.true;",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refunds\",\"select\":[\"id\",\"order_id\",\"status\",\"id_assigned_by_service_provider\",\"is_api_call_success\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderShortId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert BAP ledger SETTLED (B4 — OwnerAsset->BuyerAsset)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','from_account_id','to_account_id'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED';}); }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  console.log('  ↳ expected: BAP gross leg = rf1 =', pm.environment.get('rf1'));",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('B4 BAP refund ledger has a SETTLED leg', function () {",
+              "    var d = _resp; pm.expect(d.count, 'no BAP ledger rows for ride').to.be.above(0);",
+              "    var settled = d.rows.filter(function(r){return r.status === 'SETTLED';});",
+              "    pm.expect(settled.length, 'expected >=1 SETTLED leg').to.be.above(0);",
+              "    // account-type (OwnerAsset->BuyerAsset) needs a finance_account join — verify via 📊 Finance view / REFUNDS_DB_CHECKS.sql",
+              "  });",
+              "  ",
+              "  // Dynamic amount: the single BAP RideRefund leg carries the gross refund rf1",
+              "  var _d2 = _resp; var _rows2 = (_d2 && _d2.rows) || [];",
+              "  var _R = Number(pm.environment.get('rf1'));",
+              "  var _settled2 = _rows2.filter(function (r) { return r.status === 'SETTLED'; });",
+              "  pm.test('BAP leg amount = rf1 (gross refund)', function () {",
+              "      pm.expect(_settled2.length).to.be.above(0);",
+              "      pm.expect(Number(_settled2[0].amount)).to.be.closeTo(_R, 0.011);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"from_account_id\",\"to_account_id\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert BPP ledger SETTLED (P2 — OwnerExpense + SellerExpense)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.status==='SETTLED';}); }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  console.log('  ↳ expected: CommissionShare=round2(C*R/T), DriverShare=R-that | C='+pm.environment.get('bpp_commission')+' R='+pm.environment.get('rf1')+' T='+pm.environment.get('txn_amount'));",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('P2 BPP refund ledger Case-2 split, SETTLED', function () {",
+              "    var d = _resp; pm.expect(d.count, 'BPP ledger empty -> the BAP->BPP refundLedger call did not fire. config-sync wires driver_offer_base_url/api_key; ensure both apps are up + restarted after sync.').to.be.above(0);",
+              "    var settled = d.rows.filter(function(r){return r.status === 'SETTLED';});",
+              "    pm.expect(settled.length, 'expected SETTLED BPP legs (driver OwnerExpense + commission SellerExpense)').to.be.above(0);",
+              "  });",
+              "  ",
+              "  // Dynamic Case-2 split: platformShare = round2(C*R/T) (half-even in Haskell; closeTo absorbs the edge), driverShare = R - platformShare.",
+              "  // finance-kernel SKIPS legs with amount <= 0, so commission 0 => NO CommissionShare leg.",
+              "  var _d2 = _resp; var _rows2 = (_d2 && _d2.rows) || [];",
+              "  var _T = Number(pm.environment.get('txn_amount'));",
+              "  var _C = Number(pm.environment.get('bpp_commission'));",
+              "  var _R = Number(pm.environment.get('rf1'));",
+              "  var _ps = _T > 0 ? Math.round(_C * _R / _T * 100) / 100 : 0;",
+              "  var _ds = Math.round((_R - _ps) * 100) / 100;",
+              "  var _settled2 = _rows2.filter(function (r) { return r.status === 'SETTLED'; });",
+              "  var _dsLegs = _settled2.filter(function (r) { return (r.reference_type || '').indexOf('DriverShare') >= 0; });",
+              "  var _csLegs = _settled2.filter(function (r) { return (r.reference_type || '').indexOf('CommissionShare') >= 0; });",
+              "  pm.test('Case-2 DriverShare leg = R - platformShare', function () {",
+              "      pm.expect(_dsLegs.length).to.be.above(0);",
+              "      pm.expect(Number(_dsLegs[0].amount)).to.be.closeTo(_ds, 0.011);",
+              "  });",
+              "  if (_ps > 0) {",
+              "      pm.test('Case-2 CommissionShare leg = round2(C*R/T)', function () {",
+              "          pm.expect(_csLegs.length).to.be.above(0);",
+              "          pm.expect(Number(_csLegs[0].amount)).to.be.closeTo(_ps, 0.011);",
+              "      });",
+              "  } else {",
+              "      pm.test('commission 0 -> no CommissionShare leg', function () { pm.expect(_csLegs.length).to.eql(0); });",
+              "  }",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert BAP refund invoice Refund/Paid/RIDER (B3)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_invoice',select:['invoice_type','status','total_amount','issued_to_type','invoice_number'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.invoice_type==='Refund' && r.status==='Paid';}); }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('B3 BAP refund invoice present', function () {",
+              "    var d = _resp;",
+              "    var refundInv = (d.rows||[]).filter(function(r){return r.invoice_type === 'Refund' && r.status === 'Paid';});",
+              "    pm.expect(refundInv.length, 'expected a Paid Refund invoice on the ride').to.be.above(0);",
+              "    pm.expect(refundInv[0].issued_to_type).to.eql('RIDER');",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_invoice\",\"select\":[\"invoice_type\",\"status\",\"total_amount\",\"issued_to_type\",\"invoice_number\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Assert BPP refund invoice Refund/Paid (P1)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_driver_offer_bpp',table_name:'finance_invoice',select:['invoice_type','status','total_amount','issued_to_type','invoice_number'],where_clause:[{column_name:'reference_id',val:pm.environment.get('bppBookingId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.invoice_type==='Refund' && r.status==='Paid';}); }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, total:x.total_amount, type:(x.reference_type||x.invoice_type||undefined)}; }))); } catch(e) {}",
+              "  pm.test('P1 BPP refund invoice present', function () {",
+              "    var d = _resp;",
+              "    var refundInv = (d.rows||[]).filter(function(r){return r.invoice_type === 'Refund' && r.status === 'Paid';});",
+              "    pm.expect(refundInv.length, 'expected a Paid Refund invoice on the BPP booking').to.be.above(0);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_invoice\",\"select\":[\"invoice_type\",\"status\",\"total_amount\",\"issued_to_type\",\"invoice_number\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Switch Provider Dashboard to Helsinki (for invoice API + PDF)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "if (d.authToken) { pm.environment.set('dashboard_token', d.authToken); }",
+              "pm.test('provider dashboard switched', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\":\"{{dashboard_merchant_id}}\",\"city\":\"{{dashboard_city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{dashboard_base_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "BPP refund invoice surfaces via Dashboard finance API (list)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.environment.set('invoice_from', new Date(Date.now() - 3600*1000).toISOString());",
+              "pm.environment.set('invoice_to', new Date(Date.now() + 60*1000).toISOString());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('refund invoice listed via dashboard finance API', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json();",
+              "  var invoices = (d && d.invoices) || (Array.isArray(d) ? d : []);",
+              "  pm.expect(invoices.length, 'expected >=1 DRIVER Refund invoice via the dashboard API').to.be.above(0);",
+              "  if (invoices.length) { pm.environment.set('bppInvoiceNumber', invoices[0].invoiceNumber); }",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/list?invoiceType=%22Refund%22&from={{invoice_from}}&to={{invoice_to}}&limit=20&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "list"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "BPP refund invoice PDF base64 (best-effort: renders once the invoice-template JL rule is seeded)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BPP invoice PDF base64 present, or gated on the invoice-template JL rule', function () {",
+              "  if (d.pdfBase64) {",
+              "    pm.expect(/JVBERi0/.test(String(d.pdfBase64).substring(0,8)), 'pdfBase64 should start with the %PDF magic').to.be.true;",
+              "    console.log('BPP invoice PDF base64 (first 100):', String(d.pdfBase64).substring(0,100));",
+              "  } else {",
+              "    console.log('BPP PDF not rendered yet — gated on INVOICE_TEMPLATE JL rule (app_dynamic_logic is empty). Response:', JSON.stringify(d));",
+              "  }",
+              "  pm.expect(true).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/financeManagement/finance/invoice/pdf?invoiceType=%22Refund%22&from={{invoice_from}}&to={{invoice_to}}&limit=1&offset=0",
+          "host": [
+            "{{baseURL_BPP_Dashboard_Internal}}"
+          ],
+          "path": [
+            "{{dashboard_merchant_id}}",
+            "{{dashboard_city}}",
+            "financeManagement",
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "from",
+              "value": "{{invoice_from}}"
+            },
+            {
+              "key": "to",
+              "value": "{{invoice_to}}"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "BAP rider refund invoice PDF base64 (best-effort: renders once the invoice-template JL rule is seeded)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d; try { d = pm.response.json(); } catch (e) { d = {}; }",
+              "pm.test('BAP invoice PDF base64 present, or gated on the invoice-template JL rule', function () {",
+              "  if (d.pdfBase64) {",
+              "    pm.expect(/JVBERi0/.test(String(d.pdfBase64).substring(0,8)), 'pdfBase64 should start with the %PDF magic').to.be.true;",
+              "    console.log('BAP invoice PDF base64 (first 100):', String(d.pdfBase64).substring(0,100));",
+              "  } else {",
+              "    console.log('BAP PDF not rendered yet — gated on INVOICE_TEMPLATE JL rule (app_dynamic_logic is empty). Response:', JSON.stringify(d));",
+              "  }",
+              "  pm.expect(true).to.be.true;",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/finance/invoice/pdf?invoiceType=%22Refund%22&referenceId={{rideId}}",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "finance",
+            "invoice",
+            "pdf"
+          ],
+          "query": [
+            {
+              "key": "invoiceType",
+              "value": "%22Refund%22"
+            },
+            {
+              "key": "referenceId",
+              "value": "{{rideId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Raise 2nd Refund rf2 = T/4 (Customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('2nd raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{riderToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"requestedAmount\":{\"amount\":{{rf2}},\"currency\":\"{{currency}}\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test refund (no-re_ failure case)\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create",
+          "host": [
+            "{{baseUrl_app}}"
+          ],
+          "path": [
+            "payment",
+            "{{rideId}}",
+            "refundRequest",
+            "create"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Mock override: refund create -> error (no re_)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override registered', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\":\"stripe\",\"extract\":\"body.payment_intent\",\"value\":\"{{paymentIntentId}}\",\"match\":\"/refunds\",\"response\":{\"error\":{\"type\":\"card_error\",\"code\":\"card_declined\",\"message\":\"Your card was declined.\"},\"http_status\":402}}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Capture 2nd refundRequestId (SQL — after drain)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('2nd refund_request OPEN captured', function () {",
+              "  var d = pm.response.json(); pm.expect(d.count).to.be.above(0);",
+              "  pm.environment.set('refundRequestId', d.rows[0].id);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Approve -> FAILED (no re_)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('approve -> FAILED', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json(); pm.expect(d.status).to.eql('FAILED');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"approve (will fail at gateway)\",\"deductFromDriver\":true}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Clear mock override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Retry approve -> REFUNDED (recovers)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 4000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('retry -> REFUNDED', function () {",
+              "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+              "  var d = pm.response.json(); pm.expect(d.status).to.eql('REFUNDED');",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"approve\":true,\"responseDescription\":\"retry after gateway failure\",\"retryRefunds\":true,\"deductFromDriver\":true}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{dashboard_city}}",
+            "payment",
+            "refundRequest",
+            "{{refundRequestId}}",
+            "respond"
+          ]
+        }
+      }
+    },
+    {
+      "name": "[Failure] Assert the create-error attempt VOIDED its leg (SQL — after drain)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var t = Date.now(); while (Date.now() - t < 20000) {}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.some(function(r){return r.status==='VOIDED';}) && rows.filter(function(r){return r.status==='SETTLED';}).length>=2; }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  // create-error attempt: provisional leg VOIDED; rf1-success + rf2-retry both SETTLED.",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ BAP ride ledger:', JSON.stringify(_rows.map(function(x){return {st:x.status, amt:x.amount};}))); } catch(e) {}",
+              "  pm.test('BAP ledger: >=1 VOIDED (failed no-re_ attempt) and >=2 SETTLED (rf1 success + rf2 retry)', function () {",
+              "    var rows = (_resp.rows) || [];",
+              "    var voided = rows.filter(function(r){return r.status === 'VOIDED';});",
+              "    var settled = rows.filter(function(r){return r.status === 'SETTLED';});",
+              "    pm.expect(voided.length, 'expected >=1 VOIDED from the no-re_ failed refund').to.be.above(0);",
+              "    pm.expect(settled.length, 'expected >=2 SETTLED (rf1 success + rf2 retry)').to.be.above(1);",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -155,10 +155,28 @@ def _snap_to_road(handler):
     }
 
 
+def _compute_routes(handler):
+    """Google Routes API v2 (POST /directions/v2:computeRoutes). Response shape differs
+    entirely from the classic Directions API — LTS/driver-app consume distanceMeters,
+    duration and polyline.encodedPolyline."""
+    return {
+        "routes": [
+            {
+                "distanceMeters": 5000,
+                "duration": "600s",
+                "staticDuration": "600s",
+                "polyline": {"encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@"},
+            }
+        ]
+    }
+
+
 def handle(handler, path, body):
     if handler.command == "GET" and (path.endswith("/maps") or path.endswith("/maps/") or path.endswith("/health")):
         return handler._json({"status": "UP", "service": "mock-google"})
 
+    if "computeRoutes" in path or "/directions/v2" in path:
+        return handler._json(_compute_routes(handler))
     if "/distancematrix" in path:
         return handler._json(_distance_matrix(handler))
     if "/directions" in path:
