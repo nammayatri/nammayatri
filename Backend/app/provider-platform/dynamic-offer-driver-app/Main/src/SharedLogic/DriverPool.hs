@@ -658,7 +658,8 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           distanceWithUnit = Nothing,
           boundingBox = Nothing,
           snappedWaypoints = [],
-          points = []
+          points = [],
+          routeToken = Nothing
         }
 
     makeDriverPoolWithActualDistResult (driverPoolRes, _, ghrId, driverGoHomePoolWithActualDistance) = do
@@ -1256,7 +1257,8 @@ refactorRoutesResp goHomeCfg (nearestDriverRes, route, ghrId, driverGoHomePoolWi
           staticDuration = route'.staticDuration,
           points = getStartPoint $ filterInitPoints (refactor [] route'.points),
           snappedWaypoints = route'.snappedWaypoints,
-          boundingBox = route'.boundingBox
+          boundingBox = route'.boundingBox,
+          routeToken = route'.routeToken
         }
 
     filterInitPoints (x1 : x2 : xs) = if highPrecMetersToMeters (distanceBetweenInMeters x1 x2) <= goHomeCfg.ignoreWaypointsTill then filterInitPoints (x1 : xs) else x1 : x2 : xs
