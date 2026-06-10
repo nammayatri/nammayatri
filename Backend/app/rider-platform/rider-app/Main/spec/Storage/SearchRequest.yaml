@@ -292,5 +292,5 @@ SearchRequestPartiesLink:
 
   queries:
     findAllBySearchRequestId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithKVAndConditionalDB
       where: searchRequestId

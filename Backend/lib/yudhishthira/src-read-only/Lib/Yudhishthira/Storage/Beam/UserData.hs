@@ -29,6 +29,6 @@ instance B.Table UserDataT where
 
 type UserData = UserDataT Identity
 
-$(enableKVPG ''UserDataT ['id] [])
+$(enableKVPG ''UserDataT ['id] [['userId]])
 
 $(mkTableInstancesGenericSchema ''UserDataT "user_data")

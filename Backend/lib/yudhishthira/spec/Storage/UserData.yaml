@@ -15,7 +15,7 @@ UserData:
     batchNumber: Int
     userDataValue: Value
 
-  constraint:
+  constraints:
     userId: SecondaryKey
 
   sqlType:
