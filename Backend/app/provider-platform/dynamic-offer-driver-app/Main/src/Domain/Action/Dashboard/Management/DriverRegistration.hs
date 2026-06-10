@@ -1362,6 +1362,9 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
         whenJust mbExistingDL $ \existingDL ->
           when (existingDL.driverId /= dl.driverId) $
             throwError DLAlreadyLinked
+      dlImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
+      when (dlImage.personId /= dl.driverId) $ 
+        throwError DLAlreadyLinked
       let updatedDL =
             dl
               { DDL.documentImageId1 = imageId,
