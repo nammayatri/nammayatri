@@ -84,24 +84,66 @@ No external libraries needed — only JS arithmetic available in every sandbox.
 
 ---
 
+### Issue 5 — Test fails on second run (`is2faEnabled = true` after first run)
+
+**Error**: Step 2 ("Switch Merchant And City") test assertion failed on re-run with
+"is2faMandatory=true, is2faEnabled=true" but no `authToken` (because no TOTP was sent
+in step 2 — TOTP prerequest is only on step 5). Old test threw `Error` for this case.
+
+**Root cause**: After the first successful run, `is2fa_enabled = true` persists in DB.
+Step 2 sends no TOTP so the server returns `{is2faMandatory: true, is2faEnabled: true}`
+with no authToken. The test's final `else` branch checked `expect(true).eql(false)`.
+
+**Fix**: Added a second success branch in the step 2 test:
+- `is2faEnabled === true && authToken` → 2FA already fully set up, token returned (skip steps 3-4)
+- `is2faEnabled === true` (no authToken) → proceed through steps 3-4 to regenerate secret
+
+---
+
+### Issue 6 — `HITS_LIMIT_EXCEED` and `Authenticator OTP does not match` after page refresh
+
+**Error**: After browser page refresh, `bap_2fa_secret` is wiped from memory. Step 2
+prerequest has no secret so `switch_otp` stays as the old hardcoded value. Step 2 test
+returned `is2faEnabled=true` (from DB) with no valid TOTP → old `else` branch failed.
+
+Also, repeated test runs (including aborted runs) consume rate-limit hits on the same
+Redis key, causing `HITS_LIMIT_EXCEED`.
+
+**Fix (rate limit)**: Raised `sendEmailRateLimitOptions.limit` from 3 → 100 in
+`dhall-configs/dev/rider-dashboard.dhall` so local test runs never exhaust the limit.
+
+**Fix (page refresh)**: The `else if (d.is2faEnabled === true)` branch (from Issue 5)
+already handles this: when `bap_2fa_secret` is missing, step 2 has no TOTP, server
+returns `is2faEnabled=true` without authToken, the branch passes (logs "re-running setup
+to refresh secret") and steps 3-4 run again to generate a fresh secret. Step 5 then
+computes a valid TOTP from the new secret.
+
+Also added the same TOTP prerequest script to step 2 ("Switch Merchant And City")
+itself, so if the secret is already in memory from a previous run, step 2 can
+authenticate directly without re-setup.
+
+---
+
 ## Files changed
 
 | File | Change |
 |------|--------|
-| `BAP_2FA_Flow.json` | Added `prerequest` script on "Switch Merchant And City Copy" to compute TOTP dynamically |
-| `BPP_2FA_Flow.json` | Same fix for the BPP flow |
+| `BAP_2FA_Flow.json` | Pure-JS TOTP prerequest on steps 2 and 5; multi-branch test logic for steps 2 and 5 |
+| `BPP_2FA_Flow.json` | Same fixes for the BPP (provider-dashboard) flow |
 | `Local/Local_BT_Delhi.postman_environment.json` | *(use this env, not BTP_Delhi)* |
 | `dev/feature-migrations/0023-enable-2fa-mandatory-for-bharat-taxi.sql` | Enables `is2fa_mandatory` for BHARAT_TAXI merchant |
+| `dhall-configs/dev/rider-dashboard.dhall` | Raised `sendEmailRateLimitOptions.limit` from 3 → 100 |
 
 ## Re-run checklist
 
-Before each test run:
-1. Ensure environment is **"Delhi (BT_Delhi)"** (not BTP_Delhi)
-2. Reset 2FA state so setup steps run fresh:
-   ```sql
-   UPDATE atlas_bap_dashboard.merchant_access
-   SET is2fa_enabled = false, secret_key = NULL
-   WHERE person_id = '3680f4b5-dce4-4d03-aa8c-5405690e87bd'
-     AND merchant_short_id = 'BHARAT_TAXI';
-   ```
-3. If rate-limited: `redis-cli -p 30002 DEL "dashboard:Email:juspay_admin@dashboard.com:hitsCount"`
+The test now handles re-runs automatically (no DB reset needed). If you want a fully
+fresh run (re-run the setup steps), reset 2FA state:
+
+```sql
+UPDATE atlas_bap_dashboard.merchant_access
+SET is2fa_enabled = false, secret_key = NULL
+WHERE person_id = '3680f4b5-dce4-4d03-aa8c-5405690e87bd'
+  AND merchant_short_id = 'BHARAT_TAXI';
+```
+
+Always use environment **"Delhi (BT_Delhi)"** (not BTP_Delhi) for the BAP flow.
