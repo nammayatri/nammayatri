@@ -1126,7 +1126,7 @@ resolvePrepaidPlanFee ::
   SP.Person ->
   Flow HighPrecMoney
 resolvePrepaidPlanFee driverId merchantId merchantOpCityId plan subscriptionConfig driver = do
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   now <- getCurrentTime
   isMember <- SPayment.checkDriverMembership driverId merchantOpCityId plan.serviceName (Just subscriptionConfig)
