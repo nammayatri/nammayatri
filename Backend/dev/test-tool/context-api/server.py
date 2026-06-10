@@ -447,7 +447,7 @@ def run_config_sync(from_env: str, restart_services: bool = True, force_fetch: b
         #   - feature-migrations sit on top of both layers.
 
         def _run(label, cmd_args):
-            full = ["python3", "-u", "config_transfer.py"] + cmd_args
+            full = [sys.executable, "-u", "config_transfer.py"] + cmd_args
             _append_log(f"$ {' '.join(full)}  (cwd={CONFIG_SYNC_DIR})  [{label}]")
             p = subprocess.Popen(
                 full, cwd=str(CONFIG_SYNC_DIR),
@@ -3029,6 +3029,15 @@ class ContextHandler(BaseHTTPRequestHandler):
         else:
             return False
 
+        _xpt = self.headers.get("X-Proxy-Target", "").strip()
+        if _xpt:
+            try:
+                _xp = urlparse(_xpt)
+                if _xp.scheme in ("http", "https") and _xp.netloc:
+                    target_base = f"{_xp.scheme}://{_xp.netloc}"
+            except Exception:
+                pass
+
         target_url = f"{target_base}{target_path}"
         if parsed.query:
             target_url += f"?{parsed.query}"
@@ -3040,7 +3049,7 @@ class ContextHandler(BaseHTTPRequestHandler):
         # Forward headers (except Host)
         fwd_headers = {}
         for key in self.headers:
-            if key.lower() not in ("host", "origin", "referer"):
+            if key.lower() not in ("host", "origin", "referer", "x-proxy-target"):
                 fwd_headers[key] = self.headers[key]
 
         try:
@@ -3056,6 +3065,7 @@ class ContextHandler(BaseHTTPRequestHandler):
                 self.send_response(resp.status)
                 self.send_header("Content-Type", resp.headers.get("Content-Type", "application/json"))
                 self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
+                self.send_header("X-Proxy-Url", target_url)
                 self._cors_headers()
                 self.end_headers()
                 self.wfile.write(resp_body)
@@ -3072,11 +3082,12 @@ class ContextHandler(BaseHTTPRequestHandler):
             self.send_response(e.code)
             self.send_header("Content-Type", e.headers.get("Content-Type", "application/json"))
             self.send_header("X-Upstream-Latency-Ms", str(upstream_ms))
+            self.send_header("X-Proxy-Url", target_url)
             self._cors_headers()
             self.end_headers()
             self.wfile.write(resp_body)
         except Exception as e:
-            self._send_json({"error": str(e)}, 502)
+            self._send_json({"error": str(e), "proxyUrl": target_url}, 502)
 
         return True
 
@@ -4348,6 +4359,20 @@ class ContextHandler(BaseHTTPRequestHandler):
             else:
                 self._send_json(
                     {"error": "usage: /api/collection/<dir>/<file>"}, 400)
+        elif path == "/api/load-test/tokens":
+            tokens_dir = Path(__file__).parent.parent.parent.parent / "load-test" / "tokens"
+            try:
+                riders  = json.loads((tokens_dir / "riderTokens.json").read_text())
+                drivers = json.loads((tokens_dir / "driverTokens.json").read_text())
+                self._send_json({
+                    "riders": riders,
+                    "drivers": drivers,
+                    "riderCount": len(riders),
+                    "driverCount": len(drivers),
+                })
+            except Exception as e:
+                self._send_json({"error": str(e), "riders": [], "drivers": [], "riderCount": 0, "driverCount": 0}, 500)
+            return
         elif path == "/api/health":
             self._send_json({"status": "ok"})
         elif path == "/api/services-ready":

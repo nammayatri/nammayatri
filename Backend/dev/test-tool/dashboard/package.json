@@ -14,6 +14,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
     "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "axios": "^1.13.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
@@ -21,8 +22,7 @@
     "react-scripts": "5.0.1",
     "recharts": "^2.15.0",
     "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4",
-    "@xterm/xterm": "^5.5.0"
+    "web-vitals": "^2.1.4"
   },
   "scripts": {
     "start": "react-scripts start",
