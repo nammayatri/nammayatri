@@ -113,8 +113,8 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.TH
-import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import Lib.ConfigPilot.Interface.Types (getConfig, getOneConfig)
+import qualified Lib.JourneyLeg.Common.FRFSJourneyUtils as JLCF
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base

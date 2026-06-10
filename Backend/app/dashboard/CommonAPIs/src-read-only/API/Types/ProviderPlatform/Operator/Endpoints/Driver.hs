@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Operator.Endpoints.Driver where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
+import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import qualified Dashboard.Common
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
 import Data.Aeson
@@ -32,6 +33,17 @@ data AllTimeOperatorAnalyticsRes = AllTimeOperatorAnalyticsRes
     totalEnabledDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Int
   }
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DocumentDetail = DocumentDetail
+  { documentType :: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.DocumentType,
+    documentDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rejectedReason :: Kernel.Prelude.Text,
+    remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
+    mediaId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DriverInfo = DriverInfo
@@ -67,6 +79,16 @@ data DriverOperationHubRequest = DriverOperationHubRequest
 
 instance Kernel.Types.HideSecrets.HideSecrets DriverOperationHubRequest where
   hideSecrets = Kernel.Prelude.identity
+
+data EntityDetails = EntityDetails
+  { entityType :: EntityType,
+    entityId :: Kernel.Prelude.Text,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data EntityType
   = DRIVER
@@ -143,12 +165,7 @@ instance Kernel.Types.HideSecrets.HideSecrets RespondHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
 data ReviewQueue = ReviewQueue
-  { entityType :: EntityType,
-    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    personId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    rcNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { entityDetails :: EntityDetails,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     verified :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -161,6 +178,42 @@ data ReviewQueue = ReviewQueue
 data ReviewQueueResp = ReviewQueueResp {reviewQueue :: [ReviewQueue]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReviewRequestHistory = ReviewRequestHistory
+  { id :: Kernel.Prelude.Text,
+    requestType :: ReviewRequestType,
+    entityDetails :: EntityDetails,
+    requestStatus :: ReviewRequestStatus,
+    reviewerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    documentDetails :: Kernel.Prelude.Maybe [DocumentDetail],
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReviewRequestHistoryList = ReviewRequestHistoryList {reviewHistory :: [ReviewRequestHistory]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ReviewRequestStatus
+  = RR_IN_PROGRESS
+  | RR_COMPLETED
+  | RR_REJECTED
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data ReviewRequestType
+  = BOT_REVIEW
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+data SubmitReviewRequest = SubmitReviewRequest {entityType :: EntityType, entityId :: Kernel.Prelude.Text, rejectDocumentUpdateReq :: [DocumentDetail]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets SubmitReviewRequest where
+  hideSecrets = Kernel.Prelude.identity
 
 data TotalInspectionCompletedRes = TotalInspectionCompletedRes
   { approvedVehicleInspection :: Kernel.Prelude.Int,
@@ -183,7 +236,7 @@ data VerifyOperatorJoiningOtpReq = VerifyOperatorJoiningOtpReq
 instance Kernel.Types.HideSecrets.HideSecrets VerifyOperatorJoiningOtpReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper :<|> GetDriverOperatorDashboardAnalyticsAllTimeHelper :<|> GetDriverOperatorDashboardAnalyticsHelper :<|> GetDriverReviewQueue))
+type API = ("driver" :> (GetDriverOperatorFetchHubRequests :<|> GetDriverOperationGetAllHubs :<|> PostDriverOperatorRespondHubRequest :<|> PostDriverOperatorCreateRequest :<|> GetDriverOperatorListHelper :<|> PostDriverOperatorSendJoiningOtpHelper :<|> PostDriverOperatorVerifyJoiningOtpHelper :<|> GetDriverOperatorDashboardAnalyticsAllTimeHelper :<|> GetDriverOperatorDashboardAnalyticsHelper :<|> GetDriverReviewQueueRequest :<|> PostDriverSubmitReviewRequestHelper :<|> GetDriverRequestReviewHistory))
 
 type GetDriverOperatorFetchHubRequests =
   ( "operator" :> "fetch" :> "hubRequests" :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
@@ -330,12 +383,18 @@ type GetDriverOperatorDashboardAnalyticsHelper =
       :> Get '[JSON] FilteredOperatorAnalyticsRes
   )
 
-type GetDriverReviewQueue =
-  ( "review" :> "queue" :> Capture "entityType" EntityType :> QueryParam "mbFrom" Kernel.Prelude.UTCTime :> QueryParam "mbTo" Kernel.Prelude.UTCTime
+type GetDriverReviewQueueRequest =
+  ( "review" :> "queue" :> Capture "entityType" EntityType :> "request" :> Capture "reviewRequestType" ReviewRequestType
+      :> QueryParam
+           "mbFrom"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "mbTo" Kernel.Prelude.UTCTime
       :> QueryParam
            "mbLimit"
            Kernel.Prelude.Int
-      :> QueryParam "mbOffset" Kernel.Prelude.Int
+      :> QueryParam
+           "mbOffset"
+           Kernel.Prelude.Int
       :> QueryParam
            "mbMobileNumber"
            Kernel.Prelude.Text
@@ -343,14 +402,58 @@ type GetDriverReviewQueue =
            "mbPersonId"
            Kernel.Prelude.Text
       :> QueryParam
-           "mbRdId"
+           "mbRcNo"
            Kernel.Prelude.Text
       :> QueryParam
-           "mbRcNo"
+           "mbRcId"
            Kernel.Prelude.Text
       :> Get
            '[JSON]
            ReviewQueueResp
+  )
+
+type PostDriverSubmitReviewRequest = ("submit" :> "review" :> "request" :> ReqBody '[JSON] SubmitReviewRequest :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverSubmitReviewRequestHelper =
+  ( Capture "requestorId" Kernel.Prelude.Text :> "submit" :> "review" :> "request" :> ReqBody '[JSON] SubmitReviewRequest
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+  )
+
+type GetDriverRequestReviewHistory =
+  ( Capture "entityType" EntityType :> "request" :> Capture "reviewRequestType" ReviewRequestType :> "review" :> "history"
+      :> QueryParam
+           "mbFrom"
+           Kernel.Prelude.UTCTime
+      :> QueryParam "mbTo" Kernel.Prelude.UTCTime
+      :> QueryParam
+           "mbLimit"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "mbOffset"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "mbMobileCountryCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbMobileNumber"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbPersonId"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbRcNo"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "mbRequestStatus"
+           ReviewRequestStatus
+      :> QueryParam
+           "mbRcId"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           ReviewRequestHistoryList
   )
 
 data DriverAPIs = DriverAPIs
@@ -363,13 +466,15 @@ data DriverAPIs = DriverAPIs
     postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorDashboardAnalyticsAllTime :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeOperatorAnalyticsRes,
     getDriverOperatorDashboardAnalytics :: Kernel.Prelude.Text -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> EulerHS.Types.EulerClient FilteredOperatorAnalyticsRes,
-    getDriverReviewQueue :: EntityType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewQueueResp
+    getDriverReviewQueueRequest :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewQueueResp,
+    postDriverSubmitReviewRequest :: Kernel.Prelude.Text -> SubmitReviewRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getDriverRequestReviewHistory :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewRequestHistoryList
   }
 
 mkDriverAPIs :: (Client EulerHS.Types.EulerClient API -> DriverAPIs)
 mkDriverAPIs driverClient = (DriverAPIs {..})
   where
-    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp :<|> getDriverOperatorDashboardAnalyticsAllTime :<|> getDriverOperatorDashboardAnalytics :<|> getDriverReviewQueue = driverClient
+    getDriverOperatorFetchHubRequests :<|> getDriverOperationGetAllHubs :<|> postDriverOperatorRespondHubRequest :<|> postDriverOperatorCreateRequest :<|> getDriverOperatorList :<|> postDriverOperatorSendJoiningOtp :<|> postDriverOperatorVerifyJoiningOtp :<|> getDriverOperatorDashboardAnalyticsAllTime :<|> getDriverOperatorDashboardAnalytics :<|> getDriverReviewQueueRequest :<|> postDriverSubmitReviewRequest :<|> getDriverRequestReviewHistory = driverClient
 
 data DriverUserActionType
   = GET_DRIVER_OPERATOR_FETCH_HUB_REQUESTS
@@ -381,7 +486,9 @@ data DriverUserActionType
   | POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP
   | GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS_ALL_TIME
   | GET_DRIVER_OPERATOR_DASHBOARD_ANALYTICS
-  | GET_DRIVER_REVIEW_QUEUE
+  | GET_DRIVER_REVIEW_QUEUE_REQUEST
+  | POST_DRIVER_SUBMIT_REVIEW_REQUEST
+  | GET_DRIVER_REQUEST_REVIEW_HISTORY
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -390,5 +497,9 @@ $(mkHttpInstancesForEnum ''EntityType)
 $(mkHttpInstancesForEnum ''RequestStatus)
 
 $(mkHttpInstancesForEnum ''RequestType)
+
+$(mkHttpInstancesForEnum ''ReviewRequestStatus)
+
+$(mkHttpInstancesForEnum ''ReviewRequestType)
 
 $(Data.Singletons.TH.genSingletons [''DriverUserActionType])

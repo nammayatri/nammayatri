@@ -81,35 +81,22 @@ findVerifiedAndNotEnabled ::
   Maybe UTCTime ->
   Int ->
   Int ->
-  Maybe DbHash ->
-  Maybe Text ->
+  Maybe [Text] ->
   m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
-findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset mbMobileNumberHash mbPersonId = do
-  dbConf <- getReplicaBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ (fromIntegral limit) $
-            B.offset_ (fromIntegral offset) $
-              B.orderBy_ (\(foi, _) -> B.desc_ foi.updatedAt) $
-                B.filter_'
-                  ( \(foi, person) ->
-                      foi.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOpCityId)
-                        B.&&?. foi.verified B.==?. B.val_ True
-                        B.&&?. B.sqlBool_ (B.not_ (foi.enabled B.==. B.val_ True))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (foi.updatedAt B.>=. B.val_ from)) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (foi.updatedAt B.<=. B.val_ to)) mbTo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileHash -> person.mobileNumberHash B.==?. B.val_ (Just mobileHash)) mbMobileNumberHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pid -> B.sqlBool_ (foi.fleetOwnerPersonId B.==. B.val_ pid)) mbPersonId
-                  )
-                  do
-                    foi <- B.all_ (BeamCommon.fleetOwnerInformation BeamCommon.atlasDB)
-                    person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\p -> Beam.fleetOwnerPersonId foi B.==. BeamP.id p)
-                    pure (foi, person)
-  case res of
-    Right rows -> catMaybes <$> mapM (fromTType' . fst) rows
-    Left _ -> pure []
+findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset finalPersonIds = do
+  case finalPersonIds of
+    Just [] -> pure []
+    _ -> do
+      let clauses =
+            [ Se.Is Beam.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+              Se.Is Beam.verified (Se.Eq True),
+              Se.Is Beam.enabled (Se.Eq False)
+            ]
+              <> maybe [] (\from -> [Se.Is Beam.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
+              <> maybe [] (\to -> [Se.Is Beam.updatedAt (Se.LessThanOrEq to)]) mbTo
+              <> maybe [] (\pIds -> [Se.Is Beam.fleetOwnerPersonId (Se.In pIds)]) finalPersonIds
+
+      findAllWithOptionsKV [Se.And clauses] (Se.Desc Beam.updatedAt) (Just limit) (Just offset)
 
 findByPersonIdAndEnabledAndVerified ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

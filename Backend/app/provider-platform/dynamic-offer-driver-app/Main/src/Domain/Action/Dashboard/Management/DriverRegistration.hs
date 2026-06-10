@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
     postDriverRegistrationUnlinkDocument,
+    mapDocumentType,
     getDriverRegistrationVerificationStatus,
     postDriverRegistrationTriggerReminder,
     postDriverRegistrationVerifyBankAccount,

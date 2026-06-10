@@ -7,6 +7,9 @@ imports:
   AuthRes: Dashboard.ProviderPlatform.Management.DriverRegistration
   FCMRecipientToken: Kernel.External.Notification.FCM.Types
   DriverMode: API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+  DocumentType: API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+  Image: Dashboard.Common
+  Value: Data.Aeson
 
 module: Driver
 
@@ -158,10 +161,11 @@ apis:
             response:
               type: FilteredOperatorAnalyticsRes
   - GET:
-      endpoint: /review/queue/{entityType}
+      endpoint: /review/queue/{entityType}/request/{reviewRequestType}
       auth: ApiAuthV2
       params:
         entityType: EntityType
+        reviewRequestType: ReviewRequestType
       query:
         - mbFrom: UTCTime
         - mbTo: UTCTime
@@ -169,11 +173,46 @@ apis:
         - mbOffset: Int
         - mbMobileNumber: Text
         - mbPersonId: Text
-        - mbRdId: Text
         - mbRcNo: Text
+        - mbRcId: Text
       response:
         type: ReviewQueueResp
-
+  - POST:
+      endpoint: /submit/review/request
+      auth: ApiAuthV2
+      request:
+        type: SubmitReviewRequest
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/submit/review/request
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            request:
+              type: SubmitReviewRequest
+            response:
+              type: APISuccess
+  - GET:
+      endpoint: /{entityType}/request/{reviewRequestType}/review/history
+      auth: ApiAuthV2
+      params:
+        entityType: EntityType
+        reviewRequestType: ReviewRequestType
+      query:
+        - mbFrom: UTCTime
+        - mbTo: UTCTime
+        - mbLimit: Int
+        - mbOffset: Int
+        - mbMobileCountryCode: Text
+        - mbMobileNumber: Text
+        - mbPersonId: Text
+        - mbRcNo: Text
+        - mbRequestStatus: ReviewRequestStatus
+        - mbRcId: Text
+      response:
+        type: ReviewRequestHistoryList
 
 types:
   DriverInfoResp:
@@ -264,20 +303,52 @@ types:
     - approvedDriverInspection: Int
     - rejectedVehicleInspection: Int
     - rejectedDriverInspection: Int
+  EntityDetails:
+    - entityType: EntityType
+    - entityId: Text
+    - name: Maybe Text
+    - mobileNumber: Maybe Text
+    - rcNo: Maybe Text
+
   ReviewQueueResp:
     - reviewQueue : [ReviewQueue]
   ReviewQueue:
-    - entityType: EntityType
-    - name: Maybe Text
-    - mobileNumber: Maybe Text
-    - personId: Maybe Text
-    - rId: Maybe Text
-    - rcNo: Maybe Text
+    - entityDetails: EntityDetails
     - createdAt: UTCTime
     - updatedAt: UTCTime
     - verified: Maybe Bool
     - enabled: Maybe Bool
     - approved: Maybe Bool
+  ReviewRequestStatus:
+    enum: "RR_IN_PROGRESS,RR_COMPLETED,RR_REJECTED"
+    derive: "HttpInstance"
+  ReviewRequestType:
+    enum: "BOT_REVIEW"
+    derive: "HttpInstance"
   EntityType:
     enum: "DRIVER,VEHICLE,FLEET_OWNER"
     derive: "HttpInstance"
+  SubmitReviewRequest:
+    - entityType: EntityType
+    - entityId: Text
+    - rejectDocumentUpdateReq: [DocumentDetail]
+    - derive: "'HideSecrets"
+  ReviewRequestHistoryList:
+    - reviewHistory : [ReviewRequestHistory]
+  ReviewRequestHistory:
+    - id: Text
+    - requestType: ReviewRequestType
+    - entityDetails: EntityDetails
+    - requestStatus: ReviewRequestStatus
+    - reviewerId: Maybe Text
+    - documentDetails: Maybe [DocumentDetail]
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+  DocumentDetail:
+    - documentType: DocumentType
+    - documentDescription: Maybe Text
+    - rejectedReason: Text
+    - remarks: Maybe Text
+    - imageId: Maybe (Id Image)
+    - mediaId: Maybe Text
+    - derive: "Show"

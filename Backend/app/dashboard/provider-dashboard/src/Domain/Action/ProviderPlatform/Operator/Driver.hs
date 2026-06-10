@@ -8,7 +8,9 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     postDriverOperatorVerifyJoiningOtp,
     getDriverOperatorDashboardAnalyticsAllTime,
     getDriverOperatorDashboardAnalytics,
-    getDriverReviewQueue,
+    getDriverReviewQueueRequest,
+    postDriverSubmitReviewRequest,
+    getDriverRequestReviewHistory,
   )
 where
 
@@ -107,7 +109,18 @@ getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to
 
-getDriverReviewQueue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp)
-getDriverReviewQueue merchantShortId opCity apiTokenInfo entityType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRdId mbRcNo = do
+getDriverReviewQueueRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> API.Types.ProviderPlatform.Operator.Driver.ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp)
+getDriverReviewQueueRequest merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverReviewQueue) entityType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRdId mbRcNo
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverReviewQueueRequest) entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId
+
+postDriverSubmitReviewRequest :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.SubmitReviewRequest -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postDriverSubmitReviewRequest merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
+  SharedLogic.Transaction.withTransactionStoring transaction $ Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverSubmitReviewRequest) apiTokenInfo.personId.getId req
+
+getDriverRequestReviewHistory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> API.Types.ProviderPlatform.Operator.Driver.ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Operator.Driver.ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList)
+getDriverRequestReviewHistory merchantShortId opCity apiTokenInfo entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbPersonId mbRcNo mbRequestStatus mbRcId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverRequestReviewHistory) entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileCountryCode mbMobileNumber mbPersonId mbRcNo mbRequestStatus mbRcId
