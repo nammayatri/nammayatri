@@ -208,7 +208,9 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
           Just driverLicense -> do
             when (driverLicense.driverId /= personId) $
               if fromMaybe False documentVerificationConfig.allowLicenseTransfer
-                then pure ()
+                then do
+                  mDriverDL <- Query.findByDriverId personId
+                  whenJust mDriverDL $ \_ -> throwImageError imageId1 DriverAlreadyLinked
                 else do
                   -- Fleet-aware duplicate check: single query for both drivers' fleet associations
                   allAssocs <- QFDA.findAllByDriverIds [personId, driverLicense.driverId]
