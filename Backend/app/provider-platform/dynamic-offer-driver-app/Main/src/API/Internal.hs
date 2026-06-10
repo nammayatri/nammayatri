@@ -37,6 +37,8 @@ import qualified API.Internal.SendSMS as SendSMS
 import qualified API.Internal.SpecialLocationList as SpecialLocationList
 import qualified API.Internal.SpecialLocationUpsert as SpecialLocationUpsert
 import qualified API.Internal.StopDetection as StopDetection
+import qualified API.Internal.TollList as TollList
+import qualified API.Internal.TollUpsert as TollUpsert
 import qualified API.Internal.ViolationDetection as ViolationDetection
 import Environment
 import Servant
@@ -73,6 +75,8 @@ type API =
            :<|> CancellationDues.CustomerCancellationDuesWaiveOffAPI
            :<|> SpecialLocationList.API
            :<|> SpecialLocationUpsert.API
+           :<|> TollList.API
+           :<|> TollUpsert.API
            :<|> GeometryList.API
            :<|> GeometryUpdate.API
            :<|> SendSMS.API
@@ -111,6 +115,8 @@ handler env =
     :<|> CancellationDues.handler
     :<|> SpecialLocationList.handler
     :<|> SpecialLocationUpsert.handler
+    :<|> TollList.handler
+    :<|> TollUpsert.handler
     :<|> GeometryList.handler
     :<|> GeometryUpdate.handler
     :<|> SendSMS.handler

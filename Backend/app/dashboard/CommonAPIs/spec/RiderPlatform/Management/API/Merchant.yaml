@@ -18,7 +18,11 @@ imports:
   UpsertSpecialLocationGateReq: Dashboard.Common.Merchant
   UpsertSpecialLocationGateReqT: Dashboard.Common.Merchant
   UpsertSpecialLocationCsvReq: Dashboard.Common.Merchant
+  UpsertTollReq: Dashboard.Common.Merchant
+  UpsertTollCsvReq: Dashboard.Common.Merchant
+  TollAPIEntity: Dashboard.Common.Merchant
   APISuccessWithUnprocessedEntities: Dashboard.Common.Merchant
+  Toll: Toll.Domain.Types.Toll
   City: Kernel.Types.Beckn.Context
   ToParamSchema: Kernel.Prelude
   FromHttpApiData: Servant
@@ -232,6 +236,41 @@ apis:
         endpoint: MerchantAPI DeleteSpecialLocationGateEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_SPECIAL_LOCATION_GATE
+  - POST: # UpsertTollCsvAPI
+      endpoint: /config/toll/upsert/
+      auth: ApiAuthV2
+      multipart:
+        type: UpsertTollCsvReq
+      response:
+        type: APISuccessWithUnprocessedEntities
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_TOLL_CSV
+  - GET: # GetMerchantConfigTollList
+      endpoint: /config/toll/list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+      response:
+        type: TollListResp
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT GET_TOLL_LIST
+  - POST: # UpsertTollAPI
+      endpoint: /toll/upsert
+      query:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      request:
+        type: UpsertTollReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_TOLL
+  - DELETE: # DeleteTollAPI
+      endpoint: /toll/{tollId}/delete
+      params:
+        tollId: Id Toll
+      auth: ApiAuthV2
+      response:
+        type: APISuccess
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT DELETE_TOLL
   - POST: #ToggleConfigPriorityAPI
       endpoint: /config/{configName}/failover
       params:
@@ -326,6 +365,9 @@ types:
     - jobName: Maybe JobName
     - jobData: Text
     - derive: "'HideSecrets"
+  TollListResp:
+    - recordType: Type
+    - type: [TollAPIEntity]
   SpecialLocationResp:
     - recordType: Type
     - type: [SpecialLocationWithPlatform]

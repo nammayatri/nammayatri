@@ -13,7 +13,11 @@
 -}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
-module Toll.Storage.CachedQueries.Toll where
+module Toll.Storage.CachedQueries.Toll
+  ( findAllTollsByMerchantOperatingCity,
+    makeTollsKeyByMerchantOperatingCityId,
+  )
+where
 
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis

@@ -12,6 +12,7 @@ module Toll.SharedLogic.TollsDetector where
 import Data.List (nubBy)
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps as Maps
+import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto
 import qualified Kernel.Storage.Hedis as Hedis
@@ -19,6 +20,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.ComputeIntersection
 import Toll.Domain.Types.Toll
+import Toll.Domain.Types.TollGate (TollGate (..), geoPolygonToLatLongRings, lineStringToSegments)
 import Toll.Storage.BeamFlow (BeamFlow)
 import Toll.Storage.CachedQueries.Toll (findAllTollsByMerchantOperatingCity)
 
@@ -38,6 +40,70 @@ removeMatchedTollFromCache driverId allPendingTolls matchedToll = do
   if null remainingPendingTolls
     then Hedis.del $ tollStartGateTrackingKey driverId
     else Hedis.setExp (tollStartGateTrackingKey driverId) remainingPendingTolls 21600 -- 6 hours
+
+gateIntersectsRouteSegment :: LineSegment -> TollGate -> Bool
+gateIntersectsRouteSegment routeSegment = \case
+  LineGate gateLine ->
+    any (doIntersect routeSegment) (lineStringToSegments gateLine)
+  PolyGate gatePolygon ->
+    lineSegmentIntersectsPolygon routeSegment (geoPolygonToLatLongRings gatePolygon)
+
+gateWithinBoundingBox :: BoundingBox -> TollGate -> Bool
+gateWithinBoundingBox boundingBox = \case
+  LineGate gateLine ->
+    any (\seg -> lineSegmentWithinBoundingBox seg boundingBox) (lineStringToSegments gateLine)
+  PolyGate gatePolygon ->
+    polygonMayIntersectBoundingBox boundingBox (geoPolygonToLatLongRings gatePolygon)
+
+pointInRing :: LatLong -> [LatLong] -> Bool
+pointInRing _ ring | length ring < 3 = False
+pointInRing (LatLong y x) ring =
+  foldl' step False (zip ring (drop 1 ring ++ [head ring]))
+  where
+    step inside (LatLong y1 x1, LatLong y2 x2)
+      | y1 == y2 = inside
+      | ((y1 > y) /= (y2 > y))
+          && (x < (x2 - x1) * (y - y1) / (y2 - y1) + x1) =
+        not inside
+      | otherwise = inside
+
+pointInPolygon :: LatLong -> [[LatLong]] -> Bool
+pointInPolygon _ [] = False
+pointInPolygon p (outer : holes) = pointInRing p outer && not (any (pointInRing p) holes)
+
+ringEdges :: [LatLong] -> [LineSegment]
+ringEdges ring
+  | length ring < 2 = []
+  | otherwise = zipWith LineSegment ring (drop 1 ring ++ [head ring])
+
+lineSegmentIntersectsPolygon :: LineSegment -> [[LatLong]] -> Bool
+lineSegmentIntersectsPolygon routeSegment rings =
+  let LineSegment startPoint endPoint = routeSegment
+      intersectsBoundary = any (\ring -> any (doIntersect routeSegment) (ringEdges ring)) rings
+      entersOrInside = pointInPolygon startPoint rings || pointInPolygon endPoint rings
+   in intersectsBoundary || entersOrInside
+
+boundingBoxEdges :: BoundingBox -> [LineSegment]
+boundingBoxEdges boundingBox =
+  [ LineSegment boundingBox.topLeft boundingBox.topRight,
+    LineSegment boundingBox.topRight boundingBox.bottomRight,
+    LineSegment boundingBox.bottomRight boundingBox.bottomLeft,
+    LineSegment boundingBox.bottomLeft boundingBox.topLeft
+  ]
+
+polygonMayIntersectBoundingBox :: BoundingBox -> [[LatLong]] -> Bool
+polygonMayIntersectBoundingBox bbox rings =
+  let ringPoints = concat rings
+      anyPolyPointInside = any (`pointWithinBoundingBox` bbox) ringPoints
+      anyBoxCornerInsidePoly =
+        any
+          (`pointInPolygon` rings)
+          [bbox.topLeft, bbox.topRight, bbox.bottomLeft, bbox.bottomRight]
+      anyEdgeIntersects =
+        any
+          (\polyEdge -> any (doIntersect polyEdge) (boundingBoxEdges bbox))
+          (concatMap ringEdges rings)
+   in anyPolyPointInside || anyBoxCornerInsidePoly || anyEdgeIntersects
 
 -- | Validates pending tolls (entry detected, exit not found) against estimated tolls using IDs
 -- | Used at end ride to apply toll charges when exit gate was never detected
@@ -125,7 +191,8 @@ getExitTollAndRemainingRoute [] _ = Nothing
 getExitTollAndRemainingRoute [_] _ = Nothing
 getExitTollAndRemainingRoute _ [] = Nothing
 getExitTollAndRemainingRoute (p1 : p2 : ps) tolls = do
-  let mbExitToll = find (\Toll {..} -> any (doIntersect (LineSegment p1 p2)) tollEndGates) tolls
+  let currentRouteSegment = LineSegment p1 p2
+      mbExitToll = find (\Toll {..} -> any (gateIntersectsRouteSegment currentRouteSegment) tollEndGates) tolls
   case mbExitToll of
     Just toll -> Just (p2 : ps, toll)
     Nothing -> getExitTollAndRemainingRoute (p2 : ps) tolls
@@ -136,7 +203,8 @@ getAggregatedTollChargesAndNamesOnRoute _ [] _ tollChargesAndNamesAndIds = retur
 getAggregatedTollChargesAndNamesOnRoute _ [_] _ tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
 getAggregatedTollChargesAndNamesOnRoute _ _ [] tollChargesAndNamesAndIds = return tollChargesAndNamesAndIds
 getAggregatedTollChargesAndNamesOnRoute mbDriverId route@(p1 : p2 : ps) tolls (tollCharges, tollNames, tollIds, tollIsAutoRickshawAllowed, tollIsTwoWheelerAllowed) = do
-  let allTollCombinationsWithStartGates = filter (\Toll {..} -> any (doIntersect (LineSegment p1 p2)) tollStartGates) tolls
+  let currentRouteSegment = LineSegment p1 p2
+      allTollCombinationsWithStartGates = filter (\Toll {..} -> any (gateIntersectsRouteSegment currentRouteSegment) tollStartGates) tolls
   if not $ null allTollCombinationsWithStartGates
     then do
       case getExitTollAndRemainingRoute route allTollCombinationsWithStartGates of
@@ -182,7 +250,7 @@ getTollInfoOnRoute merchantOperatingCityId mbDriverId route = do
   if not $ null tolls
     then do
       let boundingBox = getBoundingBox route
-          eligibleTollsThatMaybePresentOnTheRoute = filter (\toll -> any (\lineSegment -> lineSegmentWithinBoundingBox lineSegment boundingBox) toll.tollStartGates) tolls
+          eligibleTollsThatMaybePresentOnTheRoute = filter (\toll -> any (gateWithinBoundingBox boundingBox) toll.tollStartGates) tolls
       case mbDriverId of
         Just driverId -> do
           mbTollCombinationsWithStartGatesInPrevBatch :: Maybe [Toll] <- Hedis.safeGet (tollStartGateTrackingKey driverId)

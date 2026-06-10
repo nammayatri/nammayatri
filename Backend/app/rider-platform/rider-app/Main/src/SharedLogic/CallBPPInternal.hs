@@ -15,6 +15,7 @@
 module SharedLogic.CallBPPInternal where
 
 import API.Types.UI.FavouriteDriver
+import qualified Dashboard.Common.Merchant as DM
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.HashMap.Strict as HM
@@ -1160,6 +1161,104 @@ getSpecialLocationList merchant city mbLimit mbOffset mbSpecialLocationTypes = d
   case result of
     Left _ -> pure Nothing
     Right locations -> pure (Just locations)
+
+---------------------------------------------------------------------
+-- Toll Upsert
+---------------------------------------------------------------------
+
+data TollUpsertReq = TollUpsertReq
+  { file :: FilePath
+  }
+  deriving stock (Generic, Show)
+
+instance FromMultipart Tmp TollUpsertReq where
+  fromMultipart form = do
+    csvFile <- fmap fdPayload (lookupFile "file" form)
+    return $ TollUpsertReq csvFile
+
+instance ToMultipart Tmp TollUpsertReq where
+  toMultipart form =
+    MultipartData
+      []
+      [FileData "file" (T.pack form.file) "" form.file]
+
+newtype TollUpsertResp = TollUpsertResp
+  { unprocessedEntities :: [Text]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+type TollUpsertAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "toll"
+    :> "upsert"
+    :> MultipartForm Tmp TollUpsertReq
+    :> Post '[JSON] TollUpsertResp
+
+tollUpsertClient :: Text -> Context.City -> (LBS.ByteString, TollUpsertReq) -> EulerClient TollUpsertResp
+tollUpsertClient = client tollUpsertApi
+
+tollUpsertApi :: Proxy TollUpsertAPI
+tollUpsertApi = Proxy
+
+upsertTollsFromCsv ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  FilePath ->
+  m TollUpsertResp
+upsertTollsFromCsv merchant city csvFile = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  let req = TollUpsertReq csvFile
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (tollUpsertClient merchantId city ("XXX00XXX", req)) "TollUpsert" tollUpsertApi
+
+---------------------------------------------------------------------
+-- Toll List
+---------------------------------------------------------------------
+
+type TollListAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> Capture "city" Context.City
+    :> "toll"
+    :> "list"
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> Get '[JSON] [DM.TollAPIEntity]
+
+tollListClient :: Text -> Context.City -> Maybe Int -> Maybe Int -> EulerClient [DM.TollAPIEntity]
+tollListClient = client tollListApi
+
+tollListApi :: Proxy TollListAPI
+tollListApi = Proxy
+
+getTollList ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasRequestId r
+  ) =>
+  Merchant ->
+  Context.City ->
+  Maybe Int ->
+  Maybe Int ->
+  m (Maybe [DM.TollAPIEntity])
+getTollList merchant city mbLimit mbOffset = do
+  let internalUrl = merchant.driverOfferBaseUrl
+  let merchantId = merchant.driverOfferMerchantId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  result <- try @_ @SomeException $ EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (tollListClient merchantId city mbLimit mbOffset) "TollList" tollListApi
+  case result of
+    Left _ -> pure Nothing
+    Right tolls -> pure (Just tolls)
 
 ---------------------------------------------------------------------
 -- Geometry List

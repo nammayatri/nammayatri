@@ -550,6 +550,8 @@ library
       SharedLogic.TicketRule.Apply
       SharedLogic.TicketRule.Core
       SharedLogic.TicketUtils
+      SharedLogic.TollDashboard
+      SharedLogic.TollUpsert
       SharedLogic.Type
       SharedLogic.Utils
       Storage.Beam.BecknRequest

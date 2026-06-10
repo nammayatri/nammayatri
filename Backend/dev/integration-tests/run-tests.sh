@@ -44,6 +44,8 @@ SUBWAY_DIR="$SCRIPT_DIR/collections/SubwayTicketBookingFlow"
 SCHEDULER_DIR="$SCRIPT_DIR/collections/SchedulerFlow"
 LOYALTY_DIR="$SCRIPT_DIR/collections/LoyaltyWalletFlow"
 STCL_DIR="$SCRIPT_DIR/collections/StclMembershipFlow"
+TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
+TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -93,6 +95,40 @@ enable_all_drivers() {
         "UPDATE atlas_driver_offer_bpp.driver_information SET enabled = true, verified = true WHERE enabled = false OR verified = false;" 2>/dev/null || true
 }
 
+TOLL_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/toll-dashboard-access.sql"
+PROVIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/provider-dashboard.sql"
+
+# Toll dashboard: access_matrix + optional local-testing-data (person, token, merchant_access).
+seed_toll_dashboard_access() {
+    if [ "${NY_TEST_SKIP_TOLL_SEED:-}" = "1" ]; then
+        echo "Skipping toll dashboard seed (NY_TEST_SKIP_TOLL_SEED=1)"
+        return 0
+    fi
+    if [ ! -f "$TOLL_SETUP_SQL" ]; then
+        echo "WARNING: Toll setup SQL not found: $TOLL_SETUP_SQL"
+        return 0
+    fi
+    echo "Seeding toll dashboard access (access_matrix)..."
+    if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+        -v ON_ERROR_STOP=1 -f "$TOLL_SETUP_SQL" > /dev/null 2>&1; then
+        echo "WARNING: Toll access_matrix seed failed (postgres on $DB_HOST:$DB_PORT?)"
+        echo "  Manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $TOLL_SETUP_SQL"
+        return 0
+    fi
+    if [ -f "$PROVIDER_DASHBOARD_SEED_SQL" ]; then
+        echo "Seeding provider-dashboard local-testing-data (token, merchant_access)..."
+        psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -f "$PROVIDER_DASHBOARD_SEED_SQL" > /dev/null 2>&1 || \
+            echo "WARNING: provider-dashboard.sql seed failed — run manually if toll tests get 403"
+    fi
+}
+
+setup() {
+    echo "=== Integration test setup ==="
+    seed_toll_dashboard_access
+    echo "Done. Run: ./run-tests.sh toll-config NY_Bangalore"
+}
+
 # ── List ──
 
 list_suites() {
@@ -107,7 +143,7 @@ list_suites() {
             done
         fi
     done
-    for label_dir in "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR"; do
+    for label_dir in "Toll Config:$TOLL_CONFIG_DIR" "Toll Ride:$TOLL_RIDE_DIR" "Online Ride:$ONLINE_DIR" "Bus:$BUS_DIR" "Metro:$METRO_DIR" "Subway:$SUBWAY_DIR" "Scheduler:$SCHEDULER_DIR"; do
         local label="${label_dir%%:*}"
         local dir="${label_dir#*:}"
         echo ""
@@ -442,6 +478,17 @@ run_scheduler() {
 
 run_loyalty() { run_frfs "$LOYALTY_DIR" "LOYALTY WALLET" "${1:-}" "${2:-}"; }
 run_stcl() { run_frfs "$STCL_DIR" "STCL MEMBERSHIP" "${1:-}" "${2:-}"; }
+run_toll_config() {
+    seed_toll_dashboard_access
+    run_frfs "$TOLL_CONFIG_DIR" "TOLL CONFIG" "${1:-}" "${2:-}"
+}
+run_toll_ride() {
+    seed_toll_dashboard_access
+    run_frfs "$TOLL_RIDE_DIR" "TOLL RIDE" "${1:-}" "${2:-}"
+}
+run_toll() {
+    run_toll_config "${1:-}" "${2:-}" && run_toll_ride "${1:-}" "${2:-}"
+}
 
 # ── Help ──
 
@@ -462,6 +509,14 @@ show_help() {
     echo "  scheduler           Run scheduler job integration tests"
     echo "  loyalty             Run loyalty wallet topup/burn suites"
     echo "  stcl                Run STCL membership share-purchase suites (partial + full)"
+    echo "  toll-config         Run toll dashboard API suites (CRUD, CSV, polygon gates)"
+    echo "  toll-ride           Run toll + auto ride flow (estimate tollChargesInfo)"
+    echo "  toll                Run toll-config then toll-ride"
+    echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
+    echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
+    echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
+    echo "  ./run-tests.sh toll-ride BT_Delhi             # Toll on estimate + auto ride (Delhi)"
+    echo "  --setup             Seed toll dashboard access_matrix + provider-dashboard.sql"
     echo "  --list              List all available suites and cities"
     echo "  --check             Check for stuck DB entities"
     echo "  -d                  Debug: capture per-API service logs to assets/test-logs/"
@@ -538,6 +593,15 @@ case "${1:-}" in
         ;;
     stcl|stcl-membership)
         run_stcl "${2:-}" "${3:-}"
+        ;;
+    toll-config)
+        run_toll_config "${2:-}" "${3:-}"
+        ;;
+    toll-ride)
+        run_toll_ride "${2:-}" "${3:-}"
+        ;;
+    toll)
+        run_toll "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
