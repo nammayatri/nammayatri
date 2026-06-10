@@ -48,6 +48,8 @@ module SharedLogic.MessageBuilder
     buildFRFSTicketCancelOTPMessage,
     BuildFRFSTicketCancelOTPMessageReq (..),
     templateText,
+    substituteVariables,
+    buildMessageWithKey,
     BuildPassSuccessMessage (..),
     buildPassSuccessMessage,
   )
@@ -76,6 +78,23 @@ import qualified UrlShortner.Common as UrlShortner
 templateText :: Text -> Text
 templateText txt = "{#" <> txt <> "#}"
 
+-- | Substitute {#key#} placeholders in a template with the given key/value pairs.
+substituteVariables :: Text -> [(Text, Text)] -> Text
+substituteVariables template vars =
+  foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) template vars
+
+-- | Resolve a MerchantMessage template by key (for the operating city) and
+--   substitute its {#var#} placeholders. Returns Nothing when no template exists.
+buildMessageWithKey ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  DMM.MessageKey ->
+  [(Text, Text)] ->
+  m (Maybe Text)
+buildMessageWithKey merchantOpCityId messageKey vars = do
+  mbMerchantMessage <- QMM.findByMerchantOperatingCityIdAndMessageKey merchantOpCityId messageKey Nothing
+  pure $ (\merchantMessage -> substituteVariables merchantMessage.message vars) <$> mbMerchantMessage
+
 type BuildMessageFlow m r =
   ( HasFlowEnv m r '["smsCfg" ::: SmsConfig],
     EsqDBFlow m r,
@@ -87,7 +106,7 @@ type SmsReqBuilder = Text -> Sms.SendSMSReq
 buildSendSmsReq :: BuildMessageFlow m r => DMM.MerchantMessage -> [(Text, Text)] -> m SmsReqBuilder
 buildSendSmsReq merchantMessage vars = do
   smsCfg <- asks (.smsCfg)
-  let smsBody = foldl' (\msg (findKey, replaceVal) -> T.replace (templateText findKey) replaceVal msg) merchantMessage.message vars
+  let smsBody = substituteVariables merchantMessage.message vars
       sender = fromMaybe smsCfg.sender merchantMessage.senderHeader
       templateId = merchantMessage.templateId
       messageType = merchantMessage.messageType
