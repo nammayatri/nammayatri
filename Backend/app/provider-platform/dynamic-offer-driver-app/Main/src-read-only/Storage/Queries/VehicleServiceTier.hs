@@ -88,6 +88,7 @@ updateByPrimaryKey (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = d
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.airConditionedThreshold airConditionedThreshold,
+      Se.Set Beam.allowNullVehicleRating allowNullVehicleRating,
       Se.Set Beam.allowedAreas (Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas),
       Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
       Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
@@ -131,6 +132,7 @@ instance FromTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehi
       Just
         Domain.Types.VehicleServiceTier.VehicleServiceTier
           { airConditionedThreshold = airConditionedThreshold,
+            allowNullVehicleRating = allowNullVehicleRating,
             allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.catMaybes . Kernel.Prelude.map Lib.Types.SpecialLocation.parsePickupDropFromText) allowedAreas,
             allowedVehicleVariant = allowedVehicleVariant,
             autoSelectedVehicleVariant = autoSelectedVehicleVariant,
@@ -172,6 +174,7 @@ instance ToTType' Beam.VehicleServiceTier Domain.Types.VehicleServiceTier.Vehicl
   toTType' (Domain.Types.VehicleServiceTier.VehicleServiceTier {..}) = do
     Beam.VehicleServiceTierT
       { Beam.airConditionedThreshold = airConditionedThreshold,
+        Beam.allowNullVehicleRating = allowNullVehicleRating,
         Beam.allowedAreas = Kernel.Prelude.fmap (Kernel.Prelude.map Lib.Types.SpecialLocation.areaToText) allowedAreas,
         Beam.allowedVehicleVariant = allowedVehicleVariant,
         Beam.autoSelectedVehicleVariant = autoSelectedVehicleVariant,
