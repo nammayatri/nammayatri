@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "05 - Refund Admin Reject And List Verify",
+    "description": "Admin LIST and REJECT branches. Customer raises a refund -> admin LIST shows it -> admin rejects (respond approve=false) -> asserts the request is REJECTED with NO Stripe refund (no refunds row), NO ledger leg, and no refunds_id.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+    "var envType = pm.environment.get('envType'); var msu = pm.environment.get('mockServerUrl') || ''; var url = pm.request.url.toString();",
+    "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) { if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest(); }"
+  ] } }],
+  "item": [
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('refund state cleared', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\"}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/refunds/clear", "host": ["{{mockServerUrl}}"], "path": ["mock", "refunds", "clear"] }
+      }
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "var d = pm.response.json();",
+        "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+        "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"] }
+      }
+    },
+    {
+      "name": "Raise Refund Request 5 (Customer)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":5,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Integration test refund (admin-reject case)\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] }
+      }
+    },
+    {
+      "name": "Capture refundRequestId (SQL — after drain)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('OPEN captured', function () { var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0); pm.environment.set('refundRequestId', d.rows[0].id); pm.expect(d.rows[0].status).to.eql('OPEN'); });"] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Admin LIST shows the request (list API — coverage gap)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('list returns the just-raised request', function () {",
+        "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+        "  pm.expect(pm.response.text(), 'list response should contain our refundRequestId').to.include(pm.environment.get('refundRequestId'));",
+        "});"
+      ] } }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/list?limit=50&offset=0", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "list"], "query": [{ "key": "limit", "value": "50" }, { "key": "offset", "value": "0" }] }
+      }
+    },
+    {
+      "name": "Reject the request (Admin respond approve=false)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('reject accepted, not refunded', function () {",
+        "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]);",
+        "  var d = pm.response.json();",
+        "  pm.expect(d.status, 'a rejected request must not be REFUNDED').to.not.eql('REFUNDED');",
+        "  pm.expect(d.refundStatus, 'no Stripe refund on a reject').to.not.eql('SUCCESS');",
+        "});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"approve\":false,\"responseDescription\":\"rejected by integration test\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "respond"] }
+      }
+    },
+    {
+      "name": "Assert request not REFUNDED + no refunds_id (SQL)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('request not REFUNDED + no refunds_id (reject moved no money)', function () {",
+          "  var d = pm.response.json(); pm.expect(d.count).to.be.above(0);",
+          "  var r = d.rows[0];",
+          "  console.log('rejected refund_request status = ' + r.status);",
+          "  pm.expect(r.status, 'a rejected request must not be REFUNDED').to.not.eql('REFUNDED');",
+          "  pm.expect(r.refunds_id == null || r.refunds_id === '', 'no refunds_id on a rejected request').to.be.true;",
+          "});"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\",\"refunds_id\"],\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Assert NO refunds row issued (SQL)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('no Stripe refund (refunds) row for this order', function () {",
+        "  var d = pm.response.json();",
+        "  pm.expect(d.count, 'a rejected refund must not create a refunds row').to.eql(0);",
+        "});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refunds\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderShortId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Assert NO BAP refund ledger leg (SQL)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('rejected refund posts no SETTLED/PENDING ledger leg', function () {",
+        "  var d = pm.response.json();",
+        "  var legs = (d.rows||[]).filter(function(r){return r.status === 'SETTLED' || r.status === 'PENDING';});",
+        "  pm.expect(legs.length, 'a rejected refund must not post ledger legs').to.eql(0);",
+        "});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Assert NO BPP refund ledger leg (SQL)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('rejected refund posts no BPP ledger leg', function () {",
+        "  var d = pm.response.json();",
+        "  var legs = (d.rows||[]).filter(function(r){return r.status === 'SETTLED' || r.status === 'PENDING';});",
+        "  pm.expect(legs.length, 'a rejected refund must not post BPP ledger legs').to.eql(0);",
+        "});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    }
+  ]
+}

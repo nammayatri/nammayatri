@@ -1,0 +1,105 @@
+{
+  "info": {
+    "name": "03 - Refund Platform Absorbs No Clawback (Case 1)",
+    "description": "Case 1 (deductFromDriver=false -> Stripe reverse_transfer=false): platform absorbs the refund, no driver clawback. Approve -> asserts BAP OwnerAsset->BuyerAsset SETTLED (same as Case 2) but the BPP side is a SINGLE SellerExpense->BuyerExternal leg (no OwnerExpense driver-share).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+    "var envType = pm.environment.get('envType'); var msu = pm.environment.get('mockServerUrl') || ''; var url = pm.request.url.toString();",
+    "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) { if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest(); }"
+  ] } }],
+  "item": [
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('refund state cleared', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\"}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/refunds/clear", "host": ["{{mockServerUrl}}"], "path": ["mock", "refunds", "clear"] }
+      }
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "var d = pm.response.json();",
+        "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+        "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"] }
+      }
+    },
+    {
+      "name": "Raise Refund Request 5 (Customer)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":5,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Case 1 platform-absorbs refund\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] }
+      }
+    },
+    {
+      "name": "Capture refundRequestId (SQL — after drain)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('OPEN captured', function () { var d = pm.response.json(); pm.expect(d.count).to.be.above(0); pm.environment.set('refundRequestId', d.rows[0].id); });"] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Approve Refund — Case 1 deductFromDriver=false (Admin)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('approve -> REFUNDED/SUCCESS', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); var d = pm.response.json(); pm.expect(d.status).to.eql('REFUNDED'); pm.expect(d.refundStatus).to.eql('SUCCESS'); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"approve\":true,\"responseDescription\":\"approved, platform absorbs\",\"deductFromDriver\":false}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "respond"] }
+      }
+    },
+    {
+      "name": "Assert BPP ledger = SINGLE SellerExpense leg (no driver clawback)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('P2 Case-1: one SETTLED commission leg, no DriverShare', function () {",
+          "  var d = pm.response.json(); pm.expect(d.count, 'BPP ledger empty').to.be.above(0);",
+          "  var settled = d.rows.filter(function(r){return r.status === 'SETTLED';});",
+          "  pm.expect(settled.length, 'expected >=1 SETTLED leg').to.be.above(0);",
+          "  var driverLegs = d.rows.filter(function(r){return String(r.reference_type||'').indexOf('DriverShare') > -1;});",
+          "  pm.expect(driverLegs.length, 'Case 1 must NOT post a DriverShare/OwnerExpense leg').to.eql(0);",
+          "});"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Assert BAP ledger still OwnerAsset->BuyerAsset SETTLED",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('B4 BAP leg SETTLED', function () { var d = pm.response.json(); pm.expect(d.rows.filter(function(r){return r.status==='SETTLED';}).length).to.be.above(0); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    }
+  ]
+}

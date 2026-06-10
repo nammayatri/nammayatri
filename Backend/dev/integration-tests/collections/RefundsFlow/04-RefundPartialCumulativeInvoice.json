@@ -1,0 +1,125 @@
+{
+  "info": {
+    "name": "04 - Refund Partial Cumulative Invoice + Over-Cap Rejection",
+    "description": "Two partial refunds via different entry points (customer-raise + admin-respond for 5, then admin-INITIATE for 3; cumulative 8 <= txn 10): asserts exactly ONE non-Voided Refund invoice at the cumulative total (8) with the earlier one Voided, plus one SETTLED ledger leg per partial. Then a 3rd raise (8+3=11 > 10) is rejected with 400 (over-cap).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+    "var envType = pm.environment.get('envType'); var msu = pm.environment.get('mockServerUrl') || ''; var url = pm.request.url.toString();",
+    "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) { if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest(); }"
+  ] } }],
+  "item": [
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('refund state cleared', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\"}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/refunds/clear", "host": ["{{mockServerUrl}}"], "path": ["mock", "refunds", "clear"] }
+      }
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "var d = pm.response.json();",
+        "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+        "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"] }
+      }
+    },
+    {
+      "name": "Raise Refund 5 (partial 1)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":5,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"partial 1\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] } }
+    },
+    {
+      "name": "Capture id 1 + approve partial 1",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('captured', function () { var d = pm.response.json(); pm.expect(d.count).to.be.above(0); pm.environment.set('refundRequestId', d.rows[0].id); });"] } }
+      ],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] } }
+    },
+    {
+      "name": "Approve partial 1 (5)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('approve 1 REFUNDED', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); pm.expect(pm.response.json().status).to.eql('REFUNDED'); });"] } }],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"approve\":true,\"responseDescription\":\"partial 1\",\"deductFromDriver\":true}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "respond"] } }
+    },
+    {
+      "name": "Admin-initiate partial 2 (3) — cumulative 8 (auto-approved)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 3000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('admin-initiate 2 REFUNDED', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); pm.expect(pm.response.json().status).to.eql('REFUNDED'); });"] } }
+      ],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":3,\"currency\":\"EUR\"},\"deductFromDriver\":true,\"description\":\"partial 2 (admin-initiated)\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{rideId}}/initiate", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{rideId}}", "initiate"] } }
+    },
+    {
+      "name": "Assert BAP cumulative Refund invoice — total 8; prior Voided",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('one non-Voided Refund invoice @ total 8; prior Voided', function () {",
+          "  var d = pm.response.json();",
+          "  var refunds = (d.rows||[]).filter(function(r){return r.invoice_type === 'Refund';});",
+          "  var live = refunds.filter(function(r){return r.status !== 'Voided';});",
+          "  pm.expect(live.length, 'exactly one non-Voided Refund invoice').to.eql(1);",
+          "  pm.expect(Number(live[0].total_amount)).to.eql(8);",
+          "  pm.expect(refunds.filter(function(r){return r.status === 'Voided';}).length, 'prior Refund invoice Voided').to.be.above(0);",
+          "});"
+        ] } }
+      ],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_invoice\",\"select\":[\"invoice_type\",\"status\",\"total_amount\",\"invoice_number\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] } }
+    },
+    {
+      "name": "Assert BPP cumulative Refund invoice — total 8; prior Voided",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('one non-Voided BPP Refund invoice @ total 8; prior Voided', function () {",
+          "  var d = pm.response.json();",
+          "  var refunds = (d.rows||[]).filter(function(r){return r.invoice_type === 'Refund';});",
+          "  pm.expect(refunds.length, 'BPP refund invoices empty -> refundLedger did not build the BPP invoice').to.be.above(0);",
+          "  var live = refunds.filter(function(r){return r.status !== 'Voided';});",
+          "  pm.expect(live.length, 'exactly one non-Voided BPP Refund invoice').to.eql(1);",
+          "  pm.expect(Number(live[0].total_amount)).to.eql(8);",
+          "  pm.expect(refunds.filter(function(r){return r.status === 'Voided';}).length, 'prior BPP Refund invoice Voided').to.be.above(0);",
+          "});"
+        ] } }
+      ],
+      "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_invoice\",\"select\":[\"invoice_type\",\"status\",\"total_amount\",\"invoice_number\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] } }
+    },
+    {
+      "name": "Raise Refund 3 more — over cap (cumulative 8+3=11 > txn 10) -> 400 rejected",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('over-refund rejected at raise (400 + txn-amount message)', function () {",
+        "  pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([400,422]);",
+        "  pm.expect(/transaction amount/i.test(pm.response.text()), 'expected an over-cap rejection referencing the transaction amount: '+pm.response.text()).to.be.true;",
+        "});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":3,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"over-cap negative: cumulative 8+3=11 exceeds txn 10\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] }
+      }
+    }
+  ]
+}

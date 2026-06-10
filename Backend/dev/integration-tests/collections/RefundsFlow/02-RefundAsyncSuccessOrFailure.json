@@ -1,0 +1,277 @@
+{
+  "info": {
+    "name": "02 - Refund Async Success Or Failure",
+    "description": "Asynchronous refund (Stripe answers PENDING, resolved later via the /info?refreshRefunds=true poll). Success: override create->pending -> approve (legs PENDING) -> override GET->succeeded -> poll -> legs SETTLED. [AsyncFail]: same setup -> override GET->failed -> poll -> request FAILED + provisional legs VOIDED.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [{ "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+    "var envType = pm.environment.get('envType'); var msu = pm.environment.get('mockServerUrl') || ''; var url = pm.request.url.toString();",
+    "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) { if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest(); }"
+  ] } }],
+  "item": [
+    {
+      "name": "Reset refund state for the ride (clean start)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('refund state cleared', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"rideId\":\"{{rideId}}\",\"orderId\":\"{{orderId}}\",\"orderShortId\":\"{{orderShortId}}\",\"bppBookingId\":\"{{bppBookingId}}\"}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/refunds/clear", "host": ["{{mockServerUrl}}"], "path": ["mock", "refunds", "clear"] }
+      }
+    },
+    {
+      "name": "Switch City for BAP (Rider Dashboard)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "var d = pm.response.json();",
+        "if (d.authToken) { pm.environment.set('bap_dashboard_token', d.authToken); }",
+        "pm.test('BAP dashboard switch OK', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"merchantId\":\"{{bap_short_id}}\",\"city\":\"{{dashboard_city}}\"}" },
+        "url": { "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity", "host": ["{{bap_dashboard_url}}"], "path": ["user", "switchMerchantAndCity"] }
+      }
+    },
+    {
+      "name": "Mock override: refund create -> pending",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('override set', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"service\":\"stripe\",\"extract\":\"body.payment_intent\",\"value\":\"{{paymentIntentId}}\",\"match\":\"/refunds\",\"response\":{\"status\":\"pending\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/override", "host": ["{{mockServerUrl}}"], "path": ["mock", "override"] }
+      }
+    },
+    {
+      "name": "Raise Refund Request 5 (Customer)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":5,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Async refund (pending then poll)\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] }
+      }
+    },
+    {
+      "name": "Capture refundRequestId (SQL — after drain)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('OPEN captured', function () { var d = pm.response.json(); pm.expect(d.count).to.be.above(0); pm.environment.set('refundRequestId', d.rows[0].id); });"] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Approve (returns PENDING)",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('approve accepted (not FAILED)', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); var d = pm.response.json(); pm.expect(d.status).to.not.eql('FAILED'); });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"approve\":true,\"responseDescription\":\"approve, async pending\",\"deductFromDriver\":true}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "respond"] }
+      }
+    },
+    {
+      "name": "Assert BAP legs PENDING + capture re_",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('B4 leg PENDING', function () { var d = pm.response.json(); pm.expect(d.rows.filter(function(r){return r.status==='PENDING';}).length, 'expected a PENDING refund leg').to.be.above(0); });"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Capture re_ id from refunds",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('re_ captured', function () { var d = pm.response.json(); pm.expect(d.count).to.be.above(0); var re = d.rows[0].id_assigned_by_service_provider; pm.environment.set('refundReId', re); pm.expect(/^re_/.test(String(re||'')), 'expected a re_ id, got: '+re).to.be.true; });"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refunds\",\"select\":[\"id\",\"id_assigned_by_service_provider\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderShortId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Mock override: refund GET -> succeeded",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('override set', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"service\":\"stripe\",\"extract\":\"path.3\",\"value\":\"{{refundReId}}\",\"match\":\"/refunds\",\"response\":{\"status\":\"succeeded\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/override", "host": ["{{mockServerUrl}}"], "path": ["mock", "override"] }
+      }
+    },
+    {
+      "name": "Poll /info?refreshRefunds=true",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('poll ok', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/info?refreshRefunds=true", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "info"], "query": [{ "key": "refreshRefunds", "value": "true" }] }
+      }
+    },
+    {
+      "name": "Assert BAP legs now SETTLED + clear override",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('B4 leg SETTLED after poll', function () { var d = pm.response.json(); pm.expect(d.rows.filter(function(r){return r.status==='SETTLED';}).length, 'expected SETTLED after poll').to.be.above(0); });",
+          "pm.sendRequest({ url: pm.environment.get('mockServerUrl') + '/mock/override', method: 'DELETE' }, function(){});"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Assert BPP legs SETTLED (P2 — refundLedger fired on poll-success)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('P2 BPP refund legs SETTLED after poll', function () { var d = pm.response.json(); pm.expect(d.count, 'BPP ledger empty -> the BAP->BPP refundLedger did not fire on poll-success').to.be.above(0); pm.expect(d.rows.filter(function(r){return r.status==='SETTLED';}).length, 'expected >=1 SETTLED BPP leg').to.be.above(0); });"] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{bppBookingId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Mock override: refund create -> pending",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('override set', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"service\":\"stripe\",\"extract\":\"body.payment_intent\",\"value\":\"{{paymentIntentId}}\",\"match\":\"/refunds\",\"response\":{\"status\":\"pending\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/override", "host": ["{{mockServerUrl}}"], "path": ["mock", "override"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Raise Refund 3 (Customer)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('raise accepted', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{riderToken}}" }],
+        "body": { "mode": "raw", "raw": "{\"requestedAmount\":{\"amount\":3,\"currency\":\"EUR\"},\"code\":\"CUSTOMER_REQUEST\",\"description\":\"Async refund (pending then GET->failed)\"}" },
+        "url": { "raw": "{{baseUrl_app}}/payment/{{rideId}}/refundRequest/create", "host": ["{{baseUrl_app}}"], "path": ["payment", "{{rideId}}", "refundRequest", "create"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Capture 2nd refundRequestId (OPEN — after drain)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": ["pm.test('2nd OPEN captured', function () { var d = pm.response.json(); pm.expect(d.count).to.be.above(0); pm.environment.set('refundRequestId', d.rows[0].id); });"] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderId}}\",\"op\":\"=\"},{\"column_name\":\"status\",\"val\":\"OPEN\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Approve (returns PENDING)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('approve accepted (not FAILED yet)', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); var d = pm.response.json(); pm.expect(d.status).to.not.eql('FAILED'); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "body": { "mode": "raw", "raw": "{\"approve\":true,\"responseDescription\":\"approve, async pending (will fail at poll)\",\"deductFromDriver\":true}" },
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/respond", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "respond"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Capture the new re_ (non-success refunds row)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('captured the pending re_', function () {",
+          "  var d = pm.response.json(); pm.expect(d.count).to.be.above(0);",
+          "  var pend = (d.rows||[]).filter(function(r){return r.status !== 'REFUND_SUCCESS';});",
+          "  var row = pend[0] || d.rows[d.rows.length-1];",
+          "  pm.environment.set('refundReId', row.id_assigned_by_service_provider);",
+          "  pm.expect(/^re_/.test(String(row.id_assigned_by_service_provider||'')), 'expected a re_ id').to.be.true;",
+          "});"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refunds\",\"select\":[\"id\",\"id_assigned_by_service_provider\",\"status\"],\"where_clause\":[{\"column_name\":\"order_id\",\"val\":\"{{orderShortId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Mock override: refund GET -> failed",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('override set', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"service\":\"stripe\",\"extract\":\"path.3\",\"value\":\"{{refundReId}}\",\"match\":\"/refunds\",\"response\":{\"status\":\"failed\",\"failure_reason\":\"insufficient_funds\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/override", "host": ["{{mockServerUrl}}"], "path": ["mock", "override"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Poll /info?refreshRefunds=true",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('poll ok', function () { pm.expect(pm.response.code, pm.response.text()).to.be.oneOf([200,201]); });"] } }],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{bap_dashboard_token}}" }],
+        "url": { "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{dashboard_city}}/payment/refundRequest/{{refundRequestId}}/info?refreshRefunds=true", "host": ["{{bap_dashboard_url}}"], "path": ["bap", "{{bap_short_id}}", "{{dashboard_city}}", "payment", "refundRequest", "{{refundRequestId}}", "info"], "query": [{ "key": "refreshRefunds", "value": "true" }] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Assert request FAILED after poll (SQL — after drain)",
+      "event": [
+        { "listen": "prerequest", "script": { "exec": ["var t = Date.now(); while (Date.now() - t < 20000) {}"] } },
+        { "listen": "test", "script": { "exec": [
+          "pm.test('GET->failed poll leaves the request FAILED', function () {",
+          "  var d = pm.response.json(); pm.expect(d.count).to.be.above(0);",
+          "  pm.expect(d.rows[0].status, 'async GET->failed should set the request FAILED').to.eql('FAILED');",
+          "});"
+        ] } }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"refund_request\",\"select\":[\"id\",\"status\",\"refunds_id\"],\"where_clause\":[{\"column_name\":\"id\",\"val\":\"{{refundRequestId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "[AsyncFail] Assert provisional legs VOIDED (SQL) + clear override",
+      "event": [{ "listen": "test", "script": { "exec": [
+        "// per the ledger model: PENDING legs made at approve are VOIDED when the async refund fails",
+        "pm.test('async-failed refund VOIDED its provisional leg(s)', function () {",
+        "  var d = pm.response.json();",
+        "  console.log('ride ledger statuses:', (d.rows||[]).map(function(r){return r.status;}).join(','));",
+        "  var voided = (d.rows||[]).filter(function(r){return r.status === 'VOIDED';});",
+        "  pm.expect(voided.length, 'expected >=1 VOIDED leg from the failed async refund').to.be.above(0);",
+        "});",
+        "pm.sendRequest({ url: pm.environment.get('mockServerUrl') + '/mock/override', method: 'DELETE' }, function(){});"
+      ] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    }
+  ]
+}
