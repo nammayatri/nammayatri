@@ -132,12 +132,22 @@ instance Aeson.FromJSON TollGate where
         gp <- Aeson.parseJSON val
         pure $ PolyGate (gp :: GeoPolygon)
 
+-- Some write paths (e.g. KV drainer) persist Aeson values via Haskell `Show`, producing
+-- `Object (fromList [...])` instead of JSON text. Aeson's Read Value round-trips Show.
+parseShownAesonValueTollGate :: String -> Maybe TollGate
+parseShownAesonValueTollGate s =
+  case readMaybe @Aeson.Value s of
+    Just v -> Aeson.decodeStrict (BSL.toStrict $ Aeson.encode v)
+    Nothing -> Nothing
+
 parseTollGateFromDbText :: BS.ByteString -> Maybe TollGate
 parseTollGateFromDbText bs =
-  case Aeson.decodeStrict bs of
-    Just gate -> Just gate
-    Nothing ->
-      (\seg -> LineGate $ lineSegmentToLineString seg) <$> readMaybe (C8.unpack bs)
+  let s = C8.unpack bs
+   in case Aeson.decodeStrict bs of
+        Just gate -> Just gate
+        Nothing ->
+          parseShownAesonValueTollGate s
+            <|> ((\seg -> LineGate $ lineSegmentToLineString seg) <$> readMaybe s)
 
 tollGateToDbText :: TollGate -> Text
 tollGateToDbText gate =
@@ -178,8 +188,8 @@ instance FromField TollGate where
               "Could not parse TollGate from DB value: "
                 <> show (C8.unpack bs)
 
-instance HasSqlValueSyntax be Aeson.Value => HasSqlValueSyntax be TollGate where
-  sqlValueSyntax = sqlValueSyntax . Aeson.toJSON
+instance HasSqlValueSyntax be Text => HasSqlValueSyntax be TollGate where
+  sqlValueSyntax = sqlValueSyntax . tollGateToDbText
 
 instance BeamSqlBackend be => B.HasSqlEqualityCheck be TollGate
 
