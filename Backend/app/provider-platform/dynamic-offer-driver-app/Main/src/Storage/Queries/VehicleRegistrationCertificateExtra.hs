@@ -5,6 +5,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import Domain.Types.Image hiding (id)
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MerchantOperatingCity
 import Domain.Types.TripTransaction as DTT
 import Domain.Types.VehicleRegistrationCertificate hiding (id)
 import Domain.Types.VehicleVariant as Vehicle
@@ -25,6 +26,45 @@ import qualified Storage.Beam.VehicleRegistrationCertificate as BeamVRC
 import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
 -- Extra code goes here --
+
+findVerifiedAndNotApproved ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Int ->
+  Int ->
+  Maybe Text ->
+  Maybe Text ->
+  m [VehicleRegistrationCertificate]
+findVerifiedAndNotApproved merchantOpCityId mbFrom mbTo limit offset mbRcNo mbRdId = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.orderBy_ (\rc -> B.desc_ rc.updatedAt) $
+                B.filter_'
+                  ( \rc ->
+                      rc.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOpCityId)
+                        B.&&?. rc.verified B.==?. B.val_ (Just True)
+                        B.&&?. B.sqlBool_ (B.not_ (rc.approved B.==. B.val_ (Just True)))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (rc.updatedAt B.>=. B.val_ from)) mbFrom
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (rc.updatedAt B.<=. B.val_ to)) mbTo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rcNo -> B.sqlBool_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ "") B.==. B.val_ rcNo)) mbRcNo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rdId -> B.sqlBool_ (rc.id B.==. B.val_ rdId)) mbRdId
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right rows -> catMaybes <$> mapM fromTType' rows
+    Left _ -> pure []
+
+-- We only need findVerifiedAndNotApproved for VRC now.
+
+type DMOC = Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+
 upsert :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => VehicleRegistrationCertificate -> m ()
 upsert a@VehicleRegistrationCertificate {..} = do
   res <- findOneWithKV [Se.Is BeamVRC.certificateNumberHash $ Se.Eq (a.certificateNumber & (.hash))]

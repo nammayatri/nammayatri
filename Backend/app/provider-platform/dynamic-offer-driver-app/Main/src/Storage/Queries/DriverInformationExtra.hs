@@ -39,6 +39,43 @@ import Tools.Error
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
+findVerifiedAndNotEnabled ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  Maybe UTCTime ->
+  Maybe UTCTime ->
+  Int ->
+  Int ->
+  Maybe DbHash ->
+  Maybe Text ->
+  m [DriverInformation]
+findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset mbMobileNumberHash mbPersonId = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.orderBy_ (\(di, _) -> B.desc_ di.updatedAt) $
+                B.filter_'
+                  ( \(di, person) ->
+                      di.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOpCityId)
+                        B.&&?. di.verified B.==?. B.val_ True
+                        B.&&?. B.sqlBool_ (B.not_ (di.enabled B.==. B.val_ True))
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (di.updatedAt B.>=. B.val_ from)) mbFrom
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (di.updatedAt B.<=. B.val_ to)) mbTo
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileHash -> person.mobileNumberHash B.==?. B.val_ (Just mobileHash)) mbMobileNumberHash
+                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pid -> B.sqlBool_ (di.driverId B.==. B.val_ pid)) mbPersonId
+                  )
+                  do
+                    di <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
+                    person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\p -> BeamDI.driverId di B.==. BeamP.id p)
+                    pure (di, person)
+  case res of
+    Right rows -> catMaybes <$> mapM (fromTType' . fst) rows
+    Left _ -> pure []
+
 -- | Disable a driver as part of a fleet-disable cascade. Flips `enabled` to
 --   False and stamps `disabledReasonFlag = FleetDisabled` so the matching
 --   re-enable cascade can find the rows it created. Kept separate from

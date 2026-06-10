@@ -107,3 +107,8 @@ ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN v
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN enable_for_airport boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.vehicle_registration_certificate ADD COLUMN verified boolean ;

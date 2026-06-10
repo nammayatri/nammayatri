@@ -8,6 +8,7 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     postDriverOperatorVerifyJoiningOtp,
     getDriverOperatorDashboardAnalyticsAllTime,
     getDriverOperatorDashboardAnalytics,
+    getDriverReviewQueue,
   )
 where
 
@@ -105,3 +106,8 @@ getDriverOperatorDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Mer
 getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to
+
+getDriverReviewQueue :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.Driver.EntityType -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp)
+getDriverReviewQueue merchantShortId opCity apiTokenInfo entityType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRdId mbRcNo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverReviewQueue) entityType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRdId mbRcNo
