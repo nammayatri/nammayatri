@@ -6,7 +6,7 @@ cabal-version: 1.12
 
 name:           communication-engine
 version:        0.1.0.0
-description:    Communication engine library - parses and dispatches communication directives from rule-orchestrator via typeclass dispatch
+description:    Communication engine library - parses and dispatches communication directives from rule-orchestrator via typeclass dispatch, includes Communication domain types and storage
 homepage:       https://github.com/nammayatri/nammayatri#readme
 bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
@@ -28,11 +28,24 @@ library
   exposed-modules:
       Lib.CommunicationEngine.Dispatcher
       Lib.CommunicationEngine.Parser
+      Lib.CommunicationEngine.Storage.Beam.BeamFlow
+      Lib.CommunicationEngine.Storage.Beam.Common
+      Lib.CommunicationEngine.Storage.Queries.CommunicationDeliveryExtra
+      Lib.CommunicationEngine.Storage.Queries.CommunicationExtra
       Lib.CommunicationEngine.Types
+      Lib.CommunicationEngine.Domain.Types.Communication
+      Lib.CommunicationEngine.Domain.Types.CommunicationDelivery
+      Lib.CommunicationEngine.Storage.Beam.Communication
+      Lib.CommunicationEngine.Storage.Beam.CommunicationDelivery
+      Lib.CommunicationEngine.Storage.Queries.Communication
+      Lib.CommunicationEngine.Storage.Queries.CommunicationDelivery
+      Lib.CommunicationEngine.Storage.Queries.OrphanInstances.Communication
+      Lib.CommunicationEngine.Storage.Queries.OrphanInstances.CommunicationDelivery
   other-modules:
       Paths_communication_engine
   hs-source-dirs:
       src
+      src-read-only
   default-extensions:
       ConstraintKinds
       DataKinds
@@ -66,16 +79,23 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      StandaloneDeriving
+      TemplateHaskell
+      DerivingStrategies
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
+    , beam-core
+    , beam-postgres
     , containers
     , euler-hs
+    , finance-kernel
     , mobility-core
     , openapi3
     , record-dot-preprocessor
     , record-hasfield
+    , sequelize
     , text
     , time
   default-language: Haskell2010

@@ -1,9 +1,6 @@
 imports:
-  Merchant: Domain.Types.Merchant
-  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
-  Person: Domain.Types.Person
+  UTCTime: Kernel.Prelude
   Value: Data.Aeson
-  Communication: Domain.Types.Communication
 
 Communication:
   tableName: communication
@@ -41,10 +38,10 @@ Communication:
 
   fields:
     id: Id Communication
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Text
+    merchantOperatingCityId: Text
     domain: CommunicationDomain
-    senderId: Id Person
+    senderId: Text
     senderRole: CommunicationSenderRole
     senderDisplayName: Maybe Text
     title: Text
@@ -113,3 +110,6 @@ Communication:
 
   excludedDefaultQueries:
     - updateByPrimaryKey
+
+  defaultQueryTypeConstraint: "(Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r)"
+  beamInstance: MakeTableInstancesGenericSchema

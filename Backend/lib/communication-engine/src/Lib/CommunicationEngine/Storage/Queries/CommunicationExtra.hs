@@ -1,15 +1,13 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.CommunicationExtra where
+module Lib.CommunicationEngine.Storage.Queries.CommunicationExtra where
 
 import qualified Data.Aeson as Aeson
 import Data.Either (fromRight)
 import qualified Data.Text as T
 import Data.Time (Day, UTCTime (..), addDays)
 import qualified Database.Beam as B
-import qualified Domain.Types.Communication
-import qualified Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -17,25 +15,27 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.CommunicationEngine.Domain.Types.Communication as Domain
+import qualified Lib.CommunicationEngine.Storage.Beam.BeamFlow
+import qualified Lib.CommunicationEngine.Storage.Beam.Common as CommDB
+import qualified Lib.CommunicationEngine.Storage.Beam.Communication as Beam
+import Lib.CommunicationEngine.Storage.Queries.OrphanInstances.Communication
 import qualified Sequelize as Se
-import qualified Storage.Beam.Common as BeamCommon
-import qualified Storage.Beam.Communication as Beam
-import Storage.Queries.OrphanInstances.Communication
 
 findBySenderIdWithLimitOffset ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  Maybe Domain.Types.Communication.CommunicationStatus ->
-  Maybe Domain.Types.Communication.CommunicationDomain ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  Maybe Domain.CommunicationStatus ->
+  Maybe Domain.CommunicationDomain ->
   Maybe Int ->
   Maybe Int ->
-  m [Domain.Types.Communication.Communication]
+  m [Domain.Communication]
 findBySenderIdWithLimitOffset senderId mbStatus mbDomain mbLimit mbOffset = do
   let limitVal = min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromMaybe 0 mbOffset
   findAllWithOptionsKV
     [ Se.And $
-        [Se.Is Beam.senderId $ Se.Eq (Kernel.Types.Id.getId senderId)]
+        [Se.Is Beam.senderId $ Se.Eq senderId]
           <> maybe [] (\s -> [Se.Is Beam.status $ Se.Eq s]) mbStatus
           <> maybe [] (\d -> [Se.Is Beam.domain $ Se.Eq d]) mbDomain
     ]
@@ -44,17 +44,17 @@ findBySenderIdWithLimitOffset senderId mbStatus mbDomain mbLimit mbOffset = do
     (Just offsetVal)
 
 findBySenderIdWithFilters ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  Maybe Domain.Types.Communication.CommunicationStatus ->
-  Maybe Domain.Types.Communication.CommunicationDomain ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  Maybe Domain.CommunicationStatus ->
+  Maybe Domain.CommunicationDomain ->
   Maybe Text ->
   Maybe Int ->
   Maybe Int ->
-  Maybe Domain.Types.Communication.ChannelType ->
+  Maybe Domain.ChannelType ->
   Maybe Day ->
   Maybe Day ->
-  m [Domain.Types.Communication.Communication]
+  m [Domain.Communication]
 findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOffset mbChannel mbFromDate mbToDate = do
   let limitVal = fromIntegral $ min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromIntegral $ fromMaybe 0 mbOffset
@@ -68,7 +68,7 @@ findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOf
               B.orderBy_ (\comm -> B.desc_ comm.createdAt) $
                 B.filter_'
                   ( \comm ->
-                      comm.senderId B.==?. B.val_ (Kernel.Types.Id.getId senderId)
+                      comm.senderId B.==?. B.val_ senderId
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\s -> comm.status B.==?. B.val_ s) mbStatus
                         B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\d -> comm.domain B.==?. B.val_ d) mbDomain
                         B.&&?. maybe
@@ -97,17 +97,17 @@ findBySenderIdWithFilters senderId mbStatus mbDomain mbSearchString mbLimit mbOf
                           (\toDate -> B.sqlBool_ (comm.createdAt B.<. B.val_ (UTCTime (addDays 1 toDate) 0)))
                           mbToDate
                   )
-                  $ B.all_ (BeamCommon.communication BeamCommon.atlasDB)
+                  $ B.all_ (CommDB.communication CommDB.communicationEngineDB)
   catMaybes <$> mapM fromTType' (fromRight [] res)
 
 updateCommunication ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Communication.Communication ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id Domain.Communication ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  Maybe Domain.Types.Communication.CommunicationContentType ->
-  Maybe [Domain.Types.Communication.ChannelType] ->
+  Maybe Domain.CommunicationContentType ->
+  Maybe [Domain.ChannelType] ->
   Maybe Aeson.Value ->
   m ()
 updateCommunication commId mbTitle mbBody mbHtmlBody mbContentType mbChannels mbMediaUrls = do
@@ -123,5 +123,5 @@ updateCommunication commId mbTitle mbBody mbHtmlBody mbContentType mbChannels mb
     )
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId commId)]
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Communication.Communication -> m ()
+deleteById :: (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) => Kernel.Types.Id.Id Domain.Communication -> m ()
 deleteById commId = deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId commId)]

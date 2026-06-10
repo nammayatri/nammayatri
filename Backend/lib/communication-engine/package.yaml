@@ -12,7 +12,7 @@ flags:
     manual: true
     default: false
 
-description: Communication engine library - parses and dispatches communication directives from rule-orchestrator via typeclass dispatch
+description: Communication engine library - parses and dispatches communication directives from rule-orchestrator via typeclass dispatch, includes Communication domain types and storage
 
 default-extensions:
   - ConstraintKinds
@@ -47,6 +47,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - StandaloneDeriving
+  - TemplateHaskell
+  - DerivingStrategies
 
 dependencies:
   - base >= 4.7 && < 5
@@ -57,6 +60,10 @@ dependencies:
   - aeson
   - containers
   - euler-hs
+  - beam-core
+  - beam-postgres
+  - sequelize
+  - finance-kernel
 
 ghc-options:
   - -fwrite-ide-info
@@ -66,6 +73,7 @@ ghc-options:
 library:
   source-dirs:
     - src
+    - src-read-only
   ghc-options:
     - -Wall
     - -Wcompat

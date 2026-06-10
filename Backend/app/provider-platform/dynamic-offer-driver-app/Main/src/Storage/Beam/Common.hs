@@ -20,7 +20,6 @@ import Storage.Beam.Booking
 import Storage.Beam.BookingCancellationReason
 import Storage.Beam.CallStatus
 import Storage.Beam.CommonDriverOnboardingDocuments
-import Storage.Beam.Communication
 import Storage.Beam.DriverFee
 import Storage.Beam.DriverGoHomeRequest
 import Storage.Beam.DriverInformation
@@ -107,7 +106,6 @@ atlasDB =
         fleetBookingAssignments = fleetBookingAssignmentsTable,
         fleetBookingInformation = fleetBookingInformationTable,
         fleetRcDailyStats = fleetRcDailyStatsTable,
-        communication = communicationTable,
         commonDriverOnboardingDocuments = commonDriverOnboardingDocumentsTable
       }
 
@@ -154,7 +152,6 @@ data AtlasDB f = AtlasDB
     fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT),
     fleetBookingInformation :: f (B.TableEntity FleetBookingInformationT),
     fleetRcDailyStats :: f (B.TableEntity FleetRcDailyStatsT),
-    communication :: f (B.TableEntity CommunicationT),
     commonDriverOnboardingDocuments :: f (B.TableEntity CommonDriverOnboardingDocumentsT)
   }
   deriving (Generic, B.Database be)

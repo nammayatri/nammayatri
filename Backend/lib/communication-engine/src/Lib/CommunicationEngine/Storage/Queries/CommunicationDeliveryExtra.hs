@@ -1,31 +1,31 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.CommunicationDeliveryExtra where
+module Lib.CommunicationEngine.Storage.Queries.CommunicationDeliveryExtra where
 
 import Data.Time (Day, UTCTime (..), addDays)
-import qualified Domain.Types.Communication
-import qualified Domain.Types.CommunicationDelivery
-import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.CommunicationEngine.Domain.Types.Communication as CommDomain
+import qualified Lib.CommunicationEngine.Domain.Types.CommunicationDelivery as CommDelDomain
+import qualified Lib.CommunicationEngine.Storage.Beam.BeamFlow
+import qualified Lib.CommunicationEngine.Storage.Beam.CommunicationDelivery as Beam
+import Lib.CommunicationEngine.Storage.Queries.OrphanInstances.CommunicationDelivery
 import qualified Sequelize as Se
-import qualified Storage.Beam.CommunicationDelivery as Beam
-import Storage.Queries.OrphanInstances.CommunicationDelivery
 
 findByRecipientIdWithChannel ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  Maybe Domain.Types.Communication.ChannelType ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Text ->
+  Maybe CommDomain.ChannelType ->
   Maybe Int ->
   Maybe Int ->
   Maybe Day ->
   Maybe Day ->
-  m [Domain.Types.CommunicationDelivery.CommunicationDelivery]
+  m [CommDelDomain.CommunicationDelivery]
 findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset mbFromDate mbToDate = do
   let limitVal = min 50 $ fromMaybe 10 mbLimit
       offsetVal = fromMaybe 0 mbOffset
@@ -42,14 +42,14 @@ findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset mbFromDate m
   case mbChannel of
     Nothing ->
       findAllWithOptionsKV
-        [Se.And $ [Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId)] <> dateFilters]
+        [Se.And $ [Se.Is Beam.recipientId $ Se.Eq recipientId] <> dateFilters]
         (Se.Desc Beam.createdAt)
         (Just limitVal)
         (Just offsetVal)
     Just channel ->
       findAllWithOptionsKV
         [ Se.And $
-            [ Se.Is Beam.recipientId $ Se.Eq (Kernel.Types.Id.getId recipientId),
+            [ Se.Is Beam.recipientId $ Se.Eq recipientId,
               Se.Is Beam.channel $ Se.Eq channel
             ]
               <> dateFilters
@@ -59,13 +59,13 @@ findByRecipientIdWithChannel recipientId mbChannel mbLimit mbOffset mbFromDate m
         (Just offsetVal)
 
 findByCommunicationIdWithFilters ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Communication.Communication ->
-  Maybe Domain.Types.Communication.ChannelType ->
-  Maybe Domain.Types.CommunicationDelivery.DeliveryStatus ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id CommDomain.Communication ->
+  Maybe CommDomain.ChannelType ->
+  Maybe CommDelDomain.DeliveryStatus ->
   Maybe Int ->
   Maybe Int ->
-  m [Domain.Types.CommunicationDelivery.CommunicationDelivery]
+  m [CommDelDomain.CommunicationDelivery]
 findByCommunicationIdWithFilters commId mbChannel mbStatus mbLimit mbOffset = do
   let limitVal = min 100 $ fromMaybe 20 mbLimit
       offsetVal = fromMaybe 0 mbOffset
@@ -80,8 +80,8 @@ findByCommunicationIdWithFilters commId mbChannel mbStatus mbLimit mbOffset = do
     (Just offsetVal)
 
 deleteByCommunicationId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id Domain.Types.Communication.Communication ->
+  (Lib.CommunicationEngine.Storage.Beam.BeamFlow.BeamFlow m r) =>
+  Kernel.Types.Id.Id CommDomain.Communication ->
   m ()
 deleteByCommunicationId commId =
   deleteWithKV [Se.Is Beam.communicationId $ Se.Eq (Kernel.Types.Id.getId commId)]
