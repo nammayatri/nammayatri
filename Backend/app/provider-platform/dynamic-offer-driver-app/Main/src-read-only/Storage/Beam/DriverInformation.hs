@@ -64,6 +64,7 @@ data DriverInformationT f = DriverInformationT
     enabled :: B.C f Kernel.Prelude.Bool,
     enabledAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     extraFareMitigationFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    firstVerifiedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     forwardBatchingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasRideStarted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

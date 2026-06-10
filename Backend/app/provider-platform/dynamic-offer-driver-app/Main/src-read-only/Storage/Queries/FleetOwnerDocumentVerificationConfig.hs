@@ -25,12 +25,12 @@ createMany = traverse_ create
 
 findAllByMerchantOpCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityId limit offset merchantOperatingCityId = do findAllWithOptionsKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)] (Se.Asc Beam.order) limit offset
 
 findAllByMerchantOpCityIdAndRole ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m ([Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Person.Role -> m [Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwnerDocumentVerificationConfig])
 findAllByMerchantOpCityIdAndRole merchantOperatingCityId role = do
   findAllWithKV
     [ Se.And
@@ -67,6 +67,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerDocumentVerificationConfig.FleetOwner
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.isImageValidationRequired isImageValidationRequired,
       Se.Set Beam.isMandatory isMandatory,
+      Se.Set Beam.isMandatoryForEnabling isMandatoryForEnabling,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.order order,
@@ -98,6 +99,7 @@ instance FromTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.Fleet
             isHidden = isHidden,
             isImageValidationRequired = isImageValidationRequired,
             isMandatory = isMandatory,
+            isMandatoryForEnabling = isMandatoryForEnabling,
             maxRetryCount = maxRetryCount,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -124,6 +126,7 @@ instance ToTType' Beam.FleetOwnerDocumentVerificationConfig Domain.Types.FleetOw
         Beam.isHidden = isHidden,
         Beam.isImageValidationRequired = isImageValidationRequired,
         Beam.isMandatory = isMandatory,
+        Beam.isMandatoryForEnabling = isMandatoryForEnabling,
         Beam.maxRetryCount = maxRetryCount,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

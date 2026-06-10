@@ -311,10 +311,10 @@ VehicleRegistrationCertificate:
     vehicleModelYear: Maybe Int
     dateOfRegistration: Maybe UTCTime
     rejectReason: Maybe Text
-    approved: Maybe Bool
+    approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
+    verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     docsVerificationStatus: Maybe DocsVerificationStatus
     vehicleImageId: Maybe (Id MediaFile)
-    verified: Maybe Bool
   default:
     approved: "false"
   constraints:
@@ -572,7 +572,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,DriverInspectionForm,TrainingForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,DriverInspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract,PersonalId,LDCCertificate,TDSCertificate,TANCertificate,UDYAMCertificate,LocalResidenceProof,PoliceVerificationCertificate,DrivingSchoolCertificate,PanAadhaarLinkage,VoterIdCard,OperatorPartnerCode,MedicalCertificate,Rating,BotApproval"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix,Exact"
     DocumentCategory:
@@ -1205,6 +1205,7 @@ FleetOwnerDocumentVerificationConfig:
     title: Text
     description: Maybe Text
     isMandatory: Bool
+    isMandatoryForEnabling: Maybe Bool
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool

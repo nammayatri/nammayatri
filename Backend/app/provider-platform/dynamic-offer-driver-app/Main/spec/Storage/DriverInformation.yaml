@@ -56,7 +56,7 @@ DriverInformation:
       recordType: NewType
       driverBadges: "[Badges]"
     AddressDocumentType:
-      enum: "RationCard,UtilityBill,Passport"
+      enum: "RationCard,UtilityBill,Passport,VoterId,LifeInsurancePolicy,Others"
     DriverBankAccountDetails:
       accountNumber: Maybe Text
       ifscCode: Maybe Text
@@ -101,6 +101,7 @@ DriverInformation:
     blockExpiryTime: Maybe UTCTime
     payerVpa: Maybe Text
     enabledAt: Maybe UTCTime
+    firstVerifiedAt: Maybe UTCTime # Stamped once, the first time the driver becomes verified; never overwritten. Needs backfill for already-verified drivers (separate data migration).
     compAadhaarImagePath: Maybe Text
     availableUpiApps: Maybe Text
     blockStateModifier: Maybe Text
