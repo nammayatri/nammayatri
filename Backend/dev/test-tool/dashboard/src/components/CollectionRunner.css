@@ -93,6 +93,19 @@
 .cr-run-all-btn:hover { background: #388bfd; }
 .cr-run-all-btn:disabled { opacity: 0.5; cursor: default; }
 
+.cr-load-test-btn {
+  background: #92400e;
+  color: #fde68a;
+  border: 1px solid #d97706;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cr-load-test-btn:hover { background: #d97706; color: #fff; }
+.cr-load-test-btn:disabled { opacity: 0.5; cursor: default; }
+
 /* Run All progress */
 .cr-run-all-progress {
   padding: 8px 16px;

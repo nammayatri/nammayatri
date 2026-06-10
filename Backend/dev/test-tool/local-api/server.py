@@ -36,6 +36,24 @@ import stage_runner
 import log_sources
 import input_store
 
+# ── Load-test execution engine ───────────────────────────────────────────────
+_LT_SERVICE_DIR = Path(__file__).resolve().parent.parent / "load-test-service"
+if str(_LT_SERVICE_DIR) not in sys.path:
+    sys.path.insert(0, str(_LT_SERVICE_DIR))
+try:
+    import runner as _lt_runner
+    _LT_AVAILABLE = True
+except Exception as _lt_err:
+    _LT_AVAILABLE = False
+    _lt_runner = None  # type: ignore
+
+try:
+    import locust_runner as _lt_locust_runner
+    _LT_LOCUST_AVAILABLE = True
+except Exception:
+    _LT_LOCUST_AVAILABLE = False
+    _lt_locust_runner = None  # type: ignore
+
 sys.stdout.reconfigure(line_buffering=True)
 sys.stderr.reconfigure(line_buffering=True)
 
@@ -2394,6 +2412,37 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         if self._handle_launcher(method, path, parsed):
             return True
 
+        # ── Load Test ─────────────────────────────────────────────────────
+        if path == "/api/load-test/start" and method == "POST":
+            body = self._read_json_body() or {}
+            engine = body.get("engine", "postman")
+            if engine == "locust":
+                if not _LT_LOCUST_AVAILABLE:
+                    self._send_json({"error": "locust runner unavailable — check load-test-service/locust_runner.py"}, 503)
+                    return True
+                run_id = _lt_locust_runner.start_run(body)
+            else:
+                if not _LT_AVAILABLE:
+                    self._send_json({"error": "load test runner unavailable"}, 503)
+                    return True
+                run_id = _lt_runner.start_run(body)
+            self._send_json({"runId": run_id})
+            return True
+        elif path.startswith("/api/load-test/events/") and method == "GET":
+            run_id = path[len("/api/load-test/events/"):]
+            self._lt_stream(run_id)
+            return True
+        elif path.startswith("/api/load-test/stop/") and method == "POST":
+            run_id = path[len("/api/load-test/stop/"):]
+            # Try both runners — only one will have the run_id
+            ok = False
+            if _LT_AVAILABLE and _lt_runner:
+                ok = _lt_runner.stop_run(run_id) or ok
+            if _LT_LOCUST_AVAILABLE and _lt_locust_runner:
+                ok = _lt_locust_runner.stop_run(run_id) or ok
+            self._send_json({"ok": ok})
+            return True
+
         self._send_json({"error": "not found"}, 404)
         return True
 
@@ -2480,6 +2529,39 @@ class LocalApiHandler(BaseHTTPRequestHandler):
                     session["subscribers"].remove(q)
                 except ValueError:
                     pass
+
+    def _lt_stream(self, run_id: str):
+        import queue as _queue
+        eq = None
+        if _LT_AVAILABLE and _lt_runner:
+            eq = _lt_runner.get_queue(run_id)
+        if eq is None and _LT_LOCUST_AVAILABLE and _lt_locust_runner:
+            eq = _lt_locust_runner.get_queue(run_id)
+        if eq is None:
+            self._send_json({"error": "run not found or already finished"}, 404)
+            return
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Accel-Buffering", "no")
+            self._cors_headers()
+            self.end_headers()
+        except BrokenPipeError:
+            return
+        try:
+            while True:
+                try:
+                    event = eq.get(timeout=15)
+                    self.wfile.write(f"data: {json.dumps(event)}\n\n".encode())
+                    self.wfile.flush()
+                    if event.get("type") in ("run_complete", "error"):
+                        break
+                except _queue.Empty:
+                    self.wfile.write(b": ping\n\n")
+                    self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     # ── Spec-driven launcher endpoints (additive) ────────────────────────────
 

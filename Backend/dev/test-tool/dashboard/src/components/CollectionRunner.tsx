@@ -1,10 +1,3 @@
-/**
- * CollectionRunner — Runs Postman collection steps from integration-tests
- *
- * Replaces hardcoded flows with collections sourced from integration-tests/collections/
- * Each step executes with variable substitution, service log capture, and pm.* script runtime.
- */
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import './CollectionRunner.css';
 import {
@@ -20,6 +13,7 @@ import { VariableStores, executePrereqScript } from '../services/postman-runtime
 import { PROXY_BASE } from '../config';
 import { callPostmanStep, PostmanStepResult, startNewCoverageRun } from '../services/api';
 import { RunAllDashboard, RunAllSuiteResult } from './RunAllDashboard';
+import { LoadTestModal } from './LoadTestModal';
 import { StepResult, LogEntry } from '../types';
 
 // Cities whose backing data lives in the EU prod cluster. Any environment
@@ -297,6 +291,7 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
   const [, setRunAllTick] = useState(0);
   const [manualMode, setManualMode] = useState(false);
   const [versionId, setVersionId] = useState<string>('');
+  const [showLoadTest, setShowLoadTest] = useState(false);
   const abortRef = useRef(false);
   const storesRef = useRef<VariableStores>({ environment: {}, collection: {} });
 
@@ -1102,6 +1097,16 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
               {isRunning && !runAllProgress ? 'Running...' : `Run (${visibleSteps.length} steps${visibleSteps.length !== steps.length ? `, ${steps.length - visibleSteps.length} hidden` : ''})`}
             </button>
           )}
+          {!manualMode && (
+            <button
+              className="cr-load-test-btn"
+              onClick={() => setShowLoadTest(true)}
+              disabled={isRunning || visibleSteps.length === 0}
+              title="Run this collection with multiple parallel workers using seeded phone numbers"
+            >
+              ⚡ Load Test
+            </button>
+          )}
           <button
             className={`cr-manual-toggle-btn ${manualMode ? 'cr-manual-toggle-active' : ''}`}
             onClick={() => { setManualMode(m => !m); setStepStates({}); manualStoresInitedRef.current = null; }}
@@ -1263,6 +1268,20 @@ export const CollectionRunner: React.FC<Props> = ({ onLog }) => {
 
       {/* JSON Viewer Modal */}
       {modalData !== null && <JsonViewerModal data={modalData} onClose={() => setModalData(null)} />}
+
+      {/* Load Test Modal */}
+      {showLoadTest && currentEnv && (
+        <LoadTestModal
+          collectionName={selectedDir}
+          suiteName={currentSuite?.name ?? selectedSuite}
+          collectionDir={selectedDir}
+          collectionSuite={selectedSuite}
+          envFile={(currentEnv as any).filename}
+          steps={visibleSteps}
+          baseEnv={currentEnv.variables}
+          onClose={() => setShowLoadTest(false)}
+        />
+      )}
     </div>
   );
 };

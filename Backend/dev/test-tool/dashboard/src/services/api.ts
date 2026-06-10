@@ -331,6 +331,24 @@ export async function callPostmanStep(
     headers[k] = resolveVariables(v, stores);
   }
 
+  const _svcEnvVar: Record<string, string> = {
+    driver: 'baseURL_namma_P',
+    rider: 'baseUrl_app',
+    lts: 'baseUrl_lts',
+    'provider-dashboard': 'dashboard_base_url',
+    'rider-dashboard': 'bap_dashboard_url',
+  };
+  const _baseUrlVar = _svcEnvVar[step.service];
+  const _baseUrlVal = _baseUrlVar ? (stores.environment[_baseUrlVar] ?? stores.collection[_baseUrlVar] ?? '') : '';
+  let _proxyTargetHost = '';
+  if (_baseUrlVal) {
+    try {
+      const _pu = new URL(_baseUrlVal);
+      _proxyTargetHost = `${_pu.protocol}//${_pu.host}`;
+      headers['X-Proxy-Target'] = _proxyTargetHost;
+    } catch { /* invalid URL, skip */ }
+  }
+
   // 6. Resolve body
   let body: any = undefined;
   if (step.bodyTemplate) {
@@ -389,7 +407,9 @@ export async function callPostmanStep(
     scriptError = result.error;
   }
 
-  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl: resolvedPath, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
+  // resolvedUrl = full URL the proxy forwarded to (shows in log panel for debugging)
+  const resolvedUrl = _proxyTargetHost ? `${_proxyTargetHost}${resolvedPath}` : resolvedPath;
+  return { ok, status, data, elapsed, upstreamMs, assertions, consoleLogs, scriptError, serviceLogs: {}, resolvedUrl, resolvedBody: body, resolvedHeaders: headers, responseHeaders };
 }
 
 function normalizeHeaders(h: any): Record<string, string> {
