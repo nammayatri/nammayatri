@@ -432,6 +432,10 @@ types:
     timeStamp: UTCTime
     towerInfo: [TowerInfo]
 
+  StopRouteResp:
+    routeCode: Text
+    eta: "Maybe [BusStopETA]"
+
 apis:
   - POST:
       endpoint: /multimodal/routeServiceability
@@ -780,3 +784,11 @@ apis:
         type: TowerInfoReq
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /multimodal/stop/{stopCode}/routes
+      auth: TokenAuth
+      params:
+        stopCode: Text
+      response:
+        type: "[StopRouteResp]"

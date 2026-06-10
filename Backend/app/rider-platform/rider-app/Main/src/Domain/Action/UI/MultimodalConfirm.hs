@@ -42,6 +42,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSetRouteName,
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
+    getMultimodalStopRoutes,
   )
 where
 
@@ -2814,3 +2815,19 @@ postStoreTowerInfo (mbPersonId, _) req = do
     validateAreaCode areaCode = do
       when (areaCode < 0) $
         logWarning $ "Invalid area code: " <> show areaCode
+
+getMultimodalStopRoutes ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Text ->
+  Environment.Flow [ApiTypes.StopRouteResp]
+getMultimodalStopRoutes (mbPersonId, _merchantId) stopCode = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  integratedBPPConfig <-
+    fromMaybeM (InvalidRequest "Integrated BPP config not found")
+      =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
+  let routeCodes = nub (map (.routeCode) mappings)
+  pure $ map (\rc -> ApiTypes.StopRouteResp {routeCode = rc, eta = Nothing}) routeCodes
