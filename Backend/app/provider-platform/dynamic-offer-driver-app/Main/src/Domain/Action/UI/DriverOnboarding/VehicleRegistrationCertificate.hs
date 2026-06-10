@@ -733,7 +733,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
             approved = Just False,
             updatedAt = now,
             vehicleImageId = Nothing,
-            verified = Nothing
+            verified = Just False
           }
     initiateRCCreation transporterConfig mVehicleRC now mbFleetOwnerId allFailures = do
       case mVehicleRC of

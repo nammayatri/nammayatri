@@ -531,6 +531,10 @@ mapDocumentType Common.TANCertificate = DVC.TANCertificate
 mapDocumentType Common.UDYAMCertificate = DVC.UDYAMCertificate
 mapDocumentType Common.PanAadhaarLink = DVC.PanAadhaarLinkage
 mapDocumentType Common.VoterIdCard = DVC.VoterIdCard
+mapDocumentType Common.OperatorPartnerCode = DVC.OperatorPartnerCode
+mapDocumentType Common.MedicalCertificate = DVC.MedicalCertificate
+mapDocumentType Common.Rating = DVC.Rating
+mapDocumentType Common.BotApproval = DVC.BotApproval
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
@@ -986,7 +990,6 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                 DRC.vehicleSeatBelts = req.vehicleSeatBelts <|> rc.vehicleSeatBelts,
                 DRC.fitnessExpiry = if isJust req.fitnessExpiry then fromJust req.fitnessExpiry else rc.fitnessExpiry,
                 DRC.permitExpiry = req.permitExpiry <|> rc.permitExpiry,
-                DRC.approved = Just True,
                 DRC.docsVerificationStatus =
                   if transporterConfig.enableManualDocumentStatusCheck == Just True
                     then Just DDVS.ADMIN_APPROVED
@@ -1052,7 +1055,7 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.vehicleModelYear = req.vehicleModelYear,
                     DRC.rejectReason = Nothing,
                     DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
-                    DRC.approved = Just True,
+                    DRC.approved = Nothing,
                     DRC.vehicleImageId = Nothing,
                     DRC.enableForAirport = Nothing,
                     DRC.merchantId = Just merchantId,

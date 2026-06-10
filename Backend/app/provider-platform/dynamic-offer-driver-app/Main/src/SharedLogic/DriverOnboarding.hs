@@ -83,6 +83,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
 import Tools.Error
 import qualified Tools.Ticket as TT
 import qualified Tools.Whatsapp as Whatsapp
+import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
 defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub, DVC.FinnishIDResidencePermit, DVC.TaxiDriverPermit]
@@ -168,6 +169,15 @@ enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified =
     merchant <- CQM.findById merchantOpCity.merchantId >>= fromMaybeM (MerchantNotFound merchantOpCity.merchantId.getId)
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     triggerOnboardingAlertsAndMessages person merchant merchantOpCity
+
+-- | Set the driver's enabled state to False with analytics + LTS pool sync (the inverse of
+--   'enableAndTriggerOnboardingAlertsAndMessages'). @mbVerified@ optionally co-writes `verified`
+--   (Nothing leaves it untouched). Used by the enableBotFlow recompute when docs become invalid.
+disableDriverWithAnalytics :: Id DMOC.MerchantOperatingCity -> Id Person -> Maybe Bool -> Flow ()
+disableDriverWithAnalytics merchantOpCityId personId mbVerified = do
+  driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False mbVerified
 
 checkAndUpdateAirConditioned :: Bool -> Bool -> Id Person -> Id DMOC.MerchantOperatingCity -> [DVST.VehicleServiceTier] -> Maybe Text -> Bool -> Flow ()
 checkAndUpdateAirConditioned isDashboard isAirConditioned personId merchantOpCityId cityVehicleServiceTiers downgradeReason shouldUpdateServiceTiers = do
@@ -708,7 +718,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentType = castDocumentType documentType,
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
-        isMandatoryForEnabling = isMandatory,
+        isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         documentFields = Nothing,
         documentFlowGrouping = castDocumentFlowGrouping DVC.STANDARD,
         isReminderSupported = Nothing,
@@ -807,3 +817,7 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate
   Domain.Types.DocumentVerificationConfig.PanAadhaarLinkage -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanAadhaarLink
   Domain.Types.DocumentVerificationConfig.VoterIdCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VoterIdCard
+  Domain.Types.DocumentVerificationConfig.OperatorPartnerCode -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.OperatorPartnerCode
+  Domain.Types.DocumentVerificationConfig.MedicalCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.MedicalCertificate
+  Domain.Types.DocumentVerificationConfig.Rating -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.Rating
+  Domain.Types.DocumentVerificationConfig.BotApproval -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.BotApproval

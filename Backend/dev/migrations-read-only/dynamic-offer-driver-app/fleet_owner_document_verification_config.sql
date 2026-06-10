@@ -42,3 +42,9 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ALTE
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ALTER COLUMN role SET NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config DROP CONSTRAINT fleet_owner_document_verification_config_pkey;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD PRIMARY KEY ( document_type, merchant_operating_city_id, role);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_document_verification_config ADD COLUMN is_mandatory_for_enabling boolean ;

@@ -189,6 +189,22 @@ updateDocsVerificationStatusByCertificateNumberHash docsVerificationStatus certi
     ]
     [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
 
+-- | Set the RC's `verified` flag (ops/onboarding) by certificate-number hash.
+--   Used under enableBotFlow, where statusHandler' writes verified once all mandatory
+--   vehicle docs are VALID; `approved`/activation remain BOT-owned.
+updateVerifiedByCertificateNumberHash ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Bool ->
+  DbHash ->
+  m ()
+updateVerifiedByCertificateNumberHash verified certificateHash = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamVRC.verified verified,
+      Se.Set BeamVRC.updatedAt now
+    ]
+    [Se.Is BeamVRC.certificateNumberHash $ Se.Eq certificateHash]
+
 findAllRCByStatusForFleet :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Maybe Text -> m [VehicleRegistrationCertificate]
 findAllRCByStatusForFleet fleetOwnerId status limitVal offsetVal (Id merchantId') statusAwareVehicleNo = do
   dbConf <- getReplicaBeamConfig

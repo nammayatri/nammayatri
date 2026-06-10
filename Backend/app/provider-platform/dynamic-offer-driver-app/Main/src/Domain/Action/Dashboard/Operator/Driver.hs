@@ -245,9 +245,25 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity mbPerson
       let analyticsDriverId = maybe request.operatorId (.getId) mbPersonId
+      -- Recording the inspection (→ InspectionHub VALID) runs for all cities. Under enableBotFlow the
+      -- BOT owns `approved` and statusHandler owns RC activation, so those are skipped; non-BOT ops-hub
+      -- cities keep them (ops-approve is their approval step).
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- Dependency gate (BOT cities): every dependencyDocumentType doc of the InspectionHub config
+      -- must be VALID before the inspection can be approved.
+      when enableBotFlow $ do
+        (vehicleDocItem, _) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
+        let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
+        mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCity.id DVC.InspectionHub vehicleCategory Nothing
+        whenJust mbInspectionCfg $ \inspectionCfg -> do
+          let statusOf docType = fromMaybe SStatus.NO_DOC_AVAILABLE $ listToMaybe [d.verificationStatus | d <- vehicleDocItem.documents, d.documentType == docType]
+              invalidDeps = filter (\docType -> statusOf docType /= SStatus.VALID) inspectionCfg.dependencyDocumentType
+          unless (null invalidDeps) $
+            throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
       allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
-        QVRC.updateApproved (Just True) rc.id
+        unless enableBotFlow $
+          QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
         -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
@@ -259,22 +275,39 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-      whenJust mbPersonId $ \personId -> do
-        mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allVehicleDocsVerified) $
-          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+      -- RC auto-activation is legacy-only; under enableBotFlow the RC is activated by the BOT/statusHandler.
+      unless enableBotFlow $
+        whenJust mbPersonId $ \personId -> do
+          mbVehicle <- QVehicle.findById personId
+          when (isNothing mbVehicle && allVehicleDocsVerified) $
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity (Just person)
+      -- Recording the inspection (→ DriverInspectionHub VALID) runs for all cities. Under enableBotFlow
+      -- the BOT owns `approved` and statusHandler owns enablement, so those are skipped; non-BOT ops-hub
+      -- cities keep them (ops-approve is their approval step).
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- Dependency gate (BOT cities): every dependencyDocumentType doc of the DriverInspectionHub
+      -- config must be VALID before the inspection can be approved.
+      when enableBotFlow $ do
+        (_, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
+        mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCity.id DVC.DriverInspectionHub vehicleCategory Nothing
+        whenJust mbInspectionCfg $ \inspectionCfg -> do
+          let statusOf docType = fromMaybe SStatus.NO_DOC_AVAILABLE $ listToMaybe [d.verificationStatus | d <- driverDocStatuses, d.documentType == docType]
+              invalidDeps = filter (\docType -> statusOf docType /= SStatus.VALID) inspectionCfg.dependencyDocumentType
+          unless (null invalidDeps) $
+            throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
       allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
-        QDIExtra.updateApproved (Just True) personId
+        unless enableBotFlow $ do
+          QDIExtra.updateApproved (Just True) personId
+          void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         -- Cancel pending driver inspection reminders
         cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
         -- Record driver inspection completion for auto-trigger monitoring
         recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
-        void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedDriverRequestsDaily" $
