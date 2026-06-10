@@ -1,0 +1,19 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "vk-gateway": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "VK Gateway",
+      "options": {
+        "baseURL": "https://grid.ai.juspay.net",
+        "apiKey": "{env:VK_GATEWAY_KEY}"
+      },
+      "models": {
+        "kimi-latest": {
+          "name": "kimi-latest"
+        }
+      }
+    }
+  },
+  "model": "vk-gateway/kimi-latest"
+}
