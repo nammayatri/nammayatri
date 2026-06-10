@@ -46,35 +46,22 @@ findVerifiedAndNotEnabled ::
   Maybe UTCTime ->
   Int ->
   Int ->
-  Maybe DbHash ->
-  Maybe Text ->
+  Maybe [Text] ->
   m [DriverInformation]
-findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset mbMobileNumberHash mbPersonId = do
-  dbConf <- getReplicaBeamConfig
-  res <-
-    L.runDB dbConf $
-      L.findRows $
-        B.select $
-          B.limit_ (fromIntegral limit) $
-            B.offset_ (fromIntegral offset) $
-              B.orderBy_ (\(di, _) -> B.desc_ di.updatedAt) $
-                B.filter_'
-                  ( \(di, person) ->
-                      di.merchantOperatingCityId B.==?. B.val_ (Just $ getId merchantOpCityId)
-                        B.&&?. di.verified B.==?. B.val_ True
-                        B.&&?. B.sqlBool_ (B.not_ (di.enabled B.==. B.val_ True))
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\from -> B.sqlBool_ (di.updatedAt B.>=. B.val_ from)) mbFrom
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\to -> B.sqlBool_ (di.updatedAt B.<=. B.val_ to)) mbTo
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mobileHash -> person.mobileNumberHash B.==?. B.val_ (Just mobileHash)) mbMobileNumberHash
-                        B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\pid -> B.sqlBool_ (di.driverId B.==. B.val_ pid)) mbPersonId
-                  )
-                  do
-                    di <- B.all_ (BeamCommon.driverInformation BeamCommon.atlasDB)
-                    person <- B.join_ (BeamCommon.person BeamCommon.atlasDB) (\p -> BeamDI.driverId di B.==. BeamP.id p)
-                    pure (di, person)
-  case res of
-    Right rows -> catMaybes <$> mapM (fromTType' . fst) rows
-    Left _ -> pure []
+findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset finalPersonIds = do
+  case finalPersonIds of
+    Just [] -> pure []
+    _ -> do
+      let clauses =
+            [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
+              Se.Is BeamDI.verified (Se.Eq True),
+              Se.Is BeamDI.enabled (Se.Eq False)
+            ]
+              <> maybe [] (\from -> [Se.Is BeamDI.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
+              <> maybe [] (\to -> [Se.Is BeamDI.updatedAt (Se.LessThanOrEq to)]) mbTo
+              <> maybe [] (\pIds -> [Se.Is BeamDI.driverId (Se.In pIds)]) finalPersonIds
+
+      findAllWithOptionsKV [Se.And clauses] (Se.Desc BeamDI.updatedAt) (Just limit) (Just offset)
 
 -- | Disable a driver as part of a fleet-disable cascade. Flips `enabled` to
 --   False and stamps `disabledReasonFlag = FleetDisabled` so the matching

@@ -39,8 +39,8 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB

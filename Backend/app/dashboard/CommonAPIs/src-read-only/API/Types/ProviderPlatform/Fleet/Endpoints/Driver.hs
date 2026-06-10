@@ -126,6 +126,17 @@ data AssignScheduledBookingReq = AssignScheduledBookingReq {bookingId :: Kernel.
 instance Kernel.Types.HideSecrets.HideSecrets AssignScheduledBookingReq where
   hideSecrets = Kernel.Prelude.identity
 
+data AssociationDetail = AssociationDetail
+  { driverName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fleetOwnerMobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data BusRideInfo = BusRideInfo
   { busNumber :: Kernel.Prelude.Text,
     destination :: Kernel.External.Maps.Types.LatLong,
@@ -1259,7 +1270,6 @@ data VehicleInfo = VehicleInfo
     vehicleDoors :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleSeatBelts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     verificationStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    fleetOwnerId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -1270,7 +1280,8 @@ data VehicleInfo = VehicleInfo
     vehicleModelYear :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dateOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     rejectReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    approved :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    association :: Kernel.Prelude.Maybe AssociationDetail
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

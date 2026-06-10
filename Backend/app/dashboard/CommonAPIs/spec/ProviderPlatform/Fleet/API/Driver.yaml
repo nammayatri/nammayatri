@@ -2390,6 +2390,13 @@ types:
   EntityOperationType:
     enum: "DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS"
     derive: "HttpInstance"
+  AssociationDetail:
+    - driverName: Maybe Text
+    - driverMobileNumber: Maybe Text
+    - driverId: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - fleetOwnerName: Maybe Text
+    - fleetOwnerMobileNumber: Maybe Text
   VehicleInfo:
     - vehicleNo: Text
     - rcId: Text
@@ -2408,7 +2415,6 @@ types:
     - vehicleDoors: Maybe Int
     - vehicleSeatBelts: Maybe Int
     - verificationStatus: Maybe Text
-    - fleetOwnerId: Maybe Text
     - airConditioned: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
@@ -2420,6 +2426,7 @@ types:
     - dateOfRegistration: Maybe UTCTime
     - rejectReason: Maybe Text
     - approved: Maybe Bool
+    - association: Maybe AssociationDetail
 
 
 

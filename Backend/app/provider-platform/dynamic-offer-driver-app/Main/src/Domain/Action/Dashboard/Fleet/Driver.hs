@@ -4981,35 +4981,70 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
   vrc <- maybe (throwError $ VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId)) pure mbVrc
   when (vrc.merchantId /= Just merchant.id || vrc.merchantOperatingCityId /= Just merchantOpCityId) $ do
     throwError (VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId))
+  mbActiveAssoc <- QRCAssociation.findActiveAssociationByRC vrc.id True
+  (mbDriverId, mbDriverName, mbDriverMobile) <- case mbActiveAssoc of
+    Nothing -> pure (Nothing, Nothing, Nothing)
+    Just assoc -> do
+      mbPerson <- B.runInReplica $ QPerson.findById assoc.driverId
+      case mbPerson of
+        Nothing -> pure (Just assoc.driverId.getId, Nothing, Nothing)
+        Just p -> do
+          let fullName = T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)
+          dMob <- mapM decrypt p.mobileNumber
+          pure (Just assoc.driverId.getId, Just fullName, dMob)
+
+  (mbFleetOwnerName, mbFleetOwnerMobile) <- case vrc.fleetOwnerId of
+    Nothing -> pure (Nothing, Nothing)
+    Just fIdText -> do
+      mbPerson <- B.runInReplica $ QPerson.findById (Id fIdText)
+      case mbPerson of
+        Nothing -> pure (Nothing, Nothing)
+        Just p -> do
+          let fullName = T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)
+          fMob <- mapM decrypt p.mobileNumber
+          pure (Just fullName, fMob)
+
   pure $
     Common.VehicleInfo
-      { vehicleNo = fromMaybe "" vrc.unencryptedCertificateNumber,
-        rcId = vrc.id.getId,
-        vehicleVariant = show <$> vrc.vehicleVariant,
-        manufacturerModel = vrc.manufacturerModel,
-        manufacturer = vrc.vehicleManufacturer,
-        fitnessExpiry = Just vrc.fitnessExpiry,
-        pucExpiry = vrc.pucExpiry,
-        insuranceValidity = vrc.insuranceValidity,
-        vehicleClass = vrc.vehicleClass,
-        vehicleModel = vrc.vehicleModel,
-        vehicleColor = vrc.vehicleColor,
-        vehicleManufacturer = vrc.vehicleManufacturer,
-        vehicleCapacity = vrc.vehicleCapacity,
-        vehicleEnergyType = vrc.vehicleEnergyType,
-        vehicleDoors = vrc.vehicleDoors,
-        vehicleSeatBelts = vrc.vehicleSeatBelts,
-        verificationStatus = Just (show vrc.verificationStatus),
-        fleetOwnerId = vrc.fleetOwnerId,
-        airConditioned = vrc.airConditioned,
-        oxygen = vrc.oxygen,
-        ventilator = vrc.ventilator,
-        luggageCapacity = vrc.luggageCapacity,
-        mYManufacturing = vrc.mYManufacturing,
-        vehicleRating = vrc.vehicleRating,
-        vehicleRatingRemark = vrc.vehicleRatingRemark,
-        vehicleModelYear = vrc.vehicleModelYear,
-        dateOfRegistration = vrc.dateOfRegistration,
-        rejectReason = vrc.rejectReason,
-        approved = vrc.approved
+      { Common.vehicleNo = fromMaybe "" vrc.unencryptedCertificateNumber,
+        Common.rcId = vrc.id.getId,
+        Common.vehicleVariant = show <$> vrc.vehicleVariant,
+        Common.manufacturerModel = vrc.manufacturerModel,
+        Common.manufacturer = vrc.vehicleManufacturer,
+        Common.fitnessExpiry = Just vrc.fitnessExpiry,
+        Common.pucExpiry = vrc.pucExpiry,
+        Common.insuranceValidity = vrc.insuranceValidity,
+        Common.vehicleClass = vrc.vehicleClass,
+        Common.vehicleModel = vrc.vehicleModel,
+        Common.vehicleColor = vrc.vehicleColor,
+        Common.vehicleManufacturer = vrc.vehicleManufacturer,
+        Common.vehicleCapacity = vrc.vehicleCapacity,
+        Common.vehicleEnergyType = vrc.vehicleEnergyType,
+        Common.vehicleDoors = vrc.vehicleDoors,
+        Common.vehicleSeatBelts = vrc.vehicleSeatBelts,
+        Common.verificationStatus = Just (show vrc.verificationStatus),
+        Common.airConditioned = vrc.airConditioned,
+        Common.oxygen = vrc.oxygen,
+        Common.ventilator = vrc.ventilator,
+        Common.luggageCapacity = vrc.luggageCapacity,
+        Common.mYManufacturing = vrc.mYManufacturing,
+        Common.vehicleRating = vrc.vehicleRating,
+        Common.vehicleRatingRemark = vrc.vehicleRatingRemark,
+        Common.vehicleModelYear = vrc.vehicleModelYear,
+        Common.dateOfRegistration = vrc.dateOfRegistration,
+        Common.rejectReason = vrc.rejectReason,
+        Common.approved = vrc.approved,
+        Common.association =
+          if isNothing mbDriverId && isNothing vrc.fleetOwnerId
+            then Nothing
+            else
+              Just $
+                Common.AssociationDetail
+                  { Common.driverName = mbDriverName,
+                    Common.driverMobileNumber = mbDriverMobile,
+                    Common.driverId = mbDriverId,
+                    Common.fleetOwnerId = vrc.fleetOwnerId,
+                    Common.fleetOwnerName = mbFleetOwnerName,
+                    Common.fleetOwnerMobileNumber = mbFleetOwnerMobile
+                  }
       }

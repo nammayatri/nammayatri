@@ -92,6 +92,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -102,7 +103,6 @@ import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as IV
-import qualified Domain.Types.Common as DI
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -145,12 +145,12 @@ import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra

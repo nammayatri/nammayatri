@@ -1,0 +1,75 @@
+imports:
+  Person: Domain.Types.Person
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  UTCTime: Kernel.Prelude
+  Image: Dashboard.Common
+  Value: Data.Aeson
+  DocumentType: Domain.Types.DocumentVerificationConfig
+
+
+ReviewRequest:
+  tableName: review_request
+  types:
+    RequestType:
+      enum: "BOT_REVIEW"
+      derive: "HttpInstance"
+    EntityType:
+      enum: "DRIVER,VEHICLE,FLEET_OWNER"
+      derive: "HttpInstance"
+    RequestStatus:
+      enum: "IN_PROGRESS,COMPLETED,REJECTED"
+      derive: "HttpInstance"
+    DocumentDetail:
+      documentType: DocumentType
+      documentDescription: Maybe Text
+      rejectedReason: Text
+      remarks: Maybe Text
+      imageId: Maybe (Id Image)
+      mediaId: Maybe Text
+
+
+  fields:
+    id: Id ReviewRequest
+    requestType: RequestType
+    entityType: EntityType
+    entityId: Text
+    rcNo: Maybe Text
+    requestStatus: RequestStatus
+    reviewerId: Maybe (Id Person)
+    documentDetails: Maybe [DocumentDetail]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  sqlType:
+    documentDetails: json
+    requestType: character varying(255)
+    entityType: character varying(255)
+    requestStatus: character varying(255)
+
+  beamType:
+    documentDetails: Maybe Value
+
+  toTType:
+    documentDetails: Data.Aeson.toJSON <$> documentDetails|E
+
+  fromTType:
+    documentDetails: Kernel.Utils.JSON.valueToMaybe =<< documentDetails|E
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo:
+      kvFunction: findAllWithKV
+      where:
+        and: [entityId,entityType,requestType,requestStatus,rcNo]
+    updateRequestStatus:
+      kvFunction: updateWithKV
+      where:
+        and: [id,requestStatus]

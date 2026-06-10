@@ -837,6 +837,7 @@ library
       Storage.Queries.RatingExtra
       Storage.Queries.RCStatsExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.ReviewRequestExtra
       Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
@@ -1265,6 +1266,7 @@ library
       Domain.Types.RegistryMapFallback
       Domain.Types.Reminder
       Domain.Types.ReminderConfig
+      Domain.Types.ReviewRequest
       Domain.Types.Ride
       Domain.Types.RideDetails
       Domain.Types.RiderDetails
@@ -1448,6 +1450,7 @@ library
       Storage.Beam.RegistryMapFallback
       Storage.Beam.Reminder
       Storage.Beam.ReminderConfig
+      Storage.Beam.ReviewRequest
       Storage.Beam.Ride
       Storage.Beam.RideDetails
       Storage.Beam.RiderDetails
@@ -1691,6 +1694,7 @@ library
       Storage.Queries.OrphanInstances.PurchaseHistory
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
+      Storage.Queries.OrphanInstances.ReviewRequest
       Storage.Queries.OrphanInstances.Ride
       Storage.Queries.OrphanInstances.RideDetails
       Storage.Queries.OrphanInstances.RiderDetails
@@ -1736,6 +1740,7 @@ library
       Storage.Queries.RegistryMapFallback
       Storage.Queries.Reminder
       Storage.Queries.ReminderConfig
+      Storage.Queries.ReviewRequest
       Storage.Queries.Ride
       Storage.Queries.RideDetails
       Storage.Queries.RiderDetails
