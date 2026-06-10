@@ -25,12 +25,12 @@ import Storage.Queries.Transformers.SearchRequestForDriver
 findAllActiveBySRId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
-findAllActiveBySRId requestId status = do findAllWithKV [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId), Se.Is Beam.status $ Se.Eq status]]
+findAllActiveBySRId requestId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 findAllActiveBySTId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry -> Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus -> m [Domain.Types.SearchRequestForDriver.SearchRequestForDriver])
-findAllActiveBySTId searchTryId status = do findAllWithKV [Se.And [Se.Is Beam.searchTryId $ Se.Eq (Kernel.Types.Id.getId searchTryId), Se.Is Beam.status $ Se.Eq status]]
+findAllActiveBySTId searchTryId status = do findAllWithKVAndConditionalDB [Se.And [Se.Is Beam.searchTryId $ Se.Eq (Kernel.Types.Id.getId searchTryId), Se.Is Beam.status $ Se.Eq status]] Nothing
 
 updateDriverResponse ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

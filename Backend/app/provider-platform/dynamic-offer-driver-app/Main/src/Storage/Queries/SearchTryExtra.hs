@@ -30,11 +30,9 @@ findTryByRequestId ::
   Id SearchRequest ->
   m (Maybe SearchTry)
 findTryByRequestId (Id searchRequest) =
-  findAllWithOptionsKV
+  findAllWithKVAndConditionalDB
     [Se.Is BeamST.requestId $ Se.Eq searchRequest]
-    (Se.Desc BeamST.searchRepeatCounter)
-    (Just 1)
-    Nothing
+    (Just (Se.Desc BeamST.searchRepeatCounter))
     <&> listToMaybe
 
 findActiveTryByQuoteId ::
