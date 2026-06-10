@@ -6,6 +6,72 @@
   },
   "item": [
     {
+      "name": "Pre-cleanup: Find existing MerchantDocument",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/list?role=\"Driver\"&language=en",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "list"],
+          "query": [
+            { "key": "role", "value": "\"Driver\"" },
+            { "key": "language", "value": "en" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "var existing = (d.documents || []).find(function(doc) {",
+              "  return doc.documentType === 'TermsAndConditions' && doc.role === 'Driver';",
+              "});",
+              "pm.environment.set('existing_doc_id', existing ? existing.id : '');",
+              "pm.test('Pre-cleanup list OK', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pre-cleanup: Delete existing MerchantDocument if any",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"id\": \"{{existing_doc_id}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_url}}/bpp/driver-offer/{{merchantShortId}}/{{city}}/merchant/merchantDocument/delete",
+          "host": ["{{dashboard_url}}"],
+          "path": ["bpp", "driver-offer", "{{merchantShortId}}", "{{city}}", "merchant", "merchantDocument", "delete"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var existingId = pm.environment.get('existing_doc_id');",
+              "pm.test('Pre-cleanup delete OK (skipped if none)', function () {",
+              "  if (!existingId) { return; }",
+              "  pm.response.to.have.status(200);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Driver Auth (sendOTP)",
       "request": {
         "method": "POST",
