@@ -45,8 +45,8 @@ import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.OfferTypes as Reexport
 import qualified SharedLogic.Utils as SLUtils
 import Storage.Beam.Payment ()
-import qualified Storage.CachedQueries.Translations as CQTranslations
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
+import qualified Storage.CachedQueries.Translations as CQTranslations
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.Person as QPerson

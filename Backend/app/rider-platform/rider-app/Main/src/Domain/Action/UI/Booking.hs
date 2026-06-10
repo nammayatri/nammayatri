@@ -403,7 +403,7 @@ data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedP
 buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Bool -> Flow ([BookingAPIEntityV2], Int, Int, Int)
 buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset dontNeedFareBreakup = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
+  mbRiderConfig <- getConfig (RiderConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (CQRC.findByMerchantOperatingCityId person.merchantOperatingCityId))
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
   istTime <- getLocalCurrentTime timeDiffFromUtc
   let today = DT.utctDay istTime

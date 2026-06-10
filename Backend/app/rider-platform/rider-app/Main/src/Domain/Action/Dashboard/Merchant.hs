@@ -105,9 +105,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
-import qualified Lib.GateInfo.Geometry as GGeom
 import Lib.ConfigPilot.Interface.Getter (invalidateConfigInMem)
 import Lib.ConfigPilot.Interface.Types (getConfig)
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
