@@ -48,3 +48,25 @@ findAllByFilters merchantId merchantOpCityId mbFrom mbTo limitAmount offsetAmoun
                 (Se.Is Beam.requestType . Se.Eq) <$> mbReqType
               ]
       findAllWithOptionsKV conditions (Se.Desc Beam.createdAt) (Just limitAmount) (Just offsetAmount)
+
+-- | Latest review request for an entity (any status), used to derive the BotApproval doc status.
+findLatestByEntityAndType ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  DRR.EntityType ->
+  DRR.RequestType ->
+  Maybe Text ->
+  m (Maybe DRR.ReviewRequest)
+findLatestByEntityAndType entityId entityType requestType mbRcNo =
+  listToMaybe
+    <$> findAllWithOptionsKV
+      [ Se.And $
+          [ Se.Is Beam.entityId $ Se.Eq entityId,
+            Se.Is Beam.entityType $ Se.Eq entityType,
+            Se.Is Beam.requestType $ Se.Eq requestType
+          ]
+            <> [Se.Is Beam.rcNo $ Se.Eq (Just rcNo) | Just rcNo <- [mbRcNo]]
+      ]
+      (Se.Desc Beam.createdAt)
+      (Just 1)
+      Nothing

@@ -389,6 +389,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             payerVpa = Nothing,
             blockStateModifier = Nothing,
             enabledAt = Nothing,
+            firstVerifiedAt = Nothing,
             createdAt = now,
             updatedAt = now,
             compAadhaarImagePath = Nothing,

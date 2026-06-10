@@ -71,4 +71,4 @@ type VehicleRegistrationCertificate = VehicleRegistrationCertificateT Identity
 
 $(enableKVPG ''VehicleRegistrationCertificateT ['id] [['certificateNumberHash], ['documentImageId], ['fleetOwnerId]])
 
-$(mkTableInstances (''VehicleRegistrationCertificateT) "vehicle_registration_certificate")
+$(mkTableInstances ''VehicleRegistrationCertificateT "vehicle_registration_certificate")

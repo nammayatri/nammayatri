@@ -433,6 +433,34 @@ updateApproved approved driverId = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
+-- | Set the driver's `verified` flag in isolation (without touching `enabled`).
+--   Used by the enableBotFlow recompute and the ops-hub inspection approval path. Writes both
+--   directions (True/False). On transition to verified, stamps `firstVerifiedAt` once, race-free.
+updateVerified :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Bool -> Id Person.Driver -> m ()
+updateVerified isVerified driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.verified isVerified,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+  when isVerified $ stampFirstVerifiedAtIfNull driverId
+
+-- | Stamp `firstVerifiedAt = now` only if it is currently NULL — atomic, so concurrent status
+--   polls cannot double-stamp / overwrite the first-verification timestamp.
+stampFirstVerifiedAtIfNull :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m ()
+stampFirstVerifiedAtIfNull driverId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.firstVerifiedAt (Just now),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is BeamDI.driverId $ Se.Eq (getId driverId),
+          Se.Is BeamDI.firstVerifiedAt $ Se.Eq Nothing
+        ]
+    ]
+
 updateDlNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe (EncryptedHashed Text) -> Id Person.Driver -> m ()
 updateDlNumber dlNumber driverId = do
   now <- getCurrentTime

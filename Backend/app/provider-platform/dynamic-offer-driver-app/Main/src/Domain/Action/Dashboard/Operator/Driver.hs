@@ -245,9 +245,22 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity mbPerson
       let analyticsDriverId = maybe request.operatorId (.getId) mbPersonId
-      allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
+      -- Recording the inspection (→ InspectionHub VALID) runs for all cities. Under enableBotFlow the
+      -- BOT owns `approved` and statusHandler owns RC activation, so those are skipped; non-BOT ops-hub
+      -- cities keep them (ops-approve is their approval step).
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- BOT: one fetch for both the dependency gate and the verified check; non-BOT uses the wrapper.
+      allVehicleDocsVerified <-
+        if enableBotFlow
+          then do
+            (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
+            let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
+            checkInspectionDependencies merchantOpCity.id DVC.InspectionHub vehicleCategory vehicleDocItem.documents
+            pure $ SStatus.checkAllVehicleDocsValidForFetchedDocs allDocumentVerificationConfigs vehicleDocItem
+          else SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
-        QVRC.updateApproved (Just True) rc.id
+        unless enableBotFlow $
+          QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
         -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
@@ -259,28 +272,52 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-      whenJust mbPersonId $ \personId -> do
-        mbVehicle <- QVehicle.findById personId
-        when (isNothing mbVehicle && allVehicleDocsVerified) $
-          void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
+      -- RC auto-activation is legacy-only; under enableBotFlow the RC is activated by the BOT/statusHandler.
+      unless enableBotFlow $
+        whenJust mbPersonId $ \personId -> do
+          mbVehicle <- QVehicle.findById personId
+          when (isNothing mbVehicle && allVehicleDocsVerified) $
+            void $ withTryCatch "activateRCAutomatically:postDriverOperatorRespondHubRequest" (SStatus.activateRCAutomatically personId merchantOpCity registrationNo)
 
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity (Just person)
-      allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
+      -- Recording the inspection (→ DriverInspectionHub VALID) runs for all cities. Under enableBotFlow
+      -- the BOT owns `approved` and statusHandler owns enablement, so those are skipped; non-BOT ops-hub
+      -- cities keep them (ops-approve is their approval step).
+      let enableBotFlow = transporterConfig.enableBotFlow == Just True
+      -- BOT: one fetch for both the dependency gate and the verified check; non-BOT uses the wrapper.
+      allDriverDocsVerified <-
+        if enableBotFlow
+          then do
+            (allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
+            checkInspectionDependencies merchantOpCity.id DVC.DriverInspectionHub vehicleCategory driverDocStatuses
+            SStatus.checkAllDriverDocsValidForFetchedDocs person transporterConfig allDocVerificationConfigs driverDocStatuses vehicleCategory
+          else SStatus.fetchAndCheckDriverDocsValidForEnabling person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
-        QDIExtra.updateApproved (Just True) personId
+        unless enableBotFlow $ do
+          QDIExtra.updateApproved (Just True) personId
+          void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         -- Cancel pending driver inspection reminders
         cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
         -- Record driver inspection completion for auto-trigger monitoring
         recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
-        void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedDriverRequestsDaily" $
               FleetOpStats.incrementApprovedDriverRequestsDaily request.operatorId personId.getId transporterConfig
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+
+    -- Throw unless every dependencyDocumentType of the inspection-hub config is VALID.
+    checkInspectionDependencies merchantOpCityId inspectionHubDocType vehicleCategory docStatuses = do
+      mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing
+      whenJust mbInspectionCfg $ \inspectionCfg -> do
+        let isDocValid doc = doc.verificationStatus == SStatus.VALID
+            validDocTypes = map (.documentType) (filter isDocValid docStatuses)
+            invalidDeps = filter (`notElem` validDocTypes) inspectionCfg.dependencyDocumentType
+        unless (null invalidDeps) $
+          throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
 
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
@@ -840,18 +877,21 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
         if isDocReqEmpty
           then do
-            let runStatusHandler = do
+            -- Already approved (durably committed on a prior call) → run only the driver recompute
+            -- (not the whole statusHandler) so `enabled` is derived from current doc validity. The
+            -- approved flag is read inside the recompute, so the two-phase below keeps the approved
+            -- write and the recompute on separate calls — avoiding a stale read of `approved`.
+            let runRecompute = do
                   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-                  let entity = IQuery.PersonEntity person
-                  entityImages <- IQuery.findAllByEntityId transporterConfig entity
-                  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
-                  statusRes <- SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True
-                  if statusRes.enabled
+                  let language = fromMaybe merchantOpCity.language person.language
+                  (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language (Just True)
+                  driverEnabled <- SStatus.recomputeDriverVerifiedAndEnabled merchantOpCity.id merchantOpCity.merchantId person allDocVerificationConfigs driverDocuments vehicleCategory Nothing Nothing Nothing transporterConfig
+                  if driverEnabled
                     then pure (DRR.COMPLETED, Nothing, Nothing)
                     else pure (DRR.IN_PROGRESS, Nothing, Nothing)
             if driverInfo.approved == Just True
-              then runStatusHandler
+              then runRecompute
               else do
                 QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
@@ -865,8 +905,18 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
         if isDocReqEmpty
           then do
-            unless fleetOwnerInfo.enabled $ QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
-            pure (DRR.COMPLETED, Nothing, Nothing)
+            -- Don't enable directly on BOT approval: run the fleet recompute so `enabled` is derived
+            -- from current doc validity (incl. the active operator association -> OperatorPartnerCode).
+            -- Keeps statusHandler the single source of truth and avoids a direct enable the next
+            -- recompute would reconcile away.
+            fleetPerson <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
+            transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+            let language = fromMaybe merchantOpCity.language fleetPerson.language
+            (allDocVerificationConfigs, fleetDocuments, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson fleetPerson merchantOpCity transporterConfig language (Just True)
+            fleetEnabled <- SStatus.recomputeFleetVerifiedAndEnabled fleetPerson allDocVerificationConfigs fleetDocuments vehicleCategory Nothing
+            if fleetEnabled
+              then pure (DRR.COMPLETED, Nothing, Nothing)
+              else pure (DRR.IN_PROGRESS, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
             QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
