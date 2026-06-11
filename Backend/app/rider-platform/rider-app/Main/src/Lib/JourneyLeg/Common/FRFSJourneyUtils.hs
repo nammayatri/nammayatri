@@ -280,6 +280,7 @@ getVehicleMetadata :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, H
 getVehicleMetadata vehicleNumbers integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   cloudType <- asks (.cloudType)
   case cloudType of
@@ -299,6 +300,7 @@ getNearbyBusesFRFS userPos' riderConfig integratedBppConfig = do
   let nearbyBusSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyBusSearchRadius
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   cloudType <- asks (.cloudType)
   busesBS <-
