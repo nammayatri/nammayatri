@@ -133,6 +133,7 @@ instance Default FRT.InvoiceContext where
         issuedAt = UTCTime (fromGregorian 1970 1 1) 0,
         dueAt = Nothing,
         invoiceType = DTI.Ride,
+        language = ENGLISH,
         currency = INR,
         currencyCode = "",
         merchantId = "",
