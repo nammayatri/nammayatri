@@ -9,6 +9,7 @@ import qualified Kernel.Types.Common as Common
 import Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id as Id
 import Lib.Payment.Domain.Types.Common (EntityName)
+import Lib.Payment.Domain.Types.PayoutOrder (PayoutOrder)
 import Lib.Payment.Domain.Types.PayoutRequest (PayoutRequest, PayoutRequestStatus)
 
 data PayoutStatusEvent = PayoutStatusEvent
@@ -98,6 +99,27 @@ type PayoutSuccess = APISuccess.APISuccess
 data PayoutHistorySummary = PayoutHistorySummary
   { totalCount :: Int,
     count :: Int
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PayoutOrderResp = PayoutOrderResp
+  { payoutOrderDbId :: Id.Id PayoutOrder,
+    driverId :: Text,
+    driverName :: Text,
+    driverPhoneNo :: Text,
+    amount :: Common.HighPrecMoney,
+    transferAmount :: Maybe Common.HighPrecMoney,
+    status :: Text,
+    entityName :: Maybe EntityName,
+    entityIds :: Maybe [Text],
+    responseMessage :: Maybe Text,
+    responseCode :: Maybe Text,
+    retriedOrderId :: Maybe Text,
+    vpa :: Maybe Text,
+    payoutTime :: LocalTime,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
