@@ -33,6 +33,7 @@ RefundRequest:
   constraints:
     id: PrimaryKey
     orderId: SecondaryKey
+    refundsId: SecondaryKey
 
   types:
     RefundRequestStatus:

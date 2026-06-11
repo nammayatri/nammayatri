@@ -37,6 +37,6 @@ instance B.Table CallStatusT where
 
 type CallStatus = CallStatusT Identity
 
-$(enableKVPG ''CallStatusT ['id] [['callId]])
+$(enableKVPG ''CallStatusT ['id] [['callId], ['entityId]])
 
 $(mkTableInstances ''CallStatusT "call_status")

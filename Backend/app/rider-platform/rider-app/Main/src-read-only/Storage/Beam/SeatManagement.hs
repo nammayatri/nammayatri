@@ -31,6 +31,6 @@ instance B.Table SeatManagementT where
 
 type SeatManagement = SeatManagementT Identity
 
-$(enableKVPG ''SeatManagementT ['id] [['ticketServiceCategoryId]])
+$(enableKVPG ''SeatManagementT ['id] [['date, 'ticketServiceCategoryId]])
 
 $(mkTableInstances ''SeatManagementT "seat_management")

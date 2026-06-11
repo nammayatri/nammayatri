@@ -17,6 +17,7 @@ FeedbackBadge:
 
   constraints:
     id: PrimaryKey
+    driverId: SecondaryKey
 
   sqlType:
     badge: character varying (255)
