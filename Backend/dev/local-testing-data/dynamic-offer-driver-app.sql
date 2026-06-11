@@ -341,3 +341,24 @@ WHERE m.short_id IN ('BRIDGE_FINLAND_PARTNER', 'BRIDGE_CABS_PARTNER')
     SELECT 1 FROM atlas_driver_offer_bpp.driver_bank_account dba
     WHERE dba.driver_id = md5(m.id || ':seed-driver-person')::uuid::text
   );
+
+-- ────────────────────────────────────────────────────────────────────────
+-- Operation Hub seed for OperationHubFlow integration tests
+-- ────────────────────────────────────────────────────────────────────────
+INSERT INTO atlas_driver_offer_bpp.operation_hub
+  (id, name, address, lat, lon, mobile_number, merchant_id, merchant_operating_city_id, created_at, updated_at)
+SELECT
+  'test-hub-001',
+  'Test Inspection Hub Bangalore',
+  'HSR Layout, Bangalore',
+  12.9141,
+  77.6446,
+  '9999900000',
+  moc.merchant_id,
+  moc.id,
+  now(),
+  now()
+FROM atlas_driver_offer_bpp.merchant_operating_city moc
+WHERE moc.merchant_short_id = 'NAMMA_YATRI_PARTNER'
+  AND moc.city = 'Bangalore'
+ON CONFLICT (id) DO NOTHING;
