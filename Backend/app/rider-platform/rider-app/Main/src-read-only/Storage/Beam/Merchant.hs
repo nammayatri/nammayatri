@@ -26,7 +26,7 @@ data MerchantT f = MerchantT
     bapUniqueKeyId :: B.C f Kernel.Prelude.Text,
     cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     city :: B.C f Kernel.Types.Beckn.Context.City,
