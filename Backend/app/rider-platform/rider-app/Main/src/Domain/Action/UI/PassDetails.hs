@@ -520,6 +520,7 @@ postPassDetailsUploadDocument (mbPersonId, merchantId) req = do
         url = fileUrl,
         s3FilePath = Just s3FilePath,
         status = Just DMF.COMPLETED,
+        fileHash = Nothing,
         createdAt = now
       }
   pure $ PassDetailsAPI.UploadDocumentResp {documentId}

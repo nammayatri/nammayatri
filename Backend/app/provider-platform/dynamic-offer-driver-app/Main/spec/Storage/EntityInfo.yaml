@@ -11,6 +11,7 @@ EntityInfo:
     questionId: Text
     question: Text
     answer: Text
+    mediaFileId: Maybe Text
     merchantId: Id Merchant
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     createdAt: UTCTime

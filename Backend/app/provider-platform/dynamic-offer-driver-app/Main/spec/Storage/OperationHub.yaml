@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
+  Value: Data.Aeson
 
 OperationHub:
   tableName: operation_hub
@@ -51,9 +52,11 @@ OperationHubRequests:
     remarks: Maybe Text
     fulfilledAt: Maybe UTCTime
     creatorId: Id Person
+    inspectionResponse: Maybe Value
   sqlType:
     requestStatus: character varying(255)
     requestType: character varying(255)
+    inspectionResponse: json
   constraints:
     id: PrimaryKey
 
@@ -64,6 +67,10 @@ OperationHubRequests:
     updateStatusWithDetails:
       kvFunction: updateOneWithKV
       params: [requestStatus, remarks, fulfilledAt, operatorId]
+      where: id
+    updateInspectionResponse:
+      kvFunction: updateOneWithKV
+      params: [inspectionResponse]
       where: id
     findByCreatorStatusAndType:
       kvFunction: findAllWithKV

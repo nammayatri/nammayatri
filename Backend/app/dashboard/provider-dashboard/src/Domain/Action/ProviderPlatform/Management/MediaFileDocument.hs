@@ -25,20 +25,20 @@ postMediaFileDocumentUploadLink ::
   City.City ->
   ApiTokenInfo ->
   Common.UploadMediaFileDocumentReq ->
-  Flow Common.MediaFileDocumentResp
+  Flow Common.MediaFileUploadLinkResp
 postMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
   let requestorId = apiTokenInfo.personId.getId
-  T.withResponseTransactionStoring transaction $ do
+  T.withTransactionStoring transaction $ do
     Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.postMediaFileDocumentUploadLink) requestorId req
 
 postMediaFileDocumentConfirm ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
-  Common.MediaFileDocumentReq ->
-  Flow APISuccess
+  Common.ConfirmMediaFileReq ->
+  Flow Common.ConfirmMediaFileResp
 postMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
@@ -50,7 +50,7 @@ postMediaFileDocumentDelete ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
-  Common.MediaFileDocumentReq ->
+  Common.DeleteMediaFileReq ->
   Flow APISuccess
 postMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -63,10 +63,9 @@ getMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
-  Common.MediaFileDocumentType ->
   Text ->
-  Flow Common.MediaFileDocumentResp
-getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = do
+  Flow Common.MediaFileDownloadResp
+getMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo fileId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) mediaFileDocumentType rcNumber requestorId
+  Client.callManagementAPI checkedMerchantId opCity (.mediaFileDocumentDSL.getMediaFileDocumentDownloadLink) fileId requestorId

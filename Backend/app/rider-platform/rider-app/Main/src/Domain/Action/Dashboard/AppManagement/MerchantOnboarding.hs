@@ -373,6 +373,7 @@ buildMediaEntry url fileType filePath = do
         url = url,
         s3FilePath = Just filePath,
         status = Just DMF.PENDING,
+        fileHash = Nothing,
         createdAt = now
       }
 

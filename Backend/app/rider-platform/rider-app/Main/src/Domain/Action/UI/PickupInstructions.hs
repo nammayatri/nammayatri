@@ -315,6 +315,7 @@ createMediaFileEntry fileUrl filePath = do
         url = fileUrl,
         s3FilePath = Just filePath,
         status = Just DMF.COMPLETED,
+        fileHash = Nothing,
         createdAt = now
       }
 

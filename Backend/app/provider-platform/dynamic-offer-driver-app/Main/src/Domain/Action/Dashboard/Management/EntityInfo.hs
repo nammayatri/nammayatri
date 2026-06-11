@@ -28,11 +28,13 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DVRC
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Error (PersonError (PersonDoesNotExist))
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common
+import SharedLogic.MediaFileDocument (finalizeInspectionMedia)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.EntityInfo (create, deleteAllByEntityIdAndType)
@@ -80,11 +82,12 @@ getEntityInfoList merchantShortId opCity entityTypeText entityId = do
   entityInfo <- map convertEntityInfoToEntityInfoAPIEntity <$> QEI.findAllByEntityIdTypeAndOpCity entityId domainEntityType merchant.id merchantOpCityId
   pure $ Common.EntityExtraInformation {entityType = apiEntityType, entityId = entityId, entityInfo = entityInfo}
   where
-    convertEntityInfoToEntityInfoAPIEntity DEI.EntityInfo {questionId, question, answer} =
+    convertEntityInfoToEntityInfoAPIEntity DEI.EntityInfo {questionId, question, answer, mediaFileId} =
       Common.EntityInfoAPIEntity
         { questionId = questionId,
           question = question,
-          answer = answer
+          answer = answer,
+          mediaFileId = mediaFileId
         }
 
 postEntityInfoUpdate ::
@@ -104,9 +107,16 @@ postEntityInfoUpdate merchantShortId opCity req = do
   let questionIds = req.newInfo <&> (.questionId)
   unless (length (DL.nub questionIds) == length questionIds) $
     throwError (InvalidRequest "questionId should be unique")
-  unless (null req.newInfo) $ do
-    deleteAllByEntityIdAndType req.entityId domainEntityType merchant.id
-    forM_ req.newInfo $ updatedEntityInfo req.entityId domainEntityType merchant.id (Just merchantOpCityId) now
+  -- Serialize concurrent updates for the same entity so the delete-then-recreate cannot interleave.
+  Redis.whenWithLockRedis ("EntityInfoUpdate:" <> req.entityId) 60 $ do
+    -- Validate + finalize each referenced media first (must be confirmed, present, in-size, unchanged); reject the
+    -- whole update before persisting answers if any is invalid. A finalized media is COMPLETED so the cleanup job
+    -- keeps it; an un-referenced / un-confirmed upload stays PENDING/CONFIRMED and is swept.
+    forM_ req.newInfo $ \info ->
+      whenJust info.mediaFileId $ \mfId -> finalizeInspectionMedia merchantOpCityId (ID.Id mfId)
+    unless (null req.newInfo) $ do
+      deleteAllByEntityIdAndType req.entityId domainEntityType merchant.id
+      forM_ req.newInfo $ updatedEntityInfo req.entityId domainEntityType merchant.id (Just merchantOpCityId) now
   pure Kernel.Types.APISuccess.Success
   where
     updatedEntityInfo entityId entityType merchantId mbMerchantOpCityId now Common.EntityInfoAPIEntity {..} =
@@ -117,6 +127,7 @@ postEntityInfoUpdate merchantShortId opCity req = do
             questionId = questionId,
             question = question,
             answer = answer,
+            mediaFileId = mediaFileId,
             merchantId = merchantId,
             merchantOperatingCityId = mbMerchantOpCityId,
             createdAt = now,
