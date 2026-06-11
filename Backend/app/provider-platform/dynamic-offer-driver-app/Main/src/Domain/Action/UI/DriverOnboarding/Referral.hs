@@ -354,4 +354,3 @@ updateD2dReferralStatsOnLink referringDriverId transporterConfig merchantId merc
                 onlineDuration = Nothing
               }
       QDailyStats.create dailyStatsOfDriver'
-
