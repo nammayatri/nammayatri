@@ -347,7 +347,7 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
 mapInspectionHubRequestStatusToDashboard :: Maybe DOHR.RequestStatus -> Common.VerificationStatus
 mapInspectionHubRequestStatusToDashboard mbRequestStatus = case mbRequestStatus of
   Just DOHR.APPROVED -> Common.VALID
-  Just DOHR.PENDING -> Common.VALID
+  Just DOHR.PENDING -> Common.PENDING
   Just DOHR.REJECTED -> Common.INVALID
   Nothing -> Common.INVALID
 

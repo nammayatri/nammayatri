@@ -208,7 +208,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       mbPerson <- forM mbPersonId $ \personId -> runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity mbPerson
       let analyticsDriverId = maybe request.operatorId (.getId) mbPersonId
-      allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
+      allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC [DVC.InspectionHub] rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
         QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
@@ -230,7 +230,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     handleDriverInspectionApproval mShortId city request now personId merchantOpCity transporterConfig = do
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       language <- getPersonInfo merchantOpCity (Just person)
-      allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
+      allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver [DVC.DriverInspectionHub] person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
         QDIExtra.updateApproved (Just True) personId
         -- Cancel pending driver inspection reminders
