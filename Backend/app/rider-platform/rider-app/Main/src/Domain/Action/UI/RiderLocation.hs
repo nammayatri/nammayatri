@@ -46,6 +46,7 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
       integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
       let redisPrefix = case integratedBPPConfig.providerConfig of
             DIBC.ONDC config -> config.redisPrefix
+            DIBC.DIRECT config -> config.redisPrefix
             _ -> Nothing
       let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
           maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
