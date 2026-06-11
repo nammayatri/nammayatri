@@ -63,6 +63,9 @@ module Domain.Action.ProviderPlatform.Management.Driver
     getDriverAirportPreference,
     postDriverAirportPreference,
     getDriverSearchRequestStats,
+    postDriverOperatorChange,
+    postDriverFleetOperatorChange,
+    postDriverFleetOperatorCreate,
   )
 where
 
@@ -420,3 +423,21 @@ getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo
 getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId
+
+postDriverOperatorChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.ChangeDriverOperatorReq -> Environment.Flow APISuccess)
+postDriverOperatorChange merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorChange) apiTokenInfo.personId.getId driverId req)
+
+postDriverFleetOperatorChange :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.ChangeFleetOperatorReq -> Environment.Flow APISuccess)
+postDriverFleetOperatorChange merchantShortId opCity apiTokenInfo fleetOwnerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverFleetOperatorChange) apiTokenInfo.personId.getId fleetOwnerId req)
+
+postDriverFleetOperatorCreate :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Text -> Common.CreateFleetOperatorReq -> Environment.Flow APISuccess)
+postDriverFleetOperatorCreate merchantShortId opCity apiTokenInfo fleetOwnerId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) Nothing Nothing (Just req)
+  T.withTransactionStoring transaction (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverFleetOperatorCreate) apiTokenInfo.personId.getId fleetOwnerId req)

@@ -623,6 +623,69 @@ apis:
       response:
         type: DriverSearchRequestStatsRes
 
+  - POST: # postDriverOperatorChange
+      endpoint: /{driverId}/operator/change
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: ChangeDriverOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{driverId}/operator/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            request:
+              type: ChangeDriverOperatorReq
+            response:
+              type: APISuccess
+
+  - POST: # postDriverFleetOperatorChange
+      endpoint: /{fleetOwnerId}/fleet/operator/change
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      request:
+        type: ChangeFleetOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{fleetOwnerId}/fleet/operator/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              fleetOwnerId: Text
+            request:
+              type: ChangeFleetOperatorReq
+            response:
+              type: APISuccess
+
+  - POST: # postDriverFleetOperatorCreate
+      endpoint: /{fleetOwnerId}/fleet/operator/create
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      request:
+        type: CreateFleetOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{fleetOwnerId}/fleet/operator/create
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              fleetOwnerId: Text
+            request:
+              type: CreateFleetOperatorReq
+            response:
+              type: APISuccess
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -872,6 +935,15 @@ types:
     - day: Day
     - response: Maybe SearchRequestForDriverResponse
     - count: Int
+  ChangeDriverOperatorReq:
+    - newOperatorCode: Maybe Text
+    - derive: "'HideSecrets"
+  ChangeFleetOperatorReq:
+    - newOperatorCode: Maybe Text
+    - derive: "'HideSecrets"
+  CreateFleetOperatorReq:
+    - operatorCode: Text
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

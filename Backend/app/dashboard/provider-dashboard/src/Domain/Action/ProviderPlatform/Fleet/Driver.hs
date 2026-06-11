@@ -28,6 +28,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getFleetOwnerIds,
     verifyFleetOwnerAccess,
     postDriverFleetRemoveDriver,
+    postDriverFleetChangeDriver,
     getDriverFleetTotalEarning,
     getDriverFleetVehicleEarning,
     getDriverFleetDriverEarning,
@@ -747,3 +748,10 @@ getDriverVehicleInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Mayb
 getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverVehicleInfo) vehicleNo rcId
+
+postDriverFleetChangeDriver :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Common.ChangeFleetDriverReq -> Flow APISuccess)
+postDriverFleetChangeDriver merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId req = do
+  checkFleetOwnerVerification apiTokenInfo.personId
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetChangeDriver) requestorId driverId mbFleetOwnerId' req
