@@ -13,6 +13,7 @@ import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
@@ -24,6 +25,8 @@ data MerchantT f = MerchantT
     bapId :: B.C f Kernel.Prelude.Text,
     bapUniqueKeyId :: B.C f Kernel.Prelude.Text,
     cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
+    cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Version.CloudType),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     city :: B.C f Kernel.Types.Beckn.Context.City,

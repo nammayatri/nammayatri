@@ -12,6 +12,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Version
 import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
@@ -19,6 +20,8 @@ data MerchantD (s :: UsageSafety) = Merchant
   { businessId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cipherText :: Kernel.Prelude.Maybe Kernel.Types.Base64.Base64,
     city :: Kernel.Types.Beckn.Context.City,
+    cloudBaseUrl :: Kernel.Prelude.Maybe Kernel.Prelude.BaseUrl,
+    cloudType :: Kernel.Prelude.Maybe Kernel.Types.Version.CloudType,
     country :: Kernel.Types.Beckn.Context.Country,
     createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
