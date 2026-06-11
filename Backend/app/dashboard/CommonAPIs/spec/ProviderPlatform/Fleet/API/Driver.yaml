@@ -1530,6 +1530,15 @@ apis:
             response:
               type: APISuccess
 
+  - GET:
+      endpoint: /vehicle/info
+      auth: ApiAuthV2
+      query:
+        - vehicleNo: Text
+        - rcId: Text
+      response:
+        type: VehicleInfo
+
 types:
   AddRidePayoutAccountNumberReq:
     - driverMobileNumber: Text
@@ -2381,6 +2390,38 @@ types:
   EntityOperationType:
     enum: "DRIVER_STATUS | VEHICLE_STATUS | FLEET_OWNER_STATUS"
     derive: "HttpInstance"
+  VehicleInfo:
+    - vehicleNo: Text
+    - rcId: Text
+    - vehicleVariant: Maybe Text
+    - manufacturerModel: Maybe Text
+    - manufacturer: Maybe Text
+    - fitnessExpiry: Maybe UTCTime
+    - pucExpiry: Maybe UTCTime
+    - insuranceValidity: Maybe UTCTime
+    - vehicleClass: Maybe Text
+    - vehicleModel: Maybe Text
+    - vehicleColor: Maybe Text
+    - vehicleManufacturer: Maybe Text
+    - vehicleCapacity: Maybe Int
+    - vehicleEnergyType: Maybe Text
+    - vehicleDoors: Maybe Int
+    - vehicleSeatBelts: Maybe Int
+    - verificationStatus: Maybe Text
+    - fleetOwnerId: Maybe Text
+    - airConditioned: Maybe Bool
+    - oxygen: Maybe Bool
+    - ventilator: Maybe Bool
+    - luggageCapacity: Maybe Int
+    - mYManufacturing: Maybe Day
+    - vehicleRating: Maybe Double
+    - vehicleRatingRemark: Maybe Text
+    - vehicleModelYear: Maybe Int
+    - dateOfRegistration: Maybe UTCTime
+    - rejectReason: Maybe Text
+    - approved: Maybe Bool
+
+
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

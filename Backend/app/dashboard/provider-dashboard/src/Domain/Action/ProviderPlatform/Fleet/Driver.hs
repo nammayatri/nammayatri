@@ -83,6 +83,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverAddRidePayoutAccountNumber,
     postDriverFleetVehicleEdit,
     getDriverFleetStatusSummary,
+    getDriverVehicleInfo,
   )
 where
 
@@ -741,3 +742,8 @@ getDriverFleetStatusSummary merchantShortId opCity apiTokenInfo entityOperationT
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   fleetOwnerId' <- getFleetOwnerId apiTokenInfo.personId.getId mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatusSummary) entityOperationType (Just fleetOwnerId')
+
+getDriverVehicleInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
+getDriverVehicleInfo merchantShortId opCity apiTokenInfo vehicleNo rcId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverVehicleInfo) vehicleNo rcId

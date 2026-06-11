@@ -102,7 +102,6 @@ import qualified Tools.Plasma as TPlasma
 import qualified Tools.SMS as Sms
 import qualified Tools.Verification as Verification
 
-
 data PersonStatusContext = PersonStatusContext
   { statusPerson :: DP.Person,
     statusEntityImagesInfo :: IQuery.EntityImagesInfo
@@ -141,8 +140,6 @@ data StatusRes' = StatusRes'
     digilockerResponseCode :: Maybe Text,
     digilockerAuthorizationUrl :: Maybe Text
   }
-
-
 
 data CommonDocumentItem = CommonDocumentItem
   { documentType :: DDVC.DocumentType,
@@ -675,8 +672,6 @@ fetchDriverDocuments entityImagesInfo allDocVerificationConfigs possibleVehicleC
     let finalMessage = mbReason <|> (if isDigiLockerEnabled then responseCode else Nothing) <|> mbMessage
     return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl, s3Path = mbS3PathFinal, imageId = mbImageIdFinal, imageId2 = mbImageId2Final, documentExpiry = mbExpiryFinal}
 
-
-
 getDriverDocTypes ::
   Id DMOC.MerchantOperatingCity ->
   DocVerificationConfigs ->
@@ -744,9 +739,6 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
               <> show driverDocumentTypes
           pure driverDocumentTypes
         else pure $ if null allDriverDocumentTypes then SDO.defaultDriverDocumentTypes else allDriverDocumentTypes
-
-
-
 
 checkAllVehicleDocsVerified ::
   [DVC.DocumentVerificationConfig] ->
@@ -826,7 +818,6 @@ sendEnablementSms merchantOpCityId personId transporterConfig merchantId =
         MessageBuilder.buildOnboardingMessage merchantOpCityId $
           MessageBuilder.BuildOnboardingMessageReq {}
       Sms.sendSMS merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber (fromMaybe sender mbSender) templateId messageType) >>= Sms.checkSmsResult
-
 
 persistDocsVerificationStatuses ::
   DP.Person ->
@@ -1047,9 +1038,6 @@ callGetDLGetStatus driverId merchantOpCityId = do
           unless ("still being processed" `T.isInfixOf` (fromMaybe "" resp.message)) (void $ DDL.onVerifyDL (SDO.makeHVVerificationReqRecord verificationReq) resp KEV.HyperVergeRCDL)
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"
 
-
-
-
 checkImageValidity :: IQuery.EntityImagesInfo -> DVC.DocumentType -> (Maybe ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkImageValidity entityImagesInfo docType = do
   let validImages = IQuery.filterImageByEntityIdAndImageTypeAndVerificationStatus entityImagesInfo docType [Documents.VALID, Documents.MANUAL_VERIFICATION_REQUIRED]
@@ -1071,7 +1059,6 @@ checkLMSTrainingStatus ::
 checkLMSTrainingStatus driverId merchantOpCityId = do
   hasCompleted <- TPlasma.allLMSTrainingCompleted merchantOpCityId (driverId.getId)
   return $ hasCompleted >>= (\ok -> if ok then Just VALID else Nothing)
-
 
 checkBackgroundVerificationStatus :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
@@ -1159,10 +1146,6 @@ getInProgressDriverDocuments driverId entityImagesInfo docType possibleVehicleCa
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
   return (status, mbReason, mbUrl, Nothing, mbS3Path, mbImageId, Nothing)
 
-
-
-
-
 checkIfImageUploadedOrInvalidated :: IQuery.EntityImagesInfo -> DDVC.DocumentType -> Bool -> DocVerificationConfigs -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDocVerificationConfigs = do
   let images = IQuery.filterRecentByEntityIdAndImageType entityImagesInfo docType
@@ -1189,9 +1172,6 @@ checkIfImageUploadedOrInvalidated entityImagesInfo docType onlyImageLookup allDo
           if hasDocumentVerificationConfig
             then return (FAILED, Nothing, Nothing)
             else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
-
-
-
 
 getAadhaarStatus :: Id DP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
@@ -1252,7 +1232,6 @@ getRCAndStatus driverId entityImagesInfo language = do
             Nothing -> do
               msg <- toVerificationMessage NoDcoumentFound language
               return (NO_DOC_AVAILABLE, Nothing, msg)
-
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
 verificationStatusCheck status language img mbReasons = do
@@ -1329,9 +1308,6 @@ getMessageFromResponse language response = do
       | otherwise -> toVerificationMessage Other language
     Nothing -> toVerificationMessage Other language
 
-
-
-
 mkCommonDocumentItem :: DCDOD.CommonDriverOnboardingDocuments -> CommonDocumentItem
 mkCommonDocumentItem doc =
   CommonDocumentItem
@@ -1367,6 +1343,3 @@ mapDigilockerToResponseStatus DocStatus.DOC_FAILED = Just FAILED
 mapDigilockerToResponseStatus DocStatus.DOC_CONSENT_DENIED = Just CONSENT_DENIED
 mapDigilockerToResponseStatus DocStatus.DOC_PULL_REQUIRED = Just PULL_REQUIRED
 mapDigilockerToResponseStatus DocStatus.DOC_SUCCESS = Just VALID
-
-
-

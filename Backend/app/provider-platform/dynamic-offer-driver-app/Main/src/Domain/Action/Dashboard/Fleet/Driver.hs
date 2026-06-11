@@ -83,6 +83,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetDashboardAnalyticsCache,
     postDriverAddRidePayoutAccountNumber,
     getDriverFleetStatusSummary,
+    getDriverVehicleInfo,
   )
 where
 
@@ -4966,3 +4967,46 @@ getDriverFleetStatusSummary merchantShortId opCity entityOperationType mbRequest
     Common.FLEET_OWNER_STATUS -> do
       statusCounts <- CHFOI.getStatusCountsByCityId merchantOpCity.id.getId
       pure $ mkStatusSummaryResponse statusCounts
+
+getDriverVehicleInfo :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.VehicleInfo
+getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
+  when (isNothing mbVehicleNo && isNothing mbRcId) $ throwError (InvalidRequest "either vehicleNo or rcId is required")
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let mbNormalizedVehicleNo = DomainRC.normalizeDocumentNumber <$> mbVehicleNo
+  mbVrc <- VRCQuery.findVehicleInfoByRcIdOrVehicleNo mbRcId mbNormalizedVehicleNo
+  vrc <- maybe (throwError $ VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId)) pure mbVrc
+  when (vrc.merchantId /= Just merchant.id || vrc.merchantOperatingCityId /= Just merchantOpCityId) $ do
+    throwError (VehicleNotFound (fromMaybe "" mbVehicleNo <> fromMaybe "" mbRcId))
+  pure $
+    Common.VehicleInfo
+      { vehicleNo = fromMaybe "" vrc.unencryptedCertificateNumber,
+        rcId = vrc.id.getId,
+        vehicleVariant = show <$> vrc.vehicleVariant,
+        manufacturerModel = vrc.manufacturerModel,
+        manufacturer = vrc.vehicleManufacturer,
+        fitnessExpiry = Just vrc.fitnessExpiry,
+        pucExpiry = vrc.pucExpiry,
+        insuranceValidity = vrc.insuranceValidity,
+        vehicleClass = vrc.vehicleClass,
+        vehicleModel = vrc.vehicleModel,
+        vehicleColor = vrc.vehicleColor,
+        vehicleManufacturer = vrc.vehicleManufacturer,
+        vehicleCapacity = vrc.vehicleCapacity,
+        vehicleEnergyType = vrc.vehicleEnergyType,
+        vehicleDoors = vrc.vehicleDoors,
+        vehicleSeatBelts = vrc.vehicleSeatBelts,
+        verificationStatus = Just (show vrc.verificationStatus),
+        fleetOwnerId = vrc.fleetOwnerId,
+        airConditioned = vrc.airConditioned,
+        oxygen = vrc.oxygen,
+        ventilator = vrc.ventilator,
+        luggageCapacity = vrc.luggageCapacity,
+        mYManufacturing = vrc.mYManufacturing,
+        vehicleRating = vrc.vehicleRating,
+        vehicleRatingRemark = vrc.vehicleRatingRemark,
+        vehicleModelYear = vrc.vehicleModelYear,
+        dateOfRegistration = vrc.dateOfRegistration,
+        rejectReason = vrc.rejectReason,
+        approved = vrc.approved
+      }
