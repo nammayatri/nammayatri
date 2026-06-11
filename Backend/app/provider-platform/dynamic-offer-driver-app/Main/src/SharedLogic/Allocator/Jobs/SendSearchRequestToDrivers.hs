@@ -36,6 +36,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified Lib.Types.SpecialLocation as SL
@@ -99,7 +100,8 @@ sendSearchRequestToDrivers ::
     ClickhouseFlow m r,
     HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
     HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "enableLtsPoolDataForPooling" r Bool
+    HasField "enableLtsPoolDataForPooling" r Bool,
+    HasField "cloudType" r (Maybe CloudType)
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -217,8 +219,7 @@ sendSearchRequestToDrivers' ::
     HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
     HasField "blackListedJobs" r [Text],
     ClickhouseFlow m r,
-    HasField "ltsHedisEnv" r Redis.HedisEnv,
-    HasField "secondaryLTSHedisEnv" r (Maybe Redis.HedisEnv),
+    Redis.HedisLTSFlowEnv r,
     HasField "enableLtsPoolDataForPooling" r Bool
   ) =>
   DriverPoolConfig ->
