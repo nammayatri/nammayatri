@@ -32,6 +32,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Version (CloudType)
 import Kernel.Utils.App (lookupDeploymentVersion)
 import Kernel.Utils.Common (CacConfig, CacheConfig)
 import Kernel.Utils.Dhall
@@ -197,7 +198,8 @@ data AppEnv = AppEnv
     maxShards :: Int,
     jobInfoMap :: M.Map Text Bool,
     blackListedJobs :: [Text],
-    shortDurationRetryCfg :: RetryCfg
+    shortDurationRetryCfg :: RetryCfg,
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -265,6 +267,7 @@ buildAppEnv AppCfg {..} consumerType = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let cloudType = Nothing :: Maybe CloudType
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
