@@ -26,6 +26,7 @@ data GoogleCfgUnencrypted = GoogleCfgUnencrypted
     googleRouteConfig :: GoogleMaps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
-    googleAutocompleteParams :: Maybe [Text]
+    googleAutocompleteParams :: Maybe [Text],
+    mobilityBillingUrl :: Maybe BaseUrl
   }
   deriving (Generic, FromDhall)
