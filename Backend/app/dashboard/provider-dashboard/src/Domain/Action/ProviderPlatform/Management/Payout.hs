@@ -2,6 +2,7 @@
 
 module Domain.Action.ProviderPlatform.Management.Payout
   ( getPayoutPayout,
+    getPayoutPayoutOrder,
     getPayoutPayoutHistory,
     getPayoutPayoutReferralHistory,
     postPayoutPayoutRetry,
@@ -173,3 +174,8 @@ postPayoutPayoutScheduledPayoutConfigUpsert merchantShortId opCity apiTokenInfo 
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ do
     ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutScheduledPayoutConfigUpsert) req
+
+getPayoutPayoutOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow Lib.Payment.API.Payout.Types.PayoutOrderResp)
+getPayoutPayoutOrder merchantShortId opCity apiTokenInfo payoutOrderId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  ManagementClient.callManagementAPI checkedMerchantId opCity (.payoutDSL.getPayoutPayoutOrder) payoutOrderId

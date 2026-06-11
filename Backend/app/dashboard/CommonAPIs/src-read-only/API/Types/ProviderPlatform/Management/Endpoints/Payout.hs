@@ -74,7 +74,7 @@ data UpdateScheduledPayoutConfigReq = UpdateScheduledPayoutConfigReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert))
+type API = ("payout" :> (GetPayoutPayoutHistory :<|> GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutOrder :<|> GetPayoutPayout :<|> PostPayoutPayoutRetry :<|> PostPayoutPayoutCancel :<|> PostPayoutPayoutCash :<|> PostPayoutPayoutVpaDelete :<|> PostPayoutPayoutVpaUpdate :<|> PostPayoutPayoutVpaRefundRegistration :<|> PostPayoutPayoutScheduledPayoutConfigUpsert))
 
 type GetPayoutPayoutHistory =
   ( "payout" :> "history" :> QueryParam "driverId" Kernel.Prelude.Text :> QueryParam "driverPhoneNo" Kernel.Prelude.Text
@@ -119,6 +119,8 @@ type GetPayoutPayoutReferralHistory =
            '[JSON]
            PayoutReferralHistoryRes
   )
+
+type GetPayoutPayoutOrder = ("payout" :> "order" :> Capture "payoutOrderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutOrderResp)
 
 type GetPayoutPayout = ("payout" :> Capture "payoutRequestId" (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest) :> Get '[JSON] Lib.Payment.API.Payout.Types.PayoutRequestResp)
 
@@ -166,6 +168,7 @@ type PostPayoutPayoutScheduledPayoutConfigUpsert =
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutHistoryRes,
     getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
+    getPayoutPayoutOrder :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutOrderResp,
     getPayoutPayout :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutRequestResp,
     postPayoutPayoutRetry :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
     postPayoutPayoutCancel :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PayoutRequest.PayoutRequest -> Lib.Payment.API.Payout.Types.PayoutCancelReq -> EulerHS.Types.EulerClient Lib.Payment.API.Payout.Types.PayoutSuccess,
@@ -179,11 +182,12 @@ data PayoutAPIs = PayoutAPIs
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
-    getPayoutPayoutHistory :<|> getPayoutPayoutReferralHistory :<|> getPayoutPayout :<|> postPayoutPayoutRetry :<|> postPayoutPayoutCancel :<|> postPayoutPayoutCash :<|> postPayoutPayoutVpaDelete :<|> postPayoutPayoutVpaUpdate :<|> postPayoutPayoutVpaRefundRegistration :<|> postPayoutPayoutScheduledPayoutConfigUpsert = payoutClient
+    getPayoutPayoutHistory :<|> getPayoutPayoutReferralHistory :<|> getPayoutPayoutOrder :<|> getPayoutPayout :<|> postPayoutPayoutRetry :<|> postPayoutPayoutCancel :<|> postPayoutPayoutCash :<|> postPayoutPayoutVpaDelete :<|> postPayoutPayoutVpaUpdate :<|> postPayoutPayoutVpaRefundRegistration :<|> postPayoutPayoutScheduledPayoutConfigUpsert = payoutClient
 
 data PayoutUserActionType
   = GET_PAYOUT_PAYOUT_HISTORY
   | GET_PAYOUT_PAYOUT_REFERRAL_HISTORY
+  | GET_PAYOUT_PAYOUT_ORDER
   | GET_PAYOUT_PAYOUT
   | POST_PAYOUT_PAYOUT_RETRY
   | POST_PAYOUT_PAYOUT_CANCEL
