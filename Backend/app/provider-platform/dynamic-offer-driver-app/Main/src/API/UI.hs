@@ -15,6 +15,7 @@
 module API.UI
   ( API,
     handler,
+    uiApiPrefix,
   )
 where
 
@@ -89,15 +90,23 @@ import qualified API.UI.Route as Route
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Transporter as Transporter
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified Data.Text as T
 import Environment
+import GHC.TypeLits (symbolVal)
 import Kernel.Prelude
 import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
 
 type HealthCheckAPI = Get '[JSON] Text
 
+--for multi-cloud proxy
+type UIAPIPrefix = "ui"
+
+uiApiPrefix :: Text
+uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
+
 type API =
-  "ui"
+  UIAPIPrefix
     :> ( HealthCheckAPI
            :<|> Merchant.API
            :<|> MerchantDocument.API

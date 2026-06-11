@@ -88,3 +88,9 @@ ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN vat_number text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN business_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_type text ;
+ALTER TABLE atlas_driver_offer_bpp.merchant ADD COLUMN cloud_base_url text ;

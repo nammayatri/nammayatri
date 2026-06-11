@@ -1,6 +1,7 @@
 module API.UI
   ( API,
     handler,
+    uiApiPrefix,
   )
 where
 
@@ -82,13 +83,21 @@ import qualified API.UI.Serviceability as Serviceability
 import qualified API.UI.Sos as Sos
 import qualified API.UI.Support as Support
 import qualified API.UI.Whatsapp as Whatsapp
+import qualified Data.Text as T
 import Environment
 import EulerHS.Prelude
+import GHC.TypeLits (symbolVal)
 import Kernel.Utils.Servant.Server (healthCheck)
 import Servant
 
+-- for multi-cloud proxy
+type UIAPIPrefix = "v2"
+
+uiApiPrefix :: Text
+uiApiPrefix = T.pack $ symbolVal (Proxy @UIAPIPrefix)
+
 type API =
-  "v2"
+  UIAPIPrefix
     :> ( Get '[JSON] Text
            :<|> Registration.API
            :<|> Profile.API
