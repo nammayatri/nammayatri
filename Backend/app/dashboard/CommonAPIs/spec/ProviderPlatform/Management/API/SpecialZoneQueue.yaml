@@ -9,7 +9,13 @@ apis:
       request:
         type: TriggerSpecialZoneQueueNotifyReq
       response:
-        type: APISuccess
+        type: TriggerSpecialZoneQueueNotifyRes
+
+  - GET:
+      endpoint: /triggerNotify/status
+      auth: ApiAuthV2
+      response:
+        type: TriggerSpecialZoneQueueNotifyStatusRes
 
   - GET:
       endpoint: /queueStats/{gateId}
@@ -61,6 +67,22 @@ types:
     - forceNotifyDriverIds: Maybe [Text]
     - isDemandHigh: Maybe Bool
     - derive: "'HideSecrets"
+
+  TriggerSpecialZoneQueueNotifyRes:
+    - requestId: Text
+
+  TriggerSpecialZoneQueueNotifyStatus:
+    - requestId: Text
+    - gateId: Text
+    - requiredAccepts: Int
+    - totalRequested: Int
+    - accepted: Int
+    - rejected: Int
+    - pendingResponse: Int
+    - ignored: Int
+
+  TriggerSpecialZoneQueueNotifyStatusRes:
+    - activeRequests: "[TriggerSpecialZoneQueueNotifyStatus]"
 
   ManualQueueAddReq:
     - specialLocationId: Text

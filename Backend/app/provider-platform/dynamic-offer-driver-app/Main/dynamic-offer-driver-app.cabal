@@ -471,6 +471,7 @@ library
       SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.SendSearchRequestToDrivers
       SharedLogic.Allocator.Jobs.Settlement.SettlementReportIngestion
       SharedLogic.Allocator.Jobs.SpecialZoneQueue.CheckPickupZoneArrival
+      SharedLogic.Allocator.Jobs.SpecialZoneQueue.TriggerSpecialZoneNotify
       SharedLogic.Allocator.Jobs.Subscription.ExpireSubscriptionPurchase
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.TDSDistribution.ScheduledTDSDistribution

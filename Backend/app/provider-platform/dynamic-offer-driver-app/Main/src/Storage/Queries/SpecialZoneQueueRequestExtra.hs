@@ -39,6 +39,28 @@ findAllByDriverIdsAndStatuses driverIds statuses
           ]
       ]
 
+-- | Finalize a trigger batch: mark every still-Active (un-responded) row for the
+-- given triggerRequestId as Ignored/Expired. Called once per trigger by the status
+-- endpoint's cleanup pass after the retry loop has stopped, so rows whose driver
+-- never opened the app still settle to a terminal state for audit. Bulk single-shot
+-- update — no fetch, no per-row round-trips.
+markRemainingIgnoredByTriggerRequestId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  m ()
+markRemainingIgnoredByTriggerRequestId triggerRequestId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.response (Just Domain.Types.SpecialZoneQueueRequest.Ignored),
+      Se.Set Beam.status Domain.Types.SpecialZoneQueueRequest.Expired,
+      Se.Set Beam.updatedAt now
+    ]
+    [ Se.And
+        [ Se.Is Beam.triggerRequestId $ Se.Eq (Just triggerRequestId),
+          Se.Is Beam.status $ Se.Eq Domain.Types.SpecialZoneQueueRequest.Active
+        ]
+    ]
+
 -- | Transition a pickup-zone request to Accepted and stamp the arrival deadline.
 -- The arrival deadline lives on its own column (arrivalDeadlineTime) rather than
 -- repurposing validTill — that way validTill keeps its original "Active window
