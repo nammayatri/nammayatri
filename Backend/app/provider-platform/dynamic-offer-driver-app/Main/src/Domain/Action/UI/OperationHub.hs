@@ -65,6 +65,7 @@ postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req
               fulfilledAt = Nothing,
               operatorId = Nothing,
               remarks = Nothing,
+              inspectionResponse = Nothing,
               ..
             }
     void $ QOHR.create operationHubReq

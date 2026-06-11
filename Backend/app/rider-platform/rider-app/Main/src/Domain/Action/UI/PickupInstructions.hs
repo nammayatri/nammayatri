@@ -315,7 +315,9 @@ createMediaFileEntry fileUrl filePath = do
         url = fileUrl,
         s3FilePath = Just filePath,
         status = Just DMF.COMPLETED,
-        createdAt = now
+        fileHash = Nothing,
+        createdAt = now,
+        updatedAt = now
       }
 
 getPickupinstructionsClosest ::

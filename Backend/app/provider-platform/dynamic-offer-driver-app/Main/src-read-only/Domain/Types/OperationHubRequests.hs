@@ -18,6 +18,7 @@ data OperationHubRequests = OperationHubRequests
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fulfilledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests,
+    inspectionResponse :: Kernel.Prelude.Maybe [Domain.Types.OperationHubRequests.InspectionResponseItem],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
@@ -30,6 +31,9 @@ data OperationHubRequests = OperationHubRequests
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data InspectionResponseItem = InspectionResponseItem {answer :: Kernel.Prelude.Text, mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, question :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text}
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data RequestStatus = PENDING | APPROVED | REJECTED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

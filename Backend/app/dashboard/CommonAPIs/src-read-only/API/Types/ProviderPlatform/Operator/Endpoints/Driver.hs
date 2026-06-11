@@ -108,6 +108,10 @@ data FilteredOperatorAnalyticsRes = FilteredOperatorAnalyticsRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data InspectionResponseItem = InspectionResponseItem {answer :: Kernel.Prelude.Text, mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text, question :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data OperationHub = OperationHub
   { address :: Kernel.Prelude.Text,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -127,10 +131,12 @@ data OperationHubDriverRequest = OperationHubDriverRequest
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver),
     driverPhoneNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Prelude.Text,
+    inspectionResponse :: Kernel.Prelude.Maybe [InspectionResponseItem],
     operationHubId :: Kernel.Types.Id.Id OperationHub,
     operationHubName :: Kernel.Prelude.Text,
     rcId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    remarks :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestStatus :: RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,
     requestType :: RequestType
@@ -157,7 +163,13 @@ data RequestType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-data RespondHubRequest = RespondHubRequest {operationHubRequestId :: Kernel.Prelude.Text, operatorId :: Kernel.Prelude.Text, remarks :: Kernel.Prelude.Text, status :: RequestStatus}
+data RespondHubRequest = RespondHubRequest
+  { operationHubRequestId :: Kernel.Prelude.Text,
+    operatorId :: Kernel.Prelude.Text,
+    remarks :: Kernel.Prelude.Text,
+    responses :: Kernel.Prelude.Maybe [InspectionResponseItem],
+    status :: RequestStatus
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

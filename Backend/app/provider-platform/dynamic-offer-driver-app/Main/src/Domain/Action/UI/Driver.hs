@@ -2281,7 +2281,9 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = d
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just Domain.COMPLETED,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 makeAlternatePhoneNumberKey :: Id SP.Person -> Text

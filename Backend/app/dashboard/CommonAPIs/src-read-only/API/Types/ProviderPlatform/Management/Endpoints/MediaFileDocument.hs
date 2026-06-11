@@ -4,7 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument where
 
 import qualified AWS.S3
-import qualified Dashboard.Common.MediaFileDocument
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -17,18 +17,14 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument}
+data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.File}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets MediaFileDocumentReq where
   hideSecrets = Kernel.Prelude.identity
 
-data MediaFileDocumentResp = MediaFileDocumentResp
-  { mediaFileLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument,
-    mediaFileDocumentStatus :: MediaFileDocumentStatus
-  }
+data MediaFileDocumentResp = MediaFileDocumentResp {mediaFileLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text, mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.File, mediaFileDocumentStatus :: MediaFileDocumentStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -41,22 +37,16 @@ data MediaFileDocumentStatus
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MediaFileDocumentTResp = MediaFileDocumentTResp {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument, mediaFileDocumentStatus :: MediaFileDocumentStatus}
+data MediaFileDocumentTResp = MediaFileDocumentTResp {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.File, mediaFileDocumentStatus :: MediaFileDocumentStatus}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadMediaFileDocumentReq = UploadMediaFileDocumentReq
-  { mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType,
-    fileType :: AWS.S3.FileType,
-    reqContentType :: Kernel.Prelude.Text,
-    rcNumber :: Kernel.Prelude.Text
-  }
+data UploadMediaFileDocumentReq = UploadMediaFileDocumentReq {fileType :: AWS.S3.FileType, reqContentType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadMediaFileDocumentTReq = UploadMediaFileDocumentTReq {mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType, fileType :: AWS.S3.FileType, reqContentType :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+instance Kernel.Types.HideSecrets.HideSecrets UploadMediaFileDocumentReq where
+  hideSecrets = Kernel.Prelude.identity
 
 type API = ("mediaFileDocument" :> (PostMediaFileDocumentUploadLinkHelper :<|> PostMediaFileDocumentConfirmHelper :<|> PostMediaFileDocumentDeleteHelper :<|> GetMediaFileDocumentDownloadLinkHelper))
 
@@ -87,20 +77,10 @@ type PostMediaFileDocumentDeleteHelper =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetMediaFileDocumentDownloadLink =
-  ( "downloadLink" :> MandatoryQueryParam "mediaFileDocumentType" Dashboard.Common.MediaFileDocument.MediaFileDocumentType
-      :> MandatoryQueryParam
-           "rcNumber"
-           Kernel.Prelude.Text
-      :> Get '[JSON] MediaFileDocumentResp
-  )
+type GetMediaFileDocumentDownloadLink = ("downloadLink" :> MandatoryQueryParam "fileId" Kernel.Prelude.Text :> Get '[JSON] MediaFileDocumentResp)
 
 type GetMediaFileDocumentDownloadLinkHelper =
-  ( "downloadLink" :> MandatoryQueryParam "mediaFileDocumentType" Dashboard.Common.MediaFileDocument.MediaFileDocumentType
-      :> MandatoryQueryParam
-           "rcNumber"
-           Kernel.Prelude.Text
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+  ( "downloadLink" :> MandatoryQueryParam "fileId" Kernel.Prelude.Text :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Get
            '[JSON]
            MediaFileDocumentResp
@@ -110,7 +90,7 @@ data MediaFileDocumentAPIs = MediaFileDocumentAPIs
   { postMediaFileDocumentUploadLink :: Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileDocumentResp,
     postMediaFileDocumentConfirm :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postMediaFileDocumentDelete :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getMediaFileDocumentDownloadLink :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp
+    getMediaFileDocumentDownloadLink :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp
   }
 
 mkMediaFileDocumentAPIs :: (Client EulerHS.Types.EulerClient API -> MediaFileDocumentAPIs)

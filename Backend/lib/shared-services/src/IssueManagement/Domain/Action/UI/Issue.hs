@@ -298,7 +298,9 @@ createMediaEntry url fileType filePath = do
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just D.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 issueMediaUpload' ::

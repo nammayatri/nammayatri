@@ -16,6 +16,7 @@ data EntityInfo = EntityInfo
     createdAt :: Kernel.Prelude.UTCTime,
     entityId :: Kernel.Prelude.Text,
     entityType :: Domain.Types.DocumentReminderHistory.EntityType,
+    mediaFileId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     question :: Kernel.Prelude.Text,

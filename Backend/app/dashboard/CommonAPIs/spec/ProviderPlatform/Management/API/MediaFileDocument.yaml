@@ -1,7 +1,6 @@
 imports:
   FileType: AWS.S3
-  MediaFileDocument: Dashboard.Common.MediaFileDocument
-  MediaFileDocumentType: Dashboard.Common.MediaFileDocument
+  File: Dashboard.Common
 
 module: MediaFileDocument
 
@@ -40,6 +39,7 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
+  # Delete a MediaFile (removes the S3 object and the row).
   - POST:
       endpoint: /delete
       auth: ApiAuthV2
@@ -57,12 +57,12 @@ apis:
               - requestorId: Text
             response:
               type: APISuccess
+  # Resolve a MediaFile id to a presigned download URL.
   - GET:
       endpoint: /downloadLink
       auth: ApiAuthV2
       mandatoryQuery:
-        - mediaFileDocumentType: MediaFileDocumentType
-        - rcNumber: Text
+        - fileId: Text
       response:
         type: MediaFileDocumentResp
       helperApi:
@@ -70,35 +70,28 @@ apis:
             endpoint: /downloadLink
             auth: ApiAuthV2
             mandatoryQuery:
-              - mediaFileDocumentType: MediaFileDocumentType
-              - rcNumber: Text
+              - fileId: Text
               - requestorId: Text
             response:
               type: MediaFileDocumentResp
 
 types:
   UploadMediaFileDocumentReq:
-    - mediaFileDocumentType: MediaFileDocumentType
     - fileType: FileType
     - reqContentType: Text
-    - rcNumber: Text
-  UploadMediaFileDocumentTReq:
-    - mediaFileDocumentType: MediaFileDocumentType
-    - fileType: FileType
-    - reqContentType: Text
+    - derive: "'HideSecrets"
   MediaFileDocumentResp:
     - mediaFileLink: Maybe Text
-    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentId: Id File
     - mediaFileDocumentStatus: MediaFileDocumentStatus
   MediaFileDocumentTResp:
-    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentId: Id File
     - mediaFileDocumentStatus: MediaFileDocumentStatus
+  MediaFileDocumentReq:
+    - mediaFileDocumentId: Id File
+    - derive: "'HideSecrets"
   MediaFileDocumentStatus:
     - enum: "PENDING, DELETED, FAILED, CONFIRMED, COMPLETED"
-  MediaFileDocumentReq:
-    - mediaFileDocumentId: Id MediaFileDocument
-    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
-  - EXTRA_API_COMMON_TYPES_FILE
