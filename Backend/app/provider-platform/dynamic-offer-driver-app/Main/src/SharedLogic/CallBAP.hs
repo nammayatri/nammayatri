@@ -465,7 +465,7 @@ buildOnConfirmMessage booking ride driver veh = do
   rideAssignedBuildReq <- rideAssignedCommon booking ride driver veh
   becknConfig <- QBC.findByMerchantIdDomainAndVehicle booking.providerId "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
   farePolicy <- SFP.getFarePolicyByEstOrQuoteIdWithoutFallback booking.quoteId
-  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 rideAssignedBuildReq farePolicy becknConfig
+  onConfirmMessage <- TFOU.mkOnUpdateMessageV2 booking rideAssignedBuildReq farePolicy becknConfig
   let generatedMsg = A.encode onConfirmMessage
   logDebug $ "ride assigned on_confirm request bppv2: " <> T.pack (show generatedMsg)
   pure . fromJust $ onConfirmMessage
@@ -970,31 +970,33 @@ sendUpdateEditDestToBAP ::
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]
   ) =>
   DRB.Booking ->
-  SRide.Ride ->
+  Maybe SRide.Ride ->
   DBUR.BookingUpdateRequest ->
   Maybe DLoc.Location ->
   Maybe Maps.LatLong ->
   DOU.UpdateType ->
   m ()
-sendUpdateEditDestToBAP booking ride bookingUpdateReqDetails newDestination currentLocation updateType = do
+sendUpdateEditDestToBAP booking mbRide bookingUpdateReqDetails newDestination currentLocation updateType = do
   isValueAddNP <- CValueAddNP.isValueAddNP booking.bapId
   when isValueAddNP $ do
     merchant <-
       CQM.findById booking.providerId
         >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
-    bppConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
-    driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-    driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-    vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
-    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
-      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-    let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
-    let paymentUrl = Nothing
-    riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
-    riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
-    let bookingDetails = ACL.BookingDetails {..}
-        sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {..}
+    becknConfig <- QBC.findByMerchantIdDomainAndVehicle merchant.id "MOBILITY" (Utils.mapServiceTierToCategory booking.vehicleServiceTier) >>= fromMaybeM (InternalError "Beckn Config not found")
+    bookingDetails <- forM mbRide $ \ride -> do
+      let bppConfig = becknConfig
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
+      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (VehicleNotFound ride.driverId.getId)
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      let paymentMethodInfo = DMPM.mkPaymentMethodInfo <$> mbPaymentMethod
+      let paymentUrl = Nothing
+      riderDetails <- maybe (return Nothing) (runInReplica . QRD.findById) booking.riderId
+      riderPhone <- fmap (fmap (.mobileNumber)) (traverse decrypt riderDetails)
+      pure ACL.BookingDetails {..}
+    let sUpdateEditDestToBAPReq = ACL.EditDestinationUpdate ACL.DEditDestinationUpdateReq {bookingDetails, bookingUpdateReqDetails, newDestination, currentLocation, updateType}
     retryConfig <- asks (.shortDurationRetryCfg)
     sUpdateEditDestToBAP <- ACL.buildOnUpdateMessageV2 merchant booking (Just bookingUpdateReqDetails.bapBookingUpdateRequestId) sUpdateEditDestToBAPReq
     void $ callOnUpdateV2 sUpdateEditDestToBAP retryConfig merchant.id

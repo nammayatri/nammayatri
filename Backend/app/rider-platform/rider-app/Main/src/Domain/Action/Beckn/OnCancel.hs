@@ -39,6 +39,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRB
@@ -80,6 +81,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
     fareBreakupEntries <- traverse (Common.buildFareBreakupV2 ride.id.getId DFareBreakup.RIDE) fareBreakups
     QFareBreakup.createMany fareBreakupEntries
   SharedCancel.releaseCancellationLock booking.transactionId
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser

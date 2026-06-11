@@ -65,6 +65,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
@@ -208,6 +209,7 @@ cancel booking mRide req cancellationSource = do
     QBCR.upsert cancellationReason
     when (req.blockOnCancellationRate == Just True) $ do
       Redis.setExp (makeCustomerBlockingKey booking.id.getId) True 60
+    EditLocationThrottle.clearBookingEditAttempts booking.id
   return $
     CancelRes
       { bppBookingId = bppBookingId,

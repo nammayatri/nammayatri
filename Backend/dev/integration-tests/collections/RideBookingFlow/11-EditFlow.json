@@ -613,9 +613,29 @@
               "    }",
               "    pm.environment.set('ride_otp', otp);",
               "    console.log('Booking:', booking.id, 'OTP:', otp);",
+              "    // Capture pre-edit baseline so the post-edit verify steps can assert *change*, not just static values.",
+              "    var bookingDetails = booking.bookingDetails || {};",
+              "    var contents = bookingDetails.contents || {};",
+              "    var origTo = contents.toLocation;",
+              "    if (origTo && origTo.lat != null && origTo.lon != null) {",
+              "        pm.environment.set('original_toLat', String(origTo.lat));",
+              "        pm.environment.set('original_toLon', String(origTo.lon));",
+              "        console.log('Original toLocation:', origTo.lat, origTo.lon);",
+              "    }",
+              "    var origFrom = booking.fromLocation;",
+              "    if (origFrom && origFrom.lat != null && origFrom.lon != null) {",
+              "        pm.environment.set('original_fromLat', String(origFrom.lat));",
+              "        pm.environment.set('original_fromLon', String(origFrom.lon));",
+              "        console.log('Original fromLocation:', origFrom.lat, origFrom.lon);",
+              "    }",
+              "    if (booking.estimatedFare != null) {",
+              "        pm.environment.set('original_bookingFare', String(booking.estimatedFare));",
+              "        console.log('Original booking estimatedFare:', booking.estimatedFare);",
+              "    }",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });",
-              "pm.test('Captured customer_rideId', function () { pm.expect(pm.environment.get('customer_rideId')).to.be.a('string').and.not.empty; });"
+              "pm.test('Captured customer_rideId', function () { pm.expect(pm.environment.get('customer_rideId')).to.be.a('string').and.not.empty; });",
+              "pm.test('Captured original toLocation (pre-edit baseline)', function () { pm.expect(pm.environment.get('original_toLat')).to.be.a('string').and.not.empty; pm.expect(pm.environment.get('original_toLon')).to.be.a('string').and.not.empty; });"
             ],
             "type": "text/javascript"
           }
@@ -647,8 +667,13 @@
             "exec": [
               "var d = pm.response.json();",
               "if (d.list && d.list.length > 0) {",
-              "    pm.environment.set('driver_ride_id', d.list[0].id);",
-              "    console.log('Driver rideId:', d.list[0].id);",
+              "    var r = d.list[0];",
+              "    pm.environment.set('driver_ride_id', r.id);",
+              "    console.log('Driver rideId:', r.id);",
+              "    if (r.estimatedDistance != null) {",
+              "        pm.environment.set('original_driver_estimatedDistance', String(r.estimatedDistance));",
+              "        console.log('Original driver estimatedDistance:', r.estimatedDistance);",
+              "    }",
               "}",
               "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
             ],
@@ -673,6 +698,195 @@
       }
     },
     {
+      "name": "Driver Move Far (for pickup edit)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var origLat = parseFloat(pm.environment.get('origin_lat'));",
+              "var origLon = parseFloat(pm.environment.get('origin_lon'));",
+              "pm.environment.set('far_driver_lat', String(origLat + 0.005));",
+              "pm.environment.set('far_driver_lon', String(origLon + 0.005));",
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" },
+          { "key": "vt", "value": "AUTO_RICKSHAW" },
+          { "key": "dm", "value": "ONLINE" },
+          { "key": "mId", "value": "{{driver_merchant_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{far_driver_lat}}, \"lon\": {{far_driver_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": ["{{baseUrl_lts}}"],
+          "path": ["driver", "location"]
+        }
+      }
+    },
+    {
+      "name": "Rider Edit Pickup",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var origLat = parseFloat(pm.environment.get('origin_lat'));",
+              "var origLon = parseFloat(pm.environment.get('origin_lon'));",
+              "pm.environment.set('new_pickup_lat', String(origLat + 0.0003));",
+              "pm.environment.set('new_pickup_lon', String(origLon + 0.0003));",
+              "const start = Date.now(); while (Date.now() - start < 500) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Pickup edit returns 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Pickup edit response:', JSON.stringify(pm.response.json()));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"origin\": {\n    \"gps\": {\"lat\": {{new_pickup_lat}}, \"lon\": {{new_pickup_lon}}},\n    \"address\": {\"street\": \"edited pickup\"}\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/edit/location",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "{{customer_bookingId}}", "edit", "location"]
+        }
+      }
+    },
+    {
+      "name": "Verify Pickup Updated (Rider)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const start = Date.now(); while (Date.now() - start < 1000) {}"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var booking = pm.response.json().list[0];",
+              "var from = booking.fromLocation;",
+              "var newLat = parseFloat(pm.environment.get('new_pickup_lat'));",
+              "var newLon = parseFloat(pm.environment.get('new_pickup_lon'));",
+              "console.log('Rider fromLocation after pickup edit:', JSON.stringify(from), 'target:', newLat, newLon);",
+              "pm.test('Rider fromLocation present', function () { pm.expect(from).to.be.an('object'); pm.expect(from).to.not.be.null; });",
+              "pm.test('Rider fromLocation moved to edited pickup', function () {",
+              "    pm.expect(Math.abs(from.lat - newLat) < 0.0001, 'lat ' + from.lat + ' should be ~' + newLat).to.be.true;",
+              "    pm.expect(Math.abs(from.lon - newLon) < 0.0001, 'lon ' + from.lon + ' should be ~' + newLon).to.be.true;",
+              "});",
+              "pm.test('Rider fromLocation differs from pre-edit baseline', function () {",
+              "    var origLat = parseFloat(pm.environment.get('original_fromLat'));",
+              "    var origLon = parseFloat(pm.environment.get('original_fromLon'));",
+              "    pm.expect(isNaN(origLat) || isNaN(origLon), 'pre-edit fromLocation baseline must have been captured').to.be.false;",
+              "    var movedLat = Math.abs(from.lat - origLat) > 0.0001;",
+              "    var movedLon = Math.abs(from.lon - origLon) > 0.0001;",
+              "    pm.expect(movedLat || movedLon, 'fromLocation should differ from original ' + origLat + ',' + origLon).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{rider_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl_app}}/rideBooking/list?limit=1&onlyActive=true&offset=0",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["rideBooking", "list"],
+          "query": [
+            { "key": "limit", "value": "1" },
+            { "key": "onlyActive", "value": "true" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Driver Move Back (pre-start)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.globals.set('current_time', new Date().toISOString().replace(/\\.\\d{3}/, ''));"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_token}}" },
+          { "key": "vt", "value": "AUTO_RICKSHAW" },
+          { "key": "dm", "value": "ONLINE" },
+          { "key": "mId", "value": "{{driver_merchant_id}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n    {\n        \"pt\": {\"lat\": {{new_pickup_lat}}, \"lon\": {{new_pickup_lon}}},\n        \"ts\": \"{{current_time}}\"\n    }\n]"
+        },
+        "url": {
+          "raw": "{{baseUrl_lts}}/driver/location",
+          "host": ["{{baseUrl_lts}}"],
+          "path": ["driver", "location"]
+        }
+      }
+    },
+    {
       "name": "Start Ride",
       "event": [
         {
@@ -693,7 +907,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{origin_lat}}, \"lon\": {{origin_lon}}}}"
+          "raw": "{\"rideOtp\": \"{{ride_otp}}\", \"point\": {\"lat\": {{new_pickup_lat}}, \"lon\": {{new_pickup_lon}}}}"
         },
         "url": {
           "raw": "{{baseURL_namma_P}}/driver/ride/{{driver_ride_id}}/start",
@@ -742,9 +956,9 @@
           "raw": "{\n  \"destination\": {\n    \"gps\": {\"lat\": 12.9816, \"lon\": 77.6512},\n    \"address\": {\"street\": \"new destination\"}\n  }\n}"
         },
         "url": {
-          "raw": "{{baseUrl_app}}/ride/{{customer_rideId}}/edit/location",
+          "raw": "{{baseUrl_app}}/rideBooking/{{customer_bookingId}}/edit/location",
           "host": ["{{baseUrl_app}}"],
-          "path": ["ride", "{{customer_rideId}}", "edit", "location"]
+          "path": ["rideBooking", "{{customer_bookingId}}", "edit", "location"]
         }
       }
     },
@@ -912,13 +1126,37 @@
           "script": {
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "var contents = pm.response.json().list[0].bookingDetails.contents;",
+              "var booking = pm.response.json().list[0];",
+              "var contents = booking.bookingDetails.contents;",
               "var to = contents && contents.toLocation;",
               "console.log('Rider toLocation:', JSON.stringify(to));",
+              "console.log('Rider booking.estimatedFare:', booking.estimatedFare);",
               "pm.test('Rider toLocation present', function () { pm.expect(to).to.be.an('object'); pm.expect(to).to.not.be.null; });",
               "pm.test('Rider toLocation moved to new dest', function () {",
               "    pm.expect(Math.abs(to.lat - 12.9816) < 0.0001).to.be.true;",
               "    pm.expect(Math.abs(to.lon - 77.6512) < 0.0001).to.be.true;",
+              "});",
+              "pm.test('Rider toLocation differs from pre-edit baseline (proves change actually happened)', function () {",
+              "    var origLat = parseFloat(pm.environment.get('original_toLat'));",
+              "    var origLon = parseFloat(pm.environment.get('original_toLon'));",
+              "    pm.expect(isNaN(origLat) || isNaN(origLon), 'pre-edit baseline must have been captured in Get Booking').to.be.false;",
+              "    var movedLat = Math.abs(to.lat - origLat) > 0.0001;",
+              "    var movedLon = Math.abs(to.lon - origLon) > 0.0001;",
+              "    pm.expect(movedLat || movedLon, 'toLocation should differ from original ' + origLat + ',' + origLon).to.be.true;",
+              "});",
+              "pm.test('Rider booking.estimatedFare reflects edited fare (within 1 of editDestFare, allowing for rounding)', function () {",
+              "    var editDestFare = pm.environment.get('editDestFare');",
+              "    pm.expect(editDestFare, 'editDestFare must have been captured in Poll Edit Dest Result').to.not.be.undefined;",
+              "    var diff = Math.abs(Number(booking.estimatedFare) - Number(editDestFare));",
+              "    pm.expect(diff, 'booking.estimatedFare=' + booking.estimatedFare + ' should be within 1 of editDestFare=' + editDestFare).to.be.below(1);",
+              "});",
+              "pm.test('Rider booking.estimatedFare differs from pre-edit baseline', function () {",
+              "    var origFare = pm.environment.get('original_bookingFare');",
+              "    if (origFare != null && origFare !== '') {",
+              "        pm.expect(Number(booking.estimatedFare)).to.not.equal(Number(origFare));",
+              "    } else {",
+              "        console.warn('original_bookingFare not captured; skipping differ check');",
+              "    }",
               "});"
             ],
             "type": "text/javascript"
@@ -950,12 +1188,32 @@
           "script": {
             "exec": [
               "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
-              "var to = pm.response.json().list[0].toLocation;",
+              "var ride = pm.response.json().list[0];",
+              "var to = ride.toLocation;",
               "console.log('Driver toLocation:', JSON.stringify(to));",
+              "console.log('Driver ride estimatedFare:', ride.estimatedFare, 'estimatedDistance:', ride.estimatedDistance);",
               "pm.test('Driver toLocation present', function () { pm.expect(to).to.not.be.null; pm.expect(to).to.be.an('object'); });",
               "pm.test('Driver toLocation moved to new dest', function () {",
               "    pm.expect(Math.abs(to.lat - 12.9816) < 0.0001).to.be.true;",
               "    pm.expect(Math.abs(to.lon - 77.6512) < 0.0001).to.be.true;",
+              "});",
+              "pm.test('Driver toLocation differs from pre-edit baseline', function () {",
+              "    var origLat = parseFloat(pm.environment.get('original_toLat'));",
+              "    var origLon = parseFloat(pm.environment.get('original_toLon'));",
+              "    if (!isNaN(origLat) && !isNaN(origLon)) {",
+              "        var movedLat = Math.abs(to.lat - origLat) > 0.0001;",
+              "        var movedLon = Math.abs(to.lon - origLon) > 0.0001;",
+              "        pm.expect(movedLat || movedLon, 'driver toLocation should differ from original ' + origLat + ',' + origLon).to.be.true;",
+              "    } else {",
+              "        console.warn('original_toLat/Lon not captured; skipping differ check');",
+              "    }",
+              "});",
+              "pm.test('Driver ride.estimatedDistance differs from pre-edit baseline (proves route recomputed)', function () {",
+              "    var origDist = pm.environment.get('original_driver_estimatedDistance');",
+              "    pm.expect(origDist, 'original_driver_estimatedDistance must have been captured in Get Ride (Driver)').to.not.be.undefined;",
+              "    pm.expect(ride.estimatedDistance, 'driver ride.estimatedDistance should be present post-edit').to.not.be.null;",
+              "    pm.expect(ride.estimatedDistance, 'driver ride.estimatedDistance should be present post-edit').to.not.be.undefined;",
+              "    pm.expect(Number(ride.estimatedDistance), 'ride.estimatedDistance=' + ride.estimatedDistance + ' should differ from baseline ' + origDist + ' (route recomputed)').to.not.equal(Number(origDist));",
               "});"
             ],
             "type": "text/javascript"

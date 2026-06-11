@@ -70,8 +70,8 @@ parseEvent merchantId reqMsg context = do
               paymentMethodInfo
             }
     "EDIT_LOCATION" -> do
-      rideId <- fmap Id fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "Fulfillment id not found")
-      parseEditLocationEvent bookingId fulfillment rideId
+      let mbRideId = fmap Id fulfillment.fulfillmentId
+      parseEditLocationEvent bookingId fulfillment mbRideId
     "ADD_STOP" -> parseAddStopEvent bookingId fulfillment
     "EDIT_STOP" -> parseEditStopEvent bookingId fulfillment
     "CHANGE_SERVICE_TIER" -> parseChangeServiceTierEvent bookingId fulfillment
@@ -98,7 +98,7 @@ parseEvent merchantId reqMsg context = do
               stops'
             }
 
-    parseEditLocationEvent bookingId fulfillment rideId = do
+    parseEditLocationEvent bookingId fulfillment mbRideId = do
       fulfillmentStops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "Fulfillment stops not found")
       let originStop = Utils.getStartLocation fulfillmentStops
       origin' <- traverse (Utils.buildLocation' merchantId) originStop
@@ -112,7 +112,7 @@ parseEvent merchantId reqMsg context = do
         DUpdate.UEditLocationReq $
           DUpdate.EditLocationReq
             { bookingId,
-              rideId,
+              rideId = mbRideId,
               origin',
               destination',
               status,

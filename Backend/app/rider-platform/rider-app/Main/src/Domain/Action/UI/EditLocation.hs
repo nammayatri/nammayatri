@@ -18,12 +18,16 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
 import Kernel.Utils.Servant.Client
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified Storage.CachedQueries.Merchant as CQM
+import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
+import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
+import Tools.Error
 
 getEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -52,8 +56,13 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
   dropLocMapping <- B.runInReplica $ QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateReqId.getId)
   destination' <- B.runInReplica $ QL.findById dropLocMapping.locationId >>= fromMaybeM (InternalError $ "Location not found for locationId: " <> dropLocMapping.locationId.getId)
   booking <- B.runInReplica $ QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Invalid booking id" <> bookingUpdateReq.bookingId.getId)
-  ride <- B.runInReplica $ QR.findByRBId booking.id >>= fromMaybeM (InvalidRequest $ "No Ride present for booking" <> booking.id.getId)
-  let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
+  mbRide <- B.runInReplica $ QR.findByRBId booking.id
+  when (isNothing mbRide) $ do
+    riderConfig <-
+      getConfig (RiderDimensions {merchantOperatingCityId = booking.merchantOperatingCityId.getId})
+        >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+    unless (fromMaybe False riderConfig.enableEditLocationWithoutRide) $
+      throwError $ InvalidRequest "Edit location without an assigned ride is not enabled for this city"
   bppBookingId <- booking.bppBookingId & fromMaybeM (BookingFieldNotPresent "bppBookingId")
   let dUpdateReq =
         ACL.UpdateBuildReq
@@ -65,7 +74,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
             details =
               ACL.UEditLocationBuildReqDetails $
                 ACL.EditLocationBuildReqDetails
-                  { bppRideId = ride.bppRideId,
+                  { bppRideId = (.bppRideId) <$> mbRide,
                     origin = Nothing,
                     status = ACL.CONFIRM_UPDATE,
                     destination = Just destination',
@@ -74,7 +83,7 @@ postEditResultConfirm (mbPersonId, merchantId) bookingUpdateReqId = do
             ..
           }
   becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
-  QR.updateEditLocationAttempts ride.id (Just (attemptsLeft -1))
+  EditLocationThrottle.decEditLocConfirmAttempts booking.id merchant.numOfAllowedEditLocationAttemptsThreshold
   QBUR.updateStatusById DBUR.CONFIRM bookingUpdateReqId
   void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
   return Success

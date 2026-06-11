@@ -105,6 +105,7 @@ import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
@@ -1154,6 +1155,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide otherParties
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup rideId DFareBreakup {..} = do
@@ -1994,3 +1996,14 @@ getRideAndBooking bppBookingId transactionId = do
     Just booking -> return booking
   ride <- QRide.findByRBId booking.id >>= fromMaybeM (RideDoesNotExist $ "bookingId: " <> bppBookingId.getId)
   return (ride, booking)
+
+lookupBookingAndMaybeRide :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, CoreMetrics m) => Id DRB.BPPBooking -> Text -> m (DRB.Booking, Maybe DRide.Ride)
+lookupBookingAndMaybeRide bppBookingId transactionId = do
+  mBooking <- QRB.findByBPPBookingId bppBookingId
+  booking <- case mBooking of
+    Nothing -> do
+      logInfo $ "Booking not found for bppBookingId: " <> bppBookingId.getId
+      QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "TransactionId: " <> transactionId)
+    Just booking -> return booking
+  mbRide <- QRide.findByRBId booking.id
+  return (booking, mbRide)

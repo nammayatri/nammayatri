@@ -182,11 +182,11 @@ data ValidatedEditDestErrorReq = ValidatedEditDestErrorReq
     bookingUpdateReqDetails :: DBUR.BookingUpdateRequest,
     bookingUpdateReqId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride
+    ride :: Maybe DRide.Ride
   }
 
 data EditDestSoftUpdateReq = EditDestSoftUpdateReq
-  { bookingDetails :: Common.BookingDetails,
+  { bppBookingId :: Id DRB.BPPBooking,
     fare :: Price,
     fareBreakups :: [Common.DFareBreakup],
     newEstimatedDistance :: HighPrecMeters,
@@ -196,28 +196,26 @@ data EditDestSoftUpdateReq = EditDestSoftUpdateReq
   }
 
 data EditDestConfirmUpdateReq = EditDestConfirmUpdateReq
-  { bookingDetails :: Common.BookingDetails,
+  { bppBookingId :: Id DRB.BPPBooking,
     bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     transactionId :: Text
   }
 
 data ValidatedEditDestSoftUpdateReq = ValidatedEditDestSoftUpdateReq
-  { bookingDetails :: Common.BookingDetails,
-    fare :: Price,
+  { fare :: Price,
     fareBreakups :: [Common.DFareBreakup],
     newEstimatedDistance :: HighPrecMeters,
     currentPoint :: Maybe LatLong,
     bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
+    ride :: Maybe DRide.Ride,
     bookingUpdateRequest :: DBUR.BookingUpdateRequest
   }
 
 data ValidatedEditDestConfirmUpdateReq = ValidatedEditDestConfirmUpdateReq
-  { bookingDetails :: Common.BookingDetails,
-    bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
+  { bookingUpdateRequestId :: Id DBUR.BookingUpdateRequest,
     booking :: DRB.Booking,
-    ride :: DRide.Ride,
+    ride :: Maybe DRide.Ride,
     bookingUpdateRequest :: DBUR.BookingUpdateRequest
   }
 
@@ -582,14 +580,13 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
-    mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
-    whenJust mbJourneyLeg $ \journeyLeg -> do
-      let journeyId = journeyLeg.journeyId
-      toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
-      -- fix it properly later
-      -- JM.cancelRemainingLegs journeyId True booking.riderId
-      QJourneyLeg.updateAfterEditLocation Nothing (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
-      JM.updateJourneyChangeLogCounter journeyId
+    whenJust ride $ \r -> do
+      mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
+      whenJust mbJourneyLeg $ \journeyLeg -> do
+        let journeyId = journeyLeg.journeyId
+        toLocation <- r.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show r.id)
+        QJourneyLeg.updateAfterEditLocation Nothing (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
+        JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
     mbMerchantPN <- CPN.findMatchingMerchantPNInRideFlow booking.merchantOperatingCityId "TOLL_CROSSED" Nothing Nothing person.language booking.configInExperimentVersions
@@ -720,15 +717,13 @@ validateRequest = \case
         unless (isJust stopLocation) $ throwError (InvalidRequest $ "Can't find stop to be reached for bpp ride " <> bppRideId.getId)
         return $ OUValidatedStopArrivedReq ValidatedStopArrivedReq {..}
   OUEditDestSoftUpdateReq EditDestSoftUpdateReq {..} -> do
-    let Common.BookingDetails {..} = bookingDetails
-    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
-    when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
+    (booking, ride) <- Common.lookupBookingAndMaybeRide bppBookingId transactionId
+    when (booking.status == DRB.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed booking."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     return $ OUValidatedEditDestSoftUpdateReq ValidatedEditDestSoftUpdateReq {..}
   OUEditDestConfirmUpdateReq EditDestConfirmUpdateReq {..} -> do
-    let Common.BookingDetails {..} = bookingDetails
-    (ride, booking) <- Common.getRideAndBooking bppBookingId transactionId
-    when (ride.status == DRide.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed ride."
+    (booking, ride) <- Common.lookupBookingAndMaybeRide bppBookingId transactionId
+    when (booking.status == DRB.COMPLETED) $ throwError $ RideInvalidStatus "Can't edit the destination of a completed booking."
     bookingUpdateRequest <- runInReplica $ QBUR.findById bookingUpdateRequestId >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> bookingUpdateRequestId.getId)
     return $ OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..}
   OUTollCrossedEventReq TollCrossedEventReq {..} -> do
@@ -745,7 +740,7 @@ validateRequest = \case
   OUEditDestError EditDestErrorReq {..} -> do
     bookingUpdateReqDetails <- runInReplica $ QBUR.findById (Id messageId) >>= fromMaybeM (InternalError $ "BookingUpdateRequest not found with Id:-" <> messageId)
     booking <- runInReplica $ QRB.findById bookingUpdateReqDetails.bookingId >>= fromMaybeM (BookingDoesNotExist $ "bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
-    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId >>= fromMaybeM (RideDoesNotExist $ " with bookingUpdateReq bookingId:- " <> bookingUpdateReqDetails.bookingId.getId)
+    ride <- runInReplica $ QRide.findByRBId bookingUpdateReqDetails.bookingId
     return $ OUValidatedEditDestError ValidatedEditDestErrorReq {bookingUpdateReqId = Id messageId, ..}
   OUDestinationReachedReq DestinationReachedReq {..} -> do
     ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
