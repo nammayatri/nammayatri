@@ -391,6 +391,7 @@ LmsCertificate:
   constraints:
     id: PrimaryKey
     moduleCompletionId: SecondaryKey
+    driverId: SecondaryKey
 
   queries:
     getAllCertificate:

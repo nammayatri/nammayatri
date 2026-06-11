@@ -28,6 +28,7 @@ Refunds:
 
   constraints:
     orderId: SecondaryKey
+    shortId: SecondaryKey
 
   sqlType:
     id: character varying(36)

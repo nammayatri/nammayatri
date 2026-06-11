@@ -41,6 +41,6 @@ instance B.Table IssueChatT where
 
 type IssueChat = IssueChatT Identity
 
-$(enableKVPG ''IssueChatT ['id] [['personId], ['issueReportId]])
+$(enableKVPG ''IssueChatT ['id] [['personId], ['issueReportId], ['ticketId]])
 
 $(mkTableInstancesGenericSchema ''IssueChatT "issue_chat")
