@@ -719,6 +719,14 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
                     && isDriverSideDoc config
               )
               driverConfigs
+      let allDriverConfigs =
+            filter
+              ( \config ->
+                  config.vehicleCategory `elem` possibleVehicleCategories
+                    && isDriverSideDoc config
+              )
+              driverConfigs
+          allDriverDocumentTypes = nub (allDriverConfigs <&> (.documentType))
       if onlyMandatoryDocs == Just True
         then do
           let driverDocumentTypes = nub (mandatoryDriverConfigs <&> (.documentType))
@@ -730,7 +738,7 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
               <> "; driverDocumentTypes: "
               <> show driverDocumentTypes
           pure driverDocumentTypes
-        else pure SDO.defaultDriverDocumentTypes
+        else pure $ if null allDriverDocumentTypes then SDO.defaultDriverDocumentTypes else allDriverDocumentTypes
 
 checkAllVehicleDocsVerified ::
   [DVC.DocumentVerificationConfig] ->
