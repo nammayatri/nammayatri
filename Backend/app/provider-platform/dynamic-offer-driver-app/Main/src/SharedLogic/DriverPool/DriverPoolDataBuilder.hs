@@ -27,6 +27,7 @@ import qualified Storage.Queries.Vehicle as QV
 -- | Get pool data for drivers, lazily building from DB for any missing keys.
 -- This handles cold start: first call after deploy fetches from DB and caches.
 -- Subsequent calls hit Redis directly.
+-- Writes are routed to the correct cloud based on each driver's cloudType.
 getOrBuildDriverPoolDataBatch ::
   ( BeamFlow m r,
     MonadFlow m,
@@ -37,6 +38,7 @@ getOrBuildDriverPoolDataBatch ::
   [Id Driver] ->
   m [DriverPoolData]
 getOrBuildDriverPoolDataBatch driverIds = do
+  deploymentCloudType <- asks (.cloudType)
   found <- getDriverPoolDataBatch driverIds
   let foundIds = map (.driverId) found
       missing = filter (`notElem` foundIds) driverIds
@@ -46,11 +48,12 @@ getOrBuildDriverPoolDataBatch driverIds = do
       toPersist = [e | (e, changed) <- migratedFound, changed]
   unless (null toPersist) $ do
     logInfo $ "DriverPoolData migrations: backfilled " <> show (length toPersist) <> " entries"
-    mapM_ setDriverPoolData toPersist
-    -- Clean up secondary cloud keys after writing migrated entries to primary,
-    -- so the driver doesn't end up with keys in both clouds.
-    let keysToDelete = map (driverPoolDataKey . (.driverId)) toPersist
-    Redis.withSecondaryLTSRedis $ Redis.delStandalone keysToDelete
+    mapM_ (setDriverPoolDataByCloud deploymentCloudType) toPersist
+    -- Clean up the other cloud's keys so the driver doesn't end up with keys in both clouds.
+    let primaryKeys = map (driverPoolDataKey . (.driverId)) $ filter (\e -> deploymentCloudType == e.cloudType) toPersist
+        secondaryKeys = map (driverPoolDataKey . (.driverId)) $ filter (\e -> deploymentCloudType /= e.cloudType) toPersist
+    unless (null primaryKeys) $ Redis.withSecondaryLTSRedis $ Redis.delStandalone primaryKeys
+    unless (null secondaryKeys) $ Redis.withLTSRedis $ Redis.delStandalone secondaryKeys
 
   builtFromDB <-
     if null missing
@@ -58,7 +61,7 @@ getOrBuildDriverPoolDataBatch driverIds = do
       else do
         logInfo $ "DriverPoolData cold start: building from DB for " <> show (length missing) <> " drivers"
         b <- buildDriverPoolDataFromDB missing
-        mapM_ setDriverPoolData b
+        mapM_ (setDriverPoolDataByCloud deploymentCloudType) b
         pure b
   pure $ migratedEntries <> builtFromDB
 
@@ -159,5 +162,6 @@ buildDriverPoolDataFromDB driverIds = do
             luggageCapacity = v.luggageCapacity,
             vehicleRating = v.vehicleRating,
             registrationNo = v.registrationNo,
+            cloudType = p.cloudType,
             schemaVersion = Just Migrations.currentSchemaVersion
           }
