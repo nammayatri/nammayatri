@@ -81,6 +81,24 @@ mkAcceptanceVehicleCategoryWithDistanceBin :: UTCTime -> Maybe DVC.VehicleCatego
 mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory (Just distance) = "acceptance_{" <> show vehicleCategory <> "}_dB_" <> getDistanceBin distance <> "_time_" <> buildTimeBucket time
 mkAcceptanceVehicleCategoryWithDistanceBin time vehicleCategory Nothing = mkAcceptanceVehicleCategory time vehicleCategory
 
+-- | QAR demand/acceptance counters are short-lived (1h TTL) ratios whose
+-- correctness depends on the demand AND acceptance counts being read back from
+-- the SAME Redis cluster they were written to. They must therefore stay pinned
+-- to the PRIMARY cloud cluster and never be routed through any multi-cloud /
+-- master-cloud-cell migration wrapper:
+--
+--   * NOT 'Hedis.runInMultiCloudRedisWrite' — would split a single ratio's
+--     writes across primary + secondary clusters.
+--   * NOT 'Hedis.runInMultiCloudRedisMaybeResult' / '...ForList' /
+--     'Hedis.runInMasterCloudRedisCell*' — would read counts back from a
+--     different cluster than they were written to.
+--
+-- Mixing clusters yields demand/acceptance counts from different stores and a
+-- meaningless QAR. Every QAR put/get is routed through this wrapper so the
+-- primary-only guarantee is explicit and centralized in one place.
+withQARPrimaryRedis :: (MonadFlow m, CacheFlow m r) => m a -> m a
+withQARPrimaryRedis = Hedis.runInMultiCloudRedisWrite . Hedis.withCrossAppRedis
+
 -- Adds a geo-spatial entry for the demand/acceptance event used by
 -- 'getActualQAR'. Writes to three tiers: distance-bin, vehicle-category,
 -- and city (city uses an atomic counter; the first two use geoAdd).
@@ -110,10 +128,10 @@ geoAddDynamicPricingCounter mkDistBinKey mkVehCatKey mkCityKey time vehicleCateg
   whenJust mbDistance $ \_ ->
     geoAddWithTtl (mkDistBinKey time vehicleCategory mbDistance) lon lat member
   where
-    incrWithTtl key = Hedis.withCrossAppRedis $ do
+    incrWithTtl key = withQARPrimaryRedis $ do
       void $ Hedis.incr key
       void $ Hedis.expire key 3600
-    geoAddWithTtl key ln lt mem = Hedis.withCrossAppRedis $ do
+    geoAddWithTtl key ln lt mem = withQARPrimaryRedis $ do
       void $ Hedis.geoAdd key [(ln, lt, mem)]
       void $ Hedis.expire key 3600
 
@@ -141,7 +159,7 @@ batchGeoSearchCounts ::
   Double ->
   m [Int]
 batchGeoSearchCounts [] _ _ = pure []
-batchGeoSearchCounts keys location radius = Hedis.withCrossAppRedis $ do
+batchGeoSearchCounts keys location radius = withQARPrimaryRedis $ do
   migrating <- asks (.hedisMigrationStage)
   prefKeys <- mapM Hedis.buildKey keys
   let from = Hedis.FromLonLat location.lon location.lat
@@ -189,7 +207,7 @@ getActualQAR now vehicleCategory location radius distance cityId = do
       -- City counters live in plain (non-geo) keys; align the reply to the requested
       -- key order and default missing keys to 0, matching 'batchGeoSearchCounts'.
       cityFetch keys = do
-        results <- Hedis.withCrossAppRedis $ Hedis.mGetClusterWithKeys @Int keys
+        results <- withQARPrimaryRedis $ Hedis.mGetClusterWithKeys @Int keys
         let resMap = Map.fromList results
         pure $ map (\k -> fromMaybe 0 (Map.lookup k resMap)) keys
   -- Level 1: distance-bin @ radius (both unresolved → 6 keys).
@@ -214,6 +232,15 @@ getActualQAR now vehicleCategory location radius distance cityId = do
 
     bothJust (mbCur, mbPast) = isJust mbCur && isJust mbPast
 
+    -- Logs each demand/acceptance Redis key alongside the count fetched for it,
+    -- so a QAR value can be traced back to the exact buckets it was computed from.
+    logQARCounts keys cs =
+      logDebug $
+        "QAR_COUNTS: vehicleCategory=" <> show vehicleCategory
+          <> " cityId=" <> cityId
+          <> " radius=" <> show radius
+          <> " keyCounts=" <> show (zip keys cs)
+
     -- Fetch only the signal(s) still missing at this level and fill them in; a value
     -- already found at a finer level is preserved untouched. 'demAt'/'accAt' build a
     -- level's demand/acceptance key for a time bucket; 'fetch' returns counts aligned
@@ -222,13 +249,19 @@ getActualQAR now vehicleCategory location radius distance cityId = do
       case (isNothing mbCur, isNothing mbPast) of
         (False, False) -> pure (mbCur, mbPast)
         (True, False) -> do
-          cs <- fetch [demAt timeN, demAt timeN_1, accAt timeN, accAt timeN_1]
+          let keys = [demAt timeN, demAt timeN_1, accAt timeN, accAt timeN_1]
+          cs <- fetch keys
+          logQARCounts keys cs
           pure (currentOf cs, mbPast)
         (False, True) -> do
-          cs <- fetch [demAt timeN_1, demAt timeN_2, accAt timeN_1, accAt timeN_2]
+          let keys = [demAt timeN_1, demAt timeN_2, accAt timeN_1, accAt timeN_2]
+          cs <- fetch keys
+          logQARCounts keys cs
           pure (mbCur, pastOf cs)
         (True, True) -> do
-          cs <- fetch [demAt timeN, demAt timeN_1, demAt timeN_2, accAt timeN, accAt timeN_1, accAt timeN_2]
+          let keys = [demAt timeN, demAt timeN_1, demAt timeN_2, accAt timeN, accAt timeN_1, accAt timeN_2]
+          cs <- fetch keys
+          logQARCounts keys cs
           pure (toQAR cs)
       where
         currentOf cs = case cs of
