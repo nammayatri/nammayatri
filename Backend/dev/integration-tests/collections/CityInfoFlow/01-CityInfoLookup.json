@@ -1,0 +1,181 @@
+{
+  "info": {
+    "name": "City Info Lookup Flow",
+    "description": "Tests GET /operatingCity: rider auth, happy-path lookup, invalid-format rejection, and unknown-code rejection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "if (!pm.collectionVariables.get('_test_rider_number')) {",
+          "    var rNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_rider_number', rNum);",
+          "    console.log('Test rider number:', rNum);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Rider Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_authId', d.authId);",
+              "pm.test('Auth OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('authId present', function () { pm.expect(d.authId).to.be.a('string'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_rider_number}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"NAMMA_YATRI\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "Rider OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('rider_token', d.token);",
+              "pm.test('Verify OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('token present', function () { pm.expect(d.token).to.be.a('string'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"city-info-test-device\"}"
+        },
+        "url": {
+          "raw": "{{baseUrl_app}}/auth/{{rider_authId}}/verify",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["auth", "{{rider_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "Get City Info - Valid STD Code (Happy Path)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('stdCode matches', function () { pm.expect(d.stdCode).to.eql(pm.environment.get('std_code')); });",
+              "pm.test('cityName present', function () { pm.expect(d.cityName).to.be.a('string').and.not.empty; });",
+              "console.log('City lookup result:', JSON.stringify(d));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{rider_token}}" }],
+        "url": {
+          "raw": "{{baseUrl_app}}/operatingCity?stdCode={{std_code}}",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["city", "stdCode"],
+          "query": [{ "key": "stdCode", "value": "{{std_code}}" }]
+        }
+      }
+    },
+    {
+      "name": "Get City Info - Invalid Format (No std: Prefix)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('error message mentions format', function () {",
+              "  pm.expect(d.errorMessage || d.description || JSON.stringify(d)).to.include('std:');",
+              "});",
+              "console.log('Format error response:', JSON.stringify(d));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{rider_token}}" }],
+        "url": {
+          "raw": "{{baseUrl_app}}/operatingCity?stdCode=080",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["city", "stdCode"],
+          "query": [{ "key": "stdCode", "value": "080" }]
+        }
+      }
+    },
+    {
+      "name": "Get City Info - Unknown STD Code",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400', function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test('error message mentions city not found', function () {",
+              "  pm.expect(d.errorMessage || d.description || JSON.stringify(d)).to.include('City not found');",
+              "});",
+              "console.log('Unknown code response:', JSON.stringify(d));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "token", "value": "{{rider_token}}" }],
+        "url": {
+          "raw": "{{baseUrl_app}}/operatingCity?stdCode=std:99999",
+          "host": ["{{baseUrl_app}}"],
+          "path": ["city", "stdCode"],
+          "query": [{ "key": "stdCode", "value": "std:99999" }]
+        }
+      }
+    }
+  ]
+}
