@@ -195,18 +195,17 @@ tfQuotationPrice booking =
 mkQuotationBreakup :: DRB.Booking -> Maybe DCDD.CancellationDuesDetails -> Maybe [Spec.QuotationBreakupInner]
 mkQuotationBreakup booking mbCancellationDuesDetails' =
   Just $
-    mkFareParamsBreakups mkPrice mkQuotationBreakupInner booking.fareParams
-      <> case mbCancellationDuesDetails' of
-        Just cancellationDuesDetails ->
-          mkProjectFareParamsTagBreakupItemsForCancellation
-            mkPrice
-            mkQuotationBreakupInner
-            (fromMaybe 0 cancellationDuesDetails.cancellationFee)
-            (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax)
-            <> [ mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)),
-                 mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_TAX) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax))
-               ]
-        Nothing -> []
+    case mbCancellationDuesDetails' of
+      Just cancellationDuesDetails ->
+        mkProjectFareParamsTagBreakupItemsForCancellation
+          mkPrice
+          mkQuotationBreakupInner
+          (fromMaybe 0 cancellationDuesDetails.cancellationFee)
+          (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax)
+          <> [ mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_CHARGES) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFee)),
+               mkQuotationBreakupInner (show Enums.RIDE_CANCELLATION_TAX) (mkPrice (fromMaybe 0 cancellationDuesDetails.cancellationFeeTax))
+             ]
+      Nothing -> []
   where
     mkPrice money =
       Just
