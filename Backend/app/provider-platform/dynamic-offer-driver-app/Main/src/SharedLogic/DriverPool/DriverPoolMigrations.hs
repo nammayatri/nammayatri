@@ -21,6 +21,7 @@ import SharedLogic.DriverPool.DriverPoolData
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
+import qualified Storage.Queries.Person as QP
 
 -- | A migrator takes a batch of LTS-loaded entries and returns the same entries
 -- with ONLY the fields it owns rewritten from DB. It MUST NOT touch
@@ -63,7 +64,8 @@ data MigrationEntry = MigrationEntry
 migrations :: [MigrationEntry]
 migrations =
   [ MigrationEntry 1 backfillEffectiveBankAccount,
-    MigrationEntry 2 backfillEnabled
+    MigrationEntry 2 backfillEnabled,
+    MigrationEntry 3 backfillCloudType
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -114,6 +116,20 @@ backfillEnabled entries = do
   pure $
     map
       (\e -> e {enabled = HashMap.lookupDefault e.enabled (cast e.driverId :: Id Person.Person) enabledMap})
+      entries
+
+-- | v3: backfill the new 'cloudType' field from the person table.
+-- Without this, legacy entries would default to 'cloudType = Nothing'.
+backfillCloudType ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillCloudType entries = do
+  let personIds = map (.driverId) entries
+  persons <- QP.getDriversByIdIn personIds
+  let ctMap = HashMap.fromList $ map (\p -> (cast p.id :: Id Person.Person, p.cloudType)) persons
+  pure $
+    map
+      (\e -> e {cloudType = join $ HashMap.lookup (cast e.driverId :: Id Person.Person) ctMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case
