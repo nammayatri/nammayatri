@@ -4403,7 +4403,8 @@ applyVehicleServiceTierUpdate existing req =
       DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas,
       DVST.specialZone = req.specialZone <|> existing.specialZone,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
-      DVST.isAirportRideEnabled = req.isAirportRideEnabled <|> existing.isAirportRideEnabled
+      DVST.isAirportRideEnabled = req.isAirportRideEnabled <|> existing.isAirportRideEnabled,
+      DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
 
 getMerchantConfigGeometryList :: ShortId DM.Merchant -> Context.City -> Maybe Int -> Maybe Int -> Flow Common.GeometryResp
@@ -4503,6 +4504,7 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         allowedAreas = req.allowedAreas,
         vehicleAgeThreshold = req.vehicleAgeThreshold,
         isAirportRideEnabled = req.isAirportRideEnabled,
+        allowNullVehicleRating = req.allowNullVehicleRating,
         specialZone = req.specialZone,
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,
         createdAt = now,
