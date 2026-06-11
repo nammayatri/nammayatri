@@ -373,6 +373,7 @@ data DriverInformationRes = DriverInformationRes
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    forwardBatchingEnabled :: Bool,
     isPetModeEnabled :: Bool,
     mode :: Maybe DriverInfo.DriverMode,
     payerVpa :: Maybe Text,
@@ -1707,6 +1708,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           bankVerificationStatus = bankVerificationStatus',
           upiId = payoutVpa,
           createdAt = registeredAt,
+          forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
           ..
         }
 
