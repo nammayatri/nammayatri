@@ -510,30 +510,44 @@ createDriverWalletTransaction ride booking fareParams driverInfo transporterConf
 
     let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
 
-    let configTdsRate = transporterConfig.taxConfig.defaultTdsRate
+    let isSpecMode = isJust transporterConfig.taxConfig.panNotLinkedTdsRate
+        configTdsRate = transporterConfig.taxConfig.defaultTdsRate
     mbTdsRate <- case ride.fleetOwnerId of
       Just fleetOwnerId -> do
         mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
         let currentRate = mbFleetInfo >>= (.tdsRate)
-        whenJust mbFleetInfo $ \_ ->
-          when (isNothing currentRate) $
-            whenJust configTdsRate $ \rate ->
-              QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
-        pure (currentRate <|> configTdsRate)
+        when (not isSpecMode) $
+          whenJust mbFleetInfo $ \_ ->
+            when (isNothing currentRate) $
+              whenJust configTdsRate $ \rate ->
+                QFOI.updateTdsRate (Just rate) (cast fleetOwnerId)
+        pure $ if isSpecMode then currentRate else (currentRate <|> configTdsRate)
       Nothing -> do
         let currentRate = driverInfo.tdsRate
-        when (isNothing currentRate) $
+        when (not isSpecMode && isNothing currentRate) $
           whenJust configTdsRate $ \rate ->
             QDI.updateTdsRate (Just rate) ride.driverId
-        pure (currentRate <|> configTdsRate)
+        pure $ if isSpecMode then currentRate else (currentRate <|> configTdsRate)
 
     mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
-    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate (transporterConfig.taxConfig.defaultTdsRate) (transporterConfig.taxConfig.invalidPanTdsRate)
+    taxSubjectRole <- maybe DP.DRIVER (.role) <$> QPerson.findById driverOrFleetPersonId
+    -- For threshold-benefit gating (section 194O), look up the counterparty's
+    -- cumulative earnings. Driver rides use driver_stats.totalEarnings (lifetime
+    -- ride.fare sum, interim — TODO(MSIL-TDS-FY) switch to FY-scoped).
+    -- Fleet rides return Nothing → applyThresholdBenefit skips the gate (always
+    -- deducts) until a fleet accumulator is added.
+    mbCumulativeEarnings <- case ride.fleetOwnerId of
+      Just _ -> pure Nothing
+      Nothing -> do
+        mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
+        pure $ Just $ maybe 0 (.totalEarnings) mbStats
+    let effectiveTdsRate = computeEffectiveTdsRate mbPanCard mbTdsRate taxSubjectRole transporterConfig.taxConfig
         baseFareForTds = max 0 baseFare
         mbTdsAmount = do
           rate <- effectiveTdsRate
-          let amount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
-          if amount > 0 then Just amount else Nothing
+          let rawAmount = baseFareForTds * realToFrac rate -- tdsRate is already decimal (0.01 = 1%)
+              gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just rate) mbCumulativeEarnings mbPanCard taxSubjectRole baseFareForTds rawAmount
+          if gatedAmount > 0 then Just gatedAmount else Nothing
 
     let serviceVatAmount =
           case transporterConfig.taxConfig.serviceVatPercentage of

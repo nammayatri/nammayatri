@@ -127,6 +127,7 @@ module SharedLogic.Finance.Wallet
     walletTransferFromMerchantRefs,
     computeTdsRateReason,
     computeEffectiveTdsRate,
+    applyThresholdBenefit,
     estimateWalletDeductions,
     formatStripeAddress,
   )
@@ -714,27 +715,79 @@ settleWalletEntries ::
 settleWalletEntries entryIds payoutRequestId =
   markEntriesAsPaidOut entryIds payoutRequestId
 
--- | Resolve the effective TDS rate for a driver/fleet owner.
---   If PAN is invalid/missing → invalidPanTdsRate.
---   If PAN is valid → custom rate (from driverInfo/fleetOwnerInfo) or config default.
 computeEffectiveTdsRate ::
   Maybe DPanCard.DriverPanCard -> -- PAN card info
-  Maybe Double -> -- custom TDS rate (driverInfo.tdsRate or fleetOwnerInfo.tdsRate)
-  Maybe Double -> -- config defaultTdsRate
-  Double -> -- invalidPanTdsRate
+  Maybe Double -> -- materialized TDS rate from driverInfo.tdsRate / fleetOwnerInfo.tdsRate
+  DP.Role -> -- counterparty's role (DRIVER / FLEET_OWNER / FLEET_BUSINESS)
+  DTC.TaxConfig -> -- merchant tax config
   Maybe Double -- effective rate
-computeEffectiveTdsRate mbPanCard mbCustomRate configDefaultTdsRate invalidPanTdsRate_ =
-  let hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
-      panType = mbPanCard >>= (.docType)
-      panTypeEligible = case panType of
-        Just DPanCard.BUSINESS -> True
-        _ -> True
-      isPanValid = hasValidPan && panTypeEligible
-   in if isPanValid
+computeEffectiveTdsRate mbPanCard mbCustomRate role taxConfig =
+  case taxConfig.panNotLinkedTdsRate of
+    Just notLinkedRate ->
+      -- Prefer the materialized rate (set by webhook); fall back to fresh
+      -- computation when the column hasn't been populated yet.
+      case mbCustomRate of
+        Just rate -> Just rate
+        Nothing -> specModeFreshRate notLinkedRate
+    Nothing -> legacyModeRate
+  where
+    hasValidPan = maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPanCard
+    docType = mbPanCard >>= (.docType)
+    isBusinessFleet = role == DP.FLEET_BUSINESS
+    isLinkedToAnyAadhaar =
+      maybe
+        False
+        ( \pan ->
+            pan.panAadhaarLinkage
+              `elem` [Just DPanCard.PAN_AADHAAR_LINKED, Just DPanCard.AADHAAR_LINKED_TO_OTHER_PAN]
+        )
+        mbPanCard
+
+    specModeFreshRate notLinkedRate
+      | not hasValidPan = Just taxConfig.invalidPanTdsRate
+      | otherwise = case docType of
+        Just DPanCard.BUSINESS
+          | isBusinessFleet -> taxConfig.defaultTdsRate
+          | otherwise -> Just taxConfig.invalidPanTdsRate
+        _ ->
+          if isLinkedToAnyAadhaar
+            then taxConfig.defaultTdsRate
+            else Just notLinkedRate
+
+    legacyModeRate =
+      if hasValidPan
         then case mbCustomRate of
           Just _ -> mbCustomRate
-          Nothing -> configDefaultTdsRate
-        else Just invalidPanTdsRate_
+          Nothing -> taxConfig.defaultTdsRate
+        else Just taxConfig.invalidPanTdsRate
+
+applyThresholdBenefit ::
+  DTC.TaxConfig ->
+  Maybe Double -> -- effective TDS rate (used to detect the invalid-PAN bracket)
+  Maybe HighPrecMoney -> -- counterparty's cumulative earnings (Nothing = no accumulator, threshold skipped)
+  Maybe DPanCard.DriverPanCard -> -- PAN card info (docType drives the Business-Fleet-with-Business-PAN exclusion)
+  DP.Role -> -- counterparty's role
+  HighPrecMoney -> -- this transaction's base amount (added to cumulative for the check)
+  HighPrecMoney -> -- raw TDS amount (base × rate, before the gate)
+  HighPrecMoney -- TDS to actually deduct
+applyThresholdBenefit taxConfig mbRate mbCumulative mbPanCard role currentBase rawAmount =
+  case (taxConfig.section194OThreshold, mbCumulative) of
+    (Nothing, _) -> rawAmount -- no threshold configured for this merchant
+    (_, Nothing) -> rawAmount -- accumulator unavailable (e.g. fleet ride for now)
+    (Just th, Just cumulative) ->
+      let isInvalidBracket = mbRate == Just taxConfig.invalidPanTdsRate
+          isBusinessFleetWithBusinessPan =
+            role == DP.FLEET_BUSINESS
+              && (mbPanCard >>= (.docType)) == Just DPanCard.BUSINESS
+          -- No threshold benefit for: defensive invalid-PAN bracket, OR
+          -- Business Fleet whose PAN is non-individual (per new spec row).
+          noThresholdBenefit = isInvalidBracket || isBusinessFleetWithBusinessPan
+       in if noThresholdBenefit
+            then rawAmount
+            else
+              if cumulative + currentBase <= th.amount
+                then 0
+                else rawAmount
 
 -- | Estimate wallet deductions (TDS only) for a given baseFare.
 --   GST (govtCharges) comes from fareParams at ride end, not recalculated here.

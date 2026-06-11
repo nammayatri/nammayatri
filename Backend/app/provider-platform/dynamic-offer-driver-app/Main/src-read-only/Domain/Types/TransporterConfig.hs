@@ -475,13 +475,17 @@ data TaxConfig = TaxConfig
   { airportEntryFeeGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     defaultTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     invalidPanTdsRate :: Kernel.Prelude.Double,
+    panNotLinkedTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     rideGst :: Domain.Types.TransporterConfig.GstBreakup,
+    section194OThreshold :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ThresholdConfig,
     securityDepositGst :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.GstBreakup,
     serviceVatPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     subscriptionGst :: Domain.Types.TransporterConfig.GstBreakup,
     subscriptionTdsRate :: Kernel.Prelude.Maybe Kernel.Prelude.Double
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data ThresholdConfig = ThresholdConfig {amount :: Kernel.Types.Common.HighPrecMoney} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe
 

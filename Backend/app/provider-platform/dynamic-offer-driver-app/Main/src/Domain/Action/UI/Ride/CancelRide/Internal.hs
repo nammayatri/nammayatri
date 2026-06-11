@@ -103,6 +103,7 @@ import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FareParameters as QFP
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRiderDetails
@@ -578,6 +579,30 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
     Nothing -> logError "createCancellationLedgerEntries: riderId not present in booking"
     Just rid -> do
       merchantOperatingCity <- CQMOC.findById booking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist booking.merchantOperatingCityId.getId)
+      let driverOrFleetPersonId = fromMaybe ride.driverId ride.fleetOwnerId
+      mbPanCard <- QPanCard.findByDriverId driverOrFleetPersonId
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      taxSubjectRole <- case ride.fleetOwnerId of
+        Nothing -> pure driver.role
+        Just fleetOwnerId -> maybe SP.DRIVER (.role) <$> QPerson.findById fleetOwnerId
+      mbDriverInfo <- QDI.findById (cast ride.driverId)
+      -- Read the materialized tds_rate for the tax subject (fleet owner if it's
+      -- a fleet ride, else the driver). Set by the PAN / linkage webhooks in
+      -- spec mode (see PanVerification.materializeTdsRateFor).
+      mbStoredTdsRate <- case ride.fleetOwnerId of
+        Just fleetOwnerId -> do
+          mbFleetInfo <- QFOI.findByPrimaryKey (cast fleetOwnerId)
+          pure (mbFleetInfo >>= (.tdsRate))
+        Nothing -> pure (mbDriverInfo >>= (.tdsRate))
+      -- For threshold-benefit gating (section 194O), look up the counterparty's
+      -- cumulative earnings. Driver rides use driver_stats.totalEarnings
+      -- (lifetime ride.fare sum, interim — TODO(MSIL-TDS-FY)). Fleet rides
+      -- return Nothing → applyThresholdBenefit skips the gate (always deducts).
+      mbCumulativeEarnings <- case ride.fleetOwnerId of
+        Just _ -> pure Nothing
+        Nothing -> do
+          mbStats <- QDriverStats.findByPrimaryKey (cast ride.driverId)
+          pure $ Just $ maybe 0 (.totalEarnings) mbStats
       let rideGst = transporterConfig.taxConfig.rideGst
           -- VAT stays with the driver (OwnerLiability), GST is remitted to govt (GovtIndirect) — mirrors createDriverWalletTransaction.
           cancellationTaxDest = if fromMaybe False booking.fareParams.isVatTaxType then OwnerLiability else GovtIndirect
@@ -585,14 +610,14 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
             [ (baseCancellation, walletReferenceCustomerCancellationCharges, OwnerLiability),
               (gstOnCancellation, walletReferenceCustomerCancellationGST, cancellationTaxDest)
             ]
-          mbTdsRate = transporterConfig.taxConfig.defaultTdsRate
+          mbTdsRate = case transporterConfig.taxConfig.panNotLinkedTdsRate of
+            Just _ -> computeEffectiveTdsRate mbPanCard mbStoredTdsRate taxSubjectRole transporterConfig.taxConfig
+            Nothing -> transporterConfig.taxConfig.defaultTdsRate
           mbTdsAmount = do
             rate <- mbTdsRate
-            let amount = baseCancellation * realToFrac rate
-            if amount > 0 then Just amount else Nothing
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      mbPanCard <- QPanCard.findByDriverId ride.driverId
-      mbDriverInfo <- QDI.findById (cast ride.driverId)
+            let rawAmount = baseCancellation * realToFrac rate
+                gatedAmount = applyThresholdBenefit transporterConfig.taxConfig (Just rate) mbCumulativeEarnings mbPanCard taxSubjectRole baseCancellation rawAmount
+            if gatedAmount > 0 then Just gatedAmount else Nothing
       -- Resolve rider's payment-mode choice from booking.paymentMethodId — same logic as EndRide.
       -- Cash → "CASH", anything else (Card/UPI/Wallet/NetBanking/BoothOnline) → "ONLINE".
       isOnline <- do
