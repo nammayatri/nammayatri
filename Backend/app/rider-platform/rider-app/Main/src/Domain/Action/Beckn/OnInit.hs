@@ -32,6 +32,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Safety.Domain.Types.Common as SafetyCommon
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -39,7 +40,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.Queries.Booking as QRideB
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics as Metrics
@@ -92,12 +92,11 @@ data OnInitRes = OnInitRes
   deriving (Generic, Show)
 
 createFareBreakup ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DRB.Booking -> [DCommon.DFareBreakup] -> m ()
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DRB.Booking -> [DCommon.DFareBreakup] -> m ()
 createFareBreakup booking fareParams = do
-  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.INITIAL_BOOKING) fareParams
-  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.getId DFareBreakup.BOOKING) fareParams
-  QFareBreakup.createMany fareBreakups
-  QFareBreakup.createMany fareBreakups'
+  fareBreakups' <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.INITIAL_BOOKING) fareParams
+  fareBreakups <- traverse (DCommon.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareParams
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (fareBreakups <> fareBreakups')
 
 onInit :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, HedisFlow m r, Metrics.HasBAPMetrics m r) => OnInitReq -> m (OnInitRes, DRB.Booking)
 onInit req = do
@@ -108,7 +107,7 @@ onInit req = do
   merchant <- CQM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
   person <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   decRider <- decrypt person
-  createFareBreakup booking.id req.fareBreakups
+  createFareBreakup booking req.fareBreakups
   safetySettings <- Lib.findSafetySettingsWithFallback (cast booking.riderId) (Lib.getDefaultSafetySettings (cast booking.riderId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   let convertToPersonRideShareOptions :: SafetyCommon.RideShareOptions -> Person.RideShareOptions
       convertToPersonRideShareOptions = \case

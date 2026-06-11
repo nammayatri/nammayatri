@@ -81,6 +81,7 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import SharedLogic.JobScheduler
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Payment as SPayment
@@ -563,14 +564,14 @@ onUpdate = \case
     let currentPointLat = (.lat) <$> currentPoint
         currentPointLon = (.lon) <$> currentPoint
     breakups <- traverse (Common.buildFareBreakupV2 bookingUpdateRequestId.getId DFareBreakup.BOOKING_UPDATE_REQUEST) fareBreakups
-    QFareBreakup.createMany breakups
+    SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) breakups
     QBUR.updateMultipleById Nothing (Just newEstimatedDistance) (Just fare.amount) Nothing currentPointLat currentPointLon bookingUpdateRequestId
   OUValidatedEditDestConfirmUpdateReq ValidatedEditDestConfirmUpdateReq {..} -> do
     dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateRequest.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateRequestId: " <> bookingUpdateRequest.id.getId)
     prevOrder <- QLM.maxOrderByEntity booking.id.getId
     dropLocMap <- SLM.buildLocationMapping' dropLocMapping.locationId booking.id.getId DLM.BOOKING (Just bookingUpdateRequest.merchantId) (Just bookingUpdateRequest.merchantOperatingCityId) prevOrder
     QLM.create dropLocMap
-    fareBreakupsBUR <- QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST
+    fareBreakupsBUR <- SFareBreakupInfo.getFareBreakupsWithFallback bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST (QFareBreakup.findAllByEntityIdAndEntityType bookingUpdateRequest.id.getId DFareBreakup.BOOKING_UPDATE_REQUEST)
     fareBreakups <-
       mapM
         ( \fareBreakup -> do
@@ -578,8 +579,7 @@ onUpdate = \case
             return fareBreakup{id, entityType = DFareBreakup.BOOKING, entityId = booking.id.getId}
         )
         fareBreakupsBUR
-    QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-    QFareBreakup.createMany fareBreakups
+    SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
     mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
@@ -647,8 +647,7 @@ onUpdate = \case
     -- Replace BOOKING-scoped FareBreakup rows with the recalculated breakdown from BPP.
     unless (null fareBreakups) $ do
       newBreakups <- traverse (Common.buildFareBreakupV2 booking.id.getId DFareBreakup.BOOKING) fareBreakups
-      QFareBreakup.deleteByEntityIdAndEntityType booking.id.getId DFareBreakup.BOOKING
-      QFareBreakup.createMany newBreakups
+      SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) newBreakups
 
 validateRequest ::
   ( CacheFlow m r,

@@ -17,7 +17,6 @@ module Domain.Action.UI.PartnerBookingStatement
   ( postCorporateBookingStatement,
     postCorporateInvoiceData,
     buildInvoiceData,
-    getToLocation,
     formatAddress,
   )
 where
@@ -27,21 +26,23 @@ import qualified API.Types.UI.PartnerBookingStatement as PBSAPI
 import API.Types.UI.PartnerBookingStatementExtra ()
 -- import Data.Time.Format (defaultTimeLocale, formatTime)
 
--- import qualified Domain.Types.Ride as DRide
 -- import qualified Domain.Types.ServiceTierType as DSTT
 
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
+import Control.Monad.Extra (mapMaybeM)
 import Data.OpenApi (ToSchema)
 import qualified Data.Text as T
 import Data.Time.Calendar (Day, addDays)
 import Data.Time.Clock (UTCTime (..), secondsToDiffTime, utctDay)
+import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types.Booking as DBooking
-import qualified Domain.Types.Booking.API as DBAPI
+import qualified Domain.Types.Booking as DRB
 import Domain.Types.Location (Location (..), LocationAPIEntity (..))
 import Domain.Types.LocationAddress (LocationAddress (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.PartnerInvoiceDataLog as DPIL
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (id)
@@ -83,9 +84,8 @@ postCorporateInvoiceData mbApiKey req = do
 
   person <- mbPerson & fromMaybeM (InvalidRequest "Person not found")
 
-  -- Fetch booking and build API entity
   booking <- QBooking.findById req.bookingId >>= fromMaybeM (InvalidRequest "Booking not found")
-  bookingAPIEntity <- DBAPI.buildBookingAPIEntity booking person.id
+  mbRide <- QRide.findByRBId booking.id
 
   email <- mapM decrypt person.email
 
@@ -106,7 +106,7 @@ postCorporateInvoiceData mbApiKey req = do
           }
   void $ QPartnerInvoiceDataLog.create logEntry
 
-  res <- buildInvoiceData person booking bookingAPIEntity (req.emailId <|> email) req.mobileNumber
+  res <- buildInvoiceData person booking mbRide (req.emailId <|> email) req.mobileNumber
   pure (res :: PBSAPI.InvoiceDataRes) {PBSAPI.responseCode = "200", PBSAPI.outcomeCode = "200", PBSAPI.responseMessage = "Success"}
 
 buildInvoiceData ::
@@ -116,16 +116,16 @@ buildInvoiceData ::
   ) =>
   DP.Person ->
   DBooking.Booking ->
-  DBAPI.BookingAPIEntity ->
+  Maybe DRide.Ride ->
   Maybe Text ->
   Maybe Text ->
   m PBSAPI.InvoiceDataRes
-buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
+buildInvoiceData person booking mbRide mbEmail mbMobile = do
   mbMerchant <- CQM.findById booking.merchantId
   let employerName = maybe "Namma Yatri" (.name) mbMerchant
-      mbRide = find (\ride -> ride.status == DRide.COMPLETED) bookingAPIEntity.rideList
-      paymentCurrency = show bookingAPIEntity.estimatedTotalFareWithCurrency.currency
-  case mbRide of
+      mbCompletedRide = mbRide >>= (\ride -> if ride.status == DRide.COMPLETED then Just ride else Nothing)
+      paymentCurrency = show booking.estimatedTotalFare.currency
+  case mbCompletedRide of
     Nothing ->
       pure
         PBSAPI.InvoiceDataRes
@@ -136,8 +136,8 @@ buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
             emailId = fromMaybe "" mbEmail,
             mobileNumber = fromMaybe "" mbMobile,
             bookingId = booking.id,
-            bookingDatetime = bookingAPIEntity.createdAt,
-            bookingStatus = bookingAPIEntity.status,
+            bookingDatetime = booking.createdAt,
+            bookingStatus = booking.status,
             item = [],
             person = [],
             employerGst = "",
@@ -159,7 +159,7 @@ buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
                 },
             invoice =
               PBSAPI.InvoiceInvoice
-                { invoiceDatetime = Just bookingAPIEntity.createdAt,
+                { invoiceDatetime = Just booking.createdAt,
                   invoiceAmount = 0,
                   invoiceAmountCurrencyName = Just paymentCurrency,
                   invoiceLink = ""
@@ -167,19 +167,19 @@ buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
           }
     Just ride -> do
       let provider = "Namma Yatri"
-          paymentAmount = fromMaybe (toHighPrecMoney bookingAPIEntity.estimatedTotalFare) (toHighPrecMoney <$> ride.computedPrice)
-          fromLocation = bookingAPIEntity.fromLocation
-          toLocation = getToLocation bookingAPIEntity
-          bookingDatetime = bookingAPIEntity.createdAt
+          paymentAmount = fromMaybe (toHighPrecMoney booking.estimatedTotalFare.amountInt) (toHighPrecMoney . (.amountInt) <$> ride.totalFare)
+          fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation
+          toLocation = getToLocation' booking
+          bookingDatetime = booking.createdAt
           serviceStartDatetime = ride.rideStartTime <|> Just bookingDatetime
           serviceEndDatetime = ride.rideEndTime <|> serviceStartDatetime
 
           itemEntry =
             PBSAPI.InvoiceItem
-              { itemId = ride.shortRideId.getShortId,
+              { itemId = ride.shortId.getShortId,
                 itemName = "Ride",
-                bookingType = bookingAPIEntity.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory bookingAPIEntity.vehicleServiceTierType),
-                bookingClass = bookingAPIEntity.vehicleServiceTierType,
+                bookingType = booking.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory booking.vehicleServiceTierType),
+                bookingClass = booking.vehicleServiceTierType,
                 provider = provider,
                 providerCode = ride.vehicleNumber,
                 providerPriceCategory = show ride.vehicleVariant,
@@ -265,7 +265,7 @@ buildInvoiceData person booking bookingAPIEntity mbEmail mbMobile = do
             employerGst = "",
             employerName = employerName,
             bookingDatetime = bookingDatetime,
-            bookingStatus = bookingAPIEntity.status,
+            bookingStatus = booking.status,
             item = [itemEntry],
             person = [personEntry],
             unitPricing = [unitPricingEntry],
@@ -323,12 +323,11 @@ postCorporateBookingStatement mbApiKey req = do
       -- Find completed bookings in date range
       bookings <- B.runInReplica $ QBooking.findBookingsForInvoice person.id startTime endTime Nothing Nothing
       -- For each booking, get the ride details and build the response
-      allBookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+      allBookingAPIEntities <- mapMaybeM (\booking -> (\mbRide -> pure $ (booking,) <$> mbRide) =<< QRide.findByRBId booking.id) bookings
 
-      -- Filter: Keep only bookings with exactly 1 completed ride
-      let validBookingAPIEntities = filter hasExactlyOneRide allBookingAPIEntities
+      let validBookingAPIEntities = filter (((==) DRide.COMPLETED) . (.status) . snd) allBookingAPIEntities
 
-      items <- catMaybes <$> mapM (buildBookingItem person) validBookingAPIEntities
+      items <- mapM (\(booking, ride) -> buildBookingItem booking ride) validBookingAPIEntities
       email <- mapM decrypt person.email
 
       return $
@@ -362,57 +361,52 @@ buildBookingItem ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
-  DP.Person ->
-  DBAPI.BookingAPIEntity ->
-  m (Maybe PBSAPI.BookingStatementItem)
-buildBookingItem _person bookingAPIEntity = do
-  let mbRide = find (\ride -> ride.status == DRide.COMPLETED) bookingAPIEntity.rideList
-  case mbRide of
-    Nothing -> return Nothing
-    Just ride -> do
-      let provider = "Namma Yatri"
-          providerCode = ride.vehicleNumber
-          -- Get payment amount
-          paymentAmount = fromMaybe (toHighPrecMoney bookingAPIEntity.estimatedTotalFare) (toHighPrecMoney <$> ride.computedPrice)
+  DBooking.Booking ->
+  DRide.Ride ->
+  m PBSAPI.BookingStatementItem
+buildBookingItem booking ride = do
+  let provider = "Namma Yatri"
+      providerCode = ride.vehicleNumber
+      -- Get payment amount
+      paymentAmount = fromMaybe (toHighPrecMoney booking.estimatedTotalFare.amountInt) (toHighPrecMoney . (.amountInt) <$> ride.totalFare)
 
-          -- Get addresses
-          fromLocation = bookingAPIEntity.fromLocation
-          toLocation = getToLocation bookingAPIEntity
+      -- Get addresses
+      fromLocation = SLoc.makeLocationAPIEntity booking.fromLocation
+      toLocation = getToLocation' booking
 
-          bookingDatetime = bookingAPIEntity.createdAt
-          serviceStartDatetime = fromMaybe bookingDatetime ride.rideStartTime
-          serviceEndDatetime = fromMaybe serviceStartDatetime ride.rideEndTime
-
-      return $
-        Just
-          PBSAPI.BookingStatementItem
-            { bookingId = bookingAPIEntity.id,
-              bookingDatetime = bookingDatetime,
-              bookingType = bookingAPIEntity.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory bookingAPIEntity.vehicleServiceTierType),
-              provider = provider,
-              providerCode = providerCode,
-              paymentAmount = paymentAmount,
-              paymentAmountCurrencyCode = show bookingAPIEntity.estimatedTotalFareWithCurrency.currency,
-              serviceStartAddress = formatAddress fromLocation,
-              serviceStartPincode = fromLocation.areaCode,
-              serviceStartDatetime = serviceStartDatetime,
-              serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
-              serviceEndPincode = toLocation >>= (.areaCode),
-              serviceEndDatetime = serviceEndDatetime
-            }
+      bookingDatetime = booking.createdAt
+      serviceStartDatetime = fromMaybe bookingDatetime ride.rideStartTime
+      serviceEndDatetime = fromMaybe serviceStartDatetime ride.rideEndTime
+  return $
+    PBSAPI.BookingStatementItem
+      { bookingId = booking.id,
+        bookingDatetime = bookingDatetime,
+        bookingType = booking.vehicleCategory <|> Just (BecknUtils.mapServiceTierToCategory booking.vehicleServiceTierType),
+        provider = provider,
+        providerCode = providerCode,
+        paymentAmount = paymentAmount,
+        paymentAmountCurrencyCode = show booking.estimatedTotalFare.currency,
+        serviceStartAddress = formatAddress fromLocation,
+        serviceStartPincode = fromLocation.areaCode,
+        serviceStartDatetime = serviceStartDatetime,
+        serviceEndAddress = fromMaybe "" (formatAddress <$> toLocation),
+        serviceEndPincode = toLocation >>= (.areaCode),
+        serviceEndDatetime = serviceEndDatetime
+      }
 
 -- | Get destination location from booking details
-getToLocation :: DBAPI.BookingAPIEntity -> Maybe LocationAPIEntity
-getToLocation booking =
-  case booking.bookingDetails of
-    DBAPI.OneWayAPIDetails details -> Just details.toLocation
-    DBAPI.DriverOfferAPIDetails details -> Just details.toLocation
-    DBAPI.OneWaySpecialZoneAPIDetails details -> Just details.toLocation
-    DBAPI.InterCityAPIDetails details -> Just details.toLocation
-    DBAPI.AmbulanceAPIDetails details -> Just details.toLocation
-    DBAPI.DeliveryAPIDetails details -> Just details.toLocation
-    DBAPI.RentalAPIDetails details -> details.stopLocation
-    DBAPI.MeterRideAPIDetails details -> details.toLocation
+getToLocation' :: DBooking.Booking -> Maybe LocationAPIEntity
+getToLocation' booking =
+  SLoc.makeLocationAPIEntity
+    <$> case booking.bookingDetails of
+      DRB.OneWayDetails details -> Just details.toLocation
+      DRB.DriverOfferDetails details -> Just details.toLocation
+      DRB.OneWaySpecialZoneDetails details -> Just details.toLocation
+      DRB.InterCityDetails details -> Just details.toLocation
+      DRB.AmbulanceDetails details -> Just details.toLocation
+      DRB.DeliveryDetails details -> Just details.toLocation
+      DRB.RentalDetails details -> details.stopLocation
+      DRB.MeterRideDetails details -> details.toLocation
 
 -- | Format address from LocationAddress
 formatAddress :: LocationAPIEntity -> Text
@@ -437,9 +431,3 @@ formatAddress address =
 -- -- | Show HighPrecMoney as text with 2 decimal places
 -- showHighPrecMoney :: HighPrecMoney -> Text
 -- showHighPrecMoney amount = T.pack $ show (realToFrac amount :: Double)
-
--- | Check if booking has at least one completed ride
-hasExactlyOneRide :: DBAPI.BookingAPIEntity -> Bool
-hasExactlyOneRide booking =
-  let completedRides = filter (\ride -> ride.status == DRide.COMPLETED) booking.rideList
-   in length completedRides == 1

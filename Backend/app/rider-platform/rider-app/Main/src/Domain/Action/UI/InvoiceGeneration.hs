@@ -115,7 +115,7 @@ generateInvoice (personId, merchantId) req@GenerateInvoiceReq {..} = do
   let invoiceId = Id invoiceIdShort.getShortId
 
   -- Convert bookings to BookingAPIEntity (includes ride data)
-  allBookingAPIEntities <- mapM (`DBAPI.buildBookingAPIEntity` person.id) bookings
+  allBookingAPIEntities <- mapM (\booking -> DBAPI.buildBookingAPIEntity booking person.id False) bookings
 
   -- Filter: Keep only bookings with exactly 1 completed ride
   let validBookingAPIEntities = filter hasExactlyOneRide allBookingAPIEntities

@@ -8,6 +8,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.SharedLogic.RideDiscount as RD
 import qualified Domain.Types.Booking
 import qualified Domain.Types.FareBreakup
+import qualified Domain.Types.FareBreakupInfo as DFareBreakupInfo
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.OfferEntity as DOfferEntity
@@ -40,6 +41,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.PaymentTransaction as HQPaym
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import qualified SharedLogic.Payment as SPayment
@@ -259,7 +261,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     mbRideOfferEntity <- QOfferEntity.findByEntityIdAndEntityType rideId.getId DOfferEntity.RIDE
     let rideDiscountAmount = maybe 0 (.discountAmount) mbRideOfferEntity
         ridePayoutAmount = maybe 0 (.payoutAmount) mbRideOfferEntity
-    fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+    fareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"
     (customerPaymentId, paymentMethodId) <- SPayment.getCustomerAndPaymentMethod booking person
     driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
@@ -321,7 +323,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         -- compares newTotal vs. oldTotal, and since tip is not part of
         -- ledger core (handled separately via createTipLedger), the
         -- existing core entries won't be disturbed.
-        tipRideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
+        tipRideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE)
         let tipLedgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
         mbTipLedgerInfo <- SPayment.buildLedgerInfoFromBreakups tipRideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 tipLedgerCtx
         let tipLedgerInfo =
@@ -345,7 +347,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
         mbPaymentIntentResp <- SPayment.makePaymentIntent person.merchantId person.merchantOperatingCityId booking.paymentMode person.id (Just rideId) mbExistingOrderId DOrder.RideHailing createPaymentIntentServiceReq (Just tipLedgerInfo)
         case mbPaymentIntentResp of
           Nothing -> do
-            bookingFareBreakup <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING
+            bookingFareBreakup <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId Domain.Types.FareBreakup.BOOKING (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.BOOKING)
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId person.merchantOperatingCityId.getId totalFare.currency True person.id.getId ride.id.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups bookingFareBreakup rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx
             let ledgerInfo =
@@ -392,25 +394,14 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
                   QRide.markPaymentStatus Domain.Types.Ride.Failed rideId
                   logError $ "Failed to capture payment intent after tip: " <> paymentIntentResp.paymentIntentId
         QRide.updateTipByRideId (Just tipAmount) rideId
-        createFareBreakup
+        let tipFarePrice = mkPriceFromAPIEntity tipRequest.amount
+        SFareBreakupInfo.addFareBreakupInfoItems rideId.getId Domain.Types.FareBreakup.RIDE [DFareBreakupInfo.FareBreakupInfoItem {description = tipFareBreakupTitle, amount = tipFarePrice.amount, currency = tipFarePrice.currency}] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     void $ CallBPPInternal.populateTipAmount merchant.driverOfferApiKey merchant.driverOfferBaseUrl ride.bppRideId.getId tipRequest.amount.amount
   return Success
   where
     tipFareBreakupTitle :: Text
     tipFareBreakupTitle = "RIDE_TIP"
-
-    createFareBreakup = do
-      id <- generateGUID
-      let tipFareBreakup =
-            Domain.Types.FareBreakup.FareBreakup
-              { id,
-                entityId = rideId.getId,
-                entityType = Domain.Types.FareBreakup.RIDE,
-                description = tipFareBreakupTitle,
-                amount = mkPriceFromAPIEntity tipRequest.amount
-              }
-      QFareBreakup.create tipFareBreakup
 
 applicationFeeAmountForTipAmount :: API.Types.UI.RidePayment.AddTipRequest -> HighPrecMoney
 applicationFeeAmountForTipAmount tipRequest = do

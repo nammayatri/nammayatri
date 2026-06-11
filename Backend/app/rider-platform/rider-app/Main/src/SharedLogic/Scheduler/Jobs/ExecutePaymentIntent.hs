@@ -36,6 +36,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import Lib.Scheduler
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import SharedLogic.JobScheduler
 import SharedLogic.Payment as SPayment
@@ -114,7 +115,7 @@ executePaymentIntentJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             -- Use ledger entry IDs from Redis if available, otherwise no existing order
             let mbExistingOrderId = mbOrderId
             -- ledgerInfo uses ride fare only (without tip) — tip has its own ledger entry via createTipLedger
-            rideFareBreakups <- QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
+            rideFareBreakups <- SFareBreakupInfo.getFareBreakupsWithFallback rideId.getId DFareBreakup.RIDE (QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE)
             -- ExecutePaymentIntent is the online-payment scheduler path → isOnline=True.
             let ledgerCtx = RidePaymentFinance.buildRiderFinanceCtx person.merchantId.getId booking.merchantOperatingCityId.getId fare.currency True person.id.getId rideId.getId Nothing Nothing (listToMaybe $ catMaybes [booking.fromLocation.address.area, booking.fromLocation.address.street, booking.fromLocation.address.city])
             mbLedgerInfo <- SPayment.buildLedgerInfoFromBreakups rideFareBreakups rideDiscountAmount ridePayoutAmount applicationFeeAmount 0 ledgerCtx

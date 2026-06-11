@@ -37,7 +37,7 @@ postBookingStatus ::
   Environment.Flow Domain.Types.Booking.API.BookingAPIEntity
 postBookingStatus merchantShortId _opCity bookingId personId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Booking.bookingStatus bookingId (personId, m.id)
+  Domain.Action.UI.Booking.bookingStatus bookingId (personId, m.id) Nothing
 
 getBookingBooking ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -54,7 +54,7 @@ getBookingBooking merchantShortId opCity searchValue mbSearchType mbMobileCountr
     DBT.BOOKING_ID -> findByDisplayOrRawId searchValue
     DBT.PHONE -> findByPhone m (fromMaybe "+91" mbMobileCountryCode) searchValue
     DBT.OTP -> findByRideOtp m searchValue
-  Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id)
+  Domain.Action.UI.Booking.bookingStatus booking.id (booking.riderId, m.id) Nothing
   where
     findByDisplayOrRawId code = do
       mbBookingIdFromDisplay <- DBI.findBookingIdByDisplayId code
@@ -84,7 +84,7 @@ getBookingList ::
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
 getBookingList merchantShortId _opCity personId mbLimit mbOffset mbOnlyActive bookingStatus = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.Booking.bookingList (Just personId, m.id) Nothing False mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing [] Nothing
+  Domain.Action.UI.Booking.bookingList (Just personId, m.id) Nothing False mbLimit mbOffset mbOnlyActive bookingStatus Nothing Nothing Nothing [] Nothing Nothing
 
 getBookingAgentL1List ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -109,7 +109,7 @@ getBookingAgentL1List merchantShortId opCity mbAgentId mbLimit mbOffset mbBookin
         mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
         return $ mbPerson <&> (.id)
       Nothing -> return Nothing
-  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id)
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) mbAgentId True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id) Nothing
 
 getBookingAgentL2List ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -133,4 +133,4 @@ getBookingAgentL2List merchantShortId opCity mbLimit mbOffset mbBookingStatus mb
         mbPerson <- QPerson.findByMobileNumberAndMerchantId "+91" mobileNumberHash m.id
         return $ mbPerson <&> (.id)
       Nothing -> return Nothing
-  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id)
+  Domain.Action.UI.Booking.bookingList (mbPersonId, m.id) Nothing True mbLimit mbOffset Nothing mbBookingStatus Nothing mbFromDateMS mbToDateMS [] (Just merchantOperatingCity.id) Nothing
