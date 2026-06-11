@@ -101,7 +101,7 @@ let kafkaProducerCfg =
 
 let secondaryKafkaProducerCfg = Some kafkaProducerCfg
 
-let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+let sendEmailRateLimitOptions = { limit = +100, limitResetTimeInSec = +600 }
 
 let inMemConfig = { enableInMem = False, maxInMemSize = +100000000 }
 
