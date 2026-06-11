@@ -59,15 +59,19 @@ jobs:
           CURRENT_KEY="${{ steps.cache-key.outputs.key }}"
 
           if [ -f "$KEY_FILE" ] && [ "$(cat $KEY_FILE)" != "$CURRENT_KEY" ]; then
-            echo "Cache key changed, busting dist-newstyle, cabal store and HIE cache"
+            echo "Cache key changed, busting dist-newstyle, cabal store, HIE and repl caches"
             rm -rf "$CACHE_ROOT/dist-newstyle"
             rm -rf "$CACHE_ROOT/.cabal-dir"
             rm -rf "$CACHE_ROOT/hie"
+            rm -rf "$CACHE_ROOT/dist-newrepl-driver"
+            rm -rf "$CACHE_ROOT/dist-newrepl-rider"
           fi
 
-          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir"
+          mkdir -p "$CACHE_ROOT/dist-newstyle" "$CACHE_ROOT/.cabal-dir" "$CACHE_ROOT/dist-newrepl-driver" "$CACHE_ROOT/dist-newrepl-rider"
           echo "$CURRENT_KEY" > "$KEY_FILE"
           ln -sfn "$CACHE_ROOT/dist-newstyle" Backend/dist-newstyle
+          ln -sfn "$CACHE_ROOT/dist-newrepl-driver" Backend/dist-newrepl-driver
+          ln -sfn "$CACHE_ROOT/dist-newrepl-rider" Backend/dist-newrepl-rider
 
       - name: Link HIE dirs to persistent cache
         run: |
@@ -195,16 +199,18 @@ jobs:
 
       - name: Push repl artifacts to MinIO
         run: |
-         MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
-         MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
-         MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
+          MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
+          MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
+          MINIO_SECRET_KEY=$(jq -r '.minio_secret_key' /etc/service_discovery.json)
           mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
 
-          tar -I 'zstd -T0 -3' -cf driver.tar.zst -C Backend dist-newrepl-driver/
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+
+          tar -I 'zstd -T0 -3' -cf driver.tar.zst -C "$CACHE_ROOT" dist-newrepl-driver/
           mc cp driver.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/dynamic-offer-driver-app.tar.zst"
           rm -f driver.tar.zst
 
-          tar -I 'zstd -T0 -3' -cf rider.tar.zst -C Backend dist-newrepl-rider/
+          tar -I 'zstd -T0 -3' -cf rider.tar.zst -C "$CACHE_ROOT" dist-newrepl-rider/
           mc cp rider.tar.zst "minio/haskell-cache/cabal-repl/${{ github.sha }}/rider-app.tar.zst"
           rm -f rider.tar.zst
 
