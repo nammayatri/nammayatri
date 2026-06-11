@@ -829,3 +829,16 @@ findAllByFleetOwnerIdAndSearchString mbLimit mbOffset fleetOwnerId mbSearchStrin
   case res of
     Right res' -> catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
+
+findVehicleInfoByRcIdOrVehicleNo :: (MonadFlow m, EncFlow m r, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> Maybe Text -> m (Maybe VehicleRegistrationCertificate)
+findVehicleInfoByRcIdOrVehicleNo mbRcId mbVehicleNo = do
+  mbVehicleNoHash <- mapM getDbHash mbVehicleNo
+  let searchPreds =
+        catMaybes
+          [ (\rId -> Se.Is BeamVRC.id $ Se.Eq rId) <$> mbRcId,
+            (\vNoHash -> Se.Is BeamVRC.certificateNumberHash $ Se.Eq vNoHash) <$> mbVehicleNoHash
+          ]
+  case searchPreds of
+    [] -> pure Nothing
+    [p] -> findOneWithKV [p]
+    ps -> findOneWithKV [Se.Or ps]
