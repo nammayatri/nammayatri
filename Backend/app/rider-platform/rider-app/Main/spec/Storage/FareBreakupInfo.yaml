@@ -1,0 +1,61 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  FareBreakupEntityType: Domain.Types.FareBreakup
+  Currency: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+
+FareBreakupInfo:
+  tableName: fare_breakup_info
+
+  derives: "Show, Generic, ToJSON, FromJSON, ToSchema, Eq"
+
+  fields:
+    id: Id FareBreakupInfo
+    entityId: Text
+    entityType: FareBreakupEntityType
+    fareBreakups: "[FareBreakupInfoItem]"
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+
+  beamType:
+    fareBreakups: Text
+
+  toTType:
+    fareBreakups: Kernel.Utils.Text.encodeToText fareBreakups|E
+
+  fromTType:
+    fareBreakups: (fromMaybe [] (Kernel.Utils.Text.decodeFromText fareBreakups))|E
+
+  types:
+    FareBreakupInfoItem:
+      description: Text
+      amount: HighPrecMoney
+      currency: Currency
+      derive': "Generic, Show, Eq, FromJSON, ToJSON, ToSchema"
+
+  constraints:
+    id: PrimaryKey
+    entityId: SecondaryKey
+
+  queries:
+    findByEntityIdAndEntityType:
+      kvFunction: findOneWithKV
+      where:
+        and: [entityId, entityType]
+    updateFareBreakupsByEntityIdAndEntityType:
+      kvFunction: updateWithKV
+      params: [fareBreakups, updatedAt]
+      where:
+        and: [entityId, entityType]
+
+  extraIndexes:
+    - columns: [entityId, entityType]
+      unique: true
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  sqlType:
+    fareBreakups: text

@@ -103,14 +103,14 @@ newtype FavouriteBookingListRes = FavouriteBookingListRes
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
-bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingAPIEntity
-bookingStatus bookingId (personId, _merchantId) = runInMultiCloud $ do
+bookingStatus :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow SRB.BookingAPIEntity
+bookingStatus bookingId (personId, _merchantId) mbDontNeedFareBreakup = runInMultiCloud $ do
   booking <- QRB.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
   fork "booking status update" $ checkBookingsForStatus [booking]
   fork "creating cache for emergency contact SOS" $ emergencyContactSOSCache booking personId
   logInfo $ "booking: test " <> show booking
   void $ handleConfirmTtlExpiry booking
-  SRB.buildBookingAPIEntity booking booking.riderId
+  SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)
 
 bookingStatusPolling :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> Flow SRB.BookingStatusAPIEntity
 bookingStatusPolling bookingId _ = runInMultiCloud $ do
@@ -201,17 +201,17 @@ getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusLi
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
 
-bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Flow BookingListRes
-bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId = do
+bookingList :: (Maybe (Id Person.Person), Id Merchant.Merchant) -> Maybe Text -> Bool -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Flow BookingListRes
+bookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId mbDontNeedFareBreakup = do
   (rbList, allbookings) <- getBookingList (mbPersonId, merchantId) mbAgentId onlyDashboard mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList mbMerchantOperatingCityId
   case mbPersonId of
     Just personId -> returnResonseAndClearStuckRides allbookings rbList personId
-    Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId) rbList
+    Nothing -> BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking booking.riderId (fromMaybe False mbDontNeedFareBreakup)) rbList
   where
     returnResonseAndClearStuckRides allbookings rbList personId = do
       fork "booking list status update" $ checkBookingsForStatus allbookings
       logInfo $ "rbList: test " <> show rbList
-      BookingListRes <$> traverse (`SRB.buildBookingAPIEntity` personId) rbList
+      BookingListRes <$> traverse (\booking -> SRB.buildBookingAPIEntity booking personId (fromMaybe False mbDontNeedFareBreakup)) rbList
 
 getPassList :: Id Merchant.Merchant -> Id Person.Person -> Maybe Int -> Maybe Int -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow [DPurchasedPass.PurchasedPass]
 getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes = do
@@ -257,7 +257,7 @@ bookingListV2ByCustomerLookup merchantId mbLimit mbOffset mbBookingOffset mbJour
           Just person -> pure person.id
           Nothing -> tryEmail
       Nothing -> tryEmail
-  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing
+  bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset Nothing mbFromDate' mbToDate' billingCategoryList rideTypeList (fromMaybe [] mbBookingStatusList) (fromMaybe [] mbJourneyStatusList) mbIsPaymentSuccess mbBookingRequestType Nothing Nothing Nothing
   where
     tryEmail =
       case mbEmail of
@@ -277,8 +277,8 @@ applyMasterDbIfGcp computation = do
       logInfo $ "applyMasterDbIfGcp: CloudType is " <> show mbCloudType <> ", using default replica/local DB"
       computation
 
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Flow BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes = do
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SLT.BillingCategory] -> [SLT.RideType] -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Maybe Bool -> Maybe [Domain.Types.PassType.PassEnum] -> Maybe Bool -> Flow BookingListResV2
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbPassOffset mbFromDate' mbToDate' billingCategoryList rideTypeList mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType mbSendEligiblePassIfAvailable mbPassTypes mbDontNeedFareBreakup = do
   applyMasterDbIfGcp $ do
     allPasses <- getPassList merchantId personId limitIntMaybe mbInitialPassOffsetInt mbFromDate' mbToDate' mbSendEligiblePassIfAvailable mbPassTypes
     (apiEntity, nextBookingOffset, nextJourneyOffset, nextPassOffset, hasMoreData) <- case mbBookingRequestType of
@@ -296,7 +296,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         let hasMoreData = length rbFilteredList + length allPasses >= limit
 
-        (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0)
+        (entitiesWithSource, finalBookingOffset, _, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList [] allPasses mbInitialBookingOffset (Just 0) (Just 0) (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Just finalBookingOffset, Nothing, Just finalPassOffset, hasMoreData)
       Just SRB.JourneyRequest -> do
@@ -312,7 +312,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         let hasMoreData = length allJourneys + length allPasses >= limit
 
-        (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0)
+        (entitiesWithSource, _, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit [] allJourneys allPasses (Just 0) mbInitialJourneyOffset (Just 0) (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Nothing, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
       _ -> do
@@ -353,7 +353,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
         clearStuckRides (Just filteredAllBookingsList) rbFilteredList
 
-        (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset
+        (entitiesWithSource, finalBookingOffset, finalJourneyOffset, finalPassOffset) <- buildApiEntityForRideOrJourneyOrPassWithCounts personId limit rbFilteredList allJourneys allPasses mbInitialBookingOffset mbInitialJourneyOffset mbInitialPassOffset (fromMaybe False mbDontNeedFareBreakup)
 
         pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, Just finalPassOffset, hasMoreData)
 
@@ -398,8 +398,8 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 
 data MergedItem = MBooking SRB.Booking | MJourney DJ.Journey | MPass DPurchasedPass.PurchasedPass
 
-buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int, Int)
-buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset = do
+buildApiEntityForRideOrJourneyOrPassWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> [DPurchasedPass.PurchasedPass] -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Bool -> Flow ([BookingAPIEntityV2], Int, Int, Int)
+buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings journeys passes initialBookingOffset initialJourneyOffset initialPassOffset dontNeedFareBreakup = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRiderConfig <- getConfig (RiderDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId})
   let timeDiffFromUtc = maybe (Seconds 19800) (.timeDiffFromUtc) mbRiderConfig
@@ -518,7 +518,7 @@ buildApiEntityForRideOrJourneyOrPassWithCounts personId finalLimit bookings jour
       where
         go _ [] acc = pure (toList acc)
         go riderId' (MBooking booking : ls) acc = do
-          bookingEntity <- SRB.buildBookingAPIEntity booking riderId'
+          bookingEntity <- SRB.buildBookingAPIEntity booking riderId' dontNeedFareBreakup
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (MJourney journey : ls) acc = do
           mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")

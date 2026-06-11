@@ -105,6 +105,7 @@ import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
@@ -136,7 +137,6 @@ import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.ClientPersonInfo as QCP
-import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.OfferEntity as QOfferEntity
@@ -525,14 +525,15 @@ rideAssignedReqHandler req = do
           bookingPayoutAmount = maybe 0 (.payoutAmount) mbBookingOfferEntity
       when (bookingDiscountAmount > 0) $ do
         guid <- generateGUID
-        QFareBreakup.create
-          DFareBreakup.FareBreakup
-            { id = guid,
-              entityId = booking.id.getId,
-              entityType = DFareBreakup.BOOKING,
-              amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
-              description = "OFFER_DISCOUNT"
-            }
+        let offerDiscountFareBreakup =
+              DFareBreakup.FareBreakup
+                { id = guid,
+                  entityId = booking.id.getId,
+                  entityType = DFareBreakup.BOOKING,
+                  amount = mkPrice (Just booking.estimatedFare.currency) (- bookingDiscountAmount),
+                  description = "OFFER_DISCOUNT"
+                }
+        SFareBreakupInfo.addFareBreakupInfoItems booking.id.getId DFareBreakup.BOOKING [SFareBreakupInfo.fareBreakupToItem offerDiscountFareBreakup] (Just booking.merchantId) (Just booking.merchantOperatingCityId)
       -- Create payment intent for online payments, capture orderId for invoice creation
       _mbPaymentIntentResp <- case req'.onlinePaymentParameters of
         Just OnlinePaymentParameters {driverAccountId = onlineDriverAccountId, ..} -> do
@@ -1128,7 +1129,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
               }
           ]
       else pure []
-  QFareBreakup.createMany (breakups <> offerDiscountBreakup)
+  SFareBreakupInfo.setFareBreakupInfoFromFareBreakups (Just booking.merchantId) (Just booking.merchantOperatingCityId) (breakups <> offerDiscountBreakup)
   QPFS.clearCache booking.riderId
   createRecentLocationForTaxi booking
   checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED

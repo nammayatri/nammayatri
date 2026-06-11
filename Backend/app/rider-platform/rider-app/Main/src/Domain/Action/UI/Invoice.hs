@@ -5,6 +5,7 @@ module Domain.Action.UI.Invoice
 where
 
 import qualified API.Types.UI.Invoice as DTInvoice
+import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.Invoice (InvoiceType, IssuedToType (..))
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
@@ -19,6 +20,7 @@ import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import Storage.Beam.Payment ()
 import qualified Storage.Clickhouse.Booking as CHB
 import qualified Storage.Clickhouse.FareBreakup as CHFB
+import qualified Storage.Clickhouse.FareBreakupInfo as CHFBI
 import qualified Storage.Clickhouse.Location as CHL
 import qualified Storage.Clickhouse.Ride as CHR
 import Tools.Error
@@ -61,7 +63,8 @@ getInvoice (mbPersonId, merchantId) from to = do
                   ("RETURN_FEE", "Return Fee"),
                   ("BOOTH_CHARGE", "Booth Charge")
                 ]
-          fareBreakups <- mapM (getFareBreakup booking) breakupItems
+          mbInfoItems <- CHFBI.findFareBreakupItemsByEntityIdAndType booking.id.getId DFareBreakup.BOOKING booking.createdAt
+          fareBreakups <- mapM (getFareBreakup booking mbInfoItems) breakupItems
           mbSource <- case booking.fromLocationId of
             Just fromLocId -> CHL.findLocationById fromLocId booking.createdAt
             Nothing -> return Nothing
@@ -85,11 +88,15 @@ getInvoice (mbPersonId, merchantId) from to = do
                   chargeableDistanceWithUnit = convertHighPrecMetersToDistance Meter <$> ride.chargeableDistance -- FIXME use proper unit
                 }
         Nothing -> return Nothing
-    getFareBreakup booking (tag, title) = do
-      fareBreakup <- CHFB.findFareBreakupByBookingIdAndDescription booking.id tag booking.createdAt
-      case fareBreakup of
-        Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
-        Nothing -> return Nothing
+    getFareBreakup booking mbInfoItems (tag, title) =
+      case mbInfoItems of
+        Just infoItems ->
+          return $ (\item -> DTInvoice.FareBreakup {price = show item.amount, title}) <$> Kernel.Prelude.find ((== tag) . (.description)) infoItems
+        Nothing -> do
+          fareBreakup <- CHFB.findFareBreakupByBookingIdAndDescription booking.id tag booking.createdAt
+          case fareBreakup of
+            Just breakup -> return . Just $ DTInvoice.FareBreakup {price = maybe notAvailableText show breakup.amount, title}
+            Nothing -> return Nothing
     notAvailableText = "N/A"
 
 -- | List finance-kernel invoices (Ride, RideCancellation) for the authenticated rider.
