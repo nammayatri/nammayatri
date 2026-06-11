@@ -30,6 +30,7 @@ data OperationHubDriverRequest = OperationHubDriverRequest
     operationHubContact :: Kernel.Prelude.Text,
     operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,
     operationHubName :: Kernel.Prelude.Text,
+    pendingChallanCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     registrationNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestStatus :: Domain.Types.OperationHubRequests.RequestStatus,
     requestTime :: Kernel.Prelude.UTCTime,

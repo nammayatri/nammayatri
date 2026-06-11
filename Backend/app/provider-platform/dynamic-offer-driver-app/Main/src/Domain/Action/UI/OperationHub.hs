@@ -9,7 +9,8 @@ import Domain.Types.OperationHubRequests
 import Domain.Types.Person
 import Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.ChallanSearch.Interface.Types as CSIT
+import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
@@ -21,6 +22,8 @@ import Kernel.Utils.Validation
 import qualified Storage.Queries.OperationHub as QOH
 import qualified Storage.Queries.OperationHubRequests as QOHR
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
+import qualified Tools.ChallanSearch as TCS
 import Tools.Error
 
 getOperationGetAllHubs :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> Flow [OperationHub]
@@ -80,8 +83,9 @@ getOperationGetRequests ::
   Maybe RequestType ->
   Maybe Text ->
   Maybe (Id Person) ->
+  Maybe Bool ->
   Flow OperationHubRequestsResp
-getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus mbType mbRcNo mbDriverId = do
+getOperationGetRequests (mbPersonId, merchantId, merchantOpCityId) mbFrom mbTo mbLimit mbOffset mbStatus mbType mbRcNo mbDriverId mbRefreshChallanCount = do
   driverId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   let limit = fromMaybe 10 mbLimit
@@ -96,9 +100,33 @@ getOperationGetRequests (mbPersonId, _, _) mbFrom mbTo mbLimit mbOffset mbStatus
   -- At least one of mbRcNo or mbDriverId must be provided
   unless (isJust mbRcNo || isJust mbDriverId) $
     throwError $ InvalidRequest "Either rcNo or driverId must be provided"
+  -- Fetch pending challan count for the RC if provided
+  mbChallanCount <- case mbRcNo of
+    Just rcNo -> fetchPendingChallanCount merchantId merchantOpCityId rcNo (mbRefreshChallanCount == Just True)
+    Nothing -> pure Nothing
   requests <- QOHR.findAllRequestsInRange from to limit offset Nothing Nothing mbStatus mbType (Just driverId.getId) Nothing Nothing mbRcNo mbDriverId
-  reqs <- mapM castHubRequests requests
+  reqs <- mapM (castHubRequests mbChallanCount) requests
   pure (OperationHubRequestsResp reqs)
+
+fetchPendingChallanCount :: Id Merchant -> Id MerchantOperatingCity -> Text -> Bool -> Flow (Maybe Int)
+fetchPendingChallanCount merchantId merchantOpCityId rcNo forceRefresh = do
+  rcHash <- getDbHash rcNo
+  mbVrc <- QVRC.findByCertificateNumberHash rcHash
+  case mbVrc of
+    Nothing -> pure Nothing
+    Just vrc -> do
+      case (vrc.pendingChallanCount, forceRefresh) of
+        (Just count, False) -> pure (Just count)
+        _ -> do
+          resp <- try @_ @SomeException $ TCS.getPendingChallanCount merchantId merchantOpCityId (CSIT.PendingChallanReq {vehicleNumber = rcNo})
+          case resp of
+            Right challanResp -> do
+              let count = challanResp.pendingChallanCount
+              QVRC.updatePendingChallanCount (Just count) vrc.id
+              pure (Just count)
+            Left err -> do
+              logError $ "Failed to fetch pending challan count from Signzy for rcNo " <> rcNo <> ": " <> show err
+              pure vrc.pendingChallanCount
 
 opsHubDriverLockKey :: Text -> Text
 opsHubDriverLockKey driverId = "opsHub:driver:Id-" <> driverId
@@ -115,8 +143,8 @@ validateDriverOperationHubRequest DriverOperationHubRequest {..} =
           LengthInRange 1 11 `And` star (P.latinUC \/ P.digit)
     ]
 
-castHubRequests :: (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest
-castHubRequests (hubReq, person, hub) = do
+castHubRequests :: Maybe Int -> (OperationHubRequests, Person, OperationHub) -> Flow OperationHubDriverRequest
+castHubRequests mbChallanCount (hubReq, person, hub) = do
   driverPhoneNo <- mapM decrypt person.mobileNumber
   pure $
     OperationHubDriverRequest
@@ -130,5 +158,6 @@ castHubRequests (hubReq, person, hub) = do
         registrationNo = hubReq.registrationNo,
         requestStatus = hubReq.requestStatus,
         requestTime = hubReq.createdAt,
-        requestType = hubReq.requestType
+        requestType = hubReq.requestType,
+        pendingChallanCount = if isJust hubReq.registrationNo then mbChallanCount else Nothing
       }

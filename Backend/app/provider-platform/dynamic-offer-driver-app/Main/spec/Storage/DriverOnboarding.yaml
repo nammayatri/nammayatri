@@ -315,6 +315,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
     vehicleImageId: Maybe (Id MediaFile)
+    pendingChallanCount: Maybe Int
   default:
     approved: "false"
   constraints:
@@ -380,6 +381,10 @@ VehicleRegistrationCertificate:
     updateVehicleRatingAndRemark:
       kvFunction: updateOneWithKV
       params: [vehicleRating, vehicleRatingRemark]
+      where: id
+    updatePendingChallanCount:
+      kvFunction: updateOneWithKV
+      params: [pendingChallanCount]
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
