@@ -6,7 +6,6 @@ where
 
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as DL
-import qualified Domain.Types.Extra.Plan as DExtraPlan
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Person as Person
 import Kernel.Prelude
@@ -18,7 +17,6 @@ import SharedLogic.DriverPool.DriverPoolData
 import qualified SharedLogic.DriverPool.DriverPoolMigrations as Migrations
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Person as QP
@@ -93,12 +91,9 @@ buildDriverPoolDataFromDB driverIds = do
   bankAccounts <- QDBA.getDriverBankAccounts (DL.nub (personIds <> fleetOwnerPersonIds))
   let baMap = HashMap.fromList $ map (\ba -> (ba.driverId, ba)) bankAccounts
 
-  safetyPlusPlans <- mapM (\did -> (did,) <$> QDP.findByDriverIdWithServiceName (cast did) (DExtraPlan.DASHCAM_RENTAL DExtraPlan.CAUTIO)) driverIds
-  let spMap = HashMap.fromList safetyPlusPlans
-
-  pure $ mapMaybe (buildOne diMap vMap pMap dsMap baMap faMap spMap) driverIds
+  pure $ mapMaybe (buildOne diMap vMap pMap dsMap baMap faMap) driverIds
   where
-    buildOne diMap vMap pMap dsMap baMap faMap spMap did = do
+    buildOne diMap vMap pMap dsMap baMap faMap did = do
       di <- HashMap.lookup did diMap
       v <- HashMap.lookup did vMap
       p <- HashMap.lookup did pMap
@@ -107,7 +102,6 @@ buildDriverPoolDataFromDB driverIds = do
       let effectiveBa = case fa of
             Just assoc -> HashMap.lookup (Id @Person.Person assoc.fleetOwnerId) baMap
             Nothing -> HashMap.lookup (cast did :: Id Person.Person) baMap
-      let sp = join $ HashMap.lookup did spMap
       Just
         DriverPoolData
           { driverId = did,
@@ -150,7 +144,7 @@ buildDriverPoolDataFromDB driverIds = do
             clientConfigVersion = p.clientConfigVersion,
             vehicleTags = v.vehicleTags,
             mYManufacturing = v.mYManufacturing,
-            safetyPlusEnabled = maybe False (.enableServiceUsageCharge) sp,
+            safetyPlusEnabled = False,
             fleetOwnerId = (.fleetOwnerId) <$> fa,
             driverTripEndLocation = di.driverTripEndLocation,
             hasRideStarted = di.hasRideStarted,
