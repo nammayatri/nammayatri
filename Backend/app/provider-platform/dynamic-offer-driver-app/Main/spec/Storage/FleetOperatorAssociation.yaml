@@ -35,5 +35,8 @@ FleetOperatorAssociation:
     deleteByFleetOwnerId:
       kvFunction: deleteWithKV
       where: fleetOwnerId
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
   extraOperations:
     - EXTRA_QUERY_FILE
