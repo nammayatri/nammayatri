@@ -335,10 +335,24 @@ calculateCancellationCharges merchantOpCityId vehicleCategory baseFare departure
   case mbMatchingTier of
     Nothing -> return (0, baseFare) -- no config → full refund
     Just tier -> do
-      let charges = case tier.cancellationChargeType of
+      let rawCharges = case tier.cancellationChargeType of
             DFRFSCancellationConfig.PERCENTAGE -> baseFare * tier.cancellationChargeValue / 100
             DFRFSCancellationConfig.FLAT -> tier.cancellationChargeValue
-          refund = max 0 (baseFare - charges)
+          charges = min baseFare (max 0 rawCharges)
+          refund = baseFare - charges
+      when (rawCharges /= charges) $
+        logError $
+          "FRFSCancellationConfig misconfigured for tier " <> tier.id.getId
+            <> " (type="
+            <> show tier.cancellationChargeType
+            <> ", value="
+            <> show tier.cancellationChargeValue
+            <> ", baseFare="
+            <> show baseFare
+            <> "): rawCharges="
+            <> show rawCharges
+            <> " clamped to "
+            <> show charges
       return (charges, refund)
   where
     matchesTier mins tier =
