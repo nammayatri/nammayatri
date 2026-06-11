@@ -128,6 +128,7 @@ getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedis
 getRoutesBuses routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
   cloudType <- asks (.cloudType)
@@ -144,6 +145,7 @@ hasLiveVehicles :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedi
 hasLiveVehicles routeId integratedBppConfig = do
   let redisPrefix = case integratedBppConfig.providerConfig of
         DIBC.ONDC config -> config.redisPrefix
+        DIBC.DIRECT config -> config.redisPrefix
         _ -> Nothing
   let key = mkRouteKey redisPrefix routeId
   cloudType <- asks (.cloudType)

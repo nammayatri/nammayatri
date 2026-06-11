@@ -30,7 +30,8 @@ instance Show EBIXConfig where
 
 data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
-    qrRefreshTtl :: Maybe Seconds
+    qrRefreshTtl :: Maybe Seconds,
+    redisPrefix :: Maybe Text
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
