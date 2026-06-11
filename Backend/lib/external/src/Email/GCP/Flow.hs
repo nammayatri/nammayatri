@@ -14,6 +14,7 @@
 
 module Email.GCP.Flow
   ( sendEmail,
+    sendPlainEmail,
     sendMagicLinkEmail,
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
@@ -141,6 +142,11 @@ sendEmail apiUrl config to otpCode = do
       subject = config.subject
       bodyText = T.replace "<otp>" otpCode config.bodyTemplate
       emailData = buildEmail from to subject bodyText Nothing
+  sendViaSendGrid apiUrl emailData
+
+sendPlainEmail :: String -> Text -> [Text] -> Text -> Text -> IO ()
+sendPlainEmail apiUrl from to subject bodyText = do
+  let emailData = buildEmail from to subject bodyText Nothing
   sendViaSendGrid apiUrl emailData
 
 sendMagicLinkEmail :: String -> Email.EmailMagicLinkConfig -> [Text] -> Text -> IO ()
