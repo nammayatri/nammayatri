@@ -556,6 +556,8 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             vehicleNumber = Nothing,
             isSingleMode = Just True,
             cloudType = Nothing,
+            clientSdkVersion = Nothing,
+            clientBundleVersion = Nothing,
             ..
           }
 
