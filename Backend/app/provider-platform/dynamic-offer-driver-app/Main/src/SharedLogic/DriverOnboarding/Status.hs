@@ -744,6 +744,205 @@ getDriverDocTypes merchantOpCityId allDocVerificationConfigs possibleVehicleCate
           pure driverDocumentTypes
         else pure $ if null allDriverDocumentTypes then SDO.defaultDriverDocumentTypes else allDriverDocumentTypes
 
+fetchProcessedVehicleDocumentsWithRC ::
+  IQuery.EntityImagesInfo ->
+  [DVC.DocumentVerificationConfig] ->
+  Language ->
+  Maybe Text ->
+  Maybe Bool ->
+  Bool ->
+  Flow [VehicleDocumentItem]
+fetchProcessedVehicleDocumentsWithRC entityImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+  processedVehicles <- case entityImagesInfo.entity of
+    IQuery.PersonEntity person -> do
+      associations <- DRAQuery.findAllLinkedByDriverId person.id
+      (catMaybes <$>) $
+        forM associations $ \assoc -> do
+          mbRc <- RCQuery.findById assoc.rcId
+          -- filter by rcNo if required
+          mbFilteredRc <- case mbRc of
+            Just rc -> do
+              rcCertificateNumber <- decrypt rc.certificateNumber
+              let wrongRcNo = isJust mbReqRegistrationNo && Just rcCertificateNumber /= mbReqRegistrationNo
+              return $ if wrongRcNo then Nothing else Just rc
+            Nothing -> return Nothing
+          return $ (assoc.isRcActive,assoc.rcId,) <$> mbFilteredRc
+    IQuery.VehicleRCEntity rc -> do
+      mbAssoc <- DRAQuery.findLatestLinkedByRCId rc.id entityImagesInfo.now
+      pure [(maybe False (.isRcActive) mbAssoc, rc.id, rc)]
+  processedVehicles `forM` \(isActive, rcId, processedVehicle) -> do
+    rcImagesInfo <- IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
+    registrationNo <- decrypt processedVehicle.certificateNumber
+    let dateOfUpload = processedVehicle.createdAt
+    let verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant
+        userSelectedVehicleCategory = fromMaybe DVC.CAR $ processedVehicle.userPassedVehicleCategory <|> verifiedVehicleCategory
+        docVerificationConfigs = filter (\config -> config.vehicleCategory == userSelectedVehicleCategory) allDocumentVerificationConfigs
+
+    vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
+    documents <-
+      vehicleDocumentTypes `forM` \docType -> do
+        (mbStatus, mbProcessedReason, mbProcessedUrl, mbExpiry, mbS3Path, mbImageId) <- getProcessedVehicleDocuments entityImagesInfo docType processedVehicle (Just rcImagesInfo)
+        case mbStatus of
+          Just status -> do
+            mbMessage <- documentStatusMessage status Nothing docType mbProcessedUrl language skipMessages
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> mbMessage, verificationUrl = mbProcessedUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = mbExpiry}
+          Nothing -> do
+            (status, mbReason, mbUrl, _, mbS3PathInProgress, mbImageIdInProgress) <- getInProgressVehicleDocuments entityImagesInfo (Just rcImagesInfo) docType docVerificationConfigs
+            mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+            return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3PathInProgress, imageId = mbImageIdInProgress, imageId2 = Nothing, documentExpiry = mbExpiry}
+
+    let mbRcImage = find (\img -> img.id == processedVehicle.documentImageId) entityImagesInfo.entityImages
+        rcS3Path = mbRcImage <&> (.s3Path)
+        rcImageId = Just processedVehicle.documentImageId.getId
+        rcExpiry = Just processedVehicle.fitnessExpiry
+    return
+      VehicleDocumentItem
+        { registrationNo,
+          userSelectedVehicleCategory,
+          verifiedVehicleCategory,
+          isVerified = False,
+          isActive,
+          isApproved = fromMaybe False processedVehicle.approved,
+          vehicleModel = processedVehicle.vehicleModel,
+          documents,
+          dateOfUpload,
+          s3Path = rcS3Path,
+          imageId = rcImageId,
+          documentExpiry = rcExpiry,
+          docsVerificationStatus = Just $ computeAdminDocsVerificationStatus documents
+        }
+
+fetchProcessedVehicleDocumentsWithoutRC ::
+  IQuery.EntityImagesInfo ->
+  [DVC.DocumentVerificationConfig] ->
+  [VehicleDocumentItem] ->
+  Maybe Text ->
+  Maybe Bool ->
+  Flow [VehicleDocumentItem]
+fetchProcessedVehicleDocumentsWithoutRC entityImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC mbReqRegistrationNo onlyMandatoryDocs = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+      mbPersonId = IQuery.getPersonEntityId entityImagesInfo
+  mbVehicle <- maybe (pure Nothing) QVehicle.findById mbPersonId
+  case mbVehicle of
+    Just vehicle -> do
+      let vehicleAlreadyIncluded = isJust $ find (\doc -> doc.registrationNo == vehicle.registrationNo) processedVehicleDocumentsWithRC
+      -- filter by rcNo if required
+      let wrongRcNo = isJust mbReqRegistrationNo && Just vehicle.registrationNo /= mbReqRegistrationNo
+      if vehicleAlreadyIncluded || wrongRcNo
+        then return []
+        else do
+          let userSelectedVehicleCategory = DV.castVehicleVariantToVehicleCategory vehicle.variant
+              verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant
+          vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
+
+          documents <-
+            vehicleDocumentTypes `forM` \docType -> do
+              return $ DocumentStatusItem {documentType = docType, verificationStatus = NO_DOC_AVAILABLE, verificationMessage = Nothing, verificationUrl = Nothing, s3Path = Nothing, imageId = Nothing, imageId2 = Nothing, documentExpiry = Nothing}
+          return
+            [ VehicleDocumentItem
+                { registrationNo = vehicle.registrationNo,
+                  userSelectedVehicleCategory,
+                  verifiedVehicleCategory,
+                  isVerified = True,
+                  isActive = True,
+                  isApproved = False,
+                  vehicleModel = Just vehicle.model,
+                  documents,
+                  dateOfUpload = vehicle.createdAt,
+                  s3Path = Nothing,
+                  imageId = Nothing,
+                  documentExpiry = Nothing,
+                  docsVerificationStatus = Nothing
+                }
+            ]
+    Nothing -> return []
+
+fetchInprogressVehicleDocuments ::
+  IQuery.EntityImagesInfo ->
+  [DVC.DocumentVerificationConfig] ->
+  Language ->
+  [VehicleDocumentItem] ->
+  Maybe Text ->
+  Maybe Bool ->
+  Bool ->
+  Flow [VehicleDocumentItem]
+fetchInprogressVehicleDocuments entityImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs skipMessages = do
+  let merchantOpCityId = entityImagesInfo.merchantOperatingCity.id
+  mbVerificationReqRecord <- case entityImagesInfo.entity of
+    IQuery.PersonEntity person -> do
+      -- Driver inspection or status handler
+      inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
+      inprogressVehicleHV <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType (Just 1) Nothing person.id DVC.VehicleRegistrationCertificate
+      pure $ getLatestVerificationRecord inprogressVehicleIdfy inprogressVehicleHV
+    IQuery.VehicleRCEntity _rc -> do
+      -- Vehicle inspection
+      -- Inprogress rc doc for Vehicle inspection case not required, because we already have processed rc
+      pure Nothing
+  case mbVerificationReqRecord of
+    Just verificationReqRecord -> do
+      registrationNoEither <- withTryCatch "decryptDocumentNumber:fetchInprogressVehicleDocuments" (decrypt verificationReqRecord.documentNumber)
+      case registrationNoEither of
+        Left err -> do
+          logError $ "Error while decrypting document number: " <> (verificationReqRecord.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
+          return []
+        Right registrationNo -> do
+          -- filter by rcNo if required
+          let wrongRcNo = isJust mbReqRegistrationNo && Just registrationNo /= mbReqRegistrationNo
+          if wrongRcNo
+            then return []
+            else do
+              rcNoEnc <- encrypt registrationNo
+              rc <- RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+              -- VRC-derived "RC link already created (done)" check, replacing the
+              -- driver_rc_association history read (findUnlinkedRC). Reuses the RC row
+              -- fetched just above + transporterConfig from entityImagesInfo, so it adds
+              -- no DB query: if the VRC exists, is not a fleet RC, and
+              -- canCreateRCAssociation holds, the driver-RC link would have been created,
+              -- so this is not an in-progress document.
+              let mbRcId = (.id) <$> rc
+                  rcLinkAlreadyCreated = maybe False (\rc_ -> isNothing rc_.fleetOwnerId && SDO.canCreateRCAssociation entityImagesInfo.transporterConfig rc_) rc
+              mbRcImagesInfo <- forM mbRcId $ \rcId -> do
+                IQuery.getRcImagesInfoFromEntityImagesInfo entityImagesInfo rcId vehicleDocsLoadedByRcId
+              if isJust (find (\doc -> doc.registrationNo == registrationNo) processedVehicleDocuments) || rcLinkAlreadyCreated
+                then return []
+                else do
+                  let userSelectedVehicleCategory = fromMaybe DVC.CAR verificationReqRecord.vehicleCategory
+                      verifiedVehicleCategory = Nothing
+                      docVerificationConfigs = filter (\config -> config.vehicleCategory == userSelectedVehicleCategory) allDocumentVerificationConfigs
+
+                  vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
+                  documents <-
+                    vehicleDocumentTypes `forM` \docType -> do
+                      (status, mbReason, mbUrl, _, mbS3Path, mbImageId) <- getInProgressVehicleDocuments entityImagesInfo mbRcImagesInfo docType docVerificationConfigs
+                      mbMessage <- documentStatusMessage status mbReason docType mbUrl language skipMessages
+                      return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbMessage, verificationUrl = mbUrl, s3Path = mbS3Path, imageId = mbImageId, imageId2 = Nothing, documentExpiry = Nothing}
+                  let mbRcIdText = (.getId) <$> mbRcId
+                      mbRcImage =
+                        find
+                          (\img -> img.imageType == DVC.VehicleRegistrationCertificate && (isNothing mbRcIdText || img.rcId == mbRcIdText))
+                          entityImagesInfo.entityImages
+                      rcS3Path = mbRcImage <&> (.s3Path)
+                      rcImageId = (.id.getId) <$> mbRcImage
+                  return
+                    [ VehicleDocumentItem
+                        { registrationNo,
+                          userSelectedVehicleCategory,
+                          verifiedVehicleCategory,
+                          isVerified = False,
+                          isActive = False,
+                          isApproved = False,
+                          vehicleModel = Nothing,
+                          documents,
+                          dateOfUpload = verificationReqRecord.createdAt,
+                          s3Path = rcS3Path,
+                          imageId = rcImageId,
+                          documentExpiry = Nothing,
+                          docsVerificationStatus = Nothing
+                        }
+                    ]
+    Nothing -> return []
+
 checkAllVehicleDocsVerified ::
   [DVC.DocumentVerificationConfig] ->
   VehicleDocumentItem ->
