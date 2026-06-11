@@ -30,6 +30,7 @@ import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
+import Kernel.Types.Version (CloudType)
 import Kernel.Types.SlidingWindowCounters
 import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -179,7 +180,8 @@ data AppEnv = AppEnv
     inMemEnv :: CF.InMemEnv,
     url :: Maybe Text,
     smsCfg :: SmsConfig,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    cloudType :: Maybe CloudType
   }
   deriving (Generic)
 
@@ -246,6 +248,7 @@ buildAppEnv AppCfg {..} consumerType = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
   let url = Nothing
+  let cloudType = Nothing :: Maybe CloudType
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -2,6 +2,7 @@ module SharedLogic.DriverPool.DriverPoolData
   ( DriverPoolData (..),
     getDriverPoolDataBatch,
     setDriverPoolData,
+    setDriverPoolDataByCloud,
     driverPoolDataKey,
     defaultDriverPoolData,
     mkParallelSearchRequestKey,
@@ -27,7 +28,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
+import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 
@@ -88,6 +89,7 @@ data DriverPoolData = DriverPoolData
     luggageCapacity :: Maybe Int,
     vehicleRating :: Maybe Double,
     registrationNo :: Text,
+    cloudType :: Maybe CloudType,
     -- | Monotonic schema version stamped by the cold-start builder and by
     -- migrators in 'SharedLogic.DriverPool.DriverPoolMigrations'. 'Nothing'
     -- means the entry was written before this field existed (treated as 0,
@@ -205,11 +207,13 @@ defaultDriverPoolData dId =
       luggageCapacity = Nothing,
       vehicleRating = Nothing,
       registrationNo = "",
+      cloudType = Nothing,
       schemaVersion = Nothing
     }
 
 -- | Set/overwrite the full pool data for a driver in LTS Redis.
--- via syncDriverPoolDataToLTS. No need to expire and rebuild frequently.
+-- Always writes to the primary cloud. Use 'setDriverPoolDataByCloud' when the
+-- write should be routed to the driver's own cloud.
 setDriverPoolData ::
   ( Redis.HedisFlow m r,
     MonadFlow m,
@@ -219,3 +223,22 @@ setDriverPoolData ::
   m ()
 setDriverPoolData dpd = do
   Redis.withLTSRedis $ Redis.setExp (driverPoolDataKey dpd.driverId) dpd (2592000 * 12) -- 1 year
+
+-- | Cloud-aware write: routes the SET to primary or secondary LTS Redis
+-- depending on whether the driver's cloudType matches the deployment's.
+-- If both are equal (or both Nothing) → primary; otherwise → secondary.
+setDriverPoolDataByCloud ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Maybe CloudType ->
+  DriverPoolData ->
+  m ()
+setDriverPoolDataByCloud deploymentCloudType dpd = do
+  let driverCloud = dpd.cloudType
+      key = driverPoolDataKey dpd.driverId
+      expiry = 2592000 * 12 -- 1 year
+  if deploymentCloudType == driverCloud
+    then Redis.withLTSRedis $ Redis.setExp key dpd expiry
+    else Redis.withSecondaryLTSRedis $ Redis.setExp key dpd expiry

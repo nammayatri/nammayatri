@@ -19,7 +19,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (Device, Version)
+import Kernel.Types.Version (CloudType, Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -89,7 +89,8 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     airConditioned :: SetField (Maybe Bool),
     luggageCapacity :: SetField (Maybe Int),
     vehicleRating :: SetField (Maybe Double),
-    registrationNo :: SetField Text
+    registrationNo :: SetField Text,
+    cloudType :: SetField (Maybe CloudType)
   }
 
 emptyUpdate :: DriverPoolDataUpdate
@@ -142,12 +143,15 @@ emptyUpdate =
       airConditioned = Unchanged,
       luggageCapacity = Unchanged,
       vehicleRating = Unchanged,
-      registrationNo = Unchanged
+      registrationNo = Unchanged,
+      cloudType = Unchanged
     }
 
 -- | Synchronously update driver pool data in Redis/LTS.
 -- MERGE semantics: only fields marked 'Set' are written; 'Unchanged' fields
 -- keep their existing values.
+-- Writes are routed to the correct cloud based on the driver's cloudType:
+-- if it matches the deployment's cloudType → primary, otherwise → secondary.
 -- If no LTS entry exists yet, the update is skipped — cold-start initialisation
 -- is the responsibility of getOrBuildDriverPoolDataBatch (called at pool-query
 -- time), which builds the full entry from DB and populates LTS. Any field
@@ -163,21 +167,41 @@ syncDriverPoolDataToLTS ::
   DriverPoolDataUpdate ->
   m ()
 syncDriverPoolDataToLTS driverId update = do
+  deploymentCloudType <- asks (.cloudType)
   Redis.withWaitOnLockRedisWithExpiry (driverPoolSyncLockKey driverId) 3 10 $ do
     mbExisting <- Redis.withLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
     case mbExisting of
       Just existing -> do
         let merged = applyUpdate update existing
-        DPD.setDriverPoolData merged
+        cleanupOldCloudKey deploymentCloudType existing merged
+        DPD.setDriverPoolDataByCloud deploymentCloudType merged
       Nothing -> do
         mbExisting' <- Redis.withSecondaryLTSRedis $ Redis.safeGet (DPD.driverPoolDataKey driverId)
         case mbExisting' of
           Just existing' -> do
             let merged = applyUpdate update existing'
-            DPD.setDriverPoolData merged
-            Redis.withSecondaryLTSRedis $ Redis.del (DPD.driverPoolDataKey driverId)
+            cleanupOldCloudKey deploymentCloudType existing' merged
+            DPD.setDriverPoolDataByCloud deploymentCloudType merged
           Nothing ->
             logError $ "syncDriverPoolDataToLTS: no LTS entry for driver in any cloud" <> driverId.getId <> " yet — skipping until getOrBuildDriverPoolDataBatch initialises it"
+
+-- | When a driver's cloudType changes, the key in the old cloud becomes orphaned.
+-- Delete it so reads don't return stale data.
+cleanupOldCloudKey ::
+  ( Redis.HedisFlow m r,
+    MonadFlow m,
+    Redis.HedisLTSFlowEnv r
+  ) =>
+  Maybe CloudType ->
+  DPD.DriverPoolData ->
+  DPD.DriverPoolData ->
+  m ()
+cleanupOldCloudKey deploymentCloudType old new =
+  when (old.cloudType /= new.cloudType) $ do
+    let key = DPD.driverPoolDataKey old.driverId
+    if deploymentCloudType == old.cloudType
+      then Redis.withLTSRedis $ Redis.del key
+      else Redis.withSecondaryLTSRedis $ Redis.del key
 
 driverPoolSyncLockKey :: Id Driver -> Text
 driverPoolSyncLockKey driverId = "driver-pool-sync-lock:" <> driverId.getId
@@ -234,7 +258,8 @@ applyUpdate u d =
       DPD.airConditioned = applyField u.airConditioned d.airConditioned,
       DPD.luggageCapacity = applyField u.luggageCapacity d.luggageCapacity,
       DPD.vehicleRating = applyField u.vehicleRating d.vehicleRating,
-      DPD.registrationNo = applyField u.registrationNo d.registrationNo
+      DPD.registrationNo = applyField u.registrationNo d.registrationNo,
+      DPD.cloudType = applyField u.cloudType d.cloudType
     }
 
 -- | Apply a single field update: Set overwrites, Unchanged keeps current.
