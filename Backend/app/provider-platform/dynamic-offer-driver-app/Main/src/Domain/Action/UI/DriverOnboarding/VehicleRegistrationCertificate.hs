@@ -895,7 +895,9 @@ deactivateRC isTaxiBoothRequest transporterConfig rc driverId = do
     DAQuery.updateRcErrorMessage driverId rc.id "Driver can't deactivate RC which is not active with them"
     throwError (InvalidRequest "Driver can't deactivate RC which is not active with them")
   removeVehicle isTaxiBoothRequest driverId
-  DAQuery.deactivateRCForDriver False driverId rc.id
+  -- Deactivate AND set the association end date to now (associatedTill), so no
+  -- associatedTill=2099 row lingers for the driver after the vehicle is unlinked.
+  DAQuery.endRCAssociationForDriverAndRC driverId rc.id
   when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.decrementFleetOwnerAnalyticsActiveVehicleCount transporterConfig rc.fleetOwnerId driverId
   return ()
 

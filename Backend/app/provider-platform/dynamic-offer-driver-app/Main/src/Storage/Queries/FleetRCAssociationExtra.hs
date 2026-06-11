@@ -48,3 +48,16 @@ findActiveAssociationByFleetOwnerId (Id fleetOwnerId) = do
 
 deleteByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
 deleteByFleetOwnerId (Id fleetOwnerId) = deleteWithKV [Se.Is Beam.fleetOwnerId (Se.Eq fleetOwnerId)]
+
+deleteById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetRCAssociation -> m ()
+deleteById rowId = deleteWithKV [Se.Is Beam.id $ Se.Eq rowId.getId]
+
+-- Mark the fleet-vehicle association ended (associatedTill=now). This UPDATE
+-- streams to ClickHouse (drainer -> Kafka) as the terminal history event; the
+-- caller then hard-deletes the row. Hard deletes are NOT pushed to Kafka.
+endById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id FleetRCAssociation -> m ()
+endById rowId = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.associatedTill (Just now), Se.Set Beam.updatedAt now]
+    [Se.Is Beam.id $ Se.Eq rowId.getId]

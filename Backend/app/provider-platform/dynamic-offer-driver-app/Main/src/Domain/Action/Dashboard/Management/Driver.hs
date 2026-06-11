@@ -67,6 +67,8 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverAirportPreference,
     postDriverAirportPreference,
     getDriverSearchRequestStats,
+    postDriverOperatorChange,
+    postDriverFleetOperatorChange,
   )
 where
 
@@ -92,6 +94,7 @@ import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AVD
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.Plan as DTPlan
 import qualified Domain.Action.UI.Registration as DReg
+import qualified Domain.Types.Common as DI
 import qualified Domain.Types.DocumentVerificationConfig as DomainDVC
 import qualified Domain.Types.DriverBlockReason as DBR
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
@@ -102,7 +105,6 @@ import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as IV
-import qualified Domain.Types.Common as DI
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -132,7 +134,9 @@ import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
 import SharedLogic.Analytics as Analytics
+import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.DeleteDriver as DeleteDriver
+import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
@@ -144,12 +148,12 @@ import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
+import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarCardExtra as QAadhaarCardExtra
@@ -1555,3 +1559,55 @@ getDriverSearchRequestStats merchantShortId opCity driverId = do
     castResponse DI.Accept = Common.Accept
     castResponse DI.Reject = Common.Reject
     castResponse DI.Pulled = Common.Pulled
+
+postDriverOperatorChange :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Common.ChangeDriverOperatorReq -> Flow APISuccess
+postDriverOperatorChange merchantShortId opCity _requestorId reqDriverId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person reqDriverId
+  -- Validate the driver exists and belongs to this merchant + operating city
+  -- (prevents cross-tenant operator swaps via a foreign driverId).
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
+  dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
+  operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
+  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+  oldAssoc <- QDriverOperator.findByDriverId personId True >>= fromMaybeM (InvalidRequest "No active operator association for driver")
+  when (oldAssoc.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
+  -- Mark old association ended (isActive=false, associatedTill=now). This UPDATE
+  -- streams to ClickHouse via the drainer; the stale inactive row is removed from
+  -- Postgres by the ClickHouse ETL, not by the app. Then create the new association.
+  AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
+    QDriverOperator.endById oldAssoc.id
+    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    QDriverOperator.create newAssoc
+  pure Success
+
+postDriverFleetOperatorChange :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.ChangeFleetOperatorReq -> Flow APISuccess
+postDriverFleetOperatorChange merchantShortId opCity _requestorId fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  -- Validate the fleet owner exists, belongs to this merchant + operating city, and
+  -- is actually a fleet owner (fleetOwnerId is a raw path param; prevents attaching an
+  -- operator to a foreign / non-fleet person).
+  let fleetOwnerPersonId = Id fleetOwnerId :: Id DP.Person
+  fleetOwner <- QPerson.findById fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
+  unless (merchant.id == fleetOwner.merchantId && merchantOpCityId == fleetOwner.merchantOperatingCityId) $
+    throwError (PersonDoesNotExist fleetOwnerId)
+  unless (fleetOwner.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
+    throwError (InvalidRequest "Person is not a fleet owner")
+  newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
+  dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
+  operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
+  unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+  oldAssoc <- QFleetOperator.findActiveByFleetOwnerId (Id fleetOwnerId)
+  -- Reject re-assigning the fleet's current operator (mirrors the driver/operator change
+  -- guard); otherwise the existing active link is needlessly ended and recreated.
+  whenJust oldAssoc $ \old -> when (old.operatorId == operator.id.getId) $ throwError (InvalidRequest "New operator equals current operator")
+  AC.withAssociation (AC.guardNoLiveRideInFleet fleetOwnerId) $ do
+    whenJust oldAssoc $ \old -> QFleetOperator.endById old.id
+    newAssoc <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId fleetOwnerId operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    QFleetOperator.create newAssoc
+  pure Success

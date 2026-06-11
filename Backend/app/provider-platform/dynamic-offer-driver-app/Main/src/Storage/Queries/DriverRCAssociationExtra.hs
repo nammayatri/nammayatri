@@ -340,3 +340,21 @@ findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumber
     Right rows ->
       catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
     Left _ -> pure []
+
+endAllRCAssociationsForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+endAllRCAssociationsForDriver (Id driverId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDRCA.associatedTill $ Just now, Se.Set BeamDRCA.isRcActive False]
+    [Se.And [Se.Is BeamDRCA.driverId (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
+
+-- End a single driver-RC association: set isRcActive=false AND associatedTill=now.
+-- The generated deactivateRCForDriver only flips isRcActive (leaving associatedTill at 2099),
+-- which leaves the link "active" to associatedTill-based queries. Use this so the
+-- driver-vehicle unlink flow records the end date, leaving no associatedTill=2099 row.
+endRCAssociationForDriverAndRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> Id VehicleRegistrationCertificate -> m ()
+endRCAssociationForDriverAndRC (Id driverId) (Id rcId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDRCA.associatedTill $ Just now, Se.Set BeamDRCA.isRcActive False]
+    [Se.And [Se.Is BeamDRCA.driverId (Se.Eq driverId), Se.Is BeamDRCA.rcId (Se.Eq rcId)]]
