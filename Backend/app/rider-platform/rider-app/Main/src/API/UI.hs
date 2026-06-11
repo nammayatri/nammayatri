@@ -10,6 +10,7 @@ import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CancellationChargesWaiveOff as CancellationChargesWaiveOff
 import qualified API.Action.UI.CancellationReasons as CancellationReasons
+import qualified API.Action.UI.CityInfo as CityInfo
 import qualified API.Action.UI.CustomerReferral as CustomerReferral
 import qualified API.Action.UI.DeletedPerson as DeletedPerson
 import qualified API.Action.UI.Dispatcher as Dispatcher
@@ -169,6 +170,7 @@ type API =
            :<|> SVP.API
            :<|> ChangeServiceTier.API
            :<|> AddBaggage.API
+           :<|> CityInfo.API
        )
 
 handler :: FlowServer API
@@ -253,3 +255,4 @@ handler =
     :<|> SVP.handler
     :<|> ChangeServiceTier.handler
     :<|> AddBaggage.handler
+    :<|> CityInfo.handler

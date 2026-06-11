@@ -263,6 +263,7 @@ library
       Domain.Action.UI.CancellationReasons
       Domain.Action.UI.CancelLogic
       Domain.Action.UI.ChangeServiceTier
+      Domain.Action.UI.CityInfo
       Domain.Action.UI.Conductor.Stats
       Domain.Action.UI.Confirm
       Domain.Action.UI.CRIS
@@ -852,6 +853,7 @@ library
       API.Action.UI.Cac
       API.Action.UI.CancellationChargesWaiveOff
       API.Action.UI.CancellationReasons
+      API.Action.UI.CityInfo
       API.Action.UI.CRIS
       API.Action.UI.CustomerReferral
       API.Action.UI.DeletedPerson
@@ -960,6 +962,7 @@ library
       API.Types.UI.BBPS
       API.Types.UI.CancellationChargesWaiveOff
       API.Types.UI.CancellationReasons
+      API.Types.UI.CityInfo
       API.Types.UI.CRIS
       API.Types.UI.CustomerReferral
       API.Types.UI.DeletedPerson

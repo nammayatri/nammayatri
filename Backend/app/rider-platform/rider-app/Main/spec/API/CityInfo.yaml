@@ -1,0 +1,19 @@
+imports: {}
+
+module: CityInfo
+
+types:
+  StdCodeResp:
+    stdCode: Text
+    cityName: Text
+    derive: "Show"
+
+apis:
+  # GET /city/stdCode
+  - GET:
+      endpoint: /operatingCity
+      auth: TokenAuth
+      mandatoryQuery:
+        stdCode: Text
+      response:
+        type: API.Types.UI.CityInfo.StdCodeResp
