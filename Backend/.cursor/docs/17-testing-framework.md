@@ -39,20 +39,21 @@ Master DB ──export──→ JSON files ──patch──→ Patched JSON ─
 ### Commands
 
 ```bash
-# Export from master to local files
-python config_transfer.py export --from master --to local
+# Export raw config from master to JSON files
+python config_transfer.py export --from master
 
-# Import from local files to local DB
+# Patch the export for local (URL rewrites, re-encryption, overrides)
+python config_transfer.py patch --from master --to local
+
+# Import the patched files into the local DB
 python config_transfer.py import --from master --to local
 
-# Full sync (export + patch + import)
-python config_transfer.py sync --from master --to local
+# List tables being synced (optionally with row counts in an env)
+python config_transfer.py list --schema atlas_app
+python config_transfer.py list --env master
 
-# List tables being synced
-python config_transfer.py list-tables --schema atlas_app
-
-# Discover new config tables (compares CachedQueries vs config.json)
-python config_transfer.py discover
+# Inspect the patch set for a direction without running it
+python config_transfer.py show-patches --from master --to local
 ```
 
 ### Key Files
