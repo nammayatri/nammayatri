@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetUnlink,
     postDriverFleetRemoveVehicle,
     postDriverFleetRemoveDriver,
+    postDriverFleetChangeDriver,
     getDriverFleetTotalEarning,
     getDriverFleetVehicleEarning,
     getDriverFleetDriverEarning,
@@ -189,6 +190,7 @@ import qualified Lib.Finance.Domain.Types.Account as FinanceAccount
 import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
+import qualified SharedLogic.Association.Change as AC
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
@@ -753,7 +755,7 @@ getDriverFleetGetAllDriver merchantShortId _opCity mblimit mboffset mbMobileNumb
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Just False -> do
-      pairs <- FDV.findAllInactiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString
+      pairs <- FDV.findAllActiveDriverByFleetOwnerIds fleetOwnerIds (Just limit) (Just offset) mobileNumberHash mbName mbSearchString (Just False)
       fleetDriversInfos <- mapM (convertToDriverAPIEntityT fleetNameMap) pairs
       return $ Common.FleetListDriverResT fleetDriversInfos
     Nothing -> do
@@ -857,12 +859,20 @@ postDriverFleetRemoveVehicle merchantShortId _ fleetOwnerId_ vehicleNo mbRequest
     when (isJust isFleetDriver) $ throwError (InvalidRequest "Vehicle is linked to a fleet driver, please unlink the vehicle from the driver before removing it.")
   vehicleRC <- RCQuery.findLastVehicleRCWrapper vehicleNo >>= fromMaybeM (VehicleDoesNotExist vehicleNo)
   unless (isJust vehicleRC.fleetOwnerId && vehicleRC.fleetOwnerId == Just fleetOwnerId_) $ throwError (FleetOwnerVehicleMismatchError fleetOwnerId_)
+  AC.guardNoLiveRideByRC vehicleRC.id
   associations <- QRCAssociation.findAllActiveAssociationByRCId vehicleRC.id ----- Here ending all the association of the vehicle with the fleet drivers
   forM_ associations $ \assoc -> do
     isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId assoc.driverId fleetOwnerId_ True
     when (isJust isFleetDriver) $ QRCAssociation.endAssociationForRC assoc.driverId vehicleRC.id
   RCQuery.upsert (updatedVehicleRegistrationCertificate vehicleRC)
-  FRAE.endAssociationForRC (Id fleetOwnerId_ :: Id DP.Person) vehicleRC.id
+  now <- getCurrentTime
+  mbFleetRc <- FRAE.findLinkedByRCIdAndFleetOwnerId (Id fleetOwnerId_) vehicleRC.id now
+  -- Mark the fleet-vehicle association ended (associatedTill=now). endById goes through the
+  -- KV layer (updateWithKV), so the row is updated in BOTH Postgres and Redis. The ended row
+  -- is retained in Postgres (not hard-deleted) -- hard deletes are invisible to the drainer/
+  -- Kafka/ClickHouse pipeline, so ending rather than deleting is what preserves association
+  -- history. Mirrors the operator/fleet-operator/fleet-driver flows.
+  whenJust mbFleetRc $ \fleetRc -> FRAE.endById fleetRc.id
   pure Success
   where
     updatedVehicleRegistrationCertificate DVRC.VehicleRegistrationCertificate {..} = DVRC.VehicleRegistrationCertificate {fleetOwnerId = Nothing, ..}
@@ -5090,3 +5100,40 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
                     Common.fleetOwnerMobileNumber = mbFleetOwnerMobile
                   }
       }
+
+postDriverFleetChangeDriver :: ShortId DM.Merchant -> Context.City -> Text -> Id Common.Driver -> Maybe Text -> Common.ChangeFleetDriverReq -> Flow APISuccess
+postDriverFleetChangeDriver merchantShortId opCity requestorId driverId mbFleetOwnerId req = do
+  (mbEntityRole, mbEntityId) <- validateRequestorRoleAndGetEntityId requestorId mbFleetOwnerId
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  fleetOwnerId <- fromMaybeM (InvalidRequest "fleetOwnerId required") mbEntityId
+  fleetAssoc <- FDV.findByDriverIdAndFleetOwnerId personId fleetOwnerId True >>= fromMaybeM (InvalidRequest "Driver is not active in this fleet")
+  -- Resolve + validate the new operator BEFORE breaking any association, so an invalid
+  -- operator code / missing fleet operator can't leave the driver stranded (no fleet,
+  -- no operator, vehicles detached). Mirrors the operator/fleet-operator change flows.
+  newOperatorId <- case mbEntityRole of
+    Just DP.FLEET_OWNER -> do
+      -- fleet owner can't pass an operator code: driver inherits the fleet's current operator
+      fleetOperatorAssoc <- FOV.findActiveByFleetOwnerId (Id fleetOwnerId) >>= fromMaybeM (InvalidRequest "Fleet has no active operator association")
+      pure fleetOperatorAssoc.operatorId
+    _ -> do
+      -- admin/operator: newOperatorCode mandatory, re-link to the specified operator
+      newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required for admin/operator change") req.newOperatorCode
+      dr <- QDR.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
+      operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
+      unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+      pure operator.id.getId
+  -- New operator validated; now break the old fleet-driver link (+ all driver-vehicle
+  -- links) and create the new operator link.
+  AC.withAssociation (AC.guardNoLiveRideByDriver personId) $ do
+    FDV.endById fleetAssoc.id
+    QRCAssociation.endAllRCAssociationsForDriver personId
+    -- End the driver's existing active operator association before creating the new one,
+    -- so the driver never ends up with two active driver_operator_association rows
+    -- (single-active invariant, mirroring the driver/operator change flow).
+    mbExistingOperatorAssoc <- QDOAExtra.findByDriverId personId True
+    whenJust mbExistingOperatorAssoc $ \existing -> QDOAExtra.endById existing.id
+    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId newOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    DOV.create newAssoc
+  pure Success

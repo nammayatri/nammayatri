@@ -668,6 +668,48 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # postDriverOperatorChange
+      endpoint: /{driverId}/operator/change
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      request:
+        type: ChangeDriverOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{driverId}/operator/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              driverId: Id Driver
+            request:
+              type: ChangeDriverOperatorReq
+            response:
+              type: APISuccess
+
+  - POST: # postDriverFleetOperatorChange
+      endpoint: /{fleetOwnerId}/fleet/operator/change
+      auth: ApiAuthV2
+      params:
+        fleetOwnerId: Text
+      request:
+        type: ChangeFleetOperatorReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{fleetOwnerId}/fleet/operator/change
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+              fleetOwnerId: Text
+            request:
+              type: ChangeFleetOperatorReq
+            response:
+              type: APISuccess
+
 types:
   DriverIdentityInfoRes:
     - driverId: Id Driver
@@ -938,6 +980,12 @@ types:
     - day: Day
     - response: Maybe SearchRequestForDriverResponse
     - count: Int
+  ChangeDriverOperatorReq:
+    - newOperatorCode: Maybe Text
+    - derive: "'HideSecrets"
+  ChangeFleetOperatorReq:
+    - newOperatorCode: Maybe Text
+    - derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
