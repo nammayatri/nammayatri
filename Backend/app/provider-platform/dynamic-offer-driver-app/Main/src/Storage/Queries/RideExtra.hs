@@ -1202,3 +1202,7 @@ findAllBySubscriptionPurchaseId ::
   m [Ride]
 findAllBySubscriptionPurchaseId (Id subPurchaseId) = do
   findAllWithKV [Se.Is BeamR.subscriptionPurchaseIds $ Se.Eq (Just [subPurchaseId])]
+
+findFirstUpcomingOrActiveByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id Person] -> m (Maybe Ride)
+findFirstUpcomingOrActiveByDriverIds driverIds =
+  findOneWithKV [Se.And [Se.Is BeamR.driverId $ Se.In $ getId <$> driverIds, Se.Is BeamR.status $ Se.In [Ride.UPCOMING, Ride.INPROGRESS, Ride.NEW]]]

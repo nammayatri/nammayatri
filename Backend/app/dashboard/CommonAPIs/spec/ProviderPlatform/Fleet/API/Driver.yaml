@@ -412,6 +412,31 @@ apis:
             response:
               type: APISuccess
 
+  - POST: # postDriverFleetChangeDriver
+      endpoint: /{driverId}/fleet/change/driver
+      auth: ApiAuthV2
+      query:
+        fleetOwnerId: Text
+      params:
+        driverId: Id Driver
+      request:
+        type: ChangeFleetDriverReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /{requestorId}/{driverId}/fleet/change/driver
+            auth: ApiAuthV2
+            params:
+              driverId: Id Driver
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+            request:
+              type: ChangeFleetDriverReq
+            response:
+              type: APISuccess
+
   - GET: # FleetTotalEarningAPI
       endpoint: /fleet/totalEarning
       auth: ApiAuthV2
@@ -2427,8 +2452,9 @@ types:
     - rejectReason: Maybe Text
     - approved: Maybe Bool
     - association: Maybe AssociationDetail
-
-
+  ChangeFleetDriverReq:
+    newOperatorCode: Maybe Text
+    derive: "'HideSecrets"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
