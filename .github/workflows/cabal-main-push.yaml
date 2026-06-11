@@ -159,7 +159,7 @@ jobs:
           crane auth logout ${DOCKER_REGISTRY}
 
       - name: Push build artifacts to MinIO
-        
+
         run: |
           MINIO_ENDPOINT=$(jq -r '.minio_endpoint' /etc/service_discovery.json)
           MINIO_ACCESS_KEY=$(jq -r '.minio_access_key' /etc/service_discovery.json)
@@ -169,7 +169,8 @@ jobs:
           # strip executables (filename == parent dirname) before tarring — ~70% size reduction
           find Backend/dist-newstyle/build -type f | awk -F/ '$NF == $(NF-1)' | xargs rm -f
 
-          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C Backend dist-newstyle/
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}
+          tar -I 'zstd -T0 -3' -cf dist-newstyle.tar.zst -C "$CACHE_ROOT" dist-newstyle/
           mc cp dist-newstyle.tar.zst "minio/haskell-cache/cabal-build/${{ github.sha }}/dist-newstyle.tar.zst"
           rm -f dist-newstyle.tar.zst
 
