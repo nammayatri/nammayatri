@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.Merchant where
 
+import qualified Data.Text
 import qualified Domain.Types
 import qualified Domain.Types.Merchant
 import Kernel.Beam.Functions
@@ -17,7 +18,7 @@ import qualified Storage.Beam.Merchant as Beam
 
 instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
   fromTType' (Beam.MerchantT {..}) = do
-    cloudBaseUrl' <- Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl) cloudBaseUrl
+    cloudBaseUrl' <- (Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl)) cloudBaseUrl
     registryUrl' <- Kernel.Prelude.parseBaseUrl registryUrl
     pure $
       Just
@@ -26,7 +27,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             cipherText = cipherText,
             city = city,
             cloudBaseUrl = cloudBaseUrl',
-            cloudType = cloudType,
+            cloudType = (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack)) cloudType,
             country = country,
             createdAt = createdAt,
             description = description,
@@ -71,7 +72,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.cipherText = cipherText,
         Beam.city = city,
         Beam.cloudBaseUrl = Kernel.Prelude.fmap showBaseUrl cloudBaseUrl,
-        Beam.cloudType = cloudType,
+        Beam.cloudType = (Kernel.Prelude.fmap Kernel.Prelude.show) cloudType,
         Beam.country = country,
         Beam.createdAt = createdAt,
         Beam.description = description,
