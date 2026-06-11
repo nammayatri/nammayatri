@@ -91,6 +91,7 @@ data AllocatorJobType
   | ScheduledBatchPayout
   | SettlementReportIngestion
   | CheckPickupZoneArrival
+  | TriggerSpecialZoneNotify
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
@@ -143,6 +144,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledBatchPayout jobData = AnyJobInfo <$> restoreJobInfo SScheduledBatchPayout jobData
   restoreAnyJobInfo SSettlementReportIngestion jobData = AnyJobInfo <$> restoreJobInfo SSettlementReportIngestion jobData
   restoreAnyJobInfo SCheckPickupZoneArrival jobData = AnyJobInfo <$> restoreJobInfo SCheckPickupZoneArrival jobData
+  restoreAnyJobInfo STriggerSpecialZoneNotify jobData = AnyJobInfo <$> restoreJobInfo STriggerSpecialZoneNotify jobData
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
@@ -558,6 +560,29 @@ data CheckPickupZoneArrivalJobData = CheckPickupZoneArrivalJobData
 instance JobInfoProcessor 'CheckPickupZoneArrival
 
 type instance JobContent 'CheckPickupZoneArrival = CheckPickupZoneArrivalJobData
+
+-- | Async payload for a dashboard /triggerNotify call. Carries everything
+-- 'forceNotifyDriverDemand' needs so the heavy LTS-queue lookup + driver
+-- filtering + FCM/GRPC fan-out runs in the allocator instead of blocking the
+-- dashboard request. 'triggerRequestId' is stamped on every row this job creates
+-- so the status endpoint can aggregate accept/reject/ignored/pending.
+data TriggerSpecialZoneNotifyJobData = TriggerSpecialZoneNotifyJobData
+  { triggerRequestId :: Text,
+    gateId :: Text,
+    vehicleType :: Text,
+    driversToNotify :: Int, -- required-accepts target the retry loop tops up toward
+    forceNotifyDriverIds :: Maybe [Text],
+    isDemandHigh :: Maybe Bool,
+    merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    retryIntervalSec :: Int, -- cadence between retry cycles (= gate's request-validity config)
+    retryTill :: UTCTime -- absolute deadline; loop stops at the first cycle past this
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'TriggerSpecialZoneNotify
+
+type instance JobContent 'TriggerSpecialZoneNotify = TriggerSpecialZoneNotifyJobData
 
 data ScheduledTDSDistributionJobData = ScheduledTDSDistributionJobData
   { merchantId :: Id DM.Merchant,
