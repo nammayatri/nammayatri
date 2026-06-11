@@ -36,9 +36,17 @@ deleteById :: BeamFlow m r => Id MediaFile -> m ()
 deleteById (Id mediaFileId) = deleteWithKV [Is BeamMF.id (Eq mediaFileId)]
 
 updateStatusById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Id MediaFile -> m ()
-updateStatusById newStatus (Id mediaFileId) =
+updateStatusById newStatus (Id mediaFileId) = do
+  now <- getCurrentTime
   updateWithKV
-    [Set BeamMF.status (Just $ DT.pack $ show newStatus)]
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.updatedAt (T.utcToLocalTime T.utc now)]
+    [Is BeamMF.id $ Eq mediaFileId]
+
+updateStatusAndHashById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Maybe Text -> Id MediaFile -> m ()
+updateStatusAndHashById newStatus fileHash (Id mediaFileId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash, Set BeamMF.updatedAt (T.utcToLocalTime T.utc now)]
     [Is BeamMF.id $ Eq mediaFileId]
 
 instance FromTType' BeamMF.MediaFile MediaFile where
@@ -51,7 +59,9 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             url = url,
             s3FilePath = s3FilePath,
             status = status >>= readMaybe . DT.unpack,
-            createdAt = T.localTimeToUTC T.utc createdAt
+            fileHash = fileHash,
+            createdAt = T.localTimeToUTC T.utc createdAt,
+            updatedAt = T.localTimeToUTC T.utc updatedAt
           }
 
 instance ToTType' BeamMF.MediaFile MediaFile where
@@ -62,5 +72,7 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.url = url,
         BeamMF.s3FilePath = s3FilePath,
         BeamMF.status = DT.pack . show <$> status,
-        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
+        BeamMF.fileHash = fileHash,
+        BeamMF.createdAt = T.utcToLocalTime T.utc createdAt,
+        BeamMF.updatedAt = T.utcToLocalTime T.utc updatedAt
       }

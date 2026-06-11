@@ -80,6 +80,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as SDO
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.FleetOperatorStats as FleetOpStats
+import SharedLogic.MediaFileDocument (finalizeInspectionMedia)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Reminder.Helper (cancelRemindersForDriverByDocumentType, cancelRemindersForRCByDocumentType, recordDocumentCompletion)
@@ -198,6 +199,23 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         Kernel.Utils.Common.throwError (InvalidRequest "Request has already been rejected; rejection is terminal")
       _ -> do
         (merchantOpCity, transporterConfig) <- getMerchantInfo merchantShortId opCity
+        -- Persist the per-request inspection checklist snapshot (answers + media ids) for audit/history, and
+        -- validate + finalize each referenced media (must be confirmed, present, in-size, unchanged) -> COMPLETED,
+        -- so the cleanup job keeps it (un-referenced / un-confirmed uploads are swept from S3).
+        whenJust req.responses $ \responses -> do
+          forM_ responses $ \r -> whenJust r.mediaFileId $ \mfId -> finalizeInspectionMedia merchantOpCity.id (Kernel.Types.Id.Id mfId)
+          let inspectionResponseItems =
+                map
+                  ( \r ->
+                      InspectionResponseItem
+                        { questionId = r.questionId,
+                          question = r.question,
+                          answer = r.answer,
+                          mediaFileId = r.mediaFileId
+                        }
+                  )
+                  responses
+          void $ SQOHR.updateInspectionResponse (Just inspectionResponseItems) (Kernel.Types.Id.Id req.operationHubRequestId)
         -- Handle rejection based on request type
         when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED) $ do
           void $ SQOHR.updateStatusWithDetails reqDomainStatus (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
@@ -379,7 +397,19 @@ castHubRequests (hubReq, creator, hub) = do
         driverId = fmap (cast @DP.Person @Common.Driver) hubReq.driverId,
         requestStatus = castReqStatus hubReq.requestStatus,
         requestTime = hubReq.createdAt,
-        requestType = castReqType hubReq.requestType
+        requestType = castReqType hubReq.requestType,
+        remarks = hubReq.remarks,
+        inspectionResponse =
+          map
+            ( \r ->
+                API.Types.ProviderPlatform.Operator.Driver.InspectionResponseItem
+                  { questionId = r.questionId,
+                    question = r.question,
+                    answer = r.answer,
+                    mediaFileId = r.mediaFileId
+                  }
+            )
+            <$> hubReq.inspectionResponse
       }
 
 castReqStatusToDomain :: API.Types.ProviderPlatform.Operator.Driver.RequestStatus -> RequestStatus

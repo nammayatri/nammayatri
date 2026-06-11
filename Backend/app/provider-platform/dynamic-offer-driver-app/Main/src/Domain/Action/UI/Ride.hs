@@ -458,7 +458,9 @@ uploadOdometerReading merchantOpCityId rideId UploadOdometerReq {..} = do
             url = url,
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 uploadDeliveryImage ::
@@ -512,7 +514,9 @@ uploadDeliveryImage merchantOpCityId rideId DeliveryImageUploadReq {..} = do
             url = url,
             s3FilePath = Just fp,
             status = Just MediaFile.PENDING,
-            createdAt = now
+            fileHash = Nothing,
+            createdAt = now,
+            updatedAt = now
           }
 
 arrivedAtDestination :: Id DRide.Ride -> LatLong -> Flow APISuccess

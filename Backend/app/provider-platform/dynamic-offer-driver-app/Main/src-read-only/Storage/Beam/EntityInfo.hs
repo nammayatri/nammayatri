@@ -16,6 +16,7 @@ data EntityInfoT f = EntityInfoT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     entityId :: B.C f Kernel.Prelude.Text,
     entityType :: B.C f Domain.Types.DocumentReminderHistory.EntityType,
+    mediaFileId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     question :: B.C f Kernel.Prelude.Text,

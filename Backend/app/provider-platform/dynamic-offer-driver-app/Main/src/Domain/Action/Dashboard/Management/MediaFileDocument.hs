@@ -7,7 +7,6 @@ module Domain.Action.Dashboard.Management.MediaFileDocument
 where
 
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
-import qualified Dashboard.Common.MediaFileDocument
 import qualified Domain.Types.Merchant
 import qualified Environment
 import qualified Kernel.Prelude
@@ -25,5 +24,5 @@ postMediaFileDocumentConfirm = SMFD.mediaFileDocumentConfirm
 postMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postMediaFileDocumentDelete = SMFD.mediaFileDocumentDelete
 
-getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
+getMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentResp)
 getMediaFileDocumentDownloadLink = SMFD.mediaFileDocumentDownloadLink

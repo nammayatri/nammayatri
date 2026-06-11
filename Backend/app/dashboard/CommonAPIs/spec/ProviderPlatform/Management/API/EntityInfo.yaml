@@ -32,6 +32,7 @@ types:
     - questionId: Text
     - question: Text
     - answer: Text
+    - mediaFileId: Maybe Text
   EntityExtraInformation:
     - entityType: EntityType
     - entityId: Text
