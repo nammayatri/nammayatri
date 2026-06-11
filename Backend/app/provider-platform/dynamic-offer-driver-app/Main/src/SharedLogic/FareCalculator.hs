@@ -17,7 +17,6 @@
 
 module SharedLogic.FareCalculator
   ( fareSum,
-    pureFareSum,
     perRideKmFareParamsSum,
     getPerMinuteRate,
     CalculateFareParametersParams (..),
@@ -361,59 +360,43 @@ mkFareParamsDisplayBreakups mkPrice mkBreakupItem fareParams = do
 -- TODO: make some tests for it
 
 fareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
-fareSum fareParams conditionalChargeCategories = do
-  pureFareSum fareParams conditionalChargeCategories
+fareSum fareParams conditionalChargeCategories =
+  pureFareSum
     + fromMaybe 0.0 fareParams.driverSelectedFare
     + fromMaybe 0.0 fareParams.customerExtraFee
     - (if fareParams.shouldApplyBusinessDiscount then fromMaybe 0.0 fareParams.businessDiscount else 0.0)
     - (if fareParams.shouldApplyPersonalDiscount then fromMaybe 0.0 fareParams.personalDiscount else 0.0)
-
--- Pure fare without customerExtraFee and driverSelectedFare
-
--- | Calculate the pure fare sum (final total fare amount)
---
--- Includes all fare components:
--- - Base fare components (baseFare, serviceCharge, waitingCharge, etc.)
--- - Additional charges (petCharges, stopCharges, priorityCharges, etc.)
--- - Policy-specific details (progressive/rental/intercity components)
--- - VAT charges (tollVat) from calculateFareParameters (rideVat is merged into govtCharges)
--- - Payment processing fee
--- - Conditional charges (filtered by category)
---
--- Note: Commission is NOT part of FareParameters and is NOT included in the final sum.
--- Commission is calculated separately and stored in Booking/Ride tables.
--- It is calculated and stored for breakdown/transparency purposes only,
--- as per PRD requirements.
-pureFareSum :: FareParameters -> Maybe [DAC.ConditionalChargesCategories] -> HighPrecMoney
-pureFareSum fareParams conditionalChargeCategories = do
-  let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
-  fareParams.baseFare
-    + fromMaybe 0.0 fareParams.serviceCharge
-    + fromMaybe 0.0 fareParams.waitingCharge
-    + fromMaybe 0.0 fareParams.govtCharges
-    + fromMaybe 0.0 fareParams.nightShiftCharge
-    + fromMaybe 0.0 fareParams.rideExtraTimeFare
-    + fromMaybe 0.0 fareParams.congestionCharge
-    + fromMaybe 0.0 fareParams.petCharges
-    + fromMaybe 0.0 fareParams.driverAllowance
-    + fromMaybe 0.0 fareParams.airportConvenienceFee
-    + fromMaybe 0.0 fareParams.stopCharges
-    + fromMaybe 0.0 fareParams.priorityCharges
-    + partOfNightShiftCharge
-    + notPartOfNightShiftCharge
-    + platformFee
-    + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
-    + fromMaybe 0.0 fareParams.insuranceCharge
-    + fromMaybe 0.0 fareParams.luggageCharge
-    + fromMaybe 0.0 fareParams.returnFeeCharge
-    + fromMaybe 0.0 fareParams.boothCharge
-    + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
-    + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
-    + fromMaybe 0.0 fareParams.paymentProcessingFee
-    + fromMaybe 0.0 fareParams.tollFareTax
-    + fromMaybe 0.0 fareParams.parkingChargeTax
-    -- Commission is intentionally excluded - stored for breakdown only
-    + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
+  where
+    pureFareSum :: HighPrecMoney
+    pureFareSum = do
+      let (partOfNightShiftCharge, notPartOfNightShiftCharge, platformFee) = countFullFareOfParamsDetails fareParams.fareParametersDetails
+      fareParams.baseFare
+        + fromMaybe 0.0 fareParams.serviceCharge
+        + fromMaybe 0.0 fareParams.waitingCharge
+        + fromMaybe 0.0 fareParams.govtCharges
+        + fromMaybe 0.0 fareParams.nightShiftCharge
+        + fromMaybe 0.0 fareParams.rideExtraTimeFare
+        + fromMaybe 0.0 fareParams.congestionCharge
+        + fromMaybe 0.0 fareParams.petCharges
+        + fromMaybe 0.0 fareParams.driverAllowance
+        + fromMaybe 0.0 fareParams.airportConvenienceFee
+        + fromMaybe 0.0 fareParams.stopCharges
+        + fromMaybe 0.0 fareParams.priorityCharges
+        + partOfNightShiftCharge
+        + notPartOfNightShiftCharge
+        + platformFee
+        + (fromMaybe 0.0 fareParams.customerCancellationDues + fromMaybe 0.0 fareParams.tollCharges + fromMaybe 0.0 fareParams.parkingCharge)
+        + fromMaybe 0.0 fareParams.insuranceCharge
+        + fromMaybe 0.0 fareParams.luggageCharge
+        + fromMaybe 0.0 fareParams.returnFeeCharge
+        + fromMaybe 0.0 fareParams.boothCharge
+        + fromMaybe 0.0 (fareParams.cardCharge >>= (.onFare))
+        + fromMaybe 0.0 (fareParams.cardCharge >>= (.fixed))
+        + fromMaybe 0.0 fareParams.paymentProcessingFee
+        + fromMaybe 0.0 fareParams.tollFareTax
+        + fromMaybe 0.0 fareParams.parkingChargeTax
+        -- Commission is intentionally excluded - stored for breakdown only
+        + (sum $ map (.charge) (filter (\addCharges -> maybe True (KP.elem addCharges.chargeCategory) conditionalChargeCategories) fareParams.conditionalCharges))
 
 perRideKmFareParamsSum :: FareParameters -> HighPrecMoney
 perRideKmFareParamsSum fareParams = do
@@ -1198,7 +1181,7 @@ applyConfiguredCharges farePolicy fareParams = do
             parkingChargeTaxExclusive = Just parkingExcl,
             parkingChargeTax = Just parkingTax
           }
-      postUpdateFareSum = pureFareSum partiallyUpdatedFareParams Nothing
+      postUpdateFareSum = fareSum partiallyUpdatedFareParams Nothing
 
       -- 'nonDiscountApplicableRideFareTaxExclusive' catches the residual —
       -- everything in pureFareSum that isn't in D / toll / cancellation /
