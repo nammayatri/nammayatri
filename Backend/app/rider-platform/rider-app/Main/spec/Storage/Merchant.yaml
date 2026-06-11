@@ -120,6 +120,7 @@ Merchant:
     arrivingPickupThreshold: HighPrecDistance
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
     stuckRideAutoCancellationBuffer: Maybe Seconds
+    cloudType: Maybe Text
     cloudBaseUrl: Maybe Text
 
   toTType:
@@ -141,6 +142,7 @@ Merchant:
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
     arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
+    cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
     cloudBaseUrl: (Kernel.Prelude.fmap Kernel.Prelude.showBaseUrl)|I
 
   fromTType:
@@ -157,7 +159,8 @@ Merchant:
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
-    cloudBaseUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . Kernel.Prelude.parseBaseUrl))|MI
+    cloudType: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    cloudBaseUrl: (Kernel.Prelude.pure . (Kernel.Prelude.>>= Kernel.Prelude.parseBaseUrl))|MI
 
   sqlType:
     editPickupDistanceThreshold: double precision

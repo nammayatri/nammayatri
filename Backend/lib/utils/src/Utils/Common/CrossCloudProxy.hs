@@ -11,8 +11,6 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
--- requestBody record update is the only way to re-attach a buffered body on this wai version
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Utils.Common.CrossCloudProxy
   ( crossCloudProxyMiddleware,
@@ -20,11 +18,11 @@ module Utils.Common.CrossCloudProxy
   )
 where
 
+import qualified Data.Aeson as A
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import Data.IORef (atomicModifyIORef, newIORef)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Data.Text.Encoding.Error as TE
 import qualified EulerHS.Runtime as R
 import Kernel.Prelude hiding (app)
 import Kernel.Types.Flow
@@ -34,14 +32,15 @@ import Kernel.Utils.IOLogging (HasLog)
 import qualified Network.HTTP.Client as Http
 import qualified Network.HTTP.Types as HttpTypes
 import qualified Network.Wai as Wai
-import Network.Wai.Internal (Request (..))
 
 forwardedFromHeader :: HttpTypes.HeaderName
 forwardedFromHeader = "x-ny-forwarded-from"
 
 -- | Forwards a UI request landing on the wrong cloud to the cloud owning the
--- person's merchant operating city and relays the response back. Fail-open:
--- any error in resolution or forwarding serves the request locally.
+-- person's merchant operating city and relays the response back verbatim.
+-- Resolution errors fail open (request served locally); once the forward is
+-- attempted there is no local fallback — a failed forward responds 502, so a
+-- non-idempotent operation can never execute on both clouds.
 crossCloudProxyMiddleware ::
   HasLog env =>
   R.FlowRuntime ->
@@ -59,7 +58,7 @@ crossCloudProxyMiddleware flowRt appEnv podCloud uiPrefixes manager resolveOwner
       Nothing -> app req respond
       Just token -> do
         mbTarget <-
-          runFlowR flowRt appEnv (withLogTag "CrossCloudProxy" $ resolveOwner (TE.decodeUtf8 token))
+          runFlowR flowRt appEnv (withLogTag "CrossCloudProxy" $ resolveOwner (TE.decodeUtf8With TE.lenientDecode token))
             `catch` \(SomeException _) -> pure Nothing
         case mbTarget of
           Just (ownerCloud, ownerUrl)
@@ -99,17 +98,18 @@ crossCloudProxyMiddleware flowRt appEnv podCloud uiPrefixes manager resolveOwner
           respond $ Wai.responseLBS (Http.responseStatus resp) respHeaders (Http.responseBody resp)
         Left err -> do
           runFlowR flowRt appEnv . withLogTag "CrossCloudProxy" $
-            logError $ "Forward to " <> show ownerCloud <> " failed, serving locally: " <> show err
-          replayableReq <- replayBody reqBody
-          app replayableReq respond
-
-    replayBody reqBody = do
-      chunksRef <- newIORef (BSL.toChunks reqBody)
-      let readChunk =
-            atomicModifyIORef chunksRef $ \case
-              [] -> ([], BS.empty)
-              (c : cs) -> (cs, c)
-      pure req {requestBody = readChunk}
+            logError $ "Forward to " <> show ownerCloud <> " failed, responding 502: " <> show err
+          respond $
+            Wai.responseLBS
+              HttpTypes.badGateway502
+              [("content-type", "application/json")]
+              ( A.encode $
+                  A.object
+                    [ "errorCode" A..= ("CROSS_CLOUD_FORWARD_FAILURE" :: Text),
+                      "errorMessage" A..= (show err :: Text),
+                      "errorPayload" A..= A.Null
+                    ]
+              )
 
     requestHopHeaders :: [HttpTypes.HeaderName]
     requestHopHeaders = ["host", "content-length", "transfer-encoding", "connection", "accept-encoding", "expect"]
