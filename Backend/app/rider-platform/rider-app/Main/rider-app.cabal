@@ -117,6 +117,7 @@ library
       API.UI.Whatsapp
       API.UnifiedDashboard
       App
+      App.CrossCloudProxy
       App.Server
       Beckn.ACL.Cancel
       Beckn.ACL.Common
