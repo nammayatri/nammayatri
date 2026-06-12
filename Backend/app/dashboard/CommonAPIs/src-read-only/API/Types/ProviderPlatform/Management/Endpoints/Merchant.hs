@@ -473,7 +473,7 @@ data FarePolicyDetailsResp = FarePolicyDetailsResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FareProductListItem = FareProductListItem {farePolicyId :: Kernel.Prelude.Text, timeBounds :: Kernel.Types.TimeBound.TimeBound, vehicleVariant :: Dashboard.Common.ServiceTierType}
+data FareProductListItem = FareProductListItem {farePolicyId :: Kernel.Prelude.Text, timeBounds :: Kernel.Types.TimeBound.TimeBound, vehicleVariant :: Dashboard.Common.ServiceTierType, serviceTierName :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -36,7 +36,6 @@ import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
-import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
 import qualified Domain.Types.SearchRequest as DSR
@@ -77,7 +76,6 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Coins.CoinsConfig as CoinsConfig (fetchCoinConfigByFunctionAndMerchant)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import Storage.Queries.RiderDriverCorrelation
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.SearchRequestForDriver as QSRD
@@ -159,9 +157,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       else return M.empty
 
   transporterConfig <- SCTC.findByMerchantOpCityId searchReq.merchantOperatingCityId (Just (TransactionId (Id searchReq.transactionId))) >>= fromMaybeM (TransporterConfigNotFound searchReq.merchantOperatingCityId.getId)
-  fleetAssocs <- QFDA.findAllByDriverIds (cast . (.driverPoolResult.driverId) <$> driverPool)
-  let fleetOwnerByDriverId = HashMap.fromList $ map (\a -> (a.driverId, Id a.fleetOwnerId)) fleetAssocs
-  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache fleetOwnerByDriverId) driverPool
+  searchRequestsForDrivers <- mapM (buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber validTill transporterConfig searchReq.riderId coinConfigCache) driverPool
   let driverPoolZipSearchRequests = zip driverPool searchRequestsForDrivers
   -- Handle queue skip for timed-out special zone drivers before marking them inactive.
   -- Forked because it's independent of the search-batch flow — failures must not
@@ -284,10 +280,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
       DTR.TransporterConfig ->
       Maybe (Id RiderDetails) ->
       M.Map DVST.ServiceTierType (Maybe Int) ->
-      HashMap.HashMap (Id DPerson.Person) (Id DPerson.Person) ->
       SDP.DriverPoolWithActualDistResult ->
       m SearchRequestForDriver
-    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache fleetOwnerByDriverId dpwRes = do
+    buildSearchRequestForDriver searchReq tripQuoteDetailsHashMap batchNumber defaultValidTill transporterConfig riderId coinConfigCache dpwRes = do
       let currency = searchTry.currency
       guid <- generateGUID
       now <- getCurrentTime
@@ -327,7 +322,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 merchantOperatingCityId = searchReq.merchantOperatingCityId,
                 searchRequestValidTill = if dpwRes.pickupZone then addUTCTime (fromIntegral dpwRes.keepHiddenForSeconds) defaultValidTill else defaultValidTill,
                 driverId = cast dpRes.driverId,
-                fleetOwnerId = HashMap.lookup (cast dpRes.driverId) fleetOwnerByDriverId,
+                fleetOwnerId = Id <$> dpRes.fleetOwnerId,
                 vehicleNumber = dpRes.vehicleNumber,
                 vehicleVariant = dpRes.variant,
                 vehicleServiceTier = tripQuoteDetail.vehicleServiceTier,

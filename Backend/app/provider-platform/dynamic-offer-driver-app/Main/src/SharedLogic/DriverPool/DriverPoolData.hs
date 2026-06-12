@@ -47,7 +47,9 @@ data DriverPoolData = DriverPoolData
     latestScheduledPickup :: Maybe Maps.LatLong,
     deviceToken :: Maybe FCM.FCMRecipientToken,
     goHomeStatus :: Maybe DDGR.DriverGoHomeRequestStatus,
-    totalRides :: Int,
+    -- | Dead field, kept as Maybe so existing on-disk JSON records that carry
+    -- a value still deserialise. New records leave it Nothing.
+    totalRides :: Maybe Int,
     variant :: VehicleVariant,
     selectedServiceTiers :: [ServiceTierType],
     -- Class 1 (preferences)
@@ -78,7 +80,9 @@ data DriverPoolData = DriverPoolData
     clientConfigVersion :: Maybe Version,
     vehicleTags :: Maybe [Text],
     mYManufacturing :: Maybe Days.Day,
-    safetyPlusEnabled :: Bool,
+    -- | Dead field, kept as Maybe so existing on-disk JSON records that carry
+    -- a value still deserialise. New records leave it Nothing.
+    safetyPlusEnabled :: Maybe Bool,
     fleetOwnerId :: Maybe Text,
     -- On-ride / forward batching fields
     driverTripEndLocation :: Maybe Maps.LatLong,
@@ -168,7 +172,7 @@ defaultDriverPoolData dId =
       latestScheduledPickup = Nothing,
       deviceToken = Nothing,
       goHomeStatus = Nothing,
-      totalRides = 0,
+      totalRides = Just 0,
       variant = AUTO_RICKSHAW,
       selectedServiceTiers = [],
       enabled = False,
@@ -198,7 +202,7 @@ defaultDriverPoolData dId =
       clientConfigVersion = Nothing,
       vehicleTags = Nothing,
       mYManufacturing = Nothing,
-      safetyPlusEnabled = False,
+      safetyPlusEnabled = Just False,
       fleetOwnerId = Nothing,
       driverTripEndLocation = Nothing,
       hasRideStarted = Nothing,

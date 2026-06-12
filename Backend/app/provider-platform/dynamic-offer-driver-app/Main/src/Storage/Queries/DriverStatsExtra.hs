@@ -16,7 +16,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import SharedLogic.DriverFee (mkCachedKeyTotalRidesByDriverId)
-import qualified SharedLogic.DriverPool.LTSDataSync as LTSSync
 import qualified Storage.Beam.DriverStats as BeamDS
 import Storage.Queries.OrphanInstances.DriverStats ()
 import Storage.Queries.Person (DriverWithRidesCount (..), fetchDriverInfo)
@@ -94,26 +93,22 @@ findAllByDriverIdList driverIds =
     then pure []
     else findAllWithKV [Se.Is BeamDS.driverId $ Se.In (getId <$> driverIds)]
 
-incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, Redis.HedisLTSFlowEnv r) => Id Driver -> Meters -> m Int
+incrementTotalRidesAndTotalDistAndIdleTime :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Id Driver -> Meters -> m Int
 incrementTotalRidesAndTotalDistAndIdleTime (Id driverId') rideDist = do
   now <- getCurrentTime
-  newTotalRides <-
-    findTotalRides (Id driverId') >>= \(rides, distance) -> do
-      updateOneWithKV
-        [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
-          Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
-          Se.Set BeamDS.idleSince now,
-          Se.Set BeamDS.updatedAt now
-        ]
-        [Se.Is BeamDS.driverId (Se.Eq driverId')]
-      totalRideKey :: (Maybe Int) <- Redis.safeGet $ mkCachedKeyTotalRidesByDriverId (Id driverId')
-      case totalRideKey of
-        Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
-        Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
-      pure (rides + 1)
-  LTSSync.syncDriverPoolDataToLTS (Id driverId') $
-    LTSSync.emptyUpdate {LTSSync.totalRides = LTSSync.Set newTotalRides}
-  pure newTotalRides
+  findTotalRides (Id driverId') >>= \(rides, distance) -> do
+    updateOneWithKV
+      [ Se.Set (\BeamDS.DriverStatsT {..} -> totalRides) (rides + 1),
+        Se.Set BeamDS.totalDistance $ (\(Meters m) -> int2Double m) (rideDist + distance),
+        Se.Set BeamDS.idleSince now,
+        Se.Set BeamDS.updatedAt now
+      ]
+      [Se.Is BeamDS.driverId (Se.Eq driverId')]
+    totalRideKey :: (Maybe Int) <- Redis.safeGet $ mkCachedKeyTotalRidesByDriverId (Id driverId')
+    case totalRideKey of
+      Nothing -> Redis.setExp (mkCachedKeyTotalRidesByDriverId (Id driverId')) (rides + 1) 86400
+      Just _ -> void $ Redis.incr (mkCachedKeyTotalRidesByDriverId (Id driverId'))
+    pure (rides + 1)
 
 findTotalRides :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Int, Meters)
 findTotalRides (Id driverId) = maybe (pure (0, 0)) (pure . (Domain.totalRides &&& Domain.totalDistance)) =<< findOneWithKV [Se.Is BeamDS.driverId (Se.Eq driverId)]
