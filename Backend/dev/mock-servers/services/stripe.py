@@ -531,4 +531,44 @@ def handle(handler, path, body):
             "created": _now(),
         })
 
+    # ── Balance ──
+    # Default: 1,000 EUR available (sufficient for any caller).
+    #
+    # Two override shapes are supported:
+    #
+    # 1. Direct balance response (legacy):
+    #      {"object": "balance", "available": [...], "pending": [...]}
+    #    Returned as-is when matched (e.g. keyed on header.Stripe-Account=<id>).
+    #
+    # 2. Split fleet/platform shape (preferred for top-up tests):
+    #      {"fleet_balance": {<BalanceResp>}, "platform_balance": {<BalanceResp>}}
+    #    The handler routes by whether a Stripe-Account header is present:
+    #      - header present  → fleet_balance  (connected-account / fleet VA call)
+    #      - header absent   → platform_balance (platform account call)
+    #    Key the override on path.2=balance so it always fires for /v1/balance calls
+    #    without needing to know the specific connected-account ID.
+    if resource == "balance" and method == "GET":
+        is_connected = handler.headers.get("Stripe-Account") is not None
+
+        default_resp = {
+            "object": "balance",
+            "available": [{"amount": 100000, "currency": "eur", "source_types": {"card": 100000}}],
+            "pending": [{"amount": 0, "currency": "eur", "source_types": {"card": 0}}],
+        }
+
+        _, extra = handler._get_override("stripe")
+
+        # Shape 1: direct BalanceResp override (keyed on specific Stripe-Account value)
+        if extra and extra.get("object") == "balance":
+            return handler._json(extra)
+
+        # Shape 2: split fleet/platform override (keyed on path.2=balance)
+        if extra and ("fleet_balance" in extra or "platform_balance" in extra):
+            if is_connected and "fleet_balance" in extra:
+                return handler._json(extra["fleet_balance"])
+            if not is_connected and "platform_balance" in extra:
+                return handler._json(extra["platform_balance"])
+            # Fall through to default if the required key is absent
+        return handler._json(default_resp)
+
     handler._json({"error": {"message": f"Unknown route: {method} /{'/'.join(parts)}"}}, 404)

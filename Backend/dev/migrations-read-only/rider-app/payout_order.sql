@@ -101,3 +101,8 @@ ALTER TABLE atlas_app.payout_order ADD COLUMN id_assigned_by_service_provider te
 ALTER TABLE atlas_app.payout_order ADD COLUMN transfer_status text ;
 ALTER TABLE atlas_app.payout_order ADD COLUMN transfer_id text ;
 ALTER TABLE atlas_app.payout_order ADD COLUMN transfer_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.payout_order ADD COLUMN merchant_top_up_amount double precision ;

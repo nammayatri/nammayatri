@@ -353,6 +353,11 @@ class MockHandler(BaseHTTPRequestHandler):
             extract = data.get("extract")
             value = data.get("value")
 
+            # Empty body → clear all overrides
+            if not service and not extract and value is None:
+                status_store.clear_overrides()
+                return self._json({"ok": True, "cleared": "all"})
+
             if not service or not extract or value is None:
                 return self._json({"error": "service, extract, and value are required"}, status=400)
 
