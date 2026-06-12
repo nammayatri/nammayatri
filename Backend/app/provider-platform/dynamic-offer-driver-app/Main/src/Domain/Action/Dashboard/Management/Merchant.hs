@@ -1074,6 +1074,7 @@ castDDocumentType = \case
   DVC.UDYAMCertificate -> Common.UDYAMCertificate
   DVC.PanAadhaarLinkage -> Common.PanAadhaarLink
   DVC.VoterIdCard -> Common.VoterIdCard
+  DVC.OperatorPartnerCode -> Common.OperatorPartnerCode
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1178,6 +1179,7 @@ castDocumentType = \case
   Common.UDYAMCertificate -> DVC.UDYAMCertificate
   Common.PanAadhaarLink -> DVC.PanAadhaarLinkage
   Common.VoterIdCard -> DVC.VoterIdCard
+  Common.OperatorPartnerCode -> DVC.OperatorPartnerCode
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::

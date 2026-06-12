@@ -83,7 +83,7 @@ import qualified Tools.Whatsapp as Whatsapp
 import Utils.Common.Cac.KeyNameConstants
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
-defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub,DVC.FinnishIDResidencePermit,DVC.TaxiDriverPermit]
+defaultDriverDocumentTypes = [DVC.DriverLicense, DVC.AadhaarCard, DVC.PanCard, DVC.Permissions, DVC.ProfilePhoto, DVC.UploadProfile, DVC.SocialSecurityNumber, DVC.BackgroundVerification, DVC.GSTCertificate, DVC.BusinessLicense, DVC.LocalResidenceProof, DVC.PoliceVerificationCertificate, DVC.DrivingSchoolCertificate, DVC.TrainingForm, DVC.DriverInspectionHub, DVC.FinnishIDResidencePermit, DVC.TaxiDriverPermit]
 
 defaultFleetDocumentTypes :: [DVC.DocumentType]
 defaultFleetDocumentTypes = [DVC.AadhaarCard, DVC.PanCard, DVC.GSTCertificate, DVC.BusinessLicense, DVC.UDYAMCertificate, DVC.TANCertificate, DVC.LDCCertificate]
@@ -804,3 +804,4 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate
   Domain.Types.DocumentVerificationConfig.PanAadhaarLinkage -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanAadhaarLink
   Domain.Types.DocumentVerificationConfig.VoterIdCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VoterIdCard
+  Domain.Types.DocumentVerificationConfig.OperatorPartnerCode -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.OperatorPartnerCode
