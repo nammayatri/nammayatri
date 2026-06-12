@@ -654,7 +654,9 @@ createCancellationLedgerEntries booking ride baseCancellation gstOnCancellation 
                               then Just InvoiceLineItem {description = "GST on Cancellation Fee", descriptionType = Just GstOnCancellationFee, quantity = 1, unitPrice = gstOnCancellation, lineTotal = gstOnCancellation, isExternalCharge = False, groupId = Just "g-cancel", itemType = Just Tax}
                               else Nothing
                           ],
-              referenceId = Nothing,
+              -- ride id (as on the BAP cancellation invoice) — the only invoice->ride
+              -- link for cancellations (no booking.financeInvoiceId here)
+              referenceId = Just ride.id.getId,
               isVat = False,
               issuedToTaxNo = Nothing,
               issuedByTaxNo = Nothing,

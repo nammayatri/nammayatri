@@ -202,6 +202,14 @@ instance Default FRT.InvoiceContext where
         taxTxnGstRate = Nothing,
         cardBrand = Nothing,
         cardLastFour = Nothing,
+        rideShortId = Nothing,
+        driverName = Nothing,
+        vehicleNumber = Nothing,
+        pickupAddress = Nothing,
+        dropAddress = Nothing,
+        rideDate = Nothing,
+        rideStartTime = Nothing,
+        rideEndTime = Nothing,
         lineItems = []
       }
 

@@ -501,6 +501,7 @@ library
       SharedLogic.External.Nandi.Types
       SharedLogic.FareBreakupInfo
       SharedLogic.Finance.RidePayment
+      SharedLogic.Finance.RideReceipt
       SharedLogic.FRFSCancel
       SharedLogic.FRFSCancelJourney
       SharedLogic.FRFSConfirm
