@@ -549,6 +549,7 @@ library
       SharedLogic.Finance.InvoiceRegeneration
       SharedLogic.Finance.Prepaid
       SharedLogic.Finance.Reconciliation
+      SharedLogic.Finance.RideReceipt
       SharedLogic.Finance.SubscriptionPurchase
       SharedLogic.Finance.Wallet
       SharedLogic.Fleet

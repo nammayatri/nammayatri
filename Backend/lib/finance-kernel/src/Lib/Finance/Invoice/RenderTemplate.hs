@@ -69,6 +69,16 @@ data InvoiceContext = InvoiceContext
     taxTxnGstRate :: Maybe Double,
     cardBrand :: Maybe Text,
     cardLastFour :: Maybe Text,
+    -- Ride-trip fields for receipt-style templates; date/time arrive pre-formatted
+    -- (cleanJson would coerce ISO strings to %d.%m.%Y). Nothing for non-ride invoices.
+    rideShortId :: Maybe Text,
+    driverName :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    pickupAddress :: Maybe Text,
+    dropAddress :: Maybe Text,
+    rideDate :: Maybe Text,
+    rideStartTime :: Maybe Text,
+    rideEndTime :: Maybe Text,
     lineItems :: [RenderLineItem]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
@@ -197,7 +207,15 @@ data BuildInvoiceContextInput = BuildInvoiceContextInput
     mbCardLastFour :: Maybe Text,
     mbRecipientBusinessId :: Maybe Text,
     mbSellerBusinessId :: Maybe Text,
-    mbSellerVatNumber :: Maybe Text
+    mbSellerVatNumber :: Maybe Text,
+    rideShortId :: Maybe Text,
+    driverName :: Maybe Text,
+    vehicleNumber :: Maybe Text,
+    pickupAddress :: Maybe Text,
+    dropAddress :: Maybe Text,
+    rideDate :: Maybe Text,
+    rideStartTime :: Maybe Text,
+    rideEndTime :: Maybe Text
   }
 
 buildInvoiceContext :: BuildInvoiceContextInput -> InvoiceContext
@@ -236,6 +254,14 @@ buildInvoiceContext BuildInvoiceContextInput {..} =
       taxTxnGstRate = (.gstRate) <$> mbTaxTxn,
       cardBrand = mbCardBrand,
       cardLastFour = mbCardLastFour,
+      rideShortId = rideShortId,
+      driverName = driverName,
+      vehicleNumber = vehicleNumber,
+      pickupAddress = pickupAddress,
+      dropAddress = dropAddress,
+      rideDate = rideDate,
+      rideStartTime = rideStartTime,
+      rideEndTime = rideEndTime,
       lineItems = stampLanguage language (attachTaxToFares lineItems)
     }
   where
