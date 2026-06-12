@@ -79,6 +79,15 @@ clearFleetCascadeAndEnable driverId = do
   LTSSync.syncDriverPoolDataToLTS (cast driverId) $
     LTSSync.emptyUpdate {LTSSync.enabled = LTSSync.Set True}
 
+updateVerifiedState :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> Bool -> m ()
+updateVerifiedState driverId isVerified = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.verified isVerified,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId.getId)]
+
 updateDisabledReasonFlag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DriverInfo.DisabledReasonFlag -> Id Person.Driver -> m ()
 updateDisabledReasonFlag mbReason driverId = do
   now <- getCurrentTime
