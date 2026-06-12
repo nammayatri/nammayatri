@@ -186,6 +186,35 @@ sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay = do
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
   pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (listToMaybe res)
 
+sumFleetEarningsByFleetOwnerIdsAndDateRange ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Text] ->
+  Day ->
+  Day ->
+  m FODSE.DailyFleetEarningsAggregated
+sumFleetEarningsByFleetOwnerIdsAndDateRange fleetOwnerIds fromDay toDay = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \fos ->
+            CH.aggregate
+              ( CH.sum_ fos.onlineTotalEarning,
+                CH.sum_ fos.cashTotalEarning,
+                CH.sum_ fos.cashPlatformFees,
+                CH.sum_ fos.onlinePlatformFees,
+                CH.sum_ fos.onlineDuration
+              )
+        )
+        $ CH.filter_
+          ( \fos ->
+              fos.fleetOperatorId `CH.in_` fleetOwnerIds
+                CH.&&. fos.fleetDriverId `CH.in_` fleetOwnerIds
+                CH.&&. fos.merchantLocalDate CH.>=. fromDay
+                CH.&&. fos.merchantLocalDate CH.<=. toDay
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorDailyStatsTTable)
+  pure $ maybe (FODSE.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing) FODSE.mkDailyFleetEarningsAggregated (listToMaybe res)
+
 sumDriverEarningsByFleetOwnerIdAndDriverIds ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
   Text ->

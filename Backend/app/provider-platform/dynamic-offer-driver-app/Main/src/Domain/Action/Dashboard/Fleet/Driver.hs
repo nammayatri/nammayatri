@@ -246,6 +246,7 @@ import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAExtra
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
+import qualified Storage.Queries.FleetOperatorAssociationExtra as QFOAExtra
 import qualified Storage.Queries.FleetOperatorDailyStatsExtra as QFODSExtra
 import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
@@ -4172,6 +4173,22 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
 
 ---------------------------------------------------------------------
 
+resolveFleetOwnerIdsForAnalytics :: Text -> Maybe Text -> Flow () -> Flow (Maybe DP.Role, [Text])
+resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId onFleetOwnerIdAccessCheck = do
+  mbRequestor <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person)
+  let mbRole = (.role) <$> mbRequestor
+  fleetOwnerIds <- case (mbRole, mbFleetOwnerId) of
+    (Just DP.OPERATOR, Nothing) -> do
+      associations <- QFOAExtra.findAllActiveByOperatorId requestorId
+      pure $ map (.fleetOwnerId) associations
+    (_, Just foId) -> do
+      onFleetOwnerIdAccessCheck
+      pure [foId]
+    (_, Nothing) -> do
+      void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) requestorId
+      pure [requestorId]
+  pure (mbRole, fleetOwnerIds)
+
 getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.AllTimeFleetAnalyticsRes
 getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRequestorId = do
   -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
@@ -4219,9 +4236,10 @@ getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId mbRe
       }
 
 getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Common.FleetAnalyticsResponseType -> Data.Time.Day -> Data.Time.Day -> Flow Common.FleetAnalyticsRes
-getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbRequestorId mbResponseType fromDay toDay = do
-  -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
+getDriverFleetDashboardAnalytics merchantShortId opCity requestorId mbFleetOwnerId mbResponseType fromDay toDay = do
+  (_mbRole, fleetOwnerIds) <-
+    resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId $
+      void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) (fromMaybe requestorId mbFleetOwnerId)
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
@@ -4229,10 +4247,16 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbRequestor
   let useDBForAnalytics = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
   case mbResponseType of
     Just Common.EARNINGS -> do
-      earningsAgg <-
-        if useDBForAnalytics
-          then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
-          else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+      earningsAgg <- case fleetOwnerIds of
+        [] -> pure $ QFODSExtra.DailyFleetEarningsAggregated Nothing Nothing Nothing Nothing
+        [singleFoId] ->
+          if useDBForAnalytics
+            then QFODSExtra.sumFleetEarningsByFleetOwnerIdAndDateRangeDB singleFoId fromDay toDay
+            else CFODS.sumFleetEarningsByFleetOwnerIdAndDateRange singleFoId fromDay toDay
+        multipleIds ->
+          if useDBForAnalytics
+            then QFODSExtra.sumFleetEarningsByFleetOwnerIdsAndDateRangeDB multipleIds fromDay toDay
+            else CFODS.sumFleetEarningsByFleetOwnerIdsAndDateRange multipleIds fromDay toDay
       let grossEarningsAmount = earningsAgg.totalEarningSum
           cashPlatformFeesAmount = earningsAgg.cashPlatformFeesSum
           onlinePlatformFeesAmount = earningsAgg.onlinePlatformFeesSum
@@ -4260,6 +4284,7 @@ getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId mbRequestor
               netEarningsPerHour = fmap (`PriceAPIEntity` transporterConfig.currency) netEarningsPerHourAmount
             }
     _ -> do
+      let fleetOwnerId = fromMaybe requestorId (listToMaybe fleetOwnerIds)
       agg <-
         if useDBForAnalytics
           then QFODSExtra.sumFleetMetricsByFleetOwnerIdAndDateRangeDB fleetOwnerId fromDay toDay
@@ -4556,47 +4581,51 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
       Common.Passport -> DI.Passport
 
 getDriverFleetVehicleListStats :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Maybe Text -> Maybe Int -> Maybe Int -> Day -> Day -> Flow Common.FleetVehicleStatsRes
-getDriverFleetVehicleListStats merchantShortId opCity fleetOwnerId mbRequestorId mbVehicleNo mbLimit mbOffset fromDay toDay = do
-  -- Ensure requestor has access to this fleet owner (similar to VerifyJoiningOtp flow)
-  when (isNothing mbVehicleNo) $ void $ FleetAccess.checkRequestorAccessToFleet False mbRequestorId fleetOwnerId
-  whenJust mbVehicleNo $ \vehicleNo ->
-    whenJust mbRequestorId $ \requestorId -> do
-      mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
-      case mbRc of
-        Just rc -> case rc.fleetOwnerId of
-          Just rcFleetOwnerId -> validateOperatorToFleetAssoc requestorId rcFleetOwnerId
-          Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
-        Nothing -> throwError (InvalidRequest "Vehicle not found")
+getDriverFleetVehicleListStats merchantShortId opCity requestorId mbFleetOwnerId mbVehicleNo mbLimit mbOffset fromDay toDay = do
+  (mbRole, fleetOwnerIds) <-
+    resolveFleetOwnerIdsForAnalytics requestorId mbFleetOwnerId $
+      when (isNothing mbVehicleNo) $ void $ FleetAccess.checkRequestorAccessToFleet False (Just requestorId) (fromMaybe requestorId mbFleetOwnerId)
+  mbRc <- mapM VRCQuery.findLastVehicleRCWrapper mbVehicleNo <&> join
+  whenJust mbVehicleNo $ \_ -> do
+    case mbRc of
+      Just rc -> case rc.fleetOwnerId of
+        Just rcFleetOwnerId -> when (mbRole == Just DP.OPERATOR) $ validateOperatorToFleetAssoc requestorId rcFleetOwnerId
+        Nothing -> throwError (InvalidRequest "Vehicle is not associated with any fleet")
+      Nothing -> throwError (InvalidRequest "Vehicle not found")
+  let mbRcId = (.id.getId) <$> mbRc
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   let limit = min maxLimit . fromMaybe defaultLimit $ mbLimit
       offset = fromMaybe 0 mbOffset
-  mbRcId <- case mbVehicleNo of
-    Just vehicleNo -> do
-      mbRc <- VRCQuery.findLastVehicleRCWrapper vehicleNo
-      pure $ (.id.getId) <$> mbRc
-    Nothing -> pure Nothing
-  let mbMerchantId = Just merchant.id.getId
-  agg <-
-    case mbVehicleNo of
-      Just _ ->
-        if isNothing mbRcId
-          then pure []
-          else case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
-            True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
-            _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
-      Nothing ->
-        case transporterConfig.analyticsConfig.useDbForEarningAndMetrics of
-          True -> QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange (Just fleetOwnerId) Nothing limit offset fromDay toDay mbMerchantId
-          _ -> CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange (Just fleetOwnerId) Nothing limit offset fromDay toDay mbMerchantId
+      useDb = transporterConfig.analyticsConfig.useDbForEarningAndMetrics
+  agg <- case fleetOwnerIds of
+    [] -> pure []
+    [singleFoId] -> do
+      let mbMerchantId = Just merchant.id.getId
+      case mbVehicleNo of
+        Just _ ->
+          if isNothing mbRcId
+            then pure []
+            else
+              if useDb
+                then QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
+                else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange Nothing mbRcId limit offset fromDay toDay mbMerchantId
+        Nothing ->
+          if useDb
+            then QFRDSExtra.sumVehicleStatsByFleetOwnerIdAndDateRange (Just singleFoId) Nothing limit offset fromDay toDay mbMerchantId
+            else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdAndDateRange (Just singleFoId) Nothing limit offset fromDay toDay mbMerchantId
+    multipleIds ->
+      if useDb
+        then QFRDSExtra.sumVehicleStatsByFleetOwnerIdsAndDateRange multipleIds mbRcId limit offset fromDay toDay
+        else CFRDSExtra.aggerateVehicleStatsByFleetOwnerIdsAndDateRange multipleIds mbRcId limit offset fromDay toDay
   let rcIds = map (\vehicleStat -> Id vehicleStat.rcId) agg
   vehicleRegistrationCertificates <- VRCQuery.findAllById rcIds
   let vehicleMap = Map.fromList $ map (\rc -> (rc.id.getId, rc)) vehicleRegistrationCertificates
   let agg' = convertToFleetVehicleStatsItem transporterConfig agg vehicleMap
 
-  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = fleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg}}
+  pure $ Common.FleetVehicleStatsRes {fleetOwnerId = mbFleetOwnerId, listItem = agg', summary = Common.Summary {totalCount = 10000, count = length agg'}}
   where
     maxLimit = 10
     defaultLimit = 5
