@@ -61,6 +61,7 @@ import qualified Kernel.Types.MerchantOperatingCity as KMOC
 import Kernel.Utils.Common
 import Kernel.Utils.Geometry (getGeomFromKML)
 import Kernel.Utils.Validation (runRequestValidation)
+import qualified Lib.GateInfo.Geometry as GGeom
 import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Tools.DebugLog as DebugLog
 import qualified SharedLogic.Transaction as T
@@ -236,6 +237,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
   -- update entry in dashboard
   baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
   geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom")
+  geomGeoJson <- GGeom.getGeoJsonFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to GeoJSON")
   now <- getCurrentTime
   whenJust cityStdCode $ \stdCode -> do
     let (City.City cityText) = req.city
@@ -257,7 +259,7 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
   whenJust cityStdCode $ \stdCode -> do
     id <- generateGUID
     KQMOC.createIfNotExist $ KMOC.MerchantOperatingCity {id = Id id, city = show req.city, stdCode = Just stdCode}
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, geomGeoJson = geomGeoJson, ..}
   where
     buildMerchant now merchantD baseMerchant =
       DM.Merchant

@@ -803,7 +803,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
             region = show req.city,
             state = req.state,
             city = req.city,
-            geom = Just req.geom
+            geom = Just req.geomGeoJson
           }
 
     buildMerchant merchantId merchantData currentTime DM.Merchant {..} = do
