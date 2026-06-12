@@ -14,6 +14,7 @@
 
 module Email.Flow
   ( sendEmail,
+    sendPlainEmail,
     sendMagicLinkEmail,
     sendBusinessVerificationEmail,
     sendEmailWithAttachment,
@@ -42,6 +43,16 @@ sendEmail serviceConfig emailConfig to otpCode = do
       UNAVAILABLE -> do
         putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
         error "CloudType UNAVAILABLE: Cannot route email"
+
+sendPlainEmail :: EmailServiceConfig -> Text -> [Text] -> Text -> Text -> IO ()
+sendPlainEmail serviceConfig from to subject bodyText = do
+  handleEmailRouting serviceConfig "sendPlainEmail" $ \cloudType ->
+    case cloudType of
+      AWS -> AWS.sendPlainEmail from to subject bodyText
+      GCP -> GCP.sendPlainEmail (getSendGridUrl serviceConfig) from to subject bodyText
+      UNAVAILABLE -> do
+        putStrLn ("ERROR: Email.Flow: CloudType UNAVAILABLE" :: Text)
+        error "CloudType UNAVAILABLE: Cannot route plain email"
 
 sendMagicLinkEmail :: EmailServiceConfig -> EmailMagicLinkConfig -> [Text] -> Text -> IO ()
 sendMagicLinkEmail serviceConfig emailConfig to token = do

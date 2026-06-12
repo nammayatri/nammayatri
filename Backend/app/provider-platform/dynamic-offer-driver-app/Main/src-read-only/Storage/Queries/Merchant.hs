@@ -48,6 +48,8 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
     [ Se.Set Beam.businessId businessId,
       Se.Set Beam.cipherText cipherText,
       Se.Set Beam.city city,
+      Se.Set Beam.cloudBaseUrl (Kernel.Prelude.fmap showBaseUrl cloudBaseUrl),
+      Se.Set Beam.cloudType (Kernel.Prelude.fmap Kernel.Prelude.show cloudType),
       Se.Set Beam.country country,
       Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,

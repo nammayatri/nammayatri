@@ -55,6 +55,7 @@ import Kernel.Utils.Dhall hiding (maybe)
 import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Network.HTTP.Client as Http
+import qualified Network.HTTP.Client.TLS as HttpTLS
 import Network.HTTP.Types (status408)
 import Network.Wai
 import Network.Wai.Handler.Warp
@@ -160,7 +161,8 @@ runDynamicOfferDriverApp' appCfg = do
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'
     let timeoutMiddleware = UE.timeoutEvent flowRt appEnv (responseLBS status408 [] "") appCfg.incomingAPIResponseTimeout
-    runSettings settings $ timeoutMiddleware (App.run (App.EnvR flowRt' appEnv))
+    proxyManager <- HttpTLS.newTlsManager
+    runSettings settings $ timeoutMiddleware (App.run proxyManager (App.EnvR flowRt' appEnv))
 
 convertToHashMap :: Map.Map String Http.ManagerSettings -> HashMap.HashMap Text Http.ManagerSettings
 convertToHashMap = HashMap.fromList . map convert . Map.toList

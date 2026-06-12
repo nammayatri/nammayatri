@@ -14,12 +14,15 @@ import qualified Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
+import qualified Kernel.Types.Version
 import Tools.Beam.UtilsTH
 
 data MerchantT f = MerchantT
   { businessId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     cipherText :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Base64.Base64),
     city :: B.C f Kernel.Types.Beckn.Context.City,
+    cloudBaseUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cloudType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     country :: B.C f Kernel.Types.Beckn.Context.Country,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

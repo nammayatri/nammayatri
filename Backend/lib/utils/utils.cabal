@@ -29,6 +29,7 @@ library
       Utils.Common.Cac.UtilsConstants
       Utils.Common.Cac.UtilsTH
       Utils.Common.CacUtils
+      Utils.Common.CrossCloudProxy
       Utils.Common.Events
       Utils.Common.JWT.Config
       Utils.Common.JWT.TransitClaim

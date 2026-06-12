@@ -27,10 +27,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("multiModal" :> (GetMultiModalList :<|> PostMultiModalSendMessage :<|> PostMultiModalAddComment :<|> GetMultiModalGetComments))
+type API = ("multiModal" :> (GetMultiModalList :<|> PostMultiModalSendMessage :<|> PostMultiModalSendDirectMessage :<|> PostMultiModalAddComment :<|> GetMultiModalGetComments))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getMultiModalList merchantId city :<|> postMultiModalSendMessage merchantId city :<|> postMultiModalAddComment merchantId city :<|> getMultiModalGetComments merchantId city
+handler merchantId city = getMultiModalList merchantId city :<|> postMultiModalSendMessage merchantId city :<|> postMultiModalSendDirectMessage merchantId city :<|> postMultiModalAddComment merchantId city :<|> getMultiModalGetComments merchantId city
 
 type GetMultiModalList =
   ( ApiAuth
@@ -46,6 +46,14 @@ type PostMultiModalSendMessage =
       'DSL
       ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_MESSAGE)
       :> API.Types.Dashboard.RideBooking.MultiModal.PostMultiModalSendMessage
+  )
+
+type PostMultiModalSendDirectMessage =
+  ( ApiAuth
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.MULTI_MODAL / 'API.Types.Dashboard.RideBooking.MultiModal.POST_MULTI_MODAL_SEND_DIRECT_MESSAGE)
+      :> API.Types.Dashboard.RideBooking.MultiModal.PostMultiModalSendDirectMessage
   )
 
 type PostMultiModalAddComment =
@@ -69,6 +77,9 @@ getMultiModalList merchantShortId opCity apiTokenInfo limit offset bookingOffset
 
 postMultiModalSendMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMultiModalSendMessage merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.postMultiModalSendMessage merchantShortId opCity apiTokenInfo customerId req
+
+postMultiModalSendDirectMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.Dashboard.RideBooking.MultiModal.CustomerSendDirectMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postMultiModalSendDirectMessage merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.postMultiModalSendDirectMessage merchantShortId opCity apiTokenInfo req
 
 postMultiModalAddComment :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> API.Types.Dashboard.RideBooking.MultiModal.CustomerCommentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postMultiModalAddComment merchantShortId opCity apiTokenInfo customerId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.MultiModal.postMultiModalAddComment merchantShortId opCity apiTokenInfo customerId req

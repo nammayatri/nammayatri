@@ -17,6 +17,9 @@ imports:
   EntityName: Lib.Payment.Domain.Types.Common
   Integer: Kernel.Prelude
   Version: Kernel.Types.Version
+  CloudType: Kernel.Types.Version
+  showBaseUrl: Kernel.Prelude
+  parseBaseUrl: Kernel.Prelude
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
   CallService: Kernel.External.Call
   MapsService: Kernel.External.Maps.Types
@@ -107,6 +110,8 @@ Merchant:
     signingPrivateKey: Maybe Base64
     signatureExpiry: Int
     cipherText: Maybe Base64
+    cloudType: Maybe CloudType
+    cloudBaseUrl: Maybe BaseUrl
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -154,6 +159,8 @@ Merchant:
     registryUrl: Text
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
     mediaFileDocumentLinkExpires: Maybe Seconds
+    cloudType: Maybe Text
+    cloudBaseUrl: Maybe Text
 
   constraints:
     subscriberId: SecondaryKey
@@ -165,6 +172,8 @@ Merchant:
     destinationRestriction: Kernel.Types.Geofencing.destination|I
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
     mediaFileDocumentLinkExpires: Kernel.Prelude.Just|I
+    cloudType: (Kernel.Prelude.fmap Kernel.Prelude.show)|I
+    cloudBaseUrl: (Kernel.Prelude.fmap showBaseUrl)|I
 
   fromTType:
     geofencingConfig: Kernel.Types.Geofencing.GeofencingConfig originRestriction
@@ -173,6 +182,8 @@ Merchant:
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY]
       gatewayAndRegistryPriorityList|E
     mediaFileDocumentLinkExpires: Kernel.Prelude.fromMaybe 3600|I
+    cloudType: (Kernel.Prelude.>>= (Kernel.Prelude.readMaybe . Data.Text.unpack))|I
+    cloudBaseUrl: (Kernel.Prelude.pure . (Kernel.Prelude.>>= parseBaseUrl))|MI
 
   queries:
     findById:

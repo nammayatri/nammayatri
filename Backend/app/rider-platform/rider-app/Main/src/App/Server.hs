@@ -15,6 +15,7 @@
 module App.Server where
 
 import API
+import App.CrossCloudProxy (crossCloudProxy)
 -- import Beckn.Core (logBecknRequest)
 import Environment
 import EulerHS.Prelude
@@ -22,13 +23,15 @@ import Kernel.Tools.Metrics.Init
 import Kernel.Types.Flow
 import Kernel.Utils.App
 import qualified Kernel.Utils.Servant.Server as BU
+import qualified Network.HTTP.Client as Http
 import Servant
 import Tools.Auth
 
-run :: Env -> Application
-run = withModifiedEnv' riderAPI $ \modifiedEnv ->
+run :: Http.Manager -> Env -> Application
+run proxyManager = withModifiedEnv' riderAPI $ \modifiedEnv ->
   -- withLocalModifications modifiedEnv' riderAPI (\modifiedEnv ->
   BU.run riderAPI API.handler context modifiedEnv
+    & crossCloudProxy proxyManager modifiedEnv
     & logRequestAndResponse' modifiedEnv
     -- & logBecknRequest modifiedEnv
     & addServantInfo modifiedEnv.appEnv.version riderAPI
