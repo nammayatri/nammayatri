@@ -39,7 +39,7 @@ module SharedLogic.CallBAP
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,
-    sendAddBaggageUpdateToBAP
+    sendAddBaggageUpdateToBAP,
   )
 where
 

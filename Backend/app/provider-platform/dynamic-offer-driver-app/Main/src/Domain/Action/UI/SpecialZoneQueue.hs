@@ -172,6 +172,10 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
         let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
             arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
         QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline
+        -- Bump this trigger's net accept counter (drives the dashboard retry loop's
+        -- stop condition + status); no-op for App-driven requests.
+        whenJust request.triggerRequestId $ \trid ->
+          SpecialZoneDriverDemand.incrementTriggerAcceptCount trid requestId.getId
         -- Driver engaged with the queue; clear any accumulated skip count.
         SpecialZoneDriverDemand.resetQueueSkipCount request.specialLocationId personId
         fork "specialZoneSupplyIncrementOnAccept" $
@@ -191,6 +195,9 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
             }
       Domain.Types.SpecialZoneQueueRequest.Reject -> do
         QSZQR.updateResponse (Just req.response) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+        -- Trigger-level reject counter (drops the row from the pending set); no-op for App-driven.
+        whenJust request.triggerRequestId $ \trid ->
+          SpecialZoneDriverDemand.incrementTriggerRejectCount trid requestId.getId
         -- Driver explicitly rejected — count as a true queue skip and remove
         -- from queue if they've hit the gate's skip threshold. Forked so the
         -- LTS removal doesn't block the respond endpoint.
@@ -222,6 +229,10 @@ postSpecialZoneQueueRequestCancel (mbPersonId, _merchantId, _merchantOpCityId) r
     unless (request.driverId == personId) $ throwError (InvalidRequest "Request does not belong to this driver")
     unless (request.status == Domain.Types.SpecialZoneQueueRequest.Accepted) $ throwError (InvalidRequest "Only accepted requests can be cancelled")
     QSZQR.updateResponse (Just Domain.Types.SpecialZoneQueueRequest.Cancelled) Domain.Types.SpecialZoneQueueRequest.Expired requestId
+    -- A cancelled accept frees a slot — drop the net accept counter so the retry
+    -- loop keeps topping up toward the required number. No-op for App-driven.
+    whenJust request.triggerRequestId $ \trid ->
+      SpecialZoneDriverDemand.decrementTriggerAcceptCount trid
     -- Supply decrement: driver retracted their pickup-zone commitment.
     fork "specialZoneSupplyDecrementOnRequestCancel" $
       SpecialZoneDriverDemand.runSupplyDecrementForRequest requestId.getId request.gateId request.vehicleType
