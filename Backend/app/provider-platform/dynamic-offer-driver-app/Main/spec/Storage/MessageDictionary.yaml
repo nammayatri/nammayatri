@@ -1,6 +1,7 @@
 imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
 
 MessageDictionary:
   tableName: message_dictionary
@@ -15,6 +16,10 @@ MessageDictionary:
     messageType: MessageType
     merchantOperatingCityId: Id MerchantOperatingCity
     merchantId: Id Merchant
+    eligibilityLogic: Maybe Value
+
+  sqlType:
+    eligibilityLogic: "json"
 
   constraints:
     id: PrimaryKey
