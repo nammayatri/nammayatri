@@ -15,6 +15,7 @@
 module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
 import EulerHS.Prelude
+import Kernel.Types.Common (HighPrecMoney)
 import Kernel.Types.Error as Tools.Error
 import Kernel.Types.Error.BaseError.HTTPError
 import Kernel.Types.Error.BaseError.HTTPError.FromResponse
@@ -39,6 +40,20 @@ instance IsHTTPError CustomerError where
     DeviceTokenNotFound -> E400
 
 instance IsAPIError CustomerError
+
+newtype DeletedPersonError = PersonHasPendingDues HighPrecMoney
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''DeletedPersonError
+
+instance IsBaseError DeletedPersonError where
+  toMessage (PersonHasPendingDues dueAmount) = Just $ "Cannot delete account with pending dues: " <> show dueAmount
+
+instance IsHTTPError DeletedPersonError where
+  toErrorCode (PersonHasPendingDues _) = "PERSON_HAS_PENDING_DUES"
+  toHttpCode (PersonHasPendingDues _) = E402
+
+instance IsAPIError DeletedPersonError
 
 data RatingError
   = InvalidRatingValue
