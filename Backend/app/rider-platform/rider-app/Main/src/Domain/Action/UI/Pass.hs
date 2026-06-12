@@ -202,7 +202,6 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
         Just DPass.FullSaving -> (Just DPurchasedPass.FullSaving, Nothing)
         Just (DPass.FixedSaving amount) -> (Just DPurchasedPass.FixedSaving, Just amount)
         Just (DPass.PercentageSaving percentage) -> (Just DPurchasedPass.PercentageSaving, Just percentage)
-
   mbSamePassDevice <- QPurchasedPass.findPassByPersonIdAndPassTypeIdAndDeviceId personId merchantId pass.passTypeId deviceId
   -- If there is no pass for the same device, try to find an existing Pending pass to reuse across devices and set it as mbSamePass
   mbSamePass <-
@@ -217,6 +216,19 @@ purchasePassWithPayment isDashboard person pass merchantId personId mbStartDay m
             logInfo $ "Reusing existing purchased pass " <> pendingPass.id.getId <> " and updated deviceId to " <> deviceId
             return $ Just pendingPass
           Nothing -> return Nothing
+
+  -- restricting user from buying new pass in switched device before swtiching..
+  unless isDashboard $ do
+    otherTypePasses <- QPurchasedPass.findAllByPersonIdAndPassTypeIdAndStatus personId merchantId pass.passTypeId [DPurchasedPass.Active, DPurchasedPass.PreBooked]
+    let isOtherActivePass p = maybe True (\samePass -> p.id /= samePass.id) mbSamePass
+    whenJust (listToMaybe (filter isOtherActivePass otherTypePasses)) $ \otherPass -> do
+      passes <- CQPass.findAllByPassTypeIdAndEnabled pass.passTypeId True
+      let maxSwitchCount = case listToMaybe passes >>= (.passConfig) of
+            Just pc -> pc.maxSwitchCount
+            Nothing -> 1
+      if otherPass.deviceSwitchCount < maxSwitchCount
+        then throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device. Please switch it to this device instead of buying a new pass")
+        else throwError (InvalidRequest "You already have an active or pre-booked pass of this type on another device and the device switch limit has been reached")
 
   passType <- CQPassType.findById pass.passTypeId
   let initialStatus = if pass.amount == 0 then DPurchasedPass.Active else DPurchasedPass.Pending
