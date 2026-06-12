@@ -282,6 +282,10 @@ data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: K
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PassingRoutes = PassingRoutes {routeCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PaymentFareUpdate = PaymentFareUpdate
   { category :: Domain.Types.FRFSQuoteCategoryType.FRFSQuoteCategoryType,
     journeyLegOrder :: Kernel.Prelude.Int,
@@ -339,6 +343,10 @@ data RouteCodesWithLeg = RouteCodesWithLeg {legOrder :: Kernel.Prelude.Int, rout
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RouteETAResp = RouteETAResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], isLastStop :: Kernel.Prelude.Bool, isLive :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RouteServiceabilityReq = RouteServiceabilityReq
   { destinationStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCodes :: Kernel.Prelude.Maybe [RouteCodesWithLeg],
@@ -390,10 +398,6 @@ data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, ti
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data StationAPIEntity = StationAPIEntity {stopCode :: Kernel.Prelude.Text}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data StopRouteResp = StopRouteResp {eta :: Kernel.Prelude.Maybe [Storage.CachedQueries.Merchant.MultiModalBus.BusStopETA], routeCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
