@@ -911,12 +911,189 @@ REMOTE_EXCLUDES = [
     ".git", "data", "node_modules", "dist-newstyle",
     "dist", ".direnv", "_build", "result", "result-*",
     ".cabal-dir",
+    "Frontend/android-native", "Frontend/ios",
+    "Frontend/build", "Frontend/dist",
 ]
 REMOTE_DEFAULT_DIR = "/tmp/nammayatri"
 REMOTE_DEFAULT_COMMAND = (
     "cd Backend && nix develop .#backend -c , run-mobility-stack-dev"
 )
 REMOTE_BUFFER_BYTES = 256 * 1024  # last ~256 KB per session for re-attach
+
+# ── SSH key + ServiceDiscovery helpers ──
+
+_SSH_KEY_CANDIDATES = [
+    os.path.expanduser("~/.ssh/id_ed25519"),
+    os.path.expanduser("~/.ssh/id_rsa"),
+    os.path.expanduser("~/.ssh/id_ecdsa"),
+]
+BASE_API_HOST = os.environ.get("BASE_API_HOST", "3.108.177.163")
+BASE_API_PORT = os.environ.get("BASE_API_PORT", "8787")
+
+
+def _find_ssh_key() -> str | None:
+    """Return path to the first existing SSH private key, or None."""
+    for k in _SSH_KEY_CANDIDATES:
+        if os.path.isfile(k):
+            return k
+    return None
+
+
+def _ensure_ssh_key() -> tuple[str, str]:
+    """Find or generate an SSH key. Returns (private_key_path, public_key_str)."""
+    existing = _find_ssh_key()
+    if existing:
+        pub = existing + ".pub"
+        if os.path.isfile(pub):
+            with open(pub) as f:
+                return existing, f.read().strip()
+        # Private key exists but no .pub — regenerate public from private
+        result = subprocess.run(
+            ["ssh-keygen", "-y", "-f", existing],
+            capture_output=True, text=True, check=True,
+        )
+        with open(pub, "w") as f:
+            f.write(result.stdout.strip() + "\n")
+        return existing, result.stdout.strip()
+
+    # No key found — generate ~/.ssh/id_ed25519
+    key_path = _SSH_KEY_CANDIDATES[0]
+    os.makedirs(os.path.dirname(key_path), exist_ok=True)
+    subprocess.run(
+        ["ssh-keygen", "-t", "ed25519", "-f", key_path,
+         "-N", "", "-C", f"{os.environ.get('USER', 'user')}@nammayatri"],
+        capture_output=True, check=True,
+    )
+    with open(key_path + ".pub") as f:
+        return key_path, f.read().strip()
+
+
+def _fetch_machines() -> dict:
+    """Fetch ServiceDiscovery from the base station HTTP API and return
+    a list of MachineInfo dicts the frontend can render in a dropdown.
+
+    Calls  GET http://<BASE_API_HOST>:<BASE_API_PORT>/api/status
+    which returns:
+      { "base": {localIp, awsIp, name, username, resources, usage},
+        "workers": [{localIp, awsIp, name, username, type, resources, usage}, …] }
+
+    Transforms that into:
+      { "machines": [MachineInfo, …], "myIps": [...] }
+    where MachineInfo = {name, role, localIp, awsIp, bestIp, user, type, resources}
+    """
+    if not BASE_API_HOST:
+        return {"machines": [], "myIps": [],
+                "error": "BASE_API_HOST not set — cannot reach base station API"}
+
+    url = f"http://{BASE_API_HOST}:{BASE_API_PORT}/api/status"
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.loads(r.read().decode())
+    except Exception as e:
+        return {"machines": [], "myIps": [], "error": f"base station API unreachable: {e}"}
+
+    # Collect this machine's IPs so we can pick the best route to each host.
+    my_ips: list[str] = []
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.check_output(["ifconfig"], text=True, timeout=3)
+            my_ips = [ip for ip in re.findall(r"inet (\d+\.\d+\.\d+\.\d+)", out)
+                      if ip != "127.0.0.1"]
+        else:
+            out = subprocess.check_output(["hostname", "-I"], text=True, timeout=3).strip()
+            my_ips = [ip.strip() for ip in out.split() if ip.strip()]
+    except Exception:
+        pass
+
+    def _same_subnet(ip1: str, ip2: str) -> bool:
+        """Compare first three octets (/24) to decide if same LAN."""
+        if not ip1 or not ip2:
+            return False
+        a = ip1.split(".")
+        b = ip2.split(".")
+        return len(a) >= 3 and len(b) >= 3 and a[0] == b[0] and a[1] == b[1] and a[2] == b[2]
+
+    def _pick_best(local_ip: str, aws_ip: str) -> str:
+        """If any of our IPs is on the same /16 as local_ip, use LAN; else VPN."""
+        for my_ip in my_ips:
+            if _same_subnet(my_ip, local_ip):
+                return local_ip
+        return aws_ip or local_ip
+
+    machines: list[dict] = []
+
+    base = data.get("base") or {}
+    if base:
+        best = _pick_best(base.get("localIp", ""), base.get("awsIp", ""))
+        machines.append({
+            "name":      base.get("name", "base"),
+            "role":      "base",
+            "localIp":   base.get("localIp", ""),
+            "awsIp":     base.get("awsIp", ""),
+            "bestIp":    best,
+            "user":      base.get("username", "ubuntu"),
+            "type":      base.get("type", ""),
+            "resources": base.get("resources", {}),
+        })
+
+    for w in data.get("workers", []):
+        best = _pick_best(w.get("localIp", ""), w.get("awsIp", ""))
+        machines.append({
+            "name":      w.get("name", ""),
+            "role":      "worker",
+            "localIp":   w.get("localIp", ""),
+            "awsIp":     w.get("awsIp", ""),
+            "bestIp":    best,
+            "user":      w.get("username", "ubuntu"),
+            "type":      w.get("type", ""),
+            "resources": w.get("resources", {}),
+        })
+
+    return {"machines": machines, "myIps": my_ips}
+
+
+def _setup_ssh(host: str, user: str, port: int = 22) -> dict:
+    """Ensure we can SSH into the target machine.
+
+    Flow:
+      1. Check if user has an SSH key — if not, generate one.
+      2. Test SSH with BatchMode=yes.
+         → If it works: return {status: "ok"}.
+      3. If not: return error telling user to run ssh-copy-id manually.
+    """
+    key_path, pub_key = _ensure_ssh_key()
+
+    # Test if SSH key is already authorized on the remote
+    try:
+        test = subprocess.run(
+            ["ssh",
+             "-o", "StrictHostKeyChecking=accept-new",
+             "-o", "BatchMode=yes",
+             "-o", "ConnectTimeout=5",
+             "-p", str(port),
+             f"{user}@{host}", "echo ok"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if test.returncode == 0:
+            return {
+                "status": "ok",
+                "message": f"SSH key authorized on {user}@{host}",
+                "publicKey": pub_key,
+            }
+    except subprocess.TimeoutExpired:
+        pass  # treat timeout same as auth failure — show ssh-copy-id command
+
+    # SSH failed — user needs to push key manually
+    return {
+        "status": "needs_password",
+        "message": (
+            f"SSH key not authorized on {user}@{host}. "
+            f"Run this in your terminal:\n\n"
+            f"  ssh-copy-id -i {key_path} -p {port} {user}@{host}"
+        ),
+        "publicKey": pub_key,
+    }
+
 
 # ── Multi-user devbox registry ──
 # Stored on the remote host so multiple developers can share a single box
@@ -1186,6 +1363,7 @@ def _ssh_argv(user: str, host: str, port: int, identity: str | None, want_tty: b
         "-o", "ServerAliveInterval=15",
         "-o", "GSSAPIAuthentication=no",
         "-o", "ConnectTimeout=10",
+        "-o", "BatchMode=yes",
         "-p", str(port),
     ]
     if identity:
@@ -1230,7 +1408,13 @@ def remote_deploy(body: dict) -> dict:
     remote_dir = entry["dir"]
 
     target = f"{user}@{host}:{remote_dir}/"
-    ssh_cmd_parts = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
+    ssh_cmd_parts = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "BatchMode=yes",
+        "-o", "ConnectTimeout=10",
+        "-p", str(port),
+    ]
     if identity:
         ssh_cmd_parts += ["-i", identity]
     ssh_cmd = " ".join(ssh_cmd_parts)
@@ -1278,7 +1462,11 @@ def remote_deploy(body: dict) -> dict:
         f"GIT_COMMITTER_NAME=deploy GIT_COMMITTER_EMAIL=deploy@deploy "
         f"git commit -q -m deploy --allow-empty 2>/dev/null || true"
     )
-    ssh_base = ["ssh", "-o", "StrictHostKeyChecking=accept-new", "-p", str(port)]
+    ssh_base = [
+        "ssh", "-o", "StrictHostKeyChecking=accept-new",
+        "-o", "BatchMode=yes", "-o", "ConnectTimeout=10",
+        "-p", str(port),
+    ]
     if identity:
         ssh_base += ["-i", identity]
     session["post_ssh_argv"] = ssh_base + [f"{user}@{host}", git_init_cmd]
@@ -2392,6 +2580,26 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         # GET /api/remote/sessions
         if method == "GET" and path == "/api/remote/sessions":
             self._send_json(remote_sessions_list())
+            return True
+
+        # GET /api/remote/machines  — fetch ServiceDiscovery machine list
+        if method == "GET" and path == "/api/remote/machines":
+            self._send_json(_fetch_machines())
+            return True
+
+        # POST /api/remote/setup-ssh  — generate key + test connectivity
+        if method == "POST" and path == "/api/remote/setup-ssh":
+            body = self._read_json_body() or {}
+            host = (body.get("host") or "").strip()
+            user = (body.get("user") or "").strip()
+            port = int(body.get("port") or 22)
+            if not host or not user:
+                self._send_json({"error": "host and user are required"}, 400)
+                return True
+            try:
+                self._send_json(_setup_ssh(host, user, port))
+            except Exception as e:
+                self._send_json({"error": str(e)}, 500)
             return True
 
         # GET /api/remote/stream?session=<id>  (SSE)
