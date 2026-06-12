@@ -53,6 +53,7 @@ import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MerchantConfig as SMC
+import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Person as SLP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -63,6 +64,7 @@ import Storage.ConfigPilot.Config.MerchantConfig (MerchantConfigDimensions (..))
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.SavedReqLocation as QSRL
+import Tools.Error (DeletedPersonError (..))
 
 ---------------------------------------------------------------------
 deleteCustomerDelete ::
@@ -78,6 +80,8 @@ deleteCustomerDelete merchantShortId opCity customerId = do
   unless (merchant.id == person.merchantId && person.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist $ getId personId)
   bookings <- runInReplica $ QRB.findByRiderIdAndStatus personId [DRB.NEW, DRB.TRIP_ASSIGNED, DRB.AWAITING_REASSIGNMENT, DRB.CONFIRMED, DRB.COMPLETED]
   unless (null bookings) $ throwError (InvalidRequest "Can't delete customer, has a valid booking in past.")
+  dues <- SPayment.getDuesForPerson person
+  when (dues.totalDueAmount > 0) $ throwError (PersonHasPendingDues dues.totalDueAmount)
   _ <- QP.deleteById personId
   QPFS.clearCache personId
   _ <- QSRL.deleteAllByRiderId personId
