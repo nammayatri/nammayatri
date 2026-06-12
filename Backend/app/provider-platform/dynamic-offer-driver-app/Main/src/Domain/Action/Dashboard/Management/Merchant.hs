@@ -2274,6 +2274,15 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                 map (\s -> (showT s.timePercentage, showT s.distancePercentage, showT s.farePercentage, showT s.includeActualTimePercentage, showT s.includeActualDistPercentage)) (NE.toList details.pricingSlabs)
               _ -> []
 
+          slabsList =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.SlabsDetails details -> NE.toList details.slabs
+              _ -> []
+          ambulanceSlabsList =
+            case farePolicy.farePolicyDetails of
+              FarePolicy.AmbulanceDetails details -> NE.toList details.slabs
+              _ -> []
+
           -- InterCity details
           (perKmOneWay, perKmRoundTrip, kmPerExtraHour, perDayMaxHour, perDayMaxMins, defaultWaitDest, stateEntryPermit) =
             case farePolicy.farePolicyDetails of
@@ -2319,7 +2328,18 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   length pricingSlabsList,
                   length driverExtraFeeBoundsList
                 ]
-            _ -> 1
+            FarePolicy.SlabsDetails _ ->
+              maximum
+                [ 1,
+                  length slabsList,
+                  length driverExtraFeeBoundsList
+                ]
+            FarePolicy.AmbulanceDetails _ ->
+              maximum
+                [ 1,
+                  length ambulanceSlabsList,
+                  length driverExtraFeeBoundsList
+                ]
 
           -- Build a row for a given section index
           buildRow sectionIdx =
@@ -2364,6 +2384,46 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                   if sectionIdx == 0
                     then (cfpDesc, cfpFreeSecs, cfpMaxCharge, cfpMaxWaitSecs, cfpMinCharge, cfpPerMetre, cfpPerMin, cfpPercent)
                     else ("", "", "", "", "", "", "", "")
+
+                ( rowBaseDistance,
+                  rowBaseFare,
+                  rowWaitCharge,
+                  rowWaitType,
+                  rowFreeWait,
+                  rowNightCharge,
+                  rowNightType,
+                  rowPlatformFeeType,
+                  rowPlatformFeeVal,
+                  rowPfCgst,
+                  rowPfSgst,
+                  rowPerKmOneWay
+                  ) =
+                    let extractNight nsc = case nsc of
+                          Just (FarePolicy.ProgressiveNightShiftCharge val) -> (showT val, "ProgressiveNightShiftCharge")
+                          Just (FarePolicy.ConstantNightShiftCharge val) -> (showT val, "ConstantNightShiftCharge")
+                          Nothing -> ("", "")
+                        extractWait mbWci = case mbWci of
+                          Just wci -> (extractWaitingCharge wci.waitingCharge, extractWaitingChargeType wci.waitingCharge, showT wci.freeWaitingTime)
+                          Nothing -> ("0", "PerMinuteWaitingCharge", "0")
+                        extractPlatformFee mbPfi = case mbPfi of
+                          Just pfi -> case pfi.platformFeeCharge of
+                            FarePolicy.ProgressivePlatformFee val -> ("ProgressivePlatformFee", showT val, showT pfi.cgst, showT pfi.sgst)
+                            FarePolicy.ConstantPlatformFee val -> ("ConstantPlatformFee", showT val, showT pfi.cgst, showT pfi.sgst)
+                          Nothing -> ("", "", "", "")
+                     in case (slabsList, ambulanceSlabsList) of
+                          (_ : _, _) ->
+                            let slab = slabsList !! min sectionIdx (length slabsList - 1)
+                                (wc, wt, fw) = extractWait slab.waitingChargeInfo
+                                (nc, nt) = extractNight slab.nightShiftCharge
+                                (pfType, pfVal, pfCg, pfSg) = extractPlatformFee slab.platformFeeInfo
+                             in (showT slab.startDistance, showT slab.baseFare, wc, wt, fw, nc, nt, pfType, pfVal, pfCg, pfSg, perKmOneWay)
+                          (_, _ : _) ->
+                            let slab = ambulanceSlabsList !! min sectionIdx (length ambulanceSlabsList - 1)
+                                (wc, wt, fw) = extractWait slab.waitingChargeInfo
+                                (nc, nt) = extractNight slab.nightShiftCharge
+                                (pfType, pfVal, pfCg, pfSg) = extractPlatformFee slab.platformFeeInfo
+                             in (showT slab.baseDistance, showT slab.baseFare, wc, wt, fw, nc, nt, pfType, pfVal, pfCg, pfSg, showT slab.perKmRate)
+                          _ -> (baseDist, baseFareVal, waitCharge, waitType, freeWait, nightCharge, nightType, platformFeeType, platformFeeVal, pfCgst, pfSgst, perKmOneWay)
              in FarePolicyCSVRow
                   { city = showT city,
                     vehicleServiceTier = showT fp.vehicleServiceTier,
@@ -2391,16 +2451,16 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     parkingCharge = maybe "" showT farePolicy.parkingCharge,
                     perStopCharge = maybe "" showT farePolicy.perStopCharge,
                     currency = showT farePolicy.currency,
-                    baseDistance = baseDist,
-                    baseFare = baseFareVal,
+                    baseDistance = rowBaseDistance,
+                    baseFare = rowBaseFare,
                     deadKmFare = deadKmFare,
                     pickupChargesMin = pickupMin,
                     pickupChargesMax = pickupMax,
-                    waitingCharge = waitCharge,
-                    waitingChargeType = waitType,
-                    nightShiftCharge = nightCharge,
-                    nightShiftChargeType = nightType,
-                    freeWatingTime = freeWait,
+                    waitingCharge = rowWaitCharge,
+                    waitingChargeType = rowWaitType,
+                    nightShiftCharge = rowNightCharge,
+                    nightShiftChargeType = rowNightType,
+                    freeWatingTime = rowFreeWait,
                     startDistanceDriverAddition = driverAddStart,
                     minFee = driverMinFee,
                     maxFee = driverMaxFee,
@@ -2421,10 +2481,10 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     perMetreCancellationCharge = rowCfpPerMetre,
                     perMinuteCancellationCharge = rowCfpPerMin,
                     percentageOfRideFareToBeCharged = rowCfpPercent,
-                    platformFeeChargeType = platformFeeType,
-                    platformFeeCharge = platformFeeVal,
-                    platformFeeCgst = pfCgst,
-                    platformFeeSgst = pfSgst,
+                    platformFeeChargeType = rowPlatformFeeType,
+                    platformFeeCharge = rowPlatformFeeVal,
+                    platformFeeCgst = rowPfCgst,
+                    platformFeeSgst = rowPfSgst,
                     platformFeeChargeFarePolicyLevel = maybe "" showT farePolicy.platformFee,
                     platformFeeCgstFarePolicyLevel = maybe "" showT farePolicy.cgst,
                     platformFeeSgstFarePolicyLevel = maybe "" showT farePolicy.sgst,
@@ -2446,7 +2506,7 @@ getMerchantConfigFarePolicyExport merchantShortId opCity = do
                     bufferKms = rowBufKms,
                     bufferMeters = rowBufMeters,
                     perHourCharge = perHourChargeVal,
-                    perKmRateOneWay = perKmOneWay,
+                    perKmRateOneWay = rowPerKmOneWay,
                     perKmRateRoundTrip = perKmRoundTrip,
                     kmPerPlannedExtraHour = kmPerExtraHour,
                     perDayMaxHourAllowance = perDayMaxHour,
@@ -2779,7 +2839,9 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                 foldlM
                   ( \usageCount fp -> do
                       let currentCount = Map.findWithDefault 0 fp.farePolicyId usageCount
-                      when (currentCount <= 1) $ CQFP.delete fp.farePolicyId
+                      when (currentCount <= 1) $ do
+                        CQFP.delete fp.farePolicyId
+                        CQFP.clearCacheById fp.farePolicyId
                       CQFProduct.delete fp.id
                       return $ Map.adjust (subtract 1) fp.farePolicyId usageCount
                   )
@@ -2796,6 +2858,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
               -- new record instead of caching an empty result.
               forM_ oldFareProducts CQFProduct.clearCache
               CQFProduct.clearCache fareProduct
+              CQFP.clearCacheById finalFarePolicy.id
 
               return (newErrors, newBoundedAlreadyDeletedMap, newFarePolicyUsageCount)
 
