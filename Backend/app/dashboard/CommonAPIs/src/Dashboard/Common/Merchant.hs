@@ -675,6 +675,7 @@ newtype CreateMerchantOperatingCityRes = CreateMerchantOperatingCityRes
 
 data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
   { geom :: Text,
+    geomGeoJson :: Text,
     city :: Context.City,
     state :: Context.IndianState,
     country :: Context.Country,
