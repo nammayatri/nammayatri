@@ -60,7 +60,8 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerDescription :: Text,
     offerSponsoredBy :: [Text],
     offerIds :: [Text],
-    offerListResp :: Payment.OfferListResp
+    offerListResp :: Payment.OfferListResp,
+    metadata :: Maybe A.Value
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
