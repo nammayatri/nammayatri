@@ -311,6 +311,7 @@ handler merchantId req validatedReq = do
             insuredAmount = req.insuredAmount,
             exotelDeclinedCallStatusReceivingTime = Nothing,
             numberOfLuggages = searchRequest.numberOfLuggages,
+            isPickupOrDestinationEdited = Just False,
             paymentMode = searchRequest.paymentMode,
             searchTryId = searchTryId,
             dqDurationToPickup = dqDurationToPickup,
