@@ -327,3 +327,7 @@ updateFinanceInvoiceId bookingId financeInvoiceId = do
   updateOneWithKV
     [Se.Set BeamB.financeInvoiceId financeInvoiceId, Se.Set BeamB.updatedAt now]
     [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
+
+findByFinanceInvoiceId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe Booking)
+findByFinanceInvoiceId financeInvoiceId =
+  findAllWithKVAndConditionalDB [Se.Is BeamB.financeInvoiceId $ Se.Eq (Just financeInvoiceId)] (Just (Se.Desc BeamB.createdAt)) <&> listToMaybe

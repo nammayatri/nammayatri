@@ -67,6 +67,7 @@ import qualified Lib.Payment.Storage.HistoryQueries.Refunds as HQRefunds
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QSchedulerJob
 import SharedLogic.Allocator (AllocatorJobType (..), ReconciliationJobData (..))
+import qualified SharedLogic.Finance.RideReceipt as SLRideReceipt
 import qualified SharedLogic.Finance.Wallet as WalletService
 import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.RenderInvoiceFromTemplate as RIFT
@@ -75,6 +76,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Plan as CQPlan
+import qualified Storage.Queries.Booking as QBooking
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -82,6 +84,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SubscriptionPurchase as QSubscriptionPurchase
+import qualified Storage.Queries.Vehicle as QVehicle
 import Tools.Encryption (decryptWithDefault)
 import "beckn-services" Tools.InvoicePdf (generateFinanceInvoicePdf)
 
@@ -1392,24 +1395,69 @@ getFinanceManagementFinanceInvoicePdf merchantShortId opCity mbFleetOwnerOrDrive
   -- If multiple invoices match the filters, the first (newest by issuedAt DESC) is rendered.
   let chosenPdfData = Kernel.Prelude.head pdfDatas
       chosenInv = chosenPdfData.financeInvoice
-      ctx =
+      useItemizedReceipt = (transporterConfig.invoiceConfig >>= (.useFareBreakupLineItems)) == Just True
+
+  -- Itemized receipt (TransporterConfig.invoiceConfig.useFareBreakupLineItems): Ride
+  -- line items come from FareParameters display breakups (in-app parity), reached via
+  -- booking.financeInvoiceId; RideCancellation keeps the row's lines (amounts live in
+  -- cancellationDuesDetails) and reaches the ride via invoice.referenceId.
+  (ctxInvoice, ctxLineItems, mbReceiptFields) <-
+    if useItemizedReceipt && chosenInv.invoiceType `elem` [Ride, RideCancellation] && chosenInv.issuedToType == CUSTOMER
+      then do
+        (mbBooking, mbRide) <- case chosenInv.invoiceType of
+          Ride -> do
+            mbB <- QBooking.findByFinanceInvoiceId chosenInv.id.getId
+            mbR <- maybe (pure Nothing) (QRide.findOneByBookingId . (.id)) mbB
+            pure (mbB, mbR)
+          _ -> do
+            mbR <- maybe (pure Nothing) (QRide.findById . Id) chosenInv.referenceId
+            mbB <- maybe (pure Nothing) (QBooking.findById . (.bookingId)) mbR
+            pure (mbB, mbR)
+        case (mbBooking, mbRide) of
+          (Just booking, Just ride) -> do
+            mbDriver <- QPerson.findById ride.driverId
+            mbVehicle <- QVehicle.findById ride.driverId
+            let driverFullName = maybe "" (\d -> d.firstName <> maybe "" (" " <>) d.lastName) mbDriver
+                vehicleNo = maybe "" (.registrationNo) mbVehicle
+                items = case chosenInv.invoiceType of
+                  Ride -> SLRideReceipt.mkItemizedRideLineItemsFromParams (SLRideReceipt.isSpecialZoneBooking booking) booking.fareParams
+                  _ -> chosenPdfData.parsedLineItems
+                fields = SLRideReceipt.mkRideReceiptFields tz ride booking driverFullName vehicleNo
+                mbName = case chosenInv.issuedToName of
+                  Just n -> Just n
+                  Nothing -> booking.riderName
+            pure (SLRideReceipt.overrideIssuedToName mbName chosenInv, items, Just fields)
+          _ -> do
+            logWarning $ "Itemized receipt: booking/ride not found for invoice " <> chosenInv.invoiceNumber <> "; using row line items"
+            pure (chosenInv, chosenPdfData.parsedLineItems, Nothing)
+      else pure (chosenInv, chosenPdfData.parsedLineItems, Nothing)
+
+  let ctx =
         FRT.buildInvoiceContext
           FRT.BuildInvoiceContextInput
             { language = lang,
               logoUrl = tmplLogoUrl,
               sellerTradeName = tmplSellerTradeName,
               appName = tmplAppName,
-              invoice = chosenInv,
-              lineItems = chosenPdfData.parsedLineItems,
+              invoice = ctxInvoice,
+              lineItems = ctxLineItems,
               mbTaxTxn = chosenPdfData.mbTaxTxn,
               mbPaymentMode = chosenPdfData.mbPaymentMethodType,
               mbCardBrand = chosenPdfData.mbCardBrand,
               mbCardLastFour = chosenPdfData.mbCardLastFour,
               mbRecipientBusinessId = chosenPdfData.mbRecipientBusinessId,
               mbSellerBusinessId = chosenPdfData.mbSellerBusinessId,
-              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber
+              mbSellerVatNumber = chosenPdfData.mbSellerVatNumber,
+              rideShortId = mbReceiptFields >>= (.rideShortId),
+              driverName = mbReceiptFields >>= (.driverName),
+              vehicleNumber = mbReceiptFields >>= (.vehicleNumber),
+              pickupAddress = mbReceiptFields >>= (.pickupAddress),
+              dropAddress = mbReceiptFields >>= (.dropAddress),
+              rideDate = mbReceiptFields >>= (.rideDate),
+              rideStartTime = mbReceiptFields >>= (.rideStartTime),
+              rideEndTime = mbReceiptFields >>= (.rideEndTime)
             }
-      mbInvType = case chosenInv.invoiceType of
+      mbInvType = case ctxInvoice.invoiceType of
         AggregatedCommission -> Just AggregatedCommission
         _ -> Nothing
   html <- RIFT.renderHtml (Id chosenInv.merchantOperatingCityId) mbInvType lang tz ctx
