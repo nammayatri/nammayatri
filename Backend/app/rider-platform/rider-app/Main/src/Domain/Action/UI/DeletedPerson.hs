@@ -14,8 +14,9 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
-import Servant
+import Kernel.Utils.Common (fromMaybeM, throwError)
+import Servant hiding (throwError)
+import qualified SharedLogic.Payment as SPayment
 import qualified SharedLogic.Utils as SLUtils
 import qualified Storage.Queries.DeletedPerson as QD
 import qualified Storage.Queries.Person as QP
@@ -33,6 +34,9 @@ postDeletedPerson ::
 postDeletedPerson (mbPersonId, merchantId) (API.Types.UI.DeletedPerson.DeletedPersonReq {reasonToDelete}) = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  dues <- SPayment.getDuesForPerson person
+  when (dues.totalDueAmount > 0) $
+    throwError (PersonHasPendingDues dues.totalDueAmount)
   now <- getCurrentTime
   -- Decrypt mobile number and derive the static customer ID (the same opaque
   -- UUID used by the payment system). Stored as Text so we can look up this
