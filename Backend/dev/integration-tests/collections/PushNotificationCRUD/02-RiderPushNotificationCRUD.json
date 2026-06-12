@@ -1,0 +1,1073 @@
+{
+  "info": {
+    "name": "Rider Push Notification CRUD Flow",
+    "description": "End-to-end CRUD test for rider-side (BAP) merchant push notification management: list -> upsert (create) -> list (verify) -> upsert (update) -> list (verify) -> toggle disable -> list (verify) -> toggle enable -> list (verify) -> delete -> list (verify). Covers BAP/rider dashboard endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get(\"envType\") || \"Local\";",
+          "  if (envType === \"Local\") return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || \"\";",
+          "  if (raw.indexOf(\"mockServerUrl\") !== -1 || raw.indexOf(\"mock_fcm_url\") !== -1) {",
+          "    if (pm.execution && typeof pm.execution.skipRequest === \"function\") {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate a unique key per test run to avoid collision",
+          "if (!pm.collectionVariables.get(\"_test_rider_pn_key\")) {",
+          "    var suffix = Math.floor(100000 + Math.random() * 899999);",
+          "    pm.collectionVariables.set(\"_test_rider_pn_key\", \"TEST_RIDER_PN_\" + suffix);",
+          "    console.log(\"Test Rider PN key:\", pm.collectionVariables.get(\"_test_rider_pn_key\"));",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "BAP Dashboard Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var d = pm.response.json();",
+              "    pm.collectionVariables.set(\"bap_dashboard_token\", d.authToken);",
+              "} else {",
+              "    var fallback = pm.environment.get(\"bap_dashboard_token\");",
+              "    if (fallback) {",
+              "        console.log(\"Login rate-limited, using pre-set bap_dashboard_token from env\");",
+              "        pm.collectionVariables.set(\"bap_dashboard_token\", fallback);",
+              "    }",
+              "}",
+              "pm.test(\"Status 200 or fallback token available\", function () {",
+              "    var ok = pm.response.code === 200 || !!pm.environment.get(\"bap_dashboard_token\");",
+              "    pm.expect(ok).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"juspay_admin@dashboard.com\", \"password\": \"juspay_admin\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/login",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "BAP Switch Merchant And City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var d = pm.response.json();",
+              "    if (d.authToken) { pm.collectionVariables.set(\"bap_dashboard_token\", d.authToken); }",
+              "}",
+              "pm.test(\"Status 200 or skipped (using fallback token)\", function () {",
+              "    var ok = pm.response.code === 200 || !!pm.collectionVariables.get(\"bap_dashboard_token\");",
+              "    pm.expect(ok).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{bap_short_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/user/switchMerchantAndCity",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "user",
+            "switchMerchantAndCity"
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Get Initial Rider Push Notifications",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Response is an array\", function () { pm.expect(d).to.be.an(\"array\"); });",
+              "pm.collectionVariables.set(\"_initial_rider_pn_count\", d.length);",
+              "console.log(\"Initial Rider PN count:\", d.length);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPSERT - Create New Rider Push Notification (English)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var body = JSON.stringify({",
+              "    key: key,",
+              "    title: \"Rider Integration Test Notification\",",
+              "    body: \"This is a rider-side test notification body\",",
+              "    language: \"ENGLISH\",",
+              "    fcmNotificationType: \"TRIGGER_SERVICE\",",
+              "    shouldTrigger: true,",
+              "    channels: [\"NCH_FCM\", \"NCH_OVERLAY\"],",
+              "    isCritical: false",
+              "});",
+              "pm.request.body.raw = body;"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Returns success\", function () { pm.expect(d.result).to.eql(\"Success\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "placeholder"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "KEYS - Verify Rider Key Appears",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Response is an array\", function () { pm.expect(d).to.be.an(\"array\"); });",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "pm.test(\"Test key present in keys list\", function () { pm.expect(d).to.include(key); });",
+              "console.log(\"Total rider keys:\", d.length);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/keys",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "keys"
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Verify Created Rider Notification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var created = d.filter(function(n) { return n.key === key; });",
+              "pm.test(\"Created notification exists\", function () { pm.expect(created.length).to.be.at.least(1); });",
+              "var n = created[0];",
+              "pm.test(\"Title matches\", function () { pm.expect(n.title).to.eql(\"Rider Integration Test Notification\"); });",
+              "pm.test(\"Body matches\", function () { pm.expect(n.body).to.eql(\"This is a rider-side test notification body\"); });",
+              "pm.test(\"shouldTrigger is true\", function () { pm.expect(n.shouldTrigger).to.eql(true); });",
+              "pm.test(\"isCritical is false\", function () { pm.expect(n.isCritical).to.eql(false); });",
+              "pm.test(\"Channels match\", function () { pm.expect(n.channels).to.eql([\"NCH_FCM\", \"NCH_OVERLAY\"]); });",
+              "pm.collectionVariables.set(\"_test_rider_pn_id\", n.id);",
+              "console.log(\"Created Rider PN id:\", n.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPSERT - Update Existing Rider Notification",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var body = JSON.stringify({",
+              "    key: key,",
+              "    title: \"Updated Rider Integration Title\",",
+              "    body: \"Updated rider test notification body\",",
+              "    language: \"ENGLISH\",",
+              "    fcmNotificationType: \"TRIGGER_SERVICE\",",
+              "    shouldTrigger: true,",
+              "    channels: [\"NCH_FCM\", \"NCH_SMS\", \"NCH_WHATSAPP\"],",
+              "    isCritical: true",
+              "});",
+              "pm.request.body.raw = body;"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Returns success\", function () { pm.expect(d.result).to.eql(\"Success\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "placeholder"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Verify Updated Rider Notification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var updated = d.filter(function(n) { return n.key === key; });",
+              "pm.test(\"Updated notification exists\", function () { pm.expect(updated.length).to.be.at.least(1); });",
+              "var n = updated[0];",
+              "pm.test(\"Title updated\", function () { pm.expect(n.title).to.eql(\"Updated Rider Integration Title\"); });",
+              "pm.test(\"Body updated\", function () { pm.expect(n.body).to.eql(\"Updated rider test notification body\"); });",
+              "pm.test(\"isCritical updated to true\", function () { pm.expect(n.isCritical).to.eql(true); });",
+              "pm.test(\"Channels updated\", function () { pm.expect(n.channels).to.eql([\"NCH_FCM\", \"NCH_SMS\", \"NCH_WHATSAPP\"]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "TOGGLE - Disable Rider Notification (All Languages)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var body = JSON.stringify({ key: key, shouldTrigger: false });",
+              "pm.request.body.raw = body;"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Returns success\", function () { pm.expect(d.result).to.eql(\"Success\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "placeholder"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert?toggle=true&allLanguages=true",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ],
+          "query": [
+            {
+              "key": "toggle",
+              "value": "true"
+            },
+            {
+              "key": "allLanguages",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Verify Disabled Rider Notification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var disabled = d.filter(function(n) { return n.key === key; });",
+              "pm.test(\"Notification still exists\", function () { pm.expect(disabled.length).to.be.at.least(1); });",
+              "pm.test(\"All notifications for key are disabled\", function () {",
+              "    disabled.forEach(function(n) { pm.expect(n.shouldTrigger).to.eql(false); });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "TOGGLE - Re-enable Rider Notification (All Languages)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var body = JSON.stringify({ key: key, shouldTrigger: true });",
+              "pm.request.body.raw = body;"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Returns success\", function () { pm.expect(d.result).to.eql(\"Success\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "placeholder"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert?toggle=true&allLanguages=true",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ],
+          "query": [
+            {
+              "key": "toggle",
+              "value": "true"
+            },
+            {
+              "key": "allLanguages",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Verify Re-enabled Rider Notification",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var enabled = d.filter(function(n) { return n.key === key; });",
+              "pm.test(\"Notification still exists\", function () { pm.expect(enabled.length).to.be.at.least(1); });",
+              "pm.test(\"All notifications for key are re-enabled\", function () {",
+              "    enabled.forEach(function(n) { pm.expect(n.shouldTrigger).to.eql(true); });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "DELETE - Remove Rider Notification",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "var pnId = pm.collectionVariables.get(\"_test_rider_pn_id\");",
+              "if (!pnId) { throw new Error(\"No notification ID to delete - previous create step may have failed\"); }"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Returns success\", function () { pm.expect(d.result).to.eql(\"Success\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/{{_test_rider_pn_id}}/delete",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "{{_test_rider_pn_id}}",
+            "delete"
+          ]
+        }
+      }
+    },
+    {
+      "name": "LIST - Verify Rider Notification Deleted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 200\", function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var key = pm.collectionVariables.get(\"_test_rider_pn_key\");",
+              "var remaining = d.filter(function(n) { return n.key === key; });",
+              "pm.test(\"Notification is deleted\", function () { pm.expect(remaining.length).to.eql(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification"
+          ]
+        }
+      }
+    },
+    {
+      "name": "TOGGLE - Fails for Non-Existent Key (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for non-existent key\", function () { pm.response.to.have.status(400); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"key\": \"NON_EXISTENT_KEY_XYZ_99999\", \"shouldTrigger\": false}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert?toggle=true",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ],
+          "query": [
+            {
+              "key": "toggle",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "DELETE - Fails for Non-Existent ID (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for non-existent ID\", function () { pm.response.to.have.status(400); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/non-existent-id-xyz-000/delete",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "non-existent-id-xyz-000",
+            "delete"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPSERT - Fails Without Required Fields (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for missing title\", function () { pm.response.to.have.status(400); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"key\": \"SOME_KEY\", \"body\": \"body without title\", \"language\": \"ENGLISH\", \"fcmNotificationType\": \"TRIGGER_SERVICE\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPSERT - Fails With Invalid fcmSubCategory (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for invalid fcmSubCategory\", function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Error mentions fcmSubCategory\", function () { pm.expect(d.errorMessage).to.include(\"fcmSubCategory\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"key\": \"SOME_KEY\", \"title\": \"T\", \"body\": \"B\", \"language\": \"ENGLISH\", \"fcmNotificationType\": \"TRIGGER_SERVICE\", \"fcmSubCategory\": \"INVALID_VALUE\", \"channels\": [\"NCH_FCM\"]}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "UPSERT - Fails Creating Without Channels (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for missing channels\", function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Error mentions channels\", function () { pm.expect(d.errorMessage).to.include(\"channels\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"key\": \"NEW_KEY_NO_CHANNELS\", \"title\": \"T\", \"body\": \"B\", \"language\": \"ENGLISH\", \"fcmNotificationType\": \"TRIGGER_SERVICE\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ]
+        }
+      }
+    },
+    {
+      "name": "TOGGLE - Fails Without shouldTrigger (Rider)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status 400 for missing shouldTrigger\", function () { pm.response.to.have.status(400); });",
+              "var d = pm.response.json();",
+              "pm.test(\"Error mentions shouldTrigger\", function () { pm.expect(d.errorMessage).to.include(\"shouldTrigger\"); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{bap_dashboard_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"key\": \"TRIP_STARTED\", \"language\": \"ENGLISH\"}"
+        },
+        "url": {
+          "raw": "{{bap_dashboard_url}}/bap/{{bap_short_id}}/{{city}}/merchant/config/pushNotification/upsert?toggle=true",
+          "host": [
+            "{{bap_dashboard_url}}"
+          ],
+          "path": [
+            "bap",
+            "{{bap_short_id}}",
+            "{{city}}",
+            "merchant",
+            "config",
+            "pushNotification",
+            "upsert"
+          ],
+          "query": [
+            {
+              "key": "toggle",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_rider_pn_key",
+      "value": ""
+    },
+    {
+      "key": "_test_rider_pn_id",
+      "value": ""
+    },
+    {
+      "key": "_initial_rider_pn_count",
+      "value": "0"
+    },
+    {
+      "key": "bap_dashboard_token",
+      "value": ""
+    }
+  ]
+}

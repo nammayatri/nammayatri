@@ -40,6 +40,10 @@ module Domain.Action.RiderPlatform.Management.Merchant
     getMerchantConfigTollList,
     postMerchantTollUpsert,
     deleteMerchantTollDelete,
+    getMerchantConfigPushNotification,
+    getMerchantConfigPushNotificationKeys,
+    postMerchantConfigPushNotificationUpsert,
+    deleteMerchantConfigPushNotificationDelete,
   )
 where
 
@@ -50,6 +54,7 @@ import qualified Data.Text as T
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
+import Kernel.External.Types (Language)
 import Kernel.Prelude
 import qualified Kernel.Storage.Queries.MerchantOperatingCity as KQMOC
 import Kernel.Types.APISuccess (APISuccess)
@@ -353,3 +358,49 @@ deleteMerchantTollDelete merchantShortId opCity apiTokenInfo tollId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo T.emptyRequest
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantTollDelete) tollId
+
+getMerchantConfigPushNotification ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Maybe Language ->
+  Maybe Bool ->
+  Maybe Bool ->
+  Flow [MerchantPushNotificationRes]
+getMerchantConfigPushNotification merchantShortId opCity apiTokenInfo limit offset key language isCritical shouldTrigger = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (\dsl -> dsl.merchantDSL.getMerchantConfigPushNotification limit offset key language isCritical shouldTrigger)
+
+postMerchantConfigPushNotificationUpsert ::
+  ShortId DM.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Maybe Bool ->
+  Maybe Bool ->
+  MerchantPushNotificationUpsertReq ->
+  Flow APISuccess
+postMerchantConfigPushNotificationUpsert merchantShortId opCity apiTokenInfo toggle allLanguages req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (\dsl -> dsl.merchantDSL.postMerchantConfigPushNotificationUpsert toggle allLanguages req)
+
+deleteMerchantConfigPushNotificationDelete ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Id MerchantPushNotification ->
+  Flow APISuccess
+deleteMerchantConfigPushNotificationDelete merchantShortId opCity apiTokenInfo notificationId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.deleteMerchantConfigPushNotificationDelete) notificationId
+
+getMerchantConfigPushNotificationKeys :: ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Flow [Text]
+getMerchantConfigPushNotificationKeys merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.getMerchantConfigPushNotificationKeys)

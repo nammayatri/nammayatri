@@ -24,7 +24,7 @@ import Data.Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.Either (isRight)
 import Data.List.Extra (anySame)
-import Data.OpenApi hiding (description, name, password, url)
+import Data.OpenApi hiding (description, name, password, title, url)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Kernel.External.Call.Types
@@ -1104,4 +1104,73 @@ data WhiteListOperatingCityRes = WhiteListOperatingCityRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity
+
+---------------------------------------------------------
+-- merchant push notification CRUD ---------------------
+
+data MerchantPushNotification
+
+data NotificationChannel = NCH_FCM | NCH_GRPC | NCH_SMS | NCH_WHATSAPP | NCH_OVERLAY | NCH_WEB
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData NotificationChannel where
+  parseUrlPiece "FCM" = Right NCH_FCM
+  parseUrlPiece "GRPC" = Right NCH_GRPC
+  parseUrlPiece "SMS" = Right NCH_SMS
+  parseUrlPiece "WHATSAPP" = Right NCH_WHATSAPP
+  parseUrlPiece "OVERLAY" = Right NCH_OVERLAY
+  parseUrlPiece "WEB" = Right NCH_WEB
+  parseUrlPiece x = Left $ "Unknown NotificationChannel: " <> x
+
+instance ToHttpApiData NotificationChannel where
+  toUrlPiece NCH_FCM = "FCM"
+  toUrlPiece NCH_GRPC = "GRPC"
+  toUrlPiece NCH_SMS = "SMS"
+  toUrlPiece NCH_WHATSAPP = "WHATSAPP"
+  toUrlPiece NCH_OVERLAY = "OVERLAY"
+  toUrlPiece NCH_WEB = "WEB"
+
+data MerchantPushNotificationRes = MerchantPushNotificationRes
+  { id :: Text,
+    key :: Text,
+    title :: Text,
+    body :: Text,
+    language :: Language,
+    fcmNotificationType :: Text,
+    fcmSubCategory :: Maybe Text,
+    tripCategory :: Maybe Text,
+    shouldTrigger :: Bool,
+    channels :: Maybe [NotificationChannel],
+    isCritical :: Bool
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MerchantPushNotificationUpsertReq = MerchantPushNotificationUpsertReq
+  { key :: Text,
+    title :: Maybe Text,
+    body :: Maybe Text,
+    language :: Maybe Language,
+    fcmNotificationType :: Maybe Text,
+    fcmSubCategory :: Maybe Text,
+    tripCategory :: Maybe Text,
+    shouldTrigger :: Maybe Bool,
+    channels :: Maybe [NotificationChannel],
+    isCritical :: Maybe Bool,
+    notificationId :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+validateMerchantPushNotificationUpsertReq :: Validate MerchantPushNotificationUpsertReq
+validateMerchantPushNotificationUpsertReq MerchantPushNotificationUpsertReq {..} =
+  sequenceA_
+    [ validateField "key" key $ MinLength 1,
+      validateField "title" title $ InMaybe (MinLength 1),
+      validateField "body" body $ InMaybe (MinLength 1)
+    ]
+
+instance HideSecrets MerchantPushNotificationUpsertReq where
   hideSecrets = identity

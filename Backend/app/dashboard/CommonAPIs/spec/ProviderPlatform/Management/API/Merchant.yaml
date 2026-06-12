@@ -52,6 +52,9 @@ imports:
   TripCategory: Dashboard.Common
   Months: Kernel.Types.Time
   SpecialZone: Dashboard.Common
+  MerchantPushNotificationRes: Dashboard.Common.Merchant
+  MerchantPushNotificationUpsertReq: Dashboard.Common.Merchant
+  MerchantPushNotification: Dashboard.Common.Merchant
   Language: Kernel.External.Types
 
 module: Merchant
@@ -649,6 +652,44 @@ apis:
         type: SetJsonLogicDebugReq
       response:
         type: APISuccess
+  - GET: # MerchantPushNotificationListAPI
+      endpoint: /config/pushNotification
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - key: Text
+        - language: Language
+        - isCritical: Bool
+        - shouldTrigger: Bool
+      response:
+        type: "[MerchantPushNotificationRes]"
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_LIST
+  - GET: # MerchantPushNotificationKeysAPI
+      endpoint: /config/pushNotification/keys
+      auth: ApiAuthV2
+      response:
+        type: "[Text]"
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_LIST
+  - POST: # MerchantPushNotificationUpsertAPI
+      endpoint: /config/pushNotification/upsert
+      auth: ApiAuthV2
+      query:
+        - toggle: Bool
+        - allLanguages: Bool
+      request:
+        type: MerchantPushNotificationUpsertReq
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_UPSERT
+  - DELETE: # MerchantPushNotificationDeleteAPI
+      endpoint: /config/pushNotification/{notificationId}/delete
+      auth: ApiAuthV2
+      params:
+        notificationId: Id MerchantPushNotification
+      response:
+        type: APISuccess
+      userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT MERCHANT_PUSH_NOTIFICATION_DELETE
   - GET: # MerchantDocumentListAPI
       endpoint: /merchantDocument/list
       auth: ApiAuthV2

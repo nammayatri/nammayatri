@@ -13,3 +13,15 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN trip_ca
 ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN is_critical boolean ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN channels text[] ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.merchant_push_notification ADD COLUMN should_trigger boolean ;
