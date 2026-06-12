@@ -1066,7 +1066,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.docsVerificationStatus =
                       if transporterConfig.enableManualDocumentStatusCheck == Just True
                         then Just DDVS.ADMIN_APPROVED
-                        else Nothing
+                        else Nothing,
+                    DRC.pendingChallanCount = Nothing
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver

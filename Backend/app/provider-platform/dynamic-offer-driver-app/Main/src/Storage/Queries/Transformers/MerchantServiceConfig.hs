@@ -9,6 +9,8 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchInterface
+import qualified Kernel.External.ChallanSearch.Types as ChallanSearch
 import qualified Kernel.External.GSTEInvoice.Interface.Types as GSTEInvoice
 import qualified Kernel.External.GSTEInvoice.Types as GSTEInvoice
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
@@ -137,6 +139,8 @@ getConfigJSON = \case
     Payment.JuspayConfig cfg -> toJSON cfg
     Payment.StripeConfig cfg -> toJSON cfg
     Payment.PaytmEDCConfig cfg -> toJSON cfg
+  Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
+    ChallanSearchInterface.SignzyChallanSearch cfg -> toJSON cfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -220,6 +224,8 @@ getServiceName = \case
   Domain.GSTEInvoiceServiceConfig eInvCfg -> case eInvCfg of
     GSTEInvoice.CharteredInfoEInvoiceConfig _ -> Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo
   Domain.AirportReachargeServiceConfig paymentCfg -> Domain.AirportReachargeService $ getPaymentServiceConfigJson paymentCfg
+  Domain.ChallanSearchServiceConfig challanCfg -> case challanCfg of
+    ChallanSearchInterface.SignzyChallanSearch _ -> Domain.ChallanSearchService ChallanSearch.Signzy
 
 getPaymentServiceConfigJson :: Payment.PaymentServiceConfig -> Payment.PaymentService
 getPaymentServiceConfigJson = \case
@@ -315,6 +321,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
       Left err -> Left err
   Domain.GSTEInvoiceService GSTEInvoice.CharteredInfo -> Domain.GSTEInvoiceServiceConfig . GSTEInvoice.CharteredInfoEInvoiceConfig <$> eitherValue configJSON
   Domain.AirportReachargeService paymentServiceName -> Domain.AirportReachargeServiceConfig <$> mkPaymentServiceConfig configJSON paymentServiceName
+  Domain.ChallanSearchService ChallanSearch.Signzy -> Domain.ChallanSearchServiceConfig . ChallanSearchInterface.SignzyChallanSearch <$> eitherValue configJSON
 
 eitherValue :: FromJSON a => A.Value -> Either Text a
 eitherValue value = case A.fromJSON value of

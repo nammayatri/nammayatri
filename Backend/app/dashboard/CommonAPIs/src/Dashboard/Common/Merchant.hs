@@ -492,13 +492,15 @@ data IdfyCfgUpdateReq = IdfyCfgUpdateReq
   { accountId :: Text,
     apiKey :: Text,
     secret :: Text,
-    url :: BaseUrl
+    url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
-  { url :: BaseUrl
+data IdfyCfgUpdateTReq = IdfyCfgUpdateTReq
+  { url :: BaseUrl,
+    faceCompareRetryLimit :: Maybe Int
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON)

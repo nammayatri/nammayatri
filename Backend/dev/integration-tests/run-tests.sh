@@ -104,8 +104,25 @@ enable_all_drivers() {
         "UPDATE atlas_driver_offer_bpp.driver_information SET enabled = true, verified = true WHERE enabled = false OR verified = false;" 2>/dev/null || true
 }
 
+OPHUB_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-local-operation-hub.sql"
+OPHUB_CHALLAN_SETUP_SQL="$SCRIPT_DIR/collections/OperationHubFlow/setup-challan-search-test.sql"
 TOLL_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/toll-dashboard-access.sql"
 PROVIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/provider-dashboard.sql"
+
+seed_ophub() {
+    echo "Seeding operation hub + challan search config..."
+    for sql in "$OPHUB_SETUP_SQL" "$OPHUB_CHALLAN_SETUP_SQL"; do
+        if [ ! -f "$sql" ]; then
+            echo "WARNING: Setup SQL not found: $sql"
+            continue
+        fi
+        if ! psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" \
+            -v ON_ERROR_STOP=1 -f "$sql" > /dev/null 2>&1; then
+            echo "WARNING: Seed failed: $sql (postgres on $DB_HOST:$DB_PORT?)"
+            echo "  Manual: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $sql"
+        fi
+    done
+}
 
 # Toll dashboard: access_matrix + optional local-testing-data (person, token, merchant_access).
 seed_toll_dashboard_access() {
@@ -510,7 +527,10 @@ run_sms() {
     echo ""
     return $sms_exit
 }
-run_ophub() { run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"; }
+run_ophub() {
+    seed_ophub
+    run_frfs "$OPHUB_DIR" "OPERATION HUB" "${1:-}" "${2:-}"
+}
 run_airport() { run_frfs "$AIRPORT_DIR" "AIRPORT TAXI" "${1:-}" "${2:-}"; }
 run_toll_config() {
     seed_toll_dashboard_access

@@ -314,6 +314,7 @@ VehicleRegistrationCertificate:
     approved: Maybe Bool # Set by the BOT API on approval. (verified/enabled are statusHandler-computed; approved is the BOT gate.)
     verified: Maybe Bool # statusHandler-computed: true iff all isMandatory vehicle docs are VALID (InspectionHub is one of them). Bidirectional.
     docsVerificationStatus: Maybe DocsVerificationStatus
+    pendingChallanCount: Maybe Int
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -368,6 +369,10 @@ VehicleRegistrationCertificate:
     updateApproved:
       kvFunction: updateOneWithKV
       params: [approved]
+      where: id
+    updatePendingChallanCount:
+      kvFunction: updateOneWithKV
+      params: [pendingChallanCount]
       where: id
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV
