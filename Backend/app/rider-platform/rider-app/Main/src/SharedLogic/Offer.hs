@@ -8,6 +8,7 @@ where
 
 import Control.Applicative ((<|>))
 import qualified Data.Aeson as A
+import qualified Data.Aeson.KeyMap as AKM
 import qualified Data.Text as T
 import Data.Time (utctDay)
 import qualified Domain.SharedLogic.RideDiscount as RD
@@ -61,7 +62,8 @@ data CumulativeOfferRespI = CumulativeOfferRespI
     offerDescription :: Text,
     offerSponsoredBy :: [Text],
     offerIds :: [Text],
-    offerListResp :: Payment.OfferListResp
+    offerListResp :: Payment.OfferListResp,
+    offerStyle :: Maybe OfferThemeConfig
   }
   deriving (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -270,7 +272,16 @@ mkCumulativeOfferResp merchantOperatingCityId offerListRes legInfos mbFareCtx = 
     else do
       logInfo $ "Running cumulative offer logic with " <> show (length logics) <> " rules"
       result <- LYDL.runLogicsWithDebugLog LYDL.Rider (cast merchantOperatingCityId) LYT.CUMULATIVE_OFFER_POLICY Nothing logics (CumulativeOfferReq offerListRes legInfos)
-      case A.fromJSON result.result :: A.Result CumulativeOfferRespI of
+      -- offerStyle is cosmetic: if the policy emits a malformed value, drop it
+      -- instead of failing the whole banner parse below.
+      sanitizedResult <- case result.result of
+        A.Object obj
+          | Just styleVal <- AKM.lookup "offerStyle" obj,
+            A.Error styleErr <- (A.fromJSON styleVal :: A.Result (Maybe OfferThemeConfig)) -> do
+            logWarning $ "Failed to parse offerStyle from cumulative offer logic, ignoring it: " <> T.pack styleErr
+            pure $ A.Object (AKM.delete "offerStyle" obj)
+        _ -> pure result.result
+      case A.fromJSON sanitizedResult :: A.Result CumulativeOfferRespI of
         A.Success logicResult -> do
           logInfo $ "Cumulative offer logic result: " <> show logicResult
           resp <- mkCumulativeOfferRespFromI logicResult
