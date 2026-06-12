@@ -33,6 +33,7 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     mYManufacturing :: B.C f (Kernel.Prelude.Maybe Data.Time.Calendar.Day),
     manufacturerModel :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     oxygen :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    pendingChallanCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     permitExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     pucExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     rejectReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

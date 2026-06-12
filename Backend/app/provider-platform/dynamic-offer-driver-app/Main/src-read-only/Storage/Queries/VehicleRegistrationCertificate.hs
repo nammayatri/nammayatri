@@ -92,6 +92,13 @@ updateOxygen ::
   (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
 updateOxygen oxygen id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.oxygen oxygen, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePendingChallanCount ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
+updatePendingChallanCount pendingChallanCount id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.pendingChallanCount pendingChallanCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateVehicleImageId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> m ())
@@ -140,6 +147,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.mYManufacturing mYManufacturing,
       Se.Set Beam.manufacturerModel manufacturerModel,
       Se.Set Beam.oxygen oxygen,
+      Se.Set Beam.pendingChallanCount pendingChallanCount,
       Se.Set Beam.permitExpiry permitExpiry,
       Se.Set Beam.pucExpiry pucExpiry,
       Se.Set Beam.rejectReason rejectReason,
