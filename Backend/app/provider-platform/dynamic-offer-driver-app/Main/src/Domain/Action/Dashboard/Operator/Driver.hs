@@ -40,6 +40,7 @@ import qualified Domain.Types.SubscriptionPurchase as DSP
 import Environment
 import EulerHS.Prelude (whenNothing_, (<|>))
 import Kernel.Beam.Functions as B
+import qualified Kernel.External.ChallanSearch.Interface.Types as ChallanSearchTypes
 import Kernel.External.Encryption (decrypt, getDbHash)
 import Kernel.Prelude
 import Kernel.Sms.Config
@@ -77,6 +78,7 @@ import qualified Storage.Queries.SubscriptionPurchaseExtra as QSubscriptionPurch
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QVRC
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as QVRCE
+import qualified Tools.ChallanSearch as ChallanSearch
 import Tools.Error
 import Tools.SMS as Sms hiding (Success)
 
@@ -223,6 +225,15 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
               FleetOpStats.incrementApprovedVehicleRequests request.operatorId analyticsDriverId transporterConfig
       let reqUpdatedStatus = if allVehicleDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
+
+      when allVehicleDocsVerified $
+        fork "fetchPendingChallanCount" $
+          void $
+            withTryCatch "fetchPendingChallanCount" $ do
+              let challanReq = ChallanSearchTypes.PendingChallanReq {vehicleNumber = registrationNo}
+              challanResp <- ChallanSearch.getPendingChallanCount merchantOpCity.id challanReq
+              QVRC.updatePendingChallanCount (Just challanResp.pendingChallanCount) rc.id
+              logInfo $ "Pending challan count for RC " <> registrationNo <> ": " <> show challanResp.pendingChallanCount
 
       whenJust mbPersonId $ \personId -> do
         mbVehicle <- QVehicle.findById personId

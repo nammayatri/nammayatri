@@ -508,7 +508,8 @@ createRC merchantId merchantOperatingCityId input rcconfigs id now failedRules c
         unencryptedCertificateNumber = input.registrationNumber,
         approved = Just False,
         updatedAt = now,
-        vehicleImageId = Nothing
+        vehicleImageId = Nothing,
+        pendingChallanCount = Nothing
       }
 
 validateRCStatus :: VerificationFlow m r => CreateRCInput -> DVC.DocumentVerificationConfig -> UTCTime -> UTCTime -> m (Documents.VerificationStatus, Maybe Bool, Maybe DV.VehicleVariant, Maybe Text, Maybe Bool)
