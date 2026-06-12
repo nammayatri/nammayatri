@@ -103,6 +103,11 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
+  // FRFS fleet-operator conductor flow — baseUrl_driver points to driver BPP (port 8016)
+  'baseUrl_driver': { service: 'driver' },
+  // contextApiUrl points at the test-context-api itself (PROXY_BASE), so service='internal'
+  // strips the base and leaves only the path (e.g. /api/db/update) for direct forwarding.
+  'contextApiUrl': { service: 'internal' },
 };
 
 // ── Parser ──
