@@ -807,3 +807,5 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate
   Domain.Types.DocumentVerificationConfig.PanAadhaarLinkage -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanAadhaarLink
   Domain.Types.DocumentVerificationConfig.VoterIdCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VoterIdCard
+  Domain.Types.DocumentVerificationConfig.OperatorPartnerCode -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.OperatorPartnerCode
+  Domain.Types.DocumentVerificationConfig.MedicalCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.MedicalCertificate
