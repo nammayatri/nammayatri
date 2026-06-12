@@ -41,7 +41,8 @@ handler = onSelect
 
 onSelect :: SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
 onSelect _ reqBS = withFlowHandlerAPI $ do
-  req <- case decodeOnSelectReq reqBS of
+  reqBS' <- Utils.decompressGzipBody reqBS
+  req <- case decodeOnSelectReq reqBS' of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
   transaction_id <- req.onSelectReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")

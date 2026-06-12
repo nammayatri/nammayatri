@@ -108,6 +108,7 @@ dependencies:
   - unordered-containers
   - utf8-string
   - geojson
+  - zlib
   - safe-money
   - dhall
   - tasty
