@@ -477,10 +477,12 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
             let driverInspectionNotRequired = transporterConfig.requiresDriverOnboardingInspection /= Just True || driverInfo.approved == Just True
                 -- Allow first-time auto-enable even when dontAutoEnableDriver=true (enabledAt=Nothing means never enabled before)
                 autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
-            when (driverInspectionNotRequired && autoEnableAllowed) $ do
-              enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
-              whenJust onboardingVehicleCategory $ \category -> do
-                DIIQuery.updateOnboardingVehicleCategory (Just category) personId
+            when driverInspectionNotRequired $ do
+              unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
+              when autoEnableAllowed $ do
+                enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
+                whenJust onboardingVehicleCategory $ \category -> do
+                  DIIQuery.updateOnboardingVehicleCategory (Just category) personId
         -- Check vehicle enablement separately (only vehicle docs + vehicle inspection)
         getVehicleDocuments driverDocConfigs person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection transporterConfig.vehicleCategoryExcludedFromVerification True driverDocuments merchantOpCityId
       else do
@@ -490,6 +492,7 @@ statusHandler' person entityImagesInfo makeSelfieAadhaarPanMandatory prefillData
           when (allDriverDocsVerified && transporterConfig.requiresOnboardingInspection /= Just True && person.role == DP.DRIVER) $ do
             driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
             let autoEnableAllowed = not (fromMaybe False transporterConfig.dontAutoEnableDriver) || isNothing driverInfo.enabledAt
+            unless driverInfo.verified $ DIQuery.updateVerifiedState (cast personId) True
             when autoEnableAllowed $ do
               enableDriver merchantOpCityId personId person.role (mDL >>= (.driverName)) transporterConfig merchantId
               whenJust onboardingVehicleCategory $ \category -> do
