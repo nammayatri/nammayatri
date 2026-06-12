@@ -28,13 +28,13 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error
+import Lib.ConfigPilot.Interface.Types (getConfig)
 import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.MessageBuilder (buildMessageWithKey, buildSendSmsReq)
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
-import Storage.ConfigPilot.Interface.Types (getConfig)
+import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error (RiderError (RiderConfigDoesNotExist))
 import qualified Tools.Notifications as TNotifications
@@ -66,7 +66,7 @@ postMultiModalSendDirectMessage merchantShortId opCity req = do
           Whatsapp.SendWhatsAppMessageWithTemplateIdApIReq req.destination merchantMessage.templateId variables Nothing Nothing
     API.Types.Dashboard.RideBooking.MultiModal.EMAIL -> do
       riderConfig <-
-        getConfig (RiderDimensions {merchantOperatingCityId = merchantOpCityId.getId})
+        getConfig (RiderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing
           >>= fromMaybeM (RiderConfigDoesNotExist merchantOpCityId.getId)
       let fromEmail = maybe "noreply@nammayatri.in" (.fromEmail) riderConfig.emailOtpConfig
       emailServiceConfig <- asks (.emailServiceConfig)
