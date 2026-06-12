@@ -1,4 +1,5 @@
 imports:
+  RefundRequest: Domain.Types.RefundRequest
   RefundRequestStatus: Domain.Types.RefundRequest
   Person: Domain.Types.Person
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
@@ -7,8 +8,10 @@ imports:
   RefundStatus: Kernel.External.Payment.Interface.Types
   RefundRequestCode: Domain.Types.RefundRequest
   RefundPurpose: Domain.Types.RefundRequest
+  Ride: Domain.Types.Ride
 
 importPackageOverrides:
+  Domain.Types.Ride: "rider-app"
   Domain.Types.RefundRequest: "rider-app"
   Domain.Types.Person: "rider-app"
   Lib.Payment.Domain.Types.PaymentOrder: "payment"
@@ -32,21 +35,30 @@ apis:
       response:
         type: RefundRequestResp
   - GET:
-      endpoint: refundRequest/{orderId}/info
+      endpoint: refundRequest/{refundRequestId}/info
       auth: ApiAuthV2
       params:
-        orderId: Id PaymentOrder
+        refundRequestId: Id RefundRequest
       query:
         refreshRefunds: Bool
       response:
         type: RefundRequestInfoResp
   - POST:
-      endpoint: refundRequest/{orderId}/respond
+      endpoint: refundRequest/{refundRequestId}/respond
       auth: ApiAuthV2
       params:
-        orderId: Id PaymentOrder
+        refundRequestId: Id RefundRequest
       request:
         type: RefundRequestRespondReq
+      response:
+        type: RefundRequestRespondResp
+  - POST:
+      endpoint: refundRequest/{rideId}/initiate
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      request:
+        type: RefundRequestInitiateReq
       response:
         type: RefundRequestRespondResp
 
@@ -55,6 +67,7 @@ types:
     - summary: Summary
     - refundRequests: [RefundRequestItem]
   RefundRequestItem:
+    - id: Id RefundRequest
     - orderId: Id PaymentOrder
     - requestedAmount: Maybe PriceAPIEntity
     - transactionAmount: PriceAPIEntity
@@ -90,9 +103,15 @@ types:
     - responseDescription: Maybe Text
     - approvedAmount: Maybe PriceAPIEntity
     - retryRefunds: Maybe Bool # in case if previous refund was failed
+    - deductFromDriver: Maybe Bool # required when approve=true; drives Stripe reverse_transfer
     - derive: "'HideSecrets"
   RefundRequestRespondResp:
     - status: RefundRequestStatus
     - refundStatus: Maybe RefundStatus
     - errorCode: Maybe Text
+    - derive: "'HideSecrets"
+  RefundRequestInitiateReq:
+    - requestedAmount: Maybe PriceAPIEntity # null = full ride
+    - description: Maybe Text               # admin notes; null = handler default
+    - deductFromDriver: Maybe Bool          # drives Stripe reverse_transfer
     - derive: "'HideSecrets"

@@ -1,0 +1,232 @@
+{
+  "info": {
+    "name": "00 - Refund Seed Refundable Ride",
+    "description": "Seeds a refundable Helsinki Stripe ride for the refund scenarios: looks up the real config-sync merchant/op-city IDs, then inserts the BAP (atlas_app) and BPP (atlas_driver_offer_bpp) ride artifacts via /mock/sql/insert. Idempotent; run before 01-05.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// ISO timestamps for the synthetic ride (params are literals; now()-interval is NOT evaluated server-side)",
+          "var now = Date.now();",
+          "pm.collectionVariables.set('_ts_booking', new Date(now - 3600000).toISOString());",
+          "pm.collectionVariables.set('_ts_ride_start', new Date(now - 1800000).toISOString());",
+          "pm.collectionVariables.set('_ts_ride_end', new Date(now - 300000).toISOString());",
+          "pm.collectionVariables.set('_ts_txn', new Date(now - 1200000).toISOString());",
+          "// mock-skip on non-Local envs (Rules.md): every RefundsFlow step is a mock-server call",
+          "var envType = pm.environment.get('envType');",
+          "var msu = pm.environment.get('mockServerUrl') || '';",
+          "var url = pm.request.url.toString();",
+          "if (envType && envType !== 'Local' && msu && url.indexOf(msu) > -1) {",
+          "  if (pm.execution && typeof pm.execution.skipRequest === 'function') pm.execution.skipRequest();",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Lookup BAP merchant id (config-sync, by short_id)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('BAP merchant found', function () { var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0); pm.environment.set('bap_merchant_id', d.rows[0].id); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"merchant\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"short_id\",\"val\":\"{{bap_short_id}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Lookup BAP operating-city id (Helsinki)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('BAP opCity found', function () { var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0); pm.environment.set('bap_merchant_operating_city_id', d.rows[0].id); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"merchant_operating_city\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"merchant_id\",\"val\":\"{{bap_merchant_id}}\",\"op\":\"=\"},{\"column_name\":\"city\",\"val\":\"{{city}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Lookup BPP merchant id (config-sync, by short_id)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('BPP merchant found', function () { var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0); pm.environment.set('bpp_merchant_id', d.rows[0].id); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"merchant\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"short_id\",\"val\":\"{{dashboard_merchant_id}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Lookup BPP operating-city id (Helsinki)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('BPP opCity found', function () { var d = pm.response.json(); pm.expect(d.count, JSON.stringify(d)).to.be.above(0); pm.environment.set('bpp_merchant_operating_city_id', d.rows[0].id); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"merchant_operating_city\",\"select\":[\"id\"],\"where_clause\":[{\"column_name\":\"merchant_id\",\"val\":\"{{bpp_merchant_id}}\",\"op\":\"=\"},{\"column_name\":\"city\",\"val\":\"{{city}}\",\"op\":\"=\"}]}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      }
+    },
+    {
+      "name": "Seed BAP person (rider)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); var d = pm.response.json(); pm.expect(d.ok, JSON.stringify(d)).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"person\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{riderId}}\",\"gender\":\"UNKNOWN\",\"identifier_type\":\"MOBILENUMBER\",\"role\":\"USER\",\"blocked\":false,\"has_taken_valid_ride\":true,\"is_new\":false,\"is_valid_rating\":true,\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"first_name\":\"Test\",\"last_name\":\"Refund\",\"mobile_country_code\":\"+358\",\"unencrypted_mobile_number\":\"0000000000\",\"language\":\"ENGLISH\",\"total_ratings\":0,\"total_rating_score\":0}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP registration_token (rider auth)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.code).to.be.oneOf([200,201]); pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"registration_token\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"44444444-4444-4444-4444-444444444444\",\"token\":\"{{riderToken}}\",\"entity_id\":\"{{riderId}}\",\"entity_type\":\"CUSTOMER\",\"merchant_id\":\"{{bap_merchant_id}}\",\"attempts\":0,\"auth_expiry\":31536000,\"token_expiry\":31536000,\"auth_medium\":\"SMS\",\"auth_type\":\"OTP\",\"auth_value_hash\":\"fake-hash-not-checked\",\"verified\":true}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP booking_location (pickup)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"booking_location\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"55555555-5555-5555-5555-555555555555\",\"lat\":60.169883,\"lon\":24.938423}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP booking_location (dropoff)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"booking_location\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"66666666-6666-6666-6666-666666666666\",\"lat\":60.181000,\"lon\":24.927000}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP booking (completed, online)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"booking\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{bookingId}}\",\"status\":\"COMPLETED\",\"rider_id\":\"{{riderId}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"vehicle_variant\":\"SEDAN\",\"primary_exophone\":\"+358000000000\",\"provider_id\":\"BRIDGE_FINLAND_PARTNER\",\"provider_url\":\"http://localhost:8016/v2\",\"transaction_id\":\"{{bookingId}}\",\"estimated_fare\":10.00,\"estimated_total_fare\":10.00,\"start_time\":\"{{_ts_booking}}\",\"payment_method_id\":\"stripe\",\"payment_mode\":\"LIVE\",\"payment_status\":\"PAID\",\"from_location_id\":\"55555555-5555-5555-5555-555555555555\",\"to_location_id\":\"66666666-6666-6666-6666-666666666666\",\"distance\":5000.0,\"distance_value\":5000.0,\"distance_unit\":\"Meter\",\"estimated_distance\":5000.0,\"estimated_distance_value\":5000.0,\"estimated_duration\":600}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP ride (completed, paid, online)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"ride\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{rideId}}\",\"booking_id\":\"{{bookingId}}\",\"bpp_ride_id\":\"{{bppRideId}}\",\"status\":\"COMPLETED\",\"payment_status\":\"Completed\",\"short_id\":\"TESTRIDE01\",\"otp\":\"1234\",\"driver_name\":\"Test Driver\",\"driver_mobile_number\":\"+358111111111\",\"vehicle_model\":\"Test Model\",\"vehicle_number\":\"NQK834\",\"vehicle_variant\":\"SEDAN\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"fare\":10.00,\"total_fare\":10.00,\"currency\":\"EUR\",\"payment_done\":true,\"online_payment\":true,\"driver_account_id\":\"acct_test_driver_001\",\"ride_start_time\":\"{{_ts_ride_start}}\",\"ride_end_time\":\"{{_ts_ride_end}}\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP payment_transaction (CHARGED)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"payment_transaction\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"77777777-7777-7777-7777-777777777777\",\"txn_uuid\":\"txn_fake_001\",\"order_id\":\"{{orderId}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"amount\":10.00,\"currency\":\"EUR\",\"status_id\":21,\"status\":\"CHARGED\",\"payment_method_type\":\"CARD\",\"payment_method\":\"CREDIT_CARD\",\"date_created\":\"{{_ts_txn}}\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP payment_order (CHARGED, pi_ + domain_entity_id=rideId)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"payment_order\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{orderId}}\",\"short_id\":\"{{orderShortId}}\",\"person_id\":\"{{riderId}}\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"amount\":10,\"currency\":\"EUR\",\"status\":\"CHARGED\",\"payment_service_order_id\":\"{{paymentIntentId}}\",\"is_retried\":false,\"is_retargeted\":false,\"service\":\"Stripe\",\"effect_amount\":10.00,\"domain_entity_id\":\"{{rideId}}\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BAP fare invoice (Ride/Paid)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_invoice\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"aaaaaaaa-0000-0000-0000-000000000001\",\"invoice_number\":\"RIDE-FAKE-0001\",\"invoice_type\":\"Ride\",\"status\":\"Paid\",\"currency\":\"EUR\",\"issued_at\":\"{{_ts_ride_end}}\",\"issued_to_type\":\"RIDER\",\"issued_to_id\":\"{{riderId}}\",\"issued_by_type\":\"PLATFORM\",\"issued_by_id\":\"{{bap_merchant_id}}\",\"line_items\":\"[]\",\"merchant_id\":\"{{bap_merchant_id}}\",\"merchant_operating_city_id\":\"{{bap_merchant_operating_city_id}}\",\"subtotal\":10,\"total_amount\":10,\"reference_id\":\"{{rideId}}\",\"issued_to_name\":\"Matti Virtanen\",\"issued_to_address\":\"Mannerheimintie 10, 00100 Helsinki, Finland\",\"supplier_name\":\"Bridge Finland Partner\",\"supplier_address\":\"Helsinki, Uusimaa, Finland\",\"supplier_tax_no\":\"FI31750621\",\"issued_by_name\":\"Bridge Finland Partner\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP person (driver — refund-invoice recipient)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"person\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{bpp_driver_id}}\",\"first_name\":\"Aarne\",\"last_name\":\"Korhonen\",\"gender\":\"UNKNOWN\",\"identifier_type\":\"MOBILENUMBER\",\"is_new\":false,\"merchant_id\":\"{{bpp_merchant_id}}\",\"merchant_operating_city_id\":\"{{bpp_merchant_operating_city_id}}\",\"onboarded_from_dashboard\":false,\"role\":\"DRIVER\",\"total_earned_coins\":0,\"used_coins\":0}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP fare_parameters",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"fare_parameters\",\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"fare-params-fake-0001\",\"base_fare\":1000,\"fare_parameters_type\":\"Progressive\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP fare_parameters_progressive_details",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"fare_parameters_progressive_details\",\"on_conflict_do_nothing\":true,\"values\":{\"fare_parameters_id\":\"fare-params-fake-0001\",\"dead_km_fare\":0}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP booking_location (pickup)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"booking_location\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"bfp-from-loc-00000001\",\"lat\":60.169883,\"lon\":24.938423,\"street\":\"Mannerheimintie 10\",\"area\":\"Kluuvi\",\"city\":\"Helsinki\",\"state\":\"Uusimaa\",\"country\":\"Finland\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP booking_location (dropoff)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"booking_location\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"bfp-to-loc-00000001\",\"lat\":60.181000,\"lon\":24.927000,\"street\":\"Toolonlahdenkatu 2\",\"area\":\"Toolonlahti\",\"city\":\"Helsinki\",\"state\":\"Uusimaa\",\"country\":\"Finland\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP booking (completed)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"booking\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{bppBookingId}}\",\"status\":\"COMPLETED\",\"provider_id\":\"{{bpp_merchant_id}}\",\"merchant_operating_city_id\":\"{{bpp_merchant_operating_city_id}}\",\"from_location_id\":\"bfp-from-loc-00000001\",\"to_location_id\":\"bfp-to-loc-00000001\",\"bap_id\":\"BRIDGE_FINLAND\",\"bap_uri\":\"http://localhost:8013\",\"estimated_fare\":10.00,\"fare_parameters_id\":\"fare-params-fake-0001\",\"primary_exophone\":\"+358000000000\",\"quote_id\":\"quote-fake-0001\",\"start_time\":\"{{_ts_booking}}\",\"transaction_id\":\"bpp-txn-fake-0001\",\"vehicle_variant\":\"SEDAN\",\"currency\":\"EUR\",\"rider_id\":\"bfprdr00-0000-0000-0000-000000000001\",\"rider_name\":\"Matti Virtanen\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    },
+    {
+      "name": "Seed BPP ride (completed; commission=2 for Case-2 split)",
+      "event": [{ "listen": "test", "script": { "exec": ["pm.test('insert ok', function () { pm.expect(pm.response.json().ok).to.eql(true); });"] } }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_driver_offer_bpp\",\"table_name\":\"ride\",\"touch_timestamps\":true,\"on_conflict_do_nothing\":true,\"values\":{\"id\":\"{{bppRideId}}\",\"booking_id\":\"{{bppBookingId}}\",\"driver_id\":\"{{bpp_driver_id}}\",\"otp\":\"1234\",\"short_id\":\"BPPTESTRIDE1\",\"status\":\"COMPLETED\",\"tracking_url\":\"http://localhost:8016\",\"merchant_id\":\"{{bpp_merchant_id}}\",\"merchant_operating_city_id\":\"{{bpp_merchant_operating_city_id}}\",\"commission\":2.00,\"currency\":\"EUR\"}}" },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      }
+    }
+  ]
+}

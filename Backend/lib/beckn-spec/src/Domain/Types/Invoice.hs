@@ -13,7 +13,7 @@ import Kernel.Prelude
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
-data InvoiceType = SubscriptionPurchase | Ride | RideCancellation | Commission | AggregatedCommission
+data InvoiceType = SubscriptionPurchase | Ride | RideCancellation | Commission | AggregatedCommission | Refund
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(mkBeamInstancesForEnumAndList ''InvoiceType)

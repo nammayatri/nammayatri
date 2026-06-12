@@ -67,6 +67,10 @@ data PaymentMethodsResponse = PaymentMethodsResponse {defaultPaymentMethodId :: 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data RefundRequestListResp = RefundRequestListResp {refundRequests :: [RefundRequestResp]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data RefundRequestReq = RefundRequestReq
   { code :: Domain.Types.RefundRequest.RefundRequestCode,
     description :: Kernel.Prelude.Text,

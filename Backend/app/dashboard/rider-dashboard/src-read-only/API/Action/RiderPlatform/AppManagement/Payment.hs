@@ -13,6 +13,7 @@ import qualified Domain.Action.RiderPlatform.AppManagement.Payment
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "rider-app" Domain.Types.RefundRequest
+import qualified "rider-app" Domain.Types.Ride
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -24,10 +25,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("payment" :> (GetPaymentRefundRequestList :<|> GetPaymentRefundRequestInfo :<|> PostPaymentRefundRequestRespond))
+type API = ("payment" :> (GetPaymentRefundRequestList :<|> GetPaymentRefundRequestInfo :<|> PostPaymentRefundRequestRespond :<|> PostPaymentRefundRequestInitiate))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getPaymentRefundRequestList merchantId city :<|> getPaymentRefundRequestInfo merchantId city :<|> postPaymentRefundRequestRespond merchantId city
+handler merchantId city = getPaymentRefundRequestList merchantId city :<|> getPaymentRefundRequestInfo merchantId city :<|> postPaymentRefundRequestRespond merchantId city :<|> postPaymentRefundRequestInitiate merchantId city
 
 type GetPaymentRefundRequestList =
   ( ApiAuth
@@ -53,11 +54,22 @@ type PostPaymentRefundRequestRespond =
       :> API.Types.Dashboard.AppManagement.Payment.PostPaymentRefundRequestRespond
   )
 
+type PostPaymentRefundRequestInitiate =
+  ( ApiAuth
+      'APP_BACKEND_MANAGEMENT
+      'DSL
+      ('RIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.POST_PAYMENT_REFUND_REQUEST_INITIATE)
+      :> API.Types.Dashboard.AppManagement.Payment.PostPaymentRefundRequestInitiate
+  )
+
 getPaymentRefundRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestStatus -> Kernel.Prelude.Maybe Domain.Types.RefundRequest.RefundRequestCode -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestResp)
 getPaymentRefundRequestList merchantShortId opCity apiTokenInfo limit offset status code customerId orderId from to = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.getPaymentRefundRequestList merchantShortId opCity apiTokenInfo limit offset status code customerId orderId from to
 
-getPaymentRefundRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestInfoResp)
-getPaymentRefundRequestInfo merchantShortId opCity apiTokenInfo orderId refreshRefunds = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.getPaymentRefundRequestInfo merchantShortId opCity apiTokenInfo orderId refreshRefunds
+getPaymentRefundRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestInfoResp)
+getPaymentRefundRequestInfo merchantShortId opCity apiTokenInfo refundRequestId refreshRefunds = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.getPaymentRefundRequestInfo merchantShortId opCity apiTokenInfo refundRequestId refreshRefunds
 
-postPaymentRefundRequestRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
-postPaymentRefundRequestRespond merchantShortId opCity apiTokenInfo orderId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.postPaymentRefundRequestRespond merchantShortId opCity apiTokenInfo orderId req
+postPaymentRefundRequestRespond :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.RefundRequest.RefundRequest -> API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
+postPaymentRefundRequestRespond merchantShortId opCity apiTokenInfo refundRequestId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.postPaymentRefundRequestRespond merchantShortId opCity apiTokenInfo refundRequestId req
+
+postPaymentRefundRequestInitiate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> API.Types.Dashboard.AppManagement.Payment.RefundRequestInitiateReq -> Environment.FlowHandler API.Types.Dashboard.AppManagement.Payment.RefundRequestRespondResp)
+postPaymentRefundRequestInitiate merchantShortId opCity apiTokenInfo rideId req = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Payment.postPaymentRefundRequestInitiate merchantShortId opCity apiTokenInfo rideId req
