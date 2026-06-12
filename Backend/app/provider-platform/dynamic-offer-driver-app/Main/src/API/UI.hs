@@ -23,6 +23,7 @@ import qualified API.Action.UI.Cac as Cac
 import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.CancellationReasonLookup as CancellationReasonLookup
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
+import qualified API.Action.UI.Discount as Discount
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfile as DriverProfile
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
@@ -112,6 +113,7 @@ type API =
            :<|> MerchantDocument.API
            :<|> Registration.API
            :<|> DemandHotspots.API
+           :<|> Discount.API
            :<|> DriverOnboarding.API
            :<|> DriverOnboardingV2.API
            :<|> DriverProfileQuestions.API
@@ -188,6 +190,7 @@ handler =
     :<|> MerchantDocument.handler
     :<|> Registration.handler
     :<|> DemandHotspots.handler
+    :<|> Discount.handler
     :<|> DriverOnboarding.handler
     :<|> DriverOnboardingV2.handler
     :<|> DriverProfileQuestions.handler

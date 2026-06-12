@@ -1,0 +1,50 @@
+imports:
+  Discount: Domain.Types.Discount
+
+DiscountTier:
+  tableName: discount_tier
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  types:
+    DiscountValueType:
+      enum: "PERCENTAGE, FIXED"
+      derive': "Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord, Read, ToParamSchema"
+
+  fields:
+    id: Id DiscountTier
+    discountId: Id Discount
+    tierOrder: Int
+    thresholdValue: Double
+    discountValue: Double
+    discountValueType: DiscountValueType
+
+  domainInstance:
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <DiscountValueType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <DiscountValueType>
+
+  default:
+    discountValueType: "'PERCENTAGE'"
+
+  constraints:
+    id: PrimaryKey
+    discountId: "!SecondaryKey"
+
+  queries:
+    findAllByDiscountId:
+      kvFunction: findAllWithKV
+      where: discountId
+
+    findAllByDiscountIdOrderByTier:
+      kvFunction: findAllWithOptionsKV
+      where: discountId
+      orderBy: tierOrder
+      order: ASC
+
+  cachedQueries:
+    findAllByDiscountId:
+      keyParams: [discountId]
+      returnType: Array
+      dbQuery: findAllByDiscountId
+      dbQueryParams: [discountId]
+
+  excludedFields: [merchantId, merchantOperatingCityId]

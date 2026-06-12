@@ -1,0 +1,59 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Value: Data.Aeson
+  VehicleCategory: Domain.Types.VehicleCategory
+  PaymentMode: Domain.Types.Plan
+  Plan: Domain.Types.Plan
+
+Discount:
+  tableName: discount
+  derives: "Generic, Show, Eq, ToJSON, FromJSON"
+
+  fields:
+    id: Id Discount
+    discountType: Text
+    config: Maybe Value
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    planId: Maybe (Id Plan)
+    vehicleCategory: Maybe VehicleCategory
+    paymentMode: Maybe PaymentMode
+    validFrom: Maybe UTCTime
+    validTo: Maybe UTCTime
+    enabled: Bool
+
+  sqlType:
+    config: "json"
+
+  constraints:
+    id: PrimaryKey
+
+  default:
+    enabled: "true"
+
+  queries:
+    findAllEnabledByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, enabled]
+
+    findByMerchantOpCityIdAndType:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, discountType, enabled]
+
+  cachedQueries:
+    findAllEnabledByMerchantOpCityId:
+      keyParams: [merchantOperatingCityId, enabled]
+      returnType: Array
+      dbQuery: findAllEnabledByMerchantOpCityId
+      dbQueryParams: [merchantOperatingCityId, enabled]
+    findByMerchantOpCityIdAndType:
+      keyParams: [merchantOperatingCityId, discountType, enabled]
+      returnType: Array
+      dbQuery: findByMerchantOpCityIdAndType
+      dbQueryParams: [merchantOperatingCityId, discountType, enabled]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
