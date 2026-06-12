@@ -44,7 +44,8 @@ handler = onSearch
 
 onSearch :: Maybe (Id DM.Merchant) -> SignatureAuthResult -> ByteString -> FlowHandler Spec.AckResponse
 onSearch mbMerchantId authResult reqBS = withFlowHandlerAPI $ do
-  req <- case decodeOnSearchReq reqBS of
+  reqBS' <- Utils.decompressGzipBody reqBS
+  req <- case decodeOnSearchReq reqBS' of
     Right r -> pure r
     Left err -> throwError (InvalidRequest (toText err))
   mbForwarded <- Forwarding.maybeForwardOnSearch mbMerchantId authResult req reqBS
