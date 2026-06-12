@@ -138,6 +138,7 @@ buildDriverPoolDataFromDB onlinePayment isPrepaidEnabled driverIds = do
             canSwitchToRental = di.canSwitchToRental,
             canSwitchToInterCity = di.canSwitchToInterCity,
             canSwitchToIntraCity = di.canSwitchToIntraCity,
+            enableForAirport = Just di.enableForAirport,
             forwardBatchingEnabled = di.forwardBatchingEnabled,
             isSpecialLocWarrior = di.isSpecialLocWarrior,
             tollRouteBlockedTill = di.tollRouteBlockedTill,

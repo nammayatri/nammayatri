@@ -987,7 +987,6 @@ createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
       airConditioned,
       oxygen,
       ventilator,
-      enableForAirport,
       documentImageId = "",
       vehicleClass = Just vehicleClass,
       vehicleClassCategory = Nothing,

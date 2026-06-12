@@ -9,6 +9,7 @@ imports:
   FieldInfo: Domain.Types.DocumentVerificationConfig
   ServiceTierType: Domain.Types.Common
   AirConditionedRestrictionType: Domain.Types.DriverInformation
+  AirportRestrictionType: Domain.Types.DriverInformation
   APISuccess: Kernel.Types.APISuccess
   Centesimal: Kernel.Types.Common
   UTCTime: Kernel.Prelude
@@ -81,7 +82,7 @@ types:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
-    canSwitchToAirport: Maybe Bool
+    enableForAirport: AirportRestrictionType
     airConditioned: Maybe AirConditionedTier
   AirConditionedTier:
       isWorking: Bool

@@ -1086,7 +1086,6 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
               udinNumber = Nothing,
               engineNumber = Nothing,
               chassisNumber = Nothing,
-              enableForAirport = Nothing,
               ..
             },
           vehicleNumberHash,
@@ -3872,8 +3871,7 @@ convertToAddVehicleReq rcReq =
       skipFleetChecks = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing,
-      udinNumber = rcReq.udinNumber,
-      enableForAirport = rcReq.enableForAirport
+      udinNumber = rcReq.udinNumber
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)

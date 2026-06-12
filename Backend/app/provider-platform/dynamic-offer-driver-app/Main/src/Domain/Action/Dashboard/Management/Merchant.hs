@@ -3969,8 +3969,7 @@ data VehicleVariantMappingCSVRow = VehicleVariantMappingCSVRow
     manufacturerModel :: Text,
     reviewRequired :: Text,
     vehicleModel :: Text,
-    priority :: Text,
-    enableForAirport :: Text
+    priority :: Text
   }
 
 instance FromNamedRecord VehicleVariantMappingCSVRow where
@@ -3984,7 +3983,6 @@ instance FromNamedRecord VehicleVariantMappingCSVRow where
       <*> r .: "review_required"
       <*> r .: "vehicle_model"
       <*> r .: "priority"
-      <*> r .: "enable_for_airport"
 
 postMerchantUpdateOnboardingVehicleVariantMapping :: ShortId DM.Merchant -> Context.City -> Common.UpdateOnboardingVehicleVariantMappingReq -> Flow APISuccess
 postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = do
@@ -4021,8 +4019,7 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             reviewRequired = cleanFieldToLower row.reviewRequired <&> (mapToBool . T.toLower),
             vehicleModel = Just vehicleModel,
             priority = cleanFieldToLower row.priority >>= readMaybe . T.unpack,
-            bodyType = Nothing,
-            enableForAirport = cleanFieldToLower row.enableForAirport <&> (mapToBool . T.toLower)
+            bodyType = Nothing
           }
 
     validateCategory :: Text -> Flow Enums.VehicleCategory
@@ -4427,7 +4424,6 @@ applyVehicleServiceTierUpdate existing req =
       DVST.allowedAreas = req.allowedAreas <|> existing.allowedAreas,
       DVST.specialZone = req.specialZone <|> existing.specialZone,
       DVST.vehicleAgeThreshold = req.vehicleAgeThreshold <|> existing.vehicleAgeThreshold,
-      DVST.isAirportRideEnabled = req.isAirportRideEnabled <|> existing.isAirportRideEnabled,
       DVST.allowNullVehicleRating = req.allowNullVehicleRating <|> existing.allowNullVehicleRating
     }
 
@@ -4527,7 +4523,6 @@ buildVehicleServiceTierFromRequest merchantId merchantOpCityId serviceTierType r
         isEnabled = Just req.isEnabled,
         allowedAreas = req.allowedAreas,
         vehicleAgeThreshold = req.vehicleAgeThreshold,
-        isAirportRideEnabled = req.isAirportRideEnabled,
         allowNullVehicleRating = req.allowNullVehicleRating,
         specialZone = req.specialZone,
         specialZoneQueueCalloutVariants = req.specialZoneQueueCalloutVariants,

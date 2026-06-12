@@ -10,6 +10,7 @@ where
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Person (Driver, Gender)
 import Domain.Types.ServiceTierType (ServiceTierType)
@@ -57,6 +58,7 @@ data DriverPoolDataUpdate = DriverPoolDataUpdate
     canSwitchToRental :: SetField Bool,
     canSwitchToInterCity :: SetField Bool,
     canSwitchToIntraCity :: SetField Bool,
+    enableForAirport :: SetField (Maybe DI.AirportRestrictionType),
     forwardBatchingEnabled :: SetField Bool,
     isSpecialLocWarrior :: SetField Bool,
     tollRouteBlockedTill :: SetField (Maybe UTCTime),
@@ -111,6 +113,7 @@ emptyUpdate =
       canSwitchToRental = Unchanged,
       canSwitchToInterCity = Unchanged,
       canSwitchToIntraCity = Unchanged,
+      enableForAirport = Unchanged,
       forwardBatchingEnabled = Unchanged,
       isSpecialLocWarrior = Unchanged,
       tollRouteBlockedTill = Unchanged,
@@ -224,6 +227,7 @@ applyUpdate u d =
       DPD.canSwitchToRental = applyField u.canSwitchToRental d.canSwitchToRental,
       DPD.canSwitchToInterCity = applyField u.canSwitchToInterCity d.canSwitchToInterCity,
       DPD.canSwitchToIntraCity = applyField u.canSwitchToIntraCity d.canSwitchToIntraCity,
+      DPD.enableForAirport = applyField u.enableForAirport d.enableForAirport,
       DPD.forwardBatchingEnabled = applyField u.forwardBatchingEnabled d.forwardBatchingEnabled,
       DPD.isSpecialLocWarrior = applyField u.isSpecialLocWarrior d.isSpecialLocWarrior,
       DPD.tollRouteBlockedTill = applyField u.tollRouteBlockedTill d.tollRouteBlockedTill,

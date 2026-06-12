@@ -46,7 +46,6 @@ data DriverInformationE e = DriverInformation
     canDowngradeToHatchback :: Kernel.Prelude.Bool,
     canDowngradeToSedan :: Kernel.Prelude.Bool,
     canDowngradeToTaxi :: Kernel.Prelude.Bool,
-    canSwitchToAirport :: Kernel.Prelude.Bool,
     canSwitchToInterCity :: Kernel.Prelude.Bool,
     canSwitchToIntraCity :: Kernel.Prelude.Bool,
     canSwitchToRental :: Kernel.Prelude.Bool,
@@ -62,6 +61,7 @@ data DriverInformationE e = DriverInformation
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     driverTripEndLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     drunkAndDriveViolationCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    enableForAirport :: Domain.Types.DriverInformation.AirportRestrictionType,
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -163,7 +163,6 @@ instance EncryptedItem DriverInformation where
           canDowngradeToHatchback = canDowngradeToHatchback entity,
           canDowngradeToSedan = canDowngradeToSedan entity,
           canDowngradeToTaxi = canDowngradeToTaxi entity,
-          canSwitchToAirport = canSwitchToAirport entity,
           canSwitchToInterCity = canSwitchToInterCity entity,
           canSwitchToIntraCity = canSwitchToIntraCity entity,
           canSwitchToRental = canSwitchToRental entity,
@@ -179,6 +178,7 @@ instance EncryptedItem DriverInformation where
           driverId = driverId entity,
           driverTripEndLocation = driverTripEndLocation entity,
           drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
+          enableForAirport = enableForAirport entity,
           enabled = enabled entity,
           enabledAt = enabledAt entity,
           extraFareMitigationFlag = extraFareMitigationFlag entity,
@@ -272,7 +272,6 @@ instance EncryptedItem DriverInformation where
             canDowngradeToHatchback = canDowngradeToHatchback entity,
             canDowngradeToSedan = canDowngradeToSedan entity,
             canDowngradeToTaxi = canDowngradeToTaxi entity,
-            canSwitchToAirport = canSwitchToAirport entity,
             canSwitchToInterCity = canSwitchToInterCity entity,
             canSwitchToIntraCity = canSwitchToIntraCity entity,
             canSwitchToRental = canSwitchToRental entity,
@@ -288,6 +287,7 @@ instance EncryptedItem DriverInformation where
             driverId = driverId entity,
             driverTripEndLocation = driverTripEndLocation entity,
             drunkAndDriveViolationCount = drunkAndDriveViolationCount entity,
+            enableForAirport = enableForAirport entity,
             enabled = enabled entity,
             enabledAt = enabledAt entity,
             extraFareMitigationFlag = extraFareMitigationFlag entity,
@@ -367,6 +367,8 @@ data AddressDocumentType = RationCard | UtilityBill | Passport deriving (Eq, Ord
 
 data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
+data AirportRestrictionType = ENABLED | DISABLED | BLOCKED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data Badges = Badges {badgeCount :: Kernel.Prelude.Int, badgeName :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
 data DisabledReasonFlag = FleetDisabled | AdminDisabled | DriverDisabled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
@@ -413,6 +415,8 @@ data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AddressDocumentType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirportRestrictionType)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DisabledReasonFlag)
 

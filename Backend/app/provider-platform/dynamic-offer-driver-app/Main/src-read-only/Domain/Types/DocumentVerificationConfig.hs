@@ -127,7 +127,6 @@ data VehicleClassCheckType = Infix | Prefix | Suffix | Exact deriving (Eq, Ord, 
 
 data VehicleClassVariantMap = VehicleClassVariantMap
   { bodyType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     manufacturer :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     manufacturerModel :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     priority :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
