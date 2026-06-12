@@ -340,3 +340,10 @@ findAllInactiveAssociationByFleetOwnerIds fleetOwnerIds limit offset mbRegNumber
     Right rows ->
       catMaybes <$> mapM (\(rc, vrc) -> liftA2 (,) <$> fromTType' rc <*> fromTType' vrc) rows
     Left _ -> pure []
+
+endAllRCAssociationsForDriver :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person -> m ()
+endAllRCAssociationsForDriver (Id driverId) = do
+  now <- getCurrentTime
+  updateWithKV
+    [Se.Set BeamDRCA.associatedTill $ Just now, Se.Set BeamDRCA.isRcActive False]
+    [Se.And [Se.Is BeamDRCA.driverId (Se.Eq driverId), Se.Is BeamDRCA.associatedTill (Se.GreaterThan $ Just now)]]
