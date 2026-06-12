@@ -161,7 +161,7 @@ fetchSortedLTSCandidates NearestDriversReq {..} = do
 processCandidatesChunk ::
   (BeamFlow m r, MonadFlow m, MonadTime m, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) =>
   NearestDriversReq ->
-  ([Id Person.Driver] -> m [DPD.DriverPoolData]) ->
+  (Bool -> Bool -> [Id Person.Driver] -> m [DPD.DriverPoolData]) ->
   [SortedLTSCandidate] ->
   m [NearestDriversResult]
 processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
@@ -174,7 +174,7 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
       else pure chunk
   -- Pool-data MGET for chunk survivors only.
   let chunkDriverIds = (.driverId) . driverLoc <$> filteredChunk
-  poolDataList <- fetchPoolData chunkDriverIds
+  poolDataList <- fetchPoolData onlinePayment isPrepaidEnabled chunkDriverIds
   let poolDataMap = HashMap.fromList $ (\dpd -> (dpd.driverId, dpd)) <$> poolDataList
       cityServiceTiersHashMap = HashMap.fromList $ (\vst -> (vst.serviceTierType, vst)) <$> cityServiceTiers
       results = concat $ mapMaybe (buildDriverResult req poolDataMap cityServiceTiersHashMap . driverLoc) filteredChunk
@@ -184,7 +184,7 @@ processCandidatesChunk req@NearestDriversReq {..} fetchPoolData chunk = do
 getNearestDrivers ::
   (BeamFlow m r, MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
-  ([Id Person.Driver] -> m [DPD.DriverPoolData]) ->
+  (Bool -> Bool -> [Id Person.Driver] -> m [DPD.DriverPoolData]) ->
   m [NearestDriversResult]
 getNearestDrivers req fetchPoolData = do
   candidates <- fetchSortedLTSCandidates req

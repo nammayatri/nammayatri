@@ -615,6 +615,14 @@ apis:
       response:
         type: APISuccess
 
+  - GET: # DriverSearchRequestStatsAPI
+      endpoint: /{driverId}/searchRequestStats
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: DriverSearchRequestStatsRes
+
 types:
   DriverListRes:
     - totalItems: Int # for backward compatibility
@@ -855,6 +863,15 @@ types:
   AirportPreferenceReq:
     - canSwitchToAirport: Bool
     - derive: "'HideSecrets"
+  SearchRequestForDriverResponse:
+    - enum: "Accept, Reject, Pulled"
+    - derive: "Read, Kernel.Prelude.ToParamSchema"
+  DriverSearchRequestStatsRes:
+    - stats: [DriverSearchRequestDailyStats]
+  DriverSearchRequestDailyStats:
+    - day: Day
+    - response: Maybe SearchRequestForDriverResponse
+    - count: Int
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -66,6 +66,7 @@ module Domain.Action.Dashboard.Management.Driver
     postDriverUpdateRCInvalidStatusByRCNumber,
     getDriverAirportPreference,
     postDriverAirportPreference,
+    getDriverSearchRequestStats,
   )
 where
 
@@ -101,6 +102,7 @@ import qualified Domain.Types.DriverPlan as DDPlan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.HyperVergeSdkLogs as DomainHVSdkLogs
 import qualified Domain.Types.IdfyVerification as IV
+import qualified Domain.Types.Common as DI
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..), MessageKey (..))
@@ -142,6 +144,7 @@ import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Clickhouse.SearchRequestForDriver as CHSearchRequestForDriver
 import Storage.CachedQueries.DriverBlockReason as DBR
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
@@ -1525,3 +1528,28 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
     QPerson.updateDriverTag (Just updatedTags) personId
   logTagInfo "dashboard -> updateAirportPreference : " (show personId)
   pure Success
+
+---------------------------------------------------------------------
+getDriverSearchRequestStats :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverSearchRequestStatsRes
+getDriverSearchRequestStats merchantShortId opCity driverId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let personId = cast @Common.Driver @DP.Person driverId
+  driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+    throwError (PersonDoesNotExist personId.getId)
+  now <- getCurrentTime
+  let from = addUTCTime (negate $ 30 * 86400) now
+  rows <- CHSearchRequestForDriver.findSearchRequestStatsByDay personId from now
+  pure $ Common.DriverSearchRequestStatsRes {stats = map toStats rows}
+  where
+    toStats (day, mbResp, cnt) =
+      Common.DriverSearchRequestDailyStats
+        { day = day,
+          response = castResponse <$> mbResp,
+          count = cnt
+        }
+    castResponse :: DI.SearchRequestForDriverResponse -> Common.SearchRequestForDriverResponse
+    castResponse DI.Accept = Common.Accept
+    castResponse DI.Reject = Common.Reject
+    castResponse DI.Pulled = Common.Pulled

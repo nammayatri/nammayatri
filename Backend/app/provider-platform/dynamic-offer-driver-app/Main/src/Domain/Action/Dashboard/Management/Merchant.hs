@@ -2025,20 +2025,28 @@ getMerchantConfigFareProductList merchantShortId opCity area enabled tripCategor
     CQMOC.findByMerchantIdAndCity merchant.id opCity
       >>= fromMaybeM
         (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  let mbSpecialLocationId = case area of
+        SL.Pickup pId _ -> Just pId.getId
+        SL.PickupDrop pId _ _ -> Just pId.getId
+        _ -> Nothing
   fareProducts <-
     SQF.findAllByMerchantOpCityIdAreaTripCategoryEnabled
       merchantOpCity.id
       area
       tripCategory
       enabled
-  pure $ Common.FareProductListRes {fareProducts = mkItem <$> fareProducts}
+  items <- mapM (mkItem merchantOpCity.id mbSpecialLocationId) fareProducts
+  pure $ Common.FareProductListRes {fareProducts = items}
   where
-    mkItem fp =
-      Common.FareProductListItem
-        { farePolicyId = fp.farePolicyId.getId,
-          timeBounds = fp.timeBounds,
-          vehicleVariant = fp.vehicleServiceTier
-        }
+    mkItem merchantOpCityId mbSpecialLocationId fp = do
+      mbVst <- CQVST.findByServiceTierTypeAndCityId fp.vehicleServiceTier merchantOpCityId Nothing mbSpecialLocationId
+      pure
+        Common.FareProductListItem
+          { farePolicyId = fp.farePolicyId.getId,
+            timeBounds = fp.timeBounds,
+            vehicleVariant = fp.vehicleServiceTier,
+            serviceTierName = maybe "" (.name) mbVst
+          }
 
 getMerchantConfigFarePolicyExport :: ShortId DM.Merchant -> Context.City -> Flow Text
 getMerchantConfigFarePolicyExport merchantShortId opCity = do

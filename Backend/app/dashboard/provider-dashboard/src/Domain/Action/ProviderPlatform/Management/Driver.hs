@@ -62,6 +62,7 @@ module Domain.Action.ProviderPlatform.Management.Driver
     postDriverTdsRateUpdate,
     getDriverAirportPreference,
     postDriverAirportPreference,
+    getDriverSearchRequestStats,
   )
 where
 
@@ -414,3 +415,8 @@ postDriverAirportPreference merchantShortId opCity apiTokenInfo driverId req = d
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- T.buildTransaction (DT.castEndpoint apiTokenInfo.userActionType) (Just DRIVER_OFFER_BPP_MANAGEMENT) (Just apiTokenInfo) (Just driverId) Nothing (Just req)
   T.withTransactionStoring transaction $ (do Client.callManagementAPI checkedMerchantId opCity (.driverDSL.postDriverAirportPreference) driverId req)
+
+getDriverSearchRequestStats :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Environment.Flow Common.DriverSearchRequestStatsRes)
+getDriverSearchRequestStats merchantShortId opCity apiTokenInfo driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverDSL.getDriverSearchRequestStats) driverId

@@ -18,6 +18,7 @@ module Storage.Clickhouse.SearchRequestForDriver where
 import qualified Data.HashMap.Strict as HM
 import Data.Hashable (Hashable)
 import qualified Data.List.NonEmpty as NE
+import Data.Time.Calendar (Day)
 import qualified Domain.Types.Common as DI
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -263,6 +264,29 @@ findByDriverId driverId from to limit offset = do
                     CH.&&. srfd.createdAt <=. CH.DateTime to
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
+findSearchRequestStatsByDay ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  m [(Day, Maybe DI.SearchRequestForDriverResponse, Int)]
+findSearchRequestStatsByDay driverId from to = do
+  CH.findAll $
+    CH.select_
+      ( \srfd -> do
+          let day = CH.toDate srfd.createdAt
+              cnt = CH.count_ srfd.id
+          CH.groupBy (day, srfd.response) $ \(day', response) ->
+            (day', response, cnt)
+      )
+      $ CH.filter_
+        ( \srfd ->
+            srfd.driverId CH.==. driverId
+              CH.&&. srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
 findByDriverIdForInfo ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

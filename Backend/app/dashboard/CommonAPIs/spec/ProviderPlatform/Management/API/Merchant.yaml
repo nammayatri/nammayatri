@@ -1033,6 +1033,7 @@ types:
     - farePolicyId: Text
     - timeBounds: TimeBound
     - vehicleVariant: ServiceTierType
+    - serviceTierName: Text
   FareProductListRes:
     - fareProducts: "[FareProductListItem]"
   WaitingChargeInfoAPIEntity:
