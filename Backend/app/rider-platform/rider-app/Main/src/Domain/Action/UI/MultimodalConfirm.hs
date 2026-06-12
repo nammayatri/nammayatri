@@ -43,6 +43,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalUpdateBusLocation,
     postStoreTowerInfo,
     getMultimodalStopRoutes,
+    getMultimodalRouteEta,
   )
 where
 
@@ -94,6 +95,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
@@ -2847,13 +2849,76 @@ getMultimodalStopRoutes ::
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Prelude.Text ->
-  Environment.Flow [ApiTypes.StopRouteResp]
+  Environment.Flow [ApiTypes.PassingRoutes]
 getMultimodalStopRoutes (mbPersonId, _merchantId) stopCode = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <-
-    fromMaybeM (InvalidRequest "Integrated BPP config not found")
-      =<< listToMaybe <$> SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
+      =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
   mappings <- OTPRest.getRouteStopMappingByStopCode stopCode integratedBPPConfig
   let routeCodes = nub (map (.routeCode) mappings)
-  pure $ map (\rc -> ApiTypes.StopRouteResp {routeCode = rc, eta = Nothing}) routeCodes
+  pure $ map (\routeCode -> ApiTypes.PassingRoutes {routeCode = routeCode}) routeCodes
+
+getMultimodalRouteEta ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Text ->
+  Environment.Flow ApiTypes.RouteETAResp
+getMultimodalRouteEta (mbPersonId, _merchantId) routeCode stopCode = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  integratedBPPConfig <-
+    fromMaybeM (InvalidRequest "Integrated BPP config not found") . listToMaybe
+      =<< SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId Enums.BUS DIBC.MULTIMODAL
+  liveEtasFork <-
+    awaitableFork "getMultimodalRouteEta->liveEtas" $ do
+      busesForRoutes <- CQMMB.getBusesForRoutes [routeCode] integratedBPPConfig
+      pure
+        [ etaEntry
+          | routeWithBuses <- busesForRoutes,
+            bus <- routeWithBuses.buses,
+            etaEntry <- fromMaybe [] bus.busData.eta_data,
+            etaEntry.stopCode == stopCode
+        ]
+  scheduleEtasFork <-
+    awaitableFork "getMultimodalRouteEta->scheduleEtas" $ do
+      schedules <- OTPRest.getRouteBusSchedule routeCode Nothing integratedBPPConfig
+      pure
+        [ etaEntry
+          | scheduleDetail <- schedules,
+            etaEntry <- scheduleDetail.eta,
+            etaEntry.stopCode == stopCode
+        ]
+  liveEtas <-
+    L.await Nothing liveEtasFork >>= \case
+      Left err -> do
+        logError $ "getMultimodalRouteEta live ETA fetch failed: " <> show err
+        pure []
+      Right result -> pure result
+  scheduleEtas <-
+    L.await Nothing scheduleEtasFork >>= \case
+      Left err -> do
+        logError $ "getMultimodalRouteEta schedule ETA fetch failed: " <> show err
+        pure []
+      Right result -> pure result
+  let (etas, isLive) =
+        if not (null liveEtas)
+          then (liveEtas, True)
+          else (scheduleEtas, False)
+  if null etas
+    then pure $ ApiTypes.RouteETAResp {eta = Nothing, isLastStop = False, isLive = False}
+    else do
+      enrichedEtas <- mapM (JMRouteServiceability.enrichBusStopETA integratedBPPConfig) etas
+      routeMappings <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
+      let isLastStop = case sortOn (Down . (.sequenceNum)) routeMappings of
+            (lastStopMapping : _) -> lastStopMapping.stopCode == stopCode
+            [] -> False
+      pure $
+        ApiTypes.RouteETAResp
+          { eta = Just enrichedEtas,
+            isLastStop = isLastStop,
+            isLive = isLive
+          }
