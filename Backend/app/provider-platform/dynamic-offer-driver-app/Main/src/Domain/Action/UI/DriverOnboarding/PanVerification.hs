@@ -283,19 +283,23 @@ castTextToDomainType panType = case panType of
 verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
 verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
   logDebug $ "verifyPanFlow: " <> show panNumber
-  now <- getCurrentTime
-  encryptedPan <- encrypt panNumber
-  let imageExtractionValidation =
-        if documentVerificationConfig.checkExtraction
-          then Domain.Success
-          else Domain.Skipped
-  verifyRes <-
-    Verification.verifyPanAsync person.merchantId merchantOpCityId $
-      Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
-  logDebug $ "verifyRes: " <> show verifyRes
-  case verifyRes.requestor of
-    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
-    _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
+  faceMatchOutcome <- DVRC.runDocFaceMatch person documentVerificationConfig imageId1
+  case faceMatchOutcome of
+    DVRC.FMFail -> throwError FaceMatchFailed
+    _ -> do
+      now <- getCurrentTime
+      encryptedPan <- encrypt panNumber
+      let imageExtractionValidation =
+            if documentVerificationConfig.checkExtraction
+              then Domain.Success
+              else Domain.Skipped
+      verifyRes <-
+        Verification.verifyPanAsync person.merchantId merchantOpCityId $
+          Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
+      logDebug $ "verifyRes: " <> show verifyRes
+      case verifyRes.requestor of
+        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
+        _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
 onVerifyPan :: VerificationReqRecord -> VT.PanVerificationResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPan verificationReq output serviceName = do
@@ -317,7 +321,10 @@ onVerifyPanHandler person imageId1 imageId2 output = do
     Just details -> do
       mEncryptedPanNumber <- mapM encrypt (Just $ details.inputPanNumber)
       let isvalid = (&&) <$> output.dobMatch <*> output.nameMatch
-      when (isvalid == Just True) $ DPQuery.updateVerificationStatus Documents.VALID person.id
+      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
+      -- Sticky INVALID: a face-match failure on the document image must not be overturned by a late 3P webhook.
+      let docImageInvalid = (image1 >>= (.verificationStatus)) == Just Documents.INVALID
+      when (isvalid == Just True && not docImageInvalid) $ DPQuery.updateVerificationStatus Documents.VALID person.id
       when (isvalid == Just False) $ DPQuery.updateVerificationStatus Documents.INVALID person.id
       case person.role of
         role | DCommon.checkFleetOwnerRole role -> do
@@ -325,9 +332,9 @@ onVerifyPanHandler person imageId1 imageId2 output = do
         Person.DRIVER -> do
           DIQuery.updatePanNumber mEncryptedPanNumber person.id
         _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-        mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+      forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
+        when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
+          whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")
     _ -> pure ()
 
 buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Maybe Documents.VerificationStatus -> Flow DPan.DriverPanCard

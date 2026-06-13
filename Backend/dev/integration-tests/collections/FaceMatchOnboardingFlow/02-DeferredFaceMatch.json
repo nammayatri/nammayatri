@@ -1,0 +1,589 @@
+{
+  "info": {
+    "name": "FaceMatchOnboardingFlow - Deferred",
+    "_postman_id": "facematch-deferred-flow",
+    "description": "DEFERRED face match via Aadhaar (synchronous -> AadhaarCard record reaches VALID without the async webhook). FLAT structure. Seed: face_match_source_doc='ProfilePhoto' on AadhaarCard. Deferred runs in a fork after selfie upload, so status checks wait ~2.5s.\n  G Aadhaar VALID -> NON-matching selfie -> AadhaarCard INVALID (deferred FAIL)\n  H Aadhaar VALID -> MATCHING selfie -> AadhaarCard stays VALID (deferred PASS)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function r(){ return '9'+Math.floor(100000000+Math.random()*899999999); }",
+          "if(!pm.collectionVariables.get('_test_png')) pm.collectionVariables.set('_test_png','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');",
+          "['G','H'].forEach(function(k){ var key='_test_driver_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_png",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_G",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_H",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "G: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_G}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_G', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_G}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_G}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-G\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_G',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_G',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Upload Aadhaar image (NO selfie)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_G}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"AadhaarCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('aadhaarImageId_G', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Verify Aadhaar (-> VALID, no selfie)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_G}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/aadhaar",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "aadhaar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"aadhaarNumber\": \"123456789012\",\n  \"aadhaarFrontImageId\": \"{{aadhaarImageId_G}}\",\n  \"consent\": true,\n  \"driverId\": \"{{driverId_G}}\",\n  \"aadhaarName\": \"TEST FLEET OWNER\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar verified (no selfie did not block)',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Status (precondition Aadhaar VALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_G}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('precondition Aadhaar VALID',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('VALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Override compare=false",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-def-G\", \"result\": {\"is_a_match\": false, \"match_score\": 7.0, \"review_recommended\": false}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Upload Selfie (triggers deferred)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_G}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200)); var t=Date.now(); while(Date.now()-t<2500){}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Status (Aadhaar flipped INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_G}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('deferred FAIL flips Aadhaar INVALID',()=>pm.expect(['INVALID','FAILED'],'aadhaar '+JSON.stringify(aad)).to.include(aad.verificationStatus));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "G: Delete override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_H}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_H', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_H}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_H}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-H\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_H',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_H',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Upload Aadhaar image (NO selfie)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_H}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"AadhaarCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('aadhaarImageId_H', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Verify Aadhaar (-> VALID)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_H}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/aadhaar",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "aadhaar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"aadhaarNumber\": \"123456789012\",\n  \"aadhaarFrontImageId\": \"{{aadhaarImageId_H}}\",\n  \"consent\": true,\n  \"driverId\": \"{{driverId_H}}\",\n  \"aadhaarName\": \"TEST FLEET OWNER\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar verified',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Upload Selfie (matching, no override)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_H}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200)); var t=Date.now(); while(Date.now()-t<2500){}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "H: Status (Aadhaar still VALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_H}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var aad=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='AadhaarCard')||{}; pm.test('deferred PASS keeps Aadhaar VALID',()=>pm.expect(aad.verificationStatus,'aadhaar '+JSON.stringify(aad)).to.eql('VALID'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
