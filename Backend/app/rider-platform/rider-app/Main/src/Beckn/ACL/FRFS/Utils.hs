@@ -372,7 +372,7 @@ mkCheckInprogressKey transactionId = "FRFS:OnStatus:Solicited-" <> transactionId
 type ItemWithPrice = (Spec.Item, Price)
 
 mkDCategorySelect :: (MonadFlow m) => ItemWithPrice -> m Domain.DCategorySelect
-mkDCategorySelect (orderItem, quoteOfferedPrice) = do
+mkDCategorySelect (orderItem, netUnitPrice) = do
   bppItemId' <- orderItem.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
   quantity' <- orderItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
   let category =
@@ -380,9 +380,7 @@ mkDCategorySelect (orderItem, quoteOfferedPrice) = do
           Just "SJT" -> ADULT
           Just "SFSJT" -> FEMALE
           _ -> ADULT
-      itemOfferedPrice = orderItem.itemPrice >>= Utils.parseOfferPrice
-      offeredPrice = fromMaybe quoteOfferedPrice itemOfferedPrice
-  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = fromMaybe (Price (Money 0) (HighPrecMoney 0.0) INR) (Just offeredPrice)}
+  return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity', category = category, price = netUnitPrice}
 
 getBreakupPrice :: MonadFlow m => Spec.QuotationBreakupInner -> m Price
 getBreakupPrice b = b.quotationBreakupInnerPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Invalid breakup price")
@@ -414,12 +412,15 @@ zipItemsWithPrice items breakup = do
   (toll, offer) <- computeOrderAdjustments breakup
   forM items $ \item -> do
     itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
-    baseFare <- baseFareForItem itemId breakup
-    finalWithToll <- addPrice baseFare toll
-    finalPrice <- subtractPrice finalWithToll offer
     quantity <- item.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
-    let totalPrice = modifyPrice finalPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) * (toRational quantity)
-    pure (item, fromMaybe totalPrice (item.itemPrice >>= Utils.parsePrice))
+    netUnitPrice <- case item.itemPrice >>= Utils.parseOfferPrice of
+      Just offered -> pure offered
+      Nothing -> do
+        baseFare <- baseFareForItem itemId breakup
+        finalWithToll <- addPrice baseFare toll
+        finalLine <- subtractPrice finalWithToll offer
+        pure $ modifyPrice finalLine $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational quantity)
+    pure (item, netUnitPrice)
 
 sumPrices :: (MonadThrow m, Log m) => [Price] -> m Price
 sumPrices prices = withCurrencyCheckingList prices $ \mbCurrency amounts -> mkPrice mbCurrency (sum amounts)
