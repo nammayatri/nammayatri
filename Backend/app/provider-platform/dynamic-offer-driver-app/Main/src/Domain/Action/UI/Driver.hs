@@ -481,7 +481,8 @@ data DriverInformationRes = DriverInformationRes
     createdAt :: UTCTime,
     role :: SP.Role,
     operatorBadgeToken :: Maybe Text,
-    nomineeDob :: Maybe Day
+    nomineeDob :: Maybe Day,
+    approved :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1729,6 +1730,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           upiId = payoutVpa,
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
+          approved = driverInfo.approved,
           ..
         }
 
