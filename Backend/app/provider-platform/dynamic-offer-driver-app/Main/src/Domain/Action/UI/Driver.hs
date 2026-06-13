@@ -478,7 +478,8 @@ data DriverInformationRes = DriverInformationRes
     membershipId :: Maybe (Id DStclMembership.StclMembership),
     createdAt :: UTCTime,
     role :: SP.Role,
-    operatorBadgeToken :: Maybe Text
+    operatorBadgeToken :: Maybe Text,
+    approved :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1714,6 +1715,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} driverInfo mercha
           upiId = payoutVpa,
           createdAt = registeredAt,
           forwardBatchingEnabled = driverInfo.forwardBatchingEnabled,
+          approved = driverInfo.approved,
           ..
         }
 
