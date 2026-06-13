@@ -234,6 +234,7 @@ tests:
     dependencies:
       - rider-app
       - mobility-core
+      - beckn-spec
       - tasty
       - tasty-hunit
       - tasty-quickcheck

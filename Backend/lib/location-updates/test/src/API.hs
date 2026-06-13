@@ -65,9 +65,9 @@ buildTestInterpolationHandler config = do
       clearInterpolatedPoints = clearInterpolatedPointsImplementation,
       getInterpolatedPoints = getInterpolatedPointsImplementation,
       expireInterpolatedPoints = expireInterpolatedPointsImplementation,
-      interpolatePointsAndCalculateDistance = \req -> do
+      interpolatePointsAndCalculateDistanceAndToll = \_ _ _ _ req -> do
         res <- Maps.snapToRoad config $ SnapToRoadReq req
-        pure (res.distance, res.snappedPoints, Google),
+        pure (res.distance, res.snappedPoints, [Google], False, Nothing),
       updateDistance = updateDistanceTest,
       wrapDistanceCalculation = wrapDistanceCalculationImplementation,
       isDistanceCalculationFailed = isDistanceCalculationFailedImplementation

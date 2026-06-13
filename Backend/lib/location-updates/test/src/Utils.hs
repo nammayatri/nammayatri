@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-ambiguous-fields #-}
 
 module Utils where
 
@@ -21,6 +22,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Hedis.Config
 import qualified Kernel.Storage.Hedis.Queries as Hedis
+import qualified Kernel.Streaming.Kafka.Producer.Types as KafkaProd
 import qualified Kernel.Tools.Metrics.CoreMetrics.Types as Metrics
 import Kernel.Types.Flow
 import Kernel.Types.Id
@@ -42,6 +44,7 @@ data AppEnv = AppEnv
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
     hedisClusterEnv :: HedisEnv,
+    secondaryHedisClusterEnv :: Maybe HedisEnv,
     hedisMigrationStage :: Bool,
     cutOffHedisCluster :: Bool,
     encTools :: EncTools,
@@ -51,6 +54,10 @@ data AppEnv = AppEnv
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
+    requestId :: Maybe Text,
+    sessionId :: Maybe Text,
+    shouldLogRequestId :: Bool,
+    kafkaProducerForART :: Maybe KafkaProd.KafkaProducerTools,
     url :: Maybe Text
   }
   deriving (Generic)
@@ -82,7 +89,19 @@ wrapTests func = do
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion
-      let url = Nothing
+      let hedisNonCriticalEnv = hedisEnv
+          hedisNonCriticalClusterEnv = hedisEnv
+          hedisClusterEnv = hedisEnv
+          secondaryHedisClusterEnv = Nothing
+          hedisMigrationStage = False
+          cutOffHedisCluster = False
+          enableRedisLatencyLogging = False
+          enablePrometheusMetricLogging = False
+          requestId = Nothing
+          sessionId = Nothing
+          shouldLogRequestId = False
+          kafkaProducerForART = Nothing
+          url = Nothing
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,

@@ -15,8 +15,8 @@
 module Mobility.ARDU.HealthCheck where
 
 import Common (getAppBaseUrl)
-import Data.Text.Encoding as DT
 import EulerHS.Prelude
+import qualified Kernel.Utils.Servant.Server as Server
 import qualified Mobility.ARDU.APICalls as API
 import qualified Network.HTTP.Client as Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -25,10 +25,14 @@ import Servant.Client
 import Test.Hspec
 import Utils
 
-type HealthCheckAPI = Get '[JSON] Text
-
 healthCheckBackendC :: ClientM Text
-healthCheckBackendC = client (Proxy :: Proxy HealthCheckAPI)
+healthCheckBackendC = client (Proxy :: Proxy Server.HealthCheckAPI)
+
+-- Gateway may still return plain text
+type GatewayHealthCheckAPI = Get '[JSON] Text
+
+gwHealthCheckC :: ClientM Text
+gwHealthCheckC = client (Proxy :: Proxy GatewayHealthCheckAPI)
 
 spec :: Spec
 spec = do
@@ -47,8 +51,8 @@ spec = do
       hspec $
         it "Health Check API should return success" do
           appResult <- runClient appClientEnv healthCheckBackendC
-          appResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
+          appResult `shouldBe` Right "healthy"
           driverOfferBppResult <- runClient driverFlowClientEnv API.ui.healthCheck
-          driverOfferBppResult `shouldBe` Right (DT.decodeUtf8 "App is UP")
-          gwResult <- runClient gatewayClientEnv healthCheckBackendC
-          gwResult `shouldBe` Right (DT.decodeUtf8 "Gateway is UP")
+          driverOfferBppResult `shouldBe` Right "healthy"
+          gwResult <- runClient gatewayClientEnv gwHealthCheckC
+          gwResult `shouldBe` Right "Gateway is UP"

@@ -17,6 +17,7 @@ module Mobility.ARDU.Spec where
 import EulerHS.Prelude
 import qualified Mobility.ARDU.CancelFlow as DC
 import Mobility.ARDU.DriverAcceptsNonrelevantQuote as NQ
+import qualified Mobility.ARDU.DriverAllocation as DA
 import qualified Mobility.ARDU.DriverOffersTwice as OF
 import qualified Mobility.ARDU.HealthCheck as HC
 import qualified Mobility.ARDU.MapsConfig as MapsConfig
@@ -36,11 +37,14 @@ mkTestTree = do
   dcSpec <- testSpec "CancelFlow" DC.spec
   ndSpec <- testSpec "NearestDrivers" ND.spec
   srSpec <- testSpec "SyncRide" SR.spec
+  daSpec <- testSpec "DriverAllocation" DA.spec
   ------------------------------------------------------------------
   return $
     testGroup
       "ARDU"
       [ hcSpec,
+        -- Unit tests (no infrastructure required)
+        daSpec,
         after AllSucceed "HealthCheck" $
           testGroup
             "Merchant configs"
