@@ -192,6 +192,7 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
@@ -4530,9 +4531,8 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         DP.DRIVER -> do
           driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
-              address = req.address <|> driverInfo.address
-              addressDocumentType = castAddressDocumentType <$> req.addressDocumentType <|> driverInfo.addressDocumentType
-          QDriverInfo.updateDriverDobAndAddress dob address addressDocumentType personId
+          DIInfo.upsertDriverIdentityInfo personId driver.merchantId driver.merchantOperatingCityId driverInfo Nothing Nothing Nothing req.address (castAddressDocumentType <$> req.addressDocumentType) Nothing
+          QDriverInfo.updateDriverDobAndAddress dob Nothing Nothing personId
         role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
           reqStripeIdNumber <- forM req.stripeIdNumber encrypt

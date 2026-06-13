@@ -1323,6 +1323,7 @@ TransporterConfig:
     allowGstReupload: Maybe Bool
     invoiceConfig: Maybe InvoiceConfig
     enableManualDocumentStatusCheck: Maybe Bool
+    enableCourtRecordCheck: Maybe Bool # Gates the Idfy Court Record Check (CRC) on driver-inspection approval. Enabled per-merchant (e.g. MSIL).
     sendMembershipIdInProfile: Maybe Bool
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool

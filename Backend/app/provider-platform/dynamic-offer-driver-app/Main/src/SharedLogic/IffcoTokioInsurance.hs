@@ -24,6 +24,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Servant.Client.Core ()
+import qualified SharedLogic.DriverIdentityInfo as DIInfo
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
@@ -78,8 +79,9 @@ triggerIffcoTokioInsurance driverId merchantId merchantOpCityId = do
     unless alreadyInsured $ do
       person <- QPerson.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
       driverInfo <- QDI.findByPrimaryKey (cast driverId) >>= fromMaybeM DriverInfoNotFound
-      let nomineeName = driverInfo.nomineeName
-          nomineeRelationship = driverInfo.nomineeRelationship
+      identityInfo <- DIInfo.getIdentityInfo (cast driverId) driverInfo
+      let nomineeName = identityInfo.nomineeName <|> driverInfo.nomineeName
+          nomineeRelationship = identityInfo.nomineeRelationship <|> driverInfo.nomineeRelationship
       if isNothing nomineeName || isNothing nomineeRelationship
         then logInfo $ "IffcoTokio: skipping insurance for driver=" <> driverId.getId <> " nomineeName or nomineeRelationship is missing"
         else do
