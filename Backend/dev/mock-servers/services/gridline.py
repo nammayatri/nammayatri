@@ -67,6 +67,12 @@ def _send_rc_callback(request_id, group_id, task_id, rc_number):
 
 
 def handle(handler, path, body):
+    # Document-onboarding Idfy endpoints (image extract/validate + selfie face-compare) need real
+    # payloads, not gridline's generic ack/verified fallback — delegate them to the idfy mock so the
+    # PAN/Aadhaar onboarding + face-match flow works when Verification_Idfy is routed to /gridline.
+    if any(s in path for s in ("/extract_image", "/extract/", "/validate_image", "/validate/", "/compare")):
+        from services import idfy
+        return idfy.handle(handler, path, body)
     path_ids = extract_path_ids(path)
     override_status, extra = handler._get_override("gridline", *path_ids)
 

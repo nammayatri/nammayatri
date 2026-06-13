@@ -28,6 +28,7 @@ module Tools.Verification
     extractGSTImage,
     extractAadhaarImage,
     validateFaceImage,
+    faceCompare,
     verifySdkResp,
     getTask,
     nameCompare,
@@ -58,6 +59,7 @@ import Kernel.External.Verification as Reexport hiding
     extractGSTImage,
     extractPanImage,
     extractRCImage,
+    faceCompare,
     fetchAndExtractVerifiedAadhaar,
     fetchAndExtractVerifiedDL,
     fetchAndExtractVerifiedPan,
@@ -274,6 +276,14 @@ validateFaceImage ::
   FaceValidationReq ->
   m FaceValidationRes
 validateFaceImage = runWithServiceConfig Verification.validateFaceImage (.faceVerificationService)
+
+faceCompare ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  FaceCompareReq ->
+  m FaceCompareResp
+faceCompare = runWithServiceConfig Verification.faceCompare (.faceMatchService)
 
 extractRCImage ::
   ServiceFlow m r =>

@@ -54,6 +54,7 @@ OPHUB_DIR="$SCRIPT_DIR/collections/OperationHubFlow"
 AIRPORT_DIR="$SCRIPT_DIR/collections/AirportTaxiFlow"
 TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
+FACEMATCH_DIR="$SCRIPT_DIR/collections/FaceMatchOnboardingFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -105,6 +106,7 @@ enable_all_drivers() {
 
 TOLL_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/toll-dashboard-access.sql"
 PROVIDER_DASHBOARD_SEED_SQL="$SCRIPT_DIR/../local-testing-data/provider-dashboard.sql"
+FACEMATCH_SETUP_SQL="$SCRIPT_DIR/../local-testing-data/facematch-config.sql"
 
 # Toll dashboard: access_matrix + optional local-testing-data (person, token, merchant_access).
 seed_toll_dashboard_access() {
@@ -522,6 +524,17 @@ run_toll() {
     run_toll_config "${1:-}" "${2:-}" && run_toll_ride "${1:-}" "${2:-}"
 }
 
+# Face match onboarding: enable the per-document face-match toggle (base data comes from config sync).
+seed_facematch_config() {
+    echo "Seeding face-match config (document_verification_config.face_match_source_doc)..."
+    psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER_SUPER" -d "$DB_NAME" -f "$FACEMATCH_SETUP_SQL" >/dev/null 2>&1 \
+        || echo "WARNING: face-match seed failed — run manually: psql -h $DB_HOST -p $DB_PORT -U $DB_USER_SUPER -d $DB_NAME -f $FACEMATCH_SETUP_SQL"
+}
+run_facematch() {
+    seed_facematch_config
+    run_frfs "$FACEMATCH_DIR" "FACE MATCH ONBOARDING" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -550,6 +563,7 @@ show_help() {
     echo "  toll-config         Run toll dashboard API suites (CRUD, CSV, polygon gates)"
     echo "  toll-ride           Run toll + auto ride flow (estimate tollChargesInfo)"
     echo "  toll                Run toll-config then toll-ride"
+    echo "  face-match          Run selfie<->document face match onboarding suites (auto-seeds face-match config)"
     echo "  ./run-tests.sh toll-config NY_Bangalore       # Toll dashboard APIs (Bangalore)"
     echo "  ./run-tests.sh toll-config BT_Delhi           # Toll dashboard APIs (Delhi)"
     echo "  ./run-tests.sh toll-ride NY_Bangalore           # Toll on estimate + auto ride (Bangalore)"
@@ -669,6 +683,9 @@ case "${1:-}" in
         ;;
     toll)
         run_toll "${2:-}" "${3:-}"
+        ;;
+    face-match|facematch)
+        run_facematch "${2:-}" "${3:-}"
         ;;
     "")
         run_rides
