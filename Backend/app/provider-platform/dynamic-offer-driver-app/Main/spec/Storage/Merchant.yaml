@@ -56,6 +56,7 @@ imports:
   Role: Domain.Types.Person
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
+  ChallanSearchService: Kernel.External.ChallanSearch.Types
   OnboardingAs: Domain.Types.DriverInformation
 
 Merchant:
@@ -642,6 +643,7 @@ MerchantServiceUsageConfig:
     sdkVerificationService: VerificationService
     llmChatCompletion: LLMChatCompletionService
     totoVerificationPriorityList: "Maybe [VerificationService]"
+    challanProvidersPriorityList: "Maybe [ChallanSearchService]"
 
   beamType:
     llmChatCompletion: Maybe LLMChatCompletionService
@@ -705,6 +707,7 @@ MerchantServiceUsageConfig:
     backgroundVerification: text
     llmChatCompletion: character varying(30)
     totoVerificationPriorityList: "text[]"
+    challanProvidersPriorityList: "text[]"
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"

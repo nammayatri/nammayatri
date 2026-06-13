@@ -1060,7 +1060,8 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.docsVerificationStatus =
                       if transporterConfig.enableManualDocumentStatusCheck == Just True
                         then Just DDVS.ADMIN_APPROVED
-                        else Nothing
+                        else Nothing,
+                    DRC.pendingChallanCount = Nothing
                   }
           QRC.create newRC
           -- Create driver RC association so the RC is linked to the driver
@@ -1366,7 +1367,7 @@ approveAndUpdateDL merchantId merchantOpCityId req = do
           when (existingDL.driverId /= dl.driverId) $
             throwError DLAlreadyLinked
       dlImage <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found by image id")
-      when (dlImage.personId /= dl.driverId) $ 
+      when (dlImage.personId /= dl.driverId) $
         throwError DLAlreadyLinked
       let updatedDL =
             dl

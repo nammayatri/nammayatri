@@ -314,6 +314,7 @@ VehicleRegistrationCertificate:
     rejectReason: Maybe Text
     approved: Maybe Bool
     docsVerificationStatus: Maybe DocsVerificationStatus
+    pendingChallanCount: Maybe Int
     vehicleImageId: Maybe (Id MediaFile)
   default:
     approved: "false"
@@ -368,6 +369,10 @@ VehicleRegistrationCertificate:
     updateApproved:
       kvFunction: updateOneWithKV
       params: [approved]
+      where: id
+    updatePendingChallanCount:
+      kvFunction: updateOneWithKV
+      params: [pendingChallanCount]
       where: id
     updateMerchantIdAndCityIdById:
       kvFunction: updateWithKV

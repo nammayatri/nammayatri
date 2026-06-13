@@ -12,6 +12,7 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Kernel.External.AadhaarVerification.Types
 import qualified Kernel.External.BackgroundVerification.Types
 import qualified Kernel.External.Call
+import qualified Kernel.External.ChallanSearch.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Notification.Types
 import qualified Kernel.External.Payment.Types
@@ -29,6 +30,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     autoComplete :: Kernel.External.Maps.Types.MapsService,
     backgroundVerification :: Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     categoryBasedVerificationPriorityList :: Kernel.Prelude.Maybe (Data.Map.Strict.Map Kernel.Prelude.Text [Kernel.External.Verification.Types.VerificationService]),
+    challanProvidersPriorityList :: Kernel.Prelude.Maybe [Kernel.External.ChallanSearch.Types.ChallanSearchService],
     createBankAccount :: Kernel.External.Payment.Types.PaymentService,
     createPayoutOrder :: Kernel.External.Payout.Types.PayoutService,
     createdAt :: Kernel.Prelude.UTCTime,
