@@ -644,6 +644,7 @@ DocumentVerificationConfig:
     isReminderSupported: Maybe Bool
     isApprovalSupported: Maybe Bool
     onlyImageVerificationStatusLookupRequired: Maybe Bool
+    faceMatchSourceDoc: Maybe DocumentType
   default:
     order: "0"
     doStrictVerifcation: "true"

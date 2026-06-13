@@ -13,6 +13,7 @@ import Kernel.External.Encryption
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.External.Payout.Types
 import qualified Kernel.External.SMS.Types
+import qualified Kernel.External.Verification.Types
 import qualified Kernel.External.Whatsapp.Types
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -87,12 +88,13 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             categoryBasedVerificationPriorityList = Kernel.Utils.JSON.valueToMaybe =<< categoryBasedVerificationPriorityList,
             challanProvidersPriorityList = challanProvidersPriorityList,
             createBankAccount = createBankAccount,
-            createPayoutOrder = fromMaybe (Kernel.External.Payout.Types.Juspay) createPayoutOrder,
+            createPayoutOrder = fromMaybe Kernel.External.Payout.Types.Juspay createPayoutOrder,
             createdAt = createdAt,
             dashboardGstVerificationService = dashboardGstVerificationService,
             dashboardPanVerificationService = dashboardPanVerificationService,
             dashboardUdyamVerificationService = dashboardUdyamVerificationService,
             driverBackgroundVerificationService = driverBackgroundVerificationService,
+            faceMatchService = Kernel.Prelude.fromMaybe Kernel.External.Verification.Types.Idfy faceMatchService,
             faceVerificationService = faceVerificationService,
             getBankAccount = getBankAccount,
             getDistances = getDistances,
@@ -112,7 +114,7 @@ instance FromTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantService
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             panVerificationService = panVerificationService,
-            payoutOrderStatus = fromMaybe (Kernel.External.Payout.Types.Juspay) payoutOrderStatus,
+            payoutOrderStatus = fromMaybe Kernel.External.Payout.Types.Juspay payoutOrderStatus,
             rectifyDistantPointsFailure = rectifyDistantPointsFailure,
             retryBankAccountLink = retryBankAccountLink,
             sdkVerificationService = sdkVerificationService,
@@ -143,6 +145,7 @@ instance ToTType' Beam.MerchantServiceUsageConfig Domain.Types.MerchantServiceUs
         Beam.dashboardPanVerificationService = dashboardPanVerificationService,
         Beam.dashboardUdyamVerificationService = dashboardUdyamVerificationService,
         Beam.driverBackgroundVerificationService = driverBackgroundVerificationService,
+        Beam.faceMatchService = Kernel.Prelude.Just faceMatchService,
         Beam.faceVerificationService = faceVerificationService,
         Beam.getBankAccount = getBankAccount,
         Beam.getDistances = getDistances,

@@ -38,6 +38,7 @@ data MerchantServiceUsageConfigD (s :: UsageSafety) = MerchantServiceUsageConfig
     dashboardPanVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     dashboardUdyamVerificationService :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService,
     driverBackgroundVerificationService :: Kernel.External.Verification.Types.DriverBackgroundVerificationService,
+    faceMatchService :: Kernel.External.Verification.Types.VerificationService,
     faceVerificationService :: Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: Kernel.External.Payment.Types.PaymentService,
     getDistances :: Kernel.External.Maps.Types.MapsService,
@@ -86,9 +87,9 @@ data ProviderLookUpKey
   | BUS
   | TRAIN
   | FLIGHT
-  deriving (Eq, (Ord), (Show), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-type MerchantServiceUsageConfig = MerchantServiceUsageConfigD ('Safe)
+type MerchantServiceUsageConfig = MerchantServiceUsageConfigD 'Safe
 
 instance FromJSON (MerchantServiceUsageConfigD 'Unsafe)
 
