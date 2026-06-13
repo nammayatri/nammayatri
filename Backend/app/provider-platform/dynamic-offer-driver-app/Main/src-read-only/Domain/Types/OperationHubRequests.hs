@@ -18,6 +18,7 @@ data OperationHubRequests = OperationHubRequests
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     fulfilledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.OperationHubRequests.OperationHubRequests,
+    inspectionResponse :: Kernel.Prelude.Maybe Data.Aeson.Value,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     operationHubId :: Kernel.Types.Id.Id Domain.Types.OperationHub.OperationHub,

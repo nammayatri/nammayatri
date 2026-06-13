@@ -519,6 +519,7 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just DMF.COMPLETED,
+            fileHash = Nothing,
             createdAt = now
           }
   result <- withTryCatch "S3:put:uploadSosMedia" $ S3.put (T.unpack filePath) mediaFile

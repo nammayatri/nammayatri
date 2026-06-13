@@ -47,7 +47,6 @@ library
       Dashboard.ProviderPlatform.Management.DriverRegistration
       Dashboard.ProviderPlatform.Management.FinanceManagement
       Dashboard.ProviderPlatform.Management.KnowledgeCenter
-      Dashboard.ProviderPlatform.Management.MediaFileDocument
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride

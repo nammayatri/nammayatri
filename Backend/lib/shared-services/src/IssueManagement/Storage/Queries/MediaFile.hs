@@ -41,6 +41,12 @@ updateStatusById newStatus (Id mediaFileId) =
     [Set BeamMF.status (Just $ DT.pack $ show newStatus)]
     [Is BeamMF.id $ Eq mediaFileId]
 
+updateStatusAndHashById :: BeamFlow m r => DMF.MediaFileUploadStatus -> Maybe Text -> Id MediaFile -> m ()
+updateStatusAndHashById newStatus fileHash (Id mediaFileId) =
+  updateWithKV
+    [Set BeamMF.status (Just $ DT.pack $ show newStatus), Set BeamMF.fileHash fileHash]
+    [Is BeamMF.id $ Eq mediaFileId]
+
 instance FromTType' BeamMF.MediaFile MediaFile where
   fromTType' BeamMF.MediaFileT {..} = do
     pure $
@@ -51,6 +57,7 @@ instance FromTType' BeamMF.MediaFile MediaFile where
             url = url,
             s3FilePath = s3FilePath,
             status = status >>= readMaybe . DT.unpack,
+            fileHash = fileHash,
             createdAt = T.localTimeToUTC T.utc createdAt
           }
 
@@ -62,5 +69,6 @@ instance ToTType' BeamMF.MediaFile MediaFile where
         BeamMF.url = url,
         BeamMF.s3FilePath = s3FilePath,
         BeamMF.status = DT.pack . show <$> status,
+        BeamMF.fileHash = fileHash,
         BeamMF.createdAt = T.utcToLocalTime T.utc createdAt
       }

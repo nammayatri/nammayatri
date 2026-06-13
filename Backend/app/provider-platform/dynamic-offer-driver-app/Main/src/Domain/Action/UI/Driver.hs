@@ -2250,6 +2250,7 @@ createMediaEntry driverId Common.AddLinkAsMedia {..} filePath imageType mbRc = d
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just Domain.COMPLETED,
+            fileHash = Nothing,
             createdAt = now
           }
 

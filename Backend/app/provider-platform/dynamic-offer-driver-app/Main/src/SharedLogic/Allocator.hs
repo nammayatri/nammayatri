@@ -17,13 +17,14 @@
 
 module SharedLogic.Allocator where
 
+import Control.Applicative ((<|>))
+import Data.Aeson (withObject, (.:))
 import Data.Singletons.TH
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
 import qualified "beckn-spec" Domain.Types.Invoice as BeckInvoice
-import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -40,6 +41,7 @@ import qualified Domain.Types.ScheduledPayout as DSPayout
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.SubscriptionPurchase as DSP
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import Kernel.Prelude
 import Kernel.Types.Common (Meters, Seconds)
 import Kernel.Types.Id
@@ -461,9 +463,14 @@ instance JobInfoProcessor 'CheckDashCamInstallationStatus
 type instance JobContent 'CheckDashCamInstallationStatus = CheckDashCamInstallationStatusJobData
 
 newtype MediaFileDocumentCompleteJobData = MediaFileDocumentCompleteJobData
-  { mediaFileDocumentId :: Id DMFD.MediaFileDocument
+  { mediaFileId :: Id DMF.MediaFile
   }
-  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+  deriving (Generic, Show, Eq, ToJSON)
+
+instance FromJSON MediaFileDocumentCompleteJobData where
+  parseJSON = withObject "MediaFileDocumentCompleteJobData" $ \o ->
+    MediaFileDocumentCompleteJobData
+      <$> (o .: "mediaFileId" <|> o .: "mediaFileDocumentId")
 
 instance JobInfoProcessor 'MediaFileDocumentComplete
 

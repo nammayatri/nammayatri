@@ -80,6 +80,7 @@ createMediaEntry Common.AddLinkAsMedia {..} = do
             url = fileUrl,
             s3FilePath = Nothing,
             status = Just Domain.COMPLETED,
+            fileHash = Nothing,
             createdAt = now
           }
 
@@ -103,6 +104,7 @@ postMessageUploadFile merchantShortId opCity Common.UploadFileRequest {..} = do
             url = fileUrl,
             s3FilePath = Just filePath,
             status = Just Domain.PENDING,
+            fileHash = Nothing,
             createdAt = now
           }
   MFQuery.create fileEntity

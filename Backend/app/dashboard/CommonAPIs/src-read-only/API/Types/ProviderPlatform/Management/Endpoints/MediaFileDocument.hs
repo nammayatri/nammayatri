@@ -4,7 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument where
 
 import qualified AWS.S3
-import qualified Dashboard.Common.MediaFileDocument
+import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -17,100 +17,77 @@ import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
 
-data MediaFileDocumentReq = MediaFileDocumentReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument}
+data ConfirmMediaFileReq = ConfirmMediaFileReq {fileId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-instance Kernel.Types.HideSecrets.HideSecrets MediaFileDocumentReq where
+instance Kernel.Types.HideSecrets.HideSecrets ConfirmMediaFileReq where
   hideSecrets = Kernel.Prelude.identity
 
-data MediaFileDocumentResp = MediaFileDocumentResp
-  { mediaFileLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument,
-    mediaFileDocumentStatus :: MediaFileDocumentStatus
-  }
+data ConfirmMediaFileResp = ConfirmMediaFileResp {fileId :: Kernel.Types.Id.Id Dashboard.Common.File}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MediaFileDocumentStatus
-  = PENDING
-  | DELETED
-  | FAILED
-  | CONFIRMED
-  | COMPLETED
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data MediaFileDocumentTResp = MediaFileDocumentTResp {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument, mediaFileDocumentStatus :: MediaFileDocumentStatus}
+data DeleteMediaFileReq = DeleteMediaFileReq {fileId :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadMediaFileDocumentReq = UploadMediaFileDocumentReq
-  { mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType,
-    fileType :: AWS.S3.FileType,
-    reqContentType :: Kernel.Prelude.Text,
-    rcNumber :: Kernel.Prelude.Text
-  }
+instance Kernel.Types.HideSecrets.HideSecrets DeleteMediaFileReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data MediaFileDownloadResp = MediaFileDownloadResp {url :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UploadMediaFileDocumentTReq = UploadMediaFileDocumentTReq {mediaFileDocumentType :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType, fileType :: AWS.S3.FileType, reqContentType :: Kernel.Prelude.Text}
+data MediaFileUploadLinkResp = MediaFileUploadLinkResp {uploadUrl :: Kernel.Prelude.Text, filePath :: Kernel.Prelude.Text, fileId :: Kernel.Types.Id.Id Dashboard.Common.File}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data UploadMediaFileDocumentReq = UploadMediaFileDocumentReq {fileType :: AWS.S3.FileType, reqContentType :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UploadMediaFileDocumentReq where
+  hideSecrets = Kernel.Prelude.identity
 
 type API = ("mediaFileDocument" :> (PostMediaFileDocumentUploadLinkHelper :<|> PostMediaFileDocumentConfirmHelper :<|> PostMediaFileDocumentDeleteHelper :<|> GetMediaFileDocumentDownloadLinkHelper))
 
-type PostMediaFileDocumentUploadLink = ("uploadLink" :> ReqBody '[JSON] UploadMediaFileDocumentReq :> Post '[JSON] MediaFileDocumentResp)
+type PostMediaFileDocumentUploadLink = ("uploadLink" :> ReqBody '[JSON] UploadMediaFileDocumentReq :> Post '[JSON] MediaFileUploadLinkResp)
 
 type PostMediaFileDocumentUploadLinkHelper =
   ( "uploadLink" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] UploadMediaFileDocumentReq
       :> Post
            '[JSON]
-           MediaFileDocumentResp
+           MediaFileUploadLinkResp
   )
 
-type PostMediaFileDocumentConfirm = ("confirm" :> ReqBody '[JSON] MediaFileDocumentReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMediaFileDocumentConfirm = ("confirm" :> ReqBody '[JSON] ConfirmMediaFileReq :> Post '[JSON] ConfirmMediaFileResp)
 
-type PostMediaFileDocumentConfirmHelper =
-  ( "confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MediaFileDocumentReq
-      :> Post
-           '[JSON]
-           Kernel.Types.APISuccess.APISuccess
-  )
+type PostMediaFileDocumentConfirmHelper = ("confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] ConfirmMediaFileReq :> Post '[JSON] ConfirmMediaFileResp)
 
-type PostMediaFileDocumentDelete = ("delete" :> ReqBody '[JSON] MediaFileDocumentReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+type PostMediaFileDocumentDelete = ("delete" :> ReqBody '[JSON] DeleteMediaFileReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostMediaFileDocumentDeleteHelper =
-  ( "delete" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MediaFileDocumentReq
+  ( "delete" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] DeleteMediaFileReq
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetMediaFileDocumentDownloadLink =
-  ( "downloadLink" :> MandatoryQueryParam "mediaFileDocumentType" Dashboard.Common.MediaFileDocument.MediaFileDocumentType
-      :> MandatoryQueryParam
-           "rcNumber"
-           Kernel.Prelude.Text
-      :> Get '[JSON] MediaFileDocumentResp
-  )
+type GetMediaFileDocumentDownloadLink = ("downloadLink" :> MandatoryQueryParam "fileId" Kernel.Prelude.Text :> Get '[JSON] MediaFileDownloadResp)
 
 type GetMediaFileDocumentDownloadLinkHelper =
-  ( "downloadLink" :> MandatoryQueryParam "mediaFileDocumentType" Dashboard.Common.MediaFileDocument.MediaFileDocumentType
-      :> MandatoryQueryParam
-           "rcNumber"
-           Kernel.Prelude.Text
-      :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+  ( "downloadLink" :> MandatoryQueryParam "fileId" Kernel.Prelude.Text :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Get
            '[JSON]
-           MediaFileDocumentResp
+           MediaFileDownloadResp
   )
 
 data MediaFileDocumentAPIs = MediaFileDocumentAPIs
-  { postMediaFileDocumentUploadLink :: Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileDocumentResp,
-    postMediaFileDocumentConfirm :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postMediaFileDocumentDelete :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getMediaFileDocumentDownloadLink :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp
+  { postMediaFileDocumentUploadLink :: Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileUploadLinkResp,
+    postMediaFileDocumentConfirm :: Kernel.Prelude.Text -> ConfirmMediaFileReq -> EulerHS.Types.EulerClient ConfirmMediaFileResp,
+    postMediaFileDocumentDelete :: Kernel.Prelude.Text -> DeleteMediaFileReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMediaFileDocumentDownloadLink :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDownloadResp
   }
 
 mkMediaFileDocumentAPIs :: (Client EulerHS.Types.EulerClient API -> MediaFileDocumentAPIs)
