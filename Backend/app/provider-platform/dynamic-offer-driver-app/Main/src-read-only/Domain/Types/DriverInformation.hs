@@ -65,6 +65,7 @@ data DriverInformationE e = DriverInformation
     enabled :: Kernel.Prelude.Bool,
     enabledAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     extraFareMitigationFlag :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    firstVerifiedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     forwardBatchingEnabled :: Kernel.Prelude.Bool,
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -182,6 +183,7 @@ instance EncryptedItem DriverInformation where
           enabled = enabled entity,
           enabledAt = enabledAt entity,
           extraFareMitigationFlag = extraFareMitigationFlag entity,
+          firstVerifiedAt = firstVerifiedAt entity,
           forwardBatchingEnabled = forwardBatchingEnabled entity,
           hasAdvanceBooking = hasAdvanceBooking entity,
           hasRideStarted = hasRideStarted entity,
@@ -291,6 +293,7 @@ instance EncryptedItem DriverInformation where
             enabled = enabled entity,
             enabledAt = enabledAt entity,
             extraFareMitigationFlag = extraFareMitigationFlag entity,
+            firstVerifiedAt = firstVerifiedAt entity,
             forwardBatchingEnabled = forwardBatchingEnabled entity,
             hasAdvanceBooking = hasAdvanceBooking entity,
             hasRideStarted = hasRideStarted entity,
@@ -363,7 +366,7 @@ instance EncryptedItem' DriverInformation where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data AddressDocumentType = RationCard | UtilityBill | Passport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data AddressDocumentType = RationCard | UtilityBill | Passport | VoterId | LifeInsurancePolicy | Others deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data AirConditionedRestrictionType = NoRestriction | ToggleAllowed | ToggleNotAllowed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

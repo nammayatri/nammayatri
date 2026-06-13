@@ -163,6 +163,7 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.vehicleVariant vehicleVariant,
       Se.Set Beam.ventilator ventilator,
       Se.Set Beam.verificationStatus verificationStatus,
+      Se.Set Beam.verified verified,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.updatedAt _now

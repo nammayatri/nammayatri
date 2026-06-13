@@ -228,6 +228,9 @@ data DocumentType
   | BankAccount
   | PanAadhaarLink
   | VoterIdCard
+  | OperatorCode
+  | MedicalCertificate
+  | Rating
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
