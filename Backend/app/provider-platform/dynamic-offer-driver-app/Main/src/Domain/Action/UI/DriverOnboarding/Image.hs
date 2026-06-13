@@ -32,7 +32,7 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
-import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock)
+import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock, runDeferredFaceMatchOnSelfie)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -246,6 +246,9 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
             checkErrors imageEntity.id imageType validationOutput.detectedImage
           Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
         else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+      when (imageType == DVC.ProfilePhoto) $
+        fork "deferred face match on selfie upload" $
+          runDeferredFaceMatchOnSelfie person
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed

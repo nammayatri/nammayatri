@@ -48,6 +48,9 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     isBusinessPan,
     getDriverDocumentInfo,
     getDocumentImage,
+    FaceMatchOutcome (..),
+    runDocFaceMatch,
+    runDeferredFaceMatchOnSelfie,
     isNameComparePercentageValid,
     imageS3Lock,
     getRegexRulesFromDocumentConfig,
@@ -453,6 +456,68 @@ getDocumentImage personId imageId_ expectedDocType = do
     throwError (ImageInvalidType (show expectedDocType) "")
   Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
     S3.get $ T.unpack imageMetadata.s3Path
+
+-- | Outcome of a server-side selfie-vs-document face match.
+--   FMSkip     -> face match not required, or document already SDK-matched on-device.
+--   FMPass     -> faces matched.
+--   FMFail     -> faces did not match; the document Image has been marked INVALID.
+--   FMDeferred -> no source (selfie) image available yet; resolve when the selfie arrives.
+data FaceMatchOutcome = FMSkip | FMPass | FMFail | FMDeferred
+  deriving (Eq, Show)
+
+-- | Compare a freshly-uploaded document image against the configured source document
+--   (typically the driver's selfie / ProfilePhoto) using the merchant's faceMatchService
+--   (IDfy two-image compare). Only runs for non-SDK uploads (workflowTransactionId == Nothing);
+--   SDK uploads are already face-matched on-device. On a mismatch the document Image is marked
+--   INVALID with FaceMatchFailed so the existing reupload UX surfaces it.
+runDocFaceMatch :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Flow FaceMatchOutcome
+runDocFaceMatch person config docImageId =
+  case config.faceMatchSourceDoc of
+    Nothing -> pure FMSkip
+    Just sourceDocType -> do
+      docImage <- ImageQuery.findById docImageId >>= fromMaybeM (ImageNotFound docImageId.getId)
+      -- Skip when the doc was SDK-matched on-device, or when its image isn't VALID yet
+      -- (e.g. isImageValidationRequired=False leaves it MANUAL_VERIFICATION_REQUIRED) — face match isn't applicable.
+      if isJust docImage.workflowTransactionId || docImage.verificationStatus /= Just Documents.VALID
+        then pure FMSkip
+        else do
+          sourceImages <- ImageQuery.findRecentByPersonIdAndImageType person.id sourceDocType
+          case DL.find ((== Just Documents.VALID) . (.verificationStatus)) sourceImages of
+            Nothing -> pure FMDeferred -- no selfie yet; resolve when it arrives
+            Just sourceImage -> do
+              documentImage1 <- getDocumentImage person.id docImageId.getId config.documentType
+              documentImage2 <- getDocumentImage person.id sourceImage.id.getId sourceDocType
+              resp <-
+                Verification.faceCompare person.merchantId person.merchantOperatingCityId $
+                  VI.FaceCompareReq {documentImage1, documentImage2, driverId = person.id.getId}
+              let matched = (resp.faceComparedData >>= (.is_a_match)) == Just True
+              if matched
+                then pure FMPass
+                else do
+                  ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID FaceMatchFailed docImageId
+                  logInfo $ "Face match failed for document " <> show config.documentType <> " of driver " <> person.id.getId
+                  pure FMFail
+
+-- | When a selfie (ProfilePhoto) is uploaded, retroactively face-match previously-uploaded,
+--   non-SDK DL/PAN/Aadhaar documents that bypassed the upload-time gate (no selfie was present then).
+--   Image-based (not record-based): we re-check the latest uploaded, image-VALID, non-SDK document image
+--   regardless of its 3P record status, so a selfie arriving while 3P is still PENDING is also covered.
+--   On a mismatch the document image is marked INVALID (by runDocFaceMatch) and the doc record is flipped
+--   INVALID if it already exists; if 3P is still pending, the late webhook's sticky-INVALID guard keeps it
+--   INVALID. Only docs whose config has faceMatchSourceDoc set are considered.
+runDeferredFaceMatchOnSelfie :: Person.Person -> Flow ()
+runDeferredFaceMatchOnSelfie person =
+  forM_ [ODC.DriverLicense, ODC.PanCard, ODC.AadhaarCard] $ \docType -> do
+    mbConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId docType Nothing
+    whenJust mbConfig $ \config -> whenJust config.faceMatchSourceDoc $ \_ -> do
+      docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
+      whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId) docImages) $ \docImg -> do
+        outcome <- runDocFaceMatch person config docImg.id
+        when (outcome == FMFail) $ case docType of
+          ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
+          ODC.PanCard -> DPQuery.updateVerificationStatus Documents.INVALID person.id
+          ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatus Documents.INVALID person.id
+          _ -> pure ()
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Maybe Text -> Maybe Text -> Maybe Text -> Flow ()
 verifyRCFlow person merchantOpCityId useCategoryBasedPriority rcNumber imageId dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation mbUdinNumber mbEngineNumber mbChassisNumber = do

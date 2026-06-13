@@ -1,0 +1,1688 @@
+{
+  "info": {
+    "name": "FaceMatchOnboardingFlow",
+    "_postman_id": "facematch-onboarding-flow",
+    "description": "Selfie<->document face match during driver onboarding (server-side IDfy face-compare for non-SDK uploads). FLAT structure (the dashboard parser is flat-only).\n\nSEED ONCE: UPDATE atlas_driver_offer_bpp.document_verification_config SET face_match_source_doc='ProfilePhoto' WHERE document_type IN ('DriverLicense','PanCard','AadhaarCard') AND merchant_operating_city_id IN (<city ids>);\n\nEDGE CASES (request name prefix = flow):\n  A selfie+PAN compare PASS -> PAN not INVALID    B selfie+PAN compare FAIL -> PAN INVALID\n  C PAN no-selfie -> not blocked (FMDeferred)      D is_a_match=null -> FAIL\n  E Aadhaar mismatch -> 400 FACE_MATCH_FAILED       F fail then re-upload+match -> clears INVALID\nNeeds the stack: `, run-mobility-stack-dev` + `, run-test-context-server`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function r(){ return '9'+Math.floor(100000000+Math.random()*899999999); }",
+          "if(!pm.collectionVariables.get('_test_png')) pm.collectionVariables.set('_test_png','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');",
+          "['match','mismatch','C','D','E','F'].forEach(function(k){ var key='_test_driver_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "_test_png",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_match",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_mismatch",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_C",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_D",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_E",
+      "value": ""
+    },
+    {
+      "key": "_test_driver_F",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "A: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_match}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_A', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_A}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_A}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-A\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_A',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_A',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('selfieImageId_A', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Upload PAN image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_A', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Verify PAN (PASS)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_A}}\",\n  \"driverId\": \"{{driverId_A}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify accepted (face matched)',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Status (PAN not INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('PAN not INVALID after matching selfie',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('INVALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Override compare=false",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-B\", \"result\": {\"image_1\": null, \"image_2\": null, \"is_a_match\": false, \"match_score\": 11.2, \"review_recommended\": false}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_mismatch}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_B', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_B}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_B}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-B\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_B',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_B',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Upload PAN image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_B', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Verify PAN (FAIL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_B}}\",\n  \"driverId\": \"{{driverId_B}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify rejected with 400',()=>pm.response.to.have.status(400));",
+              "pm.test('error is FACE_MATCH_FAILED',()=>pm.expect((pm.response.json()||{}).errorCode).to.eql('FACE_MATCH_FAILED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Status (PAN INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200));",
+              "var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{};",
+              "pm.test('PAN not VALID after face mismatch',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('VALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Delete override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_C}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_C', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_C}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_C}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-C\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_C',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_C',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Upload PAN image (NO selfie)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_C', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Verify PAN (not blocked)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_C}}\",\n  \"driverId\": \"{{driverId_C}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('no selfie -> FMDeferred -> proceeds',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Status (PAN not INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('absent selfie does not block',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('INVALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Override is_a_match=null",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-null\", \"result\": {\"is_a_match\": null, \"match_score\": null, \"review_recommended\": true}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_D}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_D', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_D}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_D}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-D\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_D',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_D',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_D}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Upload PAN image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_D}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_D', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Verify PAN",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_D}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_D}}\",\n  \"driverId\": \"{{driverId_D}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify rejected with 400',()=>pm.response.to.have.status(400));",
+              "pm.test('error is FACE_MATCH_FAILED',()=>pm.expect((pm.response.json()||{}).errorCode).to.eql('FACE_MATCH_FAILED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Status (PAN INVALID, null!=match)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_D}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200));",
+              "var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{};",
+              "pm.test('PAN not VALID after face mismatch',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('VALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "D: Delete override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Override compare=false",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-aadhaar\", \"result\": {\"is_a_match\": false, \"match_score\": 9.1, \"review_recommended\": false}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_E}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_E', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_E}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_E}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-E\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_E',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_E',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_E}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Upload Aadhaar image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_E}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"AadhaarCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('aadhaarImageId_E', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Verify Aadhaar (expect 400 FACE_MATCH_FAILED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_E}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/aadhaar",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "aadhaar"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"aadhaarNumber\": \"123456789012\",\n  \"aadhaarFrontImageId\": \"{{aadhaarImageId_E}}\",\n  \"consent\": true,\n  \"driverId\": \"{{driverId_E}}\",\n  \"aadhaarName\": \"TEST FLEET OWNER\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('aadhaar face fail throws (not 200)',()=>pm.expect(pm.response.code).to.not.eql(200)); pm.test('error is FACE_MATCH_FAILED',()=>pm.expect(pm.response.text()).to.include('FACE_MATCH_FAILED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "E: Delete override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Override compare=false",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-reup\", \"result\": {\"is_a_match\": false, \"match_score\": 8.0, \"review_recommended\": false}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_F}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_F', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_F}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_F}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-F\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_F',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_F',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Upload PAN image #1",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_F1', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Verify PAN #1 (FAIL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_F1}}\",\n  \"driverId\": \"{{driverId_F}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify rejected with 400',()=>pm.response.to.have.status(400));",
+              "pm.test('error is FACE_MATCH_FAILED',()=>pm.expect((pm.response.json()||{}).errorCode).to.eql('FACE_MATCH_FAILED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Clear override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Re-upload PAN image #2",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('reupload allowed after INVALID',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_F2', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Re-verify PAN #2 (match)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_F2}}\",\n  \"driverId\": \"{{driverId_F}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('re-verify accepted',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "F: Status (PAN no longer INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_F}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('reupload+match clears INVALID',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('INVALID'));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
