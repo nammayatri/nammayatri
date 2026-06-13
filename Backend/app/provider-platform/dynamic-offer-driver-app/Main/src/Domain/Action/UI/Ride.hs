@@ -44,6 +44,7 @@ import qualified Domain.Action.Internal.ViolationDetection as VID
 import qualified Domain.Action.UI.Ride.Common as RideCommon
 import qualified Domain.Action.UI.RideDetails as RD
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -273,6 +274,7 @@ otpRideCreate driver otpCode booking clientId = do
   unless (driverInfo.subscribed || isKaaliPeeliBooking booking) $ throwError DriverUnsubscribed
   unless (driverInfo.enabled || fromMaybe False transporterConfig.allowDisableDriverToTakeSpecialZoneRide) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
+  unless (driverInfo.enableForAirport == DI.ENABLED) $ throwError DriverNotEnabledForAirport
   unless booking.isDashboardRequest $ throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
   -- Verify the driver has enough liability balance to cover the airport entry
   -- fee BEFORE creating the ride entity. Doing it here (instead of at StartRide)

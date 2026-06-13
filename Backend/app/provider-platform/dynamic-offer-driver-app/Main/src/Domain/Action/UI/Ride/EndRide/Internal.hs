@@ -325,7 +325,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
-  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled) $
+  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled && driverInfo.enableForAirport == DI.ENABLED) $
     AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking
   where
     processEndRidePrepaidSubscription fare mbVC = do

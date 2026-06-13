@@ -41,8 +41,7 @@ data DriverVehicleQualityResp = DriverVehicleQualityResp
     vehicleName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    vehicleRatingRemark :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    canSwitchToAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+    vehicleRatingRemark :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
