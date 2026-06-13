@@ -36,10 +36,10 @@ data TicketStatusResult = TicketStatusResult
   { qR_Payload :: QRPayloadStatus,
     qR_Tkt_Sl_No :: T.Text,
     qR_SHA256 :: T.Text,
-    merchant_Order_Id :: T.Text,
-    interchange_Status :: T.Text,
-    interchange_Stations :: T.Text,
-    platform_No :: T.Text
+    merchant_Order_Id :: Maybe T.Text,
+    interchange_Status :: Maybe T.Text,
+    interchange_Stations :: Maybe T.Text,
+    platform_No :: Maybe T.Text
   }
   deriving (Generic, Show, ToJSON)
 
@@ -49,10 +49,10 @@ instance FromJSON TicketStatusResult where
       <$> v .: "QR_Payload"
       <*> v .: "QR_Tkt_Sl_No"
       <*> v .: "QR_SHA256"
-      <*> v .: "Merchant_Order_Id"
-      <*> v .: "Interchange_Status"
-      <*> v .: "Interchange_Stations"
-      <*> v .: "Platform_No"
+      <*> v .:? "Merchant_Order_Id"
+      <*> v .:? "Interchange_Status"
+      <*> v .:? "Interchange_Stations"
+      <*> v .:? "Platform_No"
 
 data TicketStatusRes = TicketStatusRes
   { returnCode :: T.Text,
