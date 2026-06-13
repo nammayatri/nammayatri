@@ -38,6 +38,7 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     dashboardPanVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     dashboardUdyamVerificationService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService)),
     driverBackgroundVerificationService :: (B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService),
+    faceMatchService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     faceVerificationService :: (B.C f Kernel.External.Verification.Types.VerificationService),
     getBankAccount :: (B.C f Kernel.External.Payment.Types.PaymentService),
     getDistances :: (B.C f Kernel.External.Maps.Types.MapsService),
@@ -80,8 +81,8 @@ instance B.Table MerchantServiceUsageConfigT where
 
 type MerchantServiceUsageConfig = MerchantServiceUsageConfigT Identity
 
-$(enableKVPG (''MerchantServiceUsageConfigT) [('merchantOperatingCityId)] [])
+$(enableKVPG ''MerchantServiceUsageConfigT ['merchantOperatingCityId] [])
 
-$(mkTableInstances (''MerchantServiceUsageConfigT) "merchant_service_usage_config")
+$(mkTableInstances ''MerchantServiceUsageConfigT "merchant_service_usage_config")
 
-$(Domain.Types.UtilsTH.mkCacParseInstance (''MerchantServiceUsageConfigT))
+$(Domain.Types.UtilsTH.mkCacParseInstance ''MerchantServiceUsageConfigT)

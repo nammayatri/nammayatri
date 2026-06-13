@@ -19,6 +19,9 @@ Routes (mounted under any path containing "/idfy"):
   POST  /idfy/v3/tasks/async/extract_image/ind_aadhaar
   POST  /idfy/v3/tasks/async/compare
         — wrap their result in an IdfyResponse envelope.
+  POST  /idfy/v3/tasks/sync/compare/face
+        — selfie-vs-document face match; returns `{result: {is_a_match, match_score, ...}}`.
+          Defaults to a match; force a mismatch via POST /mock/override (is_a_match=false).
 
   POST  /idfy/configure                — update the in-memory MockDocConfig used
                                          by the extract endpoints.
@@ -92,18 +95,25 @@ def _fire_webhook(tag, payload):
     threading.Timer(_WEBHOOK_DELAY_MS / 1000.0, _do_send).start()
 
 
+def _dual(d):
+    # Different shared-kernel pins parse Idfy extract under different wrappers:
+    # older flows read `source_output`, c72fffc reads `extraction_output` (ExtractionOutput a).
+    # Emit both (Aeson ignores the unused key) so the mock works regardless of pin.
+    return {"source_output": d, "extraction_output": d}
+
+
 def _dl_extract():
-    return {"source_output": {
+    return _dual({
         "id_number": "id_number", "name_on_card": "name_on_card", "fathers_name": "fathers_name",
         "date_of_birth": "date_of_birth", "date_of_validity": "date_of_validity",
         "address": "address", "district": "district", "street_address": "street_address",
         "pincode": "pincode", "state": "state", "issue_dates": None,
         "type": ["W_CAB"], "validity": None, "status": "status",
-    }}
+    })
 
 
 def _rc_extract():
-    return {"source_output": {
+    return _dual({
         "address": "address", "body": "body", "chassis_number": "chassis_number",
         "class": "_class", "colour": "colour", "cubic_capacity": "cubic_capacity",
         "document1_side": "document1_side", "document2_side": "document2_side",
@@ -113,24 +123,24 @@ def _rc_extract():
         "owner_name": "owner_name", "registration_date": "registration_date",
         "registration_number": "registration_number", "rto_district": "rto_district",
         "state": "state", "wheel_base": "wheel_base", "status": "status",
-    }}
+    })
 
 
 def _pan_extract():
     with _LOCK:
         cfg = dict(_CONFIG)
-    return {"source_output": {
+    return _dual({
         "age": None, "date_of_birth": "1990-01-01", "date_of_issue": None,
         "fathers_name": "FATHER NAME", "id_number": cfg["panNumber"],
         "is_scanned": True, "minor": False, "name_on_card": "TEST FLEET OWNER",
         "pan_type": "Individual",
-    }}
+    })
 
 
 def _gst_extract():
     with _LOCK:
         cfg = dict(_CONFIG)
-    return {"source_output": {
+    return _dual({
         "address": "123 Test Street",
         "constitution_of_business": "Private Limited Company",
         "date_of_liability": "2020-01-01",
@@ -142,7 +152,7 @@ def _gst_extract():
         "type_of_registration": "Regular",
         "valid_from": "2020-01-01",
         "valid_upto": None,
-    }}
+    })
 
 
 def _aadhaar_extract():
@@ -190,6 +200,18 @@ def _name_compare():
     return {"match_output": {"name_match": 100}}
 
 
+def _face_compare(is_match=True):
+    """IDfy POST /v3/tasks/sync/compare/face result. Default is a match;
+    tests force a mismatch via POST /mock/override (service=idfy) returning is_a_match=false."""
+    return {
+        "image_1": None,
+        "image_2": None,
+        "is_a_match": is_match,
+        "match_score": 99.5 if is_match else 11.2,
+        "review_recommended": False,
+    }
+
+
 def handle(handler, path, body):
     text = body.decode("utf-8") if isinstance(body, bytes) and body else (body or "")
     try:
@@ -198,8 +220,10 @@ def handle(handler, path, body):
         body_json = {}
 
     # Allow /mock/override rules to short-circuit with a fully synthetic response.
+    # Face-compare is handled below instead, so it can emit a valid IdfyResponse envelope with the
+    # overridden is_a_match (a raw replacement drops required envelope fields like status/task_id).
     override_status, override_data = handler._get_override("idfy")
-    if override_status and isinstance(override_data, dict):
+    if override_status and isinstance(override_data, dict) and "/compare/face" not in path:
         return handler._json(override_data)
 
     if path.endswith("/configure"):
@@ -234,19 +258,27 @@ def handle(handler, path, body):
         _fire_webhook("GstVerificationResult", body_json)
         return handler._json(resp)
 
-    # Extract (synchronous)
-    if "/validate_image" in path:
+    # Validate / extract (synchronous) — match both /extract_image/ind_X and /extract/ind_X path styles.
+    if "/validate_image" in path or "/validate/" in path:
         return handler._json(_idfy_envelope(_validate_image(body_json)))
-    if "/extract_image/ind_dl" in path:
-        return handler._json(_idfy_envelope(_dl_extract()))
-    if "/extract_image/ind_rc" in path:
-        return handler._json(_idfy_envelope(_rc_extract()))
-    if "/extract_image/ind_pan" in path:
-        return handler._json(_idfy_envelope(_pan_extract()))
-    if "/extract_image/ind_gst" in path:
-        return handler._json(_idfy_envelope(_gst_extract()))
-    if "/extract_image/ind_aadhaar" in path:
-        return handler._json(_idfy_envelope(_aadhaar_extract()))
+    if "extract" in path:
+        if "ind_dl" in path:
+            return handler._json(_idfy_envelope(_dl_extract()))
+        if "ind_rc" in path:
+            return handler._json(_idfy_envelope(_rc_extract()))
+        if "ind_pan" in path:
+            return handler._json(_idfy_envelope(_pan_extract()))
+        if "ind_gst" in path:
+            return handler._json(_idfy_envelope(_gst_extract()))
+        if "ind_aadhaar" in path:
+            return handler._json(_idfy_envelope(_aadhaar_extract()))
+    if "/compare/face" in path:
+        # A /mock/override (service=gridline, match=/compare/face) can force the outcome by carrying
+        # a `result` with the desired is_a_match (true / false / null). Re-wrap it in a valid
+        # IdfyResponse envelope so the BE parses it; absent an override, default to a match.
+        if isinstance(override_data, dict) and isinstance(override_data.get("result"), dict):
+            return handler._json(_idfy_envelope(override_data["result"]))
+        return handler._json(_idfy_envelope(_face_compare(True)))
     if "/compare" in path:
         return handler._json(_idfy_envelope(_name_compare()))
 
