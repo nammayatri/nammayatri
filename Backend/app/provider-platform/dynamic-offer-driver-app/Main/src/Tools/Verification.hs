@@ -16,6 +16,7 @@ module Tools.Verification
   ( module Reexport,
     verifyDL,
     verifyBankAccountAsync,
+    verifyCRCAsync,
     verifyGstAsync,
     verifyPanAsync,
     verifyPanAadhaarLinkAsync,
@@ -68,6 +69,7 @@ import Kernel.External.Verification as Reexport hiding
     validateFaceImage,
     validateImage,
     verifyBankAccountAsync,
+    verifyCRCAsync,
     verifyDL,
     verifyGstAsync,
     verifyPanAadhaarLinkAsync,
@@ -111,6 +113,14 @@ verifyBankAccountAsync ::
   VerifyBankAccountAsyncReq ->
   m VerifyBankAccountAsyncResp
 verifyBankAccountAsync = runWithServiceConfig Verification.verifyBankAccountAsync (.verificationService)
+
+verifyCRCAsync ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  VerifyCRCReq ->
+  m VerifyCRCAsyncResp
+verifyCRCAsync = runWithServiceConfig Verification.verifyCRCAsync (.verificationService)
 
 verifyPanAadhaarLinkAsync ::
   ServiceFlow m r =>

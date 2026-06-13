@@ -18,6 +18,7 @@ data DriverIdentityInfo = DriverIdentityInfo
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressDocumentType :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType,
     addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    courtRecord :: Kernel.Prelude.Maybe Data.Aeson.Value,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

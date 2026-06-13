@@ -920,7 +920,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_onboard
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_based_verification_priority_list boolean  default true;
 
+------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_court_record_check boolean ;
 
 
 ------- SQL updates -------

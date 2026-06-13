@@ -3,6 +3,7 @@
 
 module Storage.Beam.DriverIdentityInfo where
 
+import qualified Data.Aeson
 import qualified Data.Time
 import qualified Database.Beam as B
 import Domain.Types.Common ()
@@ -17,6 +18,7 @@ data DriverIdentityInfoT f = DriverIdentityInfoT
   { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     addressDocumentType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType),
     addressState :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState),
+    courtRecord :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,

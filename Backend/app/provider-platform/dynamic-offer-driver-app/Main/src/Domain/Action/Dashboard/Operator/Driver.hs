@@ -23,6 +23,7 @@ import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.DriverOnboarding.CourtRecordCheck as CourtRecordCheck
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
@@ -239,6 +240,13 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
         -- Record driver inspection completion for auto-trigger monitoring
         recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
+        -- Court Record Check (CRC) — submit on inspection approval; Idfy pushes the result to the webhook.
+        -- Gated per-merchant (enabled for MSIL); CRC is an Idfy-only, paid external call.
+        when (transporterConfig.enableCourtRecordCheck == Just True) $
+          fork "courtRecordCheck" $
+            void $
+              withTryCatch "courtRecordCheck" $
+                CourtRecordCheck.runCourtRecordCheck person merchantOpCity
         void $ postDriverEnable mShortId city $ cast @DP.Person @Common.Driver personId
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $

@@ -4,11 +4,13 @@
 
 module Storage.Queries.DriverIdentityInfo (module Storage.Queries.DriverIdentityInfo, module ReExport) where
 
+import qualified Data.Aeson
 import qualified Domain.Types.DriverIdentityInfo
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -25,6 +27,11 @@ createMany = traverse_ create
 findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverIdentityInfo.DriverIdentityInfo))
 findByDriverId driverId = do findOneWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateCourtRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateCourtRecord courtRecord driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.courtRecord courtRecord, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m (Maybe Domain.Types.DriverIdentityInfo.DriverIdentityInfo))
 findByPrimaryKey driverId = do findOneWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]]
 
@@ -35,6 +42,7 @@ updateByPrimaryKey (Domain.Types.DriverIdentityInfo.DriverIdentityInfo {..}) = d
     [ Se.Set Beam.address address,
       Se.Set Beam.addressDocumentType addressDocumentType,
       Se.Set Beam.addressState addressState,
+      Se.Set Beam.courtRecord courtRecord,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.nomineeDob nomineeDob,
