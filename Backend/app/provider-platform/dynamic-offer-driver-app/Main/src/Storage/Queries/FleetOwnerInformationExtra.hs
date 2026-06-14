@@ -74,23 +74,25 @@ findFleetOwners merchantOperatingCityId mbFleetType mbDocsVerificationStatus mbF
     Right fleetOwnerInfoList -> catMaybes <$> mapM (fromTType' . fst) fleetOwnerInfoList
     Left _ -> pure []
 
-findVerifiedAndNotEnabled ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+findByVerifiedAndEnabled ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Bool ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Int ->
   Int ->
   Maybe [Text] ->
   m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
-findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset finalPersonIds = do
+findByVerifiedAndEnabled merchantOpCityId isVerified isEnabled mbFrom mbTo limit offset finalPersonIds = do
   case finalPersonIds of
     Just [] -> pure []
     _ -> do
       let clauses =
             [ Se.Is Beam.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-              Se.Is Beam.verified (Se.Eq True),
-              Se.Is Beam.enabled (Se.Eq False)
+              Se.Is Beam.verified (Se.Eq isVerified),
+              Se.Is Beam.enabled (if isEnabled then Se.Eq True else Se.Not (Se.Eq True))
             ]
               <> maybe [] (\from -> [Se.Is Beam.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
               <> maybe [] (\to -> [Se.Is Beam.updatedAt (Se.LessThanOrEq to)]) mbTo
