@@ -75,23 +75,21 @@ Syncs ~150 configuration tables across 7 schemas from a master (staging/prod) da
 ```bash
 cd Backend/dev/config-sync
 
-# Export from master → local JSON files
-python config_transfer.py export --from master --to local
+# Export raw config from master → JSON files
+python config_transfer.py export --from master
 
-# Patch exported files (URL replacements, overrides)
+# Patch exported files (URL replacements, overrides) for local
 python config_transfer.py patch --from master --to local
 
 # Import patched files to local DB
 python config_transfer.py import --from master --to local
 
-# Full pipeline: export + patch + import
-python config_transfer.py sync --from master --to local
+# List configured tables (optionally with row counts in an env)
+python config_transfer.py list
+python config_transfer.py list --env master
 
-# Discover config tables not yet in config.json
-python config_transfer.py discover
-
-# Validate config tables exist in DB
-python config_transfer.py validate --schema atlas_app
+# Inspect the patch set for a direction without running it
+python config_transfer.py show-patches --from master --to local
 ```
 
 ### Key Files
@@ -609,7 +607,7 @@ This command:
 1. Add to `config.json` under the correct schema
 2. If it has encrypted fields: add `ENCRYPT:S"mock-value"` overrides in patches.json
 3. If it has external URLs: verify coverage by global_replacements
-4. Run `python config_transfer.py discover` to validate
+4. Run `python config_transfer.py list --env master` to confirm the table is picked up (and has rows upstream)
 
 ---
 
