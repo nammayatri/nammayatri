@@ -192,6 +192,7 @@ library:
     - finance-kernel
     - utils
     - external
+    - safe-exceptions
 
 executables:
   rider-app-exe:
@@ -234,6 +235,7 @@ tests:
     dependencies:
       - rider-app
       - mobility-core
+      - external
       - tasty
       - tasty-hunit
       - tasty-quickcheck

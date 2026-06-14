@@ -27,6 +27,8 @@ import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import qualified Kernel.External.Tokenize as Tokenize
 import Kernel.External.Whatsapp.Interface as Whatsapp
 import Kernel.Prelude
+import qualified PartnerAuth.Interface.Types as PartnerAuth
+import qualified PartnerAuth.Types as PartnerAuth
 import qualified Text.Show as Show
 import Tools.Beam.UtilsTH
 import Utils.Common.JWT.Config as GW
@@ -59,12 +61,14 @@ data ServiceName
   | SOSService SOS.SOSService
   | SettlementService Settlement.SettlementService
   | EventTrackingService EventTracking.EventTrackingService
+  | PartnerAuthService PartnerAuth.PartnerAuthService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
 $(mkBeamInstancesForEnum ''ServiceName)
 
 instance Show ServiceName where
+  show (PartnerAuthService s) = "PartnerAuth_" <> show s
   show (MapsService s) = "Maps_" <> show s
   show (SmsService s) = "Sms_" <> show s
   show (WhatsappService s) = "Whatsapp_" <> show s
@@ -201,6 +205,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "EventTracking_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (PartnerAuthService v1, r2)
+                 | r1 <- stripPrefix "PartnerAuth_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -233,6 +241,7 @@ data ServiceConfigD (s :: UsageSafety)
   | SOSServiceConfig !SOSInterface.SOSServiceConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | EventTrackingServiceConfig !EventTrackingInterface.EventTrackingServiceConfig
+  | PartnerAuthServiceConfig !PartnerAuth.PartnerAuthServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -246,6 +255,7 @@ instance FromJSON (ServiceConfigD 'Safe)
 instance ToJSON (ServiceConfigD 'Safe)
 
 instance Show (ServiceConfigD 'Safe) where
+  show (PartnerAuthServiceConfig cfg) = "PartnerAuthServiceConfig " <> show cfg
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
   show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
   show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg
@@ -274,6 +284,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (EventTrackingServiceConfig cfg) = "EventTrackingServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
+  show (PartnerAuthServiceConfig cfg) = "PartnerAuthServiceConfig " <> show cfg
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
   show (SmsServiceConfig cfg) = "SmsServiceConfig " <> show cfg
   show (WhatsappServiceConfig cfg) = "WhatsappServiceConfig " <> show cfg

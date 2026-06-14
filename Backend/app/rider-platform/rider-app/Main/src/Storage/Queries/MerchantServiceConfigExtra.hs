@@ -33,6 +33,8 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import Kernel.Utils.Logging
+import qualified PartnerAuth.Interface.Types as PartnerAuth
+import qualified PartnerAuth.Types as PartnerAuth
 import qualified Sequelize as Se
 import qualified Storage.Beam.MerchantServiceConfig as BeamMSC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -203,3 +205,5 @@ getServiceNameConfigJSON = \case
   Domain.SettlementServiceConfig cfg -> (Domain.SettlementService cfg.settlementService, toJSON cfg)
   Domain.EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig cfg -> (Domain.EventTrackingService EventTracking.Moengage, toJSON cfg)
+  Domain.PartnerAuthServiceConfig partnerAuthCfg -> case partnerAuthCfg of
+    PartnerAuth.BHIMConfig cfg -> (Domain.PartnerAuthService PartnerAuth.BHIM, toJSON cfg)

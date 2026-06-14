@@ -54,6 +54,8 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified PartnerAuth.Interface.Types as PartnerAuth
+import qualified PartnerAuth.Types as PartnerAuth
 import qualified Storage.Queries.MerchantServiceConfig as Queries
 import qualified Utils.Common.JWT.Config as GW
 
@@ -213,6 +215,8 @@ getServiceName msc = case msc.serviceConfig of
   SettlementServiceConfig cfg -> SettlementService cfg.settlementService
   EventTrackingServiceConfig eventTrackingCfg -> case eventTrackingCfg of
     EventTrackingInterface.MoengageConfig _ -> EventTrackingService EventTracking.Moengage
+  PartnerAuthServiceConfig partnerAuthCfg -> case partnerAuthCfg of
+    PartnerAuth.BHIMConfig _ -> PartnerAuthService PartnerAuth.BHIM
 
 upsertMerchantServiceConfig :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => MerchantServiceConfig -> m ()
 upsertMerchantServiceConfig cfg = do

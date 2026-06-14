@@ -1,0 +1,32 @@
+module: PartnerAuth
+
+types:
+  PartnerSessionReq:
+    token: Text
+    derive': "Generic,Show,ToSchema"
+
+  PartnerSessionRes:
+    isValid: Bool
+    sessionToken: Maybe Text
+    mobileNumber: Maybe Text
+    name: Maybe Text
+    derive': "Generic,Show,ToSchema"
+
+apis:
+  # Generic partner embedded-auth session endpoint.
+  # provider is captured from the path (e.g. "bhim") and resolved to a
+  # PartnerAuthService; the handler verifies the partner token (S2S), fetches
+  # user details, and issues a NammaYatri session under the NAMMA_YATRI merchant.
+  - POST:
+      endpoint: /partner/{provider}/session
+      auth: NoAuth
+      params:
+        provider: Text
+      headers:
+        # Client IP (set by the gateway) so the handler can enforce the same
+        # SMC.isIPBlocked fraud gate as /auth before resolving/creating a Person.
+        x-forwarded-for: Text
+      request:
+        type: PartnerSessionReq
+      response:
+        type: PartnerSessionRes

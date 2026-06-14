@@ -42,6 +42,14 @@ library
       Email.GCP.Flow
       Email.Types
       KafkaLogs.TransactionLogs
+      PartnerAuth.BHIM.API
+      PartnerAuth.BHIM.Config
+      PartnerAuth.BHIM.Encryption
+      PartnerAuth.BHIM.Types
+      PartnerAuth.Interface
+      PartnerAuth.Interface.BHIM
+      PartnerAuth.Interface.Types
+      PartnerAuth.Types
       Slack.AWS.Flow
       Slack.Flow
       Slack.GCP.Flow
