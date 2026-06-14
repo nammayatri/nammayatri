@@ -122,6 +122,26 @@ findByMerchantIdAndDateRange merchantId fromDate toDate =
         ]
     ]
 
+findByMerchantIdAndDateRangeWithLimitOffset ::
+  (BeamFlow m r) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [Domain.PgPaymentSettlementReport]
+findByMerchantIdAndDateRangeWithLimitOffset merchantId fromDate toDate limit offset =
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq fromDate,
+          Se.Is Beam.createdAt $ Se.LessThanOrEq toDate
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    (Just limit)
+    (Just offset)
+
 findBySettlementId ::
   (BeamFlow m r) =>
   Text ->

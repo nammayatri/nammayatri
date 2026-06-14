@@ -170,7 +170,7 @@ types:
     - derive: "HttpInstance"
 
   PgGateway:
-    - enum: "Juspay, BillDesk"
+    - enum: "Juspay, BillDesk, RazorPay, CCAvenue"
     - derive: "HttpInstance"
 
   PaymentModeFilter:

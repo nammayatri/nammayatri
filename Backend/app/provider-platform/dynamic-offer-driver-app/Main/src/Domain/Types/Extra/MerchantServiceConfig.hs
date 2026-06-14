@@ -23,6 +23,7 @@ import qualified Kernel.External.PartnerSdk.Interface.Types as PartnerSdk
 import Kernel.External.Payment.Interface as Payment
 import Kernel.External.Payout.Interface as Payout
 import qualified Kernel.External.Plasma as Plasma
+import qualified Kernel.External.SAP.Interface as SAP
 import Kernel.External.SMS as Sms
 import qualified Kernel.External.Settlement.Types as Settlement
 import qualified Kernel.External.Ticket.Interface.Types as Ticket
@@ -60,6 +61,10 @@ data PartnerSdkProvider = Aarokya
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+data SAPProvider = Journal
+  deriving stock (Eq, Ord, Show, Read, Generic)
+  deriving anyclass (FromJSON, ToJSON)
+
 data ServiceName
   = MapsService Maps.MapsService
   | SmsService Sms.SmsService
@@ -86,6 +91,7 @@ data ServiceName
   | PlasmaService Plasma.PlasmaService
   | InsuranceDeclarationService InsuranceProvider
   | PartnerSdkService PartnerSdkProvider
+  | SAPService SAPProvider
   | SettlementService Settlement.SettlementService
   | GSTEInvoiceService GSTEInvoice.GSTEInvoiceService
   | AirportReachargeService Payment.PaymentService
@@ -120,6 +126,7 @@ instance Show ServiceName where
   show (PlasmaService s) = "Plasma_" <> show s
   show (InsuranceDeclarationService s) = "InsuranceDeclaration_" <> show s
   show (PartnerSdkService s) = "PartnerSdk_" <> show s
+  show (SAPService s) = "SAP_" <> show s
   show (SettlementService s) = "Settlement_" <> show s
   show (GSTEInvoiceService s) = "GSTEInvoice_" <> show s
   show (AirportReachargeService s) = "AirportReacharge_" <> show s
@@ -229,6 +236,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "PartnerSdk_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (SAPService v1, r2)
+                 | r1 <- stripPrefix "SAP_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
             ++ [ (SettlementService v1, r2)
                  | r1 <- stripPrefix "Settlement_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
@@ -272,6 +283,7 @@ data ServiceConfigD (s :: UsageSafety)
   | PlasmaServiceConfig !Plasma.PlasmaServiceConfig
   | InsuranceDeclarationServiceConfig !IffcoTokioConfig
   | PartnerSdkServiceConfig !PartnerSdk.PartnerSdkConfig
+  | SAPServiceConfig !SAP.SAPServiceConfig
   | SettlementServiceConfig !Settlement.SettlementServiceConfig
   | GSTEInvoiceServiceConfig !GSTEInvoice.GSTEInvoiceConfig
   | AirportReachargeServiceConfig !PaymentServiceConfig

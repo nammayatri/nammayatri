@@ -322,6 +322,8 @@ let AllocatorJobType =
       | ScheduledTDSDistribution
       | IffcoTokioInsurance
       | AggregatedCommissionInvoiceCreation
+      | SAPReportDispatch
+      | TriggerSpecialZoneNotify
       >
 
 let jobInfoMapx =
@@ -388,6 +390,8 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.AggregatedCommissionInvoiceCreation
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.SAPReportDispatch, mapValue = True }
+      , { mapKey = AllocatorJobType.TriggerSpecialZoneNotify, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

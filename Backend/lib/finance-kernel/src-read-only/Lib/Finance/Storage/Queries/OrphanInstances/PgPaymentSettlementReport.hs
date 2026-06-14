@@ -17,12 +17,16 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
     pure $
       Just
         Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport
-          { bankId = bankId,
+          { bankCode = bankCode,
+            bankId = bankId,
+            cardNumber = cardNumber,
+            cardType = cardType,
             chargebackAmount = chargebackAmount,
             chargebackId = chargebackId,
             chargebackReasonCode = chargebackReasonCode,
             chargebackStatus = chargebackStatus,
             createdAt = createdAt,
+            createdBy = createdBy,
             currency = currency,
             disputeId = disputeId,
             disputeType = disputeType,
@@ -69,12 +73,16 @@ instance FromTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPa
 instance ToTType' Beam.PgPaymentSettlementReport Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport where
   toTType' (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
     Beam.PgPaymentSettlementReportT
-      { Beam.bankId = bankId,
+      { Beam.bankCode = bankCode,
+        Beam.bankId = bankId,
+        Beam.cardNumber = cardNumber,
+        Beam.cardType = cardType,
         Beam.chargebackAmount = chargebackAmount,
         Beam.chargebackId = chargebackId,
         Beam.chargebackReasonCode = chargebackReasonCode,
         Beam.chargebackStatus = chargebackStatus,
         Beam.createdAt = createdAt,
+        Beam.createdBy = createdBy,
         Beam.currency = currency,
         Beam.disputeId = disputeId,
         Beam.disputeType = disputeType,

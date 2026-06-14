@@ -1,0 +1,24 @@
+CREATE TABLE atlas_driver_offer_bpp.sap_journal_entry ();
+
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN batch_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN belnr text ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN blart text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN bldat text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN budat text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN currency text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN description text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN gjahr text ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN gl_name text[] ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN gl_number text[] ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN merchant_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN merchant_operating_city_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN raw_response text ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN sap_message text ;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN total_credit_amount double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN total_debit_amount double precision NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN transaction_count integer NOT NULL default 0;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN transaction_type text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.sap_journal_entry ADD PRIMARY KEY ( id);
