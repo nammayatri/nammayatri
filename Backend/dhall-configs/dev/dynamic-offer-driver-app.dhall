@@ -323,6 +323,7 @@ let AllocatorJobType =
       | IffcoTokioInsurance
       | AggregatedCommissionInvoiceCreation
       | TriggerSpecialZoneNotify
+      | SAPReportDispatch
       >
 
 let jobInfoMapx =
@@ -390,6 +391,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.TriggerSpecialZoneNotify, mapValue = True }
+      , { mapKey = AllocatorJobType.SAPReportDispatch, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig =

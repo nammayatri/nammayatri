@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 import status_store
-from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, sandbox_proxy
+from services import juspay, stripe, paytm, exotel, acko, sos, kapture, whatsapp, mmi, nextbillion, gridline, transit, hyperverge, gullak, openai, cmrl, cris, ebix, mlpricing, ondc, cac, fcm, sms, idfy, google, sandbox_proxy, sap
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("mock-server")
@@ -115,6 +115,7 @@ ROUTES = [
     ("/cris",        cris,        "cris"),
     ("/ebix",        ebix,        "ebix"),
     ("/mlpricing",   mlpricing,   "mlpricing"),
+    ("/sap",         sap,         "sap"),
     ("/ondc",        ondc,        "ondc"),
     ("/cac",         cac,         "cac"),
     ("/fcm",         fcm,         "fcm"),
@@ -620,8 +621,8 @@ class MockHandler(BaseHTTPRequestHandler):
     # lib/scheduler/src/Lib/Scheduler/Types.hs:115 — keep in sync.
     # Shard math mirrors createJobImpl at lib/scheduler/src/Lib/Scheduler/ScheduleJob.hs:120.
     _SCHEDULER_TARGETS = {
-        "rider":  {"schedulerSetName": "Scheduled_Jobs_Rider",  "redisPort": 30001, "maxShards": 5},
-        "driver": {"schedulerSetName": "Scheduled_Jobs_Driver", "redisPort": 30001, "maxShards": 5},
+        "rider":  {"schedulerSetName": "Scheduled_Jobs",  "redisPort": 30001, "maxShards": 5},
+        "driver": {"schedulerSetName": "Scheduled_Jobs", "redisPort": 30001, "maxShards": 5},
     }
 
     def _mock_scheduler_trigger(self, body):
