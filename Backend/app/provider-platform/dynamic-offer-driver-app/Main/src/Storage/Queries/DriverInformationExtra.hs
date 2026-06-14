@@ -39,23 +39,25 @@ import Tools.Error
 findById :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> m (Maybe DriverInformation)
 findById (Id driverInformationId) = findOneWithKV [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
 
-findVerifiedAndNotEnabled ::
+findByVerifiedAndEnabled ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Bool ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Int ->
   Int ->
   Maybe [Text] ->
   m [DriverInformation]
-findVerifiedAndNotEnabled merchantOpCityId mbFrom mbTo limit offset finalPersonIds = do
+findByVerifiedAndEnabled merchantOpCityId isVerified isEnabled mbFrom mbTo limit offset finalPersonIds = do
   case finalPersonIds of
     Just [] -> pure []
     _ -> do
       let clauses =
             [ Se.Is BeamDI.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-              Se.Is BeamDI.verified (Se.Eq True),
-              Se.Is BeamDI.enabled (Se.Eq False)
+              Se.Is BeamDI.verified (Se.Eq isVerified),
+              Se.Is BeamDI.enabled (if isEnabled then Se.Eq True else Se.Not (Se.Eq True))
             ]
               <> maybe [] (\from -> [Se.Is BeamDI.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
               <> maybe [] (\to -> [Se.Is BeamDI.updatedAt (Se.LessThanOrEq to)]) mbTo

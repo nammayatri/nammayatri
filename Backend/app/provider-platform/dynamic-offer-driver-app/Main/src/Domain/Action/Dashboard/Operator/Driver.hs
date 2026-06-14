@@ -11,6 +11,7 @@ module Domain.Action.Dashboard.Operator.Driver
     getDriverOperatorDashboardAnalytics,
     getDriverReviewQueueRequest,
     postDriverSubmitReviewRequest,
+    reviewRequestLockKey,
     getDriverRequestReviewHistory,
   )
 where
@@ -25,7 +26,7 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
-import Domain.Action.Dashboard.Management.DriverRegistration (mapDocumentType)
+import Domain.Action.Dashboard.Management.DriverRegistration (mapDocumentType, sendDocumentRejectionNotification)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
@@ -92,6 +93,7 @@ import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.DriverRCAssociation as QRCAssoc
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
 import qualified Storage.Queries.DriverRCAssociationExtra as SQDRA
 import qualified Storage.Queries.DriverSSN as QDSSN
@@ -292,6 +294,9 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
 
 opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
+
+reviewRequestLockKey :: Text -> Text
+reviewRequestLockKey reqId = "ops:reviewQueue:Id-" <> reqId
 
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
 castHubRequests (hubReq, creator, hub) = do
@@ -713,7 +718,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
       case finalPersonIds of
         Just [] -> pure []
         _ -> do
-          driverInfoList <- QDIExtra.findVerifiedAndNotEnabled merchantOpCity.id mbFrom mbTo limit offset finalPersonIds
+          driverInfoList <- QDIExtra.findByVerifiedAndEnabled merchantOpCity.id True False mbFrom mbTo limit offset finalPersonIds
           let driverIds = map (.driverId) driverInfoList
           if null driverIds
             then pure []
@@ -727,7 +732,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
       case finalPersonIds of
         Just [] -> pure []
         _ -> do
-          fleetOwnerList <- QFOIExtra.findVerifiedAndNotEnabled merchantOpCity.id mbFrom mbTo limit offset finalPersonIds
+          fleetOwnerList <- QFOIExtra.findByVerifiedAndEnabled merchantOpCity.id True False mbFrom mbTo limit offset finalPersonIds
           let ownerIds = map (.fleetOwnerPersonId) fleetOwnerList
           if null ownerIds
             then pure []
@@ -823,177 +828,192 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
   now <- getCurrentTime
 
   let reqId = req.entityId
-  let isDocReqEmpty = null req.rejectDocumentUpdateReq
+  Redis.whenWithLockRedis (reviewRequestLockKey reqId) 60 $ do
+    let isDocReqEmpty = null req.rejectDocumentUpdateReq
 
-  validatedDocs <- if isDocReqEmpty then pure [] else validateDocs merchantOpCity.id req.entityType
-  let docDetails = map (\(_, _, d) -> d) validatedDocs
+    validatedDocs <- if isDocReqEmpty then pure [] else validateDocs merchantOpCity.id req.entityType
+    let docDetails = map (\(_, _, d) -> d) validatedDocs
 
-  (status, mbRegNo) <- case req.entityType of
-    API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
-      let driverId = Kernel.Types.Id.Id reqId
-      driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
-      if isDocReqEmpty
-        then do
-          let runStatusHandler = do
-                person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
-                transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-                let entity = IQuery.PersonEntity person
-                entityImages <- IQuery.findAllByEntityId transporterConfig entity
-                let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
-                statusRes <- SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True
-                if statusRes.enabled
-                  then pure (DRR.COMPLETED, Nothing)
-                  else pure (DRR.IN_PROGRESS, Nothing)
-          if driverInfo.approved == Just True
-            then runStatusHandler
-            else do
-              QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
-              pure (DRR.IN_PROGRESS, Nothing)
-        else do
-          applyDocRejections req.entityType reqId validatedDocs
-          QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
-          pure (DRR.REJECTED, Nothing)
-    API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
-      let fleetOwnerId = Kernel.Types.Id.Id reqId
-      fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
-      if isDocReqEmpty
-        then do
-          unless fleetOwnerInfo.enabled $ QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
-          pure (DRR.COMPLETED, Nothing)
-        else do
-          applyDocRejections req.entityType reqId validatedDocs
-          QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
-          pure (DRR.REJECTED, Nothing)
-    API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
-      let rcId = Kernel.Types.Id.Id reqId
-      rcInfo <- QVRC.findByPrimaryKey rcId >>= fromMaybeM (VehicleNotFound reqId)
-      if isDocReqEmpty
-        then do
-          unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
-          pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber)
-        else do
-          applyDocRejections req.entityType reqId validatedDocs
-          QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just False, DVRC.verified = Just False}
-          pure (DRR.REJECTED, rcInfo.unencryptedCertificateNumber)
+    (status, mbRegNo, mbPersonToNotify) <- case req.entityType of
+      API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
+        let driverId = Kernel.Types.Id.Id reqId
+        driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
+        if isDocReqEmpty
+          then do
+            let runStatusHandler = do
+                  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
+                  transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+                  let entity = IQuery.PersonEntity person
+                  entityImages <- IQuery.findAllByEntityId transporterConfig entity
+                  let entityImagesInfo = IQuery.EntityImagesInfo {entity, merchantOperatingCity = merchantOpCity, entityImages, transporterConfig, now}
+                  statusRes <- SStatus.statusHandler' person entityImagesInfo Nothing Nothing Nothing Nothing (Just True) False (Just True) True
+                  if statusRes.enabled
+                    then pure (DRR.COMPLETED, Nothing, Nothing)
+                    else pure (DRR.IN_PROGRESS, Nothing, Nothing)
+            if driverInfo.approved == Just True
+              then runStatusHandler
+              else do
+                QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
+                pure (DRR.IN_PROGRESS, Nothing, Nothing)
+          else do
+            applyDocRejections req.entityType reqId validatedDocs
+            QDI.updateByPrimaryKey driverInfo {DDI.approved = Just False, DDI.verified = False}
+            person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
+            pure (DRR.REJECTED, Nothing, Just person)
+      API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
+        let fleetOwnerId = Kernel.Types.Id.Id reqId
+        fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
+        if isDocReqEmpty
+          then do
+            unless fleetOwnerInfo.enabled $ QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = True}
+            pure (DRR.COMPLETED, Nothing, Nothing)
+          else do
+            applyDocRejections req.entityType reqId validatedDocs
+            QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
+            person <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
+            pure (DRR.REJECTED, Nothing, Just person)
+      API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
+        let rcId = Kernel.Types.Id.Id reqId
+        rcInfo <- QVRC.findByPrimaryKey rcId >>= fromMaybeM (VehicleNotFound reqId)
+        if isDocReqEmpty
+          then do
+            unless (rcInfo.approved == Just True) $ QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just True}
+            pure (DRR.COMPLETED, rcInfo.unencryptedCertificateNumber, Nothing)
+          else do
+            applyDocRejections req.entityType reqId validatedDocs
+            QVRC.updateByPrimaryKey rcInfo {DVRC.approved = Just False, DVRC.verified = Just False}
+            mbPersonId <- resolvePersonIdViaRc rcId
+            mbPerson <- case mbPersonId of
+              Just pId -> QPerson.findById pId
+              Nothing -> pure Nothing
+            pure (DRR.REJECTED, rcInfo.unencryptedCertificateNumber, mbPerson)
 
-  let domainEntityType = case req.entityType of
-        API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER
-        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> DRR.FLEET_OWNER
-        API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> DRR.VEHICLE
+    when (not isDocReqEmpty) $ do
+      forM_ mbPersonToNotify $ \person -> do
+        forM_ validatedDocs $ \(docType, _mbImage, docDetail) -> do
+          sendDocumentRejectionNotification merchantOpCity.id (show docType) docDetail.rejectedReason person
 
-  existingRecords <- QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW status mbRegNo
+    let domainEntityType = case req.entityType of
+          API.Types.ProviderPlatform.Operator.Driver.DRIVER -> DRR.DRIVER
+          API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> DRR.FLEET_OWNER
+          API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> DRR.VEHICLE
 
-  inProgressRecords <-
-    if domainEntityType == DRR.DRIVER && status == DRR.COMPLETED
-      then QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW DRR.IN_PROGRESS mbRegNo
-      else pure []
+    existingRecords <- QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW status mbRegNo
 
-  if not (null inProgressRecords)
-    then do
-      forM_ inProgressRecords $ \record -> do
-        QRR.updateByPrimaryKey record {DRR.requestStatus = status, DRR.updatedAt = now, DRR.reviewerId = Just (Kernel.Types.Id.Id requestorId)}
-    else when (null existingRecords) $ do
-      reqUUID <- generateGUID
-      QRR.create
-        DRR.ReviewRequest
-          { id = reqUUID,
-            createdAt = now,
-            updatedAt = now,
-            requestType = DRR.BOT_REVIEW,
-            entityType = domainEntityType,
-            entityId = reqId,
-            rcNo = mbRegNo,
-            requestStatus = status,
-            reviewerId = Just (Kernel.Types.Id.Id requestorId),
-            documentDetails = if isDocReqEmpty then Nothing else Just docDetails,
-            merchantId = merchant.id,
-            merchantOperatingCityId = merchantOpCity.id
-          }
+    inProgressRecords <-
+      if domainEntityType == DRR.DRIVER && status == DRR.COMPLETED
+        then QRR.findByEntityIdAndEntityTypeAndRequestTypeAndStatusAndRcNo reqId domainEntityType DRR.BOT_REVIEW DRR.IN_PROGRESS mbRegNo
+        else pure []
+
+    if not (null inProgressRecords)
+      then do
+        forM_ inProgressRecords $ \record -> do
+          QRR.updateByPrimaryKey record {DRR.requestStatus = status, DRR.updatedAt = now, DRR.reviewerId = Just (Kernel.Types.Id.Id requestorId)}
+      else when (null existingRecords) $ do
+        reqUUID <- generateGUID
+        QRR.create
+          DRR.ReviewRequest
+            { id = reqUUID,
+              createdAt = now,
+              updatedAt = now,
+              requestType = DRR.BOT_REVIEW,
+              entityType = domainEntityType,
+              entityId = reqId,
+              rcNo = mbRegNo,
+              requestStatus = status,
+              reviewerId = Just (Kernel.Types.Id.Id requestorId),
+              documentDetails = if isDocReqEmpty then Nothing else Just docDetails,
+              merchantId = merchant.id,
+              merchantOperatingCityId = merchantOpCity.id
+            }
 
   pure Success
   where
-    validateDocs mocId entityType = forM req.rejectDocumentUpdateReq $ \doc -> do
-      let domainDocType = mapDocumentType doc.documentType
-      mbImage <- forM doc.imageId $ \imgId -> do
-        IQuery.findById (Kernel.Types.Id.cast imgId) >>= fromMaybeM (InvalidRequest "Image ID not found")
+    resolvePersonIdViaRc rcId = do
+      mbDriverAssoc <- QRCAssoc.findActiveAssociationByRC rcId True
+      case mbDriverAssoc of
+        Just assoc -> pure $ Just assoc.driverId
+        Nothing -> do
+          mbRc <- QVRC.findById rcId
+          case mbRc of
+            Just rcRecord -> do
+              mbImage <- IQuery.findById rcRecord.documentImageId
+              case mbImage of
+                Just image -> pure $ Just image.personId
+                Nothing -> pure Nothing
+            Nothing -> pure Nothing
+    validateDocs mocId entityType = do
+      allFODVC <- case entityType of
+        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> CQFODVC.findAllByMerchantOpCityId mocId Nothing
+        _ -> pure []
+      allDVC <- case entityType of
+        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> pure []
+        _ -> CQDVC.findAllByMerchantOpCityId mocId Nothing
 
-      when (domainDocType == DVC.ProfilePhoto) $ throwError (InvalidRequest "Cannot reject Profile Photo")
+      forM req.rejectDocumentUpdateReq $ \doc -> do
+        let domainDocType = mapDocumentType doc.documentType
+        mbImage <- forM doc.imageId $ \imgId -> do
+          IQuery.findById (Kernel.Types.Id.cast imgId) >>= fromMaybeM (InvalidRequest "Image ID not found")
 
-      isMandatory <- case entityType of
-        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
-          config <- CQFODVC.findByMerchantOpCityIdAndDocumentType mocId domainDocType Nothing >>= fromMaybeM (InvalidRequest "Document Verification Config not found")
-          pure config.isMandatory
-        _ -> do
-          dvcList <- CQDVC.findByMerchantOpCityIdAndDocumentType mocId domainDocType Nothing
-          case dvcList of
-            (dvc : _) -> pure dvc.isMandatory
-            [] -> throwError (InvalidRequest "Document Verification Config not found")
+        when (domainDocType == DVC.ProfilePhoto) $ throwError (InvalidRequest "Cannot reject Profile Photo")
 
-      unless isMandatory $ throwError (InvalidRequest "Cannot reject optional document")
-      let docDetail =
-            DRR.DocumentDetail
-              { documentType = domainDocType,
-                documentDescription = Nothing,
-                rejectedReason = doc.rejectedReason,
-                remarks = doc.remarks,
-                imageId = fmap Kernel.Types.Id.cast doc.imageId,
-                mediaId = Nothing
-              }
-      pure (mbImage, doc.rejectedReason, docDetail)
+        isMandatory <- case entityType of
+          API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
+            config <- case filter (\c -> c.documentType == domainDocType) allFODVC of
+              (c : _) -> pure c
+              [] -> throwError (InvalidRequest "Document Verification Config not found")
+            pure config.isMandatory
+          _ -> do
+            case filter (\c -> c.documentType == domainDocType) allDVC of
+              (dvc : _) -> pure dvc.isMandatory
+              [] -> throwError (InvalidRequest "Document Verification Config not found")
+
+        unless isMandatory $ throwError (InvalidRequest "Cannot reject optional document")
+        let docDetail =
+              DRR.DocumentDetail
+                { documentType = domainDocType,
+                  documentDescription = Nothing,
+                  rejectedReason = doc.rejectedReason,
+                  remarks = doc.remarks,
+                  imageId = fmap Kernel.Types.Id.cast doc.imageId,
+                  mediaId = Nothing
+                }
+        pure (mbImage, doc.rejectedReason, docDetail)
     applyDocRejections entityType reqId validatedDocs =
       forM_ validatedDocs $ \(mbImage, rejectedReason, docDetail) -> do
         forM_ mbImage $ \image -> IQuery.updateByPrimaryKey image {DImage.verificationStatus = Just Documents.INVALID}
         invalidateSpecificDocument entityType reqId docDetail.documentType (Just rejectedReason)
 
-    invalidateSpecificDocument entityType entityIdTxt docType rejectReason = do
+    invalidateSpecificDocument entityType entityIdTxt docType rejectReason =
       case entityType of
-        API.Types.ProviderPlatform.Operator.Driver.DRIVER -> do
-          let driverId = Kernel.Types.Id.Id entityIdTxt
-          case docType of
-            DVC.AadhaarCard -> do
-              mbDoc <- QAadhaarCard.findByPrimaryKey driverId
-              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID}
-            DVC.PanCard -> do
-              mbDoc <- QDPC.findByDriverId driverId
-              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID}
-            DVC.DriverLicense -> do
-              mbDoc <- DLQuery.findByDriverId driverId
-              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
-            DVC.SocialSecurityNumber -> do
-              mbDoc <- QDSSN.findByDriverId driverId
-              forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
-            DVC.GSTCertificate -> do
-              mbDoc <- QDGST.findByDriverId driverId
-              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID}
-            DVC.UDYAMCertificate -> do
-              mbDoc <- QUDYAM.findByDriverId driverId
-              forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
-            _ -> pure ()
-        API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER -> do
-          let fleetOwnerId = Kernel.Types.Id.Id entityIdTxt
-          case docType of
-            DVC.AadhaarCard -> do
-              mbDoc <- QAadhaarCard.findByPrimaryKey fleetOwnerId
-              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID}
-            DVC.PanCard -> do
-              mbDoc <- QDPC.findByDriverId fleetOwnerId
-              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID}
-            DVC.SocialSecurityNumber -> do
-              mbDoc <- QDSSN.findByDriverId fleetOwnerId
-              forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
-            DVC.GSTCertificate -> do
-              mbDoc <- QDGST.findByDriverId fleetOwnerId
-              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID}
-            DVC.UDYAMCertificate -> do
-              mbDoc <- QUDYAM.findByDriverId fleetOwnerId
-              forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
-            _ -> pure ()
         API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
           let rcId = Kernel.Types.Id.Id entityIdTxt
           case docType of
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
               forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID}
+            _ -> pure ()
+        _ -> do
+          let personId = Kernel.Types.Id.Id entityIdTxt
+          case docType of
+            DVC.AadhaarCard -> do
+              mbDoc <- QAadhaarCard.findByPrimaryKey personId
+              forM_ mbDoc $ \doc -> QAadhaarCard.updateByPrimaryKey doc {DAadhaarCard.verificationStatus = Documents.INVALID}
+            DVC.PanCard -> do
+              mbDoc <- QDPC.findByDriverId personId
+              forM_ mbDoc $ \doc -> QDPC.updateByPrimaryKey doc {DDPC.verificationStatus = Documents.INVALID}
+            DVC.DriverLicense -> do
+              mbDoc <- DLQuery.findByDriverId personId
+              forM_ mbDoc $ \doc -> DLQuery.updateByPrimaryKey doc {DDL.verificationStatus = Documents.INVALID, DDL.rejectReason = rejectReason}
+            DVC.SocialSecurityNumber -> do
+              mbDoc <- QDSSN.findByDriverId personId
+              forM_ mbDoc $ \doc -> QDSSN.updateByPrimaryKey doc {DDSSN.verificationStatus = Documents.INVALID, DDSSN.rejectReason = rejectReason}
+            DVC.GSTCertificate -> do
+              mbDoc <- QDGST.findByDriverId personId
+              forM_ mbDoc $ \doc -> QDGST.updateByPrimaryKey doc {DDGST.verificationStatus = Documents.INVALID}
+            DVC.UDYAMCertificate -> do
+              mbDoc <- QUDYAM.findByDriverId personId
+              forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
             _ -> pure ()
 
 getDriverRequestReviewHistory ::
@@ -1059,19 +1079,9 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
       pure API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistoryList {reviewHistory}
   where
     buildReviewHistoryItem personByEntityId req = do
-      mbPersonMobileNumber <-
-        if req.entityType == DRR.VEHICLE
-          then pure Nothing
-          else case HashMap.lookup req.entityId personByEntityId of
-            Just p -> mapM decrypt p.mobileNumber
-            Nothing -> pure Nothing
-
-      let mbPersonName =
-            if req.entityType == DRR.VEHICLE
-              then Nothing
-              else case HashMap.lookup req.entityId personByEntityId of
-                Just p -> Just $ T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)
-                Nothing -> Nothing
+      let mbPerson = if req.entityType == DRR.VEHICLE then Nothing else HashMap.lookup req.entityId personByEntityId
+      mbPersonMobileNumber <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
+      let mbPersonName = (\p -> T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)) <$> mbPerson
       pure $
         API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistory
           { id = req.id.getId,
