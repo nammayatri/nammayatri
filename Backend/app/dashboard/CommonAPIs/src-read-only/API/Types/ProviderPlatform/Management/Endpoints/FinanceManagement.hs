@@ -243,6 +243,8 @@ data PayoutListRes = PayoutListRes {totalItems :: Kernel.Prelude.Int, payouts ::
 data PgGateway
   = Juspay
   | BillDesk
+  | RazorPay
+  | CCAvenue
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 

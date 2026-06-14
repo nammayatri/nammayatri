@@ -95,6 +95,7 @@ data AllocatorJobType
   | ScheduledTDSDistribution
   | IffcoTokioInsurance
   | AggregatedCommissionInvoiceCreation
+  | SAPReportDispatch
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -148,6 +149,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledTDSDistribution jobData = AnyJobInfo <$> restoreJobInfo SScheduledTDSDistribution jobData
   restoreAnyJobInfo SIffcoTokioInsurance jobData = AnyJobInfo <$> restoreJobInfo SIffcoTokioInsurance jobData
   restoreAnyJobInfo SAggregatedCommissionInvoiceCreation jobData = AnyJobInfo <$> restoreJobInfo SAggregatedCommissionInvoiceCreation jobData
+  restoreAnyJobInfo SSAPReportDispatch jobData = AnyJobInfo <$> restoreJobInfo SSAPReportDispatch jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -620,3 +622,16 @@ data AggregatedCommissionInvoiceCreationJobData = AggregatedCommissionInvoiceCre
 instance JobInfoProcessor 'AggregatedCommissionInvoiceCreation
 
 type instance JobContent 'AggregatedCommissionInvoiceCreation = AggregatedCommissionInvoiceCreationJobData
+
+data SAPReportDispatchJobData = SAPReportDispatchJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    scheduledTime :: TimeOfDay,
+    timeDiffFromUtc :: Seconds,
+    maxApiRetries :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'SAPReportDispatch
+
+type instance JobContent 'SAPReportDispatch = SAPReportDispatchJobData

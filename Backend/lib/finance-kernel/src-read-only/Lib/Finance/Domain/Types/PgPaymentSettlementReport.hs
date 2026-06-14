@@ -11,12 +11,16 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReport = PgPaymentSettlementReport
-  { bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { bankCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bankId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cardType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     chargebackId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackReasonCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     chargebackStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
+    createdBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     currency :: Kernel.Types.Common.Currency,
     disputeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disputeType :: Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType,
@@ -63,7 +67,26 @@ data PgPaymentSettlementReport = PgPaymentSettlementReport
 
 data DisputeType = FRAUD | CONSUMER | PROCESSING_ERROR | OTHER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data PaymentMethod = UPI | CREDIT_CARD | DEBIT_CARD | NETBANKING | WALLET deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data PaymentMethod
+  = UPI
+  | CREDIT_CARD
+  | DEBIT_CARD
+  | NETBANKING
+  | WALLET
+  | CASH_CARD
+  | BHARAT_QR
+  | EMI
+  | NEFT
+  | UPI_CREDIT
+  | ENACH
+  | CBDC
+  | UPI_PREPAID_WALLET
+  | UPI_CREDIT_LINE
+  | BANK_TRANSFER
+  | COMMERCIAL_CARD
+  | PAY_LATER
+  | INTERNATIONAL_CARD
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ReconStatus = PENDING | MATCHED | MISMATCHED | MANUAL_REVIEW | IGNORED | SETTLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -100,5 +123,3 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnStatus))
 $(mkHttpInstancesForEnum (''TxnStatus))
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''TxnType))
-
-$(mkHttpInstancesForEnum (''TxnType))

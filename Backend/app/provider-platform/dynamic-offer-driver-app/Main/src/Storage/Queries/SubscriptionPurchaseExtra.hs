@@ -3,17 +3,22 @@ module Storage.Queries.SubscriptionPurchaseExtra where
 import Data.List (partition, sortBy)
 import Data.Ord (comparing)
 import qualified Data.Set as Set
+import qualified Database.Beam as B
 import Domain.Types.Extra.Plan (ServiceNames)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.SubscriptionPurchase
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common
 import Kernel.Types.Id
+import qualified Lib.Finance.Domain.Types.IndirectTaxTransaction as ITTDomain
 import qualified Lib.Finance.Domain.Types.Invoice
+import qualified Lib.Finance.Storage.Beam.IndirectTaxTransaction as BeamITT
 import qualified Sequelize as Se
+import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.SubscriptionPurchase as Beam
 import Storage.Queries.OrphanInstances.SubscriptionPurchase ()
 
@@ -273,3 +278,38 @@ findByFinanceInvoiceId ::
   m (Maybe SubscriptionPurchase)
 findByFinanceInvoiceId invoiceId =
   findOneWithKV [Se.Is Beam.financeInvoiceId $ Se.Eq (Just (Kernel.Types.Id.getId invoiceId))]
+
+findActiveWithTaxByDateRange ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  UTCTime ->
+  UTCTime ->
+  Int ->
+  Int ->
+  m [(Beam.SubscriptionPurchase, Maybe BeamITT.IndirectTaxTransaction)]
+findActiveWithTaxByDateRange merchantOpCityId startTime endTime limit offset = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limit) $
+            B.offset_ (fromIntegral offset) $
+              B.orderBy_ (\(sp, _) -> B.asc_ sp.purchaseTimestamp) $
+                B.filter_'
+                  ( \(sp, _) ->
+                      sp.merchantOperatingCityId B.==?. B.val_ merchantOpCityId.getId
+                        B.&&?. sp.status B.==?. B.val_ ACTIVE
+                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.>=. B.val_ startTime)
+                        B.&&?. B.sqlBool_ (sp.purchaseTimestamp B.<=. B.val_ endTime)
+                  )
+                  do
+                    sp <- B.all_ (BeamCommon.subscriptionPurchase BeamCommon.atlasDB)
+                    itt <-
+                      B.leftJoin_
+                        (B.all_ (BeamCommon.indirectTaxTransaction BeamCommon.atlasDB))
+                        (\itt -> itt.referenceId B.==. sp.id B.&&. itt.transactionType B.==. B.val_ ITTDomain.Subscription)
+                    pure (sp, itt)
+  case res of
+    Right rows -> pure rows
+    Left _ -> pure []

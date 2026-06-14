@@ -40,7 +40,7 @@ PgPaymentSettlementReport:
       derive: "HttpInstance"
 
     PaymentMethod:
-      enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET"
+      enum: "UPI,CREDIT_CARD,DEBIT_CARD,NETBANKING,WALLET,CASH_CARD,BHARAT_QR,EMI,NEFT,UPI_CREDIT,ENACH,CBDC,UPI_PREPAID_WALLET,UPI_CREDIT_LINE,BANK_TRANSFER,COMMERCIAL_CARD,PAY_LATER,INTERNATIONAL_CARD"
       derive: "HttpInstance"
 
 
@@ -86,6 +86,9 @@ PgPaymentSettlementReport:
     pgApprovalCode : Maybe Text                    # PG approval code
     paymentMethod: Maybe PaymentMethod             # UPI | CREDIT_CARD | ...
     paymentMethodSubType: Maybe Text               # e.g. "UPI-Bank Account", "VISA Debit"
+    bankCode: Maybe Text                           # Bank code from PG report
+    cardType: Maybe Text                           # e.g. "VISA", "MASTERCARD"
+    cardNumber: Maybe Text                         # Masked card number
 
     # --- Settlement details ---
     settlementType: Maybe SettlementType           # CREDIT | DEBIT
@@ -124,6 +127,9 @@ PgPaymentSettlementReport:
 
     # --- Raw PG report row ---
     rawData: Maybe Value                           # Full PG row stored as JSON for audit/debugging
+
+    # --- Audit ---
+    createdBy: Maybe Text                          # Who created this record
 
     # --- Multi-tenancy ---
     merchantId: Text

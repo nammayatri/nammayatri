@@ -44,11 +44,15 @@ updateByPrimaryKey :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.F
 updateByPrimaryKey (Lib.Finance.Domain.Types.PgPaymentSettlementReport.PgPaymentSettlementReport {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.bankId bankId,
+    [ Se.Set Beam.bankCode bankCode,
+      Se.Set Beam.bankId bankId,
+      Se.Set Beam.cardNumber cardNumber,
+      Se.Set Beam.cardType cardType,
       Se.Set Beam.chargebackAmount chargebackAmount,
       Se.Set Beam.chargebackId chargebackId,
       Se.Set Beam.chargebackReasonCode chargebackReasonCode,
       Se.Set Beam.chargebackStatus chargebackStatus,
+      Se.Set Beam.createdBy createdBy,
       Se.Set Beam.currency currency,
       Se.Set Beam.disputeId disputeId,
       Se.Set Beam.disputeType disputeType,

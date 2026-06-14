@@ -110,7 +110,7 @@ ingestPaymentSettlementReport cfg mbJuspayCfg merchantId merchantOperatingCityId
                       parseErrors = [],
                       storeErrors = []
                     }
-          else storeParseResult merchantId merchantOperatingCityId parseResult
+          else storeParseResult merchantId merchantOperatingCityId cfg.bankCode parseResult
       finalizeSftpFileCursor mbSftpMeta parseHadNoReports
       pure result
 
@@ -157,9 +157,10 @@ storeParseResult ::
   (BeamFlow.BeamFlow m r) =>
   Text ->
   Text ->
+  Maybe Text ->
   ParsePaymentSettlementResult ->
   m IngestionResult
-storeParseResult merchantId merchantOperatingCityId parseResult = do
+storeParseResult merchantId merchantOperatingCityId mbBankCode parseResult = do
   logInfo $
     "Parse complete. Total rows: " <> show (totalRows parseResult)
       <> ", Failed: "
@@ -171,7 +172,7 @@ storeParseResult merchantId merchantOperatingCityId parseResult = do
     logWarning $ "Parse errors: " <> show (errors parseResult)
 
   results <- forM (reports parseResult) $ \report -> do
-    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing report
+    pgReport <- Transformer.toPgPaymentSettlementReport merchantId merchantOperatingCityId Nothing Nothing mbBankCode report
     result <- try @_ @SomeException $ QPgReport.create pgReport
     case result of
       Right _ -> pure (Just pgReport, Nothing)

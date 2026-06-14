@@ -13,12 +13,16 @@ import qualified Lib.Finance.Domain.Types.PgPaymentSettlementReport
 import Tools.Beam.UtilsTH
 
 data PgPaymentSettlementReportT f = PgPaymentSettlementReportT
-  { bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+  { bankCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    bankId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cardNumber :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    cardType :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackAmount :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
     chargebackId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackReasonCode :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     chargebackStatus :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    createdBy :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     currency :: (B.C f Kernel.Types.Common.Currency),
     disputeId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     disputeType :: (B.C f (Kernel.Prelude.Maybe Lib.Finance.Domain.Types.PgPaymentSettlementReport.DisputeType)),
