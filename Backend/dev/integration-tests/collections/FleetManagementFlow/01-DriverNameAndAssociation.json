@@ -222,18 +222,19 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "token", "value": "{{dashboard_token}}" }
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\", \"name\": null}"
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\"}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp?fleetOwnerId={{fleet_owner_id}}",
-          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
-          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "sendJoiningOtp"],
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleet_owner_id}}/fleet/driver/sendJoiningOtp?fleetOwnerId={{fleet_owner_id}}&requestorId={{fleet_owner_id}}",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{fleet_owner_id}}", "fleet", "driver", "sendJoiningOtp"],
           "query": [
-            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" }
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" },
+            { "key": "requestorId", "value": "{{fleet_owner_id}}" }
           ]
         }
       }
@@ -256,18 +257,18 @@
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "token", "value": "{{dashboard_token}}" }
+          { "key": "token", "value": "{{bpp_dashboard_token}}" }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\"mobileCountryCode\": \"+91\", \"mobileNumber\": \"{{_test_driver_number}}\", \"otp\": \"{{login_otp}}\", \"deviceToken\": null}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp?fleetOwnerId={{fleet_owner_id}}",
-          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
-          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "verifyJoiningOtp"],
+          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{fleet_owner_id}}/fleet/driver/verifyJoiningOtp?requestorId={{fleet_owner_id}}",
+          "host": ["{{baseURL_BPP_Driver_Direct}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{fleet_owner_id}}", "fleet", "driver", "verifyJoiningOtp"],
           "query": [
-            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" }
+            { "key": "requestorId", "value": "{{fleet_owner_id}}" }
           ]
         }
       }
