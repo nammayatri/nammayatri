@@ -1006,12 +1006,12 @@ def _fetch_machines() -> dict:
         pass
 
     def _same_subnet(ip1: str, ip2: str) -> bool:
-        """Compare first three octets (/24) to decide if same LAN."""
+        """Compare first two octets (/16) to decide if same LAN."""
         if not ip1 or not ip2:
             return False
         a = ip1.split(".")
         b = ip2.split(".")
-        return len(a) >= 3 and len(b) >= 3 and a[0] == b[0] and a[1] == b[1] and a[2] == b[2]
+        return len(a) >= 2 and len(b) >= 2 and a[0] == b[0] and a[1] == b[1]
 
     def _pick_best(local_ip: str, aws_ip: str) -> str:
         """If any of our IPs is on the same /16 as local_ip, use LAN; else VPN."""
@@ -1440,6 +1440,7 @@ def remote_deploy(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError:
         with session["lock"]:
@@ -1518,6 +1519,7 @@ def remote_clear_data(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError as e:
         with session["lock"]:
@@ -1575,6 +1577,7 @@ def remote_cabal_clean(body: dict) -> dict:
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             bufsize=0,
+            start_new_session=True,
         )
     except FileNotFoundError as e:
         with session["lock"]:
@@ -2529,22 +2532,34 @@ class LocalApiHandler(BaseHTTPRequestHandler):
 
         # POST /api/remote/deploy
         if method == "POST" and path == "/api/remote/deploy":
-            self._send_json(remote_deploy(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_deploy(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"deploy: {exc}"}, 500)
             return True
 
         # POST /api/remote/start
         if method == "POST" and path == "/api/remote/start":
-            self._send_json(remote_start(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_start(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"start: {exc}"}, 500)
             return True
 
         # POST /api/remote/clear-data
         if method == "POST" and path == "/api/remote/clear-data":
-            self._send_json(remote_clear_data(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_clear_data(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"clear-data: {exc}"}, 500)
             return True
 
         # POST /api/remote/cabal-clean
         if method == "POST" and path == "/api/remote/cabal-clean":
-            self._send_json(remote_cabal_clean(self._read_json_body() or {}))
+            try:
+                self._send_json(remote_cabal_clean(self._read_json_body() or {}))
+            except Exception as exc:
+                self._send_json({"error": f"cabal-clean: {exc}"}, 500)
             return True
 
         # POST /api/remote/input
@@ -2567,7 +2582,10 @@ class LocalApiHandler(BaseHTTPRequestHandler):
         if method == "POST" and path in ("/api/remote/stop", "/api/remote/kill"):
             body = self._read_json_body() or {}
             session_id = (body.get("session") or "").strip()
-            self._send_json(remote_stop(session_id))
+            try:
+                self._send_json(remote_stop(session_id))
+            except Exception as exc:
+                self._send_json({"error": f"stop: {exc}"}, 500)
             return True
 
         # GET /api/remote/status?session=<id>

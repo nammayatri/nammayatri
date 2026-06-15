@@ -259,6 +259,9 @@ export const RemoteStackPanel: React.FC = () => {
           status: 'rsync running…',
         }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Deploy failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -274,6 +277,22 @@ export const RemoteStackPanel: React.FC = () => {
       } else {
         setState(prev => ({ ...prev, clearSession: res.session, status: 'clear-data running…' }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Clear-data failed: ${msg}`, status: undefined }));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const onStopClearData = async () => {
+    if (!state.clearSession) return;
+    setBusy('clear-data');
+    try {
+      await remoteStop(state.clearSession);
+      setState(prev => ({ ...prev, clearSession: undefined, status: 'Clear-data stopped.' }));
+    } catch (e) {
+      setState(prev => ({ ...prev, clearSession: undefined, error: `Stop failed: ${e}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -298,6 +317,9 @@ export const RemoteStackPanel: React.FC = () => {
           status: `mobility-stack-dev running on ${target.host}`,
         }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Start failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -309,6 +331,9 @@ export const RemoteStackPanel: React.FC = () => {
     try {
       await remoteStop(state.startSession);
       setState(prev => ({ ...prev, startSession: undefined, status: 'Stopped.' }));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, startSession: undefined, error: `Stop failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -339,6 +364,9 @@ export const RemoteStackPanel: React.FC = () => {
       } else {
         setState(prev => ({ ...prev, cabalCleanSession: res.session, status: 'cabal clean running…' }));
       }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setState(prev => ({ ...prev, error: `Cabal clean failed: ${msg}`, status: undefined }));
     } finally {
       setBusy(null);
     }
@@ -421,13 +449,19 @@ export const RemoteStackPanel: React.FC = () => {
       </div>
 
       <div className="rsp-actions">
-        <button onClick={onDeploy} disabled={!!busy || !hasDevName || (!isLocalhost && (!sshStatus || !sshStatus.ok))}>
+        <button onClick={onDeploy} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession || (!isLocalhost && (!sshStatus || !sshStatus.ok))}>
           {busy === 'deploy' ? 'Deploying…' : 'Deploy (rsync)'}
         </button>
-        <button onClick={onClearData} disabled={!!busy || !hasDevName} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
-          {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
-        </button>
-        <button onClick={onStart} disabled={!!busy || !hasDevName}>
+        {state.clearSession ? (
+          <button onClick={onStopClearData} disabled={busy === 'clear-data'} style={{ background: '#e53e3e' }}>
+            {busy === 'clear-data' ? 'Stopping…' : 'Stop Clear data'}
+          </button>
+        ) : (
+          <button onClick={onClearData} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.cabalCleanSession} title="Wipe runtime data under <repo>/data (postgres, kafka, metabase, …) using `, clear-data`.">
+            {busy === 'clear-data' ? 'Clearing…' : 'Clear data'}
+          </button>
+        )}
+        <button onClick={onStart} disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession || !!state.cabalCleanSession}>
           {busy === 'start' ? 'Starting…' : 'Start mobility-stack-dev'}
         </button>
         <button onClick={onStop} disabled={!state.startSession || busy === 'stop' || !hasDevName}>
@@ -442,7 +476,7 @@ export const RemoteStackPanel: React.FC = () => {
         </button>
         <button
           onClick={onCabalClean}
-          disabled={!!busy || !hasDevName}
+          disabled={!!busy || !hasDevName || !!state.deploySession || !!state.startSession || !!state.clearSession}
           title="Run `cabal clean` in the Backend directory to clear stale build artifacts (fixes GHC panics / package-database corruption)"
         >
           {busy === 'cabal-clean' ? 'Cleaning…' : 'Cabal Clean'}
