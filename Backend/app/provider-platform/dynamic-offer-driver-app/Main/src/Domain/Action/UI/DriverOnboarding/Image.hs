@@ -33,7 +33,6 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
-import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate (imageS3Lock, runDeferredFaceMatchOnSelfie)
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM

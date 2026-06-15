@@ -125,7 +125,7 @@ validateDriverDLReqRegexFlow now DriverDLReq {..} =
 
 isDLNumberFormatValid :: DTO.DocumentVerificationConfig -> Text -> Flow Bool
 isDLNumberFormatValid documentVerificationConfig normalizedDLNumber =
-  VC.validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
+  validateByRegex "DL" documentVerificationConfig normalizedDLNumber (pure True)
 
 verifyDL ::
   DPan.VerifiedBy ->
@@ -139,7 +139,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
   now <- getCurrentTime
   documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.DriverLicense, vehicleCategory = Just (fromMaybe CAR req.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
-  let regexRules = VC.getRegexRulesFromDocumentConfig documentVerificationConfig
+  let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
       hasRegexRules = not (null regexRules)
   if hasRegexRules
     then runRequestValidation (validateDriverDLReqRegexFlow now) req
@@ -181,7 +181,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                     unless (extractDLNumber == dlNumber) $
                       throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
                     let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
-                    void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
+                    void $ compareDateOfBirth extractedDob (Just driverDateOfBirth)
                     return (_nameOnCard, extractedDL.dateOfBirth)
                   Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
@@ -203,8 +203,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             logInfo $ "Ticket: " <> show ticket
             return ()
   let runBody = do
-        when (VC.isNameCompareRequired transporterConfig verifyBy) $
-          VC.validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+        when (isNameCompareRequired transporterConfig verifyBy) $
+          validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         mbExistingLicense <- Query.findByDLNumber driverLicenseNumber
         let mdriverLicense =
               mbExistingLicense >>= \dl ->
@@ -250,8 +250,8 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
-  if VC.isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   return Success
   where
@@ -297,9 +297,9 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
   case mbReqId of
     Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
     Nothing -> do
-      faceMatchOutcome <- VC.runDocFaceMatch person documentVerificationConfig imageId1
+      faceMatchOutcome <- runDocFaceMatch person documentVerificationConfig imageId1
       case faceMatchOutcome of
-        VC.FMFail -> throwError FaceMatchFailed
+        FMFail -> throwError FaceMatchFailed
         _ -> do
           let imageExtractionValidation =
                 if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
