@@ -740,8 +740,9 @@ getDriverReviewQueueRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Bool ->
   Flow API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp
-getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId = do
+getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType mbFrom mbTo mbLimit mbOffset mbMobileNumber mbPersonId mbRcNo mbRcId mbApproved = do
   unless (reviewRequestType == API.Types.ProviderPlatform.Operator.Driver.BOT_REVIEW) $ throwError (InvalidRequest "Review Request Type not supported")
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
@@ -755,7 +756,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
       case finalPersonIds of
         Just [] -> pure []
         _ -> do
-          driverInfoList <- QDIExtra.findByVerifiedAndEnabled merchantOpCity.id True False mbFrom mbTo limit offset finalPersonIds
+          driverInfoList <- QDIExtra.findByVerifiedAndEnabled merchantOpCity.id True (fromMaybe False mbApproved) mbFrom mbTo limit offset finalPersonIds
           let driverIds = map (.driverId) driverInfoList
           if null driverIds
             then pure []
@@ -779,7 +780,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
               let pairedList = [(foi, p) | foi <- fleetOwnerList, Just p <- [HashMap.lookup foi.fleetOwnerPersonId.getId personMap]]
               mapM buildFleetOwnerReviewItem pairedList
     API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
-      rcList <- QVRCE.findVerifiedAndNotApproved merchantOpCity.id mbFrom mbTo limit offset mbRcNo mbRcId
+      rcList <- QVRCE.findVerifiedAndApproved merchantOpCity.id True (fromMaybe False mbApproved) mbFrom mbTo limit offset mbRcNo mbRcId
       mapM buildVehicleReviewItem rcList
   pure API.Types.ProviderPlatform.Operator.Driver.ReviewQueueResp {reviewQueue}
   where
@@ -1034,7 +1035,8 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         forM_ mbImage $ \image -> IQuery.updateByPrimaryKey image {DImage.verificationStatus = Just Documents.INVALID}
         invalidateSpecificDocument entityType reqId docDetail.documentType (Just rejectedReason)
 
-    invalidateSpecificDocument entityType entityIdTxt docType rejectReason =
+    invalidateSpecificDocument entityType entityIdTxt docType rejectReason = do
+      now <- getCurrentTime
       case entityType of
         API.Types.ProviderPlatform.Operator.Driver.VEHICLE -> do
           let rcId = Kernel.Types.Id.Id entityIdTxt
@@ -1042,6 +1044,14 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.VehicleRegistrationCertificate -> do
               mbDoc <- QVRC.findByPrimaryKey rcId
               forM_ mbDoc $ \doc -> QVRC.updateByPrimaryKey doc {DVRC.verificationStatus = Documents.INVALID}
+            DVC.InspectionHub -> do
+              mbRc <- QVRC.findByPrimaryKey rcId
+              forM_ mbRc $ \rc -> do
+                case rc.unencryptedCertificateNumber of
+                  Just rcNo -> do
+                    mbReq <- SQOH.findLatestByRegistrationNoAndRequestType rcNo ONBOARDING_INSPECTION
+                    forM_ mbReq $ \hubReq -> SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
+                  Nothing -> pure ()
             _ -> pure ()
         _ -> do
           let personId = Kernel.Types.Id.Id entityIdTxt
@@ -1064,6 +1074,9 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
             DVC.UDYAMCertificate -> do
               mbDoc <- QUDYAM.findByDriverId personId
               forM_ mbDoc $ \doc -> QUDYAM.updateByPrimaryKey doc {DDUDYAM.verificationStatus = Documents.INVALID, DDUDYAM.rejectReason = rejectReason}
+            DVC.DriverInspectionHub -> do
+              mbReq <- SQOH.findLatestByDriverIdAndRequestType personId DRIVER_ONBOARDING_INSPECTION
+              forM_ mbReq $ \hubReq -> SQOHR.updateByPrimaryKey hubReq {requestStatus = REJECTED, updatedAt = now, remarks = rejectReason}
             _ -> pure ()
 
 getDriverRequestReviewHistory ::

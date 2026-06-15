@@ -27,9 +27,11 @@ import Storage.Queries.OrphanInstances.VehicleRegistrationCertificate ()
 
 -- Extra code goes here --
 
-findVerifiedAndNotApproved ::
+findVerifiedAndApproved ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
+  Bool ->
+  Bool ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   Int ->
@@ -37,15 +39,20 @@ findVerifiedAndNotApproved ::
   Maybe Text ->
   Maybe Text ->
   m [VehicleRegistrationCertificate]
-findVerifiedAndNotApproved merchantOpCityId mbFrom mbTo limit offset mbRcNo mbRcId = do
+findVerifiedAndApproved merchantOpCityId isVerified isApproved mbFrom mbTo limit offset mbRcNo mbRcId = do
   let clauses =
         [ Se.Is BeamVRC.merchantOperatingCityId (Se.Eq (Just $ getId merchantOpCityId)),
-          Se.Is BeamVRC.verified (Se.Eq (Just True)),
-          Se.Or
-            [ Se.Is BeamVRC.approved (Se.Eq (Just False)),
-              Se.Is BeamVRC.approved Se.Null
-            ]
+          Se.Is BeamVRC.verified (Se.Eq (Just isVerified))
         ]
+          <> ( if isApproved
+                 then [Se.Is BeamVRC.approved (Se.Eq (Just True))]
+                 else
+                   [ Se.Or
+                       [ Se.Is BeamVRC.approved (Se.Eq (Just False)),
+                         Se.Is BeamVRC.approved Se.Null
+                       ]
+                   ]
+             )
           <> maybe [] (\from -> [Se.Is BeamVRC.updatedAt (Se.GreaterThanOrEq from)]) mbFrom
           <> maybe [] (\to -> [Se.Is BeamVRC.updatedAt (Se.LessThanOrEq to)]) mbTo
           <> maybe [] (\rcNo -> [Se.Is BeamVRC.unencryptedCertificateNumber (Se.Eq (Just rcNo))]) mbRcNo

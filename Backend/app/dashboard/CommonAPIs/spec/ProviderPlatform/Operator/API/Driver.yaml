@@ -175,6 +175,7 @@ apis:
         - mbPersonId: Text
         - mbRcNo: Text
         - mbRcId: Text
+        - approved: Bool
       response:
         type: ReviewQueueResp
   - POST:
