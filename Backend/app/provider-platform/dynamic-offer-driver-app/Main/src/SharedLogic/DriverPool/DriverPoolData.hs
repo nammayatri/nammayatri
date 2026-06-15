@@ -16,6 +16,7 @@ import Data.List (nubBy)
 import qualified Data.Time.Calendar as Days
 import Domain.Types.Common (DriverMode)
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.Merchant (Merchant)
@@ -59,6 +60,7 @@ data DriverPoolData = DriverPoolData
     canSwitchToRental :: Bool,
     canSwitchToInterCity :: Bool,
     canSwitchToIntraCity :: Bool,
+    enableForAirport :: Maybe DI.AirportRestrictionType,
     forwardBatchingEnabled :: Bool,
     isSpecialLocWarrior :: Bool,
     tollRouteBlockedTill :: Maybe UTCTime,
@@ -181,6 +183,7 @@ defaultDriverPoolData dId =
       canSwitchToRental = False,
       canSwitchToInterCity = False,
       canSwitchToIntraCity = False,
+      enableForAirport = Nothing,
       forwardBatchingEnabled = False,
       isSpecialLocWarrior = False,
       tollRouteBlockedTill = Nothing,

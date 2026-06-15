@@ -326,7 +326,6 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
                   Common.airConditioned = Just True,
                   Common.oxygen = Just False,
                   Common.ventilator = Just False,
-                  Common.enableForAirport = Nothing,
                   Common.vehicleCategory = Nothing,
                   Common.vehicleDetails = Nothing,
                   Common.vehicleClass = Nothing,
@@ -381,8 +380,8 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationRegisterRc merchantShortId opCity driverId req2)
 
         -- Validate that different RC requests are handled correctly
-        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1, Common.enableForAirport = enableForAirport1} = req1
-            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2, Common.enableForAirport = enableForAirport2} = req2
+        let Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber1, Common.operatingCity = operatingCity1, Common.airConditioned = airConditioned1, Common.oxygen = oxygen1} = req1
+            Common.RegisterRCReq {Common.vehicleRegistrationCertNumber = rcNumber2, Common.operatingCity = operatingCity2, Common.airConditioned = airConditioned2, Common.oxygen = oxygen2} = req2
 
         rcNumber1 @?= "RC123456789"
         rcNumber2 @?= "RC987654321"
@@ -392,13 +391,10 @@ testPostDriverRegistrationRegisterRcWithRealExecution =
         airConditioned2 @?= Just False
         oxygen1 @?= Just False
         oxygen2 @?= Just True
-        enableForAirport1 @?= Just True
-        enableForAirport2 @?= Just False
         rcNumber1 /= rcNumber2 @? "Different RC numbers should be distinct"
         operatingCity1 /= operatingCity2 @? "Different operating cities should be distinct"
         airConditioned1 /= airConditioned2 @? "Different air conditioned statuses should be distinct"
         oxygen1 /= oxygen2 @? "Different oxygen statuses should be distinct"
-        enableForAirport1 /= enableForAirport2 @? "Different airport switch statuses should be distinct"
     ]
 
 -- =============================================================================

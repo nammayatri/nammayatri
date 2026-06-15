@@ -1465,11 +1465,23 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
         Just tier -> Right tier
         Nothing -> Left $ "Invalid service tier: " <> tierText
 
-getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.AirportPreferenceRes
-getDriverAirportPreference _merchantShortId _opCity driverId = do
-  let personId = cast @Common.Driver @DP.Person driverId
-  driverInfo <- B.runInReplica $ QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-  pure Common.AirportPreferenceRes {canSwitchToAirport = Just driverInfo.canSwitchToAirport}
+getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AirportPreferenceRes
+getDriverAirportPreference merchantShortId _opCity phoneNumber = do
+  merchant <- findMerchantByShortId merchantShortId
+  mobileNumberHash <- getDbHash phoneNumber
+  driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+  driverInfo <- B.runInReplica $ QDriverInfo.findById driver.id >>= fromMaybeM DriverInfoNotFound
+  pure
+    Common.AirportPreferenceRes
+      { driverId = cast driver.id,
+        driverName = driver.firstName <> maybe "" (" " <>) driver.lastName,
+        enableForAirport = castAirportRestrictionToCommon driverInfo.enableForAirport
+      }
+  where
+    castAirportRestrictionToCommon :: DrInfo.AirportRestrictionType -> Common.AirportRestrictionType
+    castAirportRestrictionToCommon DrInfo.ENABLED = Common.ENABLED
+    castAirportRestrictionToCommon DrInfo.DISABLED = Common.DISABLED
+    castAirportRestrictionToCommon DrInfo.BLOCKED = Common.BLOCKED
 
 postDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AirportPreferenceReq -> Flow APISuccess
 postDriverAirportPreference merchantShortId opCity driverId req = do
@@ -1478,15 +1490,20 @@ postDriverAirportPreference merchantShortId opCity driverId req = do
   let personId = cast @Common.Driver @DP.Person driverId
   driver <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
-  QDriverInfo.updateAirportSwitch req.canSwitchToAirport personId
+  QDriverInfo.updateAirportSwitch (castAirportRestrictionToDomain req.enableForAirport) personId
   now <- getCurrentTime
   let airportDisabledTag = Yudhishthira.addTagExpiry (Yudhishthira.mkTagNameValue (LYT.TagName "AirportRides") (LYT.TextValue "Disabled")) Nothing now
   let withoutTag = Yudhishthira.removeTagNameValue driver.driverTag airportDisabledTag
-  let updatedTags = if req.canSwitchToAirport then withoutTag else withoutTag <> [airportDisabledTag]
+  let updatedTags = if req.enableForAirport == Common.ENABLED then withoutTag else withoutTag <> [airportDisabledTag]
   unless (Just (Yudhishthira.showRawTags updatedTags) == (Yudhishthira.showRawTags <$> driver.driverTag)) $
     QPerson.updateDriverTag (Just updatedTags) personId
   logTagInfo "dashboard -> updateAirportPreference : " (show personId)
   pure Success
+  where
+    castAirportRestrictionToDomain :: Common.AirportRestrictionType -> DrInfo.AirportRestrictionType
+    castAirportRestrictionToDomain Common.ENABLED = DrInfo.ENABLED
+    castAirportRestrictionToDomain Common.DISABLED = DrInfo.DISABLED
+    castAirportRestrictionToDomain Common.BLOCKED = DrInfo.BLOCKED
 
 ---------------------------------------------------------------------
 getDriverSearchRequestStats :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.DriverSearchRequestStatsRes

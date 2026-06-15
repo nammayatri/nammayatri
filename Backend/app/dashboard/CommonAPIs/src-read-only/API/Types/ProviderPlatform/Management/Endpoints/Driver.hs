@@ -35,15 +35,22 @@ data AadharPanSyncReq = AadharPanSyncReq {phoneNo :: Kernel.Prelude.Text, countr
 instance Kernel.Types.HideSecrets.HideSecrets AadharPanSyncReq where
   hideSecrets = Kernel.Prelude.identity
 
-data AirportPreferenceReq = AirportPreferenceReq {canSwitchToAirport :: Kernel.Prelude.Bool}
+data AirportPreferenceReq = AirportPreferenceReq {enableForAirport :: AirportRestrictionType}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets AirportPreferenceReq where
   hideSecrets = Kernel.Prelude.identity
 
-data AirportPreferenceRes = AirportPreferenceRes {canSwitchToAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+data AirportPreferenceRes = AirportPreferenceRes {driverId :: Kernel.Types.Id.Id Dashboard.Common.Driver, driverName :: Kernel.Prelude.Text, enableForAirport :: AirportRestrictionType}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data AirportRestrictionType
+  = ENABLED
+  | DISABLED
+  | BLOCKED
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AppendSelectedServiceTiersReq = AppendSelectedServiceTiersReq {selected_service_tiers :: [Dashboard.Common.ServiceTierType]}
@@ -701,7 +708,7 @@ type PostDriverUpdateMerchant =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverAirportPreference = (Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "airportPreference" :> Get '[JSON] AirportPreferenceRes)
+type GetDriverAirportPreference = ("airportPreference" :> MandatoryQueryParam "phoneNumber" Kernel.Prelude.Text :> Get '[JSON] AirportPreferenceRes)
 
 type PostDriverAirportPreference =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "airportPreference" :> ReqBody '[JSON] AirportPreferenceReq
@@ -764,7 +771,7 @@ data DriverAPIs = DriverAPIs
     getDriverEarnings :: Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Dashboard.Common.Driver.EarningType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EarningPeriodStatsRes,
     postDriverTdsRateUpdate :: UpdateTdsRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient AirportPreferenceRes,
+    getDriverAirportPreference :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
     postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes
   }

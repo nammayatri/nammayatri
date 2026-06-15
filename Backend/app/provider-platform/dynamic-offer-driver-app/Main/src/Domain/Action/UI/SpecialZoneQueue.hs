@@ -11,6 +11,7 @@ import qualified API.Types.UI.SpecialZoneQueue
 import Data.List (partition)
 import qualified Data.Text as T
 import Data.Time (addUTCTime)
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -36,6 +37,7 @@ import SharedLogic.SpecialZoneDriverDemand (mkGateSearchDemandKey, mkQueueSkipCo
 import qualified SharedLogic.SpecialZoneDriverDemand as SpecialZoneDriverDemand
 import Storage.Beam.SchedulerJob ()
 import Storage.Beam.SpecialZone ()
+import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.SpecialZoneQueueRequest as QSZQR
 import Tools.Error
 
@@ -177,6 +179,8 @@ postSpecialZoneQueueRequestRespond (mbPersonId, _merchantId, _merchantOpCityId) 
     mbGate <- QGI.findById (Kernel.Types.Id.Id request.gateId)
     case req.response of
       Domain.Types.SpecialZoneQueueRequest.Accept -> do
+        driverInfo <- QDI.findById personId >>= fromMaybeM DriverInfoNotFound
+        unless (driverInfo.enableForAirport == DI.ENABLED) $ throwError DriverNotEnabledForAirport
         let timeoutSec = maybe 1200 (fromMaybe 1200 . (.pickupZoneArrivalTimeoutInSec)) mbGate
             arrivalDeadline = addUTCTime (fromIntegral timeoutSec) now
         QSZQR.updateToAcceptedWithArrivalDeadline requestId arrivalDeadline

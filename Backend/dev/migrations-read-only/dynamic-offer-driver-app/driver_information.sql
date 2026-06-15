@@ -347,3 +347,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN disabled_reason
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN can_switch_to_airport boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN enable_for_airport text ;
