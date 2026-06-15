@@ -1020,7 +1020,6 @@ approveAndUpdateRC req merchantId merchantOpCityId = do
                     DRC.unencryptedCertificateNumber = Just vehicleNumberPlate,
                     DRC.approved = Just True,
                     DRC.vehicleImageId = Nothing,
-                    DRC.enableForAirport = Nothing,
                     DRC.merchantId = Just merchantId,
                     DRC.merchantOperatingCityId = Just merchantOpCityId,
                     DRC.createdAt = now,

@@ -48,6 +48,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Domain.Types.Common as DTC
+import qualified Domain.Types.DriverInformation as DDI
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -831,6 +832,7 @@ notifyDrivers merchantOpCityId merchantId gate specialLocationId vehicleType mbS
 --     of this, but the Active check tightens the race window between two
 --     near-concurrent notify calls).
 -- 'notifyDrivers' trusts this filter and skips its own busy-check.
+
 -- | Process queue drivers in batches of `batchSize`, filtering each batch for
 --   eligibility and gate proximity. Stops early once `needed` drivers are collected.
 filterInBatches ::
@@ -886,7 +888,7 @@ filterEligibleDrivers ::
   Text -> -- specialLocationId
   Text -> -- vehicleType
   Text -> -- gateId
-  Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, vehicle.canSwitchToAirport must be Just True
+  Maybe (Map.Map Text Bool) -> -- gate.enableQueueFilter: when entry is True, the driver's enableForAirport must be ENABLED
   [Id DP.Person] ->
   m ([Id DP.Person], Map.Map (Id DP.Person) Text) -- (eligible drivers, driverId -> variant map)
 filterEligibleDrivers _ _ _ _ _ [] = pure ([], Map.empty)
@@ -928,7 +930,7 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
         Set.fromList
           [ info.driverId
             | info <- driverInfos,
-              not info.canSwitchToAirport
+              info.enableForAirport /= DDI.ENABLED
           ]
   -- Bulk DB: driver vehicles for service-tier and per-vehicle airport-switch filters.
   vehicles <- measuringDurationToLog INFO ("filterEligibleDrivers.findVehicles n=" <> show (length driverIds)) $ QV.findAllByDriverIds driverIds
@@ -944,7 +946,7 @@ filterEligibleDrivers merchantId specialLocationId vehicleType gateId mbFilterAi
                   [ v.driverId
                     | v <- vehicles,
                       tier `elem` v.selectedServiceTiers,
-                      not vehicleAirportFilterEnabled || v.enableForAirport == Just True
+                      not vehicleAirportFilterEnabled
                   ]
            in filter (`Set.member` eligibleSet) driverIds
       eligibleDrivers =

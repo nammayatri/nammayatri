@@ -143,7 +143,6 @@ import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
-import Storage.Queries.Transformers.Booking (getBookingTypeFromTripCategory)
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.CancellationDuesDetails as QCDD
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -164,6 +163,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SubscriptionPurchaseExtra as QSPE
+import Storage.Queries.Transformers.Booking (getBookingTypeFromTripCategory)
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
 import Toll.SharedLogic.TollsDetector
@@ -361,7 +361,7 @@ processEndRideFinance merchant ride booking newFareParams driverId driverInfo th
     createDriverWalletTransaction ride booking newFareParams driverInfo thresholdConfig mbPerson
 
   -- 3. Airport entry fee deduction (two ledger entries: GST then airport portion)
-  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled) $
+  when (fromMaybe False thresholdConfig.airportEntryFeeEnabled && driverInfo.enableForAirport == DI.ENABLED) $
     AirportEntryFee.deductAirportEntryFeeAtEndRide ride booking
   where
     processEndRidePrepaidSubscription fare = do

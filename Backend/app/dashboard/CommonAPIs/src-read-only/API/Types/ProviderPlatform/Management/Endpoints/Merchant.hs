@@ -744,7 +744,6 @@ data VehicleServiceTierConfigCreateReq = VehicleServiceTierConfigCreateReq
     isEnabled :: Kernel.Prelude.Bool,
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
     allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
@@ -784,7 +783,6 @@ data VehicleServiceTierConfigUpdateReq = VehicleServiceTierConfigUpdateReq
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
   deriving stock (Generic)
@@ -822,7 +820,6 @@ data VehicleServiceTierItem = VehicleServiceTierItem
     isEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedAreas :: Kernel.Prelude.Maybe [Lib.Types.SpecialLocation.Area],
     vehicleAgeThreshold :: Kernel.Prelude.Maybe Kernel.Types.Time.Months,
-    isAirportRideEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     specialZone :: Kernel.Prelude.Maybe Dashboard.Common.SpecialZone,
     allowNullVehicleRating :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
   }
