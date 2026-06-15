@@ -415,7 +415,6 @@ data RegisterRCReq = RegisterRCReq
     airConditioned :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     oxygen :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     ventilator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableForAirport :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     vehicleCategory :: Kernel.Prelude.Maybe Dashboard.Common.VehicleCategory,
     vehicleClass :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleDetails :: Kernel.Prelude.Maybe Dashboard.Common.DriverVehicleDetails,

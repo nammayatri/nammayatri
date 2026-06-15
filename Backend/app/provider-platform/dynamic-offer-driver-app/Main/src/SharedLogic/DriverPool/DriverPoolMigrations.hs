@@ -65,7 +65,8 @@ migrations :: [MigrationEntry]
 migrations =
   [ MigrationEntry 1 backfillEffectiveBankAccount,
     MigrationEntry 2 backfillEnabled,
-    MigrationEntry 3 backfillCloudType
+    MigrationEntry 3 backfillCloudType,
+    MigrationEntry 4 backfillEnableForAirport
   ]
 
 -- | The "head" version, derived from the registry. Equals the largest
@@ -130,6 +131,21 @@ backfillCloudType entries = do
   pure $
     map
       (\e -> e {cloudType = join $ HashMap.lookup (cast e.driverId :: Id Person.Person) ctMap})
+      entries
+
+-- | v4: backfill the new 'enableForAirport' field from driver_information.
+-- Without this, legacy entries would default to 'enableForAirport = Nothing'
+-- regardless of the driver's actual airport restriction.
+backfillEnableForAirport ::
+  (BeamFlow m r, MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Migrator m
+backfillEnableForAirport entries = do
+  let driverIdTexts = map (getId . (.driverId)) entries
+  dis <- QDI.findAllByDriverIds driverIdTexts
+  let airportMap = HashMap.fromList $ map (\di -> (cast di.driverId :: Id Person.Person, Just di.enableForAirport)) dis
+  pure $
+    map
+      (\e -> e {enableForAirport = HashMap.lookupDefault e.enableForAirport (cast e.driverId :: Id Person.Person) airportMap})
       entries
 
 -- | Walk the registry in ascending version order (sorted defensively in case

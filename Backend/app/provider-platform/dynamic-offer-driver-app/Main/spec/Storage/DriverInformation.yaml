@@ -33,6 +33,8 @@ DriverInformation:
       enum: "VIA_WEBHOOK, MANUALLY_ADDED, VERIFIED_BY_USER"
     OnboardingAs:
       enum: "FLEET_DRIVER, INDIVIDUAL"
+    AirportRestrictionType:
+      enum: ENABLED, DISABLED, BLOCKED
     DriverSummary:
       totalEarnings: Money
       bonusEarned: Money
@@ -91,7 +93,7 @@ DriverInformation:
     canSwitchToRental: Bool
     canSwitchToInterCity: Bool
     canSwitchToIntraCity: Bool
-    canSwitchToAirport: Bool
+    enableForAirport: AirportRestrictionType
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
@@ -179,7 +181,6 @@ DriverInformation:
     canSwitchToRental: "false"
     canSwitchToInterCity: "false"
     canSwitchToIntraCity: "true"
-    canSwitchToAirport: "true"
     aadhaarVerified: "false"
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
@@ -211,7 +212,7 @@ DriverInformation:
     canSwitchToRental: Maybe Bool
     canSwitchToInterCity: Maybe Bool
     canSwitchToIntraCity: Maybe Bool
-    canSwitchToAirport: Maybe Bool
+    enableForAirport: Maybe AirportRestrictionType
     isPetModeEnabled: Maybe Bool
     acUsageRestrictionType: Maybe AirConditionedRestrictionType
     hasAdvanceBooking: Maybe Bool
@@ -237,7 +238,7 @@ DriverInformation:
     canSwitchToRental: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToInterCity: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     canSwitchToIntraCity: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
-    canSwitchToAirport: Kernel.Prelude.fromMaybe Kernel.Prelude.True|I
+    enableForAirport: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.ENABLED|I
     isSpecialLocWarrior: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     isPetModeEnabled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
     acUsageRestrictionType: Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction|I
@@ -262,7 +263,7 @@ DriverInformation:
     canSwitchToRental: Kernel.Prelude.Just|I
     canSwitchToInterCity: Kernel.Prelude.Just|I
     canSwitchToIntraCity: Kernel.Prelude.Just|I
-    canSwitchToAirport: Kernel.Prelude.Just|I
+    enableForAirport: Kernel.Prelude.Just|I
     isPetModeEnabled: Kernel.Prelude.Just|I
     isSpecialLocWarrior: Kernel.Prelude.Just|I
     acUsageRestrictionType: Kernel.Prelude.Just|I

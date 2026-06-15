@@ -25,7 +25,6 @@ import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.VehicleServiceTier (fetchVehicleTierForDriverWithUsageRestriction)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FeedbackBadgeExtra as QFeedbackBadge
 import qualified Storage.Queries.Person as QPerson
@@ -145,7 +144,6 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
       vehicleAgeInMonths = mbVehicle >>= (.mYManufacturing) >>= \mfgDate -> Just $ fromIntegral (diffDays today mfgDate) `div` 30
   phoneNo <- mapM decrypt person.mobileNumber
   let driverName = person.firstName <> maybe "" (" " <>) person.lastName
-  driverInfo <- B.runInReplica $ QDI.findById (cast person.id) >>= fromMaybeM DriverInfoNotFound
   pure
     Common.DriverVehicleQualityResp
       { driverId = cast person.id,
@@ -166,6 +164,5 @@ buildQualityResp today vehicles driverStatsList feedbackBadgesList person = do
         vehicleName = mbVehicle >>= (.vehicleName),
         vehicleCapacity = mbVehicle >>= (.capacity),
         vehicleRating = mbVehicle >>= (.vehicleRating),
-        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark),
-        canSwitchToAirport = Just driverInfo.canSwitchToAirport
+        vehicleRatingRemark = mbVehicle >>= (.vehicleRatingRemark)
       }

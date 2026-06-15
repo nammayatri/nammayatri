@@ -303,7 +303,6 @@ VehicleRegistrationCertificate:
     airConditioned: Maybe Bool
     oxygen: Maybe Bool
     ventilator: Maybe Bool
-    enableForAirport: Maybe Bool
     luggageCapacity: Maybe Int
     mYManufacturing: Maybe Day
     vehicleRating: Maybe Double
@@ -569,7 +568,6 @@ DocumentVerificationConfig:
       reviewRequired: Maybe Bool
       bodyType: Maybe Text
       priority: Maybe Int
-      enableForAirport: Maybe Bool
       derive: "Eq, Ord, Read"
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"

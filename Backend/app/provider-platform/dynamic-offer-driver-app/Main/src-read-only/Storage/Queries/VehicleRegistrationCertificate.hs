@@ -132,7 +132,6 @@ updateByPrimaryKey (Domain.Types.VehicleRegistrationCertificate.VehicleRegistrat
       Se.Set Beam.dateOfRegistration dateOfRegistration,
       Se.Set Beam.docsVerificationStatus docsVerificationStatus,
       Se.Set Beam.documentImageId (Kernel.Types.Id.getId documentImageId),
-      Se.Set Beam.enableForAirport enableForAirport,
       Se.Set Beam.failedRules failedRules,
       Se.Set Beam.fitnessExpiry fitnessExpiry,
       Se.Set Beam.fleetOwnerId fleetOwnerId,

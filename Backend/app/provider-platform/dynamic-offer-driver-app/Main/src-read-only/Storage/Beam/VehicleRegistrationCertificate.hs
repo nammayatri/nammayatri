@@ -24,7 +24,6 @@ data VehicleRegistrationCertificateT f = VehicleRegistrationCertificateT
     dateOfRegistration :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     docsVerificationStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleRegistrationCertificate.DocsVerificationStatus),
     documentImageId :: B.C f Kernel.Prelude.Text,
-    enableForAirport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     failedRules :: B.C f [Kernel.Prelude.Text],
     fitnessExpiry :: B.C f Kernel.Prelude.UTCTime,
     fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

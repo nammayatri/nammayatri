@@ -598,10 +598,10 @@ apis:
         type: APISuccess
 
   - GET: # GetAirportPreferenceAPI
-      endpoint: /{driverId}/airportPreference
+      endpoint: /airportPreference
       auth: ApiAuthV2
-      params:
-        driverId: Id Driver
+      mandatoryQuery:
+        phoneNumber: Text
       response:
         type: AirportPreferenceRes
 
@@ -858,10 +858,14 @@ types:
     - newMerchantId: Id Merchant
     - newMerchantOperatingCityId: Id MerchantOperatingCity
     - derive: "'HideSecrets"
+  AirportRestrictionType:
+    - enum: "ENABLED, DISABLED, BLOCKED"
   AirportPreferenceRes:
-    - canSwitchToAirport: Maybe Bool
+    - driverId: Id Driver
+    - driverName: Text
+    - enableForAirport: AirportRestrictionType
   AirportPreferenceReq:
-    - canSwitchToAirport: Bool
+    - enableForAirport: AirportRestrictionType
     - derive: "'HideSecrets"
   SearchRequestForDriverResponse:
     - enum: "Accept, Reject, Pulled"
