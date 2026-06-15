@@ -101,6 +101,12 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   // (http://localhost:8013/dashboard), NOT the separate rider-dashboard service on :8017.
   // Routing it through the rider proxy preserves the /dashboard prefix extracted from the env URL.
   'baseUrl_dashboard': { service: 'rider' },
+  // baseURL_BPP_Driver_Direct / baseUrl_driver both hit the driver-app directly.
+  // Without these entries the URL is treated as 'internal' and the full http://
+  // value gets concatenated onto PROXY_BASE, producing an invalid URL and a
+  // "Failed to construct 'URL'" error at runtime.
+  'baseURL_BPP_Driver_Direct': { service: 'driver' },
+  'baseUrl_driver': { service: 'driver' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
 };
