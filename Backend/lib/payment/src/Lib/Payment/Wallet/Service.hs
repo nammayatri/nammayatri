@@ -91,6 +91,7 @@ getOrCreateWalletForPerson personId programType programId currency merchantId mb
                 counterpartyType = Just programType,
                 counterpartyId = Just personId,
                 subLedger = Nothing,
+                description = Nothing,
                 currency = currency,
                 merchantId = merchantId,
                 merchantOperatingCityId = fromMaybe "" mbMerchantOperatingCityId

@@ -27,13 +27,13 @@ createMany = traverse_ create
 findById :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Finance.Domain.Types.Invoice.Invoice -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByIssuedTo :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Invoice.Invoice]))
+findByIssuedTo :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Domain.Types.Invoice.IssuedToType -> Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.Invoice.Invoice])
 findByIssuedTo issuedToType issuedToId = do findAllWithKV [Se.And [Se.Is Beam.issuedToType $ Se.Eq issuedToType, Se.Is Beam.issuedToId $ Se.Eq issuedToId]]
 
 findByNumber :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Finance.Domain.Types.Invoice.Invoice))
 findByNumber invoiceNumber = do findOneWithKV [Se.Is Beam.invoiceNumber $ Se.Eq invoiceNumber]
 
-findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Lib.Finance.Domain.Types.Invoice.Invoice]))
+findByReferenceId :: (Lib.Finance.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Lib.Finance.Domain.Types.Invoice.Invoice])
 findByReferenceId referenceId = do findAllWithKV [Se.Is Beam.referenceId $ Se.Eq referenceId]
 
 updateIrnAndSignedQRByInvoiceId ::

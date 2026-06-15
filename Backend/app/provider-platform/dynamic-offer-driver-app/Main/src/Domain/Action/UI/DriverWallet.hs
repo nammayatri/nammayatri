@@ -39,7 +39,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Time
 import qualified Data.Time.Calendar as Cal
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import Domain.Types.Extra.Plan
 import "beckn-spec" Domain.Types.Invoice (InvoiceType (..), IssuedToType (..))
 import qualified Domain.Types.Merchant

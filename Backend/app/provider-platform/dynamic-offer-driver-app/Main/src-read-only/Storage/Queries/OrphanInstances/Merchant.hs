@@ -72,7 +72,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.cipherText = cipherText,
         Beam.city = city,
         Beam.cloudBaseUrl = Kernel.Prelude.fmap showBaseUrl cloudBaseUrl,
-        Beam.cloudType = (Kernel.Prelude.fmap Kernel.Prelude.show) cloudType,
+        Beam.cloudType = Kernel.Prelude.fmap Kernel.Prelude.show cloudType,
         Beam.country = country,
         Beam.createdAt = createdAt,
         Beam.description = description,

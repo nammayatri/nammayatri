@@ -57,6 +57,7 @@ imports:
   Base64: Kernel.Types.Base64
   Map: Data.Map.Strict
   OnboardingAs: Domain.Types.DriverInformation
+  ActionType: Domain.Types.AdminRequest
 
 Merchant:
   derives: Generic,Show,'UsageSafety
@@ -1327,6 +1328,7 @@ TransporterConfig:
     stclConfig: Maybe StclConfig # STCL membership tunables. Any field left as Nothing falls back to defaults in Domain.Action.UI.StclMembership.
     useCategoryBasedVerificationPriorityList: Maybe Bool
 
+    enableAdminMakerChecker: Maybe [ActionType]
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1689,6 +1691,7 @@ TransporterConfig:
     allowedPaymentInstrumentForPayout: "text[]"
     stclConfig: json
     defaultOnboardingAs: character varying(255)
+    enableAdminMakerChecker: "text[]"
 
   default:
     mediaFileUrlPattern: |-

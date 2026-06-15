@@ -28,4 +28,4 @@ data AuditEntry = AuditEntry
 
 data AuditAction = Created | Updated | Reversed | StatusChanged deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AuditAction))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AuditAction)

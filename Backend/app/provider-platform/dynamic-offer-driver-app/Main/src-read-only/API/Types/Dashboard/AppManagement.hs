@@ -3,6 +3,7 @@
 
 module API.Types.Dashboard.AppManagement where
 
+import qualified API.Types.Dashboard.AppManagement.AdminRequest
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified API.Types.Dashboard.AppManagement.DriverWallet
@@ -18,7 +19,8 @@ import qualified Text.Read
 import qualified Text.Show
 
 data AppManagementUserActionType
-  = DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
+  = ADMIN_REQUEST API.Types.Dashboard.AppManagement.AdminRequest.AdminRequestUserActionType
+  | DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
   | DRIVER_SUBSCRIPTION API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionUserActionType
   | DRIVER_WALLET API.Types.Dashboard.AppManagement.DriverWallet.DriverWalletUserActionType
   | OVERLAY API.Types.Dashboard.AppManagement.Overlay.OverlayUserActionType
@@ -30,6 +32,7 @@ data AppManagementUserActionType
 
 instance Text.Show.Show AppManagementUserActionType where
   show = \case
+    ADMIN_REQUEST e -> "ADMIN_REQUEST/" <> show e
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_SUBSCRIPTION e -> "DRIVER_SUBSCRIPTION/" <> show e
     DRIVER_WALLET e -> "DRIVER_WALLET/" <> show e
@@ -43,12 +46,21 @@ instance Text.Read.Read AppManagementUserActionType where
     Text.Read.readParen
       (d' > app_prec)
       ( \r ->
-          [(DRIVER v1, r2) | r1 <- stripPrefix "DRIVER/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+          [(ADMIN_REQUEST v1, r2) | r1 <- stripPrefix "ADMIN_REQUEST/" r, (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1]
+            ++ [ ( DRIVER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "DRIVER/" r,
+                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+               ]
             ++ [ ( DRIVER_SUBSCRIPTION v1,
                    r2
                  )
                  | r1 <- stripPrefix "DRIVER_SUBSCRIPTION/" r,
-                   (v1, r2) <- Text.Read.readsPrec (app_prec + 1) r1
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
                ]
             ++ [ ( DRIVER_WALLET v1,
                    r2
