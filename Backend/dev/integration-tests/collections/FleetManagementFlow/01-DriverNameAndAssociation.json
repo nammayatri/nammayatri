@@ -1,0 +1,498 @@
+{
+  "info": {
+    "name": "Fleet Driver Name & Association",
+    "description": "End-to-end test: registers driver + fleet owner, creates fleet association via joining OTP, then tests updateName set/clear/restore and verifies driverAssociation response includes firstName, middleName, lastName fields",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-skip mock-server requests when envType is not Local.",
+          "(function () {",
+          "  var envType = pm.environment.get('envType') || 'Local';",
+          "  if (envType === 'Local') return;",
+          "  var raw = (pm.request && pm.request.url && pm.request.url.toString()) || '';",
+          "  if (raw.indexOf('mockServerUrl') !== -1 || raw.indexOf('mock_fcm_url') !== -1) {",
+          "    console.log('[skip] mock-only request on envType=' + envType + ': ' + (pm.info && pm.info.requestName));",
+          "    if (pm.execution && typeof pm.execution.skipRequest === 'function') {",
+          "      pm.execution.skipRequest();",
+          "    }",
+          "  }",
+          "})();",
+          "",
+          "// Generate random values ONCE per collection run",
+          "if (!pm.collectionVariables.get('_test_driver_number')) {",
+          "    var dNum = '9' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    var fleetNum = '8' + Math.floor(100000000 + Math.random() * 899999999);",
+          "    pm.collectionVariables.set('_test_driver_number', dNum);",
+          "    pm.collectionVariables.set('_test_fleet_owner_number', fleetNum);",
+          "    console.log('Test driver:', dNum, 'fleet owner:', fleetNum);",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 - Driver Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_authId', d.authId);",
+              "pm.test('Driver auth returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"mobileNumber\": \"{{_test_driver_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{driver_merchant_id}}\",\n    \"merchantOperatingCity\": \"{{city}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth"]
+        }
+      }
+    },
+    {
+      "name": "02 - Driver OTP Verify",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('driver_token', d.token);",
+              "pm.environment.set('driver_id', d.person.id);",
+              "console.log('Driver ID:', d.person.id);",
+              "pm.test('Driver OTP verify returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"otp\": \"{{login_otp}}\",\n    \"deviceToken\": \"test-device\"\n}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{driver_authId}}/verify",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["auth", "{{driver_authId}}", "verify"]
+        }
+      }
+    },
+    {
+      "name": "03 - Switch City (Dashboard)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var d = pm.response.json();",
+              "pm.environment.set('dashboard_token', d.authToken);",
+              "console.log('Switched to', d.merchantId, d.city);",
+              "pm.test('Switch city returns 200', function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"merchantId\": \"{{dashboard_merchant_id}}\", \"city\": \"{{city}}\"}"
+        },
+        "url": {
+          "raw": "{{dashboard_base_url}}/user/switchMerchantAndCity",
+          "host": ["{{dashboard_base_url}}"],
+          "path": ["user", "switchMerchantAndCity"]
+        }
+      }
+    },
+    {
+      "name": "04 - Fleet Owner Login OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fleet owner login OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "console.log('Fleet V2 login response:', JSON.stringify(d));",
+              "var fid = d.personId || d.getId || d.id || (typeof d === 'string' ? d : null);",
+              "pm.environment.set('fleet_owner_id', fid);",
+              "console.log('Fleet Owner ID:', fid);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "login", "otp"]
+        }
+      }
+    },
+    {
+      "name": "05 - Fleet Owner Verify OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "console.log('Fleet owner verify OTP response:', JSON.stringify(d));",
+              "pm.environment.set('fleet_owner_dashboard_token', d.authToken);",
+              "pm.test('authToken is set', function () { pm.expect(d.authToken).to.be.a('string'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\", \"otp\": \"{{login_otp}}\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{dashboard_merchant_id}}", "{{dashboard_city}}", "fleet", "v2", "verify", "otp"]
+        }
+      }
+    },
+    {
+      "name": "06 - Send Fleet Joining OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Send joining OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "console.log('Send joining OTP response:', JSON.stringify(d));",
+              "pm.test('Response has authId', function () { pm.expect(d).to.have.property('authId'); });",
+              "pm.environment.set('fleet_joining_auth_id', d.authId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_driver_number}}\", \"mobileCountryCode\": \"+91\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/sendJoiningOtp",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "sendJoiningOtp"]
+        }
+      }
+    },
+    {
+      "name": "07 - Verify Fleet Joining OTP",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Verify joining OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "console.log('Fleet driver association created successfully');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{fleet_owner_dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileCountryCode\": \"+91\", \"mobileNumber\": \"{{_test_driver_number}}\", \"otp\": \"{{login_otp}}\", \"deviceToken\": \"test-device-token\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/verifyJoiningOtp",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["bpp", "driver-offer", "{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "verifyJoiningOtp"]
+        }
+      }
+    },
+    {
+      "name": "08 - Update Name (Set All Fields)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Update name returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Update name succeeds', function () { pm.expect(d.result).to.eql('Success'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\": \"TestFirst\", \"middleName\": \"TestMiddle\", \"lastName\": \"TestLast\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/updateName",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "updateName"]
+        }
+      }
+    },
+    {
+      "name": "09 - Get Driver Association (Verify Name Fields Set)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Response has listItem', function () { pm.expect(d).to.have.property('listItem'); });",
+              "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
+              "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
+              "if (driver) {",
+              "  pm.test('driverName is TestFirst', function () { pm.expect(driver.driverName).to.eql('TestFirst'); });",
+              "  pm.test('firstName is TestFirst', function () { pm.expect(driver.firstName).to.eql('TestFirst'); });",
+              "  pm.test('middleName is TestMiddle', function () { pm.expect(driver.middleName).to.eql('TestMiddle'); });",
+              "  pm.test('lastName is TestLast', function () { pm.expect(driver.lastName).to.eql('TestLast'); });",
+              "  pm.test('conductorName is TestLast', function () { pm.expect(driver.conductorName).to.eql('TestLast'); });",
+              "  pm.test('firstName field exists as separate field', function () { pm.expect(driver).to.have.property('firstName'); });",
+              "  pm.test('middleName field exists as separate field', function () { pm.expect(driver).to.have.property('middleName'); });",
+              "  pm.test('lastName field exists as separate field', function () { pm.expect(driver).to.have.property('lastName'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{fleet_owner_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driverAssociation?Limit=10&Offset=0&fleetOwnerId={{fleet_owner_id}}&mbRequestorId={{fleet_owner_id}}&hasFleetMemberHierarchy=false&isRequestorFleerOwner=true",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driverAssociation"],
+          "query": [
+            { "key": "Limit", "value": "10" },
+            { "key": "Offset", "value": "0" },
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" },
+            { "key": "mbRequestorId", "value": "{{fleet_owner_id}}" },
+            { "key": "hasFleetMemberHierarchy", "value": "false" },
+            { "key": "isRequestorFleerOwner", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Update Name (Null preserves existing middleName and lastName)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Update name returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Update name succeeds', function () { pm.expect(d.result).to.eql('Success'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\": \"OnlyFirst\", \"middleName\": null, \"lastName\": null}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/updateName",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "updateName"]
+        }
+      }
+    },
+    {
+      "name": "11 - Get Driver Association (Verify Null Preserves Fields)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
+              "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
+              "if (driver) {",
+              "  pm.test('driverName is OnlyFirst', function () { pm.expect(driver.driverName).to.eql('OnlyFirst'); });",
+              "  pm.test('firstName is OnlyFirst', function () { pm.expect(driver.firstName).to.eql('OnlyFirst'); });",
+              "  pm.test('middleName preserved as TestMiddle', function () { pm.expect(driver.middleName).to.eql('TestMiddle'); });",
+              "  pm.test('lastName preserved as TestLast', function () { pm.expect(driver.lastName).to.eql('TestLast'); });",
+              "  pm.test('conductorName preserved as TestLast', function () { pm.expect(driver.conductorName).to.eql('TestLast'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{fleet_owner_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driverAssociation?Limit=10&Offset=0&fleetOwnerId={{fleet_owner_id}}&mbRequestorId={{fleet_owner_id}}&hasFleetMemberHierarchy=false&isRequestorFleerOwner=true",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driverAssociation"],
+          "query": [
+            { "key": "Limit", "value": "10" },
+            { "key": "Offset", "value": "0" },
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" },
+            { "key": "mbRequestorId", "value": "{{fleet_owner_id}}" },
+            { "key": "hasFleetMemberHierarchy", "value": "false" },
+            { "key": "isRequestorFleerOwner", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12 - Update Name (Clear middleName via empty string, update lastName)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Update name returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "pm.test('Update name succeeds', function () { pm.expect(d.result).to.eql('Success'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"firstName\": \"Restored\", \"middleName\": \"\", \"lastName\": \"NewLast\"}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/{{driver_id}}/updateName",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "{{driver_id}}", "updateName"]
+        }
+      }
+    },
+    {
+      "name": "13 - Get Driver Association (Verify middleName Cleared, lastName Updated)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('driverAssociation returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "var driver = d.listItem.find(function(item) { return item.driverId === pm.environment.get('driver_id'); });",
+              "pm.test('Driver found in association list', function () { pm.expect(driver).to.not.be.undefined; });",
+              "if (driver) {",
+              "  pm.test('driverName is Restored', function () { pm.expect(driver.driverName).to.eql('Restored'); });",
+              "  pm.test('firstName is Restored', function () { pm.expect(driver.firstName).to.eql('Restored'); });",
+              "  pm.test('middleName is null after clearing via empty string', function () { pm.expect(driver.middleName).to.be.null; });",
+              "  pm.test('lastName is NewLast', function () { pm.expect(driver.lastName).to.eql('NewLast'); });",
+              "  pm.test('conductorName is NewLast', function () { pm.expect(driver.conductorName).to.eql('NewLast'); });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "token", "value": "{{fleet_owner_dashboard_token}}" }
+        ],
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/driver/fleet/driverAssociation?Limit=10&Offset=0&fleetOwnerId={{fleet_owner_id}}&mbRequestorId={{fleet_owner_id}}&hasFleetMemberHierarchy=false&isRequestorFleerOwner=true",
+          "host": ["{{baseURL_BPP_Dashboard}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "driver", "fleet", "driverAssociation"],
+          "query": [
+            { "key": "Limit", "value": "10" },
+            { "key": "Offset", "value": "0" },
+            { "key": "fleetOwnerId", "value": "{{fleet_owner_id}}" },
+            { "key": "mbRequestorId", "value": "{{fleet_owner_id}}" },
+            { "key": "hasFleetMemberHierarchy", "value": "false" },
+            { "key": "isRequestorFleerOwner", "value": "true" }
+          ]
+        }
+      }
+    }
+  ]
+}

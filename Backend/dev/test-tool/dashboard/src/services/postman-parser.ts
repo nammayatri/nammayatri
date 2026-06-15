@@ -16,6 +16,12 @@ export interface PostmanCollection {
 
 export interface PostmanItem {
   name: string;
+  /**
+   * Optional custom grouping label. Not part of the Postman spec — real
+   * Postman/Newman ignore unknown fields, so this is harmless to them. When set,
+   * the dashboard groups consecutive steps sharing the same value into one box.
+   */
+  _group?: string;
   event?: PostmanEvent[];
   request: {
     method: string;
@@ -50,7 +56,7 @@ export interface ParsedStep {
   index: number;
   name: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'internal';
+  service: 'rider' | 'driver' | 'lts' | 'provider-dashboard' | 'rider-dashboard' | 'mock-idfy' | 'mock-server' | 'juspay-payment' | 'internal';
   /** URL path with {{var}} placeholders, relative to proxy prefix */
   pathTemplate: string;
   /** Raw URL template before service resolution */
@@ -62,6 +68,8 @@ export interface ParsedStep {
   prereqScript: string | null;
   /** Tag for grouping: driver, rider, or system */
   tag: 'driver' | 'rider' | 'system';
+  /** Explicit group label from the item's `_group` field, or null */
+  group: string | null;
   /** Detected wait/delay in ms from prerequest script */
   delayMs: number;
 }
@@ -71,6 +79,12 @@ export interface ParsedTreeNode {
   title: string;
   tag: 'driver' | 'rider' | 'system';
   stepIds: string[];
+  /**
+   * True when this node was formed by an explicit `_group` field (e.g. "Setup Driver A").
+   * Such a group can mix actors, so the UI shows a per-step actor tag instead of a
+   * single (potentially misleading) tag on the group header.
+   */
+  prefixGroup?: boolean;
 }
 
 // ── Base URL → Service mapping ──
@@ -83,7 +97,15 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseURL_BPP_Dashboard_Internal': { service: 'provider-dashboard' },
   'dashboard_base_url': { service: 'provider-dashboard' },
   'bap_dashboard_url': { service: 'rider-dashboard' },
+  // baseUrl_dashboard points at the rider-app itself with a /dashboard path prefix
+  // (http://localhost:8013/dashboard), NOT the separate rider-dashboard service on :8017.
+  // Routing it through the rider proxy preserves the /dashboard prefix extracted from the env URL.
+  'baseUrl_dashboard': { service: 'rider' },
+  // baseUrl_driver hits the driver-app directly (e.g. http://localhost:8016).
+  // Collections that need /dashboard paths include it explicitly in the URL template.
+  'baseUrl_driver': { service: 'driver' },
   'mockServerUrl': { service: 'mock-server' },
+  'mock_server_url': { service: 'juspay-payment' },
 };
 
 // ── Parser ──
@@ -161,6 +183,9 @@ function parseItem(item: PostmanItem, index: number, envVars: Record<string, str
   // Tag based on name
   const tag = inferTag(item.name);
 
+  // Explicit grouping label (custom `_group` field), if present
+  const group = item._group?.trim() || null;
+
   const id = `postman-${String(index).padStart(2, '0')}-${sanitize(item.name)}`;
 
   return {
@@ -177,6 +202,7 @@ function parseItem(item: PostmanItem, index: number, envVars: Record<string, str
     testScript,
     prereqScript,
     tag,
+    group,
     delayMs,
   };
 }
@@ -218,10 +244,12 @@ function resolveService(
 
 function extractScript(events: PostmanEvent[] | undefined, listen: 'test' | 'prerequest'): string | null {
   if (!events) return null;
-  const ev = events.find(e => e.listen === listen);
-  if (!ev?.script?.exec) return null;
-  const script = ev.script.exec.join('\n').trim();
-  return script || null;
+  const parts = events
+    .filter(e => e.listen === listen && e.script?.exec)
+    .map(e => e.script!.exec!.join('\n').trim())
+    .filter(s => s.length > 0);
+  if (parts.length === 0) return null;
+  return parts.join('\n');
 }
 
 function detectDelay(script: string | null): number {
@@ -248,29 +276,41 @@ function sanitize(name: string): string {
 
 // ── Auto-grouping into TreeNodes ──
 
+// A step may declare an explicit group via the custom `_group` field on its Postman
+// item (carried through to ParsedStep.group). When set, consecutive steps sharing the
+// same group value form one box titled by that group — regardless of actor tag — so
+// e.g. all "Setup Driver A" steps stay together even though they mix driver/system
+// calls. Steps without `_group` fall back to grouping by actor tag (unchanged
+// behaviour), so collections that don't use the field are completely unaffected.
 function autoGroup(steps: ParsedStep[]): ParsedTreeNode[] {
   const nodes: ParsedTreeNode[] = [];
   let currentNode: ParsedTreeNode | null = null;
+  let currentKey: string | null = null; // 'grp:<label>' or 'tag:<tag>'
 
   for (const step of steps) {
-    // Start new group when tag changes or it's the first step
-    if (!currentNode || currentNode.tag !== step.tag) {
+    const key = step.group ? `grp:${step.group}` : `tag:${step.tag}`;
+    // Start a new group when the grouping key changes (explicit group label or,
+    // lacking one, the actor tag) or it's the first step.
+    if (!currentNode || currentKey !== key) {
       currentNode = {
         id: `node-${nodes.length}`,
-        title: inferNodeTitle(step, nodes.length),
+        title: step.group ?? inferNodeTitle(step, nodes.length),
         tag: step.tag,
         stepIds: [],
+        prefixGroup: step.group !== null,
       };
       nodes.push(currentNode);
+      currentKey = key;
     }
     currentNode.stepIds.push(step.id);
   }
 
-  // Refine node titles based on contained steps
+  // Refine titles of single-step tag-grouped nodes to the step name.
+  // Explicitly-grouped nodes keep their group title even when they hold one step.
   for (const node of nodes) {
     if (node.stepIds.length === 1) {
       const step = steps.find(s => s.id === node.stepIds[0]);
-      if (step) node.title = step.name;
+      if (step && step.group === null) node.title = step.name;
     }
   }
 
