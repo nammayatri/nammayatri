@@ -95,7 +95,7 @@ data EntityType
   | VEHICLE
   | FLEET_OWNER
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FilteredOperatorAnalyticsRes = FilteredOperatorAnalyticsRes
   { activeDriver :: Kernel.Prelude.Int,
@@ -201,12 +201,12 @@ data ReviewRequestStatus
   | RR_COMPLETED
   | RR_REJECTED
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ReviewRequestType
   = BOT_REVIEW
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SubmitReviewRequest = SubmitReviewRequest {entityType :: EntityType, entityId :: Kernel.Prelude.Text, rejectDocumentUpdateReq :: [DocumentDetail]}
   deriving stock (Generic)
@@ -495,14 +495,8 @@ data DriverUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum ''EntityType)
-
 $(mkHttpInstancesForEnum ''RequestStatus)
 
 $(mkHttpInstancesForEnum ''RequestType)
-
-$(mkHttpInstancesForEnum ''ReviewRequestStatus)
-
-$(mkHttpInstancesForEnum ''ReviewRequestType)
 
 $(Data.Singletons.TH.genSingletons [''DriverUserActionType])

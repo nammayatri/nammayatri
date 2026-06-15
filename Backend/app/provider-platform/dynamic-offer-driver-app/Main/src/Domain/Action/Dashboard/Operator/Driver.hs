@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Domain.Action.Dashboard.Operator.Driver
   ( getDriverOperatorFetchHubRequests,
     postDriverOperatorRespondHubRequest,
@@ -21,6 +23,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
+import Dashboard.ProviderPlatform.Operator.Driver ()
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
