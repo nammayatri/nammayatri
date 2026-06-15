@@ -203,7 +203,8 @@ data GoogleCfgUpdateReq = GoogleCfgUpdateReq
     googleRouteConfig :: Maps.GoogleRouteConfig,
     googlePlaceNewUrl :: BaseUrl,
     useNewPlaces :: Bool,
-    googleAutocompleteParams :: Maybe [Text]
+    googleAutocompleteParams :: Maybe [Text],
+    mobilityBillingUrl :: Maybe BaseUrl
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -443,7 +444,7 @@ buildVerificationServiceConfig = \case
     accountId' <- encrypt accountId
     apiKey' <- encrypt apiKey
     secret' <- encrypt secret
-    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', ..}
+    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', faceCompareRetryLimit = Nothing, ..}
 
 instance ToJSON VerificationServiceConfigUpdateReq where
   toJSON = genericToJSON (updateVerificationReqOptions updateVerificationReqConstructorModifier)
