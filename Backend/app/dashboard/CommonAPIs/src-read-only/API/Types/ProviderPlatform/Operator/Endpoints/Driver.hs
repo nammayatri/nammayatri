@@ -407,6 +407,9 @@ type GetDriverReviewQueueRequest =
       :> QueryParam
            "mbRcId"
            Kernel.Prelude.Text
+      :> QueryParam
+           "approved"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            ReviewQueueResp
@@ -466,7 +469,7 @@ data DriverAPIs = DriverAPIs
     postDriverOperatorVerifyJoiningOtp :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> VerifyOperatorJoiningOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverOperatorDashboardAnalyticsAllTime :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AllTimeOperatorAnalyticsRes,
     getDriverOperatorDashboardAnalytics :: Kernel.Prelude.Text -> Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> EulerHS.Types.EulerClient FilteredOperatorAnalyticsRes,
-    getDriverReviewQueueRequest :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewQueueResp,
+    getDriverReviewQueueRequest :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient ReviewQueueResp,
     postDriverSubmitReviewRequest :: Kernel.Prelude.Text -> SubmitReviewRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverRequestReviewHistory :: EntityType -> ReviewRequestType -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe ReviewRequestStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReviewRequestHistoryList
   }
