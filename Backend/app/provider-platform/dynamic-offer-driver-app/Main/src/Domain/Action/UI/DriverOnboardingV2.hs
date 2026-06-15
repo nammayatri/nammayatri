@@ -464,15 +464,6 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
           )
           False
           driverVehicleServiceTierTypes
-      canSwitchToAirport' =
-        foldl
-          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-              if isUsageRestricted
-                then canSwitchToAirportForAnyServiceTierSoFar
-                else canSwitchToAirportForAnyServiceTierSoFar || fromMaybe True selectedServiceTier.isAirportRideEnabled
-          )
-          False
-          driverVehicleServiceTierTypes
       canSwitchToIntraCity' = any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
 
   return $
@@ -481,7 +472,7 @@ getDriverVehicleServiceTiers (mbPersonId, _, merchantOpCityId) = do
         canSwitchToRental = if canSwitchToRental' then Just driverInfo.canSwitchToRental else Nothing,
         canSwitchToInterCity = if canSwitchToInterCity' then Just driverInfo.canSwitchToInterCity else Nothing,
         canSwitchToIntraCity = if canSwitchToIntraCity' then Just driverInfo.canSwitchToIntraCity else Nothing,
-        canSwitchToAirport = if canSwitchToAirport' && fromMaybe True vehicle.enableForAirport then Just driverInfo.canSwitchToAirport else Nothing,
+        enableForAirport = driverInfo.enableForAirport,
         airConditioned = mbAirConditioned
       }
 
@@ -535,15 +526,6 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           )
           False
           driverVehicleServiceTierTypes
-      canSwitchToAirport' =
-        foldl
-          ( \canSwitchToAirportForAnyServiceTierSoFar (selectedServiceTier, isUsageRestricted) ->
-              if isUsageRestricted
-                then canSwitchToAirportForAnyServiceTierSoFar
-                else canSwitchToAirportForAnyServiceTierSoFar || (fromMaybe driverInfo.canSwitchToAirport canSwitchToAirport && fromMaybe True selectedServiceTier.isAirportRideEnabled)
-          )
-          False
-          driverVehicleServiceTierTypes
 
       canSwitchToIntraCity' =
         if any (\(st, _) -> st.vehicleCategory == Just DVC.CAR) driverVehicleServiceTierTypes && (canSwitchToInterCity' || canSwitchToRental')
@@ -551,7 +533,7 @@ postDriverUpdateServiceTiers (mbPersonId, _, merchantOperatingCityId) API.Types.
           else True
 
   QDI.updateRentalInterCityAndIntraCitySwitch canSwitchToRental' canSwitchToInterCity' canSwitchToIntraCity' personId
-  QDI.updateAirportSwitch canSwitchToAirport' personId
+  QDI.updateAirportSwitch enableForAirport personId
 
   return Success
 

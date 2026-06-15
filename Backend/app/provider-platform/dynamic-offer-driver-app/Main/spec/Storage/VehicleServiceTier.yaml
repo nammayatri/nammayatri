@@ -25,7 +25,6 @@ VehicleServiceTier:
     isAirConditioned: Maybe Bool
     isIntercityEnabled: Maybe Bool
     isRentalsEnabled: Maybe Bool
-    isAirportRideEnabled: Maybe Bool
     oxygen: Maybe Double
     ventilator: Maybe Int
     luggageCapacity: Maybe Int

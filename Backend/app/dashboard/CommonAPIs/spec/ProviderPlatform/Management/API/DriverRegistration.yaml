@@ -418,7 +418,6 @@ types:
     - airConditioned: Maybe Bool
     - oxygen: Maybe Bool
     - ventilator: Maybe Bool
-    - enableForAirport: Maybe Bool
     - vehicleCategory: Maybe VehicleCategory
     - vehicleClass: Maybe Text
     - vehicleDetails: Maybe DriverVehicleDetails

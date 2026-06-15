@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "NY Vehicle Service Tier Flow",
-    "description": "End-to-end tests for vehicle service tier management and all usageRestriction\nchecks in selectVehicleTierForDriverWithUsageRestriction.\n\nDrivers onboarded:\n  A   — fresh SEDAN, no special restrictions (baseline + main test driver)\n  B   — SEDAN with mYManufacturing=2005-01-01 (~20 years, tests mfcCheck)\n  C   — SEDAN with airConditioned=false (tests airConditionedCheck at onboarding)\n  AUTO— AUTO_RICKSHAW (tests variant-based filterVehicleTier)\n\nTest phases:\n  2. Structure & canSwitchToAirport field validation (new field)\n  3. Ineligibility: AUTO driver has no CAB tiers (filterVehicleTier)\n  4a. mfcCheck: old vehicle (2005) restricts vehicleAgeThreshold-gated tiers\n  4b. airConditionedCheck: AC=false at onboarding restricts AC-gated tiers\n  5. Tier selection: driver can select non-restricted tiers;\n     defaultForVehicleVariant tier is always kept selected\n  6. vehicleRatingCheck: dashboard updateVehicleRating(1.0)→restricted, (5.0)→unrestricted\n  7. airConditionedCheck (dashboard path): acRestriction/update(isWorking=false)\n     restricts AC-gated tiers AND auto-deselects them (shouldUpdateServiceTiers=true)\n  8. airConditionedCheck (driver path): updateAirCondition(false) same behaviour\n  9. canSwitchToAirport toggle via updateServiceTiers\n\nNot covered (no API to set values directly):\n  luggageCapacityCheck — luggageCapacity not exposed in addVehicle or any dashboard API\n  driverRatingCheck    — DriverStats.rating computed from actual rides only\n\nPrerequisites: local stack running, SEDAN + AUTO service tiers configured for the city.",
+    "description": "End-to-end tests for vehicle service tier management and all usageRestriction\nchecks in selectVehicleTierForDriverWithUsageRestriction.\n\nDrivers onboarded:\n  A   — fresh SEDAN, no special restrictions (baseline + main test driver)\n  B   — SEDAN with mYManufacturing=2005-01-01 (~20 years, tests mfcCheck)\n  C   — SEDAN with airConditioned=false (tests airConditionedCheck at onboarding)\n  AUTO— AUTO_RICKSHAW (tests variant-based filterVehicleTier)\n\nTest phases:\n  2. Structure & enableForAirport field validation (new field)\n  3. Ineligibility: AUTO driver has no CAB tiers (filterVehicleTier)\n  4a. mfcCheck: old vehicle (2005) restricts vehicleAgeThreshold-gated tiers\n  4b. airConditionedCheck: AC=false at onboarding restricts AC-gated tiers\n  5. Tier selection: driver can select non-restricted tiers;\n     defaultForVehicleVariant tier is always kept selected\n  6. vehicleRatingCheck: dashboard updateVehicleRating(1.0)→restricted, (5.0)→unrestricted\n  7. airConditionedCheck (dashboard path): acRestriction/update(isWorking=false)\n     restricts AC-gated tiers AND auto-deselects them (shouldUpdateServiceTiers=true)\n  8. airConditionedCheck (driver path): updateAirCondition(false) same behaviour\n  9. enableForAirport toggle via updateServiceTiers\n\nNot covered (no API to set values directly):\n  luggageCapacityCheck — luggageCapacity not exposed in addVehicle or any dashboard API\n  driverRatingCheck    — DriverStats.rating computed from actual rides only\n\nPrerequisites: local stack running, SEDAN + AUTO service tiers configured for the city.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -708,11 +708,11 @@
               "    pm.expect(d.tiers).to.be.an('array').with.length.above(0);",
               "});",
               "",
-              "// canSwitchToAirport is null when no tier has isAirportRideEnabled=true,",
-              "// or a boolean (driverInfo.canSwitchToAirport) when at least one non-restricted tier does.",
-              "// New field added in the service_tier changes commit — verify it exists.",
-              "pm.test('canSwitchToAirport field present in response (new field)', function () {",
-              "    pm.expect(d).to.have.property('canSwitchToAirport');",
+              "// enableForAirport is the driver's airport restriction (ENABLED/DISABLED/BLOCKED),",
+              "// sourced directly from driverInfo.enableForAirport — always present (non-null).",
+              "pm.test('enableForAirport field present and valid enum (new field)', function () {",
+              "    pm.expect(d).to.have.property('enableForAirport');",
+              "    pm.expect(['ENABLED','DISABLED','BLOCKED']).to.include(d.enableForAirport);",
               "});",
               "",
               "// isUsageRestricted — set by mapUsageRestriction; tells UI which quality thresholds failed.",
@@ -732,7 +732,7 @@
               "pm.environment.set('_vst_nonrestr_type', nonRestr ? nonRestr.serviceTierType : '');",
               "pm.environment.set('_vst_default_type',  dflt ? dflt.serviceTierType : '');",
               "console.log('A tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+',D='+t.isDefault+')';}).join(', '));",
-              "console.log('canSwitchToAirport:', d.canSwitchToAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
+              "console.log('enableForAirport:', d.enableForAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
             ],
             "type": "text/javascript"
           }
@@ -750,7 +750,7 @@
           "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
         }
       },
-      "description": "GET /driver/vehicleServiceTiers — response shape validation.\n\nChecks:\n  • tiers[] non-empty (driver has at least one eligible tier)\n  • canSwitchToAirport field present — new field from service_tier commit;\n    computed as: if any non-restricted tier has isAirportRideEnabled\n    then Just driverInfo.canSwitchToAirport else Nothing\n  • Every tier has isUsageRestricted / isSelected / isDefault\n\nSaves full response as _vst_baseline for diff-based assertions in later steps."
+      "description": "GET /driver/vehicleServiceTiers — response shape validation.\n\nChecks:\n  • tiers[] non-empty (driver has at least one eligible tier)\n  • enableForAirport field present (ENABLED/DISABLED/BLOCKED) — sourced directly\n    from driverInfo.enableForAirport; always present (non-null enum)\n  • Every tier has isUsageRestricted / isSelected / isDefault\n\nSaves full response as _vst_baseline for diff-based assertions in later steps."
     },
     {
       "name": "GET Tiers (AUTO) — Ineligible CAB Tiers Absent (Variant Filtering)",
@@ -1583,20 +1583,13 @@
           "listen": "prerequest",
           "script": {
             "exec": [
-              "// canSwitchToAirport is null when no tier has isAirportRideEnabled=true.",
-              "// Skip: there's nothing to toggle and QDI.updateAirportSwitch won't be meaningful.",
+              "// enableForAirport is always present (driverInfo.enableForAirport, non-null enum).",
+              "// Toggle ENABLED <-> DISABLED; backend persists it directly via QDI.updateAirportSwitch.",
               "var base = JSON.parse(pm.environment.get('_vst_baseline') || '{\"tiers\":[]}');",
-              "if (base.canSwitchToAirport === null || base.canSwitchToAirport === undefined) {",
-              "    console.log('[skip] canSwitchToAirport is null (no isAirportRideEnabled tier in city config)');",
-              "    pm.execution.skipRequest(); return;",
-              "}",
-              "// Toggle the value — backend propagates it via QDI.updateAirportSwitch.",
-              "// canSwitchToAirport' = any non-restricted tier with isAirportRideEnabled",
-              "//   && (fromMaybe driverInfo.canSwitchToAirport req.canSwitchToAirport)",
-              "var toggled = !base.canSwitchToAirport;",
-              "pm.environment.set('_vst_airport_toggled_to', String(toggled));",
-              "pm.environment.set('_vst_update_body', JSON.stringify(Object.assign({},base,{canSwitchToAirport:toggled})));",
-              "console.log('Toggling canSwitchToAirport:', base.canSwitchToAirport, '→', toggled);"
+              "var toggled = (base.enableForAirport === 'ENABLED') ? 'DISABLED' : 'ENABLED';",
+              "pm.environment.set('_vst_airport_toggled_to', toggled);",
+              "pm.environment.set('_vst_update_body', JSON.stringify(Object.assign({},base,{enableForAirport:toggled})));",
+              "console.log('Toggling enableForAirport:', base.enableForAirport, '→', toggled);"
             ],
             "type": "text/javascript"
           }
@@ -1631,7 +1624,7 @@
           "raw": "{{_vst_update_body}}"
         }
       },
-      "description": "POST /driver/updateServiceTiers with canSwitchToAirport flipped.\n\nBackend in postDriverUpdateServiceTiers:\n  canSwitchToAirport' = foldl (\\acc (tier, isRestricted) ->\n    if isRestricted then acc\n    else acc || (fromMaybe driverInfo.canSwitchToAirport req.canSwitchToAirport\n                 && fromMaybe True tier.isAirportRideEnabled)) False tiers\n  QDI.updateAirportSwitch canSwitchToAirport' personId\n\nSkips gracefully if canSwitchToAirport is null (no isAirportRideEnabled tier in config)."
+      "description": "POST /driver/updateServiceTiers with enableForAirport flipped.\n\nBackend in postDriverUpdateServiceTiers persists the requested value directly:\n  QDI.updateAirportSwitch enableForAirport personId\n\nenableForAirport is a required AirportRestrictionType enum (ENABLED/DISABLED/BLOCKED),\nno longer gated by per-tier isAirportRideEnabled."
     },
     {
       "name": "GET Tiers (A) — canSwitchToAirport Reflects Toggle",
@@ -1643,27 +1636,19 @@
               "var d = pm.response.json();",
               "pm.test('200',function(){pm.response.to.have.status(200);});",
               "",
-              "// In getDriverVehicleServiceTiers:",
-              "//   canSwitchToAirport' = any non-restricted tier has isAirportRideEnabled=True",
-              "//   response.canSwitchToAirport =",
-              "//     if canSwitchToAirport' then Just driverInfo.canSwitchToAirport else Nothing",
-              "// So only assert if canSwitchToAirport is non-null (means airport tiers exist in city config).",
-              "var toggled = pm.environment.get('_vst_airport_toggled_to');",
-              "if (toggled !== null && toggled !== '' && toggled !== undefined) {",
-              "    toggled = (toggled === 'true');",
-              "    if (d.canSwitchToAirport !== null && d.canSwitchToAirport !== undefined) {",
-              "        pm.test('canSwitchToAirport persisted and reflected via updateServiceTiers', function(){",
-              "            pm.expect(d.canSwitchToAirport).to.equal(toggled);",
-              "        });",
-              "    }",
-              "    console.log('canSwitchToAirport after toggle:', d.canSwitchToAirport, '(expected:', toggled+')');",
-              "} else { console.log('[info] canSwitchToAirport toggle skipped (no airport tiers in city config)'); }",
+              "// getDriverVehicleServiceTiers returns enableForAirport = driverInfo.enableForAirport",
+              "// directly, so the toggled value is always reflected (no null/skip case).",
+              "var expected = pm.environment.get('_vst_airport_toggled_to');",
+              "pm.test('enableForAirport persisted and reflected via updateServiceTiers', function(){",
+              "    pm.expect(d.enableForAirport).to.equal(expected);",
+              "});",
+              "console.log('enableForAirport after toggle:', d.enableForAirport, '(expected:', expected+')');",
               "",
               "// ── Summary ──",
               "console.log('');",
               "console.log('=== Vehicle Service Tier Flow — Complete ===');",
               "console.log('Final Driver A tiers:', d.tiers.map(function(t){return t.serviceTierType+'(R='+t.isUsageRestricted+',S='+t.isSelected+')';}).join(', '));",
-              "console.log('canSwitchToAirport:', d.canSwitchToAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
+              "console.log('enableForAirport:', d.enableForAirport, '| canSwitchToRental:', d.canSwitchToRental, '| canSwitchToInterCity:', d.canSwitchToInterCity);"
             ],
             "type": "text/javascript"
           }
@@ -1681,7 +1666,7 @@
           "raw": "{{baseURL_namma_P}}/driver/vehicleServiceTiers"
         }
       },
-      "description": "Verifies canSwitchToAirport was persisted and reflected in GET.\n\nIn getDriverVehicleServiceTiers:\n  canSwitchToAirport' = any non-restricted tier has isAirportRideEnabled=True\n  response.canSwitchToAirport =\n    if canSwitchToAirport' then Just driverInfo.canSwitchToAirport else Nothing\n\nSo if no tier has isAirportRideEnabled, the field is always null regardless of toggle.\nAssertion skipped in that case."
+      "description": "Verifies enableForAirport was persisted and reflected in GET.\n\nIn getDriverVehicleServiceTiers:\n  response.enableForAirport = driverInfo.enableForAirport (always present, non-null enum)\n\nSo the toggled value (ENABLED/DISABLED) is always reflected — no skip case."
     }
   ]
 }
