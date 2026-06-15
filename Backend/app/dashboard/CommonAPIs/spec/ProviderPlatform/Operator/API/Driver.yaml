@@ -322,13 +322,10 @@ types:
     - approved: Maybe Bool
   ReviewRequestStatus:
     enum: "RR_IN_PROGRESS,RR_COMPLETED,RR_REJECTED"
-    derive: "HttpInstance"
   ReviewRequestType:
     enum: "BOT_REVIEW"
-    derive: "HttpInstance"
   EntityType:
     enum: "DRIVER,VEHICLE,FLEET_OWNER"
-    derive: "HttpInstance"
   SubmitReviewRequest:
     - entityType: EntityType
     - entityId: Text
