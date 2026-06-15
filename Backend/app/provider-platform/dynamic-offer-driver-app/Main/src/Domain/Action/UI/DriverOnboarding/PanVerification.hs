@@ -116,7 +116,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
+  (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicatePan of
@@ -162,8 +162,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
           _ -> pure ()
 
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
   logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
@@ -179,10 +179,10 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
     _ -> pure False
   pure res
   where
-    callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
+    callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
       documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just DTO.PanCard, vehicleCategory = Just CAR}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.PanCard CAR Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.PanCard))
-      image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
+      image1 <- getDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -212,7 +212,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
                               percentage = Just True,
                               driverId = person.id.getId
                             }
-                    isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
+                    isValid <- isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
                     unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
                   _ -> pure ()
                 when documentVerificationConfig.doStrictVerifcation $ do
@@ -232,14 +232,14 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
 
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           DPQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth (Just verifyBy) (Id req.imageId) req.panNumber (if not documentVerificationConfig.doStrictVerifcation then Just Documents.VALID else Nothing)
           DPQuery.create panCardDetails
 
@@ -278,9 +278,9 @@ castTextToDomainType panType = case panType of
 verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
 verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
   logDebug $ "verifyPanFlow: " <> show panNumber
-  faceMatchOutcome <- DVRC.runDocFaceMatch person documentVerificationConfig imageId1
+  faceMatchOutcome <- runDocFaceMatch person documentVerificationConfig imageId1
   case faceMatchOutcome of
-    DVRC.FMFail -> throwError FaceMatchFailed
+    FMFail -> throwError FaceMatchFailed
     _ -> do
       now <- getCurrentTime
       encryptedPan <- encrypt panNumber
@@ -350,7 +350,7 @@ buildPanCard person panType panName panDob verifyBy image1 panNumber verificatio
         createdAt = now,
         updatedAt = now,
         consent = True,
-        docType = castTextToDomainType panType <|> DVRC.inferPanTypeFromNumber panNumber,
+        docType = castTextToDomainType panType <|> inferPanTypeFromNumber panNumber,
         consentTimestamp = now,
         documentImageId2 = Nothing,
         driverDob = parsedDob,
@@ -474,7 +474,7 @@ shouldTriggerPanAadhaarLinkage _ merchantOpCityId docType panNumber = do
     getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let allowed = fromMaybe True transporterConfig.allowPanAadhaarLinkage
-      isBusiness = docType == Just DPan.BUSINESS || DVRC.isBusinessPan (Just panNumber)
+      isBusiness = docType == Just DPan.BUSINESS || isBusinessPan (Just panNumber)
   pure (allowed && not isBusiness)
 
 verifyPanAadhaarLinkageIfAadhaarExists ::

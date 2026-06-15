@@ -92,7 +92,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
+  (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
   case transporterConfig.allowDuplicateGst of
@@ -150,8 +150,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             gstin <- encrypt req.gstin
             QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
           _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   res <- case person.role of
     Person.DRIVER -> do
@@ -197,7 +197,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             stateName = mbStateName
           }
 
-    callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
+    callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverGstInformation driverDocument transporterConfig = do
       logDebug $ "callIdfy: " <> show req
       checkExtraction <-
@@ -212,7 +212,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
               listToMaybe <$> getConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.GSTCertificate, vehicleCategory = Nothing}) (Just (CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId ODC.GSTCertificate Nothing))
                 >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.GSTCertificate))
             pure dvc.checkExtraction
-      image1 <- DVRC.getDocumentImage person.id req.imageId ODC.GSTCertificate
+      image1 <- getDocumentImage person.id req.imageId ODC.GSTCertificate
       let extractReq =
             Verification.ExtractImageReq
               { image1 = image1,
@@ -249,14 +249,14 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
-            DVRC.validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
+          when (isNameCompareRequired transporterConfig verifyBy) $
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number Nothing Nothing
           DGQuery.create gstCardDetails
       pure Success

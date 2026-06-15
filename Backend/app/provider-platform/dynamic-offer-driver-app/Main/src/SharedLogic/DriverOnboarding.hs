@@ -21,6 +21,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
+import AWS.S3 as S3
 import Control.Applicative ((<|>))
 import qualified Data.List as DL
 import qualified Data.Text as T
@@ -30,17 +31,22 @@ import qualified Domain.Types as DVST
 import qualified Domain.Types.DocsVerificationStatus as DDVS
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.DocumentVerificationConfig as ODC
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.DriverPanCard as DPan
 import Domain.Types.DriverRCAssociation
 import qualified Domain.Types.FleetOwnerDocumentVerificationConfig
 import qualified Domain.Types.FleetRCAssociation as FRCA
 import qualified Domain.Types.HyperVergeVerification as DHV
 import qualified Domain.Types.IdfyVerification as DIdfy
 import qualified Domain.Types.Image as Domain
+import qualified Domain.Types.Image as Image
+import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.Person as Person
 import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as DVC
@@ -53,7 +59,9 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.External.Types (Language, VerificationFlow)
+import qualified Kernel.External.Verification.Interface as VI
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Documents
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
@@ -71,17 +79,25 @@ import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
+import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverLicense as DLQuery
+import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
+import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Translations as MTQuery
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
+import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Ticket as TT
+import qualified Tools.Verification as Verification
 import qualified Tools.Whatsapp as Whatsapp
 
 defaultDriverDocumentTypes :: [DVC.DocumentType]
@@ -806,3 +822,316 @@ castDocumentType = \case
   Domain.Types.DocumentVerificationConfig.UDYAMCertificate -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.UDYAMCertificate
   Domain.Types.DocumentVerificationConfig.PanAadhaarLinkage -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.PanAadhaarLink
   Domain.Types.DocumentVerificationConfig.VoterIdCard -> API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration.VoterIdCard
+
+-- Shared document-onboarding helpers (moved from Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate):
+-- these are used across RC, PAN, Aadhaar, DL, GST and Idfy webhook flows.
+
+data DriverDocument = DriverDocument
+  { panNumber :: Maybe Text,
+    aadhaarNumber :: Maybe Text,
+    dlNumber :: Maybe Text,
+    gstNumber :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON)
+
+getRegexRulesFromDocumentConfig :: ODC.DocumentVerificationConfig -> [Text]
+getRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
+
+matchesRegexSafely :: Text -> Text -> Text -> Flow (Maybe Bool)
+matchesRegexSafely documentType input regexPattern = do
+  result <- try @_ @SomeException $ do
+    let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
+    matched `seq` pure matched
+  case result of
+    Right matched -> pure (Just matched)
+    Left err -> do
+      logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
+      pure Nothing
+
+validateByRegex :: Text -> ODC.DocumentVerificationConfig -> Text -> Flow Bool -> Flow Bool
+validateByRegex documentType config input fallback = do
+  let regexRules = getRegexRulesFromDocumentConfig config
+  if null regexRules
+    then fallback
+    else do
+      regexResults <- mapM (matchesRegexSafely documentType input) regexRules
+      let validRegexResults = mapMaybe (\x -> x) regexResults
+      if null validRegexResults
+        then fallback
+        else pure (or validRegexResults)
+
+imageS3Lock :: Text -> Text
+imageS3Lock path = "image-s3-lock-" <> path
+
+isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
+isNameComparePercentageValid merchantId merchantOpCityId req = do
+  transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  case transporterConfig.validNameComparePercentage of
+    Just percentage -> do
+      resp <- Verification.nameCompare merchantId merchantOpCityId req
+      logDebug $ "Name compare percentage response: " <> show resp
+      case resp.nameComparedData of
+        Just percentageData -> return $ percentageData.match_output.name_match >= percentage
+        Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
+    Nothing -> return True -- If percentage not configured, assume valid
+
+getDocumentImage :: Id Person.Person -> Text -> ODC.DocumentType -> Flow Text
+getDocumentImage personId imageId_ expectedDocType = do
+  imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
+  unless (imageMetadata.verificationStatus == Just Documents.VALID) $
+    throwError (ImageNotValid imageId_)
+  unless (imageMetadata.personId == personId) $
+    throwError (ImageNotFound imageId_)
+  unless (imageMetadata.imageType == expectedDocType) $
+    throwError (ImageInvalidType (show expectedDocType) "")
+  Redis.withLockRedisAndReturnValue (imageS3Lock (imageMetadata.s3Path)) 5 $
+    S3.get $ T.unpack imageMetadata.s3Path
+
+-- | Outcome of a server-side selfie-vs-document face match.
+--   FMSkip     -> face match not required, or document already SDK-matched on-device.
+--   FMPass     -> faces matched.
+--   FMFail     -> faces did not match; the document Image has been marked INVALID.
+--   FMDeferred -> no source (selfie) image available yet; resolve when the selfie arrives.
+data FaceMatchOutcome = FMSkip | FMPass | FMFail | FMDeferred
+  deriving (Eq, Show)
+
+-- | Compare a freshly-uploaded document image against the configured source document
+--   (typically the driver's selfie / ProfilePhoto) using the merchant's faceMatchService
+--   (IDfy two-image compare). Only runs for non-SDK uploads (workflowTransactionId == Nothing);
+--   SDK uploads are already face-matched on-device. On a mismatch the document Image is marked
+--   INVALID with FaceMatchFailed so the existing reupload UX surfaces it.
+runDocFaceMatch :: Person.Person -> ODC.DocumentVerificationConfig -> Id Image.Image -> Flow FaceMatchOutcome
+runDocFaceMatch person config docImageId =
+  case config.faceMatchSourceDoc of
+    Nothing -> pure FMSkip
+    Just sourceDocType -> do
+      docImage <- ImageQuery.findById docImageId >>= fromMaybeM (ImageNotFound docImageId.getId)
+      -- Skip when the doc was SDK-matched on-device, or when its image isn't VALID yet
+      -- (e.g. isImageValidationRequired=False leaves it MANUAL_VERIFICATION_REQUIRED) — face match isn't applicable.
+      if isJust docImage.workflowTransactionId || docImage.verificationStatus /= Just Documents.VALID
+        then pure FMSkip
+        else do
+          sourceImages <- ImageQuery.findRecentByPersonIdAndImageType person.id sourceDocType
+          case DL.find ((== Just Documents.VALID) . (.verificationStatus)) sourceImages of
+            Nothing -> pure FMDeferred -- no selfie yet; resolve when it arrives
+            Just sourceImage -> do
+              documentImage1 <- getDocumentImage person.id docImageId.getId config.documentType
+              documentImage2 <- getDocumentImage person.id sourceImage.id.getId sourceDocType
+              resp <-
+                Verification.faceCompare person.merchantId person.merchantOperatingCityId $
+                  VI.FaceCompareReq {documentImage1, documentImage2, driverId = person.id.getId}
+              let matched = (resp.faceComparedData >>= (.is_a_match)) == Just True
+              if matched
+                then pure FMPass
+                else do
+                  ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID FaceMatchFailed docImageId
+                  logInfo $ "Face match failed for document " <> show config.documentType <> " of driver " <> person.id.getId
+                  pure FMFail
+
+-- | When a selfie (ProfilePhoto) is uploaded, retroactively face-match previously-uploaded,
+--   non-SDK DL/PAN/Aadhaar documents that bypassed the upload-time gate (no selfie was present then).
+--   Image-based (not record-based): we re-check the latest uploaded, image-VALID, non-SDK document image
+--   regardless of its 3P record status, so a selfie arriving while 3P is still PENDING is also covered.
+--   On a mismatch the document image is marked INVALID (by runDocFaceMatch) and the doc record is flipped
+--   INVALID if it already exists; if 3P is still pending, the late webhook's sticky-INVALID guard keeps it
+--   INVALID. Only docs whose config has faceMatchSourceDoc set are considered.
+runDeferredFaceMatchOnSelfie :: Person.Person -> Flow ()
+runDeferredFaceMatchOnSelfie person =
+  forM_ [ODC.DriverLicense, ODC.PanCard, ODC.AadhaarCard] $ \docType -> do
+    mbConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId docType Nothing
+    whenJust mbConfig $ \config -> whenJust config.faceMatchSourceDoc $ \_ -> do
+      docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
+      whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId) docImages) $ \docImg -> do
+        outcome <- runDocFaceMatch person config docImg.id
+        when (outcome == FMFail) $ case docType of
+          ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
+          ODC.PanCard -> DPQuery.updateVerificationStatus Documents.INVALID person.id
+          ODC.AadhaarCard -> QAadhaarCard.updateVerificationStatus Documents.INVALID person.id
+          _ -> pure ()
+
+mkRCIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m DIdfy.IdfyVerification
+mkRCIdfyVerificationEntity person requestId now imageExtractionValidation encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
+  id <- generateGUID
+  return $
+    DIdfy.IdfyVerification
+      { id,
+        driverId = person.id,
+        documentImageId1 = imageId,
+        documentImageId2 = Nothing,
+        requestId,
+        docType = ODC.VehicleRegistrationCertificate,
+        documentNumber = encryptedRC,
+        driverDateOfBirth = Nothing,
+        imageExtractionValidation = imageExtractionValidation,
+        issueDateOnDoc = dateOfRegistration,
+        status = fromMaybe "pending" mbStatus,
+        idfyResponse = Nothing,
+        vehicleCategory = mbVehicleCategory,
+        airConditioned = mbAirConditioned,
+        oxygen = mbOxygen,
+        ventilator = mbVentilator,
+        retryCount = Just $ fromMaybe 0 mbRetryCnt,
+        nameOnCard = Nothing,
+        merchantId = Just person.merchantId,
+        merchantOperatingCityId = Just person.merchantOperatingCityId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+compareNames :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Id Person.Person -> Flow Bool
+compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId =
+  case (mbExtractedName, mbVerifiedName) of
+    (Just extractedName, Just verifiedName) -> do
+      let nameCompareReq =
+            Verification.NameCompareReq
+              { extractedName = extractedName,
+                verifiedName = verifiedName,
+                percentage = Just True,
+                driverId = personId.getId
+              }
+      isNameValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
+      unless isNameValid $ throwError (MismatchDataError "Name match failed with previously uploaded docs")
+      return True
+    _ -> do
+      logInfo "Name comparison checks not executed."
+      return False
+
+compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
+compareDateOfBirth mbExtractedValue mbVerifiedValue = do
+  case (mbExtractedValue, mbVerifiedValue) of
+    (Just extractedValue, Just verifiedValue) -> do
+      let extractedDay = utctDay extractedValue
+          verifiedDay = utctDay verifiedValue
+      unless (extractedDay == verifiedDay) $ throwError (MismatchDataError $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
+      return True
+    _ -> do
+      logInfo "Date of birth checks not executed."
+      return False
+
+checkPan :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
+  mdriverPanInformation <- DPQuery.findByDriverId personId
+  case mdriverPanInformation of
+    Just panData -> do
+      if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.DriverLicense]
+        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue panData.driverNameOnGovtDB mbDateOfBirthValue panData.driverDob personId
+        else return False
+    Nothing -> throwError $ InternalError "Pan not found"
+
+checkDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
+  mdriverLicense <- DLQuery.findByDriverId personId
+  case mdriverLicense of
+    Just dlData -> do
+      if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.PanCard]
+        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue dlData.driverName mbDateOfBirthValue dlData.driverDob personId
+        else return False
+    Nothing -> throwError $ InternalError "DL not found"
+
+checkAadhaar :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
+checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
+  aadhaarInfo <- QAadhaarCard.findByPrimaryKey personId
+  case aadhaarInfo of
+    Just aadhaarData -> do
+      if verifyingDocumentType `elem` [ODC.PanCard, ODC.DriverLicense]
+        then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue aadhaarData.nameOnCard mbDateOfBirthValue (parseDateTime =<< aadhaarData.dateOfBirth) personId
+        else return False
+    Nothing -> throwError $ InternalError "Aadhaar not found"
+
+checkGST :: Id Person.Person -> Maybe Text -> Flow ()
+checkGST personId mbPanNumber = do
+  mGstData <- DGQuery.findByDriverId personId
+  case mGstData of
+    Just gstData -> checkTwoPanNumber mbPanNumber gstData.panNumber
+    Nothing -> throwError $ InternalError "GST not found"
+
+validateDocument :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> Flow ()
+validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthValue mbPanNumber verifyingDocumentType DriverDocument {..} = do
+  let mbUtcDateOfBirthValue = parseDateTime =<< mbDateOfBirthValue
+  let skipPanAadhaarCrossCheck = isBusinessPan panNumber || isBusinessPan mbPanNumber
+  case verifyingDocumentType of
+    ODC.AadhaarCard -> do
+      panChecked <- case panNumber of
+        Just _
+          | not skipPanAadhaarCrossCheck ->
+            checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
+        _ -> pure False
+      unless panChecked $
+        whenJust dlNumber $ \_ ->
+          void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
+    ODC.PanCard -> do
+      aadhaarChecked <- case aadhaarNumber of
+        Just _
+          | not skipPanAadhaarCrossCheck ->
+            checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
+        _ -> pure False
+      unless aadhaarChecked $ do
+        dlChecked <-
+          maybe
+            (pure False)
+            (\_ -> checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard)
+            dlNumber
+        unless dlChecked $
+          when (isJust gstNumber) $
+            checkGST personId mbPanNumber
+    ODC.DriverLicense -> do
+      aadhaarChecked <-
+        maybe
+          (pure False)
+          (\_ -> checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense)
+          aadhaarNumber
+      unless aadhaarChecked $
+        whenJust panNumber $ \_ ->
+          void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
+    ODC.GSTCertificate -> checkTwoPanNumber mbPanNumber panNumber
+    _ -> return ()
+
+checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
+checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
+  case (mbExtractedValue, mbVerifiedValue) of
+    (Just extractedValue, Just verifiedValue) -> do
+      unless (extractedValue == verifiedValue) $ throwError (MismatchDataError "GST not linked with existing PAN")
+      return ()
+    _ -> return ()
+
+validateNameAndDOB :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id Person.Person -> Flow Bool
+validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mbExtractedDOB mbVerifiedDOB personId = do
+  isNameValid <- compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
+  isDateOfBirthValid <- compareDateOfBirth mbExtractedDOB mbVerifiedDOB
+  return (isNameValid && isDateOfBirthValid)
+
+-- (P = Individual, C = Company, H = HUF, F = Firm, A = AOP, T = Trust, B = BOI, L/J/G = others).
+inferPanTypeFromNumber :: Text -> Maybe DPan.PanType
+inferPanTypeFromNumber panNumber =
+  let upperPan = T.toUpper panNumber
+   in if T.length upperPan >= 4
+        then Just $ if T.index upperPan 3 == 'P' then DPan.INDIVIDUAL else DPan.BUSINESS
+        else Nothing
+
+isBusinessPan :: Maybe Text -> Bool
+isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
+
+-- Define a common function to handle role-based decryption
+getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
+getDriverDocumentInfo person = do
+  case person.role of
+    role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
+      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+      decryptedPanNumber <- mapM decrypt res.panNumber
+      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
+      decryptedGstNumber <- mapM decrypt res.gstNumber
+      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber Nothing decryptedGstNumber)
+    _ -> do
+      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
+      decryptedPanNumber <- mapM decrypt res.panNumber
+      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
+      decryptedDlNumber <- mapM decrypt res.dlNumber
+      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber decryptedDlNumber Nothing)
+
+-- | Returns True if name compare is required for the given transporterConfig and verifyBy
+isNameCompareRequired :: DTC.TransporterConfig -> DPan.VerifiedBy -> Bool
+isNameCompareRequired transporterConfig verifyBy =
+  isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER
+
+makeDocumentVerificationLockKey :: Text -> Text
+makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
