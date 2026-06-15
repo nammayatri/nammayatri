@@ -5,6 +5,8 @@ imports:
   AddressDocumentType: Domain.Types.DriverInformation
   Day: Data.Time
   IndianState: Kernel.Types.Beckn.Context
+  Value: Data.Aeson
+  CRCVerificationResponse: Kernel.External.Verification.Types
 
 DriverIdentityInfo:
   tableName: driver_identity_info
@@ -17,6 +19,7 @@ DriverIdentityInfo:
     address: Maybe Text
     addressDocumentType: Maybe AddressDocumentType
     addressState: Maybe IndianState
+    courtRecord: Maybe CRCVerificationResponse
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     createdAt: UTCTime
@@ -25,9 +28,25 @@ DriverIdentityInfo:
   constraints:
     driverId: PrimaryKey
 
+  beamType:
+    courtRecord: Maybe Value
+
+  fromTType:
+    courtRecord: Kernel.Utils.JSON.valueToMaybe =<< courtRecord|E
+
+  toTType:
+    courtRecord: Data.Aeson.toJSON <$> courtRecord|E
+
+  sqlType:
+    courtRecord: json
+
   queries:
     findByDriverId:
       kvFunction: findOneWithKV
+      where: driverId
+    updateCourtRecord:
+      kvFunction: updateOneWithKV
+      params: [courtRecord]
       where: driverId
 
   excludedFields: [merchantId, merchantOperatingCityId, createdAt, updatedAt]

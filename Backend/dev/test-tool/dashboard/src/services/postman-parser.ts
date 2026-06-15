@@ -92,6 +92,9 @@ export interface ParsedTreeNode {
 const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; stripPrefix?: string }> = {
   'baseUrl_app': { service: 'rider' },
   'baseURL_namma_P': { service: 'driver' },
+  // driver-app dashboard APIs (http://localhost:8016/dashboard) — operator/fleet/hub
+  // endpoints. Same driver service; basePath '/dashboard' is preserved from the env value.
+  'baseURL_BPP_Driver_Direct': { service: 'driver' },
   'baseUrl_lts': { service: 'lts' },
   'baseURL_BPP_Dashboard': { service: 'provider-dashboard' },
   'baseURL_BPP_Dashboard_Internal': { service: 'provider-dashboard' },
@@ -103,6 +106,10 @@ const URL_VAR_TO_SERVICE: Record<string, { service: ParsedStep['service']; strip
   'baseUrl_dashboard': { service: 'rider' },
   'mockServerUrl': { service: 'mock-server' },
   'mock_server_url': { service: 'juspay-payment' },
+  // driver-app webhook receiver (e.g. Idfy CRC). Value http://localhost:8016 (caddy,
+  // same entrypoint as the other driver base URLs); no path prefix, so the raw webhook
+  // path /{merchant}/{city}/service/... routes via /proxy/driver-raw to the driver-app.
+  'driverAppWebhookBase': { service: 'driver' },
 };
 
 // ── Parser ──
