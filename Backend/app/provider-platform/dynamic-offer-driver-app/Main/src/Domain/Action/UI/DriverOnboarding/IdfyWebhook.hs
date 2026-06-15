@@ -22,6 +22,7 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
 where
 
 import qualified Data.Text as T
+import qualified Domain.Action.UI.DriverOnboarding.CourtRecordCheck as CourtRecordCheck
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
 import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
 import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
@@ -157,34 +158,47 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
 onVerify (Idfy.VerificationResponse rsp) respDump = do
-  logInfo $ "IdfyWebhook.onVerify: received webhook rsp=" <> show rsp <> " respDump=" <> respDump
-  verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
-  person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+  -- Log only safe metadata; the raw payload (rsp/respDump) can carry PII and is already
+  -- persisted to the verification request via IVQuery.updateResponse below.
   logInfo $
-    "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
-      <> " driverId="
-      <> verificationReq.driverId.getId
-      <> " docType="
-      <> show verificationReq.docType
+    "IdfyWebhook.onVerify: received webhook requestId=" <> rsp.request_id
+      <> " groupId="
+      <> rsp.group_id
+      <> " action="
+      <> rsp.action
       <> " status="
-      <> verificationReq.status
-      <> "Response="
-      <> show rsp
-  IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
-  let resultStatus = getResultStatus rsp.result
-  logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
-  if resultStatus == Just "source_down"
-    then do
-      logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
-      handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+      <> rsp.status
+  case rsp.result of
+    Just (Idfy.CRCResult resSrcOp) -> do
+      logInfo $ "IdfyWebhook.onVerify: CRC result -> storing court record for driverId(group_id)=" <> rsp.group_id
+      CourtRecordCheck.onVerifyCRC (Id rsp.group_id) resSrcOp.source_output
       return Ack
-    else do
-      mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
-      logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
-      ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
-      logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
-      void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
-      return ack_
+    _ -> do
+      verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
+      person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
+      logInfo $
+        "IdfyWebhook.onVerify: looked up verificationReq requestId=" <> rsp.request_id
+          <> " driverId="
+          <> verificationReq.driverId.getId
+          <> " docType="
+          <> show verificationReq.docType
+          <> " status="
+          <> verificationReq.status
+      IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
+      let resultStatus = getResultStatus rsp.result
+      logInfo $ "IdfyWebhook.onVerify: parsed resultStatus=" <> show resultStatus
+      if resultStatus == Just "source_down"
+        then do
+          logInfo $ "IdfyWebhook.onVerify: source_down path requestId=" <> rsp.request_id
+          handleIdfySourceDown person scheduleRetryVerificationJob verificationReq
+          return Ack
+        else do
+          mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId
+          logInfo $ "IdfyWebhook.onVerify: routing to verifyDocument mbRemPriorityList=" <> show mbRemPriorityList
+          ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
+          logInfo $ "IdfyWebhook.onVerify: completed requestId=" <> rsp.request_id
+          void $ SStatus.processStatusEvent (Just person) Nothing (SStatus.PersonDocChangedEvent verificationReq.driverId)
+          return ack_
   where
     getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
     getResultStatus mbResult =

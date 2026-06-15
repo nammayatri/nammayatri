@@ -33,6 +33,7 @@ import Domain.Action.Dashboard.Management.DriverRegistration (mapDocumentType, s
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.UI.DriverOnboarding.CourtRecordCheck as CourtRecordCheck
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
@@ -340,6 +341,15 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
         cancelRemindersForDriverByDocumentType personId DVC.DriverInspectionHub
         -- Record driver inspection completion for auto-trigger monitoring
         recordDocumentCompletion DVC.DriverInspectionHub personId.getId DRH.DRIVER (Just personId) merchantOpCity.merchantId merchantOpCity.id
+        -- Court Record Check (CRC) — submit on inspection approval; Idfy pushes the result to the webhook.
+        -- BOT-flow only: the CRC result is consumed by the BOT, so it is pointless to call/store this
+        -- paid Idfy check when the BOT is off. Also gated per-merchant via enableCourtRecordCheck (MSIL).
+        -- Forked so it never blocks or fails the approval/enable path.
+        when (enableBotFlow && transporterConfig.enableCourtRecordCheck == Just True) $
+          fork "courtRecordCheck" $
+            void $
+              withTryCatch "courtRecordCheck" $
+                CourtRecordCheck.runCourtRecordCheck person merchantOpCity
         when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $
           void $
             withTryCatch "incrementApprovedDriverRequestsDaily" $

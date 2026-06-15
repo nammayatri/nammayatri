@@ -9,6 +9,7 @@ import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Kernel.External.Verification.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
@@ -18,6 +19,7 @@ data DriverIdentityInfo = DriverIdentityInfo
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     addressDocumentType :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.AddressDocumentType,
     addressState :: Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.IndianState,
+    courtRecord :: Kernel.Prelude.Maybe Kernel.External.Verification.Types.CRCVerificationResponse,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

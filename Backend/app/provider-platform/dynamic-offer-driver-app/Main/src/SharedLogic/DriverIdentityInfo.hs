@@ -68,6 +68,7 @@ upsertDriverIdentityInfo mbExisting driverId merchantId mocId driverInfo pName p
             address = pAddr <|> (mbExisting >>= (.address)) <|> driverInfo.address,
             addressDocumentType = pAddrDoc <|> (mbExisting >>= (.addressDocumentType)) <|> driverInfo.addressDocumentType,
             addressState = pState <|> (mbExisting >>= (.addressState)),
+            courtRecord = mbExisting >>= (.courtRecord),
             merchantId = merchantId,
             merchantOperatingCityId = mocId,
             createdAt = maybe now (.createdAt) mbExisting,
