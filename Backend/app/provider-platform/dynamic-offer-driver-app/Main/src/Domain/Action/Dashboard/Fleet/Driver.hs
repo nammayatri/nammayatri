@@ -229,7 +229,6 @@ import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstinExtra as QDGExtra
-import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
@@ -4532,9 +4531,7 @@ postDriverFleetDriverUpdate merchantShortId opCity driverId requestorId req = do
         DP.DRIVER -> do
           driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
           let dob = fmap (\d -> UTCTime d 0) req.dob <|> driverInfo.driverDob
-          Redis.withLockRedis (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
-            mbExisting <- QDII.findByDriverId personId
-            void $ DIInfo.upsertDriverIdentityInfo mbExisting personId driver.merchantId driver.merchantOperatingCityId driverInfo Nothing Nothing Nothing req.address (castAddressDocumentType <$> req.addressDocumentType) Nothing
+          void $ DIInfo.upsertDriverIdentityInfoLocked personId driver.merchantId driver.merchantOperatingCityId driverInfo Nothing Nothing Nothing req.address (castAddressDocumentType <$> req.addressDocumentType) Nothing
           QDriverInfo.updateDriverDobAndAddress dob Nothing Nothing personId
         role | DCommon.checkFleetOwnerRole role -> do
           fleetOwnerInfo <- B.runInReplica (FOI.findByPrimaryKey personId) >>= fromMaybeM (InvalidRequest "Fleet owner information does not exist")
@@ -4992,7 +4989,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
       case mbPerson of
         Nothing -> pure (Just assoc.driverId.getId, Nothing, Nothing)
         Just p -> do
-          let fullName = T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)
+          let fullName = personFullName p
           dMob <- mapM decrypt p.mobileNumber
           pure (Just assoc.driverId.getId, Just fullName, dMob)
 
@@ -5003,7 +5000,7 @@ getDriverVehicleInfo merchantShortId opCity mbVehicleNo mbRcId = do
       case mbPerson of
         Nothing -> pure (Nothing, Nothing)
         Just p -> do
-          let fullName = T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)
+          let fullName = personFullName p
           fMob <- mapM decrypt p.mobileNumber
           pure (Just fullName, fMob)
 

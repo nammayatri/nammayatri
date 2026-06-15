@@ -22,7 +22,6 @@ import qualified API.Types.ProviderPlatform.Operator.Driver
 import qualified API.Types.ProviderPlatform.Operator.Endpoints.Driver as CommonDriver
 import qualified API.Types.UI.OperationHub as DomainT
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
@@ -48,6 +47,7 @@ import qualified Domain.Types.FleetOwnerInformation as DFOI
 import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.OperationHub as DOH
 import Domain.Types.OperationHubRequests
 import qualified Domain.Types.Person as DP
@@ -254,12 +254,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       when enableBotFlow $ do
         (vehicleDocItem, _) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
         let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
-        mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCity.id DVC.InspectionHub vehicleCategory Nothing
-        whenJust mbInspectionCfg $ \inspectionCfg -> do
-          let statusOf docType = fromMaybe SStatus.NO_DOC_AVAILABLE $ listToMaybe [d.verificationStatus | d <- vehicleDocItem.documents, d.documentType == docType]
-              invalidDeps = filter (\docType -> statusOf docType /= SStatus.VALID) inspectionCfg.dependencyDocumentType
-          unless (null invalidDeps) $
-            throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
+        assertInspectionDependenciesValid merchantOpCity.id DVC.InspectionHub vehicleCategory vehicleDocItem.documents
       allVehicleDocsVerified <- SStatus.checkAllVehicleDocsVerifiedForRC rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
         unless enableBotFlow $
@@ -293,12 +288,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       -- config must be VALID before the inspection can be approved.
       when enableBotFlow $ do
         (_, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
-        mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCity.id DVC.DriverInspectionHub vehicleCategory Nothing
-        whenJust mbInspectionCfg $ \inspectionCfg -> do
-          let statusOf docType = fromMaybe SStatus.NO_DOC_AVAILABLE $ listToMaybe [d.verificationStatus | d <- driverDocStatuses, d.documentType == docType]
-              invalidDeps = filter (\docType -> statusOf docType /= SStatus.VALID) inspectionCfg.dependencyDocumentType
-          unless (null invalidDeps) $
-            throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
+        assertInspectionDependenciesValid merchantOpCity.id DVC.DriverInspectionHub vehicleCategory driverDocStatuses
       allDriverDocsVerified <- SStatus.checkAllDriverDocsVerifiedForDriver person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
         unless enableBotFlow $ do
@@ -330,6 +320,20 @@ opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 
 reviewRequestLockKey :: Text -> Text
 reviewRequestLockKey reqId = "ops:reviewQueue:Id-" <> reqId
+
+assertInspectionDependenciesValid ::
+  Id DMOC.MerchantOperatingCity ->
+  DVC.DocumentType ->
+  DVC.VehicleCategory ->
+  [SStatus.DocumentStatusItem] ->
+  Flow ()
+assertInspectionDependenciesValid mocId inspectionDocType vehicleCategory docStatuses = do
+  mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory mocId inspectionDocType vehicleCategory Nothing
+  whenJust mbInspectionCfg $ \inspectionCfg -> do
+    let statusOf docType = fromMaybe SStatus.NO_DOC_AVAILABLE $ listToMaybe [d.verificationStatus | d <- docStatuses, d.documentType == docType]
+        invalidDeps = filter (\docType -> statusOf docType /= SStatus.VALID) inspectionCfg.dependencyDocumentType
+    unless (null invalidDeps) $
+      throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
 
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
 castHubRequests (hubReq, creator, hub) = do
@@ -800,7 +804,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
           { entityDetails =
               API.Types.ProviderPlatform.Operator.Driver.EntityDetails
                 { entityType = API.Types.ProviderPlatform.Operator.Driver.DRIVER,
-                  name = Just $ T.strip (person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName),
+                  name = Just $ SDO.personFullName person,
                   mobileNumber,
                   entityId = driverInfo.driverId.getId,
                   rcNo = Nothing
@@ -819,7 +823,7 @@ getDriverReviewQueueRequest merchantShortId opCity entityType reviewRequestType 
           { entityDetails =
               API.Types.ProviderPlatform.Operator.Driver.EntityDetails
                 { entityType = API.Types.ProviderPlatform.Operator.Driver.FLEET_OWNER,
-                  name = Just $ T.strip (person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName),
+                  name = Just $ SDO.personFullName person,
                   mobileNumber,
                   entityId = fleetOwnerInfo.fleetOwnerPersonId.getId,
                   rcNo = Nothing
@@ -1114,7 +1118,7 @@ getDriverRequestReviewHistory merchantShortId opCity apiEntityType reviewRequest
     buildReviewHistoryItem personByEntityId req = do
       let mbPerson = if req.entityType == DRR.VEHICLE then Nothing else HashMap.lookup req.entityId personByEntityId
       mbPersonMobileNumber <- maybe (pure Nothing) (\p -> mapM decrypt p.mobileNumber) mbPerson
-      let mbPersonName = (\p -> T.strip (p.firstName <> maybe "" (" " <>) p.middleName <> maybe "" (" " <>) p.lastName)) <$> mbPerson
+      let mbPersonName = SDO.personFullName <$> mbPerson
       pure $
         API.Types.ProviderPlatform.Operator.Driver.ReviewRequestHistory
           { id = req.id.getId,

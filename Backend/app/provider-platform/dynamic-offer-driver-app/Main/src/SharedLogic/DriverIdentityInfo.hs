@@ -2,6 +2,7 @@ module SharedLogic.DriverIdentityInfo
   ( IdentityInfo (..),
     getIdentityInfo,
     upsertDriverIdentityInfo,
+    upsertDriverIdentityInfoLocked,
     driverIdentityInfoLockKey,
   )
 where
@@ -14,6 +15,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Beckn.Context (IndianState)
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
@@ -77,3 +79,21 @@ upsertDriverIdentityInfo mbExisting driverId merchantId mocId driverInfo pName p
     Just _ -> QDII.updateByPrimaryKey row
     Nothing -> QDII.create row
   pure row
+
+upsertDriverIdentityInfoLocked ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, Redis.HedisFlow m r) =>
+  Id DP.Person ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  DI.DriverInformation ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Day ->
+  Maybe Text ->
+  Maybe DI.AddressDocumentType ->
+  Maybe IndianState ->
+  m DII.DriverIdentityInfo
+upsertDriverIdentityInfoLocked driverId merchantId mocId driverInfo pName pRel pDob pAddr pAddrDoc pState =
+  Redis.withLockRedisAndReturnValue (driverIdentityInfoLockKey driverId) 10 $ do
+    mbExisting <- QDII.findByDriverId driverId
+    upsertDriverIdentityInfo mbExisting driverId merchantId mocId driverInfo pName pRel pDob pAddr pAddrDoc pState

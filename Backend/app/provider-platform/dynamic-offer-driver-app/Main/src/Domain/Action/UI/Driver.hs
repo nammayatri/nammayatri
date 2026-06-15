@@ -1488,9 +1488,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   let nomineeOrAddressChanged = isJust req.nomineeName || isJust req.nomineeRelationship || isJust req.nomineeDob || isJust req.address || isJust req.addressDocumentType || isJust req.addressState
   mbIdentityInfo <-
     if nomineeOrAddressChanged
-      then Redis.withLockRedisAndReturnValue (DIInfo.driverIdentityInfoLockKey personId) 10 $ do
-        mbExisting <- QDII.findByDriverId personId
-        Just <$> DIInfo.upsertDriverIdentityInfo mbExisting personId person.merchantId merchantOpCityId driverInfo req.nomineeName req.nomineeRelationship req.nomineeDob req.address req.addressDocumentType req.addressState
+      then Just <$> DIInfo.upsertDriverIdentityInfoLocked personId person.merchantId merchantOpCityId driverInfo req.nomineeName req.nomineeRelationship req.nomineeDob req.address req.addressDocumentType req.addressState
       else QDII.findByDriverId personId
   let (legacyAddress, legacyAddressDocumentType, legacyNomineeName, legacyNomineeRelationship) =
         if nomineeOrAddressChanged
