@@ -179,10 +179,10 @@ jobs:
 
       - name: Build repl artifacts (dynamic-offer-driver-app)
         run: |
-          ln -sfn "$GITHUB_WORKSPACE" "$HOME/ny-nammayatri-src"
+          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri-src"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd $HOME/ny-nammayatri-src/Backend
+            cd /tmp/nammayatri-src/Backend
             cabal repl dynamic-offer-driver-app \
               --repl-options='-fno-code -fwrite-interface' \
               --builddir=dist-newrepl-driver <<< ':quit'
@@ -190,10 +190,10 @@ jobs:
 
       - name: Build repl artifacts (rider-app)
         run: |
-          ln -sfn "$GITHUB_WORKSPACE" "$HOME/ny-nammayatri-src"
+          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri-src"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd $HOME/ny-nammayatri-src/Backend
+            cd /tmp/nammayatri-src/Backend
             cabal repl rider-app \
               --repl-options='-fno-code -fwrite-interface' \
               --builddir=dist-newrepl-rider <<< ':quit'
