@@ -215,7 +215,6 @@ unescapeQuotedJSON bs =
             Left _ -> Nothing
     else Nothing
 
-
 decompressGzipBody :: (MonadFlow m) => ByteString -> m ByteString
 decompressGzipBody bs
   | BS.take 2 bs == BS.pack [0x1f, 0x8b] = do
