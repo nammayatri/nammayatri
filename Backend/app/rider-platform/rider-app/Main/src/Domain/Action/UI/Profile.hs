@@ -52,6 +52,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Action.UI.Registration as DR
 import Domain.Types.Booking as DBooking
+import qualified Domain.Types.ClientPersonInfo as DCP
 import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
@@ -109,6 +110,7 @@ import Storage.ConfigPilot.Config.PayoutConfig (PayoutDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderDimensions (..))
 import Storage.ConfigPilot.Interface.Types (getConfig, getOneConfig)
 import Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonDisability as PDisability
@@ -352,14 +354,14 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
   safetySettings <- Lib.findSafetySettingsWithFallback (cast personId) (Lib.getDefaultSafetySettings (cast personId) (Just $ SLP.riderPersonToSafetySettingsPersonDefaults person))
   logInfo "[Profile.getPersonDetails] findSafetySettings done"
   isSafetyCenterDisabled_ <- SLP.checkSafetyCenterDisabled person safetySettings
-  -- hasTakenValidRide <- QCP.findAllByPersonId personId
-  -- logInfo "[Profile.getPersonDetails] findAllByPersonId (ClientPersonInfo) done"
-  let hasTakenValidFirstCabRide = False -- validRideCount hasTakenValidRide BecknEnums.CAB -- removed for GCP <> AWS, data transfer
-      hasTakenValidFirstAutoRide = False -- validRideCount hasTakenValidRide BecknEnums.AUTO_RICKSHAW -- removed for GCP <> AWS, data transfer
-      hasTakenValidFirstBikeRide = False -- validRideCount hasTakenValidRide BecknEnums.MOTORCYCLE -- removed for GCP <> AWS, data transfer
-      hasTakenValidAmbulanceRide = False -- validRideCount hasTakenValidRide BecknEnums.AMBULANCE -- removed for GCP <> AWS, data transfer
-      hasTakenValidTruckRide = False -- validRideCount hasTakenValidRide BecknEnums.TRUCK -- removed for GCP <> AWS, data transfer
-      hasTakenValidBusRide = False -- validRideCount hasTakenValidRide BecknEnums.BUS -- removed for GCP <> AWS, data transfer
+  hasTakenValidRide <- QCP.findAllByPersonId personId
+  logInfo "[Profile.getPersonDetails] findAllByPersonId (ClientPersonInfo) done"
+  let hasTakenValidFirstCabRide = validRideCount hasTakenValidRide Enums.CAB
+      hasTakenValidFirstAutoRide = validRideCount hasTakenValidRide Enums.AUTO_RICKSHAW
+      hasTakenValidFirstBikeRide = validRideCount hasTakenValidRide Enums.MOTORCYCLE
+      hasTakenValidAmbulanceRide = validRideCount hasTakenValidRide Enums.AMBULANCE
+      hasTakenValidTruckRide = validRideCount hasTakenValidRide Enums.TRUCK
+      hasTakenValidBusRide = validRideCount hasTakenValidRide Enums.BUS
   newCustomerReferralCode <-
     if isNothing person.customerReferralCode
       then do
@@ -437,11 +439,11 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
             ..
           }
 
--- validRideCount :: [DCP.ClientPersonInfo] -> BecknEnums.VehicleCategory -> Bool
--- validRideCount hasTakenValidRide vehicleCategory =
---   case find (\info -> info.vehicleCategory == Just vehicleCategory) hasTakenValidRide of
---     Just info -> info.rideCount == 1
---     Nothing -> False
+validRideCount :: [DCP.ClientPersonInfo] -> Enums.VehicleCategory -> Bool
+validRideCount hasTakenValidRide vehicleCategory =
+  case find (\info -> info.vehicleCategory == Just vehicleCategory) hasTakenValidRide of
+    Just info -> info.rideCount == 1
+    Nothing -> False
 
 marketingEvents :: (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], EventStreamFlow m r) => MarketEventReq -> m APISuccess.APISuccess
 marketingEvents req = do
