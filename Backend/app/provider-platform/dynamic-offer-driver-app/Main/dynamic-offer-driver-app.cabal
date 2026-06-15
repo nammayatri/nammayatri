@@ -538,6 +538,7 @@ library
       SharedLogic.FleetOperatorStats
       SharedLogic.FleetVehicleStats
       SharedLogic.GoogleMaps
+      SharedLogic.GoogleMobilityBilling
       SharedLogic.GoogleTranslate
       SharedLogic.IffcoTokioInsurance
       SharedLogic.IntegratedBPPConfig
