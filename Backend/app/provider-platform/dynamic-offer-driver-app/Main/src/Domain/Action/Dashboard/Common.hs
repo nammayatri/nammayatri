@@ -32,6 +32,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.DocumentValidation (DriverRCReq (..))
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.Queries.FleetOwnerInformation as QFI
@@ -97,7 +98,7 @@ runVerifyRCFlow :: Bool -> Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperat
 runVerifyRCFlow skipFleetChecks personId merchant merchantOpCityId operatingCity req isFleet bulkUpload mbFleetOwnerId = do
   let imageId = maybe "" cast req.imageId
   let rcReq =
-        DomainRC.DriverRCReq
+        DriverRCReq
           { vehicleRegistrationCertNumber = req.registrationNo,
             imageId = imageId,
             imageId2 = cast <$> req.imageId2,

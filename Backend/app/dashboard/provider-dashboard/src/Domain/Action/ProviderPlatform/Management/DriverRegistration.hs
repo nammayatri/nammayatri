@@ -17,8 +17,6 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationDocumentsCommon,
-    postDriverRegistrationRegisterDl,
-    postDriverRegistrationRegisterRc,
     postDriverRegistrationRegisterGenerateAadhaarOtp,
     postDriverRegistrationRegisterVerifyAadhaarOtp,
     getDriverRegistrationUnderReviewDrivers,
@@ -39,7 +37,6 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
-import qualified Domain.Action.ProviderPlatform.Management.Account as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
@@ -127,21 +124,6 @@ postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverI
   let mbRequestorId = determineRequestorId apiTokenInfo driverId
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req {Common.requestorId = mbRequestorId}
-
-postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
-postDriverRegistrationRegisterDl merchantShortId opCity apiTokenInfo driverId req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
-  let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
-  T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterDl) driverId req{accessType = mbAccessType}
-
-postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
-postDriverRegistrationRegisterRc merchantShortId opCity apiTokenInfo driverId req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
-  T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterRc) driverId req
 
 postDriverRegistrationRegisterGenerateAadhaarOtp :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.GenerateAadhaarOtpReq -> Flow Common.GenerateAadhaarOtpRes
 postDriverRegistrationRegisterGenerateAadhaarOtp merchantShortId opCity apiTokenInfo driverId req = do

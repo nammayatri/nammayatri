@@ -77,7 +77,6 @@ import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
-import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 
 data DriverPanReq = DriverPanReq
@@ -116,24 +115,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
-  when blocked $ throwError AccountBlocked
+  (_, driverDocument) <- DVRC.getDriverDocumentInfo person
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  DVRC.validateIndividualPANCheck transporterConfig person req.panNumber
-  case transporterConfig.allowDuplicatePan of
-    Just False -> do
-      panHash <- getDbHash req.panNumber
-      panInfoList <- DPQuery.findAllByEncryptedPanNumber panHash
-      let otherDriverIds = filter (/= person.id) (map (.driverId) panInfoList)
-      unless (Kernel.Prelude.null otherDriverIds) $ do
-        Utils.cleanupUploadedImages [Id req.imageId] person.id
-        throwError PanAlreadyLinked
-      when (not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-        panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
-        let getRoles = map (.role) panPersonDetails
-        when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
-    _ -> pure ()
-
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -225,12 +208,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
       case mdriverPanInformation of
-        Just driverPanInformation -> do
-          let verificationStatus = driverPanInformation.verificationStatus
-          when (verificationStatus == Documents.VALID && not (fromMaybe False transporterConfig.allowPanReupload)) $ do
-            Utils.cleanupUploadedImages [Id req.imageId] person.id
-            throwError $ DocumentAlreadyValidated "PAN"
-
+        Just _ -> do
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
           when (DVRC.isNameCompareRequired transporterConfig verifyBy) $

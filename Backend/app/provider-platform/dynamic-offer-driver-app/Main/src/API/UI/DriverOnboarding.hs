@@ -37,6 +37,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import SharedLogic.DocumentValidation (DriverDLReq, DriverRCReq)
 import Storage.Beam.SystemConfigs ()
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Auth (TokenAuth)
@@ -45,11 +46,11 @@ type API =
   "driver" :> "register"
     :> ( "dl"
            :> TokenAuth
-           :> ReqBody '[JSON] DriverOnboarding.DriverDLReq
+           :> ReqBody '[JSON] DriverDLReq
            :> Post '[JSON] DriverOnboarding.DriverDLRes
            :<|> "rc"
              :> TokenAuth
-             :> ReqBody '[JSON] DriverOnboarding.DriverRCReq
+             :> ReqBody '[JSON] DriverRCReq
              :> Post '[JSON] DriverOnboarding.DriverRCRes
            :<|> "pan"
              :> TokenAuth
@@ -150,10 +151,10 @@ handler =
     :<|> deleteRC
     :<|> getAllLinkedRCs
 
-verifyDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
+verifyDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
 verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId)
 
-verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
+verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req False Nothing
 
 statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes

@@ -14,9 +14,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 
 module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
-  ( DriverVehicleDetails (..),
-    DriverRCReq (..),
-    DriverRCRes,
+  ( DriverRCRes,
     RCStatusReq (..),
     RCValidationReq (..),
     verifyRC,
@@ -63,7 +61,6 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (maybeM)
 import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
-import qualified Data.List as DL
 import qualified Data.Text as T hiding (elem, find, map, zip)
 import Data.Time (Day, utctDay)
 import qualified Domain.Types.Common as DCommon
@@ -100,14 +97,12 @@ import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Types.Predicate
 import Kernel.Utils.Common
-import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import Kernel.Utils.Validation
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified SharedLogic.Analytics as Analytics
+import SharedLogic.DocumentValidation (DriverDocument (..), DriverRCReq (..), DriverVehicleDetails (..), getDriverDocumentInfo, getRegexRulesFromDocumentConfig, matchesRegexSafely, normalizeDocumentNumber, validateByRegex)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.VehicleDocs as SStatus
 import SharedLogic.Reminder.Helper (createReminder)
@@ -125,7 +120,6 @@ import qualified Storage.Queries.DriverPanCard as DPQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.FleetDriverAssociationExtra as FDA
-import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
 import qualified Storage.Queries.IdfyVerification as IVQuery
@@ -139,38 +133,8 @@ import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRegistrationCertificateExtra as VRCExtra
-import Text.Regex.Posix ((=~))
 import Tools.Error
 import qualified Tools.Verification as Verification
-
-data DriverVehicleDetails = DriverVehicleDetails
-  { vehicleManufacturer :: Text,
-    vehicleModel :: Text,
-    vehicleColour :: Text,
-    vehicleDoors :: Maybe Int,
-    vehicleSeatBelts :: Maybe Int,
-    vehicleModelYear :: Maybe Int
-  }
-  deriving (Generic, ToSchema, Show, ToJSON, FromJSON)
-
-data DriverRCReq = DriverRCReq
-  { vehicleRegistrationCertNumber :: Text,
-    imageId :: Id Image.Image,
-    imageId2 :: Maybe (Id Image.Image), -- backside of RC document
-    udinNumber :: Maybe Text, -- For TTEN certificate validation (TOTO)
-    operatingCity :: Text,
-    dateOfRegistration :: Maybe UTCTime, -- updatable
-    vehicleCategory :: Maybe DVC.VehicleCategory,
-    vehicleClass :: Maybe Text,
-    airConditioned :: Maybe Bool,
-    oxygen :: Maybe Bool,
-    ventilator :: Maybe Bool,
-    vehicleDetails :: Maybe DriverVehicleDetails,
-    isRCImageValidated :: Maybe Bool, -- updatable
-    engineNumber :: Maybe Text,
-    chassisNumber :: Maybe Text
-  }
-  deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
 type DriverRCRes = APISuccess
 
@@ -202,87 +166,6 @@ data RCValidationReq = RCValidationReq
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
-data DriverDocument = DriverDocument
-  { panNumber :: Maybe Text,
-    aadhaarNumber :: Maybe Text,
-    dlNumber :: Maybe Text,
-    gstNumber :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-validateDriverRCReq :: Validate DriverRCReq
-validateDriverRCReq DriverRCReq {..} =
-  sequenceA_
-    [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber P.vehicleRegistrationCertNumberRule]
-
-validateDriverRCReqRegexFlow :: Validate DriverRCReq
-validateDriverRCReqRegexFlow DriverRCReq {..} =
-  sequenceA_
-    [validateField "vehicleRegistrationCertNumber" vehicleRegistrationCertNumber (MinLength 1)]
-
-prefixMatchedResult :: Text -> [Text] -> Bool
-prefixMatchedResult rcNumber = DL.any (`T.isPrefixOf` rcNumber)
-
-normalizeDocumentNumber :: Text -> Text
-normalizeDocumentNumber = T.toUpper . removeSpaceAndDash
-
-getRegexRulesFromDocumentConfig :: ODC.DocumentVerificationConfig -> [Text]
-getRegexRulesFromDocumentConfig config = maybe [] (mapMaybe (.regexValidation)) config.documentFields
-
-matchesRegexSafely :: Text -> Text -> Text -> Flow (Maybe Bool)
-matchesRegexSafely documentType input regexPattern = do
-  result <- try @_ @SomeException $ do
-    let matched = (T.unpack input =~ T.unpack regexPattern :: Bool)
-    matched `seq` pure matched
-  case result of
-    Right matched -> pure (Just matched)
-    Left err -> do
-      logError $ "Invalid regex in DocumentVerificationConfig for " <> documentType <> " validation: " <> regexPattern <> ", error: " <> show err
-      pure Nothing
-
-validateByRegex :: Text -> ODC.DocumentVerificationConfig -> Text -> Flow Bool -> Flow Bool
-validateByRegex documentType config input fallback = do
-  let regexRules = getRegexRulesFromDocumentConfig config
-  if null regexRules
-    then fallback
-    else do
-      regexResults <- mapM (matchesRegexSafely documentType input) regexRules
-      let validRegexResults = mapMaybe (\x -> x) regexResults
-      if null validRegexResults
-        then fallback
-        else pure (or validRegexResults)
-
-isRCNumberFormatValid :: ODC.DocumentVerificationConfig -> Text -> Flow Bool
-isRCNumberFormatValid documentVerificationConfig normalizedRCNumber = do
-  let normalizedPrefixList = normalizeDocumentNumber <$> documentVerificationConfig.rcNumberPrefixList
-      rcLength = T.length normalizedRCNumber
-      isLegacyCertNumFormatValid =
-        rcLength >= 5
-          && rcLength <= 12
-          && T.all (\ch -> (ch >= 'A' && ch <= 'Z') || (ch >= '0' && ch <= '9') || ch == ',') normalizedRCNumber
-      fallbackCheck =
-        pure $
-          (null normalizedPrefixList || prefixMatchedResult normalizedRCNumber normalizedPrefixList)
-            && isLegacyCertNumFormatValid
-  validateByRegex "RC" documentVerificationConfig normalizedRCNumber fallbackCheck
-
--- Define a common function to handle role-based decryption
-getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)
-getDriverDocumentInfo person = do
-  case person.role of
-    role | role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS] -> do
-      res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-      decryptedPanNumber <- mapM decrypt res.panNumber
-      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
-      decryptedGstNumber <- mapM decrypt res.gstNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber Nothing decryptedGstNumber)
-    _ -> do
-      res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
-      decryptedPanNumber <- mapM decrypt res.panNumber
-      decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
-      decryptedDlNumber <- mapM decrypt res.dlNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber decryptedDlNumber Nothing)
-
 verifyRC ::
   Bool ->
   Maybe DM.Merchant ->
@@ -297,32 +180,14 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
 
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
 
-  let isTtenCertificate = isJust req.udinNumber
   documentVerificationConfig <- getOneConfig (DocumentVerificationConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just ODC.VehicleRegistrationCertificate, vehicleCategory = Just (fromMaybe DVC.CAR req.vehicleCategory)}) (Just (maybeToList <$> CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId ODC.VehicleRegistrationCertificate (fromMaybe DVC.CAR req.vehicleCategory) Nothing)) >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show ODC.VehicleRegistrationCertificate))
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  unless isTtenCertificate $ do
-    let regexRules = getRegexRulesFromDocumentConfig documentVerificationConfig
-        hasRegexRules = not (null regexRules)
-    if hasRegexRules
-      then runRequestValidation validateDriverRCReqRegexFlow req
-      else runRequestValidation validateDriverRCReq req
-    let normalizedRCNumber = normalizeDocumentNumber req.vehicleRegistrationCertNumber
-    checkRCFormat <- isRCNumberFormatValid documentVerificationConfig normalizedRCNumber
-    unless checkRCFormat $ do
-      if hasRegexRules
-        then throwError (InvalidRequest "RC number format is not valid")
-        else throwError (InvalidRequest "RC number prefix is not valid")
 
-  (blocked, _) <- getDriverDocumentInfo person
-  when blocked $ throwError AccountBlocked
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  when (person.role == Person.DRIVER) $ do
-    allLinkedRCs <- DAQuery.findAllLinkedByDriverId personId
-    rcs <- RCQuery.findAllById (map (.rcId) allLinkedRCs)
-    let validLinkedRCs = Kernel.Prelude.filter (\rc -> rc.verificationStatus /= Documents.INVALID) rcs
-    unless (length validLinkedRCs < (transporterConfig.rcLimit + (if isDashboard then 1 else 0))) $ throwError (RCLimitReached transporterConfig.rcLimit)
-  let mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
+
+  let isTtenCertificate = isJust req.udinNumber
+      mbAirConditioned = maybe req.airConditioned (\category -> if category `elem` [DVC.CAR, DVC.AMBULANCE, DVC.BUS] then req.airConditioned else Just False) req.vehicleCategory
       (mbOxygen, mbVentilator) = maybe (req.oxygen, req.ventilator) (\category -> if category == DVC.AMBULANCE then (req.oxygen, req.ventilator) else (Just False, Just False)) req.vehicleCategory
 
   unless isTtenCertificate $
@@ -346,14 +211,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
             unless (extractRCNumber == rcNumber) $
               throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
           Nothing -> throwImageError req.imageId ImageExtractionFailed
+  -- Fleet owner setup (after validation) - Redis and DB operations
   whenJust mbFleetOwnerId $ \fleetOwnerId -> do
-    -- Reject cross-fleet hijacks: if the RC is already linked to a different
-    -- fleet owner, fail rather than silently re-linking it to this fleet.
-    mbExistingRC <- VRCExtra.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
-    whenJust mbExistingRC $ \existingRC ->
-      whenJust existingRC.fleetOwnerId $ \existingFleetId ->
-        when (existingFleetId /= fleetOwnerId.getId) $
-          throwError VehicleBelongsToAnotherFleet
     Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
     -- Optionally update existing RC's fleetOwnerId in DB if enabled via transporterConfig
     updateExistingRCFleetOwnerIfEnabled transporterConfig req.vehicleRegistrationCertNumber fleetOwnerId

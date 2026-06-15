@@ -190,6 +190,7 @@ import qualified Lib.Finance.Storage.Queries.Account as QFinanceAccount
 import SharedLogic.Analytics as Analytics
 import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.Booking as SBooking
+import SharedLogic.DocumentValidation (DriverRCReq (..))
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified SharedLogic.DriverIdentityInfo as DIInfo
@@ -564,7 +565,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
   whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
   let rcReq =
-        DomainRC.DriverRCReq
+        DriverRCReq
           { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
             imageId = cast req.imageId,
             imageId2 = cast <$> req.imageId2,

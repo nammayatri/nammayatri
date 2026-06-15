@@ -66,7 +66,6 @@ import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person as Person
 import qualified Tools.AadhaarVerification as AadhaarVerification
 import Tools.Error
-import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 
 data VerifyAadhaarOtpReq = VerifyAadhaarOtpReq
@@ -389,26 +388,8 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
   whenJust req.aadhaarNumber $ \aadhaarNumber -> do
     checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey aadhaarNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  (blocked, driverDocument) <- DVRC.getDriverDocumentInfo person
-  when blocked $ throwError AccountBlocked
+  (_, driverDocument) <- DVRC.getDriverDocumentInfo person
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  case (transporterConfig.allowDuplicateAadhaar, req.aadhaarNumber) of
-    (Just False, Just aadhaarNumber) -> do
-      aadhaarHash <- getDbHash aadhaarNumber
-      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
-      let otherDriverIds = filter (/= person.id) (map (.driverId) aadhaarInfoList)
-      unless (null otherDriverIds) $ do
-        Utils.cleanupUploadedImages
-          ( [Id req.aadhaarFrontImageId]
-              <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
-          )
-          person.id
-        throwError AadhaarAlreadyLinked
-      when (not (fromMaybe False transporterConfig.allowAadhaarReupload)) $ do
-        aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
-        let getRoles = map (.role) aadhaarPersonDetails
-        when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
-    _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   image1 <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
@@ -425,17 +406,6 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             consent = if req.consent then "yes" else "no"
           }
   let runBody = do
-        let allowAadhaarReupload = fromMaybe False transporterConfig.allowAadhaarReupload
-        when (not allowAadhaarReupload) $ do
-          aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
-          whenJust aadhaarInfo $ \aadhaarInfoData -> do
-            when (aadhaarInfoData.verificationStatus == Documents.VALID) $ do
-              Utils.cleanupUploadedImages
-                ( [Id req.aadhaarFrontImageId]
-                    <> maybe [] (\backImageId -> [Id backImageId]) req.aadhaarBackImageId
-                )
-                person.id
-              throwError $ DocumentAlreadyValidated "Aadhaar"
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
         mbAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do
