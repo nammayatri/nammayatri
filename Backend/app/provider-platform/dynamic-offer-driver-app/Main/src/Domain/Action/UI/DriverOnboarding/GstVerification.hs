@@ -164,8 +164,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
               Person.updatePersonRole person.id Person.FLEET_BUSINESS
               QFOI.updateFleetType FOI.BUSINESS_FLEET person.id
           _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   res <- case person.role of
     Person.DRIVER -> do

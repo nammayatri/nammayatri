@@ -13,7 +13,7 @@
         "exec": [
           "function r(){ return '9'+Math.floor(100000000+Math.random()*899999999); }",
           "if(!pm.collectionVariables.get('_test_png')) pm.collectionVariables.set('_test_png','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');",
-          "['match','mismatch','C','D','E','F'].forEach(function(k){ var key='_test_driver_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
+          "['match','mismatch','D','E','F','I'].forEach(function(k){ var key='_test_driver_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
         ]
       }
     }
@@ -32,10 +32,6 @@
       "value": ""
     },
     {
-      "key": "_test_driver_C",
-      "value": ""
-    },
-    {
       "key": "_test_driver_D",
       "value": ""
     },
@@ -46,9 +42,40 @@
     {
       "key": "_test_driver_F",
       "value": ""
+    },
+    {
+      "key": "_test_driver_I",
+      "value": ""
     }
   ],
   "item": [
+    {
+      "name": "Setup: Clear stale overrides",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('stale overrides cleared',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
     {
       "name": "A: Auth (sendOTP)",
       "request": {
@@ -566,193 +593,6 @@
           "script": {
             "exec": [
               "pm.test('cleared',()=>pm.response.to.have.status(200));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "C: Auth (sendOTP)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "auth"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_C}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_C', pm.response.json().authId);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "C: Auth Verify",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/auth/{{authId_C}}/verify",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "auth",
-            "{{authId_C}}",
-            "verify"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-C\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_C',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_C',j.person.id);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "C: Upload PAN image (NO selfie)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{token_C}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "driver",
-            "register",
-            "validateImage"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"PanCard\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('pan image ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('panImageId_C', pm.response.json().imageId);"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "C: Verify PAN (not blocked)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{token_C}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/register/pan",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "driver",
-            "register",
-            "pan"
-          ]
-        },
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"panNumber\": \"ABCDE1234F\",\n  \"imageId\": \"{{panImageId_C}}\",\n  \"driverId\": \"{{driverId_C}}\"\n}"
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('no selfie -> FMDeferred -> proceeds',()=>pm.response.to.have.status(200));"
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "C: Status (PAN not INVALID)",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "token",
-            "value": "{{token_C}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseURL_namma_P}}/driver/register/status",
-          "host": [
-            "{{baseURL_namma_P}}"
-          ],
-          "path": [
-            "driver",
-            "register",
-            "status"
-          ]
-        }
-      },
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('status ok',()=>pm.response.to.have.status(200)); var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('absent selfie does not block',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('INVALID'));"
             ]
           }
         }
@@ -1679,6 +1519,297 @@
           "script": {
             "exec": [
               "pm.test('status ok',()=>pm.response.to.have.status(200)); var pan=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='PanCard')||{}; pm.test('reupload+match clears INVALID',()=>pm.expect(pan.verificationStatus,'pan '+JSON.stringify(pan)).to.not.eql('INVALID'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Override compare=false",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"service\": \"gridline\", \"match\": \"/compare/face\", \"response\": {\"status\": \"completed\", \"request_id\": \"fm-I\", \"result\": {\"image_1\": null, \"image_2\": null, \"is_a_match\": false, \"match_score\": 11.2, \"review_recommended\": false}}, \"extract\": \"path.5\", \"value\": \"face\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('override set',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Auth (sendOTP)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"mobileNumber\": \"{{_test_driver_I}}\",\n  \"mobileCountryCode\": \"+91\",\n  \"merchantId\": \"{{merchantId}}\",\n  \"merchantOperatingCity\": \"{{city}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('auth ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('authId_I', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Auth Verify",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_I}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_I}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"otp\": \"{{login_otp}}\",\n  \"deviceToken\": \"facematch-I\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify ok',()=>pm.response.to.have.status(200)); var j=pm.response.json(); pm.collectionVariables.set('token_I',j.token); if(j.person&&j.person.id) pm.collectionVariables.set('driverId_I',j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Upload Selfie",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_I}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"ProfilePhoto\",\n  \"validationStatus\": \"AUTO_APPROVED\",\n  \"workflowTransactionId\": \"{{$guid}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('selfie ok',()=>pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Upload DL image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_I}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"image\": \"{{_test_png}}\",\n  \"imageType\": \"DriverLicense\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('img ok',()=>pm.response.to.have.status(200)); pm.collectionVariables.set('dlImageId_I', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Verify DL (FAIL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_I}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/dl",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "dl"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"driverLicenseNumber\": \"KA0120200012345\",\n  \"operatingCity\": \"{{city}}\",\n  \"driverDateOfBirth\": \"1990-01-01T00:00:00Z\",\n  \"imageId1\": \"{{dlImageId_I}}\",\n  \"vehicleCategory\": \"CAR\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('verify rejected with 400',()=>pm.response.to.have.status(400)); pm.test('error is FACE_MATCH_FAILED',()=>pm.expect((pm.response.json()||{}).errorCode).to.eql('FACE_MATCH_FAILED'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Status (DL INVALID)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "token",
+            "value": "{{token_I}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/status",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('status ok',()=>pm.response.to.have.status(200)); var doc=(pm.response.json().driverDocuments||[]).find(d=>d.documentType==='DriverLicense')||{}; pm.test('DriverLicense INVALID after mismatch',()=>pm.expect(['INVALID','FAILED'],'doc '+JSON.stringify(doc)).to.include(doc.verificationStatus));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "I: Delete override",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/override",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "override"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('cleared',()=>pm.response.to.have.status(200));"
             ]
           }
         }

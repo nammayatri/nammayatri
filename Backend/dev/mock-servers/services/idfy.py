@@ -44,6 +44,7 @@ _CONFIG = {
     "panNumber": "ABCDE1234F",
     "gstNumber": "29ABCDE1234F1Z5",
     "aadhaarNumber": "123456789012",
+    "dlNumber": "KA0120200012345",
 }
 _WEBHOOK_URL = os.environ.get("IDFY_WEBHOOK_URL", "")
 _WEBHOOK_DELAY_MS = int(os.environ.get("IDFY_WEBHOOK_DELAY_MS", "500"))
@@ -103,8 +104,10 @@ def _dual(d):
 
 
 def _dl_extract():
+    with _LOCK:
+        cfg = dict(_CONFIG)
     return _dual({
-        "id_number": "id_number", "name_on_card": "name_on_card", "fathers_name": "fathers_name",
+        "id_number": cfg["dlNumber"], "name_on_card": "name_on_card", "fathers_name": "fathers_name",
         "date_of_birth": "date_of_birth", "date_of_validity": "date_of_validity",
         "address": "address", "district": "district", "street_address": "street_address",
         "pincode": "pincode", "state": "state", "issue_dates": None,
@@ -237,7 +240,7 @@ def handle(handler, path, body):
             return handler._json(dict(_CONFIG))
 
     # Verification (async-callback shape)
-    if "/verify_with_source/ind_dl" in path:
+    if "/verify_with_source/ind_dl" in path or "/verify_with_source/ind_driving_license" in path:
         resp = _ack(body_json)
         _fire_webhook("DLVerificationResult", body_json)
         return handler._json(resp)
@@ -262,7 +265,7 @@ def handle(handler, path, body):
     if "/validate_image" in path or "/validate/" in path:
         return handler._json(_idfy_envelope(_validate_image(body_json)))
     if "extract" in path:
-        if "ind_dl" in path:
+        if "ind_dl" in path or "driving_license" in path:
             return handler._json(_idfy_envelope(_dl_extract()))
         if "ind_rc" in path:
             return handler._json(_idfy_envelope(_rc_extract()))

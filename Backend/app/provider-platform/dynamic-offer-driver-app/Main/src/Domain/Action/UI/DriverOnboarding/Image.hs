@@ -249,7 +249,7 @@ validateImageHandler isDashboard mbUploaderRole mbDocConfigs (personId, _, merch
         else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
       when (imageType == DVC.ProfilePhoto) $
         fork "deferred face match on selfie upload" $
-          runDeferredFaceMatchOnSelfie person
+          runDeferredFaceMatchOnSelfie person imageEntity.createdAt
       return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed

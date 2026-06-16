@@ -1250,6 +1250,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
         let mbImg = find (\img -> img.id == imgId) entityImagesInfo.entityImages
             iid = Just imgId.getId
          in (mbImg <&> (.s3Path), iid)
+      lookupImageFailReason imgId =
+        extractImageFailReason (find (\img -> img.id == imgId) entityImagesInfo.entityImages >>= (.failureReason))
       commonDocStatus dt = do
         mbDoc <- listToMaybe <$> QCommonDocExtra.findLatestByDriverIdAndDocumentType (Just driverId) dt
         let (status, reason, url) = checkImageValidity entityImagesInfo dt
@@ -1268,16 +1270,19 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
           -- Expiry from DL table's licenseExpiry field (not from Image table)
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL'
               iid2 = mbDL' >>= (.documentImageId2) <&> (.getId)
-          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), mbDL' >>= (.rejectReason), Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2)
+              reason = (mbDL' >>= (.rejectReason)) <|> (if (mbDL' <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL' <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+          return (mapStatus <$> (mbDL' <&> (.verificationStatus)), reason, Nothing, mbDL' <&> (.licenseExpiry), s3, iid, iid2)
         else do
           let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbDL
               iid2 = mbDL >>= (.documentImageId2) <&> (.getId)
-          return (mapStatus <$> (mbDL <&> (.verificationStatus)), mbDL >>= (.rejectReason), Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2)
+              reason = (mbDL >>= (.rejectReason)) <|> (if (mbDL <&> (.verificationStatus)) == Just Documents.INVALID then (mbDL <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing)
+          return (mapStatus <$> (mbDL <&> (.verificationStatus)), reason, Nothing, mbDL <&> (.licenseExpiry), s3, iid, iid2)
     DVC.AadhaarCard -> do
       mbAadhaarCard <- QAadhaarCard.findByPrimaryKey driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) lookupImage (mbAadhaarCard >>= (.aadhaarFrontImageId))
           iid2 = mbAadhaarCard >>= (.aadhaarBackImageId) <&> (.getId)
-      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, Nothing, Nothing, Nothing, s3, iid, iid2)
+          reason = if (mbAadhaarCard <&> (.verificationStatus)) == Just Documents.INVALID then (mbAadhaarCard >>= (.aadhaarFrontImageId)) >>= lookupImageFailReason else Nothing
+      return (mapStatus . (.verificationStatus) <$> mbAadhaarCard, reason, Nothing, Nothing, s3, iid, iid2)
     DVC.Permissions -> return (Just VALID, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
     DVC.SocialSecurityNumber -> do
       mbSSN <- QDSSN.findByDriverId driverId
@@ -1292,7 +1297,8 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
       mbPanCard <- QDPC.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbPanCard
           iid2 = mbPanCard >>= (.documentImageId2) <&> (.getId)
-      return (mapStatus . (.verificationStatus) <$> mbPanCard, Nothing, Nothing, Nothing, s3, iid, iid2)
+          reason = if (mbPanCard <&> (.verificationStatus)) == Just Documents.INVALID then (mbPanCard <&> (.documentImageId1)) >>= lookupImageFailReason else Nothing
+      return (mapStatus . (.verificationStatus) <$> mbPanCard, reason, Nothing, Nothing, s3, iid, iid2)
     DVC.GSTCertificate -> do
       mbGSTCertificate <- QDGST.findByDriverId driverId
       let (s3, iid) = maybe (mbS3Path, mbImageId) (lookupImage . (.documentImageId1)) mbGSTCertificate

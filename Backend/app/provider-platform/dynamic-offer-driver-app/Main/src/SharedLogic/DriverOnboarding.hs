@@ -952,13 +952,13 @@ runDocFaceMatch person config docImageId =
 --   On a mismatch the document image is marked INVALID (by runDocFaceMatch) and the doc record is flipped
 --   INVALID if it already exists; if 3P is still pending, the late webhook's sticky-INVALID guard keeps it
 --   INVALID. Only docs whose config has faceMatchSourceDoc set are considered.
-runDeferredFaceMatchOnSelfie :: Person.Person -> Flow ()
-runDeferredFaceMatchOnSelfie person =
+runDeferredFaceMatchOnSelfie :: Person.Person -> UTCTime -> Flow ()
+runDeferredFaceMatchOnSelfie person selfieCreatedAt =
   forM_ [ODC.DriverLicense, ODC.PanCard, ODC.AadhaarCard] $ \docType -> do
     mbConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType person.merchantOperatingCityId docType Nothing
     whenJust mbConfig $ \config -> whenJust config.faceMatchSourceDoc $ \_ -> do
       docImages <- ImageQuery.findRecentByPersonIdAndImageType person.id docType
-      whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId) docImages) $ \docImg -> do
+      whenJust (DL.find (\img -> img.verificationStatus == Just Documents.VALID && isNothing img.workflowTransactionId && img.createdAt < selfieCreatedAt) docImages) $ \docImg -> do
         outcome <- runDocFaceMatch person config docImg.id
         when (outcome == FMFail) $ case docType of
           ODC.DriverLicense -> DLQuery.updateVerificationStatus Documents.INVALID docImg.id
@@ -1127,6 +1127,17 @@ inferPanTypeFromNumber panNumber =
 
 isBusinessPan :: Maybe Text -> Bool
 isBusinessPan = maybe False ((== Just DPan.BUSINESS) . inferPanTypeFromNumber)
+
+-- | When a merchant enables individualPANCheck, reject business PANs (4th char ≠ 'P')
+-- for individual drivers (incl. fleet drivers) and individual fleet owners.
+-- Business fleet owners and other roles are exempt, as they may hold a business PAN.
+validateIndividualPANCheck :: DTC.TransporterConfig -> Person.Person -> Text -> Flow ()
+validateIndividualPANCheck transporterConfig person panNumber =
+  when (transporterConfig.individualPANCheck == Just True && isIndividualRole person.role) $
+    when (inferPanTypeFromNumber (removeSpaceAndDash panNumber) /= Just DPan.INDIVIDUAL) $
+      throwError (InvalidRequest "Business PAN card not be accepted please upload individual PAN")
+  where
+    isIndividualRole role = role == Person.DRIVER || role == Person.FLEET_OWNER
 
 -- Define a common function to handle role-based decryption
 getDriverDocumentInfo :: Person.Person -> Flow (Bool, DriverDocument)

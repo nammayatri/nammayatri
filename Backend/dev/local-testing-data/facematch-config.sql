@@ -51,7 +51,7 @@ BEGIN
   CREATE TEMP TABLE _dvc ON COMMIT DROP AS SELECT * FROM atlas_driver_offer_bpp.document_verification_config WHERE merchant_operating_city_id = src;
   UPDATE _dvc SET merchant_operating_city_id = dst;
   UPDATE _dvc SET face_match_source_doc = 'ProfilePhoto' WHERE document_type IN ('DriverLicense','PanCard','AadhaarCard');
-  UPDATE _dvc SET is_image_validation_required = true WHERE document_type IN ('PanCard','AadhaarCard');
+  UPDATE _dvc SET is_image_validation_required = true WHERE document_type IN ('DriverLicense','PanCard','AadhaarCard');
   INSERT INTO atlas_driver_offer_bpp.document_verification_config SELECT * FROM _dvc;
 
   RAISE NOTICE 'created face-match test opCity % (% / NAMMA)', dst, newcity;
