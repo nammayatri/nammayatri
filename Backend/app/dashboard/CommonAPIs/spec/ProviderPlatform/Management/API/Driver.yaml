@@ -600,8 +600,9 @@ apis:
   - GET: # GetAirportPreferenceAPI
       endpoint: /airportPreference
       auth: ApiAuthV2
-      mandatoryQuery:
-        phoneNumber: Text
+      query:
+        - phoneNumber: Text
+        - vehicleNumber: Text
       response:
         type: AirportPreferenceRes
 
