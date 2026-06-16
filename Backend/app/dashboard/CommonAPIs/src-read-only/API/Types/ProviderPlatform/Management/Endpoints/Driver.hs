@@ -708,7 +708,7 @@ type PostDriverUpdateMerchant =
            Kernel.Types.APISuccess.APISuccess
   )
 
-type GetDriverAirportPreference = ("airportPreference" :> MandatoryQueryParam "phoneNumber" Kernel.Prelude.Text :> Get '[JSON] AirportPreferenceRes)
+type GetDriverAirportPreference = ("airportPreference" :> QueryParam "phoneNumber" Kernel.Prelude.Text :> QueryParam "vehicleNumber" Kernel.Prelude.Text :> Get '[JSON] AirportPreferenceRes)
 
 type PostDriverAirportPreference =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "airportPreference" :> ReqBody '[JSON] AirportPreferenceReq
@@ -771,7 +771,7 @@ data DriverAPIs = DriverAPIs
     getDriverEarnings :: Data.Time.Calendar.Day -> Data.Time.Calendar.Day -> Dashboard.Common.Driver.EarningType -> Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient EarningPeriodStatsRes,
     postDriverTdsRateUpdate :: UpdateTdsRateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverUpdateMerchant :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateDriverMerchantReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getDriverAirportPreference :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
+    getDriverAirportPreference :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient AirportPreferenceRes,
     postDriverAirportPreference :: Kernel.Types.Id.Id Dashboard.Common.Driver -> AirportPreferenceReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverSearchRequestStats :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient DriverSearchRequestStatsRes
   }
