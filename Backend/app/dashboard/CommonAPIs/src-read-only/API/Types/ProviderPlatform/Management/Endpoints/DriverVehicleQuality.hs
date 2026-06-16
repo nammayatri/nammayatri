@@ -60,17 +60,23 @@ instance Kernel.Types.HideSecrets.HideSecrets UpdateVehicleRatingReq where
 type API = ("driverVehicleQuality" :> (GetDriverVehicleQualityList :<|> GetDriverVehicleQualitySearch :<|> PostDriverVehicleQualityUpdateVehicleRating))
 
 type GetDriverVehicleQualityList =
-  ( "list" :> QueryParam "limit" Kernel.Prelude.Int :> QueryParam "maxVehicleRating" Kernel.Prelude.Double
+  ( "list" :> QueryParam "vehicleVariant" Dashboard.Common.VehicleVariant :> QueryParam "limit" Kernel.Prelude.Int
+      :> QueryParam
+           "maxVehicleRating"
+           Kernel.Prelude.Double
+      :> QueryParam "minVehicleRating" Kernel.Prelude.Double
+      :> QueryParam
+           "vehicleVariants"
+           [Dashboard.Common.VehicleVariant]
       :> QueryParam
            "offset"
            Kernel.Prelude.Int
-      :> MandatoryQueryParam "maxVehicleAge" Kernel.Prelude.Int
+      :> MandatoryQueryParam
+           "maxVehicleAge"
+           Kernel.Prelude.Int
       :> MandatoryQueryParam
            "minDriverRating"
            Kernel.Prelude.Double
-      :> MandatoryQueryParam
-           "vehicleVariant"
-           Dashboard.Common.VehicleVariant
       :> Get
            '[JSON]
            DriverVehicleQualityListRes
@@ -81,7 +87,7 @@ type GetDriverVehicleQualitySearch = ("search" :> QueryParam "phoneNumber" Kerne
 type PostDriverVehicleQualityUpdateVehicleRating = ("updateVehicleRating" :> ReqBody '[JSON] UpdateVehicleRatingReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data DriverVehicleQualityAPIs = DriverVehicleQualityAPIs
-  { getDriverVehicleQualityList :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Dashboard.Common.VehicleVariant -> EulerHS.Types.EulerClient DriverVehicleQualityListRes,
+  { getDriverVehicleQualityList :: Kernel.Prelude.Maybe Dashboard.Common.VehicleVariant -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> EulerHS.Types.EulerClient DriverVehicleQualityListRes,
     getDriverVehicleQualitySearch :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient [DriverVehicleQualityResp],
     postDriverVehicleQualityUpdateVehicleRating :: UpdateVehicleRatingReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }

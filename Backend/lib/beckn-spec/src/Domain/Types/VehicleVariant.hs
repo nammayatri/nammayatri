@@ -20,12 +20,17 @@ module Domain.Types.VehicleVariant where
 
 import Control.Applicative ((<|>))
 import Data.Aeson
+import qualified Data.Bifunctor as BF
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as DT
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified EulerHS.Prelude as EP
 import Kernel.Prelude
 import qualified Kernel.Storage.ClickhouseV2 as CH
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data VehicleVariant
   = SEDAN
@@ -72,6 +77,16 @@ allVehicleVariants :: [VehicleVariant]
 allVehicleVariants = [minBound .. maxBound]
 
 $(mkHttpInstancesForEnum ''VehicleVariant)
+
+instance FromHttpApiData [VehicleVariant] where
+  parseUrlPiece = parseHeader . DT.encodeUtf8
+  parseQueryParam = parseUrlPiece
+  parseHeader bs = BF.first T.pack . eitherDecode . BSL.fromStrict $ bs
+
+instance ToHttpApiData [VehicleVariant] where
+  toUrlPiece = DT.decodeUtf8 . toHeader
+  toQueryParam = toUrlPiece
+  toHeader = BSL.toStrict . encode
 
 castServiceTierToVariant :: DVST.ServiceTierType -> VehicleVariant
 castServiceTierToVariant = \case

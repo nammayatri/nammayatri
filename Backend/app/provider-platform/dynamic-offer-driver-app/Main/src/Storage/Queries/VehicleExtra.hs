@@ -181,6 +181,42 @@ findEnabledByVariantCityAndManufacturingDateAfter variantVal cutoffDate (Id merc
       Just maxRating ->
         B.sqlBool_ (B.isNothing_ vr) B.||?. B.maybe_ (B.sqlBool_ $ B.val_ False) (\r -> B.sqlBool_ (r B.<. B.val_ maxRating)) vr
 
+findEnabledByVariantsCityAndManufacturingDateAfter :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [VehicleVariant] -> Days.Day -> Id Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Double -> Int -> Int -> m [Vehicle]
+findEnabledByVariantsCityAndManufacturingDateAfter variantVals cutoffDate (Id merchantId') opCityId mbMinVehicleRating limitVal offsetVal = do
+  dbConf <- getReplicaBeamConfig
+  result <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ (fromIntegral limitVal) $
+            B.offset_ (fromIntegral offsetVal) $
+              B.orderBy_ (\(vehicle, _driverInfo) -> B.desc_ vehicle.createdAt) $
+                B.filter_'
+                  ( \(vehicle, driverInfo) ->
+                      vehicle.merchantId B.==?. B.val_ merchantId'
+                        B.&&?. variantsFilter vehicle.variant
+                        B.&&?. B.maybe_ (B.sqlBool_ $ B.val_ True) (\mfgDate -> B.sqlBool_ (mfgDate B.>=. B.val_ cutoffDate)) vehicle.mYManufacturing
+                        B.&&?. B.sqlBool_ (driverInfo.enabled B.==. B.val_ True)
+                        B.&&?. B.sqlBool_ (driverInfo.blocked B.==. B.val_ False)
+                        B.&&?. (driverInfo.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCityId))
+                        B.&&?. vehicleRatingFilter vehicle.vehicleRating
+                  )
+                  do
+                    vehicle <- B.all_ (BeamCommon.vehicle BeamCommon.atlasDB)
+                    driverInfo <- B.join_' (BeamCommon.driverInformation BeamCommon.atlasDB) (\di -> BeamV.driverId vehicle B.==?. BeamDI.driverId di)
+                    pure (vehicle, driverInfo)
+  case result of
+    Right rows -> catMaybes <$> mapM (fromTType' . fst) rows
+    Left _ -> pure []
+  where
+    variantsFilter variantCol = case variantVals of
+      [] -> B.sqlBool_ (B.val_ True)
+      vs -> B.sqlBool_ (variantCol `B.in_` (B.val_ <$> vs))
+    vehicleRatingFilter vr = case mbMinVehicleRating of
+      Nothing -> B.sqlBool_ (B.isNothing_ vr)
+      Just minRating ->
+        B.maybe_ (B.sqlBool_ $ B.val_ False) (\r -> B.sqlBool_ (r B.>=. B.val_ minRating)) vr
+
 findAllByDriverIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Id Person] -> m [Vehicle]
 findAllByDriverIds driverIds =
   if null driverIds
