@@ -122,7 +122,7 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
   (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId}) (Just (SCTC.findByMerchantOpCityId person.merchantOperatingCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  DVRC.validateIndividualPANCheck transporterConfig person req.panNumber
+  validateIndividualPANCheck transporterConfig person req.panNumber
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
@@ -174,8 +174,8 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
             DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
           _ -> pure ()
 
-  if DVRC.isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
-    then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+  if isNameCompareRequired transporterConfig verifyBy || gstPanLinkCheckRequired
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   mdriverPanCard <- DPQuery.findByDriverId person.id
   logInfo ("mdriverPanCard isJust: " <> show (isJust mdriverPanCard))
@@ -214,6 +214,9 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("panName: " <> show panName)
+              panFaceConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.PanCard Nothing
+              fmOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg (Id req.imageId)) panFaceConfig
+              when (fmOutcome == FMFail) $ throwError FaceMatchFailed
               when (verifyBy /= DPan.FRONTEND_SDK) $ do
                 case (panName, extractedNameOnCard) of
                   (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
@@ -276,23 +279,19 @@ castTextToDomainType panType = case panType of
 verifyPanFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe Text -> Flow ()
 verifyPanFlow person merchantOpCityId documentVerificationConfig panNumber driverDateOfBirth imageId1 nameOnCard = do
   logDebug $ "verifyPanFlow: " <> show panNumber
-  faceMatchOutcome <- runDocFaceMatch person documentVerificationConfig imageId1
-  case faceMatchOutcome of
-    FMFail -> throwError FaceMatchFailed
-    _ -> do
-      now <- getCurrentTime
-      encryptedPan <- encrypt panNumber
-      let imageExtractionValidation =
-            if documentVerificationConfig.checkExtraction
-              then Domain.Success
-              else Domain.Skipped
-      verifyRes <-
-        Verification.verifyPanAsync person.merchantId merchantOpCityId $
-          Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
-      logDebug $ "verifyRes: " <> show verifyRes
-      case verifyRes.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
-        _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
+  now <- getCurrentTime
+  encryptedPan <- encrypt panNumber
+  let imageExtractionValidation =
+        if documentVerificationConfig.checkExtraction
+          then Domain.Success
+          else Domain.Skipped
+  verifyRes <-
+    Verification.verifyPanAsync person.merchantId merchantOpCityId $
+      Verification.VerifyPanAsyncReq {panNumber, driverId = person.id.getId, dateOfBirth = driverDateOfBirth, fullName = fromMaybe "" nameOnCard}
+  logDebug $ "verifyRes: " <> show verifyRes
+  case verifyRes.requestor of
+    VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 Nothing driverDateOfBirth Nothing nameOnCard verifyRes.requestId now imageExtractionValidation encryptedPan
+    _ -> throwError $ InternalError ("Service provider not configured to return PAN verification async responses. Provider Name : " <> (show verifyRes.requestor))
 
 onVerifyPan :: VerificationReqRecord -> VT.PanVerificationResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPan verificationReq output serviceName = do

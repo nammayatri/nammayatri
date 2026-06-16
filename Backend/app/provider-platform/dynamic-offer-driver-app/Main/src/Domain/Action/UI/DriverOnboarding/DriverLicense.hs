@@ -202,6 +202,10 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
             logInfo $ "Ticket: " <> show ticket
             return ()
+  let runDlFaceMatch = do
+        dlFaceConfig <- listToMaybe <$> CQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId DTO.DriverLicense Nothing
+        dlFaceOutcome <- maybe (pure FMSkip) (\cfg -> runDocFaceMatch person cfg imageId1) dlFaceConfig
+        when (dlFaceOutcome == FMFail) $ throwError FaceMatchFailed
   let runBody = do
         when (isNameCompareRequired transporterConfig verifyBy) $
           validateDocument merchantId merchantOpCityId person.id nameOnTheCard dateOfBirth Nothing DTO.DriverLicense DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
@@ -237,6 +241,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             when (driverLicense.verificationStatus == Documents.VALID && not (fromMaybe False documentVerificationConfig.allowLicenseTransfer) && not (fromMaybe False transporterConfig.allowDlReupload)) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwError $ DocumentAlreadyValidated "DL"
+            runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then do
                 when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
@@ -247,6 +252,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             when (isJust mDriverDL) $ do
               Utils.cleanupUploadedImages ([imageId1] <> maybe [] (\img -> [img]) imageId2) personId
               throwImageError imageId1 DriverAlreadyLinked
+            runDlFaceMatch
             if documentVerificationConfig.doStrictVerifcation
               then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnTheCard req.vehicleCategory req.requestId sdkTransactionId
               else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing (Just . T.pack . show . utctDay $ driverDateOfBirth) documentVerificationConfig req.imageId1 req.imageId2 nameOnTheCard dateOfIssue req.vehicleCategory
@@ -297,29 +303,25 @@ verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverD
   case mbReqId of
     Just reqId -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard reqId now Domain.Success encryptedDL mbTxnId
     Nothing -> do
-      faceMatchOutcome <- runDocFaceMatch person documentVerificationConfig imageId1
-      case faceMatchOutcome of
-        FMFail -> throwError FaceMatchFailed
-        _ -> do
-          let imageExtractionValidation =
-                if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
-                  then Domain.Success
-                  else Domain.Skipped
-          verifyRes <-
-            Verification.verifyDL person.merchantId merchantOpCityId $
-              Verification.VerifyDLReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
+      let imageExtractionValidation =
+            if isNothing dateOfIssue && documentVerificationConfig.checkExtraction
+              then Domain.Success
+              else Domain.Skipped
+      verifyRes <-
+        Verification.verifyDL person.merchantId merchantOpCityId $
+          Verification.VerifyDLReq {dlNumber, dateOfBirth = driverDateOfBirth, driverId = person.id.getId, returnState = Just True, applicantMobile = Nothing}
 
-          case verifyRes of
-            VerificationIntTypes.AsyncDLResp res -> case res.requestor of
-              VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL
-              VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL res.transactionId
-              _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show res.requestor))
-            VerificationIntTypes.SyncDLResp resp -> do
-              when (resp.requestor == VT.Morth) $ do
-                let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
-                morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
-                MorthQuery.create morthEntity
-              onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory
+      case verifyRes of
+        VerificationIntTypes.AsyncDLResp res -> case res.requestor of
+          VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL
+          VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard res.requestId now imageExtractionValidation encryptedDL res.transactionId
+          _ -> throwError $ InternalError ("Service provider not configured to return DL verification async responses. Provider Name : " <> (show res.requestor))
+        VerificationIntTypes.SyncDLResp resp -> do
+          when (resp.requestor == VT.Morth) $ do
+            let mbStatus = DocStatus.docStatusEnumToText $ if isJust resp.response.status then DocStatus.DOC_SUCCESS else DocStatus.DOC_FAILED
+            morthEntity <- VC.mkMorthVerificationEntity person Nothing DTO.DriverLicense encryptedDL mbStatus dateOfIssue (Just driverDateOfBirth) mbVehicleCategory Nothing Nothing (Just $ show resp.response) now
+            MorthQuery.create morthEntity
+          onVerifyDLHandler person resp.response.licenseNumber (resp.response.t_validity_to <|> resp.response.nt_validity_to <|> Just "2099-12-12") resp.response.covs resp.response.driverName resp.response.dob documentVerificationConfig imageId1 imageId2 nameOnTheCard dateOfIssue mbVehicleCategory
 
 mkIdfyVerificationEntity :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe VehicleCategory -> UTCTime -> Maybe UTCTime -> Maybe Text -> Text -> UTCTime -> Domain.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> Flow Domain.IdfyVerification
 mkIdfyVerificationEntity person imageId1 imageId2 mbVehicleCategory driverDateOfBirth dateOfIssue nameOnTheCard requestId now imageExtractionValidation encryptedDL = do
@@ -418,13 +420,14 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
 
   case mDriverLicense of
     Just driverLicense -> do
+      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
       Query.upsert driverLicense
+      let docImageInvalid = any (\mbImg -> (mbImg >>= (.verificationStatus)) == Just Documents.INVALID) [image1, image2]
+      when docImageInvalid $ Query.updateVerificationStatus Documents.INVALID imageId1
       case person.role of
         Person.DRIVER -> do
           DriverInfo.updateDlNumber mEncryptedDL person.id
         _ -> pure ()
-      (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-      -- Sticky INVALID: never promote an image already marked INVALID (e.g. by a face-match failure) to VALID.
       forM_ [(image1, Just imageId1), (image2, imageId2)] $ \(mbImg, mbImgId) ->
         when ((mbImg >>= (.verificationStatus)) `notElem` [Just Documents.VALID, Just Documents.INVALID]) $
           whenJust mbImgId $ ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard.")

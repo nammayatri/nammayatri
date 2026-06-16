@@ -705,7 +705,7 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
   transporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing)) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  VRC.validateIndividualPANCheck transporterConfig person req.panNumber
+  SDO.validateIndividualPANCheck transporterConfig person req.panNumber
   (verificationStatus, mbNameFromGovtDB) <-
     if isDigiLockerFlow
       then pure (Documents.VALID, Nothing)
