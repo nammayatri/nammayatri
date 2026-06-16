@@ -83,7 +83,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
           if transporterConfig.enableManualDocumentStatusCheck == Just True
             then Just DDVS.ADMIN_PENDING
             else Nothing
-    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
+    DRegistrationV2.createFleetOwnerInfo personId person.merchantId (Just False) (Just person.merchantOperatingCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where
