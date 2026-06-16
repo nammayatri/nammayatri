@@ -109,9 +109,10 @@ jobs:
       - name: Build (incremental cabal)
         run: |
           set -o pipefail
+          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd Backend
+            cd /tmp/nammayatri/Backend
             echo \"GHC libdir: \$(ghc --print-libdir)\"
             echo '--- cabal dry-run (what it plans to rebuild) ---'
             cabal build all --dry-run 2>&1 | tail -20
@@ -179,10 +180,10 @@ jobs:
 
       - name: Build repl artifacts (dynamic-offer-driver-app)
         run: |
-          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri-src"
+          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd /tmp/nammayatri-src/Backend
+            cd /tmp/nammayatri/Backend
             cabal repl dynamic-offer-driver-app \
               --repl-options='-fno-code -fwrite-interface' \
               --builddir=dist-newrepl-driver <<< ':quit'
@@ -190,10 +191,10 @@ jobs:
 
       - name: Build repl artifacts (rider-app)
         run: |
-          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri-src"
+          ln -sfn "$GITHUB_WORKSPACE" "/tmp/nammayatri"
           nix develop .#backend --command bash -c "
             export CABAL_DIR=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/${{ github.ref_name }}/.cabal-dir
-            cd /tmp/nammayatri-src/Backend
+            cd /tmp/nammayatri/Backend
             cabal repl rider-app \
               --repl-options='-fno-code -fwrite-interface' \
               --builddir=dist-newrepl-rider <<< ':quit'
