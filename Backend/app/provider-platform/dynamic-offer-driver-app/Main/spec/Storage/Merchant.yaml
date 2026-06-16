@@ -1086,6 +1086,7 @@ TransporterConfig:
     canDowngradeToSedan: Bool
     canDowngradeToHatchback: Bool
     canDowngradeToTaxi: Bool
+    enableTierUpgradeFeature: Maybe Bool
     canSuvDowngradeToTaxi: Bool
     canSuvDowngradeToHatchback: Bool
     canSwitchToRental: Bool

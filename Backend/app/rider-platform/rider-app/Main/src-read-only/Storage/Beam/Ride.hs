@@ -25,6 +25,7 @@ import Tools.Beam.UtilsTH
 data RideT f = RideT
   { allowedEditLocationAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     allowedEditPickupLocationAttempts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    assignedServiceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     billingCategory :: B.C f (Kernel.Prelude.Maybe SharedLogic.Type.BillingCategory),
@@ -80,6 +81,7 @@ data RideT f = RideT
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isTierUpgrade :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     offersFraudCheckFailureReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
