@@ -98,3 +98,9 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN original_registration_amount 
 
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN airport_ride_subscription double precision ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ALTER COLUMN registration_amount TYPE numeric(30,2);
