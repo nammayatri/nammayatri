@@ -444,7 +444,7 @@ buildVerificationServiceConfig = \case
     accountId' <- encrypt accountId
     apiKey' <- encrypt apiKey
     secret' <- encrypt secret
-    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', faceCompareRetryLimit = Nothing, ..}
+    pure . Verification.IdfyConfig $ Verification.IdfyCfg {accountId = accountId', apiKey = apiKey', secret = secret', ..}
 
 instance ToJSON VerificationServiceConfigUpdateReq where
   toJSON = genericToJSON (updateVerificationReqOptions updateVerificationReqConstructorModifier)
