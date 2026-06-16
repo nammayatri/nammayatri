@@ -20,6 +20,8 @@ module SharedLogic.DriverOnboarding.Status
     fetchDriverDocStatusesForPerson,
     recomputeFleetVerifiedAndEnabled,
     recomputeDriverVerifiedAndEnabled,
+    botApproveAndReconcile,
+    forkRecomputeVehicleVerified,
     activateRCAutomatically,
     mkCommonDocumentItem,
     checkInspectionHubRequestCreated,
@@ -974,6 +976,52 @@ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs driverDocument
   -- Return the freshly computed `enabled` so callers don't re-read FOI (which could be stale under
   -- read-replica lag right after the write).
   pure allFleetEnablingDocsValid
+
+-- | BOT approve: returns whether BotApproval's dependency docs are VALID, and forks the recompute.
+botApproveAndReconcile ::
+  DMOC.MerchantOperatingCity ->
+  DP.Person ->
+  DTC.TransporterConfig ->
+  Flow Bool
+botApproveAndReconcile merchantOperatingCity person transporterConfig = do
+  let language = fromMaybe merchantOperatingCity.language person.language
+  (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- fetchDriverDocStatusesForPerson person merchantOperatingCity transporterConfig language (Just True)
+  let botApprovalDeps = case allDocVerificationConfigs of
+        Left fleetConfigs -> maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) fleetConfigs
+        Right driverConfigs -> maybe [] (.dependencyDocumentType) $ find (\c -> c.documentType == DVC.BotApproval) driverConfigs
+      validDocTypes = map (.documentType) $ filter (\d -> d.verificationStatus == VALID) driverDocuments
+      dependencyDocsValid = all (`elem` validDocTypes) botApprovalDeps
+  -- Force BotApproval VALID: ReviewRequest isn't COMPLETED yet, but approval is committed.
+  fork "botApproveAndReconcile: recompute verified/enabled" $ do
+    let docs' = map forceBotApprovalValid driverDocuments
+    if isFleetRole person.role
+      then void $ recomputeFleetVerifiedAndEnabled person allDocVerificationConfigs docs' vehicleCategory Nothing
+      else void $ recomputeDriverVerifiedAndEnabled merchantOperatingCity.id merchantOperatingCity.merchantId person allDocVerificationConfigs docs' vehicleCategory Nothing Nothing Nothing transporterConfig
+  pure dependencyDocsValid
+  where
+    forceBotApprovalValid :: DocumentStatusItem -> DocumentStatusItem
+    forceBotApprovalValid d
+      | d.documentType == DVC.BotApproval = d {verificationStatus = VALID}
+      | otherwise = d
+
+-- | Fork RC-verified recompute (reusing fetched docs): RC.verified = all mandatory vehicle docs VALID,
+--   with InspectionHub forced VALID (OHR not APPROVED yet). `approved`/RC activation stay BOT-owned.
+forkRecomputeVehicleVerified ::
+  Text ->
+  VehicleDocumentItem ->
+  [DVC.DocumentVerificationConfig] ->
+  Flow ()
+forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs =
+  fork "forkRecomputeVehicleVerified: recompute vehicle verified" $ do
+    let vehicleDocItem' = vehicleDocItem {documents = map overrideInspectionHubAsValid vehicleDocItem.documents}
+        allVehicleMandatoryDocsValid = checkAllVehicleDocsValidForVerified allDocumentVerificationConfigs vehicleDocItem' Nothing
+    rcHash <- getDbHash registrationNo
+    RCQuery.updateVerifiedByCertificateNumberHash (Just allVehicleMandatoryDocsValid) rcHash
+  where
+    overrideInspectionHubAsValid :: DocumentStatusItem -> DocumentStatusItem
+    overrideInspectionHubAsValid d
+      | d.documentType == DVC.InspectionHub = d {verificationStatus = VALID}
+      | otherwise = d
 
 -- | Enable a driver/fleet (cascades fleet→drivers). @verifiedToSet@ is written for `verified` too;
 --   legacy callers pass True.
