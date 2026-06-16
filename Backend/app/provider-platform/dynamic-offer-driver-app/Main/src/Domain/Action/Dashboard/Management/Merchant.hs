@@ -1081,6 +1081,7 @@ castDDocumentType = \case
   DVC.MedicalCertificate -> Common.MedicalCertificate
   DVC.Rating -> Common.Rating
   DVC.BotApproval -> Common.BotApproval
+  DVC.NomineeDetails -> Common.NomineeDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentUpdate ::
@@ -1189,6 +1190,7 @@ castDocumentType = \case
   Common.MedicalCertificate -> DVC.MedicalCertificate
   Common.Rating -> DVC.Rating
   Common.BotApproval -> DVC.BotApproval
+  Common.NomineeDetails -> DVC.NomineeDetails
 
 ---------------------------------------------------------------------
 postMerchantConfigOnboardingDocumentCreate ::
