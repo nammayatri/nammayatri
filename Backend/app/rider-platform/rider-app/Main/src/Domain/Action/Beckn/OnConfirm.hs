@@ -120,6 +120,8 @@ data RideAssignedInfo = RideAssignedInfo
     favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId,
     isSafetyPlus :: Bool,
+    isTierUpgrade :: Bool,
+    assignedServiceTierName :: Maybe Text,
     bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 

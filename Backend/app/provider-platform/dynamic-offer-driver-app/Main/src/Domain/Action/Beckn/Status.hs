@@ -115,4 +115,7 @@ handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
       let isAlreadyFav = False
       let favCount = 0
       let isSafetyPlus = booking.isSafetyPlus
+      let isTierUpgrade = False
+          assignedServiceTierType = Nothing
+          assignedServiceTierName = Nothing
       pure $ RideAssignedReq DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}

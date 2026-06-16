@@ -925,9 +925,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_ba
 
 ------- SQL updates -------
 
-
-
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upgrade_feature boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;

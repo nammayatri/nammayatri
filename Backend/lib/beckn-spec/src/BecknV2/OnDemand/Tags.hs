@@ -581,6 +581,10 @@ data BecknTag
   | SUPPLIER_ID -- BPP_INVOICE_INFO: supplier (fleet owner / merchant) id
   | -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -- CHANGE_SERVICE_TIER_DETAILS: target tier type
+  | -- Tier upgrade tags (within-family, post-assignment upgrade signal at on_update / ride_assigned)
+    IS_TIER_UPGRADE -- GENERAL_INFO: "true" iff assigned tier ranks above booked tier
+  | ASSIGNED_SERVICE_TIER_TYPE -- GENERAL_INFO: assigned tier enum (e.g. "SEDAN")
+  | ASSIGNED_SERVICE_TIER_NAME -- GENERAL_INFO: merchant-configured display name (e.g. "Sedan")
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 instance CompleteTag BecknTag where
@@ -785,6 +789,10 @@ instance CompleteTag BecknTag where
     INITIATED_AS -> DELIVERY
     -- Change service tier tags
     NEW_VEHICLE_SERVICE_TIER -> CHANGE_SERVICE_TIER_DETAILS
+    -- Tier upgrade tags
+    IS_TIER_UPGRADE -> GENERAL_INFO
+    ASSIGNED_SERVICE_TIER_TYPE -> GENERAL_INFO
+    ASSIGNED_SERVICE_TIER_NAME -> GENERAL_INFO
     -- Fare policy tags
     MIN_FARE -> FARE_POLICY
     MIN_FARE_DISTANCE_KM -> FARE_POLICY

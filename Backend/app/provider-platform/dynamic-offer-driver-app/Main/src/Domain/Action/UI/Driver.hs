@@ -1214,19 +1214,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId, identit
       Nothing -> return (False, Nothing, False)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId Nothing Nothing
-        let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers
-        let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
-        let mbDefaultServiceTierItem =
-              if null allVehicleSupportedDefaultServiceTiers
-                then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
-                else listToMaybe allVehicleSupportedDefaultServiceTiers
-        let checIfACWorking' =
-              case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
-                Nothing -> False
-                Just acThreshold -> do
-                  (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
-                    && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
-        return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem, isVehicleSupported)
+        let (ac, mbTier, supported) = getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now
+        return (ac, (.serviceTierType) <$> mbTier, supported)
   onRideFlag <-
     if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS
       then
