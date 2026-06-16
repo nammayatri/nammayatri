@@ -232,6 +232,7 @@ data DocumentType
   | MedicalCertificate
   | Rating
   | BotApproval
+  | NomineeDetails
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
