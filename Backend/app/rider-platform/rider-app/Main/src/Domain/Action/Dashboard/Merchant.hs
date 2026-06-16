@@ -309,7 +309,7 @@ postMerchantServiceUsageConfigMapsUpdate merchantShortId city req = do
     when (Common.mapsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.MapsService service)}
       void $
-        listToMaybe <$> getConfig mscDims Nothing
+        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.MapsService service)))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for maps service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-
@@ -342,7 +342,7 @@ postMerchantServiceUsageConfigSmsUpdate merchantShortId city req = do
     when (Common.smsServiceUsedInReq req service) $ do
       let mscDims = MerchantServiceConfigDimensions {merchantOperatingCityId = merchantOperatingCity.id.getId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = Just (DMSC.SmsService service)}
       void $
-        listToMaybe <$> getConfig mscDims Nothing
+        listToMaybe <$> getConfig mscDims (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService merchantOperatingCity.merchantId merchantOperatingCity.id (DMSC.SmsService service)))
           >>= fromMaybeM (InvalidRequest $ "Merchant config for sms service " <> show service <> " is not provided")
 
   merchantServiceUsageConfig <-

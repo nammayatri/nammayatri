@@ -66,6 +66,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RCStatsExtra as QRCStats
 import qualified Storage.Queries.Reminder as QReminder
+import qualified Storage.Queries.ReminderConfig as QRC
 
 -- ============================================================================
 -- Helper functions for common patterns
@@ -107,7 +108,7 @@ getReminderConfigIfEnabled driverId merchantOpCityId documentType = do
       mbTransporterConfig <- getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (SCTC.findByMerchantOpCityId merchantOpCityId Nothing))
       case mbTransporterConfig >>= (.reminderSystemEnabled) of
         Just True -> do
-          mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType}) Nothing
+          mbReminderConfig <- getOneConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId, documentType = Just documentType}) (Just (maybeToList <$> QRC.findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType))
           case mbReminderConfig of
             Just config | config.enabled -> pure $ Just config
             _ -> pure Nothing
@@ -499,7 +500,7 @@ checkAndCreateRemindersForRidesThreshold ::
   m ()
 checkAndCreateRemindersForRidesThreshold driverId driverRideCount mbRCAssoc mbRCRideCount merchantOperatingCityId providerId = do
   -- Get all reminder configs that have ridesThreshold configured
-  allReminderConfigs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing}) Nothing
+  allReminderConfigs <- getConfig (ReminderConfigDimensions {merchantOperatingCityId = merchantOperatingCityId.getId, documentType = Nothing}) (Just (QRC.findAllByMerchantOpCityId merchantOperatingCityId))
   let ridesThresholdDocumentTypes =
         List.map (.documentType) $
           filter

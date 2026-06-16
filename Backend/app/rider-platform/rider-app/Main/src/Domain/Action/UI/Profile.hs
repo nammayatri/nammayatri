@@ -107,6 +107,7 @@ import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import Storage.Beam.Sos ()
+import qualified Storage.CachedQueries.Merchant.PayoutConfig as CQPayoutCfg
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
@@ -377,7 +378,7 @@ getPersonDetails (personId, _) toss tenant' context includeProfileImage mbBundle
           else pure Nothing
       else pure person.customerReferralCode
   logInfo "[Profile.getPersonDetails] referralCode done"
-  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) Nothing
+  mbPayoutConfig <- getOneConfig (PayoutConfigDimensions {merchantOperatingCityId = person.merchantOperatingCityId.getId, vehicleCategory = Just VehicleCategory.AUTO_CATEGORY, isPayoutEnabled = Nothing, payoutEntity = Nothing}) (Just (maybeToList <$> CQPayoutCfg.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY (Just [])))
   logInfo "[Profile.getPersonDetails] findPayoutConfig done"
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-

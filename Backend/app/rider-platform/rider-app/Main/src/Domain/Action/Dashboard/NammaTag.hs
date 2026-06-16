@@ -133,6 +133,7 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.PayoutConfig (PayoutConfigDimensions (..))
 import Storage.ConfigPilot.Config.RideRelatedNotificationConfig (RideRelatedNotificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+import qualified Storage.Queries.BecknConfig as SQBC
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.UiRiderConfig as SQU
 import Storage.Queries.UiRiderConfigExtra ()
@@ -744,7 +745,7 @@ postNammaTagConfigPilotGetConfigWithDimensions merchantShortId opCity req = do
       cfgs <- getConfig (MerchantServiceConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, serviceName = dimLookup "serviceName" dims}) Nothing
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.BecknConfig -> do
-      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) Nothing
+      cfgs <- getConfig (BecknConfigDimensions {merchantOperatingCityId = mocId, merchantId = merchantOperatingCity.merchantId.getId, domain = dimLookup "domain" dims, vehicleCategory = dimLookup "vehicleCategory" dims}) (Just (SQBC.findByMerchantId (Just merchantOperatingCity.merchantId)))
       pure LYTU.TableDataResp {configs = map A.toJSON cfgs}
     LYTU.MerchantPushNotificationRider -> do
       cfgs <- getConfig (MerchantPushNotificationDimensions {merchantOperatingCityId = mocId}) (Just (SQMerchantPN.findAllByMerchantOpCityId (Id mocId) (Just [])))

@@ -13,6 +13,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as QOMSC
+import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Tools.Error
 
@@ -29,7 +30,7 @@ runWithServiceConfig ::
   CIT.GeneralChatCompletionReq ->
   m CIT.GeneralChatCompletionResp
 runWithServiceConfig func getCfg _merchantId merchantOpCityId req = do
-  orgLLMChatCompletionConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
+  orgLLMChatCompletionConfig <- getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId)) >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   orgLLMChatCompletionServiceConfig <-
     QOMSC.findByServiceAndCity (DOSC.LLMChatCompletionService $ getCfg orgLLMChatCompletionConfig) merchantOpCityId
       >>= fromMaybeM (MerchantServiceConfigNotFound merchantOpCityId.getId "LLMChatCompletion" (show $ getCfg orgLLMChatCompletionConfig))
