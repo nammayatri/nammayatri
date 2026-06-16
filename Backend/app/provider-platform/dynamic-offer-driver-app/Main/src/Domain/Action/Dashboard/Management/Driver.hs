@@ -1506,11 +1506,18 @@ postDriverVehicleUpsertSelectedServiceTiers merchantShortId opCity req = do
         Just tier -> Right tier
         Nothing -> Left $ "Invalid service tier: " <> tierText
 
-getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AirportPreferenceRes
-getDriverAirportPreference merchantShortId _opCity phoneNumber = do
+getDriverAirportPreference :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Text -> Flow Common.AirportPreferenceRes
+getDriverAirportPreference merchantShortId _opCity mbPhoneNumber mbVehicleNumber = do
   merchant <- findMerchantByShortId merchantShortId
-  mobileNumberHash <- getDbHash phoneNumber
-  driver <- QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+  driver <- case (mbPhoneNumber, mbVehicleNumber) of
+    (Just phoneNumber, _) -> do
+      mobileNumberHash <- getDbHash phoneNumber
+      QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (InvalidRequest "Person not found")
+    (_, Just vehicleNumber) -> do
+      vehicle <- QVehicle.findByRegistrationNo vehicleNumber >>= fromMaybeM (VehicleDoesNotExist vehicleNumber)
+      unless (vehicle.merchantId == merchant.id) $ throwError (VehicleDoesNotExist vehicleNumber)
+      QPerson.findById vehicle.driverId >>= fromMaybeM (PersonDoesNotExist vehicle.driverId.getId)
+    _ -> throwError $ InvalidRequest "Either phoneNumber or vehicleNumber must be provided"
   driverInfo <- B.runInReplica $ QDriverInfo.findById driver.id >>= fromMaybeM DriverInfoNotFound
   pure
     Common.AirportPreferenceRes
