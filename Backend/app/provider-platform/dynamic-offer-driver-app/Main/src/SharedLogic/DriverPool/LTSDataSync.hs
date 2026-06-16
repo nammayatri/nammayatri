@@ -20,7 +20,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType, Device, Version)
+import Kernel.Types.Version (CloudType (..), Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.DriverPool.DriverPoolData as DPD
@@ -198,7 +198,7 @@ cleanupOldCloudKey ::
 cleanupOldCloudKey deploymentCloudType old new =
   when (old.cloudType /= new.cloudType) $ do
     let key = DPD.driverPoolDataKey old.driverId
-    if deploymentCloudType == old.cloudType
+    if deploymentCloudType == Just (fromMaybe GCP old.cloudType)
       then Redis.withLTSRedis $ Redis.del key
       else Redis.withSecondaryLTSRedis $ Redis.del key
 

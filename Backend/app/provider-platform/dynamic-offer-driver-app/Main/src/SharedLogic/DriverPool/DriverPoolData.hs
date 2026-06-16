@@ -29,7 +29,7 @@ import qualified Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
-import Kernel.Types.Version (CloudType, Device, Version)
+import Kernel.Types.Version (CloudType (..), Device, Version)
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
 
@@ -246,6 +246,6 @@ setDriverPoolDataByCloud deploymentCloudType dpd = do
   let driverCloud = dpd.cloudType
       key = driverPoolDataKey dpd.driverId
       expiry = 2592000 * 12 -- 1 year
-  if deploymentCloudType == driverCloud
+  if deploymentCloudType == Just (fromMaybe GCP driverCloud)
     then Redis.withLTSRedis $ Redis.setExp key dpd expiry
     else Redis.withSecondaryLTSRedis $ Redis.setExp key dpd expiry
