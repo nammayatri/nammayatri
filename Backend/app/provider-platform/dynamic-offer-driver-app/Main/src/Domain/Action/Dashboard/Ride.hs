@@ -548,7 +548,7 @@ rideInfo merchantId merchantOpCityId reqRideId mbFinanceData = do
   driverEdaKafkaList <- CHDriverEda.findAllTuple firstDate lastDate ride.driverId (Just ride.id)
   let driverEdaKafka = listToMaybe driverEdaKafkaList
   let driverStartLocation = (\(lat, lon, _, _, _) -> KEMT.LatLong <$> lat <*> lon) =<< driverEdaKafka
-  mbIsDestinationEdited <- case ride.isPickupOrDestinationEdited of
+  mbIsDestinationEdited <- case booking.isPickupOrDestinationEdited of
     Just True -> do
       mbBookingUpdateReq <- runInReplica $ QBUR.findByBookingIdAndStatus ride.bookingId DBUR.DRIVER_ACCEPTED
       case mbBookingUpdateReq of

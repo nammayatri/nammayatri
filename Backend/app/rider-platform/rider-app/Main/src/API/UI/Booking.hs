@@ -11,6 +11,7 @@ import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Action.UI.FareBreakup as DFareBreakup
 import qualified Domain.Action.UI.InvoiceGeneration as DInvoice
 import qualified Domain.Action.UI.Payment as DPayment
+import qualified Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity)
 import qualified Domain.Types.BookingStatus as SRB
@@ -91,6 +92,12 @@ type API =
              :> "editStop"
              :> ReqBody '[JSON] DBooking.StopReq
              :> Post '[JSON] APISuccess
+           :<|> Capture "rideBookingId" (Id SRB.Booking)
+             :> TokenAuth
+             :> "edit"
+             :> "location"
+             :> ReqBody '[JSON] DRide.EditLocationReq
+             :> Post '[JSON] DRide.EditLocationResp
            :<|> "invoice"
              :> "generate"
              :> TokenAuth
@@ -116,6 +123,7 @@ handler =
     :<|> favouriteBookingList
     :<|> addStop
     :<|> editStop
+    :<|> editLocationForBooking
     :<|> generateInvoice
     :<|> getRideBookingPaymentStatus
     :<|> getBookingFareBreakup
@@ -131,6 +139,9 @@ addStop bookingId (personId, merchantId) addStopReq = withFlowHandlerAPIPersonId
 
 editStop :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DBooking.StopReq -> FlowHandler APISuccess
 editStop bookingId (personId, merchantId) editStopReq = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.editStop (personId, merchantId) bookingId editStopReq
+
+editLocationForBooking :: Id SRB.Booking -> (Id Person.Person, Id Merchant.Merchant) -> DRide.EditLocationReq -> FlowHandler DRide.EditLocationResp
+editLocationForBooking bookingId (personId, merchantId) req = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DBooking.editLocationForBooking (personId, merchantId) bookingId req
 
 getBookingFareBreakup :: (Id Person.Person, Id Merchant.Merchant) -> Text -> Maybe DFareBreakup.FareBreakupEntity -> FlowHandler DFareBreakup.BookingFareBreakupRes
 getBookingFareBreakup (personId, merchantId) entityId mbEntityType = withFlowHandlerAPIPersonId personId . withPersonIdLogTag personId $ DFareBreakup.getBookingFareBreakup (personId, merchantId) entityId mbEntityType

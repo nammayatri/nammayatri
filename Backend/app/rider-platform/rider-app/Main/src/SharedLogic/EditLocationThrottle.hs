@@ -9,9 +9,10 @@ where
 
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingUpdateRequest as DBUR
-import Environment (Flow)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
+import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Storage.Hedis (HedisFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -19,74 +20,68 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.LocationMapping as QLM
 import Tools.Error
 
-locAttemptsKey :: Id DB.Booking -> Text
-locAttemptsKey bookingId = "BAP:BookingEditLocAttempts:" <> bookingId.getId
+type ThrottleFlow m env r = (HedisFlow m env, EsqDBFlow m r, MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r)
 
-pickupAttemptsKey :: Id DB.Booking -> Text
-pickupAttemptsKey bookingId = "BAP:BookingEditPickupAttempts:" <> bookingId.getId
+editLocAttemptsKey, editPickupAttemptsKey :: Id DB.Booking -> Text
+editLocAttemptsKey b = "BAP:BookingEditLocAttempts:" <> b.getId
+editPickupAttemptsKey b = "BAP:BookingEditPickupAttempts:" <> b.getId
 
-locConfirmField :: Text
+locConfirmField, locSoftField :: Text
 locConfirmField = "location:CONFIRM"
-
-locSoftField :: Text
 locSoftField = "location:SOFT"
 
-locSoftLimit :: Int
+locSoftLimit, locTtl, pickupTtl :: Int
 locSoftLimit = 10
+locTtl = 3 * 60 * 60
+pickupTtl = 60 * 60
 
-locTtlSeconds :: Int
-locTtlSeconds = 3 * 60 * 60
-
-pickupTtlSeconds :: Int
-pickupTtlSeconds = 60 * 60
-
-readOrRehydrateLocAttempt :: Id DB.Booking -> Text -> DBUR.BookingUpdateRequestStatus -> Int -> Flow Int
-readOrRehydrateLocAttempt bookingId field statusToCount initialBudget = do
-  mbVal <- Hedis.hGet (locAttemptsKey bookingId) field
+readLocField ::
+  ThrottleFlow m env r =>
+  Id DB.Booking ->
+  Text ->
+  (DBUR.BookingUpdateRequest -> Bool) ->
+  Int ->
+  m Int
+readLocField bookingId field consumedBy initialBudget = do
+  mbVal <- Hedis.hGet (editLocAttemptsKey bookingId) field
   case mbVal of
     Just v -> pure v
     Nothing -> do
       burs <- B.runInReplica $ QBUR.findAllByBookingId bookingId
-      let used = length $ filter (\b -> b.status == statusToCount) burs
-          remaining = max 0 (initialBudget - used)
-      Hedis.hSetExp (locAttemptsKey bookingId) field remaining locTtlSeconds
-      pure remaining
+      let r = max 0 (initialBudget - length (filter consumedBy burs))
+      Hedis.hSetExp (editLocAttemptsKey bookingId) field r locTtl
+      pure r
 
-gateEditLocAttempts :: Id DB.Booking -> Int -> Flow ()
+gateEditLocAttempts :: ThrottleFlow m env r => Id DB.Booking -> Int -> m ()
 gateEditLocAttempts bookingId threshold = do
-  remaining <- readOrRehydrateLocAttempt bookingId locConfirmField DBUR.CONFIRM threshold
-  when (remaining <= (0 :: Int)) $ throwError EditLocationAttemptsExhausted
+  remaining <- readLocField bookingId locConfirmField (\b -> b.status == DBUR.CONFIRM) threshold
+  when (remaining <= 0) $ throwError EditLocationAttemptsExhausted
 
-decEditLocSoftAttempts :: Id DB.Booking -> Flow ()
+decEditLocSoftAttempts :: ThrottleFlow m env r => Id DB.Booking -> m ()
 decEditLocSoftAttempts bookingId = do
-  remaining <- readOrRehydrateLocAttempt bookingId locSoftField DBUR.SOFT locSoftLimit
-  when (remaining <= (0 :: Int)) $ throwError EditLocationAttemptsExhausted
-  Hedis.hSetExp (locAttemptsKey bookingId) locSoftField (remaining - 1 :: Int) locTtlSeconds
+  remaining <- readLocField bookingId locSoftField (const True) locSoftLimit
+  when (remaining <= 0) $ throwError EditLocationAttemptsExhausted
+  Hedis.hSetExp (editLocAttemptsKey bookingId) locSoftField (remaining - 1) locTtl
 
-decEditLocConfirmAttempts :: Id DB.Booking -> Int -> Flow ()
+decEditLocConfirmAttempts :: ThrottleFlow m env r => Id DB.Booking -> Int -> m ()
 decEditLocConfirmAttempts bookingId threshold = do
-  remaining <- readOrRehydrateLocAttempt bookingId locConfirmField DBUR.CONFIRM threshold
-  Hedis.hSetExp (locAttemptsKey bookingId) locConfirmField (max 0 (remaining - 1 :: Int)) locTtlSeconds
+  remaining <- readLocField bookingId locConfirmField (\b -> b.status == DBUR.CONFIRM) threshold
+  Hedis.hSetExp (editLocAttemptsKey bookingId) locConfirmField (max 0 (remaining - 1)) locTtl
 
-readOrRehydratePickupAttempt :: Id DB.Booking -> Int -> Flow Int
-readOrRehydratePickupAttempt bookingId initialBudget = do
-  mbVal <- Hedis.get (pickupAttemptsKey bookingId)
-  case mbVal of
+decEditPickupAttempts :: ThrottleFlow m env r => Id DB.Booking -> Int -> m ()
+decEditPickupAttempts bookingId threshold = do
+  mbVal <- Hedis.get (editPickupAttemptsKey bookingId)
+  remaining <- case mbVal of
     Just v -> pure v
     Nothing -> do
       mappings <- B.runInReplica $ QLM.findAllByEntityIdAndOrder bookingId.getId 0
-      let used = max 0 (length mappings - 1)
-          remaining = max 0 (initialBudget - used)
-      Hedis.setExp (pickupAttemptsKey bookingId) remaining pickupTtlSeconds
-      pure remaining
+      let r = max 0 (threshold - max 0 (length mappings - 1))
+      Hedis.setExp (editPickupAttemptsKey bookingId) r pickupTtl
+      pure r
+  when (remaining <= 0) $ throwError EditLocationAttemptsExhausted
+  Hedis.setExp (editPickupAttemptsKey bookingId) (remaining - 1) pickupTtl
 
-decEditPickupAttempts :: Id DB.Booking -> Int -> Flow ()
-decEditPickupAttempts bookingId threshold = do
-  remaining <- readOrRehydratePickupAttempt bookingId threshold
-  when (remaining <= (0 :: Int)) $ throwError EditLocationAttemptsExhausted
-  Hedis.setExp (pickupAttemptsKey bookingId) (remaining - 1 :: Int) pickupTtlSeconds
-
-clearBookingEditAttempts :: Id DB.Booking -> Flow ()
+clearBookingEditAttempts :: HedisFlow m env => Id DB.Booking -> m ()
 clearBookingEditAttempts bookingId = do
-  Hedis.del (locAttemptsKey bookingId)
-  Hedis.del (pickupAttemptsKey bookingId)
+  Hedis.del (editLocAttemptsKey bookingId)
+  Hedis.del (editPickupAttemptsKey bookingId)
