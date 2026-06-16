@@ -43,6 +43,7 @@ import SharedLogic.AnalyticsExtra as AnalyticsExtra
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as DriverInformation
@@ -130,6 +131,9 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.incrementReferralCountByPersonId (Just newtotalRef) dr.driverId
           return Success
         Person.OPERATOR -> do
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+          SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
           driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
           void $ QDOA.create driverOperatorAssData
