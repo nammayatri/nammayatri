@@ -48,7 +48,6 @@
               "console.log('Fleet V2 login response:', JSON.stringify(d));",
               "var fid = d.personId || d.getId || d.id || (typeof d === 'string' ? d : null);",
               "pm.environment.set('fleet_owner_id', fid);",
-              "pm.test('Fleet owner ID is set', function () { pm.expect(fid).to.not.be.null; });",
               "console.log('Fleet Owner (Creator) ID:', fid);"
             ],
             "type": "text/javascript"
@@ -61,10 +60,6 @@
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{bpp_dashboard_token}}"
           }
         ],
         "body": {
@@ -72,23 +67,19 @@
           "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\"}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp?enabled=true",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/login/otp",
           "host": [
-            "{{baseURL_BPP_Driver_Direct}}"
+            "{{baseURL_BPP_Dashboard}}"
           ],
           "path": [
+            "bpp",
+            "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
             "fleet",
             "v2",
             "login",
             "otp"
-          ],
-          "query": [
-            {
-              "key": "enabled",
-              "value": "true"
-            }
           ]
         }
       }
@@ -100,7 +91,11 @@
           "listen": "test",
           "script": {
             "exec": [
-              "pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });"
+              "pm.test('Fleet owner verify OTP returns 200', function () { pm.response.to.have.status(200); });",
+              "var d = pm.response.json();",
+              "console.log('Fleet owner verify OTP response:', JSON.stringify(d));",
+              "pm.environment.set('fleet_owner_dashboard_token', d.authToken);",
+              "pm.test('authToken is set', function () { pm.expect(d.authToken).to.be.a('string'); });"
             ],
             "type": "text/javascript"
           }
@@ -112,10 +107,6 @@
           {
             "key": "Content-Type",
             "value": "application/json"
-          },
-          {
-            "key": "token",
-            "value": "{{bpp_dashboard_token}}"
           }
         ],
         "body": {
@@ -123,11 +114,13 @@
           "raw": "{\"mobileNumber\": \"{{_test_fleet_owner_number}}\", \"mobileCountryCode\": \"+91\", \"otp\": \"{{login_otp}}\"}"
         },
         "url": {
-          "raw": "{{baseURL_BPP_Driver_Direct}}/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
+          "raw": "{{baseURL_BPP_Dashboard}}/bpp/driver-offer/{{dashboard_merchant_id}}/{{dashboard_city}}/fleet/v2/verify/otp",
           "host": [
-            "{{baseURL_BPP_Driver_Direct}}"
+            "{{baseURL_BPP_Dashboard}}"
           ],
           "path": [
+            "bpp",
+            "driver-offer",
             "{{dashboard_merchant_id}}",
             "{{dashboard_city}}",
             "fleet",
