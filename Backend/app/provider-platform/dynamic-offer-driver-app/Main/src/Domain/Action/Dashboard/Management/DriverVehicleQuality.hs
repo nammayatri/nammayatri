@@ -35,14 +35,16 @@ import Tools.Error
 getDriverVehicleQualityList ::
   ShortId DM.Merchant ->
   Context.City ->
+  Maybe DVariant.VehicleVariant ->
   Maybe Int ->
   Maybe Double ->
+  Maybe Double ->
+  Maybe [DVariant.VehicleVariant] ->
   Maybe Int ->
   Int ->
   Double ->
-  DVariant.VehicleVariant ->
   Environment.Flow Common.DriverVehicleQualityListRes
-getDriverVehicleQualityList merchantShortId opCity mbLimit mbMaxVehicleRating mbOffset maxVehicleAge minDriverRating vehicleVariant = do
+getDriverVehicleQualityList merchantShortId opCity mbVehicleVariant mbLimit _mbMaxVehicleRating mbMinVehicleRating mbVehicleVariants mbOffset maxVehicleAge minDriverRating = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchant.id.getId <> "-city-" <> show opCity)
   now <- getCurrentTime
@@ -51,8 +53,9 @@ getDriverVehicleQualityList merchantShortId opCity mbLimit mbMaxVehicleRating mb
       limit = min 50 . fromMaybe 20 $ mbLimit
       offset = fromMaybe 0 mbOffset
       minRatingCentesimal = realToFrac minDriverRating
+      variants = maybeToList mbVehicleVariant <> fromMaybe [] mbVehicleVariants
 
-  vehicles <- B.runInReplica $ QVehicle.findEnabledByVariantCityAndManufacturingDateAfter vehicleVariant cutoffDate merchant.id merchantOpCity.id mbMaxVehicleRating limit offset
+  vehicles <- B.runInReplica $ QVehicle.findEnabledByVariantsCityAndManufacturingDateAfter variants cutoffDate merchant.id merchantOpCity.id mbMinVehicleRating limit offset
   let driverIds = map (.driverId) vehicles
 
   driverStatsList <- B.runInReplica $ QDriverStats.findAllByDriverIdList (cast <$> driverIds)
