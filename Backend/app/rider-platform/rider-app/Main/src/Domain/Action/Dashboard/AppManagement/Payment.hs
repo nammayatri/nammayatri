@@ -177,7 +177,7 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
                           refundsTries = refundRequest.refundsTries + 1,
                           deductFromDriver = req.deductFromDriver
                          }
-      let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
+      rideId <- SPayment.getRideIdForOrder updRefundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> updRefundRequest.orderId.getId)
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
       Notify.notifyRefunds updRefundRequest
       DRidePayment.processRefundRaised updRefundRequest
@@ -187,7 +187,7 @@ postPaymentRefundRequestRespond merchantShortId opCity refundRequestId req = do
       logInfo $ "Refund request rejected by admin: orderId: " <> refundRequest.orderId.getId
       QRefundRequest.updateRefundDetails DRefundRequest.REJECTED req.responseDescription refundRequest.refundsAmount refundRequest.refundsTries Nothing refundRequest.id
       let updRefundRequest = refundRequest{status = DRefundRequest.REJECTED, responseDescription = req.responseDescription}
-      let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride updRefundRequest.orderId
+      rideId <- SPayment.getRideIdForOrder updRefundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> updRefundRequest.orderId.getId)
       QRide.updateRefundRequestStatus (Just updRefundRequest.status) rideId
       Notify.notifyRefunds updRefundRequest
       pure Common.RefundRequestRespondResp {status = updRefundRequest.status, refundStatus = Nothing, errorCode = Nothing}
@@ -197,7 +197,7 @@ submitRefundToPaymentService ::
   Bool ->
   Flow Common.RefundRequestRespondResp
 submitRefundToPaymentService refundRequest retryIfFailed = do
-  let rideId = cast @DPaymentOrder.PaymentOrder @DRide.Ride refundRequest.orderId
+  rideId <- SPayment.getRideIdForOrder refundRequest.orderId >>= fromMaybeM (InternalError $ "No ride mapping found for order: " <> refundRequest.orderId.getId)
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driverAccountId <- ride.driverAccountId & fromMaybeM (RideFieldNotPresent "driverAccountId")
