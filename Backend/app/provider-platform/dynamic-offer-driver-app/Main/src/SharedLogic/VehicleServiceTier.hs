@@ -14,7 +14,12 @@
 
 module SharedLogic.VehicleServiceTier where
 
+import Data.List (sortOn)
+import Data.Ord (Down (..))
+import Data.Time (diffDays, utctDay)
+import qualified Domain.Types.Common as DTC
 import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.TransporterConfig as DTPC
 import qualified Domain.Types.Vehicle as DV
 import qualified Domain.Types.VehicleCategory as VC
 import qualified Domain.Types.VehicleServiceTier as DVST
@@ -46,3 +51,36 @@ selectVehicleTierForDriverWithUsageRestriction onlyAutoSelected driverInfo vehic
       case (mbX, mbY) of
         (Just x, Just y) -> x >= y
         _ -> True
+
+-- | Mirrors Driver.hs's default-tier derivation. Picks the highest-AC tier
+-- whose `defaultForVehicleVariant` contains the driver's variant *and* whose
+-- serviceTierType is in the city's supportedServiceTiers list. Falls back to
+-- any default-for-variant tier if the intersection is empty. Also returns
+-- whether AC is currently working for this driver (using the picked tier's
+-- threshold) and whether the vehicle is supported at all in this city.
+getDriverDefaultServiceTier ::
+  DV.Vehicle ->
+  DI.DriverInformation ->
+  DTPC.TransporterConfig ->
+  [DTC.ServiceTierType] ->
+  [DVST.VehicleServiceTier] ->
+  UTCTime ->
+  (Bool, Maybe DVST.VehicleServiceTier, Bool)
+getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityServiceTiers now =
+  let allVehicleSupportedDefaultServiceTiers =
+        sortOn (fmap Down . (.airConditionedThreshold)) $
+          filter
+            (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers)
+            cityServiceTiers
+      isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
+      mbDefaultServiceTierItem =
+        if null allVehicleSupportedDefaultServiceTiers
+          then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+          else listToMaybe allVehicleSupportedDefaultServiceTiers
+      checkIfACWorking =
+        case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
+          Nothing -> False
+          Just acThreshold ->
+            fromMaybe 0 driverInfo.airConditionScore <= acThreshold
+              && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
+   in (checkIfACWorking, mbDefaultServiceTierItem, isVehicleSupported)
