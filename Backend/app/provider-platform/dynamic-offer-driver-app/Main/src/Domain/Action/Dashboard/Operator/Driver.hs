@@ -254,18 +254,23 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       -- BOT owns `approved` and statusHandler owns RC activation, so those are skipped; non-BOT ops-hub
       -- cities keep them (ops-approve is their approval step).
       let enableBotFlow = transporterConfig.enableBotFlow == Just True
-      -- BOT: one fetch for both the dependency gate and the verified check; non-BOT uses the wrapper.
-      allVehicleDocsVerified <-
+      -- BOT: approve once dependency docs are VALID (fetch once, reuse in the fork). Non-BOT: full check.
+      (mbVehicleDocs, allVehicleDocsVerified) <-
         if enableBotFlow
           then do
             (vehicleDocItem, allDocumentVerificationConfigs) <- SStatus.fetchVehicleDocStatusesForRC rc merchantOpCity transporterConfig language registrationNo Nothing
             let vehicleCategory = fromMaybe vehicleDocItem.userSelectedVehicleCategory vehicleDocItem.verifiedVehicleCategory
-            checkInspectionDependencies merchantOpCity.id DVC.InspectionHub vehicleCategory vehicleDocItem.documents
-            pure $ SStatus.checkAllVehicleDocsValidForFetchedDocs allDocumentVerificationConfigs vehicleDocItem
-          else SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOpCity transporterConfig language registrationNo
+            depsValid <- inspectionDependenciesValid merchantOpCity.id DVC.InspectionHub vehicleCategory vehicleDocItem.documents
+            pure (Just (vehicleDocItem, allDocumentVerificationConfigs), depsValid)
+          else (Nothing,) <$> SStatus.fetchAndCheckVehicleDocsValidForEnabling rc merchantOpCity transporterConfig language registrationNo
       when allVehicleDocsVerified $ do
-        unless enableBotFlow $
-          QVRC.updateApproved (Just True) rc.id
+        if enableBotFlow
+          then -- BOT: mark RC verified now, then reconcile in the fork.
+          whenJust mbVehicleDocs $ \(vehicleDocItem, allDocumentVerificationConfigs) -> do
+            rcHash <- getDbHash registrationNo
+            QVRC.updateVerifiedByCertificateNumberHash (Just True) rcHash
+            SStatus.forkRecomputeVehicleVerified registrationNo vehicleDocItem allDocumentVerificationConfigs
+          else QVRC.updateApproved (Just True) rc.id
         -- Cancel pending vehicle inspection reminders for all drivers using this RC
         cancelRemindersForRCByDocumentType rc.id DVC.InspectionHub
         -- Record inspection completion for auto-trigger monitoring (per RC, not per driver)
@@ -300,13 +305,13 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       -- the BOT owns `approved` and statusHandler owns enablement, so those are skipped; non-BOT ops-hub
       -- cities keep them (ops-approve is their approval step).
       let enableBotFlow = transporterConfig.enableBotFlow == Just True
-      -- BOT: one fetch for both the dependency gate and the verified check; non-BOT uses the wrapper.
+      -- BOT: approve once dependency docs are VALID (just marks APPROVED; verified/enabled is owned by
+      -- the BOT/statusHandler flow). Non-BOT: full enabling check.
       allDriverDocsVerified <-
         if enableBotFlow
           then do
-            (allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
-            checkInspectionDependencies merchantOpCity.id DVC.DriverInspectionHub vehicleCategory driverDocStatuses
-            SStatus.checkAllDriverDocsValidForFetchedDocs person transporterConfig allDocVerificationConfigs driverDocStatuses vehicleCategory
+            (_allDocVerificationConfigs, driverDocStatuses, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language Nothing
+            inspectionDependenciesValid merchantOpCity.id DVC.DriverInspectionHub vehicleCategory driverDocStatuses
           else SStatus.fetchAndCheckDriverDocsValidForEnabling person merchantOpCity transporterConfig language
       when allDriverDocsVerified $ do
         unless enableBotFlow $ do
@@ -323,15 +328,14 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       let reqUpdatedStatus = if allDriverDocsVerified then castReqStatusToDomain request.status else PENDING
       void $ SQOHR.updateStatusWithDetails reqUpdatedStatus (Just request.remarks) (Just now) (Just (Kernel.Types.Id.Id request.operatorId)) (Kernel.Types.Id.Id request.operationHubRequestId)
 
-    -- Throw unless every dependencyDocumentType of the inspection-hub config is VALID.
-    checkInspectionDependencies merchantOpCityId inspectionHubDocType vehicleCategory docStatuses = do
+    -- True iff the inspection-hub config's dependency docs are all VALID. Drives APPROVED vs PENDING.
+    inspectionDependenciesValid merchantOpCityId inspectionHubDocType vehicleCategory docStatuses = do
       mbInspectionCfg <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId inspectionHubDocType vehicleCategory Nothing
-      whenJust mbInspectionCfg $ \inspectionCfg -> do
-        let isDocValid doc = doc.verificationStatus == SStatus.VALID
-            validDocTypes = map (.documentType) (filter isDocValid docStatuses)
-            invalidDeps = filter (`notElem` validDocTypes) inspectionCfg.dependencyDocumentType
-        unless (null invalidDeps) $
-          throwError (InvalidRequest $ "Cannot approve inspection; dependency documents not valid: " <> show invalidDeps)
+      case mbInspectionCfg of
+        Nothing -> pure True
+        Just inspectionCfg -> do
+          let validDocTypes = map (.documentType) (filter (\doc -> doc.verificationStatus == SStatus.VALID) docStatuses)
+          pure $ all (`elem` validDocTypes) inspectionCfg.dependencyDocumentType
 
     getMerchantInfo mShortId city = do
       merchant <- findMerchantByShortId mShortId
@@ -892,21 +896,16 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         driverInfo <- QDI.findByPrimaryKey driverId >>= fromMaybeM (PersonNotFound reqId)
         if isDocReqEmpty
           then do
-            -- Already approved (durably committed on a prior call) → run only the driver recompute
-            -- (not the whole statusHandler) so `enabled` is derived from current doc validity. The
-            -- approved flag is read inside the recompute, so the two-phase below keeps the approved
-            -- write and the recompute on separate calls — avoiding a stale read of `approved`.
-            let runRecompute = do
+            -- Two-phase: phase 1 durably commits `approved`; phase 2 (approved == True) does the fast
+            -- enabling-docs check synchronously and forks the heavy recompute (which performs the actual
+            -- enable + alerts). Splitting the two calls avoids a stale read of `approved`.
+            let runReconcile = do
                   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound reqId)
                   transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-                  let language = fromMaybe merchantOpCity.language person.language
-                  (allDocVerificationConfigs, driverDocuments, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson person merchantOpCity transporterConfig language (Just True)
-                  driverEnabled <- SStatus.recomputeDriverVerifiedAndEnabled merchantOpCity.id merchantOpCity.merchantId person allDocVerificationConfigs driverDocuments vehicleCategory Nothing Nothing Nothing transporterConfig
-                  if driverEnabled
-                    then pure (DRR.COMPLETED, Nothing, Nothing)
-                    else pure (DRR.IN_PROGRESS, Nothing, Nothing)
+                  dependencyDocsValid <- SStatus.botApproveAndReconcile merchantOpCity person transporterConfig
+                  pure (if dependencyDocsValid then DRR.COMPLETED else DRR.IN_PROGRESS, Nothing, Nothing)
             if driverInfo.approved == Just True
-              then runRecompute
+              then runReconcile
               else do
                 QDI.updateByPrimaryKey driverInfo {DDI.approved = Just True}
                 pure (DRR.IN_PROGRESS, Nothing, Nothing)
@@ -920,18 +919,11 @@ postDriverSubmitReviewRequest merchantShortId opCity requestorId req = do
         fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound reqId)
         if isDocReqEmpty
           then do
-            -- Don't enable directly on BOT approval: run the fleet recompute so `enabled` is derived
-            -- from current doc validity (incl. the active operator association -> OperatorPartnerCode).
-            -- Keeps statusHandler the single source of truth and avoids a direct enable the next
-            -- recompute would reconcile away.
+            -- Sync dependency-docs check; the heavy fleet recompute (sets `enabled` + cascades) is forked.
             fleetPerson <- QPerson.findById fleetOwnerInfo.fleetOwnerPersonId >>= fromMaybeM (PersonNotFound fleetOwnerInfo.fleetOwnerPersonId.getId)
             transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
-            let language = fromMaybe merchantOpCity.language fleetPerson.language
-            (allDocVerificationConfigs, fleetDocuments, vehicleCategory) <- SStatus.fetchDriverDocStatusesForPerson fleetPerson merchantOpCity transporterConfig language (Just True)
-            fleetEnabled <- SStatus.recomputeFleetVerifiedAndEnabled fleetPerson allDocVerificationConfigs fleetDocuments vehicleCategory Nothing
-            if fleetEnabled
-              then pure (DRR.COMPLETED, Nothing, Nothing)
-              else pure (DRR.IN_PROGRESS, Nothing, Nothing)
+            dependencyDocsValid <- SStatus.botApproveAndReconcile merchantOpCity fleetPerson transporterConfig
+            pure (if dependencyDocsValid then DRR.COMPLETED else DRR.IN_PROGRESS, Nothing, Nothing)
           else do
             applyDocRejections req.entityType reqId validatedDocs
             QFOI.updateByPrimaryKey fleetOwnerInfo {DFOI.enabled = False, DFOI.verified = False}
