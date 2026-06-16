@@ -918,3 +918,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_location
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_onboarding_as character varying(255) ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
