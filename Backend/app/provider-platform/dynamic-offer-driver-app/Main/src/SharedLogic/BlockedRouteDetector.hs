@@ -91,5 +91,5 @@ checkRouteServiceability merchantOperatingCityId (customerPrefferedSearchRouteId
           multipleRoutes = routes,
           isCustomerPrefferedSearchRoute = True,
           isBlockedRoute,
-          routeToken = Nothing
+          routeToken = (.routeToken) =<< listToMaybe (drop customerPrefferedSearchRouteIdx routes)
         }
