@@ -65,6 +65,7 @@ import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Lib.ConfigPilot.Interface.Types (getOneConfig)
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
+import qualified SharedLogic.Finance.Wallet as Wallet
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -80,6 +81,7 @@ import qualified Storage.Queries.Person as Person
 import Tools.Error
 import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
+import Utils.Common.Cac.KeyNameConstants
 
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
@@ -329,6 +331,7 @@ onVerifyPanHandler person imageId1 imageId2 output = do
       when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
         mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
     _ -> pure ()
+  materializeTdsRateFor person
 
 buildPanCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe DPan.VerifiedBy -> Id Image.Image -> Text -> Maybe Documents.VerificationStatus -> Flow DPan.DriverPanCard
 buildPanCard person panType panName panDob verifyBy image1 panNumber verificationStatus = do
@@ -508,6 +511,21 @@ verifyPanAadhaarLinkageIfAadhaarExists person merchantOpCityId mdriverPanCard = 
             IVQuery.create ivEntity
           _ -> throwError $ InternalError ("Service provider not configured for PAN-Aadhaar linkage. Provider: " <> show verifyRes.requestor)
 
+materializeTdsRateFor :: Person.Person -> Flow ()
+materializeTdsRateFor person = do
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id)))
+      >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+  -- No-op unless PAN-Aadhaar-link TDS is enabled for the merchant; otherwise
+  -- leave tds_rate alone so other merchants' rate resolution is unchanged.
+  when (Wallet.panAadhaarLinkTdsEnabled transporterConfig.taxConfig) $ do
+    mbPanCard <- DPQuery.findByDriverId person.id
+    let mbRate = Wallet.computeEffectiveTdsRate mbPanCard Nothing transporterConfig.taxConfig
+    whenJust mbRate $ \rate ->
+      if DCommon.checkFleetOwnerRole person.role
+        then QFOI.updateTdsRate (Just rate) (cast person.id)
+        else DIQuery.updateTdsRate (Just rate) (cast person.id)
+
 onVerifyPanAadhaarLink :: VerificationReqRecord -> VT.PanAadhaarLinkResponse -> VT.VerificationService -> Flow AckResponse
 onVerifyPanAadhaarLink verificationReq output serviceName = do
   person <- Person.findById verificationReq.driverId >>= fromMaybeM (PersonNotFound verificationReq.driverId.getId)
@@ -515,10 +533,19 @@ onVerifyPanAadhaarLink verificationReq output serviceName = do
     VT.Idfy -> do
       logInfo ("onVerifyPanAadhaarLink: " <> show output)
       IVQuery.updateExtractValidationStatus Domain.Success verificationReq.requestId
-      case output.message of
-        Just "PAN & Aadhaar are linked" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
-        Just "Aadhaar linked to some other PAN" -> DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
-        Just "This PAN number does not exist" -> DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
-        other -> throwError $ InternalError ("Unknown message in onVerifyPanAadhaarLink. Message : " <> show other)
+      case (output.isLinked, output.message) of
+        (Just True, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_LINKED) person.id
+        (Just False, Just "Aadhaar linked to some other PAN") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.AADHAAR_LINKED_TO_OTHER_PAN) person.id
+        (Just False, Just "This PAN number does not exist") ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_DOES_NOT_EXIST) person.id
+        (Just False, _) ->
+          DPQuery.updatePanAadhaarLinkage (Just DPan.PAN_AADHAAR_NOT_LINKED) person.id
+        (Nothing, _) ->
+          logWarning $ "onVerifyPanAadhaarLink: Idfy response had no isLinked field, leaving column NULL. Payload: " <> show output
     _ -> throwError $ InternalError ("Unknown Service provider webhook encopuntered in onVerifyPanAadhaarLink. Name of provider : " <> show serviceName)
+  -- Recompute and materialize the effective TDS rate now that linkage status
+  -- has been updated. No-op unless PAN-Aadhaar-link TDS is enabled.
+  materializeTdsRateFor person
   pure Ack

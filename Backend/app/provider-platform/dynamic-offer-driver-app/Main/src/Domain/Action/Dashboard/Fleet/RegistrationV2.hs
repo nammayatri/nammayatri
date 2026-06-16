@@ -338,7 +338,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
         if transporterConfig.enableManualDocumentStatusCheck == Just True
           then Just DDVS.ADMIN_PENDING
           else Nothing
-  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
+  createFleetOwnerInfo person.id merchantId enabled (Just merchantOpCityId) ((.rate) <$> transporterConfig.taxConfig.defaultTdsRate) defaultDocsVerificationStatus
   pure person
 
 createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe (Id DMOC.MerchantOperatingCity) -> Maybe Double -> Maybe DDVS.DocsVerificationStatus -> Flow ()

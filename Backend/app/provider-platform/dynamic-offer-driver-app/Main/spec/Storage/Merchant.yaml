@@ -46,6 +46,7 @@ imports:
   Hours: Kernel.Types.Common
   ExotelMapping: Domain.Types.Extra.TransporterConfig
   KnowledgeCenterSopTypesConfig: Domain.Types.Extra.TransporterConfig
+  TdsConfig: Domain.Types.Extra.TransporterConfig
   Expand: Kernel.External.Payout.Interface.Types
   TripCategory: Domain.Types.Trip
   IssueBreachConfig: SharedLogic.BehaviourManagement.IssueBreach
@@ -1003,9 +1004,12 @@ TransporterConfig:
       subscriptionGst: GstBreakup
       airportEntryFeeGst: Maybe GstBreakup
       securityDepositGst: Maybe GstBreakup
-      defaultTdsRate: Maybe Double
-      subscriptionTdsRate: Maybe Double
-      invalidPanTdsRate: Double
+      defaultTdsRate: Maybe TdsConfig
+      subscriptionTdsRate: Maybe TdsConfig
+      invalidPanTdsRate: TdsConfig
+      individualLinked: Maybe TdsConfig
+      individualNotLinked: Maybe TdsConfig
+      businessTds: Maybe TdsConfig
       serviceVatPercentage: Maybe Double
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     CommissionAggregationFrequency:
