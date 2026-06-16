@@ -83,6 +83,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
@@ -96,6 +97,7 @@ import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
+import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverPanCard as QDPC
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
 import qualified Storage.Queries.DriverSSN as QDriverSSN
@@ -1337,9 +1339,13 @@ postDriverLinkToFleet ::
   (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant, Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) ->
   APITypes.LinkToFleetReq ->
   Flow APISuccess
-postDriverLinkToFleet (mbDriverId, _, _) req = do
+postDriverLinkToFleet (mbDriverId, merchantId, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
-  fdaForFleetOwner <- FDA.findByDriverIdAndFleetOwnerIdWithStatus driverId req.fleetOwnerId.getId
+  -- Fetch the driver's (non-expired) fleet associations once and reuse them for both the
+  -- this-fleet branching below and the D17 "active with another fleet" guard, avoiding a
+  -- second read on fleet_driver_association.
+  driverFleetAssocs <- FDA.findAllByDriverIdWithStatus driverId
+  let fdaForFleetOwner = DL.find (\fda -> fda.fleetOwnerId == req.fleetOwnerId.getId) driverFleetAssocs
   case req.isRevoke of
     Just True -> do
       case fdaForFleetOwner of
@@ -1351,6 +1357,13 @@ postDriverLinkToFleet (mbDriverId, _, _) req = do
         Just fda | fda.isActive -> throwError $ InvalidRequest "Driver is already linked to this fleet"
         Just _ -> throwError $ InvalidRequest "Driver already has a pending fleet association request with this fleet"
         Nothing -> do
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          unless (merchant.overwriteAssociation == Just True) $ do
+            when (any (.isActive) driverFleetAssocs) $
+              throwError (InvalidRequest "Driver already associated with a fleet")
+            existingDriverOperatorAssocs <- QDOA.findAllByDriverId driverId True
+            unless (null existingDriverOperatorAssocs) $
+              throwError (InvalidRequest "Driver is already associated with an operator")
           let requestReason = fromMaybe "Driver requested to join fleet" req.requestReason
           FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False (Just requestReason)
   return Success

@@ -1552,22 +1552,15 @@ postDriverOperatorChange merchantShortId opCity requestorId reqDriverId req = do
   pure Success
 
 postDriverFleetOperatorChange :: ShortId DM.Merchant -> Context.City -> Text -> Text -> Common.ChangeFleetOperatorReq -> Flow APISuccess
-postDriverFleetOperatorChange merchantShortId opCity requestorId fleetOwnerId req = do
+postDriverFleetOperatorChange merchantShortId opCity _requestorId fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
-  -- Validate the fleet owner exists, belongs to this merchant + operating city, and
-  -- is actually a fleet owner (fleetOwnerId is a raw path param; prevents attaching an
-  -- operator to a foreign / non-fleet person).
+  -- Admin-only flow: just validate the fleet owner exists and belongs to this merchant +
+  -- operating city (fleetOwnerId is a raw path param).
   let fleetOwnerPersonId = Id fleetOwnerId :: Id DP.Person
   fleetOwner <- QPerson.findById fleetOwnerPersonId >>= fromMaybeM (PersonDoesNotExist fleetOwnerId)
   unless (merchant.id == fleetOwner.merchantId && merchantOpCityId == fleetOwner.merchantOperatingCityId) $
     throwError (PersonDoesNotExist fleetOwnerId)
-  unless (fleetOwner.role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]) $
-    throwError (InvalidRequest "Person is not a fleet owner")
-  requestorPerson <- QPerson.findById (Id requestorId)
-  whenJust requestorPerson $ \requestor -> do
-    isValid <- isAssociationBetweenTwoPerson requestor fleetOwner
-    unless isValid $ throwError AccessDenied
   newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required") req.newOperatorCode
   dr <- QDriverReferral.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
   operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)

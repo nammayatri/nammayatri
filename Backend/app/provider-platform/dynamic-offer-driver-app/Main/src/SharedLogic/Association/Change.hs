@@ -25,8 +25,6 @@ guardNoLiveRideByDriver driverId = do
 -- Vehicle-scoped: resolves the RC to its active driver(s), then checks their live rides.
 guardNoLiveRideByRC :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DVRC.VehicleRegistrationCertificate -> m ()
 guardNoLiveRideByRC rcId = do
-  -- An RC can be actively linked to multiple drivers (fleet vehicles), so resolve all active
-  -- driver associations, then short-circuit on the first live ride across them.
   assocs <- QDriverRC.findAllActiveAssociationByRCId rcId
   mbLiveRide <- QRide.findFirstUpcomingOrActiveByDriverIds (map (.driverId) assocs)
   when (isJust mbLiveRide) $ throwError (InvalidRequest "Vehicle has a live ride, cannot change association")
