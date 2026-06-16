@@ -19,9 +19,12 @@ module Domain.Action.UI.Maps
     Maps.GetPlaceDetailsResp,
     Maps.GetPlaceNameReq,
     Maps.GetPlaceNameResp,
+    Maps.SearchDestinationsReq,
+    Maps.SearchDestinationsResp,
     autoComplete,
     getPlaceDetails,
     getPlaceName,
+    searchDestinations,
     AutoCompleteType (..),
   )
 where
@@ -95,6 +98,11 @@ getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> M
 getPlaceDetails (personId, merchantId) entityId req = do
   merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
   Maps.getPlaceDetails merchantId merchantOperatingCityId entityId req
+
+searchDestinations :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.SearchDestinationsReq -> m Maps.SearchDestinationsResp
+searchDestinations (personId, merchantId) entityId req = do
+  merchantOperatingCityId <- CQP.findCityInfoById personId >>= fmap (.merchantOperatingCityId) . fromMaybeM (PersonCityInformationNotFound personId.getId)
+  Maps.searchDestinations merchantId merchantOperatingCityId entityId req
 
 expirePlaceNameCache :: ServiceFlow m r => [PlaceNameCache] -> Id DMOC.MerchantOperatingCity -> m ()
 expirePlaceNameCache placeNameCache merchantOperatingCityId = do

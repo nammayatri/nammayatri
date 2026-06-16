@@ -134,7 +134,7 @@ buildMapsServiceConfig ::
 buildMapsServiceConfig = \case
   GoogleConfigUpdateReq GoogleCfgUpdateReq {..} -> do
     googleKey' <- encrypt googleKey
-    pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', ..}
+    pure . Maps.GoogleConfig $ Maps.GoogleCfg {googleKey = googleKey', googleGeocodeUrl = Nothing, ..}
   OSRMConfigUpdateReq OSRMCfgUpdateReq {..} -> do
     pure . Maps.OSRMConfig $ Maps.OSRMCfg {radiusDeviation = (distanceToMeters <$> radiusDeviationWithUnit) <|> radiusDeviation, ..}
   MMIConfigUpdateReq MMICfgUpdateReq {..} -> do

@@ -19,6 +19,7 @@ module Tools.Maps
     getDistances,
     getPlaceDetails,
     getPlaceName,
+    searchDestinations,
     getRoutes,
     getFrfsAutocompleteDistances,
     snapToRoad,
@@ -45,6 +46,7 @@ import Kernel.External.Maps as Reexport hiding
     getPlaceDetails,
     getPlaceName,
     getRoutes,
+    searchDestinations,
     snapToRoad,
   )
 import qualified Kernel.External.Maps as Maps
@@ -204,6 +206,11 @@ getPlaceName = runWithServiceConfig Maps.getPlaceName (.getPlaceName)
 
 getPlaceDetails :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> GetPlaceDetailsReq -> m GetPlaceDetailsResp
 getPlaceDetails = runWithServiceConfig Maps.getPlaceDetails (.getPlaceDetails)
+
+-- | Google Geocoding v4 "search for destinations". Google-only; routed via the
+-- same provider slot as getPlaceName (geocoding).
+searchDestinations :: ServiceFlow m r => Id Merchant -> Id MerchantOperatingCity -> Maybe Text -> SearchDestinationsReq -> m SearchDestinationsResp
+searchDestinations = runWithServiceConfig Maps.searchDestinations (.getPlaceName)
 
 callGetRoutesWrapper :: ServiceFlow m r => Bool -> Maybe Text -> MapsServiceConfig -> GetRoutesReq -> m GetRoutesResp
 callGetRoutesWrapper isAvoidToll entityId = Maps.getRoutes entityId isAvoidToll
