@@ -1556,6 +1556,16 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
       >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-short-Id-" <> merchantShortId.getShortId <> "-city-" <> show city)
   issueConfig <- CQI.findByMerchantOpCityId merchantOperatingCity.id identifier >>= fromMaybeM (IssueConfigNotFound merchantOperatingCity.id.getId)
   now <- getCurrentTime
+  let updatedMessageTransformationConfig =
+        case (req.merchantName, req.supportEmail) of
+          (Nothing, Nothing) -> issueConfig.messageTransformationConfig
+          _ ->
+            let existing = fromMaybe (DICFG.MessageTransformationConfig Nothing Nothing Nothing) issueConfig.messageTransformationConfig
+             in Just $
+                  existing
+                    { DICFG.merchantName = req.merchantName <|> existing.merchantName,
+                      DICFG.supportEmail = req.supportEmail <|> existing.supportEmail
+                    }
   let updatedConfig =
         issueConfig
           { DICFG.autoMarkIssueClosedDuration = fromMaybe issueConfig.autoMarkIssueClosedDuration req.autoMarkIssueClosedDuration,
@@ -1565,6 +1575,7 @@ updateIssueConfig merchantShortId city req issueHandle identifier = do
             DICFG.onKaptMarkIssueResMsgs = maybe issueConfig.onKaptMarkIssueResMsgs (map cast) req.onKaptMarkIssueResMsgs,
             DICFG.onIssueCloseMsgs = maybe issueConfig.onIssueCloseMsgs (map cast) req.onIssueCloseMsgs,
             DICFG.reopenCount = fromMaybe issueConfig.reopenCount req.reopenCount,
+            DICFG.messageTransformationConfig = updatedMessageTransformationConfig,
             DICFG.updatedAt = now
           }
   CQI.updateByPrimaryKey updatedConfig
