@@ -388,7 +388,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             estimatedDistance <- shortestRoute.distance & fromMaybeM (InternalError "No distance found for new destination")
             (duration :: Seconds) <- shortestRoute.duration & fromMaybeM (InternalError "No duration found for new destination")
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "pickedWaypoints: " <> show duration
-            let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points}
+            let routeInfo = RR.RouteInfo {distance = Just estimatedDistance, distanceWithUnit = Just (convertMetersToDistance booking.distanceUnit estimatedDistance), duration = Just duration, points = Just shortestRoute.points, routeToken = shortestRoute.routeToken}
             let mapsRouteReqInText = T.pack $ show Maps.GetRoutesReq {waypoints = pickedWaypoints, mode = Just Maps.CAR, calcPoints = True}
             let routeInfoInText = T.pack $ show routeInfo
             Redis.setExp (bookingRequestKeySoftUpdate booking.id.getId) routeInfo 600

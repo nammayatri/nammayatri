@@ -107,7 +107,8 @@ mkRouteV2 origin destination =
           viewport = mkViewPort origin destination,
           distanceMeters = dist.getMeters,
           duration = show durationSecs <> "s",
-          staticDuration = Just $ show durationSecs <> "s"
+          staticDuration = Just $ show durationSecs <> "s",
+          routeToken = Nothing
         }
 
 mkViewPort :: GoogleMaps.LatLngV2 -> GoogleMaps.LatLngV2 -> GoogleMaps.ViewPort
@@ -221,7 +222,8 @@ mkRouteV2Osrm origin destination r =
       viewport = mkViewPort origin destination,
       distanceMeters = r.distanceMeters,
       duration = show r.durationSeconds <> "s",
-      staticDuration = Just $ show r.durationSeconds <> "s"
+      staticDuration = Just $ show r.durationSeconds <> "s",
+      routeToken = Nothing
     }
 
 mkLegV2Osrm ::
