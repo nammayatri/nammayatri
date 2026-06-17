@@ -71,6 +71,15 @@ jobs:
           rm /tmp/rider-${{ github.run_id }}.tar.zst
           ln -sfn "$CACHE_ROOT/dist-newrepl-rider" Backend/dist-newrepl-rider
 
+      - name: Restore cabal store from MinIO
+        run: |
+          CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
+          mkdir -p "$CACHE_ROOT/.cabal-dir"
+          rm -rf "$CACHE_ROOT/.cabal-dir/store"
+          mc cp "minio/haskell-cache/cabal-store/${{ steps.find-cache.outputs.cache_sha }}/cabal-store.tar.zst" /tmp/cabal-store-${{ github.run_id }}.tar.zst
+          tar -I 'zstd -T0' -xf /tmp/cabal-store-${{ github.run_id }}.tar.zst -C "$CACHE_ROOT/.cabal-dir"
+          rm /tmp/cabal-store-${{ github.run_id }}.tar.zst
+
       - name: Link HIE dirs to persistent cache
         run: |
           CACHE_ROOT=$HOME/ny-cabal-unoptimized-cache/${RUNNER_NAME}/main
