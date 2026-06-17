@@ -49,6 +49,7 @@ module Tools.Payment
     roundToTwoDecimalPlaces,
     fetchGatewayReferenceId,
     fetchOfferSKUConfig,
+    mkOfferBasket,
     extractSplitSettlementDetailsAmount,
     getPaymentOrderValidity,
     offerList,
@@ -844,6 +845,21 @@ fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceT
       RideHailing -> DMSC.PaymentService Payment.Juspay
       OnlineRideHailing -> DMSC.PaymentService Payment.Stripe
       STCL -> DMSC.MembershipPaymentService Payment.Juspay
+
+mkOfferBasket ::
+  (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Maybe (Id TicketPlace) ->
+  PaymentServiceType ->
+  HighPrecMoney ->
+  Int ->
+  m [Payment.Basket]
+mkOfferBasket merchantId merchantOperatingCityId mbPlaceId paymentServiceType amount quantity = do
+  mbOfferSKUProductId <- fetchOfferSKUConfig merchantId merchantOperatingCityId mbPlaceId paymentServiceType
+  pure $ case mbOfferSKUProductId of
+    Just offerSKUProductId -> [Payment.Basket {Payment.id = offerSKUProductId, Payment.unitPrice = amount, Payment.quantity = quantity}]
+    Nothing -> [Payment.Basket {Payment.id = "no_basket", Payment.unitPrice = 0, Payment.quantity = quantity}]
 
 loadLoyaltyProgramMap ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m) =>

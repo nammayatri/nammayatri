@@ -15,6 +15,7 @@
 module SharedLogic.Utils
   ( getStaticCustomerId,
     getPureStaticCustomerId,
+    getPersonUdf1,
   )
 where
 
@@ -22,11 +23,25 @@ import qualified Data.Time as Time
 import qualified Domain.Types.Person as DP
 import EulerHS.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Types.Version as Version
 import Kernel.Utils.Common
 import qualified Kernel.Utils.UUID as UUID
 import Lib.ConfigPilot.Interface.Types (getConfig)
 import qualified Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.ConfigPilot.Config.RiderConfig (RiderConfigDimensions (..))
+
+-- | udf1 (user defined field 1) sent in the Juspay session/createOrder request.
+-- Resolves to the customer's device id based on the client OS:
+--   iOS     -> person.deviceId
+--   Android -> person.androidId
+-- Returns Nothing when the device/OS is unknown.
+getPersonUdf1 :: Applicative m => DP.Person -> m (Maybe Text)
+getPersonUdf1 person =
+  pure $ case person.clientDevice of
+    Just device -> case device.deviceType of
+      Version.IOS -> person.deviceId
+      Version.ANDROID -> person.androidId
+    Nothing -> Nothing
 
 -- | Pure version of static customer ID generation.
 -- Generates the ID deterministically from phone and merchantId without any config lookups.
