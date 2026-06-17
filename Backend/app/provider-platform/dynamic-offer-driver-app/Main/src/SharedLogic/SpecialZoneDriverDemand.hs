@@ -1237,7 +1237,7 @@ filterByGateProximity merchantId targetGate driverVariantMap driverIds = do
       stalenessThreshold <-
         case targetGate.merchantOperatingCityId of
           Just mocId ->
-            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) Nothing
+            getOneConfig (TransporterConfigDimensions {merchantOperatingCityId = mocId.getId}) (Just (SCTC.findByMerchantOpCityId (cast mocId) Nothing))
               <&> maybe
                 driverLocationStalenessThresholdSecondsDefault
                 (fromMaybe driverLocationStalenessThresholdSecondsDefault . (.driverLocationStalenessThresholdSeconds))

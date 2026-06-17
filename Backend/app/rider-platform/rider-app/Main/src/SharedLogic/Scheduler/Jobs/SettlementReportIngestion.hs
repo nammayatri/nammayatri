@@ -41,6 +41,7 @@ import Lib.Scheduler.JobStorageType.DB.Table (SchedulerJobT)
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as JC
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import Storage.ConfigPilot.Config.MerchantServiceConfig (MerchantServiceConfigDimensions (..))
 
 -- | Lock TTL reduced from 3600s to 600s (10 minutes) to avoid long lock holds
@@ -166,7 +167,7 @@ runSettlementReportIngestionJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.g
                 serviceName = Just svcName
               }
           )
-          Nothing
+          (Just (maybeToList <$> CQMSC.findByMerchantOpCityIdAndService mId mOpCityId svcName))
       case mbCfg >>= extractPaymentServiceConfig . (.serviceConfig) of
         Just (Payment.JuspayConfig juspayCfg) ->
           pure . Just $
