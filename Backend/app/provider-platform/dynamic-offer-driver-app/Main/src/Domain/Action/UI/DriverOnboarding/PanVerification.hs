@@ -70,6 +70,7 @@ import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import Storage.ConfigPilot.Config.DocumentVerificationConfig (DocumentVerificationConfigDimensions (..))
 import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsageConfigDimensions (..))
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
+import qualified Storage.Queries.DriverGstin as QDGst
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -133,6 +134,14 @@ verifyPanHandler verifyBy mbMerchant (personId, _, merchantOpCityId) req adminAp
         let getRoles = map (.role) panPersonDetails
         when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
     _ -> pure ()
+
+  when (DCommon.checkFleetOwnerRole person.role) $ do
+    mDriverGst <- QDGst.findByDriverId person.id
+    whenJust mDriverGst $ \driverGst -> do
+      gstin <- decrypt driverGst.gstin
+      unless (panMatchesGstin req.panNumber gstin) $ do
+        Utils.cleanupUploadedImages [Id req.imageId] person.id
+        throwError PanGstNumberMismatch
 
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))

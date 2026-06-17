@@ -1,0 +1,1433 @@
+{
+  "info": {
+    "name": "PAN-GST Cross-Check Flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function r(){ return '9' + Math.floor(100000000 + Math.random()*899999999); }",
+          "if(!pm.collectionVariables.get('_test_png')) pm.collectionVariables.set('_test_png','iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');",
+          "['A','B','C'].forEach(function(k){ var key='_test_fleet_'+k; if(!pm.collectionVariables.get(key)) pm.collectionVariables.set(key, r()); });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "A: configure mock Idfy (ABCDE1234F/29ABCDE1234F1Z5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/idfy/configure",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "idfy",
+            "configure"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"ABCDE1234F\", \"gstNumber\": \"29ABCDE1234F1Z5\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mock configured', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_A}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_A', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_A}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_A}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-A\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "pm.collectionVariables.set('token_A', j.token);",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_A', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL resolve merchant/city",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"select\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_A}}\", \"op\": \"=\"}], \"limit\": 1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = (pm.response.json().rows) || [];",
+              "pm.test('person row present in PG', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) {",
+              "  pm.collectionVariables.set('mid_A', rows[0].merchant_id);",
+              "  pm.collectionVariables.set('moc_A', rows[0].merchant_operating_city_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_A}}\", \"op\": \"=\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('role update 200', () => pm.response.to.have.status(200));",
+              "pm.test('exactly one person updated to FLEET_OWNER', () => pm.expect(pm.response.json().rowcount).to.eql(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_A}}\", \"merchant_id\": \"{{mid_A}}\", \"merchant_operating_city_id\": \"{{moc_A}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('fleet_owner_information seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: upload PanCard image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"PanCard\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PanCard image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('panImg_A', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: verify PAN ABCDE1234F",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"ABCDE1234F\", \"imageId\": \"{{panImg_A}}\", \"driverId\": \"{{driverId_A}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PAN stored (200, no cross-check error)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: upload GSTCertificate image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"GSTCertificate\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GSTCertificate image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('gstImg_A', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "A: verify GST 29ZZZZZ9999Z1Z5 (MISMATCH -> 400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_A}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/gstin",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "gstin"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gstin\": \"29ZZZZZ9999Z1Z5\", \"imageId\": \"{{gstImg_A}}\", \"driverId\": \"{{driverId_A}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GST rejected 400', () => pm.response.to.have.status(400));",
+              "pm.test('errorCode PAN_GST_NUMBER_MISMATCH', () => pm.expect(pm.response.json().errorCode).to.eql('PAN_GST_NUMBER_MISMATCH'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: configure mock Idfy (LMNOP9012Q/29LMNOP9012Q1Z5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/idfy/configure",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "idfy",
+            "configure"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"LMNOP9012Q\", \"gstNumber\": \"29LMNOP9012Q1Z5\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mock configured', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_B}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_B', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_B}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_B}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-B\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "pm.collectionVariables.set('token_B', j.token);",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_B', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL resolve merchant/city",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"select\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_B}}\", \"op\": \"=\"}], \"limit\": 1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = (pm.response.json().rows) || [];",
+              "pm.test('person row present in PG', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) {",
+              "  pm.collectionVariables.set('mid_B', rows[0].merchant_id);",
+              "  pm.collectionVariables.set('moc_B', rows[0].merchant_operating_city_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_B}}\", \"op\": \"=\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('role update 200', () => pm.response.to.have.status(200));",
+              "pm.test('exactly one person updated to FLEET_OWNER', () => pm.expect(pm.response.json().rowcount).to.eql(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_B}}\", \"merchant_id\": \"{{mid_B}}\", \"merchant_operating_city_id\": \"{{moc_B}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('fleet_owner_information seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: upload GSTCertificate image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"GSTCertificate\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GSTCertificate image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('gstImg_B', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: verify GST 29LMNOP9012Q1Z5",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/gstin",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "gstin"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gstin\": \"29LMNOP9012Q1Z5\", \"imageId\": \"{{gstImg_B}}\", \"driverId\": \"{{driverId_B}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GST accepted (200)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: upload PanCard image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"PanCard\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PanCard image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('panImg_B', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "B: verify PAN ZZZZZ9999Z (MISMATCH -> 400)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_B}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"ZZZZZ9999Z\", \"imageId\": \"{{panImg_B}}\", \"driverId\": \"{{driverId_B}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PAN rejected 400', () => pm.response.to.have.status(400));",
+              "pm.test('errorCode PAN_GST_NUMBER_MISMATCH', () => pm.expect(pm.response.json().errorCode).to.eql('PAN_GST_NUMBER_MISMATCH'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: configure mock Idfy (FGHIJ5678K/29FGHIJ5678K1Z5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/idfy/configure",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "idfy",
+            "configure"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"FGHIJ5678K\", \"gstNumber\": \"29FGHIJ5678K1Z5\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mock configured', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth sendOTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"mobileNumber\": \"{{_test_fleet_C}}\", \"mobileCountryCode\": \"+91\", \"merchantId\": \"{{merchantId}}\", \"merchantOperatingCity\": \"{{city}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth sendOTP 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('authId_C', pm.response.json().authId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: Auth verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/auth/{{authId_C}}/verify",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "auth",
+            "{{authId_C}}",
+            "verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"otp\": \"{{login_otp}}\", \"deviceToken\": \"pangst-C\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('verify 200', () => pm.response.to.have.status(200));",
+              "var j = pm.response.json();",
+              "pm.collectionVariables.set('token_C', j.token);",
+              "if (j.person && j.person.id) pm.collectionVariables.set('driverId_C', j.person.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL resolve merchant/city",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"select\": [\"id\", \"merchant_id\", \"merchant_operating_city_id\", \"role\"], \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_C}}\", \"op\": \"=\"}], \"limit\": 1}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('sql select 200', () => pm.response.to.have.status(200));",
+              "var rows = (pm.response.json().rows) || [];",
+              "pm.test('person row present in PG', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) {",
+              "  pm.collectionVariables.set('mid_C', rows[0].merchant_id);",
+              "  pm.collectionVariables.set('moc_C', rows[0].merchant_operating_city_id);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL set role FLEET_OWNER",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/update",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "update"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"person\", \"set\": {\"role\": \"FLEET_OWNER\"}, \"touch_updated_at\": true, \"where_clause\": [{\"column_name\": \"id\", \"val\": \"{{driverId_C}}\", \"op\": \"=\"}]}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('role update 200', () => pm.response.to.have.status(200));",
+              "pm.test('exactly one person updated to FLEET_OWNER', () => pm.expect(pm.response.json().rowcount).to.eql(1));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: SQL seed fleet_owner_information",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/insert",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "insert"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{driverId_C}}\", \"merchant_id\": \"{{mid_C}}\", \"merchant_operating_city_id\": \"{{moc_C}}\", \"fleet_type\": \"NORMAL_FLEET\", \"blocked\": false, \"enabled\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('fleet_owner_information seeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: upload PanCard image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"PanCard\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PanCard image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('panImg_C', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: verify PAN FGHIJ5678K",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pan",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "pan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"FGHIJ5678K\", \"imageId\": \"{{panImg_C}}\", \"driverId\": \"{{driverId_C}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('PAN stored (200, no cross-check error)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: upload GSTCertificate image",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/validateImage",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "validateImage"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"image\": \"{{_test_png}}\", \"imageType\": \"GSTCertificate\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GSTCertificate image 200', () => pm.response.to.have.status(200));",
+              "pm.collectionVariables.set('gstImg_C', pm.response.json().imageId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "C: verify GST 29FGHIJ5678K1Z5",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "token",
+            "value": "{{token_C}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/gstin",
+          "host": [
+            "{{baseURL_namma_P}}"
+          ],
+          "path": [
+            "driver",
+            "register",
+            "gstin"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"gstin\": \"29FGHIJ5678K1Z5\", \"imageId\": \"{{gstImg_C}}\", \"driverId\": \"{{driverId_C}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('GST accepted (200)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup: reset mock Idfy config to defaults",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{mockServerUrl}}/idfy/configure",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "idfy",
+            "configure"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"ABCDE1234F\", \"gstNumber\": \"29ABCDE1234F1Z5\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('mock Idfy reset to defaults', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
