@@ -64,6 +64,9 @@ DriverInformation:
     DisabledReasonFlag:
       enum: "FleetDisabled,AdminDisabled,DriverDisabled"
       derive: "HttpInstance"
+    MapProvider:
+      enum: "GOOGLE_MAPS, WAZE, APPLE_MAPS"
+      derive: "HttpInstance"
   fields:
     driverId: Id Person
     adminId: Maybe (Id Person)
@@ -159,6 +162,7 @@ DriverInformation:
     weeklyExtraKms: Maybe HighPrecMeters
     onboardingAs: Maybe OnboardingAs
     approved: Maybe Bool
+    preferredMapProvider: Maybe MapProvider
     docsVerificationStatus: Maybe DocsVerificationStatus
     address: Maybe Text # deprecated: moved to driver_identity_info;
     addressDocumentType: Maybe AddressDocumentType # deprecated: moved to driver_identity_info;

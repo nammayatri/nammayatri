@@ -101,6 +101,7 @@ data DriverInformationE e = DriverInformation
     payoutVpa :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaBankAccount :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
+    preferredMapProvider :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.MapProvider,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
     preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -219,6 +220,7 @@ instance EncryptedItem DriverInformation where
           payoutVpa = payoutVpa entity,
           payoutVpaBankAccount = payoutVpaBankAccount entity,
           payoutVpaStatus = payoutVpaStatus entity,
+          preferredMapProvider = preferredMapProvider entity,
           preferredPrimarySpecialLocId = preferredPrimarySpecialLocId entity,
           preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds entity,
           referralCode = referralCode entity,
@@ -329,6 +331,7 @@ instance EncryptedItem DriverInformation where
             payoutVpa = payoutVpa entity,
             payoutVpaBankAccount = payoutVpaBankAccount entity,
             payoutVpaStatus = payoutVpaStatus entity,
+            preferredMapProvider = preferredMapProvider entity,
             preferredPrimarySpecialLocId = preferredPrimarySpecialLocId entity,
             preferredSecondarySpecialLocIds = preferredSecondarySpecialLocIds entity,
             referralCode = referralCode entity,
@@ -411,6 +414,8 @@ data DriverSummary = DriverSummary
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data MapProvider = GOOGLE_MAPS | WAZE | APPLE_MAPS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
 data OnboardingAs = FLEET_DRIVER | INDIVIDUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
@@ -428,6 +433,10 @@ $(mkHttpInstancesForEnum ''DisabledReasonFlag)
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
 $(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MapProvider)
+
+$(mkHttpInstancesForEnum ''MapProvider)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''OnboardingAs)
 
