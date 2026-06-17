@@ -1,0 +1,286 @@
+{
+  "info": {
+    "name": "PAN Hard Check Flow",
+    "description": "Verifies the merchant-level individual-PAN check (transporter_config.individual_pan_check). On PAN uploads (app + dashboard), a business PAN (4th char != 'P') must be rejected for individual drivers (role=DRIVER) and individual fleet owners (role=FLEET_OWNER) with 'Business PAN card not be accepted please upload individual PAN'; an individual PAN (4th char == 'P') must pass the gate. FLEET_BUSINESS and other roles are exempt. Self-contained: resolves ids + sets the flag + seeds the fleet-owner FOI row via the mock-server SQL endpoints (works in both the 7070 UI and newman CLI). The check fires before the image is read, so the verify steps use a dummy imageId — no upload needed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "function L(){return String.fromCharCode(65+Math.floor(Math.random()*26));}",
+          "function D(n){let s='';for(let i=0;i<n;i++)s+=Math.floor(Math.random()*10);return s;}",
+          "// Fresh, valid-format PANs each request: 4th char C => business, P => individual.",
+          "pm.environment.set('business_pan', L()+L()+L()+'C'+L()+D(4)+L());",
+          "pm.environment.set('individual_pan', L()+L()+L()+'P'+L()+D(4)+L());",
+          "pm.environment.set('dummy_image_id', '00000000-0000-0000-0000-000000000000');"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - SQL: Resolve merchant uuid",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"merchant\", \"select\": [\"id\"], \"where_clause\": [{\"column_name\": \"short_id\", \"val\": \"{{dashboard_merchant_id}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('SQL select 200', () => pm.response.to.have.status(200));",
+              "const rows = (pm.response.json() || {}).rows || [];",
+              "pm.test('merchant found', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) pm.environment.set('merchant_uuid', rows[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 - SQL: Resolve driver_id (seed)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"registration_token\", \"select\": [\"entity_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": \"{{driver_seed_token}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('SQL select 200', () => pm.response.to.have.status(200));",
+              "const rows = (pm.response.json() || {}).rows || [];",
+              "pm.test('seed driver token found', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) pm.environment.set('driver_id', rows[0].entity_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 - SQL: Resolve fleet_owner_id (seed)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"registration_token\", \"select\": [\"entity_id\"], \"where_clause\": [{\"column_name\": \"token\", \"val\": \"{{fleet_seed_token}}\", \"op\": \"=\"}], \"limit\": 1}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/select", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "select"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('SQL select 200', () => pm.response.to.have.status(200));",
+              "const rows = (pm.response.json() || {}).rows || [];",
+              "pm.test('seed fleet owner token found', () => pm.expect(rows.length).to.be.above(0));",
+              "if (rows.length) pm.environment.set('fleet_owner_id', rows[0].entity_id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - SQL: Seed fleet_owner_information (NORMAL_FLEET)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"fleet_owner_information\", \"values\": {\"fleet_owner_person_id\": \"{{fleet_owner_id}}\", \"merchant_id\": \"{{merchant_uuid}}\", \"fleet_type\": \"NORMAL_FLEET\", \"enabled\": true, \"blocked\": false, \"verified\": false}, \"touch_timestamps\": true, \"on_conflict_do_nothing\": true}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/insert", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "insert"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('FOI seed ok (200)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - SQL: Enable individual_pan_check",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"individual_pan_check\": true}, \"where_clause\": [{\"column_name\": \"merchant_id\", \"val\": \"{{merchant_uuid}}\", \"op\": \"=\"}]}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "update"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('enable flag ok (200)', () => pm.response.to.have.status(200));",
+              "const d = pm.response.json() || {};",
+              "pm.test('flag set on >=1 op-city row', () => pm.expect(d.rowcount).to.be.above(0));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 - [DRIVER] business PAN -> rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driver_id}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"{{business_pan}}\", \"identifierName\": null}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "verify", "%22VERIFY_PAN%22"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 (rejected)', () => pm.response.to.have.status(400));",
+              "pm.test('Business-PAN rejection message present', () => pm.expect(pm.response.text()).to.include('Business PAN card not be accepted please upload individual PAN'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 - [DRIVER] individual PAN -> passes gate",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{driver_id}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"{{individual_pan}}\", \"identifierName\": null}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "verify", "%22VERIFY_PAN%22"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Hard-check gate passed (no business-PAN rejection)', () => pm.expect(pm.response.text()).to.not.include('Business PAN card not be accepted please upload individual PAN'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - [FLEET_OWNER] business PAN -> rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{dashboard_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"driverId\": \"{{fleet_owner_id}}\", \"imageId\": \"{{dummy_image_id}}\", \"identifierNumber\": \"{{business_pan}}\", \"identifierName\": null}"
+        },
+        "url": {
+          "raw": "{{baseURL_BPP_Dashboard_Internal}}/{{dashboard_merchant_id}}/{{dashboard_city}}/onboarding/verify/%22VERIFY_PAN%22",
+          "host": ["{{baseURL_BPP_Dashboard_Internal}}"],
+          "path": ["{{dashboard_merchant_id}}", "{{dashboard_city}}", "onboarding", "verify", "%22VERIFY_PAN%22"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 (rejected)', () => pm.response.to.have.status(400));",
+              "pm.test('Business-PAN rejection message present', () => pm.expect(pm.response.text()).to.include('Business PAN card not be accepted please upload individual PAN'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - [APP/DRIVER] business PAN via /driver/register/pancard -> rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "token", "value": "{{driver_seed_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"panNumber\": \"{{business_pan}}\", \"imageId1\": \"{{dummy_image_id}}\", \"consent\": true}"
+        },
+        "url": {
+          "raw": "{{baseURL_namma_P}}/driver/register/pancard",
+          "host": ["{{baseURL_namma_P}}"],
+          "path": ["driver", "register", "pancard"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 (rejected)', () => pm.response.to.have.status(400));",
+              "pm.test('Business-PAN rejection message present', () => pm.expect(pm.response.text()).to.include('Business PAN card not be accepted please upload individual PAN'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 - SQL: Reset individual_pan_check (teardown)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\": \"atlas_dev\", \"db_schema\": \"atlas_driver_offer_bpp\", \"table_name\": \"transporter_config\", \"set\": {\"individual_pan_check\": null}, \"where_clause\": [{\"column_name\": \"merchant_id\", \"val\": \"{{merchant_uuid}}\", \"op\": \"=\"}]}"
+        },
+        "url": { "raw": "{{mockServerUrl}}/mock/sql/update", "host": ["{{mockServerUrl}}"], "path": ["mock", "sql", "update"] }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('reset flag ok (200)', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

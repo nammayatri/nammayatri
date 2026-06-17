@@ -934,3 +934,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_bot_flow boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN individual_pan_check boolean ;
