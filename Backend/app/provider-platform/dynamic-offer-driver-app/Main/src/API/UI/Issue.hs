@@ -38,6 +38,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Ticket as TT
 
 type API =
@@ -58,24 +59,42 @@ handler = externalHandler
         :<|> deleteIssue (personId, merchantId, merchantOpCityId)
         :<|> updateIssueStatus (personId, merchantId, merchantOpCityId)
         :<|> igmIssueStatus (personId, merchantId, merchantOpCityId)
-        :<|> driverChatMessageStub
-        :<|> driverChatMessagesStub
-        :<|> driverChatReadStub
-        :<|> driverChatStateStub
+        :<|> postChatMessage (personId, merchantId)
+        :<|> getChatMessages (personId, merchantId)
+        :<|> postChatRead (personId, merchantId)
+        :<|> getChatState (personId, merchantId)
 
--- Live chat is not wired on driver-app yet. These stubs exist to satisfy the
--- shared `IssueAPI` type; exposing them on the driver UI is a follow-up.
-driverChatMessageStub :: Id Domain.IssueReport -> Common.CreateChatMessageReq -> FlowHandler Common.ChatMessageItem
-driverChatMessageStub _ _ = withFlowHandlerAPI $ throwError $ InvalidRequest "Live chat is not enabled on driver-app."
+postChatMessage ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.CreateChatMessageReq ->
+  FlowHandler Common.ChatMessageItem
+postChatMessage (driverId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.createChatMessage (cast driverId) issueReportId Common.DRIVER req
 
-driverChatMessagesStub :: Id Domain.IssueReport -> Maybe UTCTime -> Maybe Int -> FlowHandler [Common.ChatMessageItem]
-driverChatMessagesStub _ _ _ = withFlowHandlerAPI $ pure []
+getChatMessages ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Maybe UTCTime ->
+  Maybe Int ->
+  FlowHandler [Common.ChatMessageItem]
+getChatMessages (driverId, _) issueReportId mbSince mbLimit =
+  withFlowHandlerAPI $ Common.listChatMessages (cast driverId) issueReportId Common.DRIVER mbSince mbLimit
 
-driverChatReadStub :: Id Domain.IssueReport -> Common.MarkChatReadReq -> FlowHandler APISuccess
-driverChatReadStub _ _ = withFlowHandlerAPI $ pure Success
+postChatRead ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  Common.MarkChatReadReq ->
+  FlowHandler APISuccess
+postChatRead (driverId, _) issueReportId req =
+  withFlowHandlerAPI $ Common.markChatRead (cast driverId) issueReportId Common.DRIVER req
 
-driverChatStateStub :: Id Domain.IssueReport -> FlowHandler Common.ChatStateRes
-driverChatStateStub _ = withFlowHandlerAPI $ pure $ Common.ChatStateRes {unread = 0, latestMessageAt = Nothing}
+getChatState ::
+  (Id SP.Person, Id DM.Merchant) ->
+  Id Domain.IssueReport ->
+  FlowHandler Common.ChatStateRes
+getChatState (driverId, _) issueReportId =
+  withFlowHandlerAPI $ Common.getChatState (cast driverId) issueReportId
 
 driverIssueHandle :: Common.ServiceHandle Flow
 driverIssueHandle =
@@ -103,10 +122,7 @@ driverIssueHandle =
       findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
       mbFindFRFSTicketBookingById = Nothing,
       mbFindStationByIdWithContext = Nothing,
-      -- Live chat is not yet exposed on driver-app. Leaving this hook as
-      -- `Nothing` means dashboard operator comments on driver-side issues
-      -- are persisted but no FCM push is sent to the driver.
-      mbSendChatNotification = Nothing
+      mbSendChatNotification = Just (\pid payload -> Notify.notifyOnIssueChatMessage (cast pid) payload)
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)

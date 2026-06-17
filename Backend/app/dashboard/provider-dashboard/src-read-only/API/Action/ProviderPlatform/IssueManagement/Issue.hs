@@ -21,6 +21,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -30,10 +31,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> PostIssueChatMessage :<|> GetIssueChatMessages :<|> PostIssueChatRead))
+type API = ("issue" :> (GetIssueCategoryList :<|> GetIssueList :<|> GetIssueInfo :<|> GetIssueInfoV2 :<|> PutIssueUpdate :<|> PostIssueComment :<|> GetIssueMedia :<|> PostIssueTicketStatusCallBack :<|> PostIssueCategoryCreate :<|> PostIssueCategoryUpdate :<|> PostIssueOptionCreate :<|> PostIssueOptionUpdate :<|> PostIssueMessageUpsert :<|> GetIssueCategoryDetail :<|> GetIssueOptionDetail :<|> GetIssueMessageDetail :<|> GetIssueMessageList :<|> GetIssueOptionList :<|> DeleteIssueCategory :<|> DeleteIssueOption :<|> DeleteIssueMessage :<|> GetIssueCategoryFlowPreview :<|> GetIssueTranslations :<|> PostIssueBulkUpsertTranslations :<|> GetIssueConfig :<|> PostIssueConfigUpdate :<|> PostIssueCategoryReorder :<|> PostIssueOptionReorder :<|> PostIssueMessageReorder :<|> PostIssueCategoryCopy :<|> PostIssueCategoryDefaultCopy :<|> PostIssueCategoryAllCopy :<|> PostIssueChatMessage :<|> GetIssueChatMessages :<|> PostIssueChatRead))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> postIssueChatMessage merchantId city :<|> getIssueChatMessages merchantId city :<|> postIssueChatRead merchantId city
+handler merchantId city = getIssueCategoryList merchantId city :<|> getIssueList merchantId city :<|> getIssueInfo merchantId city :<|> getIssueInfoV2 merchantId city :<|> putIssueUpdate merchantId city :<|> postIssueComment merchantId city :<|> getIssueMedia merchantId city :<|> postIssueTicketStatusCallBack merchantId city :<|> postIssueCategoryCreate merchantId city :<|> postIssueCategoryUpdate merchantId city :<|> postIssueOptionCreate merchantId city :<|> postIssueOptionUpdate merchantId city :<|> postIssueMessageUpsert merchantId city :<|> getIssueCategoryDetail merchantId city :<|> getIssueOptionDetail merchantId city :<|> getIssueMessageDetail merchantId city :<|> getIssueMessageList merchantId city :<|> getIssueOptionList merchantId city :<|> deleteIssueCategory merchantId city :<|> deleteIssueOption merchantId city :<|> deleteIssueMessage merchantId city :<|> getIssueCategoryFlowPreview merchantId city :<|> getIssueTranslations merchantId city :<|> postIssueBulkUpsertTranslations merchantId city :<|> getIssueConfig merchantId city :<|> postIssueConfigUpdate merchantId city :<|> postIssueCategoryReorder merchantId city :<|> postIssueOptionReorder merchantId city :<|> postIssueMessageReorder merchantId city :<|> postIssueCategoryCopy merchantId city :<|> postIssueCategoryDefaultCopy merchantId city :<|> postIssueCategoryAllCopy merchantId city :<|> postIssueChatMessage merchantId city :<|> getIssueChatMessages merchantId city :<|> postIssueChatRead merchantId city
 
 type GetIssueCategoryList =
   ( ApiAuth
@@ -139,6 +140,158 @@ type PostIssueMessageUpsert =
       :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueMessageUpsert
   )
 
+type GetIssueCategoryDetail =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_DETAIL)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueCategoryDetail
+  )
+
+type GetIssueOptionDetail =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_OPTION_DETAIL)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueOptionDetail
+  )
+
+type GetIssueMessageDetail =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_MESSAGE_DETAIL)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueMessageDetail
+  )
+
+type GetIssueMessageList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_MESSAGE_LIST)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueMessageList
+  )
+
+type GetIssueOptionList =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_OPTION_LIST)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueOptionList
+  )
+
+type DeleteIssueCategory =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.DELETE_ISSUE_CATEGORY)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.DeleteIssueCategory
+  )
+
+type DeleteIssueOption =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.DELETE_ISSUE_OPTION)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.DeleteIssueOption
+  )
+
+type DeleteIssueMessage =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.DELETE_ISSUE_MESSAGE)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.DeleteIssueMessage
+  )
+
+type GetIssueCategoryFlowPreview =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_CATEGORY_FLOW_PREVIEW)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueCategoryFlowPreview
+  )
+
+type GetIssueTranslations =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_TRANSLATIONS)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueTranslations
+  )
+
+type PostIssueBulkUpsertTranslations =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_BULK_UPSERT_TRANSLATIONS)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueBulkUpsertTranslations
+  )
+
+type GetIssueConfig =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.GET_ISSUE_CONFIG)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.GetIssueConfig
+  )
+
+type PostIssueConfigUpdate =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CONFIG_UPDATE)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueConfigUpdate
+  )
+
+type PostIssueCategoryReorder =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_REORDER)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryReorder
+  )
+
+type PostIssueOptionReorder =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_OPTION_REORDER)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueOptionReorder
+  )
+
+type PostIssueMessageReorder =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_MESSAGE_REORDER)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueMessageReorder
+  )
+
+type PostIssueCategoryCopy =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_COPY)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryCopy
+  )
+
+type PostIssueCategoryDefaultCopy =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_DEFAULT_COPY)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryDefaultCopy
+  )
+
+type PostIssueCategoryAllCopy =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_ISSUE_MANAGEMENT / 'API.Types.ProviderPlatform.IssueManagement.ISSUE / 'API.Types.ProviderPlatform.IssueManagement.Issue.POST_ISSUE_CATEGORY_ALL_COPY)
+      :> API.Types.ProviderPlatform.IssueManagement.Issue.PostIssueCategoryAllCopy
+  )
+
 type PostIssueChatMessage =
   ( ApiAuth
       'DRIVER_OFFER_BPP_MANAGEMENT
@@ -201,6 +354,63 @@ postIssueOptionUpdate merchantShortId opCity apiTokenInfo issueOptionid req = wi
 
 postIssueMessageUpsert :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes)
 postIssueMessageUpsert merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueMessageUpsert merchantShortId opCity apiTokenInfo req
+
+getIssueCategoryDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes)
+getIssueCategoryDetail merchantShortId opCity apiTokenInfo categoryId language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueCategoryDetail merchantShortId opCity apiTokenInfo categoryId language
+
+getIssueOptionDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes)
+getIssueOptionDetail merchantShortId opCity apiTokenInfo optionId language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueOptionDetail merchantShortId opCity apiTokenInfo optionId language
+
+getIssueMessageDetail :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes)
+getIssueMessageDetail merchantShortId opCity apiTokenInfo messageId language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueMessageDetail merchantShortId opCity apiTokenInfo messageId language
+
+getIssueMessageList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueMessageListRes)
+getIssueMessageList merchantShortId opCity apiTokenInfo categoryId optionId isActive language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueMessageList merchantShortId opCity apiTokenInfo categoryId optionId isActive language
+
+getIssueOptionList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes)
+getIssueOptionList merchantShortId opCity apiTokenInfo categoryId messageId isActive language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueOptionList merchantShortId opCity apiTokenInfo categoryId messageId isActive language
+
+deleteIssueCategory :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteIssueCategory merchantShortId opCity apiTokenInfo categoryId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.deleteIssueCategory merchantShortId opCity apiTokenInfo categoryId
+
+deleteIssueOption :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteIssueOption merchantShortId opCity apiTokenInfo optionId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.deleteIssueOption merchantShortId opCity apiTokenInfo optionId
+
+deleteIssueMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+deleteIssueMessage merchantShortId opCity apiTokenInfo messageId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.deleteIssueMessage merchantShortId opCity apiTokenInfo messageId
+
+getIssueCategoryFlowPreview :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory -> Kernel.Prelude.Maybe Kernel.External.Types.Language -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes)
+getIssueCategoryFlowPreview merchantShortId opCity apiTokenInfo categoryId language = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueCategoryFlowPreview merchantShortId opCity apiTokenInfo categoryId language
+
+getIssueTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes)
+getIssueTranslations merchantShortId opCity apiTokenInfo sentence = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueTranslations merchantShortId opCity apiTokenInfo sentence
+
+postIssueBulkUpsertTranslations :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueBulkUpsertTranslations merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueBulkUpsertTranslations merchantShortId opCity apiTokenInfo req
+
+getIssueConfig :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.IssueConfigRes)
+getIssueConfig merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.getIssueConfig merchantShortId opCity apiTokenInfo
+
+postIssueConfigUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueConfigUpdate merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueConfigUpdate merchantShortId opCity apiTokenInfo req
+
+postIssueCategoryReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueCategoryReorder merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueCategoryReorder merchantShortId opCity apiTokenInfo req
+
+postIssueOptionReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueOptionReorder merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueOptionReorder merchantShortId opCity apiTokenInfo req
+
+postIssueMessageReorder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postIssueMessageReorder merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueMessageReorder merchantShortId opCity apiTokenInfo req
+
+postIssueCategoryCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes)
+postIssueCategoryCopy merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueCategoryCopy merchantShortId opCity apiTokenInfo req
+
+postIssueCategoryDefaultCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
+postIssueCategoryDefaultCopy merchantShortId opCity apiTokenInfo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueCategoryDefaultCopy merchantShortId opCity apiTokenInfo
+
+postIssueCategoryAllCopy :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq -> Environment.FlowHandler IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes)
+postIssueCategoryAllCopy merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueCategoryAllCopy merchantShortId opCity apiTokenInfo req
 
 postIssueChatMessage :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueReport.IssueReport -> IssueManagement.Common.Dashboard.Issue.SendChatMessageReq -> Environment.FlowHandler IssueManagement.Common.UI.Issue.ChatMessageItem)
 postIssueChatMessage merchantShortId opCity apiTokenInfo issueId req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.IssueManagement.Issue.postIssueChatMessage merchantShortId opCity apiTokenInfo issueId req
