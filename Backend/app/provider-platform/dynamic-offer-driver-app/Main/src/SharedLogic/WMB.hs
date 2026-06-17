@@ -529,7 +529,7 @@ linkFleetBadge driverId _ _ fleetOwnerId badge badgeType = do
     buildBadgeAssociation fleetBadgeId now =
       FleetBadgeAssociation
         { associatedOn = Just now,
-          associatedTill = convertTextToUTC (Just "2099-12-12"),
+          associatedTill = defaultAssociationEnd,
           badgeId = badge.id,
           badgeType = badgeType,
           createdAt = now,

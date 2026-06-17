@@ -31,6 +31,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     LinkedRC (..),
     DeleteRCReq (..),
     convertTextToUTC,
+    defaultAssociationEnd,
     mkHyperVergeVerificationEntity,
     mkMorthVerificationEntity,
     validateRCResponse,

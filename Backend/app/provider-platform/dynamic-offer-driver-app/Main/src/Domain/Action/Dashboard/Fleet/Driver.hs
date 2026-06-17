@@ -2832,7 +2832,7 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       when (isJust mbActiveRide) $ throwError (InvalidRequest "Driver has active rides. Please complete or cancel all rides before adding to fleet")
 
       -- onboarded operator required only for new drivers
-      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing DomainRC.defaultAssociationEnd
       QFDV.create assoc
       when (transporterConfig.deleteDriverBankAccountWhenLinkToFleet == Just True) $ QDBA.deleteById person.id
       Analytics.handleDriverAnalyticsAndFlowStatus
@@ -5120,9 +5120,7 @@ postDriverFleetChangeDriver merchantShortId opCity requestorId driverId mbFleetO
     _ -> do
       -- admin/operator: newOperatorCode mandatory, re-link to the specified operator
       newOperatorCode <- fromMaybeM (InvalidRequest "newOperatorCode is required for admin/operator change") req.newOperatorCode
-      dr <- QDR.findByReferralCodeAndMerchantCityId (Just merchantOpCityId) (Id newOperatorCode) >>= fromMaybeM (InvalidRequest $ "Unknown operator code: " <> newOperatorCode)
-      operator <- QPerson.findById dr.driverId >>= fromMaybeM (PersonDoesNotExist dr.driverId.getId)
-      unless (operator.role == DP.OPERATOR) $ throwError (InvalidRequest "Operator code does not belong to an operator")
+      operator <- SA.resolveOperatorByCode merchantOpCityId newOperatorCode
       pure operator.id.getId
   -- New operator validated; now break the old fleet-driver link (+ all driver-vehicle
   -- links) and create the new operator link.
@@ -5134,6 +5132,6 @@ postDriverFleetChangeDriver merchantShortId opCity requestorId driverId mbFleetO
     -- (single-active invariant, mirroring the driver/operator change flow).
     mbExistingOperatorAssoc <- QDOAExtra.findByDriverId personId True
     whenJust mbExistingOperatorAssoc $ \existing -> QDOAExtra.endById existing.id
-    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId newOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    newAssoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId personId newOperatorId DomainRC.defaultAssociationEnd
     DOV.create newAssoc
   pure Success

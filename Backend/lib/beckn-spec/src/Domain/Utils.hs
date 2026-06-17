@@ -28,6 +28,9 @@ convertTextToUTC a = do
   a_ <- a
   parseTimeM True defaultTimeLocale "%Y-%-m-%-d" $ T.unpack a_
 
+defaultAssociationEnd :: Maybe UTCTime
+defaultAssociationEnd = convertTextToUTC (Just "2099-12-12")
+
 utctTimeToDayOfWeek :: UTCTime -> DayOfWeek
 utctTimeToDayOfWeek utcTime = dayOfWeek (utctDay utcTime)
 
