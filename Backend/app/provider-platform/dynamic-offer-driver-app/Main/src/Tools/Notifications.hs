@@ -43,6 +43,8 @@ import Domain.Types.ServiceTierType
 import Domain.Types.Trip as Trip
 import qualified Domain.Types.TripTransaction as DTT
 import qualified EulerHS.Prelude hiding (null)
+import qualified IssueManagement.Common as IMCommon
+import Kernel.Beam.Functions
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Notification.FCM.Flow as FCM
 import Kernel.External.Notification.FCM.Types as FCM
@@ -455,6 +457,45 @@ notifyDriverWithProviders merchantOpCityId category title body driver mbDeviceTo
           ttl = Nothing,
           sound = Nothing
         }
+
+-- | Sent when a dashboard operator posts a chat message on a driver-side
+-- issue. Mirror of the rider-app helper of the same name; routes the FCM
+-- through `runWithServiceConfigForProviders` so it goes via the driver's
+-- configured provider stack.
+notifyOnIssueChatMessage ::
+  ( ServiceFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
+    Hedis.HedisFlow m r,
+    Hedis.HedisLTSFlowEnv r
+  ) =>
+  Id Person ->
+  IMCommon.ChatNotifPayload ->
+  m ()
+notifyOnIssueChatMessage driverId payload = do
+  driver <- runInReplica $ QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  let merchantOperatingCityId = driver.merchantOperatingCityId
+      title = T.pack "Support"
+      body =
+        if T.null payload.snippet
+          then if payload.hasMedia then "Sent you an image" else "You have a new message"
+          else payload.snippet
+      notificationData =
+        Notification.NotificationReq
+          { category = Notification.CHAT_MESSAGE,
+            subCategory = Nothing,
+            showNotification = Notification.SHOW,
+            messagePriority = Nothing,
+            entity = Notification.Entity Notification.Product payload.issueReportId payload,
+            body = body,
+            title = title,
+            dynamicParams = EmptyDynamicParam,
+            auth = Notification.Auth driver.id.getId ((.getFCMRecipientToken) <$> driver.deviceToken) Nothing,
+            ttl = Nothing,
+            sound = Nothing
+          }
+  runWithServiceConfigForProviders merchantOperatingCityId driver.clientId driver.clientDevice notificationData EulerHS.Prelude.id (clearDeviceToken driver.id)
 
 driverScheduledRideAcceptanceAlert ::
   ( ServiceFlow m r,

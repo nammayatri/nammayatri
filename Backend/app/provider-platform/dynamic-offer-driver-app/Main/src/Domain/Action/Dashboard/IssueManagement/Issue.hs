@@ -12,6 +12,26 @@ module Domain.Action.Dashboard.IssueManagement.Issue
     postIssueOptionCreate,
     postIssueOptionUpdate,
     postIssueMessageUpsert,
+    -- New Admin Content Management APIs
+    getIssueCategoryDetail,
+    getIssueOptionDetail,
+    getIssueMessageDetail,
+    getIssueMessageList,
+    getIssueOptionList,
+    deleteIssueCategory,
+    deleteIssueOption,
+    deleteIssueMessage,
+    getIssueCategoryFlowPreview,
+    getIssueTranslations,
+    postIssueBulkUpsertTranslations,
+    getIssueConfig,
+    postIssueConfigUpdate,
+    postIssueCategoryReorder,
+    postIssueOptionReorder,
+    postIssueMessageReorder,
+    postIssueCategoryCopy,
+    postIssueCategoryDefaultCopy,
+    postIssueCategoryAllCopy,
     -- Live chat APIs
     postIssueChatMessage,
     getIssueChatMessages,
@@ -33,6 +53,7 @@ import qualified IssueManagement.Domain.Types.Issue.IssueCategory
 import qualified IssueManagement.Domain.Types.Issue.IssueMessage
 import qualified IssueManagement.Domain.Types.Issue.IssueOption
 import qualified IssueManagement.Domain.Types.Issue.IssueReport
+import qualified Kernel.External.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
@@ -159,6 +180,169 @@ postIssueMessageUpsert ::
   Environment.Flow IssueManagement.Common.Dashboard.Issue.UpsertIssueMessageRes
 postIssueMessageUpsert (Kernel.Types.Id.ShortId merchantShortId) city req =
   DIssue.upsertIssueMessage (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+-----------------------------------------------------------
+-- New Admin Content Management APIs ----------------------
+
+getIssueCategoryDetail ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryDetailRes
+getIssueCategoryDetail (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbLanguage =
+  DIssue.getCategoryDetail (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbLanguage dashboardIssueHandle Common.DRIVER
+
+getIssueOptionDetail ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionDetailRes
+getIssueOptionDetail (Kernel.Types.Id.ShortId merchantShortId) city optionId mbLanguage =
+  DIssue.getOptionDetail (Kernel.Types.Id.ShortId merchantShortId) city optionId mbLanguage dashboardIssueHandle Common.DRIVER
+
+getIssueMessageDetail ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageDetailRes
+getIssueMessageDetail (Kernel.Types.Id.ShortId merchantShortId) city messageId mbLanguage =
+  DIssue.getMessageDetail (Kernel.Types.Id.ShortId merchantShortId) city messageId mbLanguage dashboardIssueHandle Common.DRIVER
+
+getIssueMessageList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueMessageListRes
+getIssueMessageList (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbOptionId mbIsActive mbLanguage =
+  DIssue.listMessages (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbOptionId mbIsActive mbLanguage dashboardIssueHandle Common.DRIVER
+
+getIssueOptionList ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory) ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage) ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueOptionListDRes
+getIssueOptionList (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbMessageId mbIsActive mbLanguage =
+  DIssue.listOptions (Kernel.Types.Id.ShortId merchantShortId) city mbCategoryId mbMessageId mbIsActive mbLanguage dashboardIssueHandle Common.DRIVER
+
+deleteIssueCategory ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteIssueCategory (Kernel.Types.Id.ShortId merchantShortId) city categoryId =
+  DIssue.deleteIssueCategory (Kernel.Types.Id.ShortId merchantShortId) city categoryId dashboardIssueHandle Common.DRIVER
+
+deleteIssueOption ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueOption.IssueOption ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteIssueOption (Kernel.Types.Id.ShortId merchantShortId) city optionId =
+  DIssue.deleteIssueOption (Kernel.Types.Id.ShortId merchantShortId) city optionId dashboardIssueHandle Common.DRIVER
+
+deleteIssueMessage ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueMessage.IssueMessage ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+deleteIssueMessage (Kernel.Types.Id.ShortId merchantShortId) city messageId =
+  DIssue.deleteIssueMessage (Kernel.Types.Id.ShortId merchantShortId) city messageId dashboardIssueHandle Common.DRIVER
+
+getIssueCategoryFlowPreview ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id IssueManagement.Domain.Types.Issue.IssueCategory.IssueCategory ->
+  Kernel.Prelude.Maybe Kernel.External.Types.Language ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueCategoryFlowPreviewRes
+getIssueCategoryFlowPreview (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbLanguage =
+  DIssue.previewCategoryFlow (Kernel.Types.Id.ShortId merchantShortId) city categoryId mbLanguage dashboardIssueHandle Common.DRIVER
+
+getIssueTranslations ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueTranslationListRes
+getIssueTranslations (Kernel.Types.Id.ShortId merchantShortId) city sentence =
+  DIssue.getTranslations (Kernel.Types.Id.ShortId merchantShortId) city sentence dashboardIssueHandle Common.DRIVER
+
+postIssueBulkUpsertTranslations ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.BulkUpsertTranslationsReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueBulkUpsertTranslations (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.bulkUpsertTranslations (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+getIssueConfig ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.IssueConfigRes
+getIssueConfig (Kernel.Types.Id.ShortId merchantShortId) city =
+  DIssue.getIssueConfig (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle Common.DRIVER
+
+postIssueConfigUpdate ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.UpdateIssueConfigReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueConfigUpdate (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.updateIssueConfig (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+postIssueCategoryReorder ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.ReorderIssueCategoryReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueCategoryReorder (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.reorderCategories (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+postIssueOptionReorder ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.ReorderIssueOptionReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueOptionReorder (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.reorderOptions (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+postIssueMessageReorder ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.ReorderIssueMessageReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postIssueMessageReorder (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.reorderMessages (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+postIssueCategoryCopy ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryReq ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyIssueCategoryRes
+postIssueCategoryCopy (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.copyIssueCategory (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
+
+postIssueCategoryDefaultCopy ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes
+postIssueCategoryDefaultCopy (Kernel.Types.Id.ShortId merchantShortId) city =
+  DIssue.copyAllDefaultIssueCategories (Kernel.Types.Id.ShortId merchantShortId) city dashboardIssueHandle Common.DRIVER
+
+postIssueCategoryAllCopy ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryReq ->
+  Environment.Flow IssueManagement.Common.Dashboard.Issue.CopyAllIssueCategoryRes
+postIssueCategoryAllCopy (Kernel.Types.Id.ShortId merchantShortId) city req =
+  DIssue.copyAllIssueCategories (Kernel.Types.Id.ShortId merchantShortId) city req dashboardIssueHandle Common.DRIVER
 
 -----------------------------------------------------------
 -- Live chat APIs ------------------------------------------
