@@ -59,6 +59,7 @@ data MessageKey
   | PASS_PURCHASED_MESSAGE
   | SPECIAL_ZONE_BOOKING_INVOICE
   | SEND_TOTP
+  | SPECIAL_ZONE_BOOKING_INVOICE_TITLE
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 type MerchantMessage = MerchantMessageD 'Safe
