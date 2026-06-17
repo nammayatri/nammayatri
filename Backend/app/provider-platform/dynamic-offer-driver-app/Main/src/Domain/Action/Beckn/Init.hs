@@ -397,6 +397,7 @@ validateRequest merchantId req = do
         -- Lock Description: This is a Lock held between Init and Cancel Search, if Cancel Search is OnGoing then the Driver Quote would be Marked Inactive post the lock release and Init will fail with `QuoteExpired`.
         -- Lock Release: If any errors or Post Init Beckn Action Handler is executed.
         isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+        logError $ "cancelSearchInitLock | Init acquire | txn=" <> searchRequest.transactionId <> " acquired=" <> show isLockAcquired
         searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
         updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
         when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
@@ -414,6 +415,7 @@ validateRequest merchantId req = do
       exep <- withTryCatch "init:validateRequest:callWithErrorHandling" action
       case exep of
         Left e -> do
+          logError $ "cancelSearchInitLock | Init release (validateRequest error) | txn=" <> transactionId
           Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
           someExceptionToAPIErrorThrow e
         Right a -> pure a

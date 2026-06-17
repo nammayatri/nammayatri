@@ -379,6 +379,7 @@ data DriverQuoteError
   | DriverQuoteExpired
   | NoSearchRequestForDriver
   | RideRequestAlreadyAccepted
+  | CancelSearchLockNotAcquired
   | RideRequestAlreadyAcceptedOrCancelled Text
   | DriverAlreadyQuoted Text
   | QuoteAlreadyRejected
@@ -399,6 +400,7 @@ instance IsBaseError DriverQuoteError where
   toMessage DriverQuoteExpired = Just "Driver quote expired"
   toMessage NoSearchRequestForDriver = Just "No search request for this driver"
   toMessage RideRequestAlreadyAccepted = Just "Ride request already accepted by other driver"
+  toMessage CancelSearchLockNotAcquired = Just "Cancel search could not acquire the init/cancel lock; an init or another cancel is in progress."
   toMessage (RideRequestAlreadyAcceptedOrCancelled srfd) = Just $ "Ride request already accepted by other driver or cancelled:-" <> show srfd
   toMessage (DriverAlreadyQuoted stId) = Just $ "Driver already quoted for stId:-" <> show stId
   toMessage QuoteAlreadyRejected = Just "Quote Already Rejected"
@@ -417,6 +419,7 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> "QUOTE_EXPIRED"
     NoSearchRequestForDriver -> "NO_SEARCH_REQUEST_FOR_DRIVER"
     RideRequestAlreadyAccepted -> "RIDE_REQUEST_ALREADY_ACCEPTED"
+    CancelSearchLockNotAcquired -> "CANCEL_SEARCH_LOCK_NOT_ACQUIRED"
     RideRequestAlreadyAcceptedOrCancelled _ -> "RIDE_REQUEST_ALREADY_ACCEPTED_OR_CANCELLED"
     DriverAlreadyQuoted _ -> "DRIVER_ALREADY_QUOTED"
     QuoteAlreadyRejected -> "QUOTE_ALREADY_REJECTED"
@@ -434,6 +437,7 @@ instance IsHTTPError DriverQuoteError where
     DriverQuoteExpired -> E400
     NoSearchRequestForDriver -> E400
     RideRequestAlreadyAccepted -> E400
+    CancelSearchLockNotAcquired -> E400
     RideRequestAlreadyAcceptedOrCancelled _ -> E409
     DriverAlreadyQuoted _ -> E409
     QuoteAlreadyRejected -> E400
