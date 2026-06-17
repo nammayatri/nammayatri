@@ -90,6 +90,7 @@ import qualified Storage.Queries.BackgroundVerification as BVQuery
 import qualified Storage.Queries.CommonDriverOnboardingDocumentsExtra as QCommonDocExtra
 import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
+import qualified Storage.Queries.DriverIdentityInfo as QDII
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
 import qualified Storage.Queries.DriverInformationExtra as DIQueryExtra
@@ -1269,6 +1270,10 @@ getProcessedDriverDocuments role driverId entityImagesInfo docType useHVSdkForDL
     DVC.TAXDetails -> commonDocStatus DVC.TAXDetails
     DVC.FinnishIDResidencePermit -> commonDocStatus DVC.FinnishIDResidencePermit
     DVC.TaxiDriverPermit -> commonDocStatus DVC.TaxiDriverPermit
+    DVC.NomineeDetails -> do
+      mbIdentityInfo <- QDII.findByDriverId driverId
+      let hasNominee = maybe False (\info -> isJust info.nomineeName && isJust info.nomineeRelationship && isJust info.nomineeDob) mbIdentityInfo
+      return (if hasNominee then Just VALID else Nothing, Nothing, Nothing, Nothing, mbS3Path, mbImageId, Nothing)
     _ -> commonDocStatus docType
 
 callGetDLGetStatus :: Id DP.Person -> Id DMOC.MerchantOperatingCity -> Flow ()
