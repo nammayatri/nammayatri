@@ -142,8 +142,8 @@ Ride:
     pickupEtaLogicVersion: Maybe Int
     commission: Maybe HighPrecMoney
     sosId: Maybe (Id Sos)
-    isTierUpgrade: Maybe Bool
     assignedServiceTierName: Maybe Text
+    assignedServiceTierType: Maybe ServiceTierType
 
   sqlType:
     allowedEditLocationAttempts: int

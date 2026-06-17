@@ -33,6 +33,7 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PurchasedPass as DPurchasedPass
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
@@ -355,6 +356,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     vehicleNumber :: Maybe Text,
     otp :: Maybe Text,
     serviceTierName :: Maybe Text,
+    vehicleServiceTierType :: Maybe DVST.ServiceTierType,
     bookingId :: Maybe (Id DBooking.Booking),
     rideId :: Maybe (Id DRide.Ride),
     vehicleIconUrl :: Maybe BaseUrl,
@@ -663,6 +665,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 vehicleNumber = mRide <&> (.vehicleNumber),
                 otp = mRide <&> (.otp),
                 serviceTierName = (mRide >>= (.assignedServiceTierName)) <|> booking.serviceTierName,
+                vehicleServiceTierType = (mRide >>= (.assignedServiceTierType)) <|> Just booking.vehicleServiceTierType,
                 bookingId = Just $ booking.id,
                 rideId = mRide <&> (.id),
                 vehicleIconUrl = booking.vehicleIconUrl,
@@ -744,6 +747,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
                 vehicleNumber = Nothing,
                 otp = Nothing,
                 serviceTierName = mbEstimate >>= (.serviceTierName),
+                vehicleServiceTierType = mbEstimate <&> (.vehicleServiceTierType),
                 bookingId = Nothing,
                 rideId = Nothing,
                 vehicleIconUrl = mbEstimate >>= (.vehicleIconUrl),

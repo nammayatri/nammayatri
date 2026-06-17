@@ -97,8 +97,8 @@ buildOnConfirmReqV2 req isValueAddNP = do
               favCount :: Maybe Int = readMaybe . T.unpack =<< getTagV2' Tag.DRIVER_DETAILS Tag.FAVOURITE_COUNT tagGroups
               driverAccountId = getTagV2' Tag.DRIVER_DETAILS Tag.DRIVER_ACCOUNT_ID tagGroups
               isSafetyPlus' = isJust $ getTagV2' Tag.DRIVER_DETAILS Tag.IS_SAFETY_PLUS tagGroups
-              isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< getTagV2' Tag.GENERAL_INFO Tag.IS_TIER_UPGRADE tagGroupsFullfillment)
               assignedServiceTierName = getTagV2' Tag.GENERAL_INFO Tag.ASSIGNED_SERVICE_TIER_NAME tagGroupsFullfillment
+              assignedServiceTierType = readMaybe . T.unpack =<< getTagV2' Tag.GENERAL_INFO Tag.ASSIGNED_SERVICE_TIER_TYPE tagGroupsFullfillment
           rideOtp <- maybe (Left "Missing rideOtp in on_confirm") Right mbRideOtp
           bppRideId <- fulf >>= (.fulfillmentId) & maybe (Left "Missing fulfillmentId") (Right . Id)
           driverName <- fulf >>= (.fulfillmentAgent) >>= (.agentPerson) >>= (.personName) & maybe (Left "Missing fulfillment.agent.person.name in on_confirm") Right

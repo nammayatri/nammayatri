@@ -56,6 +56,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import qualified Domain.Types.Yudhishthira as Y
@@ -181,8 +182,8 @@ data BookingDetails = BookingDetails
     vehicleModel :: Text,
     otp :: Text,
     isInitiatedByCronJob :: Bool,
-    isTierUpgrade :: Bool,
-    assignedServiceTierName :: Maybe Text
+    assignedServiceTierName :: Maybe Text,
+    assignedServiceTierType :: Maybe DVST.ServiceTierType
   }
 
 data RideAssignedReq = RideAssignedReq
@@ -435,8 +436,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
-        isTierUpgrade = Just isTierUpgrade,
         assignedServiceTierName = assignedServiceTierName,
+        assignedServiceTierType = assignedServiceTierType,
         ..
       }
 

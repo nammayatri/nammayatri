@@ -353,7 +353,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         isValueAddNP,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         isPetRide = booking.isPetRide,
-        vehicleServiceTierType = booking.vehicleServiceTierType,
+        vehicleServiceTierType = fromMaybe booking.vehicleServiceTierType (activeRide >>= (.assignedServiceTierType)),
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
         isAirConditioned = booking.isAirConditioned,

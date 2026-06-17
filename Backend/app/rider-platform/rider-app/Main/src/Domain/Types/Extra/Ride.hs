@@ -80,7 +80,7 @@ data RideAPIEntity = RideAPIEntity
     refundRequestStatus :: Maybe Domain.Types.RefundRequest.RefundRequestStatus,
     cancellationFeeStatus :: Maybe Domain.Types.Ride.CancellationFeeStatus,
     selectedOffers :: Kernel.Prelude.Maybe SharedLogic.Offer.OffersRespAPIEntity,
-    isTierUpgrade :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    assignedServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+    assignedServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    assignedServiceTierType :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

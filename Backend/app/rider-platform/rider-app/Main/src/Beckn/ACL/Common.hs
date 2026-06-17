@@ -146,8 +146,8 @@ parseBookingDetails order msgId = do
       vehicleModel = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleModel)
       vehicleNumber = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentVehicle) >>= (.vehicleRegistration)
   let fulfillmentTagGroups = order.orderFulfillments >>= listToMaybe >>= (.fulfillmentTags)
-      isTierUpgrade = fromMaybe False (readMaybe . T.unpack =<< getTagV2' Tag.GENERAL_INFO Tag.IS_TIER_UPGRADE fulfillmentTagGroups)
       assignedServiceTierName = getTagV2' Tag.GENERAL_INFO Tag.ASSIGNED_SERVICE_TIER_NAME fulfillmentTagGroups
+      assignedServiceTierType = readMaybe . T.unpack =<< getTagV2' Tag.GENERAL_INFO Tag.ASSIGNED_SERVICE_TIER_TYPE fulfillmentTagGroups
   pure $
     Common.BookingDetails
       { bppBookingId = Id bppBookingId,

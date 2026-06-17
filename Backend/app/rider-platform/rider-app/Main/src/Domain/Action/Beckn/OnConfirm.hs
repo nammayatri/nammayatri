@@ -30,6 +30,7 @@ import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.ServiceTierType as DVST
 import EulerHS.Prelude hiding (id, whenJust)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
@@ -120,8 +121,8 @@ data RideAssignedInfo = RideAssignedInfo
     favCount :: Maybe Int,
     driverAccountId :: Maybe Payment.AccountId,
     isSafetyPlus :: Bool,
-    isTierUpgrade :: Bool,
     assignedServiceTierName :: Maybe Text,
+    assignedServiceTierType :: Maybe DVST.ServiceTierType,
     bppInvoiceProviderInfo :: BPPInvoiceProviderInfo
   }
 
