@@ -123,7 +123,7 @@ jobs:
           echo "======================"
           nix develop .#backend --command bash -c '
             export CABAL_DIR=$CANON_CACHE/.cabal-dir
-            cabal repl dynamic-offer-driver-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-driver <<< ":quit"
+            cabal repl dynamic-offer-driver-app --repl-options="-fno-code -fwrite-interface" --builddir=dist-newrepl-driver -v3 <<< ":quit" 2>&1 | head -400 || true
           '
           NAMESPACE_SCRIPT
           chmod +x /tmp/ns-repl-driver-${{ github.run_id }}.sh
