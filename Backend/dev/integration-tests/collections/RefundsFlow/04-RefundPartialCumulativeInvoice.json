@@ -802,6 +802,65 @@
       }
     },
     {
+      "name": "Assert BAP ledger — both refund legs SETTLED (/initiate rf2)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "function _mockUrl(){ return (pm.environment.get('mockServerUrl')||'http://localhost:8080').replace(/\\$\\{[^:}]*:?([^}]*)\\}/g,'$1'); }",
+              "function _sqlBody(){ return JSON.stringify({db_name:'atlas_dev',db_schema:'atlas_app',table_name:'finance_ledger_entry',select:['id','status','amount','reference_type'],where_clause:[{column_name:'reference_id',val:pm.environment.get('rideId'),op:'='}]}); }",
+              "function _ok(rows){ return rows.filter(function(r){return r.status==='SETTLED';}).length >= 2; }",
+              "function _assert(rows){",
+              "  var _resp = { count: rows.length, rows: rows };",
+              "  var _rf1 = Number(pm.environment.get('rf1')); var _rf2 = Number(pm.environment.get('rf2')); var _cum = _rf1 + _rf2;",
+              "  console.log('  ↳ expected: 2 SETTLED BAP RideRefund legs (rf1 via /respond + rf2 via /initiate); sum =', _cum.toFixed(2));",
+              "  try { var _rows = (_resp.rows) || []; console.log('  ↳ DB rows:', JSON.stringify(_rows.map(function(x){ return {st:x.status, amt:x.amount, type:x.reference_type}; }))); } catch(e) {}",
+              "  var settled = (_resp.rows||[]).filter(function(r){return r.status === 'SETTLED';});",
+              "  pm.test('admin-initiate (rf2) wrote a BAP ledger leg — both refund legs SETTLED', function () {",
+              "    pm.expect(settled.length, 'expected >=2 SETTLED BAP refund legs (rf1 + rf2); only 1 means /initiate skipped processRefundRaised').to.be.at.least(2);",
+              "  });",
+              "  pm.test('BAP settled legs sum = rf1+rf2 (cumulative gross)', function () {",
+              "    var _sum = settled.reduce(function(a,r){return a + Number(r.amount);}, 0);",
+              "    pm.expect(_sum, 'sum of SETTLED BAP refund legs').to.be.closeTo(_cum, 0.022);",
+              "  });",
+              "  pm.test('the /initiate leg (= rf2) is present on the BAP ledger', function () {",
+              "    var _hasRf2 = settled.some(function(r){ return Math.abs(Number(r.amount) - _rf2) <= 0.011; });",
+              "    pm.expect(_hasRf2, 'no SETTLED BAP leg ~= rf2; admin /initiate did not raise+settle its leg').to.be.true;",
+              "  });",
+              "}",
+              "function _poll(n){ pm.sendRequest({ url:_mockUrl()+'/mock/sql/select', method:'POST', header:{'Content-Type':'application/json'}, body:{mode:'raw', raw:_sqlBody()} }, function(err,res){ var rows=[]; try{ rows=((res&&res.json())||{}).rows||[]; }catch(e){} if(_ok(rows) || n<=0){ _assert(rows); } else { setTimeout(function(){ _poll(n-1); }, 3000); } }); }",
+              "var _r0=[]; try{ _r0=(pm.response.json().rows)||[]; }catch(e){} if(_ok(_r0)){ _assert(_r0); } else { _poll(10); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"db_name\":\"atlas_dev\",\"db_schema\":\"atlas_app\",\"table_name\":\"finance_ledger_entry\",\"select\":[\"id\",\"status\",\"amount\",\"reference_type\"],\"where_clause\":[{\"column_name\":\"reference_id\",\"val\":\"{{rideId}}\",\"op\":\"=\"}]}"
+        },
+        "url": {
+          "raw": "{{mockServerUrl}}/mock/sql/select",
+          "host": [
+            "{{mockServerUrl}}"
+          ],
+          "path": [
+            "mock",
+            "sql",
+            "select"
+          ]
+        }
+      }
+    },
+    {
       "name": "Assert BPP cumulative Refund invoice — cumulative rf1+rf2; prior Voided",
       "event": [
         {

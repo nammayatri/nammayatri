@@ -259,6 +259,7 @@ postPaymentRefundRequestInitiate merchantShortId opCity rideId req = do
                 req.deductFromDriver,
             postCreate = \refundRequest -> do
               Notify.notifyRefunds refundRequest
+              DRidePayment.processRefundRaised refundRequest
               submitRefundToPaymentService refundRequest False
           }
   DRidePayment.createPaymentRefundRequest h rideId
