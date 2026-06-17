@@ -906,6 +906,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN send_membership
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN stcl_config json ;
 
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upgrade_feature boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;
