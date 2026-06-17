@@ -271,6 +271,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   localResidenceProofImgs <- getDriverImages merchant.id DVC.LocalResidenceProof
   policeVerificationCertificateImgs <- getDriverImages merchant.id DVC.PoliceVerificationCertificate
   drivingSchoolCertificateImgs <- getDriverImages merchant.id DVC.DrivingSchoolCertificate
+  medicalCertificateImgs <- getDriverImages merchant.id DVC.MedicalCertificate
   commonDocumentsData <- runInReplica (QCommonDriverOnboardingDocuments.findByDriverId (Just (cast driverId)))
   let commonDocuments = map toCommonDocumentItem commonDocumentsData
   allDlImgs <- runInReplica (QDL.findAllByImageId (map (Id) $ mapMaybe listToMaybe dlImgs))
@@ -313,6 +314,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
         policeVerificationCertificate = policeVerificationCertificateImgs,
         drivingSchoolCertificate = drivingSchoolCertificateImgs,
         udyamCertificate = udyamImgs,
+        medicalCertificate = medicalCertificateImgs,
         commonDocuments = commonDocuments
       }
   where

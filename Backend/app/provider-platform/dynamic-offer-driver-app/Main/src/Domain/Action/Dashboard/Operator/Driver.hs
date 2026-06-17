@@ -569,7 +569,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       when (isJust checkAssocOperator) $
         throwError (InvalidRequest "Driver already associated with operator")
 
-      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+      assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId DomainRC.defaultAssociationEnd
       QDOA.create assoc
       Analytics.handleDriverAnalyticsAndFlowStatus
         transporterConfig

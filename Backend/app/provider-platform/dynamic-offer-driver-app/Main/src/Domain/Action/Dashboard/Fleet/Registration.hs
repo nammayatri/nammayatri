@@ -167,7 +167,7 @@ createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deployme
           else Nothing
   createFleetOwnerInfo person.id merchantId mbfleetType mbFleetName mbEnabled mbgstNumber mbReferredOperatorId mbTicketPlaceId (Just $ merchantOperatingCity.id) transporterConfig.taxConfig.defaultTdsRate defaultDocsVerificationStatus
   whenJust mbReferredOperatorId $ \referredOperatorId -> do
-    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+    fleetOperatorAssData <- SA.makeFleetOperatorAssociation merchantId merchantOpCityId (person.id.getId) referredOperatorId DomainRC.defaultAssociationEnd
     QFOA.create fleetOperatorAssData
     let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
     when allowCacheDriverFlowStatus $ do

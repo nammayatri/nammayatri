@@ -135,7 +135,7 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
           SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
-          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
+          driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId DomainRC.defaultAssociationEnd
           void $ QDOA.create driverOperatorAssData
           Analytics.handleDriverAnalyticsAndFlowStatus
             transporterConfig

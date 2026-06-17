@@ -239,7 +239,7 @@ createDriverRCAssociationIfPossible ::
 createDriverRCAssociationIfPossible transporterConfig driverId rc = do
   if canCreateRCAssociation transporterConfig rc
     then do
-      driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
+      driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       DAQuery.create driverRCAssoc
     else do
       logWarning $ "Unable to create driver rc association: " <> "; driverId: " <> driverId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus
@@ -275,7 +275,7 @@ createFleetRCAssociationIfPossible ::
 createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
   if canCreateRCAssociation transporterConfig rc
     then do
-      fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id (convertTextToUTC (Just "2099-12-12"))
+      fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId rc.id defaultAssociationEnd
       FRCAssoc.create fleetRCAssoc
     else do
       logWarning $ "Unable to create fleet rc association: " <> "; fleetOwnerId: " <> fleetOwnerId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus

@@ -265,6 +265,7 @@ data DocumentsListResponse = DocumentsListResponse
     policeVerificationCertificate :: [Kernel.Prelude.Text],
     drivingSchoolCertificate :: [Kernel.Prelude.Text],
     udyamCertificate :: [Kernel.Prelude.Text],
+    medicalCertificate :: [Kernel.Prelude.Text],
     commonDocuments :: [CommonDocumentItem]
   }
   deriving stock (Generic)
