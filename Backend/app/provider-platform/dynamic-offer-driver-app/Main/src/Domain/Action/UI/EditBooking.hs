@@ -3,7 +3,9 @@ module Domain.Action.UI.EditBooking where
 import API.Types.UI.EditBooking
 import qualified Data.Geohash as DG
 import Data.Text as T
+import qualified Domain.Types.Booking
 import Domain.Types.BookingUpdateRequest
+import qualified Domain.Types.Location
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -13,6 +15,7 @@ import Domain.Types.RideRoute
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -20,6 +23,7 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Error.Throwing
+import Lib.LocationUpdates.Internal (updatePassedThroughDrop)
 import qualified SharedLogic.CallBAP as CallBAP
 import qualified SharedLogic.LocationMapping as SLM
 import SharedLogic.Ride
@@ -60,11 +64,16 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
         else do
           QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReqId
           ride <- QR.findActiveByRBId bookingUpdateReq.bookingId >>= fromMaybeM (InternalError $ "Ride not found for bookingId: " <> bookingUpdateReq.bookingId.getId)
-          QR.updateIsPickupOrDestinationEdited (Just True) ride.id
+          QB.updateIsPickupOrDestinationEdited (Just True) booking.id
           fork "updateIsReallocationEnabled" $ do
             searchReq <- QSR.findByTransactionIdAndMerchantId booking.transactionId bookingUpdateReq.merchantId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> bookingUpdateReq.merchantId.getId)
             QSR.updateIsReallocationEnabled (Just False) searchReq.id
           dropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReqId.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReqId.getId)
+          mbDropLocation <- QL.findById dropLocMapping.locationId
+          whenJust mbDropLocation $ \dl -> do
+            let dropLatLong = LatLong {lat = dl.lat, lon = dl.lon}
+            QDI.updateTripEndLocation (Just dropLatLong) driverId
+            updatePassedThroughDrop driverId
           prevOrder <- QLM.maxOrderByEntity bookingUpdateReq.bookingId.getId
           dropLocMapBooking <- SLM.buildLocationMapping' dropLocMapping.locationId bookingUpdateReq.bookingId.getId DLM.BOOKING (Just bookingUpdateReq.merchantId) (Just bookingUpdateReq.merchantOperatingCityId) prevOrder
           prevOrderforRide <- QLM.maxOrderByEntity ride.id.getId
@@ -79,7 +88,8 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
           QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
           recomputeRideFinancialsForFareUpdate booking ride bookingUpdateReq.fareParamsId bookingUpdateReq.estimatedFare
-          CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
+          updatedBooking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
+          CallBAP.sendUpdateEditDestToBAP updatedBooking (Just ride) bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
           void $ Redis.unlockRedis (editDestinationLockKey driverId)
           driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           mbUpdatedloc <- QL.findById dropLocMapRide.locationId
@@ -101,3 +111,29 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
       if isLockAquired && action /= ACCEPT
         then ("Trip Update Request Declined", "Request was declined by your driver. Kindly check with them offline before requesting again.")
         else ("Trip Update Request Not Available", "Edit Destination is not possible at this moment. Please try again later.")
+
+-- Skips all driver-coupled work (ride mapping, driver FCM, geohash, notifyEditDestination) since there is no Ride.
+postEditResultNoRide ::
+  Domain.Types.Booking.Booking ->
+  Domain.Types.BookingUpdateRequest.BookingUpdateRequest ->
+  Domain.Types.Location.Location ->
+  Environment.Flow ()
+postEditResultNoRide booking bookingUpdateReq dropLocation = do
+  QBUR.updateStatusById DRIVER_ACCEPTED bookingUpdateReq.id
+  QB.updateIsPickupOrDestinationEdited (Just True) booking.id
+  routeInfo :: RouteInfo <- Redis.runInMultiCloudRedisMaybeResult (Redis.get (bookingRequestKeySoftUpdate booking.id.getId)) >>= fromMaybeM (InternalError $ "BookingRequestRoute not found for bookingId: " <> booking.id.getId)
+  multipleRoutes :: Kernel.Prelude.Maybe [RouteAndDeviationInfo] <- Redis.runInMultiCloudRedisMaybeResult $ Redis.safeGet $ multipleRouteKeySoftUpdate booking.id.getId
+  Redis.setExp (searchRequestKey booking.transactionId) routeInfo 3600
+  whenJust multipleRoutes $ \allRoutes ->
+    Redis.setExp (multipleRouteKey booking.transactionId) allRoutes 3600
+  burDropLocMapping <- QLM.getLatestEndByEntityId bookingUpdateReq.id.getId >>= fromMaybeM (InternalError $ "Latest drop location mapping not found for bookingUpdateReqId: " <> bookingUpdateReq.id.getId)
+  prevOrder <- QLM.maxOrderByEntity booking.id.getId
+  dropLocMapBooking <- SLM.buildLocationMapping' burDropLocMapping.locationId booking.id.getId DLM.BOOKING (Just booking.providerId) (Just booking.merchantOperatingCityId) prevOrder
+  QLM.create dropLocMapBooking
+  fork "updateIsReallocationEnabled" $ do
+    searchReq <- QSR.findByTransactionIdAndMerchantId booking.transactionId booking.providerId >>= fromMaybeM (SearchRequestNotFound $ "transactionId-" <> booking.transactionId <> ",merchantId-" <> booking.providerId.getId)
+    QSR.updateIsReallocationEnabled (Just False) searchReq.id
+  let estimatedDistance = highPrecMetersToMeters <$> bookingUpdateReq.estimatedDistance
+  QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
+  updatedBooking <- QB.findById bookingUpdateReq.bookingId >>= fromMaybeM (BookingDoesNotExist bookingUpdateReq.bookingId.getId)
+  CallBAP.sendUpdateEditDestToBAP updatedBooking Nothing bookingUpdateReq (Just dropLocation) Nothing OU.CONFIRM_UPDATE

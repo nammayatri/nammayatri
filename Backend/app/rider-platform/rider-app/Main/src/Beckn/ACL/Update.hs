@@ -74,7 +74,7 @@ data PaymentCompletedBuildReqDetails = PaymentCompletedBuildReqDetails
   }
 
 data EditLocationBuildReqDetails = EditLocationBuildReqDetails
-  { bppRideId :: Id DRide.BPPRide,
+  { bppRideId :: Maybe (Id DRide.BPPRide),
     origin :: Maybe DLoc.Location,
     destination :: Maybe DLoc.Location,
     stops :: Maybe [DLoc.Location],
@@ -202,7 +202,7 @@ mkUpdateMessage req (UEditLocationBuildReqDetails details) = do
             orderFulfillments =
               Just
                 [ Spec.Fulfillment
-                    { fulfillmentId = Just details.bppRideId.getId,
+                    { fulfillmentId = (.getId) <$> details.bppRideId,
                       fulfillmentStops = CommonUtils.mkStops' details.origin (fromMaybe [] details.stops) details.destination,
                       fulfillmentAgent = Nothing,
                       fulfillmentCustomer = Nothing,

@@ -106,6 +106,7 @@ import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CancellationFee as CancellationFee
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.FareBreakupInfo as SFareBreakupInfo
 import qualified SharedLogic.Finance.RidePayment as RidePaymentFinance
 import qualified SharedLogic.Insurance as SI
@@ -1164,6 +1165,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
     SafetyCQSos.updateStatusToNotResolvedIfPendingByRideId (cast ride.id)
   unless isInitiatedByCronJob $
     Notify.notifyOnRideCompleted booking updRide otherParties
+  EditLocationThrottle.clearBookingEditAttempts booking.id
   where
     buildFareBreakup :: MonadFlow m => Id DRide.Ride -> DFareBreakup -> m DFareBreakup.FareBreakup
     buildFareBreakup rideId DFareBreakup {..} = do

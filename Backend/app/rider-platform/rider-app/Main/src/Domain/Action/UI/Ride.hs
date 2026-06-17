@@ -22,6 +22,8 @@ module Domain.Action.UI.Ride
     editLocation,
     getDriverPhoto,
     getDeliveryImage,
+    buildLocation,
+    buildbookingUpdateRequest,
   )
 where
 
@@ -61,6 +63,7 @@ import Kernel.Utils.Common
 import qualified Safety.Storage.Queries.SafetySettingsExtra as Lib
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import qualified SharedLogic.EditLocationThrottle as EditLocationThrottle
 import qualified SharedLogic.LocationMapping as SLM
 import qualified SharedLogic.Person as SLP
 import qualified SharedLogic.Serviceability as Serviceability
@@ -148,6 +151,8 @@ getRideStatus rideId personId = withLogTag ("personId-" <> personId.getId) do
         driverPosition = mbPos <&> (.currPoint)
       }
 
+-- ** DEPRECATED **        use editLocationForBooking
+
 editLocation ::
   ( CacheFlow m r,
     EncFlow m r,
@@ -175,11 +180,9 @@ editLocation rideId (personId, merchantId) req = do
   when (not isValueAddNP) $ throwError (InvalidRequest "Edit location is not supported for non value add NP")
   case (req.origin, req.destination) of
     (Just pickup, _) -> do
-      let attemptsLeft = fromMaybe merchant.numOfAllowedEditPickupLocationAttemptsThreshold ride.allowedEditPickupLocationAttempts
-      when (attemptsLeft == 0) do
-        throwError EditLocationAttemptsExhausted
       when (ride.status /= SRide.NEW) do
         throwError (InvalidRequest $ "Customer is not allowed to change pickup as the ride is not NEW for rideId: " <> ride.id.getId)
+      EditLocationThrottle.decEditPickupAttempts booking.id merchant.numOfAllowedEditPickupLocationAttemptsThreshold
       pickupLocationMappings <- QLM.findAllByEntityIdAndOrder ride.id.getId 0
       {-
         Sorting down will sort mapping like this v-2, v-1, LATEST
@@ -225,7 +228,7 @@ editLocation rideId (personId, merchantId) req = do
                 details =
                   ACL.UEditLocationBuildReqDetails $
                     ACL.EditLocationBuildReqDetails
-                      { bppRideId = ride.bppRideId,
+                      { bppRideId = Just ride.bppRideId,
                         origin,
                         status = ACL.CONFIRM_UPDATE,
                         destination = Nothing,
@@ -236,14 +239,12 @@ editLocation rideId (personId, merchantId) req = do
       becknUpdateReq <- ACL.buildUpdateReq dUpdateReq
       void . withShortRetry $ CallBPP.updateV2 booking.providerUrl becknUpdateReq
       QRB.updateIsBookingUpdated True booking.id
-      QRide.updateEditPickupLocationAttempts ride.id (Just (attemptsLeft -1))
       pure $ EditLocationResp Nothing "Success"
     (_, Just destination) -> do
-      let attemptsLeft = fromMaybe merchant.numOfAllowedEditLocationAttemptsThreshold ride.allowedEditLocationAttempts
-      when (attemptsLeft == 0) do
-        throwError EditLocationAttemptsExhausted
       when (ride.status == SRide.CANCELLED || ride.status == SRide.COMPLETED) do
         throwError (InvalidRequest $ "Customer is not allowed to change destination as the ride is in terminal state for rideId: " <> ride.id.getId)
+      EditLocationThrottle.gateEditLocAttempts booking.id merchant.numOfAllowedEditLocationAttemptsThreshold
+      EditLocationThrottle.decEditLocSoftAttempts booking.id
       newDropLocation <- buildLocation merchantId booking.merchantOperatingCityId destination
       QL.create newDropLocation
       startLocMapping <- QLM.getLatestStartByEntityId booking.id.getId >>= fromMaybeM (InternalError $ "Latest start location mapping not found for bookingId: " <> booking.id.getId)
@@ -273,7 +274,7 @@ editLocation rideId (personId, merchantId) req = do
                 details =
                   ACL.UEditLocationBuildReqDetails $
                     ACL.EditLocationBuildReqDetails
-                      { bppRideId = ride.bppRideId,
+                      { bppRideId = Just ride.bppRideId,
                         origin = Nothing,
                         status = ACL.SOFT_UPDATE,
                         destination = destination',

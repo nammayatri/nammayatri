@@ -740,3 +740,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN student_pass_verify_config json ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_edit_location_without_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN enable_edit_location_without_ride SET DEFAULT true;
