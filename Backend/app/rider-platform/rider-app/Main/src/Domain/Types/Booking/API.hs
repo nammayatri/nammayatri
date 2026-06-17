@@ -357,7 +357,7 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleServiceTierSeatingCapacity = booking.vehicleServiceTierSeatingCapacity,
         vehicleServiceTierAirConditioned = booking.vehicleServiceTierAirConditioned,
         isAirConditioned = booking.isAirConditioned,
-        serviceTierName = booking.serviceTierName,
+        serviceTierName = (activeRide >>= (.assignedServiceTierName)) <|> booking.serviceTierName,
         serviceTierShortDesc = booking.serviceTierShortDesc,
         driversPreviousRideDropLocLat = if showPrevDropLocationLatLon then fmap (.lat) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,
         driversPreviousRideDropLocLon = if showPrevDropLocationLatLon then fmap (.lon) (activeRide >>= (.driversPreviousRideDropLoc)) else Nothing,

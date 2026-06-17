@@ -662,7 +662,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 driverName = mRide <&> (.driverName),
                 vehicleNumber = mRide <&> (.vehicleNumber),
                 otp = mRide <&> (.otp),
-                serviceTierName = booking.serviceTierName,
+                serviceTierName = (mRide >>= (.assignedServiceTierName)) <|> booking.serviceTierName,
                 bookingId = Just $ booking.id,
                 rideId = mRide <&> (.id),
                 vehicleIconUrl = booking.vehicleIconUrl,
