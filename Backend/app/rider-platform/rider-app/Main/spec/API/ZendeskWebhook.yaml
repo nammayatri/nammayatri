@@ -1,0 +1,20 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+
+module: ZendeskWebhook
+
+types:
+  ZendeskWebhookPayload:
+    ticket_id: Maybe Text
+    status: Maybe Text
+
+apis:
+  - POST:
+      endpoint: /zendesk/webhook
+      auth: NoAuth
+      headers:
+        Authorization: Text
+      request:
+        type: ZendeskWebhookPayload
+      response:
+        type: APISuccess

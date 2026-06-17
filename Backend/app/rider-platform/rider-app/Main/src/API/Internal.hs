@@ -8,6 +8,7 @@ import qualified API.Action.UI.AlertWebhook as AlertWebhook
 import qualified API.Action.UI.FRFSInternal as FRFSInternal
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
+import qualified API.Action.UI.ZendeskWebhook as ZendeskWebhook
 import qualified API.Internal.Auth as Auth
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
@@ -50,6 +51,7 @@ type API =
            :<|> SendSMS.API
            :<|> InMemManagement.API
            :<|> FRFSInternal.API
+           :<|> ZendeskWebhook.API
        )
 
 handler :: FlowServer API
@@ -74,3 +76,4 @@ handler =
     :<|> SendSMS.handler
     :<|> InMemManagement.handler
     :<|> FRFSInternal.handler
+    :<|> ZendeskWebhook.handler
