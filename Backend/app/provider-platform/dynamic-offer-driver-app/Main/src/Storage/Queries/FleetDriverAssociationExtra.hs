@@ -60,7 +60,7 @@ createFleetDriverAssociationIfNotExists driverId fleetOwnerId onboardedOperatorI
         id <- generateGUID
         createWithKV $
           FleetDriverAssociation
-            { associatedTill = convertTextToUTC (Just "2099-12-12"),
+            { associatedTill = defaultAssociationEnd,
               driverId = driverId,
               fleetOwnerId = fleetOwnerId.getId,
               associatedOn = Just now,

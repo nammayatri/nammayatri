@@ -8,7 +8,7 @@ import Domain.Types.DriverOperatorAssociation
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleCategory as DVeh
-import Domain.Utils (convertTextToUTC)
+import Domain.Utils (defaultAssociationEnd)
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (getDbHash)
@@ -105,7 +105,7 @@ createDriverOperatorAssociationIfNotExists moc driverId operatorId onboardingVeh
       id <- generateGUID
       createWithKV $
         DriverOperatorAssociation
-          { associatedTill = convertTextToUTC (Just "2099-12-12"),
+          { associatedTill = defaultAssociationEnd,
             driverId = driverId,
             operatorId = operatorId.getId,
             associatedOn = Just now,
