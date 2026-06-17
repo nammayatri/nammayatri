@@ -56,6 +56,7 @@ TOLL_CONFIG_DIR="$SCRIPT_DIR/collections/TollConfigFlow"
 TOLL_RIDE_DIR="$SCRIPT_DIR/collections/TollRideFlow"
 DRIVER_IMAGE_DIR="$SCRIPT_DIR/collections/DriverImageFlow"
 PAN_HARD_CHECK_DIR="$SCRIPT_DIR/collections/PanHardCheckFlow"
+PANGST_DIR="$SCRIPT_DIR/collections/PanGstCrossCheckFlow"
 REPORTS_DIR="$SCRIPT_DIR/reports"
 TEST_LOGS_DIR="$SCRIPT_DIR/data/test-logs"
 DEBUG_RUNNER="$SCRIPT_DIR/debug-runner.py"
@@ -551,6 +552,10 @@ run_toll() {
     run_toll_config "${1:-}" "${2:-}" && run_toll_ride "${1:-}" "${2:-}"
 }
 
+run_pangst() {
+    run_frfs "$PANGST_DIR" "PAN-GST CROSS CHECK" "${1:-}" "${2:-}"
+}
+
 # ── Help ──
 
 show_help() {
@@ -706,6 +711,9 @@ case "${1:-}" in
         ;;
     pan|pan-hard-check)
         run_pan_hard_check "${2:-}"
+        ;;
+    pan-gst|pangst)
+        run_pangst "${2:-}" "${3:-}"
         ;;
     "")
         run_rides

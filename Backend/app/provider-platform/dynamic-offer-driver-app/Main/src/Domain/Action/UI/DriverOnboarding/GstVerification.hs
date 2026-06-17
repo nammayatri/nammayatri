@@ -63,11 +63,13 @@ import Storage.ConfigPilot.Config.MerchantServiceUsageConfig (MerchantServiceUsa
 import Storage.ConfigPilot.Config.TransporterConfig (TransporterConfigDimensions (..))
 import qualified Storage.Queries.DriverGstin as DGQuery
 import qualified Storage.Queries.DriverGstinExtra as DGQueryExtra
+import qualified Storage.Queries.DriverPanCard as DPQuery
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.IdfyVerification as IVQuery
 import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Tools.Error
+import qualified Tools.Utils as Utils
 import qualified Tools.Verification as Verification
 
 data DriverGstinReq = DriverGstinReq
@@ -131,6 +133,13 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
+  when (DCommon.checkFleetOwnerRole person.role) $ do
+    mDriverPan <- DPQuery.findByDriverId person.id
+    whenJust mDriverPan $ \driverPan -> do
+      panNumber <- decrypt driverPan.panCardNumber
+      unless (panMatchesGstin panNumber req.gstin) $ do
+        Utils.cleanupUploadedImages [Id req.imageId] person.id
+        throwError PanGstNumberMismatch
   merchantServiceUsageConfig <-
     getOneConfig (MerchantServiceUsageConfigDimensions {merchantOperatingCityId = merchantOpCityId.getId}) (Just (CMSUC.findByMerchantOpCityId merchantOpCityId Nothing))
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
@@ -303,15 +312,22 @@ onVerifyGstHandler :: Person.Person -> Id Image.Image -> Maybe (Id Image.Image) 
 onVerifyGstHandler person imageId1 imageId2 output = do
   logDebug $ "onVerifyGstHandler: " <> show output
   mEncryptedGstinNumber <- encrypt `mapM` output.gstin
-  let isValidGst = output.gstinStatus == Just "Active"
-      verificationStatus = if isValidGst then Documents.VALID else Documents.INVALID
+  let isActive = output.gstinStatus == Just "Active"
+      isFleet = DCommon.checkFleetOwnerRole person.role
+      mbLegalName = (\t -> if T.strip t == "" then Nothing else Just t) =<< output.legalName
+      legalNameMissing = isFleet && isNothing mbLegalName
+      verificationStatus = if isActive && not legalNameMissing then Documents.VALID else Documents.INVALID
       mbPrincipalAddr = output.principalPlaceOfBusinessFields
   DGQueryExtra.updateVerificationStatusWithPlaceDetails verificationStatus (mbPrincipalAddr >>= (.pincode)) (mbPrincipalAddr >>= (.stateName)) person.id
-  when (DCommon.checkFleetOwnerRole person.role) $ do
+  when isFleet $ do
     QFOI.updateGstImage mEncryptedGstinNumber (Just imageId1.getId) person.id
+    when (verificationStatus == Documents.VALID) $ QFOI.updateFleetName mbLegalName person.id
   (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
-  when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
-    mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+  let rejectForMissingLegalName = ImageQuery.updateVerificationStatusAndFailureReason Documents.INVALID GstLegalNameNotFound imageId1
+      markImagesValidIfNeeded =
+        when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
+          mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]
+  if legalNameMissing then rejectForMissingLegalName else markImagesValidIfNeeded
 
 mkIdfyVerificationEntityGst :: MonadFlow m => Person.Person -> Id Image.Image -> Text -> UTCTime -> DIdfy.ImageExtractionValidation -> EncryptedHashedField 'AsEncrypted Text -> m DIdfy.IdfyVerification
 mkIdfyVerificationEntityGst person imageId1 requestId now imageExtractionValidation encryptedGst = do
