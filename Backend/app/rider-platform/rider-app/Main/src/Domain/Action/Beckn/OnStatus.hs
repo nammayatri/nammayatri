@@ -365,7 +365,7 @@ buildNewRide mbMerchant booking DCommon.BookingDetails {..} = do
       sosId = Nothing
       offersFraudCheckFailureReason = booking.offersFraudCheckFailureReason
       driverArrivalStatus = Nothing
-  pure $ DRide.Ride {cloudType = cloudType, assignedServiceTierName = assignedServiceTierName, assignedServiceTierType = assignedServiceTierType, ..}
+  pure $ DRide.Ride {cloudType = cloudType, ..}
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

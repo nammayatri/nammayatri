@@ -436,8 +436,6 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         commission = booking.commission,
         cloudType = cloudType,
         sosId = Nothing,
-        assignedServiceTierName = assignedServiceTierName,
-        assignedServiceTierType = assignedServiceTierType,
         ..
       }
 
@@ -530,6 +528,8 @@ rideAssignedReqHandler req = do
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
+      whenJust assignedServiceTierType $ \tierType ->
+        QRBE.updateServiceTierOnChange booking.id tierType Nothing Nothing assignedServiceTierName Nothing Nothing Nothing Nothing
       let applicationFeeAmount = fromMaybe 0 booking.commission
       mbBookingOfferEntity <- QOfferEntity.findByEntityIdAndEntityType booking.id.getId DOfferEntity.BOOKING
       let bookingDiscountAmount = maybe 0 (.discountAmount) mbBookingOfferEntity
