@@ -87,6 +87,10 @@ type API =
                     :> Get '[JSON] DRide.DriverRideListRes
                     :<|> TokenAuth
                     :> Capture "rideId" (Id Ride.Ride)
+                    :> QueryParam "financeData" Bool
+                    :> Get '[JSON] RideCommon.DriverRideRes
+                    :<|> TokenAuth
+                    :> Capture "rideId" (Id Ride.Ride)
                     :> "arrived"
                     :> "pickup"
                     :> ReqBody '[JSON] LatLong
@@ -177,6 +181,7 @@ handler :: FlowServer API
 handler =
   otpRideCreateAndStart
     :<|> ( listDriverRides
+             :<|> getDriverRideById
              :<|> arrivedAtPickup
              :<|> startRide
              :<|> endRide
@@ -270,6 +275,13 @@ listDriverRides ::
   Maybe Bool ->
   FlowHandler DRide.DriverRideListRes
 listDriverRides (driverId, _, mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbNumOfDay mbFinanceData = withFlowHandlerAPI $ DRide.listDriverRides driverId (Just mocId) mbLimit mbOffset mbOnlyActive mbRideStatus mbDay Nothing mbNumOfDay mbFinanceData
+
+getDriverRideById ::
+  (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) ->
+  Id Ride.Ride ->
+  Maybe Bool ->
+  FlowHandler RideCommon.DriverRideRes
+getDriverRideById (driverId, _, mocId) rideId mbFinanceData = withFlowHandlerAPI $ DRide.getDriverRideById driverId (Just mocId) rideId mbFinanceData
 
 arrivedAtPickup :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> LatLong -> FlowHandler APISuccess
 arrivedAtPickup (_, _, _) rideId req = withFlowHandlerAPI $ DRide.arrivedAtPickup rideId req
