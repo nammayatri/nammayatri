@@ -33,6 +33,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
         Domain.Types.Ride.Ride
           { allowedEditLocationAttempts = allowedEditLocationAttempts,
             allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
+            assignedServiceTierName = assignedServiceTierName,
             backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
             billingCategory = Kernel.Prelude.fromMaybe SharedLogic.Type.PERSONAL billingCategory,
@@ -80,6 +81,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             isInsured = Kernel.Prelude.fromMaybe False isInsured,
             isPetRide = Kernel.Prelude.fromMaybe False isPetRide,
             isSafetyPlus = Kernel.Prelude.fromMaybe False isSafetyPlus,
+            isTierUpgrade = isTierUpgrade,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             offersFraudCheckFailureReason = offersFraudCheckFailureReason,
@@ -123,6 +125,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
     Beam.RideT
       { Beam.allowedEditLocationAttempts = allowedEditLocationAttempts,
         Beam.allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts,
+        Beam.assignedServiceTierName = assignedServiceTierName,
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.billingCategory = Kernel.Prelude.Just billingCategory,
@@ -178,6 +181,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.isInsured = Kernel.Prelude.Just isInsured,
         Beam.isPetRide = Kernel.Prelude.Just isPetRide,
         Beam.isSafetyPlus = Kernel.Prelude.Just isSafetyPlus,
+        Beam.isTierUpgrade = isTierUpgrade,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.offersFraudCheckFailureReason = offersFraudCheckFailureReason,

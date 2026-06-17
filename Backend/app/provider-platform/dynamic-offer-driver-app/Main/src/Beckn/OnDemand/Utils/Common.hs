@@ -1242,6 +1242,16 @@ mkIsSafetyPlusTagGroupV2 isSafetyPlus =
     [ Tags.IS_SAFETY_PLUS ~=| (isSafetyPlus, show isSafetyPlus)
     ]
 
+mkTierUpgradeTagGroupV2 :: Bool -> Maybe Text -> Maybe Text -> Maybe [Spec.TagGroup]
+mkTierUpgradeTagGroupV2 isTierUpgrade mbAssignedTierType mbAssignedTierName
+  | not isTierUpgrade = Nothing
+  | otherwise =
+    Tags.buildTagGroups
+      [ Tags.IS_TIER_UPGRADE ~= show isTierUpgrade,
+        Tags.ASSIGNED_SERVICE_TIER_TYPE ~=? mbAssignedTierType,
+        Tags.ASSIGNED_SERVICE_TIER_NAME ~=? mbAssignedTierName
+      ]
+
 mkForwardBatchTagGroupV2 :: Maybe Maps.LatLong -> Maybe [Spec.TagGroup]
 mkForwardBatchTagGroupV2 previousRideDropLocation' =
   previousRideDropLocation' >>= \previousRideDropLocation ->

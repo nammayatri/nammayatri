@@ -39,7 +39,7 @@ module SharedLogic.CallBAP
     sendOnConfirmToBAP,
     notfyDeliveryImageUploadedToBAP,
     sendChangeServiceTierUpdateToBAP,
-    sendAddBaggageUpdateToBAP
+    sendAddBaggageUpdateToBAP,
   )
 where
 
@@ -99,7 +99,6 @@ import qualified Domain.Types.Vehicle as DVeh
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified EulerHS.Types as Euler
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
-import qualified Lib.Types.SpecialLocation as SL
 import Kernel.Beam.Functions
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.Maps.Types as Maps
@@ -117,13 +116,16 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError (IsBecknAPI)
 import qualified Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError as Beckn
 import Kernel.Utils.Monitoring.Prometheus.Servant (SanitizedUrl)
 import Kernel.Utils.Servant.SignatureAuth
+import qualified Lib.Types.SpecialLocation as SL
 import Network.URI (parseURI, uriQuery)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FarePolicy as SFP
 import qualified SharedLogic.MerchantPaymentMethod as DMPM
+import qualified SharedLogic.VehicleServiceTier as SVST
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.BecknConfig as QBC
+import qualified Storage.CachedQueries.FareProduct as CQFP
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.ValueAddNP as CValueAddNP
@@ -385,6 +387,39 @@ rideAssignedCommon booking ride driver veh = do
             Nothing -> QDBA.findByPrimaryKey ride.driverId
         return $ (.accountId) <$> mDriverBankAccount
       else pure Nothing
+  let isTierUpgradeFeatureEnabled = fromMaybe False (mbTransporterConfig >>= (.enableTierUpgradeFeature))
+  (isTierUpgrade, assignedServiceTierType, assignedServiceTierName) <-
+    case (isTierUpgradeFeatureEnabled, mbTransporterConfig) of
+      (True, Just transporterConfig) -> do
+        let bookedTier = booking.vehicleServiceTier
+        cityTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow booking.merchantOperatingCityId [] Nothing
+        supportedServiceTiers <- CQFP.findSupportedServiceTiersByMerchantOpCityId booking.merchantOperatingCityId
+        now <- getCurrentTime
+        let mbBookedCfg = DL.find (\t -> t.serviceTierType == bookedTier) cityTiers
+            (_acWorking, mbAssignedCfg, _isVehicleSupported) =
+              SVST.getDriverDefaultServiceTier vehicle driverInfo transporterConfig supportedServiceTiers cityTiers now
+            isUpgrade = fromMaybe False $ do
+              a <- mbAssignedCfg
+              b <- mbBookedCfg
+              pure (a.priority < b.priority)
+        logInfo $
+          "tierUpgradeCheck ride=" <> ride.id.getId
+            <> " booking.vehicleServiceTier="
+            <> show bookedTier
+            <> " vehicle.variant="
+            <> show vehicle.variant
+            <> " mbBookedCfg="
+            <> show ((\t -> (t.serviceTierType, t.name, t.priority)) <$> mbBookedCfg)
+            <> " mbAssignedCfg="
+            <> show ((\t -> (t.serviceTierType, t.name, t.priority)) <$> mbAssignedCfg)
+            <> " isTierUpgrade="
+            <> show isUpgrade
+        pure
+          ( isUpgrade,
+            if isUpgrade then (show . (.serviceTierType)) <$> mbAssignedCfg else Nothing,
+            if isUpgrade then (.name) <$> mbAssignedCfg else Nothing
+          )
+      _ -> pure (False, Nothing, Nothing)
   pure $ (if ride.status == SRide.UPCOMING then ACL.ScheduledRideAssignedBuildReq else ACL.RideAssignedBuildReq) ACL.DRideAssignedReq {vehicleAge = rideDetails.vehicleAge, ..}
   where
     extractRCManufacturerModel :: Idfy.VerificationResponse -> Maybe Text

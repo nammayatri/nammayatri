@@ -917,10 +917,16 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_location
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN default_onboarding_as character varying(255) ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN use_category_based_verification_priority_list boolean  default true;
 
 
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tier_upgrade_feature boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_mobility_billing boolean ;

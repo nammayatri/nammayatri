@@ -30,6 +30,7 @@ import qualified Tools.Beam.UtilsTH
 data RideE e = Ride
   { allowedEditLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     allowedEditPickupLocationAttempts :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    assignedServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     billingCategory :: SharedLogic.Type.BillingCategory,
@@ -77,6 +78,7 @@ data RideE e = Ride
     isInsured :: Kernel.Prelude.Bool,
     isPetRide :: Kernel.Prelude.Bool,
     isSafetyPlus :: Kernel.Prelude.Bool,
+    isTierUpgrade :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     offersFraudCheckFailureReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -129,6 +131,7 @@ instance EncryptedItem Ride where
       Ride
         { allowedEditLocationAttempts = allowedEditLocationAttempts entity,
           allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts entity,
+          assignedServiceTierName = assignedServiceTierName entity,
           backendAppVersion = backendAppVersion entity,
           backendConfigVersion = backendConfigVersion entity,
           billingCategory = billingCategory entity,
@@ -176,6 +179,7 @@ instance EncryptedItem Ride where
           isInsured = isInsured entity,
           isPetRide = isPetRide entity,
           isSafetyPlus = isSafetyPlus entity,
+          isTierUpgrade = isTierUpgrade entity,
           merchantId = merchantId entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
           offersFraudCheckFailureReason = offersFraudCheckFailureReason entity,
@@ -220,6 +224,7 @@ instance EncryptedItem Ride where
       ( Ride
           { allowedEditLocationAttempts = allowedEditLocationAttempts entity,
             allowedEditPickupLocationAttempts = allowedEditPickupLocationAttempts entity,
+            assignedServiceTierName = assignedServiceTierName entity,
             backendAppVersion = backendAppVersion entity,
             backendConfigVersion = backendConfigVersion entity,
             billingCategory = billingCategory entity,
@@ -267,6 +272,7 @@ instance EncryptedItem Ride where
             isInsured = isInsured entity,
             isPetRide = isPetRide entity,
             isSafetyPlus = isSafetyPlus entity,
+            isTierUpgrade = isTierUpgrade entity,
             merchantId = merchantId entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
             offersFraudCheckFailureReason = offersFraudCheckFailureReason entity,
